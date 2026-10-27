@@ -23,7 +23,7 @@ const CAST = `[
   { name: 'knight', lut: 'char', frames: [
     ...[0, 0.7, 1.4, 2.1].map(t => ['idle', () => sprKnight({ variant: 'red', atk: -1, moving: false, walk: 0 }, t)]),
     ...[0, 1, 2, 3, 4, 5].map(i => ['walk', () => sprKnight({ variant: 'red', atk: -1, moving: true, walk: i * Math.PI / 3 }, 0)]),
-    ...[0, 0.25, 0.5, 0.75, 0.95].map(a => ['atk', () => sprKnight({ variant: 'red', atk: a, moving: false, walk: 0 }, 0)]),
+    ...[0, 120, 165, 215, 300, 400].map(a => ['atk', () => sprKnight({ variant: 'red', atk: a, moving: false, walk: 0 }, 0)]),
     ['blue', () => sprKnight({ variant: 'blue', atk: -1, moving: false, walk: 0 }, 0)],
   ] },
   { name: 'skeleton', lut: 'env', frames: [0, 0.3, 0.6, 0.9, 1.2, 1.5].map(t => ['idle', () => sprSkeleton({ seed: 0 }, t)]) },

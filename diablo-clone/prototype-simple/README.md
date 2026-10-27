@@ -11,7 +11,7 @@ Open `index.html` in a browser. No build step, no dependencies, no image files.
 - **Attack:** Space / J, or tap anywhere on the right side
 - **Swap the knight's team color:** C
 
-Enemies flash when hit, spray blood that stays on the floor, and respawn 6 seconds after dying.
+Attacks are held pose keys (anticipation, smears, contact, follow-through). A hit freezes attacker and victim briefly (hitstop), flashes for 50 ms and knocks the enemy back; a kill adds a short screen shake (`?shake=0` turns it off) and a collapse-and-dissolve death. Blood stays on the floor, and enemies respawn 6 seconds after dying.
 
 ## How it's drawn
 | Layer | Technique |

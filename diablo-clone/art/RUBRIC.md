@@ -1,8 +1,18 @@
 # Sprite review rubric
 
-Score each sprite from its contact sheet (`node tools/art.cjs sheet`), never from code or ASCII.
-Every "no" must name the frame and region (for example "frame 3, shield's lower edge").
-Run at most 3 passes, record the score of each, and keep the best version, not the latest.
+Review each sprite from its contact sheet (`node tools/art.cjs sheet`), never from code or ASCII.
+
+**The five questions are a gate, not a score.** Every "no" must name the frame and region (for
+example "frame 3, shield's lower edge") and gets fixed before anything else.
+
+**Choosing between passes is pairwise.** Put the new pass and the best pass so far side by side,
+unlabeled, and ask "which is better?" twice, once in each left/right order. If the answers
+disagree, call it a tie and keep the earlier pass. Run at most 3 passes. Pairwise judging agrees
+with humans far better than absolute scores (Pearson 0.80 vs 0.45 in MLLM-as-a-Judge), and the
+order swap cancels position bias. Log how often the two orders disagree.
+
+Don't ask the judge about 1 px details, gaps or overlaps; vision models are unreliable at that
+(best model ~74% on overlapping-circle tests). The lint metrics own geometry.
 
 | # | Question (yes/no) | What "yes" looks like |
 |---|---|---|
