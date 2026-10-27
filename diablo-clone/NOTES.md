@@ -1,7 +1,7 @@
 # Diablo-clone project notes
 
 Running log of decisions, state and next steps, so work can resume in a fresh session.
-Last updated: 2026-10-27.
+Last updated: 2026-10-27 (round 6: playable game build).
 
 ## Goal
 A 2D pixel-art, isometric, Diablo-style action RPG for mobile (portrait). The open question
@@ -16,18 +16,28 @@ committed and pushed before ending a turn.
 
 | Path | What |
 |---|---|
-| `diablo-clone/prototype-simple/` | **The main prototype.** 270×480, playable, all art in code. `index.html` is the whole game |
+| `diablo-clone/game/` | **The main game (round 6).** Playable vertical slice: rig-rendered 8-direction characters, generated dungeon, fog of war, combat, loot, inventory, save. Multi-file, no build, no image assets. Published for phone testing at https://claude.ai/artifact/7EX2mEMH4cSGuKC2c3K29g |
+| `diablo-clone/prototype-simple/` | Earlier single-file prototype (hand-composed room, 2D primitive sprites). Kept as the before/after baseline |
 | `diablo-clone/prototype-original/` | One-off attempt to match the original concept art (384×576, 3D-primitive characters, precomputed shadows). Looks closest to the concept but ~5 s load and 11–16 fps; characters read as smooth "toys". Not developed further |
 | `diablo-clone/tools/art.cjs` | Review tooling (see below) |
 | `diablo-clone/tools/bench.cjs` | Frame-time benchmark at 1× and 4× CPU throttle |
 | `diablo-clone/tools/combat.cjs` | Deterministic combat recording (two swings at the spider, second kills) to PNG frames |
+| `diablo-clone/tools/rig-sheet.cjs` | Contact sheet for a rig family or monster id: `node tools/rig-sheet.cjs hero|skeleton|fallen|hound|spider|<monster id> <outdir>` |
+| `diablo-clone/tools/bench-game.cjs` | Game benchmark: level load, first 5 s (cold sprite cache) and warm frames, 1× and 4× CPU |
+| `diablo-clone/tools/compare-new.cjs` | Old vs new sprites (before/after + blind A/B with base64 keys) and scene before/after → `art-review/new-game/` |
 | `diablo-clone/art/RUBRIC.md` | 5-question gate + pairwise selection rules |
 | `.claude/skills/pixel-sprite/SKILL.md` | Project skill for drawing/revising sprites with the review loop |
 | `diablo-clone/art-review/` | Committed review images: blind A/B sheets, `before-after/` comparisons |
 | `diablo-clone/art-review/blind-keys.b64.txt` | Encoded answer keys for the blind sheets. Don't decode until the user has judged |
 | `reports/` + `research_notes/` | Two deep-research reports and their notes |
 
-Run the game: open `diablo-clone/prototype-simple/index.html` in a browser.
+Run the game: open `diablo-clone/game/index.html` in a browser (or the published link above on a phone).
+Game controls: left thumb anywhere on the left half = floating move stick; right half / sword button =
+attack (auto-targets and walks to the nearest visible enemy); star button = holy bolt (6 mana); potion
+button; bag = inventory (tap item → EQUIP/REMOVE/DROP, COLOR swaps red/blue); map = automap. Keyboard:
+WASD, J/space attack, K bolt, Q potion, I inventory, M map, C team color. URL params `?shake=0`, `?fps=1`.
+
+Run the old prototype: open `diablo-clone/prototype-simple/index.html`.
 Controls: WASD/arrows or left stick to move; Space/J or right side to attack; C swaps knight
 team color (red/blue). URL params: `?shade=edge` (old shader, for A/B), `?shake=0`.
 
@@ -56,6 +66,49 @@ team color (red/blue). URL params: `?shade=edge` (old shader, for A/B), `?shake=
   the `hit` key. Hit: 70 ms hitstop (150 ms on kill), victim jitter, 50 ms flash, eased
   knockback. Kill: trauma² screen shake (kill only), 420 ms collapse + Bayer dissolve.
 - **Caches:** sprites keyed by pose step; UI redrawn at most every 100 ms.
+
+## How the game build works (diablo-clone/game, round 6)
+Files load as classic scripts in order: `core.js` (palette, light tables, math, 3x5 font) → `rig.js`
+(sprite renderer) → `actors.js` (biped skeleton, hero) → `monsters.js` (families, monster table, sprite
+cache) → `items.js` → `world.js` (dungeon) → `game.js` (simulation, combat, render, save) → `ui.js`
+(HUD, inventory, input, loop). `sheet.html` + `js/review.js` are review-only.
+- **Rig sprites:** each pose is a list of 3D primitives (sphere, oriented ellipsoid, round cone, capped
+  cylinder, oriented box) in local space (+x forward, +y the character's right, +z up; the tile grid is
+  left-handed). One orthographic ray per pixel from the 30° iso camera; all 8 directions rotate the
+  rig, never mirror pixels. Shading = the round-3 form shader on true normals, real cast shadows from
+  shadow rays, back rim, thresholded spec, internal lines only where similar colors overlap in depth,
+  black outline. Per-primitive `mf(point)` paints material details (visor slits, ribs, gold trim).
+  Weapon smears are emissive triangles depth-tested against the body. ~1.7 ms per sprite (desktop).
+- **Animation:** procedural. Biped joints from a gait phase + 2-bone IK; quadruped trot; spider
+  tetrapod gait with high knees. Attacks are `SWINGS` pose keys with hold times and a `hit` key
+  (light sword 420 ms, heavy 700 ms). Death = 6 keys that tip the rig over; the last frame is baked
+  into the floor as a corpse. Walk frames advance with distance moved (no foot sliding).
+- **Families vs variants (handoff roster ledger):** 4 enemy families + the hero. Variants: skeleton
+  (warrior, archer, burning dead), fallen (fallen one, shaman), hound (crypt hound, bone hound), spider
+  (cave spider, broodmother unique on level 3+). Count families and variants separately.
+- **Equipment:** item = base (slot + visual look) + rolled affixes; stats never change the look. Looks
+  are rig parts: helm none/cap/great/horned, chest tunic/chain/plate, weapon sword/axe/mace, shield
+  none/buckler/kite, team red/blue. Gear changes show in game and on the inventory paper doll.
+- **Sprite cache:** keyed family|look|dir|clip|frame; idle + hero walk prebuilt at level load, the rest
+  built in the background (2 ms/frame) and on demand with a 2 ms budget; past the budget a missing pose
+  falls back to the nearest cached frame. Death frames always build (they hide under the kill hitstop).
+- **Dungeon:** seeded rooms (6–10 tiles) + MST corridors (2 wide) + 2 loops, BFS reachability check,
+  props only kept if every floor tile stays reachable. A wall is tall only when no floor lies in the
+  screen column it covers, otherwise it's a 14 px stub, so the hero is never hidden by walls; tall
+  props in front of the hero redraw dithered. Floors: flagstones in rooms, cobbles in corridors, moss,
+  baked wall-base contact shadow, banners and cracks on walls. Barrels break, chests open on contact,
+  stairs in the farthest room lead to a harder floor.
+- **Light + fog:** static torches/braziers summed into two world light maps (two flicker phases);
+  hero and bolts are dynamic lights. Fog per tile: unseen = black, seen = dim memory, visible =
+  LOS + 9.5-tile radius with a soft edge. Monsters outside vision aren't drawn.
+- **Combat:** auto-target + walk-to-target on attack (phone friendly), damage on the hit key, cone
+  check, hitstop 70/150 ms, flash, knockback, sparks/blood/bone chips (pooled typed-array particles),
+  damage numbers, hit recovery interrupts monster attacks on big hits, block chance from shields,
+  armor reduction, life steal. Monster AI: sleep → wake on sight (wakes neighbors) → chase via a BFS
+  flow field toward the hero; ranged ones keep distance and shoot arrows/firebolts on their hit key.
+- **Save:** versioned JSON in localStorage (`dcg-save`, v1): level, seed, hero stats, equipment, bag.
+  Saved every 20 s, on stairs, on backgrounding and pagehide. Backgrounding also pauses and clears
+  held input. On the published page the save lives in that phone's browser only.
 
 ## Review loop (use it for every art change)
 1. `cd diablo-clone && node tools/art.cjs sheet --out <dir>` → contact sheet per character
@@ -89,8 +142,13 @@ Full detail: `reports/Better code generated pixel art.md` and
 | 3 | Form shading + review tools + rubric + skill | Light-direction lint up for every character (skeleton 0.09 → 0.37) |
 | 4 | Material shading, combat feel, pairwise review | Combat clearly better frame by frame; shading changes subtle |
 | 5 | Ramp palette + light tables + performance | Steel/bone keep their color under torchlight; 4×-throttled median frame 47.9 → 15.3 ms (p95 74 → 29 ms); desktop 10.4 → 3.7 ms |
+| 6 | New game build from the handoff + all of the above (`diablo-clone/game`) | Playable loop works end to end (touch-tested on Pixel 7 emulation: move+attack together, skill, potion, equip, save/continue, death/rise, pause on background). Warm frames 3.8 ms desktop / 20.3 ms at 4× throttle (≈50 fps), p95 31 ms; level load 0.45 s / 1.6 s. First 5 s at 4×: median 26 ms while sprites build. Stills: old hand-drawn sprites read bigger and more illustrated; new ones win on motion, 8 directions and visible gear |
 
 ## Waiting on the user
+- **Play the published game on the phone** (https://claude.ai/artifact/7EX2mEMH4cSGuKC2c3K29g) and say how
+  controls, size, speed and look feel. Real-device frame time is still unmeasured.
+- **Blind A/B: old vs new sprites** in `art-review/new-game/sprites-blind.png` (A or B per character);
+  key in `art-review/new-game/blind-key.b64.txt`, don't decode first.
 - **Blind A/B picks** (A or B per character: knight, skeleton, hound, spider) for
   `art-review/ab-blind-1.png` and `art-review/before-after/shading-blind.png`.
 - Whether the new combat feels better in `art-review/before-after/combat.gif`.
@@ -98,7 +156,16 @@ Full detail: `reports/Better code generated pixel art.md` and
 - Trying the game on a real phone (offered to publish it as a page). Throttled desktop is
   only a stand-in.
 
-## Next steps (from the second report's action plan)
+## Next steps for the game build
+1. Act on the user's phone test (controls, layout, frame time on the real device).
+2. Monster walk-frame cost: cache sprites across sessions (IndexedDB) or bake at a lower canvas size;
+   death frames could prebuild per family at load.
+3. More hero skills and a class choice; boss room for the broodmother; town/stash later.
+4. Art pass with the review loop on the new families (hound front view is narrow; spider legs thin on
+   dark floors); hand-placed details per family where the rig reads generic.
+5. Palette cycling for fire/water, blend tables for glow (from the list below).
+
+## Next steps from the second report's action plan
 1. **Blend tables** (50%, additive, multiply) built at boot; use for fire glow, sparks, smoke,
    magic. No `globalAlpha`. Pool particles in typed arrays (they still use push/splice).
 2. **Palette color cycling** for fire, lava, water with coprime ramp lengths.

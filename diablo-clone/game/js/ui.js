@@ -312,10 +312,12 @@ addEventListener('pagehide', saveGame);
 
 // ---------------------------------------------------------------- loop
 function fitCanvas() {
-  const aspect = innerHeight / Math.max(1, innerWidth);
+  // fit the stage element when the page provides one (an embedded frame may pad the window)
+  const st = document.getElementById('stage'), vw = st ? st.clientWidth : innerWidth, vh = st ? st.clientHeight : innerHeight;
+  const aspect = vh / Math.max(1, vw);
   const h = clamp(Math.round(270 * aspect), 420, 600);
   if (h !== H || !scr) allocBuffers(270, h);
-  let s = Math.min(innerWidth / W, innerHeight / H);
+  let s = Math.min(vw / W, vh / H);
   if (s >= 2) s = Math.floor(s);
   cvs.style.width = (W * s) + 'px'; cvs.style.height = (H * s) + 'px';
 }
@@ -332,5 +334,6 @@ function tick(now) {
 // the title screen shows a real level behind it
 function titleScene() { newHero(); startLevel(1, 4242); G.msg = []; }
 addEventListener('resize', fitCanvas);
+if (typeof ResizeObserver !== 'undefined' && document.getElementById('stage')) new ResizeObserver(fitCanvas).observe(document.getElementById('stage'));
 fitCanvas();
 requestAnimationFrame(tick);

@@ -3,7 +3,18 @@ name: pixel-sprite
 description: Create or revise a code-drawn sprite for the diablo-clone game (characters, monsters, props) and check it with the contact-sheet review loop.
 ---
 
-# Drawing a sprite
+# Drawing a sprite (game build: rig sprites)
+
+In `diablo-clone/game/`, characters are 3D rigs (`js/actors.js`, `js/monsters.js`) rendered by
+`js/rig.js`. Build poses from `r.sph / r.ell / r.cone / r.cyl / r.box` in local space (+x forward,
++y the character's right, +z up, 1 unit ≈ 1 px). Shape and normals come from the primitives; paint
+small details with a primitive's `mf(point)` (return a material or 0), not extra pixels. Keep limbs
+≥ 0.9 units radius or they flicker. Group primitives that are one mass with `r.group()`. Attacks are
+`SWINGS` keys (`hit` marks damage). Review with `node tools/rig-sheet.cjs <family|monster id> <dir>`:
+it shows all 8 directions, walk, attack and death, lit bands, 1x and silhouettes. Then the same
+rubric and pairwise rules below. The section below describes the older prototype's 2D builder.
+
+# Drawing a sprite (prototype-simple: 2D builder)
 
 Sprites are functions in `diablo-clone/prototype-simple/index.html` that draw primitives into
 an `SB` sprite builder. Mechanical rules live in code, not in this file:

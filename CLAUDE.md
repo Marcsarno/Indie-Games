@@ -3,7 +3,9 @@
 Read `diablo-clone/NOTES.md` first: it has the project state, how the code-drawn art engine
 works, the review loop, research findings, what's waiting on the user, and next steps.
 
-- Main game: `diablo-clone/prototype-simple/index.html` (single file, no build, no image assets).
+- Main game: `diablo-clone/game/` (classic scripts, no build, no image assets; open `index.html`).
+  The earlier single-file prototype `diablo-clone/prototype-simple/` is the before/after baseline.
+- After changing the game, republish it to the same artifact (see NOTES.md) so the phone link updates.
 - Any sprite or art change goes through the `pixel-sprite` skill and `diablo-clone/art/RUBRIC.md`.
 - Show changes as before/after comparisons; shader changes get a blind A/B for the user.
 - Keep `diablo-clone/NOTES.md` updated when a round of work finishes.
