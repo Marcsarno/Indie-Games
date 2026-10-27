@@ -251,15 +251,28 @@ function poseState(fam, ent, clip, f) {
   if (clip === 'attack' || clip === 'shoot' || clip === 'cast') { const sw = FAMILIES[fam].swing(ent); st.key = sw[f]; st.prev = sw[f - 1]; }
   return st;
 }
+// Builds are budgeted per frame: past the budget, a missing pose falls back to the nearest cached
+// frame (same direction) and is queued, so a crowd turning at once never stalls a frame.
+const buildBudget = { ms: Infinity, used: 0 };
+const fallbackOrder = { walk: ['walk', 'idle'], idle: ['idle'], attack: ['attack', 'idle'], shoot: ['shoot', 'idle'], cast: ['cast', 'idle'], hit: ['hit', 'idle'], death: ['death'] };
 function getSprite(fam, look, dir, clip, f, ent) {
-  const k = `${fam}|${fam === 'hero' ? heroKey(look) : lookKey(look)}|${dir}|${clip}|${f}`;
+  const lk = fam === 'hero' ? heroKey(look) : lookKey(look);
+  const k = `${fam}|${lk}|${dir}|${clip}|${f}`;
   let sp = spriteCache.get(k);
+  if (!sp && buildBudget.used > buildBudget.ms && clip !== 'death') {
+    for (const c of fallbackOrder[clip] || ['idle']) for (let g = 0; g < 8; g++) {
+      const q = spriteCache.get(`${fam}|${lk}|${dir}|${c}|${(f + g) % 8}`) || spriteCache.get(`${fam}|${lk}|${dir}|${c}|0`);
+      if (q) { if (typeof warmQueue !== 'undefined') warmQueue.push([fam, look, dir, clip, f]); return q; }
+    }
+  }
   if (!sp) {
+    const t0 = performance.now();
     const F = FAMILIES[fam], [w, h, ax, ay] = F.size;
     const ex = ent || { look };
     sp = renderRig(F.rig(look, poseState(fam, ex, clip, f)), yawOf(dir), w, h, ax, ay);
     if (spriteCache.size > 3000) spriteCache.clear();
     spriteCache.set(k, sp); spriteBuilds++;
+    buildBudget.used += performance.now() - t0;
   }
   return sp;
 }

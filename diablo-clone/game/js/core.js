@@ -61,6 +61,9 @@ for (let i = 1; i < NPAL; i++) {
     LTAB[L][i] = pos === 0 ? 0 : chain[clamp(np, 1, chain.length - 1)];
   }
 }
+// flat lit-color table: LCOL[level * NPAL + index] = RGBA of that index at that light level
+const LCOL = new Uint32Array(LEVELS * NPAL);
+for (let L = 0; L < LEVELS; L++) for (let i = 0; i < NPAL; i++) LCOL[L * NPAL + i] = PAL32[LTAB[L][i]];
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => v / 16);
 
 // ---------------------------------------------------------------- random

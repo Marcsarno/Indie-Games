@@ -73,6 +73,8 @@ class Rig {
     if (L <= Math.abs(ra - rb) + 0.05) return ra > rb ? this.sph(a, ra, m, o) : this.sph(b, rb, m, o);
     return this.add({ k: 2, a, b, ra, rb, m, ...o });
   }
+  // capped cylinder from a to b
+  cyl(a, b, r, m, o = {}) { return this.add({ k: 4, a, b, r, m, ...o }); }
   // oriented box: half extents along axes ex, ey, ez
   box(c, half, m, axes = null, o = {}) { return this.add({ k: 3, c, half, ax: axes || [[1, 0, 0], [0, 1, 0], [0, 0, 1]], m, ...o }); }
   // emissive triangles drawn after shading (weapon smears), depth-tested against the body
@@ -99,37 +101,60 @@ function hitPrim(p, o, d) {
     return true;
   }
   if (p.k === 1) {
-    const oc = V.sub(o, p.c), A = p.ax, R = p.rad;
-    const o0 = V.dot(oc, A[0]) / R[0], o1 = V.dot(oc, A[1]) / R[1], o2 = V.dot(oc, A[2]) / R[2];
-    const d0 = V.dot(d, A[0]) / R[0], d1 = V.dot(d, A[1]) / R[1], d2 = V.dot(d, A[2]) / R[2];
+    const A = p.ax, R = p.rad, a0 = A[0], a1 = A[1], a2 = A[2];
+    const cx = o[0] - p.c[0], cy = o[1] - p.c[1], cz = o[2] - p.c[2];
+    const o0 = (cx * a0[0] + cy * a0[1] + cz * a0[2]) / R[0], o1 = (cx * a1[0] + cy * a1[1] + cz * a1[2]) / R[1], o2 = (cx * a2[0] + cy * a2[1] + cz * a2[2]) / R[2];
+    const d0 = (d[0] * a0[0] + d[1] * a0[1] + d[2] * a0[2]) / R[0], d1 = (d[0] * a1[0] + d[1] * a1[1] + d[2] * a1[2]) / R[1], d2 = (d[0] * a2[0] + d[1] * a2[1] + d[2] * a2[2]) / R[2];
     const a = d0 * d0 + d1 * d1 + d2 * d2, b = o0 * d0 + o1 * d1 + o2 * d2, c = o0 * o0 + o1 * o1 + o2 * o2 - 1;
     const h = b * b - a * c; if (h < 0) return false;
     HT = (-b - Math.sqrt(h)) / a;
     const p0 = (o0 + d0 * HT) / R[0], p1 = (o1 + d1 * HT) / R[1], p2 = (o2 + d2 * HT) / R[2];
-    const n = V.norm([A[0][0] * p0 + A[1][0] * p1 + A[2][0] * p2, A[0][1] * p0 + A[1][1] * p1 + A[2][1] * p2, A[0][2] * p0 + A[1][2] * p1 + A[2][2] * p2]);
-    HN[0] = n[0]; HN[1] = n[1]; HN[2] = n[2];
+    const nx = a0[0] * p0 + a1[0] * p1 + a2[0] * p2, ny = a0[1] * p0 + a1[1] * p1 + a2[1] * p2, nz = a0[2] * p0 + a1[2] * p1 + a2[2] * p2;
+    const l = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+    HN[0] = nx / l; HN[1] = ny / l; HN[2] = nz / l;
     return true;
   }
   if (p.k === 2) {   // round cone (Inigo Quilez)
-    const ba = V.sub(p.b, p.a), oa = V.sub(o, p.a), ob = V.sub(o, p.b), ra = p.ra, rb = p.rb, rr = ra - rb;
-    const m0 = V.dot(ba, ba), m1 = V.dot(ba, oa), m2 = V.dot(ba, d), m3 = V.dot(d, oa), m5 = V.dot(oa, oa), m6 = V.dot(ob, d), m7 = V.dot(ob, ob);
+    const pa = p.a, pb = p.b, ra = p.ra, rb = p.rb, rr = ra - rb;
+    const bax = pb[0] - pa[0], bay = pb[1] - pa[1], baz = pb[2] - pa[2];
+    const oax = o[0] - pa[0], oay = o[1] - pa[1], oaz = o[2] - pa[2];
+    const obx = o[0] - pb[0], oby = o[1] - pb[1], obz = o[2] - pb[2];
+    const m0 = bax * bax + bay * bay + baz * baz, m1 = bax * oax + bay * oay + baz * oaz, m2 = bax * d[0] + bay * d[1] + baz * d[2];
+    const m3 = d[0] * oax + d[1] * oay + d[2] * oaz, m5 = oax * oax + oay * oay + oaz * oaz, m6 = obx * d[0] + oby * d[1] + obz * d[2], m7 = obx * obx + oby * oby + obz * obz;
     const d2 = m0 - rr * rr, k2 = d2 - m2 * m2, k1 = d2 * m3 - m1 * m2 + m2 * rr * ra, k0 = d2 * m5 - m1 * m1 + m1 * rr * ra * 2 - m0 * ra * ra;
     const h = k1 * k1 - k0 * k2; if (h < 0) return false;
     let t = (-Math.sqrt(h) - k1) / k2;
     const y = m1 - ra * rr + t * m2;
     if (y > 0 && y < d2) {
       HT = t;
-      const n = V.norm(V.sub(V.mul(V.mad(oa, d, t), d2), V.mul(ba, y)));
-      HN[0] = n[0]; HN[1] = n[1]; HN[2] = n[2];
+      const nx = d2 * (oax + d[0] * t) - bax * y, ny = d2 * (oay + d[1] * t) - bay * y, nz = d2 * (oaz + d[2] * t) - baz * y;
+      const l = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+      HN[0] = nx / l; HN[1] = ny / l; HN[2] = nz / l;
       return true;
     }
     const h1 = m3 * m3 - m5 + ra * ra, h2 = m6 * m6 - m7 + rb * rb;
     if (Math.max(h1, h2) < 0) return false;
     let best = 1e20;
-    if (h1 > 0) { t = -m3 - Math.sqrt(h1); best = t; const q = V.mad(oa, d, t); HN[0] = q[0] / ra; HN[1] = q[1] / ra; HN[2] = q[2] / ra; }
-    if (h2 > 0) { t = -m6 - Math.sqrt(h2); if (t < best) { best = t; const q = V.mad(ob, d, t); HN[0] = q[0] / rb; HN[1] = q[1] / rb; HN[2] = q[2] / rb; } }
+    if (h1 > 0) { t = -m3 - Math.sqrt(h1); best = t; HN[0] = (oax + d[0] * t) / ra; HN[1] = (oay + d[1] * t) / ra; HN[2] = (oaz + d[2] * t) / ra; }
+    if (h2 > 0) { t = -m6 - Math.sqrt(h2); if (t < best) { best = t; HN[0] = (obx + d[0] * t) / rb; HN[1] = (oby + d[1] * t) / rb; HN[2] = (obz + d[2] * t) / rb; } }
     HT = best;
     return true;
+  }
+  if (p.k === 4) {   // capped cylinder (Inigo Quilez)
+    const ba = V.sub(p.b, p.a), oc = V.sub(o, p.a);
+    const baba = V.dot(ba, ba), bard = V.dot(ba, d), baoc = V.dot(ba, oc);
+    const k2 = baba - bard * bard, k1 = baba * V.dot(oc, d) - baoc * bard, k0 = baba * V.dot(oc, oc) - baoc * baoc - p.r * p.r * baba;
+    let h = k1 * k1 - k2 * k0; if (h < 0) return false;
+    h = Math.sqrt(h);
+    let t = (-k1 - h) / k2;
+    const y = baoc + t * bard;
+    if (y > 0 && y < baba) {
+      HT = t; const q = V.mad(oc, d, t), n = V.mul(V.sub(q, V.mul(ba, y / baba)), 1 / p.r);
+      HN[0] = n[0]; HN[1] = n[1]; HN[2] = n[2]; return true;
+    }
+    t = ((y < 0 ? 0 : baba) - baoc) / bard;
+    if (Math.abs(k1 + k2 * t) < h) { HT = t; const s = Math.sign(y) / Math.sqrt(baba); HN[0] = ba[0] * s; HN[1] = ba[1] * s; HN[2] = ba[2] * s; return true; }
+    return false;
   }
   // oriented box (slabs)
   const oc = V.sub(o, p.c), A = p.ax, Hh = p.half;
@@ -151,6 +176,7 @@ function boundOf(p) {
   if (p.k === 0) return [p.c, p.r];
   if (p.k === 1) return [p.c, Math.max(...p.rad)];
   if (p.k === 2) return [V.lerp(p.a, p.b, 0.5), V.len(V.sub(p.b, p.a)) / 2 + Math.max(p.ra, p.rb)];
+  if (p.k === 4) return [V.lerp(p.a, p.b, 0.5), V.len(V.sub(p.b, p.a)) / 2 + p.r];
   return [p.c, V.len(p.half)];
 }
 
@@ -160,33 +186,58 @@ function renderRig(rig, yaw, w, h, ax, ay) {
   const R = V.rotZ(CAM_R, -yaw), D = V.rotZ(CAM_D, -yaw), VD = V.rotZ(CAM_V, -yaw), T = V.mul(VD, -1), LL = V.rotZ(LIGHT_W, -yaw);
   const prims = rig.p, np = prims.length;
   const bx0 = new Float32Array(np), bx1 = new Float32Array(np), by0 = new Float32Array(np), by1 = new Float32Array(np);
+  let gx0 = 1e9, gx1 = -1e9, gy0 = 1e9, gy1 = -1e9;
   prims.forEach((p, i) => {
-    const [c, r] = boundOf(p), sx = V.dot(c, R), sy = V.dot(c, D);
-    bx0[i] = sx - r; bx1[i] = sx + r; by0[i] = sy - r; by1[i] = sy + r;
+    const [c, r] = boundOf(p);
+    p._c = c; p._r2 = r * r;
+    if (p.k === 2 || p.k === 4) {   // segments: bound the two end caps, not the whole sphere
+      const rr = p.k === 2 ? Math.max(p.ra, p.rb) : p.r * 1.42;
+      const ax0 = V.dot(p.a, R), ay0 = V.dot(p.a, D), bx = V.dot(p.b, R), by = V.dot(p.b, D);
+      bx0[i] = Math.min(ax0, bx) - rr; bx1[i] = Math.max(ax0, bx) + rr; by0[i] = Math.min(ay0, by) - rr; by1[i] = Math.max(ay0, by) + rr;
+    } else { const sx = V.dot(c, R), sy = V.dot(c, D); bx0[i] = sx - r; bx1[i] = sx + r; by0[i] = sy - r; by1[i] = sy + r; }
+    gx0 = Math.min(gx0, bx0[i]); gx1 = Math.max(gx1, bx1[i]); gy0 = Math.min(gy0, by0[i]); gy1 = Math.max(gy1, by1[i]);
   });
+  // only pixels inside the union of the primitives' screen bounds can be hit
+  const PX0 = Math.max(1, Math.floor(gx0 + ax - 1)), PX1 = Math.min(w - 1, Math.ceil(gx1 + ax + 1));
+  const PY0 = Math.max(1, Math.floor(gy0 + ay - 1)), PY1 = Math.min(h - 1, Math.ceil(gy1 + ay + 1));
   const n = w * h;
   const m = new Uint8Array(n), pid = new Uint16Array(n), dep = new Float32Array(n).fill(1e9), zz = new Uint8Array(n);
   const nx = new Float32Array(n), ny = new Float32Array(n), nz = new Float32Array(n), shad = new Uint8Array(n), bias = new Int8Array(n);
-  const o = [0, 0, 0];
-  for (let py = 1; py < h - 1; py++) for (let px = 1; px < w - 1; px++) {
-    const sx = px - ax + 0.5, sy = py - ay + 0.5;
-    o[0] = R[0] * sx + D[0] * sy - VD[0] * 400; o[1] = R[1] * sx + D[1] * sy - VD[1] * 400; o[2] = R[2] * sx + D[2] * sy - VD[2] * 400;
-    let bt = 1e9, bi = -1, n0 = 0, n1 = 0, n2 = 0;
-    for (let i = 0; i < np; i++) {
-      if (sx < bx0[i] || sx > bx1[i] || sy < by0[i] || sy > by1[i]) continue;
-      if (hitPrim(prims[i], o, VD) && HT < bt && HT > 0) { bt = HT; bi = i; n0 = HN[0]; n1 = HN[1]; n2 = HN[2]; }
+  // splat each primitive over its own screen box, keeping the nearest hit per pixel
+  const bi = new Int16Array(n).fill(-1), o = [0, 0, 0];
+  for (let i = 0; i < np; i++) {
+    const p = prims[i];
+    const x0 = Math.max(PX0, Math.floor(bx0[i] + ax)), x1 = Math.min(PX1 - 1, Math.ceil(bx1[i] + ax));
+    const y0 = Math.max(PY0, Math.floor(by0[i] + ay)), y1 = Math.min(PY1 - 1, Math.ceil(by1[i] + ay));
+    for (let py = y0; py <= y1; py++) {
+      const sy = py - ay + 0.5;
+      for (let px = x0; px <= x1; px++) {
+        const sx = px - ax + 0.5;
+        o[0] = R[0] * sx + D[0] * sy - VD[0] * 400; o[1] = R[1] * sx + D[1] * sy - VD[1] * 400; o[2] = R[2] * sx + D[2] * sy - VD[2] * 400;
+        if (!hitPrim(p, o, VD) || HT <= 0) continue;
+        const k = py * w + px;
+        if (HT >= dep[k]) continue;
+        dep[k] = HT; bi[k] = i; nx[k] = HN[0]; ny[k] = HN[1]; nz[k] = HN[2];
+      }
     }
-    if (bi < 0) continue;
-    const k = py * w + px, p = prims[bi], P = V.mad(o, VD, bt);
+  }
+  for (let k = 0; k < n; k++) {
+    const i = bi[k]; if (i < 0) continue;
+    const p = prims[i], bt = dep[k], px = k % w, py = (k / w) | 0, sx = px - ax + 0.5, sy = py - ay + 0.5;
+    const P = [R[0] * sx + D[0] * sy + VD[0] * (bt - 400), R[1] * sx + D[1] * sy + VD[1] * (bt - 400), R[2] * sx + D[2] * sy + VD[2] * (bt - 400)];
+    const n0 = nx[k], n1 = ny[k], n2 = nz[k];
     let mat = p.m;
     if (p.mf) { const mm = p.mf(P, [n0, n1, n2]); if (mm) mat = mm; }
-    m[k] = mat; pid[k] = p.part; dep[k] = bt; zz[k] = clamp(Math.round(P[2]), 0, 255); bias[k] = p.bias || 0;
+    m[k] = mat; pid[k] = p.part; zz[k] = clamp(Math.round(P[2]), 0, 255); bias[k] = p.bias || 0;
     nx[k] = n0 * R[0] + n1 * R[1] + n2 * R[2]; ny[k] = n0 * D[0] + n1 * D[1] + n2 * D[2]; nz[k] = n0 * T[0] + n1 * T[1] + n2 * T[2];
     // cast shadow: does anything else sit between this point and the light?
     if (!MATS[mat].flat) {
       const so = [P[0] + n0 * 0.6, P[1] + n1 * 0.6, P[2] + n2 * 0.6];
-      for (let i = 0; i < np; i++) {
-        const q = prims[i]; if (q.part === p.part || q.noShadow) continue;
+      for (let i2 = 0; i2 < np; i2++) {
+        const q = prims[i2]; if (q.part === p.part || q.noShadow) continue;
+        const c = q._c, ox = so[0] - c[0], oy = so[1] - c[1], oz = so[2] - c[2];
+        const b = ox * LL[0] + oy * LL[1] + oz * LL[2], cc = ox * ox + oy * oy + oz * oz - q._r2;
+        if ((cc > 0 && b > 0) || b * b - cc < 0) continue;
         if (hitPrim(q, so, LL) && HT > 0.3) { shad[k] = 1; break; }
       }
     }
@@ -208,14 +259,16 @@ function shade(w, h, ax, ay, B, rig, R, D, VD) {
   }
   // majority cleanup: a tone pixel that disagrees with 3+ same-part neighbors joins them
   const t2 = tone.slice();
+  const NB = [-1, 1, -w, w], cnt = new Int8Array(16);
   for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
-    const k = y * w + x; if (tone[k] < 0) continue;
-    const cnt = {}; let same = 0;
-    for (const q of [k - 1, k + 1, k - w, k + w]) {
-      if (tone[q] < 0 || pid[q] !== pid[k] || m[q] !== m[k]) continue;
-      if (tone[q] === tone[k]) same++; else cnt[tone[q]] = (cnt[tone[q]] || 0) + 1;
+    const k = y * w + x, tk = tone[k]; if (tk < 0) continue;
+    let same = 0, other = 0; cnt.fill(0);
+    for (let a = 0; a < 4; a++) {
+      const q = k + NB[a], tq = tone[q];
+      if (tq < 0 || pid[q] !== pid[k] || m[q] !== m[k]) continue;
+      if (tq === tk) same++; else { cnt[tq]++; other++; }
     }
-    if (same === 0) for (const v in cnt) if (cnt[v] >= 3) t2[k] = +v;
+    if (same === 0 && other >= 3) for (let v = 0; v < 16; v++) if (cnt[v] >= 3) t2[k] = v;
   }
   // back rim: silhouette pixels facing away from the light lift one step so dark sides read
   const t3 = t2.slice();
@@ -247,7 +300,8 @@ function shade(w, h, ax, ay, B, rig, R, D, VD) {
   const o2 = d.slice();
   for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
     const k = y * w + x; if (t2[k] < 0) continue;
-    for (const q of [k - 1, k + 1, k - w, k + w]) {
+    for (let a = 0; a < 4; a++) {
+      const q = k + NB[a];
       if (!m[q] || pid[q] === pid[k] || dep[q] > dep[k] - 2.5 || (d[q] & EMIS)) continue;
       if (Math.abs(lum(d[q] & 127) - lum(d[k] & 127)) < 0.12) { const rp = MATS[m[k]].ramp; o2[k] = rp[lo(m[k])]; break; }
     }
