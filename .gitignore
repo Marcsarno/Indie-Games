@@ -2,3 +2,4 @@
 diablo-clone/art-review/*
 !diablo-clone/art-review/ab-blind-*.png
 !diablo-clone/art-review/before-after/
+!diablo-clone/art-review/blind-keys.b64.txt
