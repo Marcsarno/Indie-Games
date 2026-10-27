@@ -161,7 +161,9 @@ function heroAttack() {
 }
 const heroReach = () => hero.look.weapon === 'sword' ? 1.45 : 1.35;
 function heroCast() {
-  if (G.mode !== 'play' || hero.dead || hero.atk >= 0 || hero.cast >= 0) return;
+  if (G.mode !== 'play' || hero.dead || hero.cast >= 0) return;
+  if (hero.atk >= 0) { hero.castQueued = true; return; }   // fires when the swing ends
+  hero.castQueued = false;
   if (hero.mana < 6) { say('NOT ENOUGH MANA', 40, 1.2); return; }
   let best = null, bd = 9;
   for (const e of enemies) { if (!alive(e) || LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] < 0.3) continue; const d = Math.hypot(e.fi - hero.fi, e.fj - hero.fj); if (d < bd && los(hero.fi, hero.fj, e.fi, e.fj)) { bd = d; best = e; } }
@@ -291,7 +293,7 @@ function update(dt) {
   for (const g of groundItems) g.t += dt;
 }
 function updateHero(dt) {
-  if (hero.dead) { hero.dead += dt; hero.clock += dt; return; }
+  if (hero.dead) { hero.dead += dt; hero.clock += dt; hero.flash = 0; return; }
   hero.flash = Math.max(0, hero.flash - dt); hero.hurtT = Math.max(0, hero.hurtT - dt);
   hero.hp = Math.min(STAT.maxHp, hero.hp + dt * 0.25); hero.mana = Math.min(STAT.maxMana, hero.mana + dt * 1.2);
   if (input.attack) heroAttack();
@@ -328,7 +330,7 @@ function updateHero(dt) {
     hero.atk += dt * 1000;
     const sw = weaponSwing(hero.look), ki = swingKey(sw, hero.atk);
     if (ki >= 0 && sw[ki].hit && !hero.hitDone) { hero.hitDone = true; heroHitResolve(); }
-    if (ki < 0) { hero.atk = -1; hero.clip = 'idle'; }
+    if (ki < 0) { hero.atk = -1; hero.clip = 'idle'; if (hero.castQueued) heroCast(); }
   }
   // pick up what we walk over; open chests by walking into them
   for (let n = groundItems.length - 1; n >= 0; n--) {
@@ -416,7 +418,6 @@ function hurtHero(dmg, src) {
   if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.25);
   if (hero.hp <= 0) {
     hero.hp = 0; hero.dead = 0.001; hero.clip = 'death'; hero.clock = 0; hero.atk = -1;
-    say('YOU HAVE DIED', 22, 99);
   }
   void src;
 }
@@ -607,7 +608,7 @@ function drawProjectile(p) {
 // one level each so they never shimmer.
 function lightPass(chars, kx, ky) {
   const t = G.t;
-  const dyn = [{ x: kx, y: ky, z: 32, r: 120, i: 0.55 }];
+  const dyn = [{ x: kx, y: ky, z: 34, r: 145, i: 0.62 }];
   for (const p of projectiles) if (p.kind !== 'arrow' && dyn.length < 5) { const [x, y] = iso(p.fi, p.fj); dyn.push({ x, y, z: p.z, r: 70, i: 0.8 }); }
   const fl = g => 1 + 0.07 * Math.sin(t * 11 + g * 2.3) + 0.05 * Math.sin(t * 23.7 + g * 5.1) + 0.04 * Math.sin(t * 37 + g);
   const f0 = fl(0), f1 = fl(1), A = staticLight[0], B = staticLight[1];

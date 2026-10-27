@@ -260,6 +260,7 @@ function invTap(p) {
 
 // ---------------------------------------------------------------- input
 function toNative(e) { const r = cvs.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H]; }
+function capture(e) { try { cvs.setPointerCapture(e.pointerId); } catch (err) { /* synthetic or already-ended pointer */ } }
 function clearInput() { stick.id = null; input.mx = input.my = 0; input.attack = false; press.attack = null; press.skill = false; input.keys.clear(); }
 cvs.addEventListener('pointerdown', e => {
   e.preventDefault();
@@ -272,8 +273,8 @@ cvs.addEventListener('pointerdown', e => {
   if (hitCircle(p, UI.map)) { showMap = !showMap; return; }
   if (hitCircle(p, UI.potion)) { drinkPotion(); return; }
   if (hitCircle(p, UI.skill, 6)) { press.skill = true; heroCast(); return; }
-  if (hitCircle(p, UI.attack, 10) || (p[0] > W * 0.55 && p[1] > H * 0.3)) { press.attack = e.pointerId; input.attack = true; heroAttack(); cvs.setPointerCapture(e.pointerId); return; }
-  if (p[0] < W * 0.55 && stick.id === null) { stick.id = e.pointerId; stick.ox = p[0]; stick.oy = p[1]; stick.x = p[0]; stick.y = p[1]; cvs.setPointerCapture(e.pointerId); }
+  if (hitCircle(p, UI.attack, 10) || (p[0] > W * 0.55 && p[1] > H * 0.3)) { press.attack = e.pointerId; input.attack = true; heroAttack(); capture(e); return; }
+  if (p[0] < W * 0.55 && stick.id === null) { stick.id = e.pointerId; stick.ox = p[0]; stick.oy = p[1]; stick.x = p[0]; stick.y = p[1]; capture(e); }
 }, { passive: false });
 cvs.addEventListener('pointermove', e => {
   if (e.pointerId !== stick.id) return;

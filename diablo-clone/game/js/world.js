@@ -46,7 +46,7 @@ function tryGen(level, seed) {
   map.fill(VOID); LV.solid.fill(0); LV.roomOf.fill(-1); LV.seen.fill(0); LV.vis.fill(0);
   const rooms = [];
   for (let t = 0; t < 400 && rooms.length < 11; t++) {
-    const w = R.int(5, 9), h = R.int(5, 9), x = R.int(2, MW - w - 2), y = R.int(2, MH - h - 2);
+    const w = R.int(6, 10), h = R.int(6, 10), x = R.int(2, MW - w - 2), y = R.int(2, MH - h - 2);
     if (rooms.some(r => x < r.x + r.w + 3 && x + w + 3 > r.x && y < r.y + r.h + 3 && y + h + 3 > r.y)) continue;
     rooms.push({ x, y, w, h, cx: x + (w >> 1), cy: y + (h >> 1), type: R.pick(['crypt', 'hall', 'store', 'crypt']) });
   }
@@ -130,7 +130,7 @@ function placeDecor(R, level) {
     if (r.type === 'hall' && r.w >= 7 && r.h >= 7) {
       for (const [i, j] of [[r.x + 1, r.y + 1], [r.x + r.w - 2, r.y + 1], [r.x + 1, r.y + r.h - 2], [r.x + r.w - 2, r.y + r.h - 2]]) if (trySolid(i, j)) D.push({ kind: 'pillar', i, j });
       if (n && trySolid(r.cx, r.cy)) D.push({ kind: 'brazier', i: r.cx, j: r.cy });
-    }
+    } else if (n && r.w * r.h >= 36 && R() < 0.5 && trySolid(r.cx, r.cy)) D.push({ kind: 'brazier', i: r.cx, j: r.cy });
     if (r.type === 'store' || R() < 0.4) {
       const cnt = R.int(2, 4);
       for (let t = 0; t < 30 && D.filter(d => d.room === n && (d.kind === 'barrel' || d.kind === 'crate')).length < cnt; t++) {
@@ -155,7 +155,7 @@ function placeDecor(R, level) {
     if (!LV.tall[tIdx(i, j)]) continue;
     const faceR = tileAt(i + 1, j) === FLOOR, faceL = tileAt(i, j + 1) === FLOOR;
     if (!faceR && !faceL) continue;
-    if (hash(i, j, LV.seed) > 0.22 || torches.some(t => Math.abs(t.i - i) + Math.abs(t.j - j) < 6)) continue;
+    if (hash(i, j, LV.seed) > 0.4 || torches.some(t => Math.abs(t.i - i) + Math.abs(t.j - j) < 5)) continue;
     torches.push({ kind: 'torch', i, j, face: faceL ? 'L' : 'R' });
   }
   D.push(...torches);
