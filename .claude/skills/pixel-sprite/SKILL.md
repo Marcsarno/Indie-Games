@@ -13,7 +13,9 @@ an `SB` sprite builder. Mechanical rules live in code, not in this file:
 - **Parts:** each primitive is a part. Dark interior lines appear only where a rear part touches a
   front part of similar color. Wrap shapes that are one mass (a body made of 3 ellipses) in
   `s.group(() => { ... })`.
-- **Palette** is fixed; use existing materials (`defMat`). Add a material only for a new substance.
+- **Palette** is fixed and every color sits on a ramp in `PAL_RAMPS`; lighting steps colors along
+  their ramp, so a color outside a ramp can't be lit. Use existing materials (`defMat`); add a
+  material only for a new substance, and add any new color to a ramp.
   Materials differ by contrast `span` and thresholded `spec` ([n·H threshold, color]), not texture:
   metal high span with a guaranteed 1 px highlight, cloth low span and no highlight.
 - **Animation:** attacks are pose keys with hold times (`ATTACK`); damage, hitstop and effects fire

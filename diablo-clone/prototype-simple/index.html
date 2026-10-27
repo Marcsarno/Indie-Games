@@ -30,19 +30,22 @@ const outImg = ctx.createImageData(W, H);
 const out32 = new Uint32Array(outImg.data.buffer);
 
 // ---------------------------------------------------------------- palette
+// Every color sits on a dark-to-light ramp. Ramps lean cool in the darks and warm in the lights
+// (about 10° hue per step for stone and steel, more for cloth and skin), and all of them fade into
+// the same near-black tail, so darkness reads as one cool shadow instead of muddy browns.
 const PAL_HEX = [
   '000000',                                                             // 0  transparent
-  '0a0706', '140f0c', '1f1712',                                         // 1-3   blacks
-  '2a211a', '382c23', '47392d', '574738', '6a5744', '7f6a53', '977f63', 'b09574', 'cbb08a', // 4-12 stone
+  '0a0706', '151013', '1d1619',                                         // 1-3   outline black + shared dark tail
+  '1e171a', '2b2020', '41302a', '584130', '705437', '8a663d', 'a37a45', 'b98d50', 'cfa262', // 4-12 stone
   '4a1f0e', '8a3a12', 'c4601a', 'ec9a32', 'f8d16a', 'fff4c4',           // 13-18 fire
-  '2e0a0a', '4f1010', '7a1a17', 'a82822', 'd4473a',                     // 19-23 blood / red
-  '8c7f64', 'b9ac8c', 'dcd2b4', 'f4eedc',                               // 24-27 bone
-  '2c3036', '4a5058', '737b84', 'a4acb3', 'd6dce0',                     // 28-32 steel
-  '33200f', '52341b', '774c28', '9c6a3a',                               // 33-36 wood
-  '0d1640', '1d3592', '3b62d6', '8fb0ff',                               // 37-40 blue (UI only)
-  '2b1a17', '44291f', '603a2a',                                         // 41-43 spider
-  '6e4220', '94602f', 'b57f47', 'd4a263',                               // 44-47 torch-lit warm browns
-  '6b4a0e', 'a8781a', 'deae2a', 'f8de6a',                               // 48-51 gold trim
+  '2c0a16', '4d0f1b', '781a1e', 'a8281f', 'd4473a',                     // 19-23 blood / cloth red
+  '6f6670', 'a49a8a', 'd8ceb0', 'f6efdb',                               // 24-27 bone
+  '262b37', '434e60', '6f7b8c', 'a3adba', 'dbe2e8',                     // 28-32 steel
+  '351d16', '56331f', '7c502e', 'a26e3c',                               // 33-36 wood
+  '0d1640', '1d3592', '3b62d6', '8fb0ff',                               // 37-40 blue
+  '291820', '45282b', '663a2f',                                         // 41-43 spider
+  '3a0f0c', '6e1c14', 'a0301f', 'cf5034',                               // 44-47 demon flesh (warm shadows)
+  '5c3610', 'a8781a', 'deae2a', 'f8de6a',                               // 48-51 gold trim
 ];
 const NPAL = PAL_HEX.length;
 const PR = new Uint8Array(NPAL), PG = new Uint8Array(NPAL), PB = new Uint8Array(NPAL);
@@ -60,28 +63,25 @@ const STEEL = [28, 29, 30, 31, 32];
 const WOOD = [33, 34, 35, 36];
 const BLK = 1, K1 = 2, K2 = 3, EMIS = 128;
 
-// Lit colors get snapped back to the palette through 15-bit lookup tables. The environment
-// snaps to earthy colors only; the knight may also use gold and blue so trim and team
-// colors survive the torchlight without leaking into the stone.
-function buildLUT(cand) {
-  const LUT = new Uint8Array(32768);
-  for (let r = 0; r < 32; r++) for (let g = 0; g < 32; g++) for (let b = 0; b < 32; b++) {
-    const R = r * 8 + 4, G = g * 8 + 4, B = b * 8 + 4;
-    let best = 1, bd = 1e12;
-    for (const i of cand) {
-      const dr = R - PR[i], dg = G - PG[i], db = B - PB[i], rm = (R + PR[i]) / 2;
-      const d = (2 + rm / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256) * db * db;
-      if (d < bd) { bd = d; best = i; }
-    }
-    LUT[(r << 10) | (g << 5) | b] = best;
+// Light tables (Diablo 1's method): lighting never mixes RGB. Level L maps each palette index to
+// another index on its own ramp: below L_ID it steps about two colors down the ramp per level and
+// on into the shared tail (a fixed step, not proportional, so short ramps keep their texture in
+// the dark); above L_ID it steps up for torch-side over-exposure. Emissive pixels (fire, eyes)
+// never go through the tables.
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const TAIL = [1, 2, 3];
+const PAL_RAMPS = [[4, 5, 6, 7, 8, 9, 10, 11, 12], [13, 14, 15, 16, 17, 18], [19, 20, 21, 22, 23], [24, 25, 26, 27],
+  [28, 29, 30, 31, 32], [33, 34, 35, 36], [37, 38, 39, 40], [41, 42, 43], [44, 45, 46, 47], [48, 49, 50, 51]];
+const LEVELS = 9, L_ID = 3;   // light band 0..8 (band = light / 0.2); level 3 shows colors as drawn
+const LTAB = Array.from({ length: LEVELS }, () => new Uint8Array(NPAL));
+for (let i = 1; i < NPAL; i++) {
+  const ramp = PAL_RAMPS.find(r => r.includes(i));
+  const chain = ramp ? [...TAIL, ...ramp] : TAIL, pos = chain.indexOf(i);
+  for (let L = 0; L < LEVELS; L++) {
+    const np = L <= L_ID ? pos - Math.round((L_ID - L) * 1.8) : pos + Math.round((L - L_ID) * 0.4);
+    LTAB[L][i] = pos === 0 ? 0 : chain[clamp(np, 1, chain.length - 1)];
   }
-  return LUT;
 }
-const ENV_COLORS = [];
-for (let i = 1; i <= 36; i++) if (i < 15 || i > 18) ENV_COLORS.push(i);
-ENV_COLORS.push(41, 42, 43, 44, 45, 46, 47);
-const LUT_ENV = buildLUT(ENV_COLORS);
-const LUT_CHAR = buildLUT([...ENV_COLORS, 37, 38, 39, 40, 48, 49, 50, 51]);
 
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => v / 16);
 
@@ -100,7 +100,6 @@ function rng(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 
 // ---------------------------------------------------------------- map
 // Tile (i,j) projects to world pixels with a 2:1 isometric grid of 32x16 tiles.
@@ -151,6 +150,10 @@ function genFloor() {
     floorBuf[y * WW + x] = v;
   }
 }
+// Static scenery (floor, back walls, props) is baked once into world-sized buffers; each frame
+// copies the visible window and redraws only props that overlap a character.
+const wIdx = new Uint8Array(WW * WH), wZ = new Uint8Array(WW * WH), wFloor = new Uint8Array(WW * WH);
+function setFloor(k, v) { floorBuf[k] = v; if (wFloor[k]) wIdx[k] = v; }
 function stampBlood(wx, wy, size, seed) {
   const r = rng(seed);
   const blobs = 3 + size * 2;
@@ -163,14 +166,13 @@ function stampBlood(wx, wy, size, seed) {
       const k = y * WW + x;
       if (floorBuf[k] === BLK) continue;
       if (d > 0.75 && hash(x, y, seed) < 0.4) continue;
-      floorBuf[k] = d < 0.45 ? RED[2] : RED[1];
-      if (hash(x, y, seed + 1) < 0.05) floorBuf[k] = RED[3];
+      setFloor(k, hash(x, y, seed + 1) < 0.05 ? RED[3] : d < 0.45 ? RED[2] : RED[1]);
     }
   }
   for (let n = 0; n < size * 7; n++) {
     const a = r() * 6.283, d = size * 3 + r() * size * 6;
     const x = Math.round(wx + Math.cos(a) * d), y = Math.round(wy + Math.sin(a) * d * 0.5);
-    if (x >= 0 && y >= 0 && x < WW && y < WH && floorBuf[y * WW + x] !== BLK) floorBuf[y * WW + x] = RED[1];
+    if (x >= 0 && y >= 0 && x < WW && y < WH && floorBuf[y * WW + x] !== BLK) setFloor(y * WW + x, RED[1]);
   }
 }
 
@@ -192,7 +194,7 @@ defMat('CLOTH', [19, 20, 21, 22, 23], 2, { span: 0.6 });
 defMat('WOOD', WOOD, 2, { span: 0.8 });
 defMat('WOODTOP', [34, 35, 36], 1, { span: 0.8 });
 defMat('LEATHER', [33, 34, 35], 1, { span: 0.8 });
-defMat('FLESH', [19, 20, 21, 22, 23], 2, { span: 1.0, spec: [0.985, 23] });
+defMat('FLESH', [44, 45, 46, 47], 1, { span: 1.0, spec: [0.985, 47] });
 defMat('HORN', [3, 24, 25], 1, { spec: [0.97, 26] });
 defMat('SPIDER', [2, 41, 42, 43], 2, { span: 1.0, spec: [0.988, 36] });
 defMat('MARK', [20, 21, 22], 1, { span: 0.6 });
@@ -824,13 +826,13 @@ function sprSpider(e, t) {
 const scr = new Uint8Array(W * H);    // palette index, bit 7 = emissive
 const zbuf = new Uint8Array(W * H);   // pixel height above its ground point (for lighting)
 const shd = new Uint8Array(W * H);    // blob shadows
-const chr = new Uint8Array(W * H);    // 1 where the knight was drawn (picks LUT_CHAR)
 const cid = new Uint8Array(W * H);    // character index + 1: whole sprite gets one light value, no dither
+const lbuf = new Float32Array(W * H); // light per pixel (filled per 2x2 block on flat surfaces)
 let camX = 0, camY = 0;
 
 // cidx tags a character so the lighting pass gives the whole sprite one light value;
 // squash (rows) and dissolve (ordered-dither threshold) are used by the death animation
-function blit(sp, wx, wy, zBase = 0, flip = false, flash = false, isChar = 0, cidx = 0, squash = 1, dissolve = 0) {
+function blit(sp, wx, wy, zBase = 0, flip = false, flash = false, cidx = 0, squash = 1, dissolve = 0) {
   const sx0 = Math.round(wx - camX) - (flip ? sp.w - 1 - sp.ax : sp.ax), sy0 = Math.round(wy - camY) - sp.ay;
   for (let y = 0; y < sp.h; y++) {
     const yy = squash === 1 ? sy0 + y : sy0 + sp.ay - Math.round((sp.ay - y) * squash); if (yy < 0 || yy >= H) continue;
@@ -842,7 +844,7 @@ function blit(sp, wx, wy, zBase = 0, flip = false, flash = false, isChar = 0, ci
       const o = yy * W + xx;
       scr[o] = flash ? (v === BLK ? BLK : (27 | EMIS)) : v;
       zbuf[o] = Math.min(255, zBase + (sp.z ? sp.z[k] : Math.max(0, sp.ay - y)));
-      shd[o] = 0; chr[o] = isChar; cid[o] = cidx;
+      shd[o] = 0; cid[o] = cidx;
     }
   }
 }
@@ -946,6 +948,46 @@ for (const [fi, fj, size, seed] of [[4.6, 2.6, 4, 11], [7.6, 8.4, 3, 12], [9.0, 
   const [x, y] = iso(fi, fj); stampBlood(Math.round(x), Math.round(y), size, seed);
 }
 
+function blitWorld(sp, wx, wy, zBase = 0, flip = false) {
+  const sx0 = Math.round(wx) - (flip ? sp.w - 1 - sp.ax : sp.ax), sy0 = Math.round(wy) - sp.ay;
+  for (let y = 0; y < sp.h; y++) {
+    const yy = sy0 + y; if (yy < 0 || yy >= WH) continue;
+    for (let x = 0; x < sp.w; x++) {
+      const xx = sx0 + x; if (xx < 0 || xx >= WW) continue;
+      const k = y * sp.w + (flip ? sp.w - 1 - x : x), v = sp.data[k];
+      if (!v) continue;
+      const o = yy * WW + xx;
+      wIdx[o] = v; wZ[o] = Math.min(255, zBase + (sp.z ? sp.z[k] : Math.max(0, sp.ay - y))); wFloor[o] = 0;
+    }
+  }
+}
+function bakeWorld() {
+  wIdx.set(floorBuf); wZ.fill(0); wFloor.fill(1);
+  for (const d of back) blitWorld(d.sp, d.wx, d.wy, d.z, d.flip);
+  for (const p of [...props].sort((a, b) => a.depth - b.depth)) blitWorld(p.sp, p.wx, p.wy, p.z || 0);
+}
+bakeWorld();
+// Static lights never move, so each one's falloff over the baked scenery is computed once
+// (world space, using the baked pixel heights). Per frame it is only scaled by the flicker.
+// The light that follows the player stays dynamic.
+const ZMAX = 112;
+function bakeLightMaps() {
+  for (const L of lights) {
+    const r = L.r, ox = Math.floor(L.x - r), oy = Math.floor(L.y - r / 2 - ZMAX), mw = Math.ceil(2 * r), mh = Math.ceil(r + ZMAX);
+    const map = new Float32Array(mw * mh), r2 = r * r;
+    for (let my = 0; my < mh; my++) {
+      const wy = oy + my; if (wy < 0 || wy >= WH) continue;
+      for (let mx = 0; mx < mw; mx++) {
+        const wx = ox + mx; if (wx < 0 || wx >= WW) continue;
+        const z = wZ[wy * WW + wx], dx = wx - L.x, dy = (wy + z - L.y) * 2, dz = z - L.z, d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 < r2) { const f = 1 - d2 / r2; map[my * mw + mx] = f * f * L.i; }
+      }
+    }
+    L.map = { ox, oy, mw, mh, map };
+  }
+}
+bakeLightMaps();
+
 const knight = { type: 'knight', variant: 'red', fi: 6.5, fj: 6.5, face: 1, walk: 0, atk: -1, moving: false, seed: 0, shadow: 8, clock: 0, stop: 0 };
 const enemyDefs = [
   { type: 'skeleton', fi: 2.9, fj: 5.8, hp: 3, shadow: 7, draw: sprSkeleton, chest: 24 },
@@ -1047,7 +1089,7 @@ function update(dt, t) {
     if (p.ember) { if (p.life <= 0) particles.splice(n, 1); continue; }
     if (p.z <= 0) {
       const x = Math.round(p.wx), y = Math.round(p.wy);
-      if (x >= 0 && y >= 0 && x < WW && y < WH && floorBuf[y * WW + x] !== BLK) floorBuf[y * WW + x] = hash(x, y, 77) < 0.5 ? RED[2] : RED[1];
+      if (x >= 0 && y >= 0 && x < WW && y < WH && floorBuf[y * WW + x] !== BLK) setFloor(y * WW + x, hash(x, y, 77) < 0.5 ? RED[2] : RED[1]);
       particles.splice(n, 1);
     }
   }
@@ -1076,7 +1118,7 @@ function resolveHit() {
       e.dying = 0.42;
       if (SHAKE) trauma = Math.min(1, trauma + 0.55);
       stampBlood(Math.round(ex), Math.round(ey), e.type === 'spider' ? 5 : 4, (Math.random() * 1e6) | 0);
-      if (e.type === 'skeleton') props.push({ depth: e.fi + e.fj - 0.5, sp: sprBones((Math.random() * 1e6) | 0), wx: ex, wy: ey });
+      if (e.type === 'skeleton') { const bones = { depth: e.fi + e.fj - 0.5, sp: sprBones((Math.random() * 1e6) | 0), wx: ex, wy: ey }; props.push(bones); blitWorld(bones.sp, ex, ey); }
     } else {
       e.kb = [(e.fi - knight.fi) / (d || 1) * 3, (e.fj - knight.fj) / (d || 1) * 3];
     }
@@ -1084,7 +1126,21 @@ function resolveHit() {
 }
 
 // ---------------------------------------------------------------- render
-const BANDS = 5, AMB = [0.12, 0.10, 0.13], TINT = [1.15, 0.92, 0.68];
+const BANDS = 5;
+// Poses only change on the stepped pose clock, so sprites are rebuilt only when their pose key changes.
+const spriteCache = new Map();
+function spriteFor(c, pt) {
+  const walk = Math.floor(c.walk / (Math.PI / 3)) * (Math.PI / 3);
+  const k = c === knight ? `k|${c.variant}|${c.moving ? walk.toFixed(2) : '-'}|${c.atk >= 0 ? attackKey(c.atk) : -1}|${pt.toFixed(1)}`
+    : `${c.type}|${c.seed}|${pt.toFixed(1)}`;
+  let sp = spriteCache.get(k);
+  if (!sp) {
+    if (spriteCache.size > 400) spriteCache.clear();
+    sp = c === knight ? sprKnight({ ...c, walk }, pt) : c.draw(c, pt);
+    spriteCache.set(k, sp);
+  }
+  return sp;
+}
 function render(t) {
   // camera follows the knight (knight sits at 135,215 on screen)
   const [kx, ky] = screenOf(knight);
@@ -1092,29 +1148,37 @@ function render(t) {
   const shx = Math.round(sh * (Math.sin(t * 61) * 0.6 + Math.sin(t * 97 + 1) * 0.4)), shy = Math.round(sh * (Math.sin(t * 73 + 2) * 0.6 + Math.sin(t * 89 + 3) * 0.4));
   camX = Math.round(kx - 135) + shx; camY = Math.round(ky - 215) + shy;
 
+  shd.fill(0); cid.fill(0);
   for (let y = 0; y < H; y++) {
     const wy = camY + y, row = wy * WW;
+    if (wy >= 0 && wy < WH && camX >= 0 && camX + W <= WW) {   // whole row inside the world: bulk copy
+      scr.set(wIdx.subarray(row + camX, row + camX + W), y * W); zbuf.set(wZ.subarray(row + camX, row + camX + W), y * W);
+      continue;
+    }
     for (let x = 0; x < W; x++) {
       const wx = camX + x, o = y * W + x;
-      scr[o] = (wy < 0 || wy >= WH || wx < 0 || wx >= WW) ? BLK : floorBuf[row + wx];
-      zbuf[o] = 0; shd[o] = 0; chr[o] = 0; cid[o] = 0;
+      const inside = wy >= 0 && wy < WH && wx >= 0 && wx < WW;
+      scr[o] = inside ? wIdx[row + wx] : BLK; zbuf[o] = inside ? wZ[row + wx] : 0;
     }
   }
-  for (const d of back) blit(d.sp, d.wx, d.wy, d.z, d.flip);
-
-  const list = props.map(p => ({ depth: p.depth, draw: () => blit(p.sp, p.wx, p.wy, p.z || 0) }));
   const chars = [knight, ...enemies.filter(e => !e.dead)];
+  // props already baked; redraw (in depth order with the characters) only those overlapping one
+  const boxes = chars.map(c => { const [x, y] = screenOf(c); return [x - 40, y - 64, x + 40, y + 6]; });
+  const list = props.filter(p => {
+    const x0 = p.wx - p.sp.ax, y0 = p.wy - p.sp.ay, x1 = x0 + p.sp.w, y1 = y0 + p.sp.h;
+    return boxes.some(b => x0 < b[2] && x1 > b[0] && y0 < b[3] && y1 > b[1]);
+  }).map(p => ({ depth: p.depth, draw: () => blit(p.sp, p.wx, p.wy, p.z || 0) }));
   chars.forEach((c, n) => {
     const [x, y] = screenOf(c);
     if (!c.dying) shadow(x, y + 1, c.shadow);
     list.push({ depth: c.fi + c.fj, draw: () => {
       // pose clock is stepped (100 ms) so computed poses don't shimmer frame to frame
       const pt = Math.floor(c.clock / 0.1) * 0.1;
-      const sp = c === knight ? sprKnight({ ...c, walk: Math.floor(c.walk / (Math.PI / 3)) * (Math.PI / 3) }, pt) : c.draw(c, pt);
+      const sp = spriteFor(c, pt);
       const jit = c.stop > 0 && c !== knight ? (Math.floor(t * 33) % 2 ? 1 : -1) : 0;
       let squash = 1, dissolve = 0;
       if (c.dying) { const a = 1 - c.dying / 0.42; squash = 1 - 0.15 * Math.min(3, Math.floor(a * 6)); dissolve = Math.max(0, (a - 0.35) / 0.65); }
-      blit(sp, x + jit, y, 0, c.face < 0, c.flash > 0, c === knight ? 1 : 0, n + 1, squash, dissolve);
+      blit(sp, x + jit, y, 0, c.face < 0, c.flash > 0, n + 1, squash, dissolve);
     } });
   });
   list.sort((a, b) => a.depth - b.depth);
@@ -1127,7 +1191,8 @@ function render(t) {
     zbuf[y * W + x] = Math.min(255, Math.max(0, p.z | 0));
   }
 
-  // lighting: per-pixel distance to each light's 3D position, banded with ordered dithering
+  // lighting: per-pixel distance to each light's 3D position, banded with ordered dithering (not on
+  // characters, which get one band each), then a light-table lookup instead of any RGB math
   const ls = [...lights.map(L => ({ ...L, f: 1 + 0.07 * Math.sin(t * 11 + L.seed) + 0.05 * Math.sin(t * 23.7 + L.seed * 2) + 0.04 * Math.sin(t * 37 + L.seed) })),
     { x: kx, y: ky, z: 32, r: 125, i: 0.5, f: 1 }];
   const n = ls.length;
@@ -1138,41 +1203,60 @@ function render(t) {
     for (let k = 0; k < n; k++) { const dx = x - lx[k], dy = (y + z - ly[k]) * 2, dz = z - lz[k], d2 = dx * dx + dy * dy + dz * dz; if (d2 < lr2[k]) { const f = 1 - d2 / lr2[k]; l += f * f * li[k]; } }
     return l;
   };
-  const charBand = chars.map(c => { const [x, y] = screenOf(c); return Math.min(1.6, Math.round(lightAt(x - camX, y - camY - 18, 18) * BANDS) / BANDS); });
-  // cull lights per row: a pixel at height z <= ZMAX only sees a light whose ground point is within r/2 rows
-  const ZMAX = 112, act = new Int32Array(n);
+  const charLevel = chars.map(c => { const [x, y] = screenOf(c); return Math.min(LEVELS - 1, Math.round(lightAt(x - camX, y - camY - 18, 18) * BANDS)); });
+  // static lights: precomputed world maps scaled by flicker; rows pick the maps that cover them
+  const st = ls.slice(0, lights.length);
   for (let y = 0; y < H; y++) {
-    let na = 0;
-    for (let k = 0; k < n; k++) { const hr = Math.sqrt(lr2[k]) / 2; if (y > ly[k] - hr - ZMAX && y < ly[k] + hr) act[na++] = k; }
-    for (let x = 0; x < W; x++) {
-    const o = y * W + x, v = scr[o];
-    if (v === BLK) { out32[o] = PAL32[BLK]; continue; }
-    if (v & EMIS) { out32[o] = PAL32[v & 127]; continue; }
-    const ci = cid[o];
-    if (ci) { const lb = charBand[ci - 1], r = PR[v] * (AMB[0] + lb * TINT[0]), g = PG[v] * (AMB[1] + lb * TINT[1]), b = PB[v] * (AMB[2] + lb * TINT[2]);
-      out32[o] = PAL32[(chr[o] ? LUT_CHAR : LUT_ENV)[(((r > 255 ? 255 : r) >> 3) << 10) | (((g > 255 ? 255 : g) >> 3) << 5) | ((b > 255 ? 255 : b) >> 3)]]; continue; }
-    const z = zbuf[o], gy = y + z;
-    let l = 0;
-    for (let a = 0; a < na; a++) {
-      const k = act[a];
-      const dx = x - lx[k]; if (dx * dx >= lr2[k]) continue;
-      const dy = (gy - ly[k]) * 2, dz = z - lz[k];
-      const d2 = dx * dx + dy * dy + dz * dz;
-      if (d2 < lr2[k]) { const f = 1 - d2 / lr2[k]; l += f * f * li[k]; }
-    }
-    if (shd[o]) l *= 0.4;
-    let lb = Math.floor(l * BANDS + BAYER[((y & 3) << 2) | (x & 3)]) / BANDS;
-    if (lb > 1.6) lb = 1.6;
-    const r = PR[v] * (AMB[0] + lb * TINT[0]), g = PG[v] * (AMB[1] + lb * TINT[1]), b = PB[v] * (AMB[2] + lb * TINT[2]);
-    out32[o] = PAL32[(chr[o] ? LUT_CHAR : LUT_ENV)[(((r > 255 ? 255 : r) >> 3) << 10) | (((g > 255 ? 255 : g) >> 3) << 5) | ((b > 255 ? 255 : b) >> 3)]];
+    const wy = camY + y, o0 = y * W;
+    lbuf.fill(0, o0, o0 + W);
+    for (const L of st) {
+      const m = L.map, my = wy - m.oy; if (my < 0 || my >= m.mh) continue;
+      const base = my * m.mw - m.ox, x0 = Math.max(0, m.ox - camX), x1 = Math.min(W, m.ox + m.mw - camX), f = L.f, map = m.map;
+      for (let x = x0; x < x1; x++) lbuf[o0 + x] += map[base + camX + x] * f;
     }
   }
-  drawUI(t);
+  // the player's light is dynamic: evaluated per 2x2 block over its bounding box, per pixel only
+  // where a block spans a height change (wall edges)
+  {
+    const k = n - 1, r = Math.sqrt(lr2[k]), X0 = Math.max(0, Math.floor(lx[k] - r) & ~1), X1 = Math.min(W, Math.ceil(lx[k] + r));
+    const Y0 = Math.max(0, Math.floor(ly[k] - r / 2 - ZMAX) & ~1), Y1 = Math.min(H, Math.ceil(ly[k] + r / 2));
+    const lp = (x, y, z) => { const dx = x - lx[k], dy = (y + z - ly[k]) * 2, dz = z - lz[k], d2 = dx * dx + dy * dy + dz * dz; if (d2 >= lr2[k]) return 0; const f = 1 - d2 / lr2[k]; return f * f * li[k]; };
+    for (let y = Y0; y < Y1 - 1; y += 2) for (let x = X0; x < X1 - 1; x += 2) {
+      const o = y * W + x, o2 = o + W, za = zbuf[o], zb = zbuf[o + 1], zc = zbuf[o2], zd = zbuf[o2 + 1];
+      if (Math.max(za, zb, zc, zd) - Math.min(za, zb, zc, zd) <= 6) {
+        const l = lp(x + 0.5, y + 0.5, (za + zb + zc + zd) >> 2);
+        if (l) { lbuf[o] += l; lbuf[o + 1] += l; lbuf[o2] += l; lbuf[o2 + 1] += l; }
+      } else { lbuf[o] += lp(x, y, za); lbuf[o + 1] += lp(x + 1, y, zb); lbuf[o2] += lp(x, y + 1, zc); lbuf[o2 + 1] += lp(x + 1, y + 1, zd); }
+    }
+  }
+  for (let y = 0, o = 0; y < H; y++) {
+    const by = (y & 3) << 2;
+    for (let x = 0; x < W; x++, o++) {
+      const v = scr[o];
+      if (v === BLK) { out32[o] = PAL32[BLK]; continue; }
+      if (v & EMIS) { out32[o] = PAL32[v & 127]; continue; }
+      const ci = cid[o];
+      if (ci) { out32[o] = PAL32[LTAB[charLevel[ci - 1]][v]]; continue; }
+      const L = ((shd[o] ? lbuf[o] * 0.4 : lbuf[o]) * BANDS + BAYER[by | (x & 3)]) | 0;
+      out32[o] = PAL32[LTAB[L < LEVELS ? L : LEVELS - 1][v]];
+    }
+  }
+  drawUICached(t);
   ctx.putImageData(outImg, 0, 0);
 }
 
 // ---------------------------------------------------------------- UI (unlit, drawn after lighting)
-function put(x, y, c) { x = Math.round(x); y = Math.round(y); if (x >= 0 && y >= 0 && x < W && y < H) out32[y * W + x] = PAL32[c]; }
+let uiTarget = out32;
+const uiBuf = new Uint32Array(W * H); let uiKey = '', uiPx = [];
+function put(x, y, c) { x = Math.round(x); y = Math.round(y); if (x >= 0 && y >= 0 && x < W && y < H) uiTarget[y * W + x] = PAL32[c]; }
+function drawUICached(t) {
+  const k = `${Math.floor(t / 0.1)}|${stick.dx.toFixed(2)}|${stick.dy.toFixed(2)}|${mana.toFixed(2)}`;
+  if (k !== uiKey) {
+    uiKey = k; uiBuf.fill(0); uiTarget = uiBuf; drawUI(Math.floor(t / 0.1) * 0.1); uiTarget = out32;
+    uiPx = []; for (let i = 0; i < uiBuf.length; i++) if (uiBuf[i]) uiPx.push(i);
+  }
+  for (const i of uiPx) out32[i] = uiBuf[i];
+}
 function drawOrb(cx, cy, r, ramp, fill, t, side) {
   // horns on the frame (a nod to the concept's gargoyle frames)
   for (const s of [-1, 1]) {

@@ -38,12 +38,9 @@ function pageRender(castSrc, mode, blind) {
   const Z = 4;
   const rgb = i => [PR[i], PG[i], PB[i]];
   // lit color for one sprite pixel at a torch band, exactly as the game's lighting pass does it
-  const lit = (v, lb, lut) => {
+  const lit = (v, lb) => {
     if (v & EMIS) return rgb(v & 127);
-    if (v === BLK) return rgb(BLK);
-    const r = PR[v] * (AMB[0] + lb * TINT[0]), g = PG[v] * (AMB[1] + lb * TINT[1]), b = PB[v] * (AMB[2] + lb * TINT[2]);
-    const L = lut === 'char' ? LUT_CHAR : LUT_ENV;
-    return rgb(L[(((r > 255 ? 255 : r) >> 3) << 10) | (((g > 255 ? 255 : g) >> 3) << 5) | ((b > 255 ? 255 : b) >> 3)]);
+    return rgb(LTAB[Math.min(LEVELS - 1, Math.round(lb * BANDS))][v]);
   };
   const floorAt = (x, y) => floorBuf[(WY0 + 150 + (y % 60)) * WW + (WX0 + 40 + (x % 90))];
 
@@ -145,12 +142,12 @@ function pageRender(castSrc, mode, blind) {
     const s0 = sprites[0].sp;
     [...BANDS3.map(b => [b, false]), ...BANDS3.map(b => [b, true])].forEach(([b, flip], i) => {
       const ox = 8 + i * cw * Z;
-      draw({ ...s0, data: new Uint8Array(s0.w * s0.h).fill(9) }, ox, y0, Z, (v, x, y) => lit(floorAt(x, y), b, 'env'));
-      draw(s0, ox, y0, Z, v => v ? lit(v, b, entry.lut) : null, flip);
+      draw({ ...s0, data: new Uint8Array(s0.w * s0.h).fill(9) }, ox, y0, Z, (v, x, y) => lit(floorAt(x, y), b));
+      draw(s0, ox, y0, Z, v => v ? lit(v, b) : null, flip);
     });
     y0 += chh * Z + 4;
     g.fillStyle = '#b09574'; g.fillText('row 3: 1x actual size (at mid band)', 8, y0 + 12); y0 += 18;
-    sprites.forEach((s, i) => draw(s.sp, 8 + i * (cw + 4), y0, 1, v => v ? lit(v, 0.8, entry.lut) : null));
+    sprites.forEach((s, i) => draw(s.sp, 8 + i * (cw + 4), y0, 1, v => v ? lit(v, 0.8) : null));
     y0 += chh + 8;
     g.fillStyle = '#b09574'; g.fillText('row 4: silhouettes', 8, y0 + 12); y0 += 18;
     g.fillStyle = '#cbb08a'; g.fillRect(8, y0, sprites.length * cw * Z, chh * Z);
