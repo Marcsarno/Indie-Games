@@ -3,6 +3,7 @@
 A clone of the "fake mobile ad" game: rows of blue soldiers auto-fire up a road, run through +/x gates,
 shoot a crate barricade to unlock a minigun, and fight a zombie horde and a brute boss.
 Last updated 2026-10-28 (round 1: first playable).
+Published for phone testing: https://claude.ai/artifact/3YgqkiwapCshU6FPcYtDFQ (republish `dist/artifact.html` to the same artifact after each change).
 
 Read next: `RESEARCH.md` (genre research, level-design rules), `ART-SPEC.md` (read from the user's three
 mock-ups in `reference/mockups/`), `ASSETS.md` (zombie/people source files copied from the user's
