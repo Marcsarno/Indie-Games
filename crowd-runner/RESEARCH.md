@@ -135,3 +135,4 @@ Boss, gun, crates and gates are separate individual meshes.
   verified**: the download was still running when this was written. Fallback if it fails: Blender's own
   Linux tarball from blender.org.
 - Not yet confirmed that the proxy allows the download or that glTF export works in the pip build.
+- Zombie and people assets now exist locally: see `ASSETS.md` (copied from your `yola-zombie` repo).
