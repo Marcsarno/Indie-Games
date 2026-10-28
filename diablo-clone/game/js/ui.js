@@ -158,8 +158,9 @@ function drawHud() {
     for (let x = 0; x < bw; x++) for (let y = 0; y < 4; y++) put(bx + x, by + y, x < bw * f ? (y === 0 ? 23 : y === 3 ? 20 : 22) : 3);
   }
   // champion names over their heads
-  for (const e of enemies) {
-    if (!e.champ || !alive(e) || LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] < 0.5 || Math.hypot(e.fi - hero.fi, e.fj - hero.fj) > 7) continue;
+  const champs = enemies.filter(e => e.champ && alive(e) && LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] >= 0.5 && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 7)
+    .sort((a, b) => Math.hypot(a.fi - hero.fi, a.fj - hero.fj) - Math.hypot(b.fi - hero.fi, b.fj - hero.fj)).slice(0, 2);   // the two nearest, so labels never pile up
+  for (const e of champs) {
     const [x, y] = iso(e.fi, e.fj);
     textC(e.name, Math.round(x - camX), Math.round(y - camY) - e.def.chest * 1.6 - 20, { red: 23, grey: 31, green: 55, purple: 59 }[e.champ.tint]);
   }
@@ -174,7 +175,7 @@ function drawHud() {
     for (let y = -6; y <= 6; y++) for (let x = -6; x <= 6; x++) { const d = Math.hypot(x, y); if (d <= 6) put(kx + x, ky + y, d > 5 ? 28 : (-x - y) > 2 ? 31 : 30); }
   }
   // top line: level and gold
-  text(`CRYPT ${LV.level}`, 4, 4, 26);
+  text(`${TH().name} ${LV.level}`, 4, 4, 26);
   text(`${hero.gold} GOLD`, 4, 11, 50);
   // floor item labels near the hero (Diablo shows names over loot)
   for (const g of groundItems) {
@@ -221,7 +222,7 @@ function drawTitle() {
   const save = loadSave();
   UI.titleBtns = [];
   const btn = (label, y, on) => { const w = 120, x = W / 2 - w / 2; fillRect(x, y, w, 20, 5); frame(x, y, w, 20, 8, 2); textC(label, W / 2, y + 7, 27); UI.titleBtns.push({ x, y, w, h: 20, on }); };
-  if (save) btn(`CONTINUE (CRYPT ${save.level})`, H * 0.52, () => beginGame(true));
+  if (save) btn(`CONTINUE (LEVEL ${save.level})`, H * 0.52, () => beginGame(true));
   btn('NEW GAME', H * 0.52 + 28, () => beginGame(false));
   textC('LEFT THUMB MOVES. RIGHT BUTTONS FIGHT.', W / 2, H * 0.78, 25);
   textC('ALL ART IS DRAWN IN CODE', W / 2, H * 0.78 + 8, 24);

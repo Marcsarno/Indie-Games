@@ -21,6 +21,22 @@ const LV = {
   roomOf: new Int16Array(MW * MH), rooms: [], start: null, stairs: null, spawns: [], decor: [],
   seen: new Uint8Array(MW * MH), vis: new Float32Array(MW * MH), level: 1, seed: 1,
 };
+// floor themes rotate every two floors: crypt, caves, hell
+const THEMES = {
+  crypt: { name: 'CRYPT', ramp: S, torch: 0.4, banners: true },
+  caves: { name: 'CAVES', ramp: CAVE, torch: 0.16, banners: false },
+  hell: { name: 'HELL', ramp: HELL, torch: 0.24, banners: true },
+};
+const themeOf = level => ['crypt', 'caves', 'hell'][Math.floor((level - 1) / 2) % 3];
+const TH = () => THEMES[LV.theme || 'crypt'];
+// a stone tone on the 0..8 scale, mapped into the current theme's ramp
+const ST = t => { const r = TH().ramp; return r[clamp(Math.round(t * (r.length - 1) / 8), 0, r.length - 1)]; };
+function vnoise(x, y, sc, seed) {
+  const xs = x / sc, ys = y / sc, xi = Math.floor(xs), yi = Math.floor(ys), fx = xs - xi, fy = ys - yi;
+  const a = hash(xi, yi, seed), b = hash(xi + 1, yi, seed), c = hash(xi, yi + 1, seed), d = hash(xi + 1, yi + 1, seed);
+  const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
 const tileAt = (i, j) => (i < 0 || j < 0 || i >= MW || j >= MH) ? VOID : LV.map[j * MW + i];
 const tIdx = (i, j) => j * MW + i;
 function blocked(fi, fj) {
@@ -38,6 +54,7 @@ function los(a, b, c, d) {
 
 // ---------------------------------------------------------------- generation
 function genLevel(level, seed) {
+  LV.theme = themeOf(level);
   for (let attempt = 0; attempt < 20; attempt++) if (tryGen(level, seed + attempt * 7919)) { LV.level = level; LV.seed = seed; return; }
   throw new Error('level generation failed');
 }
@@ -127,11 +144,25 @@ function placeDecor(R, level) {
   const D = LV.decor = [];
   const wallSide = (i, j) => tileAt(i - 1, j) === WALL || tileAt(i, j - 1) === WALL || tileAt(i + 1, j) === WALL || tileAt(i, j + 1) === WALL;
   LV.rooms.forEach((r, n) => {
-    if (r.type === 'hall' && r.w >= 7 && r.h >= 7) {
+    const th = LV.theme, interior = () => { for (let t = 0; t < 20; t++) { const i = R.int(r.x + 1, r.x + r.w - 2), j = R.int(r.y + 1, r.y + r.h - 2); if (Math.abs(i - r.cx) + Math.abs(j - r.cy) > 1) return [i, j]; } return [r.x + 1, r.y + 1]; };
+    const nearWall = () => { for (let t = 0; t < 30; t++) { const i = R.int(r.x, r.x + r.w - 1), j = R.int(r.y, r.y + r.h - 1); if (wallSide(i, j)) return [i, j]; } return null; };
+    if (th === 'crypt') {
+      if (R() < 0.4) { const q = nearWall(); if (q && trySolid(...q)) D.push({ kind: 'coffin', i: q[0], j: q[1], yaw: tileAt(q[0] - 1, q[1]) === WALL || tileAt(q[0] + 1, q[1]) === WALL ? Math.PI / 2 : 0 }); }
+      if (R() < 0.3) { const q = nearWall(); if (q && trySolid(...q)) D.push({ kind: 'candles', i: q[0], j: q[1] }); }
+      if (R() < 0.25) { const q = interior(); if (trySolid(...q)) D.push({ kind: 'statue', i: q[0], j: q[1] }); }
+    } else if (th === 'caves') {
+      for (let n = 0; n < R.int(1, 3); n++) { const q = interior(); if (trySolid(...q)) D.push({ kind: 'stalagmite', i: q[0], j: q[1], seed: R.int(1, 1e6) % 7 }); }
+      for (let n = 0; n < R.int(2, 5); n++) { const q = nearWall(); if (q) D.push({ kind: 'mushroom', fi: q[0] + 0.5, fj: q[1] + 0.5, seed: R.int(1, 1e6) % 6 }); }
+    } else {
+      if (R() < 0.35) { const q = interior(); if (trySolid(...q)) D.push({ kind: 'statue', i: q[0], j: q[1], hell: true }); }
+      if (R() < 0.5) { const q = nearWall(); if (q && trySolid(...q)) D.push({ kind: 'bonepile', i: q[0], j: q[1], seed: R.int(1, 1e6) % 5 }); }
+      if (n && R() < 0.7) { const q = interior(); D.push({ kind: 'lava', fi: q[0] + 0.5, fj: q[1] + 0.5, size: R.int(3, 6), seed: R.int(1, 1e6) }); }
+    }
+    if (r.type === 'hall' && r.w >= 7 && r.h >= 7 && th !== 'caves') {
       for (const [i, j] of [[r.x + 1, r.y + 1], [r.x + r.w - 2, r.y + 1], [r.x + 1, r.y + r.h - 2], [r.x + r.w - 2, r.y + r.h - 2]]) if (trySolid(i, j)) D.push({ kind: 'pillar', i, j });
       if (n && trySolid(r.cx, r.cy)) D.push({ kind: 'brazier', i: r.cx, j: r.cy });
     } else if (n && r.w * r.h >= 36 && R() < 0.5 && trySolid(r.cx, r.cy)) D.push({ kind: 'brazier', i: r.cx, j: r.cy });
-    if (r.type === 'store' || R() < 0.4) {
+    if (r.type === 'store' || R() < (LV.theme === 'caves' ? 0.15 : 0.4)) {
       const cnt = R.int(2, 4);
       for (let t = 0; t < 30 && D.filter(d => d.room === n && (d.kind === 'barrel' || d.kind === 'crate')).length < cnt; t++) {
         const i = R.int(r.x, r.x + r.w - 1), j = R.int(r.y, r.y + r.h - 1);
@@ -155,7 +186,7 @@ function placeDecor(R, level) {
     if (!LV.tall[tIdx(i, j)]) continue;
     const faceR = tileAt(i + 1, j) === FLOOR, faceL = tileAt(i, j + 1) === FLOOR;
     if (!faceR && !faceL) continue;
-    if (hash(i, j, LV.seed) > 0.4 || torches.some(t => Math.abs(t.i - i) + Math.abs(t.j - j) < 5)) continue;
+    if (hash(i, j, LV.seed) > TH().torch || torches.some(t => Math.abs(t.i - i) + Math.abs(t.j - j) < 5)) continue;
     torches.push({ kind: 'torch', i, j, face: faceL ? 'L' : 'R' });
   }
   D.push(...torches);
@@ -187,14 +218,14 @@ function brick(g, z, shade, seed) {
   const zi = Math.floor(z), gi = Math.floor(g);
   const row = Math.floor(zi / 8), off = (row & 1) * 8, gx = gi + off;
   const bx = Math.floor(gx / 16), mz = zi % 8, mx = ((gx % 16) + 16) % 16;
-  if (mz === 0 || mx === 0) return S[0];
+  if (mz === 0 || mx === 0) return ST(0);
   let t = 3 + Math.floor(hash(bx, row, seed) * 3) + shade;
   if (mz === 7) t += 1; else if (mz === 1) t -= 1;
   if (mx === 1) t += 1;
   const ph = hash(gi, zi, seed + 1);
   if (ph < 0.08) t -= 1; else if (ph > 0.985) t += 1;
   if (row === 0) t -= 1;
-  return S[clamp(t, 0, 8)];
+  return ST(t);
 }
 // banner hanging on a wall face; g = position along the face within this tile (0..16)
 function bannerDeco(g, z, top, team) {
@@ -210,37 +241,54 @@ function bannerDeco(g, z, top, team) {
   }
   return 0;
 }
+// cave walls: rough rock from layered noise with dark crevices, glowing fungus low down
+function rockTex(g, b, face) {
+  const n = vnoise(g, b * 1.6, 9, 5) * 4 + vnoise(g, b, 3, 6) * 1.4;
+  if (Math.abs(vnoise(g, b * 1.3, 14, 9) - 0.5) < 0.035) return ST(0);
+  if (b < 5 && hash(g | 0, b | 0, 4) < 0.025) return FUNGUS[1] | EMIS;
+  return ST(1.5 + n - (face === 'R' ? 1 : 0) + (b < 3 ? -1 : 0));
+}
+// hell walls: a glowing rune carved into the brick now and then
+function runeDeco(a, b) {
+  const x = a - 8, y = b - 16;
+  if (Math.abs(x) > 4 || Math.abs(y) > 6) return 0;
+  const on = Math.abs(x) < 0.7 || (Math.abs(y - 3) < 0.7 && Math.abs(x) < 3.5) || (Math.abs(Math.abs(x) - y * 0.5 - 1) < 0.6 && y < 0);
+  return on ? (LAVA[3] | EMIS) : 0;
+}
 function wallTex(i, j, tall) {
   const deco = tall ? hash(i, j, 77) : 1;
   return (face, a, b) => {
     if (face === 'top') {
       const gi = i * 16 + a, gj = j * 16 + b;
-      if (((gi | 0) % 16) < 1 || ((gj | 0) % 16) < 1) return S[1];
+      if (LV.theme === 'caves') return ST(2 + Math.floor(vnoise(gi, gj, 6, 11) * 3));
+      if (((gi | 0) % 16) < 1 || ((gj | 0) % 16) < 1) return ST(1);
       let t = 2 + Math.floor(hash(Math.floor(gi / 16), Math.floor(gj / 16), 11) * 2);
       if (hash(gi | 0, gj | 0, 5) < 0.1) t--;
-      return S[t];
+      return ST(t);
     }
     const g = (face === 'L' ? i * 16 : j * 16) + a;
-    if (tall && deco < 0.1) { const d = bannerDeco(a, b, 54, deco < 0.05 ? RED : BLUE); if (d) return d; }
+    if (LV.theme === 'caves') return rockTex(g, b, face);
+    if (tall && deco < 0.1 && TH().banners) { const d = bannerDeco(a, b, 54, deco < 0.05 || LV.theme === 'hell' ? RED : BLUE); if (d) return d; }
+    if (LV.theme === 'hell' && tall && deco > 0.86 && b < 30) { const d = runeDeco(a, b); if (d) return d; }
     if (tall && deco > 0.93 && b > 6 && b < 40) {   // cracked, mossy patch
       const h = hash(g | 0, b | 0, 13);
-      if (h < 0.12) return S[1];
-      if (b < 18 && h > 0.7) return GREEN[0];
+      if (h < 0.12) return ST(1);
+      if (b < 18 && h > 0.7 && LV.theme === 'crypt') return GREEN[0];
     }
     return brick(g, b, face === 'R' ? -1 : 0, face === 'L' ? 3 : 4);
   };
 }
 function pillarTex(shade) {
   return (face, a, b) => {
-    if (face === 'top') return S[5];
+    if (face === 'top') return ST(5);
     const zi = Math.floor(b);
-    if (zi % 12 === 0) return S[1];
+    if (zi % 12 === 0) return ST(1);
     let t = (face === 'L' ? 4 : 3) + shade;
     if (face === 'L' && a < 1.5) t += 1;
     if (face === 'R' && a > 9) t -= 1;
     if (zi % 12 === 11) t += 1;
     if (hash(a | 0, zi, 21) < 0.08) t -= 1;
-    return S[clamp(t, 0, 8)];
+    return ST(t);
   };
 }
 function crateTex(L0, hgt) {
@@ -314,6 +362,35 @@ const PROPS = {
     r.cone([0, 0, 2], [0, 0, 14], 1.4, 1.2, M.IRON);
     r.group(() => { r.ell([0, 0, 17], [7, 7, 3.4], M.IRON); r.cyl([0, 0, 17], [0, 0, 19.5], 7.2, M.IRON, { mf: p => p[2] > 19.3 && Math.hypot(p[0], p[1]) < 5.8 ? M.FIREM : 0 }); });
   }, [32, 40, 16, 33]),
+  coffin: (yaw) => propSprite('coffin', r => {   // wooden coffin with a gold cross on the lid
+    r.box([0, 0, 2.6], [8.5, 4.0, 2.6], M.LEATHER, null, { mf: p => (p[2] > 5 && ((Math.abs(p[1]) < 0.55 && Math.abs(p[0] - 1.5) < 3.6) || (Math.abs(p[0] - 3.2) < 0.55 && Math.abs(p[1]) < 2))) ? M.GOLD : Math.abs(p[2] - 4.6) < 0.4 ? M.DARK : p[2] < 4.4 ? M.WOOD : 0 });
+    r.box([-8, 0, 2.4], [0.8, 3.4, 2.4], M.WOOD);
+  }, [40, 32, 20, 22], yaw),
+  statue: (hell) => propSprite('statue' + (hell ? 'h' : ''), r => {   // hooded figure on a plinth (horned in hell)
+    const st = hell ? M.HELLSTONE : M.STONE;
+    r.box([0, 0, 1.6], [5, 5, 1.6], st);
+    r.group(() => { r.cone([0, 0, 3], [0, 0, 18], 5, 2.8, st); r.sph([0, 0, 20.5], 3.2, st, { mf: p => p[0] > 2 && Math.abs(p[1]) < 1.8 && p[2] < 21.5 ? M.DARK : 0 }); });
+    r.cone([2.6, -3, 13], [3.8, 2.5, 12], 1.4, 1.4, st);
+    if (hell) for (const s2 of [-1, 1]) r.cone([0, s2 * 2.4, 22.5], [-1.5, s2 * 4.5, 27], 1.1, 0.3, st);
+  }, [30, 46, 15, 36], Math.PI / 4),
+  candles: () => propSprite('candles', r => {   // a small table crowded with candles
+    r.box([0, 0, 7.5], [5.2, 4, 0.8], M.WOOD);
+    for (const [x, y] of [[-4, -3], [4, -3], [-4, 3], [4, 3]]) r.cone([x, y, 0], [x, y, 7], 0.8, 0.8, M.WOOD);
+    for (const [x, y, hgt] of [[-2.5, -1.5, 3.5], [0, 1, 5], [2.5, -1, 2.5], [1.5, 2.2, 4], [-2, 2, 3]]) r.cyl([x, y, 8.3], [x, y, 8.3 + hgt], 0.75, M.WAX);
+  }, [30, 34, 15, 24], Math.PI / 4),
+  bonepile: (seed) => propSprite('bonepile' + seed, r => {
+    const R = rng(seed);
+    for (let n = 0; n < 9; n++) { const a = R() * 6.28, d = R() * 4, z = 1 + R() * 3.5, b = R() * 6.28, l = 2.5 + R() * 2; const c = [Math.cos(a) * d, Math.sin(a) * d, z]; r.cone(V.add(c, [Math.cos(b) * l, Math.sin(b) * l, -0.6]), V.add(c, [-Math.cos(b) * l, -Math.sin(b) * l, 0.6]), 0.8, 0.8, M.BONE); }
+    skullAt(r, [R() * 2 - 1, R() * 2 - 1, 5.5], V.norm([1, R() - 0.5, 0.2]), V.norm([R() - 0.5, 1, 0]), [0, 0, 1], M.BONE, M.DARK, 0);
+  }, [32, 28, 16, 20], 0),
+  stalagmite: (seed) => propSprite('stalag' + seed, r => {
+    const R = rng(seed);
+    for (let n = 0; n < 3; n++) { const a = n * 2.1 + R(), d = n ? 4.5 : 0, x = Math.cos(a) * d, y = Math.sin(a) * d, hgt = 20 - n * 5 + R() * 4; r.cone([x, y, 0], [x + (R() - 0.5) * 2, y + (R() - 0.5) * 2, hgt], 3.8 - n * 0.7, 0.5, M.ROCK); }
+  }, [30, 40, 15, 30], 0),
+  mushroom: (seed) => propSprite('mush' + seed, r => {   // glowing cave fungus
+    const R = rng(seed);
+    for (let n = 0; n < 4; n++) { const x = (R() - 0.5) * 8, y = (R() - 0.5) * 8, hgt = 1.5 + R() * 3; r.cone([x, y, 0], [x, y, hgt], 0.5, 0.5, M.BONE); r.ell([x, y, hgt + 0.5], [1.6 + R(), 1.6 + R(), 0.9], R() < 0.5 ? M.FUNGUS : M.FUNGUS2); }
+  }, [22, 18, 11, 13], 0),
   egg: () => propSprite('egg', r => {   // a clutch of pale, veined egg sacs on a web of strands
     const veins = p => (Math.abs(Math.sin(p[0] * 1.3 + p[2] * 0.7)) < 0.18 || Math.abs(Math.sin(p[1] * 1.5 - p[2] * 0.6)) < 0.14) ? M.MARK : 0;
     for (const [x, y, s] of [[0, 0, 1], [-4, 3, 0.75], [3.5, 3.5, 0.65]]) r.ell([x, y, 4.6 * s], [3.8 * s, 3.6 * s, 4.8 * s], M.OLDBONE, null, { mf: veins });
@@ -351,10 +428,19 @@ function genFloor() {
     wTile[k] = (ti >= 0 && tj >= 0 && ti < MW && tj < MH) ? tIdx(ti, tj) : -1;
     if (t === FLOOR) {
       const room = LV.roomOf[tIdx(ti, tj)] >= 0;
+      if (LV.theme === 'caves') {   // uneven dirt and rock, no tiling, cracks and pebbles
+        let tone = 1.6 + vnoise(A, B, 26, 3) * 3 + vnoise(A, B, 7, 4) * 1.3;
+        if (Math.abs(vnoise(A, B, 44, 8) - 0.5) < 0.018) tone = 0;
+        if (hash(x, y, 9) < 0.012) tone += 2;
+        const fa = A / 32 - ti, fb = B / 32 - tj;
+        if ((fa < 0.18 && tileAt(ti - 1, tj) === WALL) || (fb < 0.18 && tileAt(ti, tj - 1) === WALL) || (fa > 0.86 && tileAt(ti + 1, tj) === WALL) || (fb > 0.86 && tileAt(ti, tj + 1) === WALL)) tone -= 2;
+        floorBuf[k] = ST(tone);
+        continue;
+      }
       const cell = room ? 16 : 8;   // flagstones in rooms, cobbles in corridors
       const sb = Math.floor(B / cell), A2 = A + (sb & 1) * (cell / 2);
       const ma = ((A2 % cell) + cell) % cell, mb = ((B % cell) + cell) % cell;
-      if (ma < 2 || mb < 2) v = K2;
+      if (ma < 2 || mb < 2) v = (LV.theme === 'hell' && room && hash(Math.floor(A2 / cell), sb, 99) < 0.16) ? (LAVA[(Math.floor((A + B) / 6) % 6 + 6) % 6] | EMIS) : K2;   // lava in some joints
       else {
         const sa = Math.floor(A2 / cell), h = hash(sa, sb, 7 + LV.level);
         let tone = (room ? 2 : 1) + Math.floor(h * 3);
@@ -366,11 +452,23 @@ function genFloor() {
         const fa = A / 32 - ti, fb = B / 32 - tj;
         if ((fa < 0.14 && tileAt(ti - 1, tj) === WALL) || (fb < 0.14 && tileAt(ti, tj - 1) === WALL) ||
             (fa > 0.9 && tileAt(ti + 1, tj) === WALL) || (fb > 0.9 && tileAt(ti, tj + 1) === WALL)) tone -= 2;
-        v = S[clamp(tone, 0, 8)];
-        if (h > 0.985 && ph < 0.4) v = GREEN[0];   // moss in the joints
+        v = ST(tone);
+        if (h > 0.985 && ph < 0.4 && LV.theme === 'crypt') v = GREEN[0];   // moss in the joints
       }
     }
     floorBuf[k] = v;
+  }
+}
+// a molten pool: emissive lava indices (they flow through the palette cycle) with a dark crust rim
+function stampLava(wx, wy, size, seed) {
+  const r = rng(seed), blobs = [];
+  for (let n = 0; n < 2 + size; n++) blobs.push([wx + (r() - 0.5) * size * 6, wy + (r() - 0.5) * size * 2.6, 2 + r() * size * 1.6]);
+  for (let y = Math.floor(wy - size * 5); y <= wy + size * 5; y++) for (let x = Math.floor(wx - size * 10); x <= wx + size * 10; x++) {
+    if (x < 0 || y < 0 || x >= WW || y >= WH) continue;
+    const k = y * WW + x; if (floorBuf[k] === BLK || !wFloor[k]) continue;
+    let d = 9; for (const [bx, by, br] of blobs) d = Math.min(d, Math.hypot((x - bx) / br, (y - by) * 2 / br));
+    if (d > 1.25) continue;
+    setFloor(k, d > 1 ? (hash(x, y, seed) < 0.6 ? HELL[0] : BLK) : (LAVA[(Math.floor(d * 5 + (x + y) * 0.15) % 6 + 6) % 6] | EMIS));
   }
 }
 function setFloor(k, v) { floorBuf[k] = v; if (wFloor[k]) wIdx[k] = v; }
@@ -432,6 +530,24 @@ function buildWorld() {
       props.push({ depth: d.i + d.j + 1, sp: PROPS.brazier(), wx: x, wy: y, tile: tIdx(d.i, d.j) });
       fires.push({ wx: x, wy: y - 20, h: 13, w: 5, seed: d.i * 31 + d.j, ember: 0.1, tile: tIdx(d.i, d.j) });
       lights.push({ x, y, z: 30, r: 150, i: 1.1, seed: d.i + d.j * 7 });
+    } else if (d.kind === 'coffin' || d.kind === 'statue' || d.kind === 'candles' || d.kind === 'bonepile' || d.kind === 'stalagmite') {
+      const [x, y] = iso(d.i + 0.5, d.j + 0.5);
+      const sp = d.kind === 'coffin' ? PROPS.coffin(d.yaw) : d.kind === 'statue' ? PROPS.statue(!!d.hell) : d.kind === 'candles' ? PROPS.candles() : d.kind === 'bonepile' ? PROPS.bonepile(d.seed) : PROPS.stalagmite(d.seed);
+      props.push({ depth: d.i + d.j + 1, sp, wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
+      if (d.kind === 'candles') {
+        for (const [cx, cy, hgt] of [[-2.5, -1.5, 3.5], [0, 1, 5], [2.5, -1, 2.5], [1.5, 2.2, 4], [-2, 2, 3]]) {
+          const q = V.rotZ([cx, cy, 0], Math.PI / 4), gx = d.i + 0.5 + q[0] / TILE_U, gy = d.j + 0.5 + q[1] / TILE_U, [fx, fy] = iso(gx, gy);
+          fires.push({ wx: fx, wy: fy + 2 - (8.3 + hgt) * 0.87 - 1, h: 3, w: 0.8, seed: cx * 7 + cy, tile: tIdx(d.i, d.j) });
+        }
+        lights.push({ x, y, z: 14, r: 80, i: 0.65, seed: d.i + d.j });
+      }
+    } else if (d.kind === 'mushroom') {
+      const [x, y] = iso(d.fi, d.fj);
+      props.push({ depth: d.fi + d.fj, sp: PROPS.mushroom(d.seed), wx: x, wy: y, tile: tIdx(Math.floor(d.fi), Math.floor(d.fj)) });
+      lights.push({ x, y, z: 6, r: 48, i: 0.35, seed: d.seed });
+    } else if (d.kind === 'lava') {
+      const [x, y] = iso(d.fi, d.fj);
+      lights.push({ x, y, z: 4, r: 70 + d.size * 8, i: 0.8, seed: d.seed });
     } else if (d.kind === 'bones') {
       const [x, y] = iso(d.fi, d.fj);
       d.sp = PROPS.bones(d.seed % 6); d.wx = x; d.wy = y;
@@ -454,8 +570,8 @@ function buildWorld() {
     const sp = makeBox(1, 1, 1, (face, a, b) => {
       if (face !== 'top') return 0;
       const step = Math.floor(b / 3);
-      if (a < 1 || b < 1 || a > 15) return S[2];
-      return step >= 4 ? BLK : [S[6], S[4], S[3], S[1]][step] + (a < 3 ? 1 : 0);
+      if (a < 1 || b < 1 || a > 15) return ST(2);
+      return step >= 4 ? BLK : ST([6, 4, 3, 1][step] + (a < 3 ? 1 : 0));
     });
     s.sp = sp; s.wx = x; s.wy = y;
   }
@@ -463,6 +579,7 @@ function buildWorld() {
   blitWorld(LV.stairs.sp, LV.stairs.wx, LV.stairs.wy + 1, 0, -1, true);
   for (const d of LV.decor) {
     if (d.kind === 'blood') { const [x, y] = iso(d.fi, d.fj); stampBlood(Math.round(x), Math.round(y), d.size, d.seed); }
+    if (d.kind === 'lava') { const [x, y] = iso(d.fi, d.fj); stampLava(Math.round(x), Math.round(y), d.size, d.seed); }
     if (d.kind === 'bones') blitWorld(d.sp, d.wx, d.wy, 0, -1, true);
   }
   back.sort((a, b) => a.depth - b.depth);

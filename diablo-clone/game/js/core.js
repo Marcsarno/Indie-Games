@@ -21,6 +21,10 @@ const PAL_HEX = [
   '12261a', '24452a', '3f6e35', '78a84a',                               // 52-55 green (poison, set items)
   '25123a', '45206a', '7438a8', 'b070e0',                               // 56-59 purple (magic)
   '4a2a22', '7a4a36', 'b07a58', 'dcae86',                               // 60-63 skin
+  '1a1a1f', '272830', '363844', '4a4c58', '62646e', '7e7f86',           // 64-69 cave rock (cool grey)
+  '1f6f6a', '3fbfae', '9ff5e0',                                         // 70-72 glowing fungus
+  '1f0c0c', '341414', '4d1c18', '6b2a1f', '8c3a26', 'a85232',           // 73-78 hell stone
+  '5a1206', '9a2208', 'd8420c', 'f8781a', 'ffb43a', 'ffe27a',           // 79-84 lava (color-cycled)
 ];
 const NPAL = PAL_HEX.length;
 const PR = new Uint8Array(NPAL), PG = new Uint8Array(NPAL), PB = new Uint8Array(NPAL);
@@ -43,6 +47,10 @@ const GOLD = [48, 49, 50, 51];
 const GREEN = [52, 53, 54, 55];
 const PURPLE = [56, 57, 58, 59];
 const SKIN = [60, 61, 62, 63];
+const CAVE = [64, 65, 66, 67, 68, 69];
+const FUNGUS = [70, 71, 72];
+const HELL = [73, 74, 75, 76, 77, 78];
+const LAVA = [79, 80, 81, 82, 83, 84];
 const BLK = 1, K1 = 2, K2 = 3, EMIS = 128;
 
 // Light tables (Diablo 1's method): lighting never mixes RGB. Level L maps each palette index to
@@ -50,7 +58,7 @@ const BLK = 1, K1 = 2, K2 = 3, EMIS = 128;
 // shared tail; above L_ID it steps up for torch-side over-exposure. Emissive pixels skip the tables.
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const TAIL = [1, 2, 3];
-const PAL_RAMPS = [S, FIRE, RED, BONE, STEEL, WOOD, BLUE, CHITIN, FLESH, GOLD, GREEN, PURPLE, SKIN];
+const PAL_RAMPS = [S, FIRE, RED, BONE, STEEL, WOOD, BLUE, CHITIN, FLESH, GOLD, GREEN, PURPLE, SKIN, CAVE, FUNGUS, HELL, LAVA];
 const LEVELS = 9, L_ID = 3, BANDS = 5;
 const LTAB = Array.from({ length: LEVELS }, () => new Uint8Array(NPAL));
 for (let i = 1; i < NPAL; i++) {
@@ -135,3 +143,14 @@ const FONT = {};
   for (const k in g) FONT[k] = g[k];
 })();
 const textWidth = (s, z = 1) => s.length * 4 * z - z;
+
+// palette color cycling (Diablo's lava and fire trick): emissive lava pixels are drawn through this
+// table, which rotates the lava ramp every frame, so molten cracks flow without redrawing anything
+const CYCLE = new Uint8Array(NPAL).map((_, i) => i);
+function cyclePalette(t) {
+  const s = Math.floor(t * 7);
+  for (let k = 0; k < LAVA.length; k++) {
+    const w = (k + s) % 10, j = w < 6 ? w : 10 - w;   // ping-pong through the ramp so it pulses
+    CYCLE[LAVA[k]] = LAVA[clamp(j, 0, 5)];
+  }
+}

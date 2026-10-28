@@ -91,7 +91,7 @@ const CHAMP_KINDS = [
   { prefix: 'PLAGUED', tint: 'green', hp: 2.4, dmg: 1.4, speed: 1.05 },
   { prefix: 'SHADOW', tint: 'purple', hp: 2.2, dmg: 1.5, speed: 1.15 },
 ];
-const champChance = level => Math.min(0.3, 0.04 + level * 0.035);
+const champChance = level => Math.min(0.18, 0.03 + level * 0.022);
 function makeChampion(e, R) {
   const c = CHAMP_KINDS[Math.floor(R() * CHAMP_KINDS.length)];
   e.champ = c;

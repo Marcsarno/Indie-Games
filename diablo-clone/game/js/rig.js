@@ -57,6 +57,13 @@ defMat('EYE_GRN', [55], 0, { flat: true, emis: true });
 defMat('FIREM', [16], 0, { flat: true, emis: true });
 defMat('MAGIC', [59], 0, { flat: true, emis: true });
 defMat('MARK', [20, 21, 22], 1, { span: 0.6 });
+defMat('ROCK', [65, 66, 67, 68, 69], 2, { span: 1.0 });
+defMat('HELLSTONE', [73, 74, 75, 76, 77], 2, { span: 0.9 });
+defMat('STONE', [5, 6, 7, 8, 9, 10], 2, { span: 0.9 });
+defMat('FUNGUS', [71], 0, { flat: true, emis: true });
+defMat('FUNGUS2', [72], 0, { flat: true, emis: true });
+defMat('WAX', [25, 26, 27], 1, { span: 0.6 });
+defMat('LAVAM', [82], 0, { flat: true, emis: true });
 defMat('HIDE', [2, 28, 29, 30], 2, { span: 0.9 });   // grey dead hide (bone hound)
 defMat('RUST', [28, 29, 35, 49], 1, { span: 0.9, spec: [0.985, 50] });   // rusted iron: grey going orange
 defMat('MARKB', [21, 22, 23], 1, { span: 0.5 });

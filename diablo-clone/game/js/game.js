@@ -59,7 +59,8 @@ function startLevel(level, seed) {
   updateFov(hero.fi, hero.fj);
   flowT = 0; computeFlow();
   warmStep(1e9, prewarm());   // idle poses + the hero's walk now, behind the level fade; the rest during play
-  say(`CRYPT LEVEL ${level}`, 51, 3);
+  G.msg = [];
+  say(`${TH().name} LEVEL ${level}`, 51, 3);
   if (isBossFloor(level)) say('SOMETHING VAST STIRS IN THE DARK', 22, 4);
 }
 function makeEnemy(id, fi, fj, n) {
@@ -647,6 +648,7 @@ function drawProjectile(p) {
 // one level each so they never shimmer.
 function lightPass(chars, kx, ky) {
   const t = G.t;
+  cyclePalette(t);
   const dyn = [{ x: kx, y: ky, z: 34, r: 145, i: 0.62 }];
   for (const p of projectiles) if (p.kind !== 'arrow' && dyn.length < 5) { const [x, y] = iso(p.fi, p.fj); dyn.push({ x, y, z: p.z, r: 70, i: 0.8 }); }
   const fl = g => 1 + 0.07 * Math.sin(t * 11 + g * 2.3) + 0.05 * Math.sin(t * 23.7 + g * 5.1) + 0.04 * Math.sin(t * 37 + g);
@@ -683,7 +685,7 @@ function lightPass(chars, kx, ky) {
       if (v === BLK) { out32[o] = black; continue; }
       const tk = tbuf[o];
       if (tk < 0 || !seen[tk]) { out32[o] = black; continue; }
-      if (v & EMIS) { out32[o] = PAL32[v & 127]; continue; }
+      if (v & EMIS) { out32[o] = PAL32[CYCLE[v & 127]]; continue; }
       const ci = cid[o];
       if (ci) { out32[o] = LCOL[cl[ci - 1] + v]; continue; }
       const vv = vis[tk];
