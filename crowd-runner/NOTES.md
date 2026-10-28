@@ -5,6 +5,8 @@ shoot a crate barricade to unlock a minigun, and fight a zombie horde and a brut
 Last updated 2026-10-28 (round 2: character redo, narrow road, ad mode).
 Published for phone testing: https://claude.ai/artifact/3YgqkiwapCshU6FPcYtDFQ (republish `dist/artifact.html` to the same artifact after each change).
 
+**Next: `PLAN-round3.md`** (the user's round-2 playtest feedback and the plan: fixed-size squad, wider road, sound, polish).
+
 Read next: `RESEARCH.md` (genre research, level-design rules), `ART-SPEC.md` (read from the user's three
 mock-ups in `reference/mockups/`), `ASSETS.md` (zombie/people source files copied from the user's
 `yola-zombie` repo; **reference only now**, the game uses new Blender models).
