@@ -18,6 +18,8 @@ const LIGHT = V.norm([-0.55, -0.65, 0.52]);
 const D0 = LIGHT[2];
 const LIGHT_W = V.norm(V.add(V.add(V.mul(CAM_R, LIGHT[0]), V.mul(CAM_D, LIGHT[1])), V.mul(CAM_T, LIGHT[2])));
 const HALF = V.norm([LIGHT[0], LIGHT[1], LIGHT[2] + 1]);
+// soft shading (round 10): gentler shadow-side falloff; false = the original hard falloff
+let SOFT_SHADE = true;
 // world <-> screen for points on the ground: screen = (dot(p, R), dot(p, D)); tile edge in units
 const TILE_U = 16 * Math.SQRT2;
 
@@ -30,11 +32,11 @@ function defMat(name, ramp, mid, opt = {}) {
   M[name] = MATS.length - 1;
 }
 defMat('STEEL', STEEL, 2, { shiny: true, span: 1.3, spec: [0.94, 32] });
-defMat('PLATE', [2, 28, 29, 30, 31, 32], 2, { shiny: true, span: 1.2, spec: [0.95, 32] });   // plate armor: darker mids (edge light was tried and rejected in a blind A/B)
-defMat('DSTEEL', [2, 28, 29, 30, 31], 2, { shiny: true, span: 1.3, spec: [0.95, 31] });   // blackened plate
+defMat('PLATE', [2, 28, 29, 30, 31, 32], 3, { shiny: true, span: 1.2, spec: [0.95, 32] });   // plate armor: darker mids (edge light was tried and rejected in a blind A/B)
+defMat('DSTEEL', [2, 28, 29, 30, 31], 3, { shiny: true, span: 1.3, spec: [0.95, 31] });   // blackened plate
 defMat('BLADE', [29, 30, 31, 32, 27], 3, { shiny: true, span: 1.2, spec: [0.9, 27] });
 defMat('IRON', [2, 28, 29, 30], 1, { span: 0.9, spec: [0.97, 30] });
-defMat('CHAIN', [28, 29, 30, 31], 1, { span: 0.8, spec: [0.985, 31] });
+defMat('CHAIN', [28, 29, 30, 31], 2, { span: 0.8, spec: [0.985, 31] });
 defMat('BONE', BONE, 2, { span: 0.9, spec: [0.975, 27] });
 defMat('OLDBONE', [3, 24, 25, 26], 2, { span: 0.9, spec: [0.98, 26] });
 defMat('CLOTH_RED', RED, 3, { span: 0.6 });
@@ -43,7 +45,7 @@ defMat('CLOTH_GREEN', GREEN, 2, { span: 0.6 });
 defMat('CLOTH_PURPLE', PURPLE, 2, { span: 0.6 });
 defMat('CLOTH_DARK', [2, 3, 5, 6], 2, { span: 0.6 });
 defMat('WOOD', WOOD, 2, { span: 0.8 });
-defMat('LEATHER', [33, 34, 35, 36], 1, { span: 0.8 });
+defMat('LEATHER', [33, 34, 35, 36], 2, { span: 0.8 });
 defMat('FLESH', FLESH, 1, { span: 1.0, spec: [0.985, 47] });
 defMat('SKIN', SKIN, 2, { span: 0.9 });
 defMat('HORN', [3, 24, 25, 26], 1, { spec: [0.97, 26] });
@@ -89,7 +91,7 @@ class Rig {
   // oriented box: half extents along axes ex, ey, ez
   box(c, half, m, axes = null, o = {}) { return this.add({ k: 3, c, half, ax: axes || [[1, 0, 0], [0, 1, 0], [0, 0, 1]], m, ...o }); }
   // emissive triangles drawn after shading (weapon smears), depth-tested against the body
-  tri(a, b, c, col) { this.tris.push([a, b, c, col]); }
+  tri(a, b, c, col, dither = false) { this.tris.push([a, b, c, col, dither]); }
   dot(p, col) { this.dots.push([p, col]); }
 }
 // axes for a frame whose x axis points along dir (y kept as level as possible)
@@ -264,9 +266,15 @@ function shade(w, h, ax, ay, B, rig, R, D, VD) {
     const mm = m[k]; if (!mm) continue;
     const mat = MATS[mm]; if (mat.flat) continue;
     let dot = Math.max(0, nx[k] * LIGHT[0] + ny[k] * LIGHT[1] + nz[k] * LIGHT[2]);
-    if (shad[k]) dot = Math.min(dot, D0 - 0.25);
     const len = mat.ramp.length;
-    tone[k] = clamp(Math.round(mat.mid + (dot - D0) * (len - 0.5) * mat.span + bias[k]), lo(mm), len - 1);
+    let off = (dot - D0) * (len - 0.5) * mat.span;
+    if (SOFT_SHADE) {
+      // soft: the shadow side falls off at half the rate, and a cast shadow is one step darker,
+      // so turned-away surfaces keep their form instead of collapsing to the darkest color
+      if (off < 0) off *= 0.35;
+      if (shad[k]) off -= 1;
+    } else if (shad[k]) off = Math.min(off, (D0 - 0.25 - D0) * (len - 0.5) * mat.span);
+    tone[k] = clamp(Math.round(mat.mid + off + bias[k]), lo(mm), len - 1);
   }
   // majority cleanup: a tone pixel that disagrees with 3+ same-part neighbors joins them
   const t2 = tone.slice();
@@ -328,7 +336,7 @@ function shade(w, h, ax, ay, B, rig, R, D, VD) {
   }
   // emissive overlays (smears), depth-tested against the body
   const proj = p => [V.dot(p, R) + ax, V.dot(p, D) + ay, V.dot(p, VD)];
-  for (const [a, b, c, col] of rig.tris) {
+  for (const [a, b, c, col, dither] of rig.tris) {
     const A = proj(a), Bq = proj(b), C = proj(c);
     const x0 = Math.max(1, Math.floor(Math.min(A[0], Bq[0], C[0]))), x1 = Math.min(w - 2, Math.ceil(Math.max(A[0], Bq[0], C[0])));
     const y0 = Math.max(1, Math.floor(Math.min(A[1], Bq[1], C[1]))), y1 = Math.min(h - 2, Math.ceil(Math.max(A[1], Bq[1], C[1])));
@@ -337,6 +345,7 @@ function shade(w, h, ax, ay, B, rig, R, D, VD) {
       const px = x + 0.5, py = y + 0.5;
       const l1 = ((Bq[1] - C[1]) * (px - C[0]) + (C[0] - Bq[0]) * (py - C[1])) / den, l2 = ((C[1] - A[1]) * (px - C[0]) + (A[0] - C[0]) * (py - C[1])) / den, l3 = 1 - l1 - l2;
       if (l1 < 0 || l2 < 0 || l3 < 0) continue;
+      if (dither && ((x + y) & 1)) continue;
       const z = l1 * A[2] + l2 * Bq[2] + l3 * C[2], k = y * w + x;
       if (m[k] && dep[k] - 400 < z + 2) continue;   // the blade itself stays in front of its trail
       o2[k] = col | EMIS; m[k] = 255;
@@ -367,5 +376,5 @@ function scaleRig(rig, k) {
     if (p.half) p.half = V.mul(p.half, k);
     if (p.mf) { const f = p.mf; p.mf = (q, n) => f(V.mul(q, 1 / k), n); }
   }
-  rig.tris = rig.tris.map(([a, b, c, col]) => [V.mul(a, k), V.mul(b, k), V.mul(c, k), col]);
+  rig.tris = rig.tris.map(([a, b, c, col, d]) => [V.mul(a, k), V.mul(b, k), V.mul(c, k), col, d]);
 }

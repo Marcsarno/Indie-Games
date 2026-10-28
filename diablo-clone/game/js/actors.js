@@ -40,19 +40,23 @@ function tipRig(rig, pivot, pitch, roll = 0, drop = 0) {
     if (p.ax) p.ax = p.ax.map(Vv);
     if (p.mf) { const f = p.mf; const inv = q => { let r = [q[0] - pivot[0], q[1] - pivot[1], q[2] - pivot[2] + drop]; r = V.rotX(r, -roll); r = V.rotY(r, -pitch); return V.add(r, pivot); }; p.mf = (q, n) => f(inv(q), n); }
   }
-  rig.tris = rig.tris.map(([a, b, c, col]) => [P(a), P(b), P(c), col]);
+  rig.tris = rig.tris.map(([a, b, c, col, d]) => [P(a), P(b), P(c), col, d]);
 }
 // a swept blade: emissive crescent from angle a0 to a1 in the swing plane (age-graded colors)
+// SMEAR_MODE: 'full' = bright crescent; 'subtle' = a short, thin, dithered steel streak at the
+// blade tip; 'none' = no trail
+let SMEAR_MODE = 'subtle';   // user chose the subtle streak over the bright crescent (round 9)
 function smearArc(rig, pivot, F, U, a0, a1, r0, r1) {
-  const N = 7;
+  if (SMEAR_MODE === 'none') return;
+  const subtle = SMEAR_MODE === 'subtle', N = subtle ? 4 : 7, span = subtle ? 0.45 : 1;
   for (let s = 0; s < N; s++) {
-    const t0 = s / N, t1 = (s + 1) / N;
+    const t0 = s / N * span, t1 = (s + 1) / N * span;
     const A0 = lerp(a1, a0, t0), A1 = lerp(a1, a0, t1);
-    const age = t0, col = age < 0.3 ? 27 : age < 0.65 ? 26 : 25;
-    const ri = lerp(r0, r1, 0.35 + 0.65 * age);   // the trail thins as it ages
+    const age = t0 / span, col = subtle ? (age < 0.5 ? 31 : 30) : age < 0.3 ? 27 : age < 0.65 ? 26 : 25;
+    const ri = subtle ? r1 - 3.2 + age * 1.6 : lerp(r0, r1, 0.35 + 0.65 * age);   // the trail thins as it ages
     const dir = a => V.add(V.mul(F, Math.cos(a)), V.mul(U, Math.sin(a)));
     const p00 = V.mad(pivot, dir(A0), ri), p01 = V.mad(pivot, dir(A0), r1), p10 = V.mad(pivot, dir(A1), ri), p11 = V.mad(pivot, dir(A1), r1);
-    rig.tri(p00, p01, p11, col); rig.tri(p00, p11, p10, col);
+    rig.tri(p00, p01, p11, col, subtle); rig.tri(p00, p11, p10, col, subtle);
   }
 }
 
@@ -105,7 +109,7 @@ function deathTip(rig, B, f, dir = -1, side = 1) {
 }
 
 // ---------------------------------------------------------------- the hero (knight)
-const HERO_B = { hipH: 18, thigh: 9.5, shin: 8.5, ankle: 1.8, spine: 8, shW: 8.2, shZ: 4, neck: 12.5, upper: 6.5, fore: 6, hipW: 3.4, stride: 8, lift: 3.4, stance: 1.7 };
+const HERO_B = { hipH: 18, thigh: 9.5, shin: 8.5, ankle: 1.8, spine: 8, shW: 7.0, shZ: 4, neck: 12.5, upper: 6.5, fore: 6, hipW: 3.0, stride: 8, lift: 3.4, stance: 1.6 };
 const TEAM = { red: M.CLOTH_RED, blue: M.CLOTH_BLUE };
 
 // Equipment is visual family ids, separate from item stats: many items share one look.
@@ -127,18 +131,20 @@ function heroRig(eq, st) {
   const PL = eq.chest === 'darkplate' ? M.DSTEEL : M.PLATE;
   const legM = plate ? PL : M.LEATHER, torsoM = plate ? PL : chain ? M.CHAIN : team;
   const { fwd, sideR, up } = J;
+  // a lean body underneath; armor adds its own bulk on top (chain a little, plate the most)
+  const bulk = plate ? 1 : brig ? 0.75 : chain ? 0.55 : 0;
 
   // legs
   for (const [hip, knee, ank, s] of [[J.hipL, J.kneeL, J.ankL, -1], [J.hipR, J.kneeR, J.ankR, 1]]) {
-    r.cone(hip, knee, plate ? 3.4 : 3.0, plate ? 3.0 : 2.6, plate ? PL : M.CLOTH_DARK);
-    r.cone(knee, ank, plate ? 3.0 : 2.6, plate ? 2.4 : 2.1, legM);
+    r.cone(hip, knee, 2.3 + bulk, 2.0 + bulk, plate ? PL : M.CLOTH_DARK);
+    r.cone(knee, ank, 1.9 + bulk * 1.0, 1.6 + bulk * 0.8, legM);
     if (plate) { const kc = V.add(knee, [1.4, 0, 0.3]); r.sph(kc, 2.4, PL); }   // poleyn
-    r.ell(V.add(ank, [2.0, 0, -0.9]), plate ? [3.9, 2.4, 1.5] : [3.3, 1.9, 1.3], legM);
+    r.ell(V.add(ank, [2.0, 0, -0.9]), plate ? [3.9, 2.4, 1.5] : [3.1, 1.6, 1.2], legM);
   }
   // hips, belt and tabard
-  r.ell(J.pelvis, [4.4, 5.6, 3.6], plate ? PL : chain ? M.CHAIN : M.LEATHER);
-  const belt = V.mad(J.pelvis, up, 3.4);
-  if (!plate) { r.ell(belt, [5.4, 6.4, 1.4], M.LEATHER, frameAlong(fwd, up)); r.sph(V.mad(belt, fwd, 5.2), 1.2, M.GOLD); }
+  r.ell(J.pelvis, [3.4 + bulk, 4.2 + bulk * 1.4, 3.2 + bulk * 0.4], plate ? PL : chain ? M.CHAIN : M.CLOTH_DARK);
+  const belt = V.mad(J.pelvis, up, 3.0);
+  if (!plate) { r.ell(belt, [3.8 + bulk * 1.4, 4.6 + bulk * 1.6, 1.1], M.LEATHER, frameAlong(fwd, up)); r.sph(V.mad(belt, fwd, 3.8 + bulk * 1.4), 1.0, M.GOLD); }
   if (chain) r.box(V.add(V.mad(J.pelvis, fwd, 4.3), [0, 0, -2.5]), [0.5, 3.0, 5.2], team, frameAlong(fwd, up));
   if (plate) {   // faulds: a pointed front plate and two tassets over the thighs, plus a leather strap
     const fr = frameAlong(V.norm(V.add(fwd, V.mul(up, -0.35))), up);
@@ -150,7 +156,11 @@ function heroRig(eq, st) {
     r.cone(V.add(V.add(V.mad(J.pelvis, fwd, 3.6), V.mul(sideR, -4)), V.mul(up, 1)), V.add(V.add(V.mad(J.pelvis, fwd, 3.2), V.mul(sideR, 2)), V.mul(up, -5.5)), 0.7, 0.7, M.LEATHER);
   }
   // torso
-  r.ell(J.chest, [5.2, 6.8, 6.6], torsoM, frameAlong(fwd, up), {
+  // torso: a chest that tapers to a narrower waist, so the silhouette has shoulders and a middle
+  const tf = frameAlong(fwd, up), abd = V.mad(J.chest, up, -3.6);
+  r.ell(abd, [3.2 + bulk * 1.6, 4.0 + bulk * 2.2, 3.4 + bulk * 0.8], plate ? PL : chain ? M.CHAIN : brig ? team : team, tf);
+  if (!plate && !chain && !brig) r.cone(V.mad(J.chest, up, 4.5), J.head, 1.4, 1.2, M.SKIN);   // neck
+  r.ell(V.mad(J.chest, up, 0.8), [3.8 + bulk * 1.4, 5.0 + bulk * 1.8, 4.6 + bulk * 1.6], torsoM, tf, {
     mf: brig ? (p => {   // brigandine: cloth over plates, rows of gold rivets
       const q = V.sub(p, J.chest), u = V.dot(q, sideR) * 0.62, v = V.dot(q, up) * 0.62;
       return Math.abs(u - Math.round(u)) < 0.22 && Math.abs(v - Math.round(v)) < 0.22 ? M.GOLD : 0;
@@ -162,7 +172,10 @@ function heroRig(eq, st) {
       if (f > 2 && sd < 0.55 && z > -2.6) return M.BLADE;
       if (f > 1 && Math.abs(z + 3.4 - sd * 0.55) < 0.5) return M.DARK;   // V-shaped plackart seam
       return 0;
-    }) : null,
+    }) : (p => {   // tunic: a V of skin at the neck
+      const q = V.sub(p, J.chest), sd = Math.abs(V.dot(q, sideR)), z = V.dot(q, up);
+      return V.dot(q, fwd) > 1.5 && z > 2.6 && sd < (z - 2.6) * 0.9 + 0.6 ? M.SKIN : 0;
+    }),
   });
   // arms: right hand holds the weapon, left the shield
   const sw = st.clip === 'attack' ? st.key : null;
@@ -183,14 +196,15 @@ function heroRig(eq, st) {
   }
   const aR = armTo(J, J.shR, handR, B, 1);
   const armM = plate ? PL : chain ? M.CHAIN : M.LEATHER;
-  const ar = plate ? [2.7, 2.5, 2.2, 2.6] : [2.3, 2.1, 1.8, 2.1];
-  r.cone(J.shR, aR.el, ar[0], ar[1], armM); r.cone(aR.el, aR.hand, ar[1], ar[2], armM);
-  r.sph(aR.hand, ar[3], plate ? PL : M.LEATHER);
+  const ar = [1.9 + bulk * 0.8, 1.7 + bulk * 0.8, 1.5 + bulk * 0.7, 1.8 + bulk * 0.8];
+  const sleeve = eq.chest === 'tunic' ? team : armM, foreM = eq.chest === 'tunic' ? M.SKIN : armM, handM = plate ? PL : eq.chest === 'tunic' ? M.SKIN : M.LEATHER;
+  r.cone(J.shR, aR.el, ar[0], ar[1], sleeve); r.cone(aR.el, aR.hand, ar[1], ar[2], foreM);
+  r.sph(aR.hand, ar[3], handM);
   let handL = V.add(V.add(J.shL, V.mul(fwd, 5.5 - J.swingArm * 2)), V.add(V.mul(up, -7.5), V.mul(sideR, -0.5)));
   if (st.clip === 'death') handL = V.add(J.shL, [2, -3, -9]);
   const aL = armTo(J, J.shL, handL, B, -1);
-  r.cone(J.shL, aL.el, ar[0], ar[1], armM); r.cone(aL.el, aL.hand, ar[1], ar[2], armM);
-  r.sph(aL.hand, ar[3], plate ? PL : M.LEATHER);
+  r.cone(J.shL, aL.el, ar[0], ar[1], sleeve); r.cone(aL.el, aL.hand, ar[1], ar[2], foreM);
+  r.sph(aL.hand, ar[3], handM);
   if (plate) for (const a of [aR, aL]) r.sph(a.el, 2.2, PL);   // elbow cops
   // pauldrons: big rounded plates with a bright lower rim and a rivet (plate); pads otherwise
   if (eq.chest !== 'tunic') for (const [sh, sd] of [[J.shL, -1], [J.shR, 1]]) {
@@ -202,14 +216,14 @@ function heroRig(eq, st) {
   const hd = J.head;
   const helmF = frameAlong(fwd, up);
   if (eq.helm === 'none' || eq.helm === 'cap') {
-    r.ell(hd, [4.6, 4.4, 5.0], M.SKIN, helmF, { mf: p => {
+    r.ell(hd, [4.2, 4.0, 4.8], M.SKIN, helmF, { mf: p => {
       const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up);
-      if (f2 > 3 && Math.abs(Math.abs(s2) - 1.6) < 0.6 && Math.abs(z2 - 0.6) < 0.6) return M.DARK;   // eyes
-      if (eq.helm === 'none' && (z2 > 2.6 || f2 < -2)) return M.HAIR;
+      if (f2 > 2.6 && Math.abs(Math.abs(s2) - 1.5) < 0.6 && Math.abs(z2 - 1.0) < 0.6) return M.DARK;   // eyes (set high to read from above)
+      if (eq.helm === 'none' && (z2 > 1.6 - f2 * 0.15 || f2 < -1.2)) return M.HAIR;
       return 0;
     } });
     if (eq.helm === 'cap') r.ell(V.mad(hd, up, 2.2), [5.0, 4.9, 3.6], M.IRON, helmF);
-    if (eq.helm === 'none') r.cone(V.mad(V.mad(hd, up, -1), fwd, 3.8), V.mad(V.mad(hd, up, -4), fwd, 3.2), 1.6, 1.2, M.HAIR);   // beard
+    if (eq.helm === 'none') r.cone(V.mad(V.mad(hd, up, -1.6), fwd, 3.2), V.mad(V.mad(hd, up, -3.8), fwd, 2.8), 1.3, 0.9, M.HAIR);   // short beard
   } else {
     if (eq.helm === 'barbute') {
       // barbute: close round helm with a T-shaped face opening
