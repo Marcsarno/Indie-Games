@@ -1,7 +1,7 @@
 # Diablo-clone project notes
 
 Running log of decisions, state and next steps, so work can resume in a fresh session.
-Last updated: 2026-10-27 (round 6: playable game build).
+Last updated: 2026-10-28 (round 7: phone feedback fixes).
 
 ## Goal
 A 2D pixel-art, isometric, Diablo-style action RPG for mobile (portrait). The open question
@@ -143,12 +143,11 @@ Full detail: `reports/Better code generated pixel art.md` and
 | 4 | Material shading, combat feel, pairwise review | Combat clearly better frame by frame; shading changes subtle |
 | 5 | Ramp palette + light tables + performance | Steel/bone keep their color under torchlight; 4×-throttled median frame 47.9 → 15.3 ms (p95 74 → 29 ms); desktop 10.4 → 3.7 ms |
 | 6 | New game build from the handoff + all of the above (`diablo-clone/game`) | Playable loop works end to end (touch-tested on Pixel 7 emulation: move+attack together, skill, potion, equip, save/continue, death/rise, pause on background). Warm frames 3.8 ms desktop / 20.3 ms at 4× throttle (≈50 fps), p95 31 ms; level load 0.45 s / 1.6 s. First 5 s at 4×: median 26 ms while sprites build. Stills: old hand-drawn sprites read bigger and more illustrated; new ones win on motion, 8 directions and visible gear |
+| 7 | User's phone test + blind A/B (old prototype vs new rig sprites). Picks: knight new (but "not great"), hound new, skeleton old ("definitely"), big spider old (new is fine as a small spider). User: plays well, gear changes on pickup were a highlight, too slow walking, size OK | Hero 3.0 → 4.2 tiles/s with a longer stride (8) and 0.26 tiles per walk frame; monsters ×1.2. Skeleton rebuilt from the old drawing's strengths (separate rib bars over a dark hollow, back spine + shoulder blades, sword raised in guard, bigger shield, ×1.1). Broodmother gets its own look (low body, 17+17 legs with high knees, red stripe + chevrons, bigger head/eyes/fangs, 128×84 canvas); cave spider unchanged. Knight: full plume, sword out to the side in guard, wider stance. Chitin highlight now bone-grey. Before/after: `art-review/round7/`. Frame time unchanged on the same machine (4× warm 11.9 → 10.4 ms; this machine is faster than round 6's) |
 
 ## Waiting on the user
-- **Play the published game on the phone** (https://claude.ai/artifact/7EX2mEMH4cSGuKC2c3K29g) and say how
-  controls, size, speed and look feel. Real-device frame time is still unmeasured.
-- **Blind A/B: old vs new sprites** in `art-review/new-game/sprites-blind.png` (A or B per character);
-  key in `art-review/new-game/blind-key.b64.txt`, don't decode first.
+- **Replay round 7 on the phone** (same link): is the walk speed right now, and do the new skeleton,
+  broodmother and knight read better in play? Real-device frame time is still unmeasured.
 - **Blind A/B picks** (A or B per character: knight, skeleton, hound, spider) for
   `art-review/ab-blind-1.png` and `art-review/before-after/shading-blind.png`.
 - Whether the new combat feels better in `art-review/before-after/combat.gif`.

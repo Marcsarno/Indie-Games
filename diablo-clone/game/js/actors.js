@@ -61,7 +61,8 @@ function smearArc(rig, pivot, F, U, a0, a1, r0, r1) {
 function bipedJoints(B, st) {
   const { clip, f } = st;
   let bob = 0, lean = 0, twist = 0;
-  let footL = [0.5, -B.hipW, 0], footR = [-0.5, B.hipW, 0];
+  const sw0 = B.stance || 0;   // a wider, staggered planted stance for the hero
+  let footL = [0.5 + sw0, -B.hipW - sw0, 0], footR = [-0.5 - sw0 * 0.6, B.hipW + sw0, 0];
   let swingArm = 0;
   if (clip === 'idle') { bob = [0, -0.4, -0.6, -0.3][f % 4]; }
   if (clip === 'walk') {
@@ -104,7 +105,7 @@ function deathTip(rig, B, f, dir = -1, side = 1) {
 }
 
 // ---------------------------------------------------------------- the hero (knight)
-const HERO_B = { hipH: 18, thigh: 9.5, shin: 8.5, ankle: 1.8, spine: 8, shW: 7.6, shZ: 4, neck: 12.5, upper: 6.5, fore: 6, hipW: 3.2, stride: 6.5, lift: 3 };
+const HERO_B = { hipH: 18, thigh: 9.5, shin: 8.5, ankle: 1.8, spine: 8, shW: 7.6, shZ: 4, neck: 12.5, upper: 6.5, fore: 6, hipW: 3.2, stride: 8, lift: 3.4, stance: 1.3 };
 const TEAM = { red: M.CLOTH_RED, blue: M.CLOTH_BLUE };
 
 // Equipment is visual family ids, separate from item stats: many items share one look.
@@ -159,10 +160,10 @@ function heroRig(eq, st) {
   } else if (st.clip === 'death') {
     handR = V.add(J.shR, [3, 2, -10]); bd = V.norm([1, 0.4, -0.6]);
   } else {
-    // guard: blade held forward and low across the body
+    // guard: blade held out at the side, point up and forward, so it reads from the front too
     const s = J.swingArm * 2.5;
-    handR = V.add(V.add(J.shR, V.mul(fwd, 5 + s)), V.add(V.mul(up, -9.5), V.mul(sideR, 1)));
-    bd = V.norm(V.add(V.add(V.mul(fwd, 0.85), V.mul(up, 0.55)), V.mul(sideR, -0.25)));
+    handR = V.add(V.add(J.shR, V.mul(fwd, 4 + s)), V.add(V.mul(up, -8.5), V.mul(sideR, 2.6)));
+    bd = V.norm(V.add(V.add(V.mul(fwd, 0.55), V.mul(up, 0.7)), V.mul(sideR, 0.45)));
   }
   const aR = armTo(J, J.shR, handR, B, 1);
   const armM = plate ? M.STEEL : chain ? M.CHAIN : M.LEATHER;
@@ -200,8 +201,9 @@ function heroRig(eq, st) {
     } });
     r.box(V.mad(hd, up, 6.4), [3.6, 0.6, 1.0], M.GOLD, helmF);
     if (eq.helm === 'great') {
-      const a = V.add(V.mad(hd, up, 6.6), V.mul(fwd, -1)), b = V.add(V.mad(hd, up, 4), V.mul(fwd, -7.5)), c = V.add(V.mad(hd, up, -1), V.mul(fwd, -9));
-      r.group(() => { r.cone(a, b, 2.2, 1.6, team); r.cone(b, c, 1.6, 0.8, team); });
+      // a full plume: rises off the crest, arcs back and falls behind the helm
+      const a = V.add(V.mad(hd, up, 6.4), V.mul(fwd, 0.5)), b = V.add(V.mad(hd, up, 8.4), V.mul(fwd, -3.8)), c = V.add(V.mad(hd, up, 6), V.mul(fwd, -8.5)), e = V.add(V.mad(hd, up, 0), V.mul(fwd, -10));
+      r.group(() => { r.cone(a, b, 2.6, 2.9, team); r.cone(b, c, 2.9, 2.2, team); r.cone(c, e, 2.2, 1.0, team); });
     } else {
       for (const s of [-1, 1]) {
         const a = V.add(V.mad(hd, up, 3), V.mul(sideR, s * 5)), b = V.add(V.mad(hd, up, 6), V.mul(sideR, s * 8.5)), c = V.add(V.add(V.mad(hd, up, 10), V.mul(sideR, s * 8.5)), V.mul(fwd, 1.5));

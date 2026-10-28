@@ -23,13 +23,24 @@ function skeletonRig(look, st) {
     r.sph(knee, 1.4, bone); r.ell(V.add(ank, [1.4, 0, -0.6]), [2.4, 1.2, 0.8], bone);
   }
   r.ell(J.pelvis, [2.6, 4.0, 2.0], bone);
-  r.cone(J.pelvis, J.chest, 1.0, 1.1, bone);
-  const rc = V.mad(J.chest, up, 0.6);
-  r.ell(rc, [3.8, 5.0, 4.6], bone, frameAlong(fwd, up), { mf: p => {   // ribs: dark gaps between bands
-    const q = V.sub(p, rc), z = V.dot(q, up), sd = Math.abs(V.dot(q, sideR));
-    if (sd < 0.9 && V.dot(q, fwd) > 0) return 0;
-    return ((z + 20) / 2.1) % 1 < 0.38 && z < 3.2 ? M.DARK : 0;
-  } });
+  r.cone(J.pelvis, V.mad(J.chest, up, 3.5), 1.0, 1.1, bone);
+  // ribcage: separate curved rib bars over a dark hollow, so the gaps read as gaps
+  const rc = V.mad(J.chest, up, 0.4);
+  r.ell(V.mad(rc, fwd, 0.6), [2.0, 3.0, 3.6], M.DARK, frameAlong(fwd, up), { noShadow: true });
+  // from behind: spine column and shoulder blades
+  r.cone(V.add(V.mad(rc, up, -4), V.mul(fwd, -1.9)), V.add(V.mad(rc, up, 4), V.mul(fwd, -1.9)), 0.9, 0.9, bone);
+  for (const sd of [-1, 1]) r.ell(V.add(V.add(V.mad(rc, up, 2.2), V.mul(fwd, -1.9)), V.mul(sideR, sd * 2.6)), [0.6, 1.9, 2.4], bone, frameAlong(fwd, up));
+  for (let k = 0; k < 4; k++) {
+    const z = 3.2 - k * 2.35, wR = 4.6 - Math.abs(k - 1) * 0.5;
+    for (const sd of [-1, 1]) {
+      const back = V.add(V.mad(rc, up, z + 0.4), V.mul(fwd, -1.6));
+      const side = V.add(V.add(V.mad(rc, up, z), V.mul(fwd, 1.0)), V.mul(sideR, sd * wR));
+      const front = V.add(V.add(V.mad(rc, up, z - 0.7), V.mul(fwd, 3.3)), V.mul(sideR, sd * 0.9));
+      r.group(() => { r.cone(back, side, 0.75, 0.7, bone); r.cone(side, front, 0.7, 0.6, bone); });
+    }
+  }
+  r.cone(V.add(V.mad(rc, up, 3.2), V.mul(fwd, 3.2)), V.add(V.mad(rc, up, -2.6), V.mul(fwd, 3.2)), 0.7, 0.6, bone);   // sternum
+  r.ell(V.mad(rc, up, 4.3), [2.2, 5.6, 0.9], bone, frameAlong(fwd, up));   // collarbones
   for (const sh of [J.shL, J.shR]) r.sph(sh, 1.7, bone);
   // arms + gear
   const sw = st.key || null;
@@ -46,9 +57,10 @@ function skeletonRig(look, st) {
     if (sw.smear && st.prev) smearArc(r, piv, F, U, st.prev.a, sw.a, 9, 18);
     handL = V.add(V.add(J.shL, V.mul(fwd, 5)), V.mul(up, -6));
   } else {
-    handR = V.add(V.add(J.shR, V.mul(fwd, 4 + J.swingArm * 2)), V.add(V.mul(up, -8), V.mul(sideR, 1)));
-    handL = V.add(V.add(J.shL, V.mul(fwd, 5 - J.swingArm * 2)), V.mul(up, -6));
-    bd = V.norm(V.add(V.mul(fwd, 0.6), V.mul(up, 0.8)));
+    // guard: sword raised beside the head, shield forward
+    handR = V.add(V.add(J.shR, V.mul(fwd, 2 + J.swingArm)), V.add(V.mul(up, 1.5), V.mul(sideR, 2.5)));
+    handL = V.add(V.add(J.shL, V.mul(fwd, 5.5 - J.swingArm * 1.5)), V.add(V.mul(up, -5), V.mul(sideR, -0.5)));
+    bd = V.norm(V.add(V.add(V.mul(fwd, 0.15), V.mul(up, 1)), V.mul(sideR, 0.15)));
   }
   const aR = armTo(J, J.shR, handR, B, 1), aL = armTo(J, J.shL, handL, B, -1);
   for (const a of [aR, aL]) {
@@ -70,11 +82,12 @@ function skeletonRig(look, st) {
     r.box(V.mad(g, bd, 8.6), [7, 1.0, 0.35], M.IRON, wf);
     if (look.shield) {
       const n = V.norm(V.add(V.mul(fwd, 0.8), V.mul(sideR, -0.6))), c = V.mad(aL.hand, n, 1.3), ax = [n, V.norm(V.cross(up, n)), up];
-      r.ell(c, [0.9, 4.3, 4.3], M.WOOD, ax, { mf: p => { const q = V.sub(p, c), d2 = (V.dot(q, ax[1]) ** 2 + V.dot(q, ax[2]) ** 2) / 18.5; return d2 > 0.72 || d2 < 0.06 ? M.IRON : 0; } });
+      r.ell(c, [1.0, 5.6, 5.6], M.WOOD, ax, { mf: p => { const q = V.sub(p, c), d2 = (V.dot(q, ax[1]) ** 2 + V.dot(q, ax[2]) ** 2) / 31.4; return d2 > 0.74 || d2 < 0.05 ? M.IRON : (Math.abs(V.dot(q, ax[1]) - V.dot(q, ax[2])) < 0.5 ? M.LEATHER : 0); } });
     }
   }
   skullAt(r, J.head, fwd, sideR, up, bone, eye, st.clip === 'attack' && sw.hit ? 0.8 : 0);
   if (look.helm) r.ell(V.mad(J.head, up, 1.8), [4.5, 4.5, 3.2], M.IRON);
+  if (look.scale || 1.1) scaleRig(r, look.scale || 1.1);
   if (st.clip === 'death') {   // collapses in a heap: tip forward and drop hard
     tipRig(r, [2, 0, 0], [0, 0.25, 0.7, 1.2, 1.45, 1.55][st.f], -0.4 * st.f / 5, [0, 1, 1.6, 2, 2.2, 2.3][st.f]);
   }
@@ -190,31 +203,41 @@ function spiderRig(look, st) {
   if (clip === 'attack') { const a = st.key.a; rear = a > 0.5 ? 1 : st.key.hit ? 0.2 : 0.5; }
   if (clip === 'hit') rear = -0.3;
   if (clip === 'death') curl = [0, 0.25, 0.55, 0.85, 1, 1][f];
-  const H = 7 + rear * 2.5 - curl * 4.5;
-  const ceph = [3.5, 0, H + bob + rear * 1.5], abd = [-6.5, 0, H + 2.2 + bob - rear * 1];
-  r.ell(abd, [7.2, 6.2, 5.8], ch, null, { mf: p => {   // pale skull marking on top of the abdomen
+  // the broodmother: low heavy body, long sprawling legs, red chevrons down the abdomen
+  const brood = !!look.brood;
+  const H = (brood ? 5.5 : 7) + rear * 2.5 - curl * (brood ? 3.5 : 4.5);
+  const ceph = [3.5, 0, H + bob + rear * 1.5], abd = brood ? [-8, 0, H + 3.2 + bob - rear] : [-6.5, 0, H + 2.2 + bob - rear * 1];
+  r.ell(abd, brood ? [9.2, 8, 6.8] : [7.2, 6.2, 5.8], ch, null, { mf: brood ? (p => {
+    const q = V.sub(p, abd);
+    if (q[2] < 1.5) return 0;
+    const u = q[0], v = Math.abs(q[1]);
+    if (v < 0.8 && u > -6.5 && u < 6.5) return M.MARKB;                                 // spine stripe
+    for (const c of [3, -0.8, -4.6]) if (Math.abs((u - c) + v * 0.8) < 0.8 && v < 4) return M.MARKB;   // chevrons
+    return 0;
+  }) : (p => {   // pale skull marking on top of the abdomen
     const q = V.sub(p, abd);
     if (q[2] < 3) return 0;
     const u = q[0] + 1, v = q[1];
     return (u * u / 9 + v * v / 5 < 1 && !(Math.abs(Math.abs(v) - 1.2) < 0.6 && Math.abs(u - 0.4) < 0.6)) ? M.MARK : 0;
-  } });
-  r.ell(ceph, [4.4, 4.2, 3.2], ch);
+  }) });
+  const hk = brood ? 1.35 : 1;   // the broodmother's head is bigger, with a heavier eye cluster and fangs
+  r.ell(ceph, [4.4 * hk, 4.2 * hk, 3.2 * hk], ch);
   // eyes: a cluster of red beads on the front
-  for (const [y, z, s] of [[-1, 0.8, 0.6], [1, 0.8, 0.6], [-2, 1.4, 0.45], [2, 1.4, 0.45], [-0.6, 1.8, 0.4], [0.6, 1.8, 0.4]]) r.sph(V.add(ceph, [3.7, y, z]), s, M.EYE_RED, { noShadow: true });
+  for (const [y, z, s] of [[-1, 0.8, 0.6], [1, 0.8, 0.6], [-2, 1.4, 0.45], [2, 1.4, 0.45], [-0.6, 1.8, 0.4], [0.6, 1.8, 0.4]]) r.sph(V.add(ceph, [3.7 * hk, y * hk, z * hk]), s * hk, M.EYE_RED, { noShadow: true });
   // fangs
-  for (const s of [-1, 1]) r.cone(V.add(ceph, [3.6, s * 1.1, -1.2]), V.add(ceph, [4.6 + rear, s * 0.7, -4 + rear]), 0.8, 0.25, M.HORN);
+  for (const s of [-1, 1]) r.cone(V.add(ceph, [3.6 * hk, s * 1.1 * hk, -1.2 * hk]), V.add(ceph, [4.6 * hk + rear, s * 0.7 * hk, -4 * hk + rear]), 0.8 * hk, 0.25, M.HORN);
   // legs: 4 per side, knees high; alternating tetrapod gait
   const ang = [0.55, 1.15, 1.85, 2.45];
   for (let i = 0; i < 4; i++) for (const s of [-1, 1]) {
     const a = ang[i], hip = V.add(ceph, [Math.cos(a) * 2.2 - 0.5, s * Math.sin(a) * 2.6, -0.4]);
     const grp = (i + (s > 0 ? 1 : 0)) % 2, p = ph + grp * Math.PI;
-    const reach = 17.5 - Math.abs(i - 1.5) * 1.2;
+    const reach = (brood ? 24 : 17.5) - Math.abs(i - 1.5) * 1.2;
     let foot = [ceph[0] + Math.cos(a) * reach - 1.5 - (moving ? 2.4 * Math.cos(p) : 0), s * Math.sin(a) * reach, moving ? 1.8 * Math.max(0, Math.sin(p)) : 0];
     if (rear > 0.4 && i === 0) foot = [ceph[0] + 9, s * 5, 9 * rear];
     if (curl) foot = V.lerp(foot, [ceph[0] - 1, s * 3, H + 5], curl * 0.85);
-    const L = ik(hip, foot, 10, 11, [0, s * 0.3, 1]);
-    r.cone(hip, L.joint, 1.6, 1.3, ch); r.cone(L.joint, L.end, 1.3, 0.6, ch);
-    r.sph(L.joint, 1.4, M.MARK);
+    const L = brood ? ik(hip, foot, 17, 17, [0, s * 0.25, 1]) : ik(hip, foot, 10, 11, [0, s * 0.3, 1]);
+    r.cone(hip, L.joint, brood ? 1.9 : 1.6, brood ? 1.6 : 1.3, ch); r.cone(L.joint, L.end, brood ? 1.6 : 1.3, 0.6, ch);
+    r.sph(L.joint, brood ? 1.6 : 1.4, M.MARK);
   }
   if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
   return r;
@@ -224,7 +247,7 @@ function spiderRig(look, st) {
 // size: sprite canvas; swing: attack timing; looks: variants (materials, size, gear) of one body
 const FAMILIES = {
   hero: { size: [72, 72, 36, 60], rig: heroRig, swing: e => weaponSwing(e.look) },
-  skeleton: { size: [60, 60, 30, 50], rig: skeletonRig, swing: e => e.look.weapon === 'bow' ? SWINGS.bow : SWINGS.light },
+  skeleton: { size: [64, 66, 32, 55], rig: skeletonRig, swing: e => e.look.weapon === 'bow' ? SWINGS.bow : SWINGS.light },
   fallen: { size: [52, 48, 26, 40], rig: fallenRig, swing: e => e.look.staff ? SWINGS.cast : SWINGS.claw },
   hound: { size: [72, 56, 36, 44], rig: houndRig, swing: () => SWINGS.bite },
   spider: { size: [80, 60, 40, 46], rig: spiderRig, swing: () => SWINGS.bite },
@@ -239,7 +262,7 @@ const MONSTERS = {
   hound: { family: 'hound', name: 'CRYPT HOUND', look: {}, hp: 16, dmg: [3, 6], speed: 52, reach: 1.35, xp: 18, chest: 12, shadow: 10 },
   ghoulhound: { family: 'hound', name: 'BONE HOUND', look: { skin: M.OLDBONE, eye: M.EYE_RED, scale: 1.15 }, hp: 28, dmg: [5, 9], speed: 50, reach: 1.45, xp: 34, chest: 13, shadow: 11, minLevel: 2 },
   spider: { family: 'spider', name: 'CAVE SPIDER', look: { scale: 0.8 }, hp: 10, dmg: [2, 4], speed: 46, reach: 1.3, xp: 10, chest: 8, shadow: 11, pack: true },
-  broodmother: { family: 'spider', name: 'BROODMOTHER', look: { scale: 1.35, chitin: M.BLOODY }, hp: 60, dmg: [6, 12], speed: 34, reach: 1.9, xp: 90, chest: 12, shadow: 17, minLevel: 3, unique: true },
+  broodmother: { family: 'spider', name: 'BROODMOTHER', look: { brood: true, scale: 1.15, size: [128, 84, 64, 60] }, hp: 60, dmg: [6, 12], speed: 34, reach: 1.9, xp: 90, chest: 12, shadow: 17, minLevel: 3, unique: true },
 };
 const lookKey = l => JSON.stringify(l);
 
@@ -267,7 +290,7 @@ function getSprite(fam, look, dir, clip, f, ent) {
   }
   if (!sp) {
     const t0 = performance.now();
-    const F = FAMILIES[fam], [w, h, ax, ay] = F.size;
+    const F = FAMILIES[fam], [w, h, ax, ay] = look.size || F.size;
     const ex = ent || { look };
     sp = renderRig(F.rig(look, poseState(fam, ex, clip, f)), yawOf(dir), w, h, ax, ay);
     if (spriteCache.size > 3000) spriteCache.clear();

@@ -46,7 +46,7 @@ defMat('LEATHER', [33, 34, 35, 36], 1, { span: 0.8 });
 defMat('FLESH', FLESH, 1, { span: 1.0, spec: [0.985, 47] });
 defMat('SKIN', SKIN, 2, { span: 0.9 });
 defMat('HORN', [3, 24, 25, 26], 1, { spec: [0.97, 26] });
-defMat('CHITIN', [2, 41, 42, 43], 2, { span: 1.0, spec: [0.975, 36] });
+defMat('CHITIN', [2, 41, 42, 43], 2, { span: 1.0, spec: [0.982, 25] });
 defMat('GOLD', GOLD, 2, { shiny: true, span: 1.1, spec: [0.93, 51] });
 defMat('HAIR', [33, 34, 35], 1, { span: 0.7 });
 defMat('DARK', [2], 0, { flat: true });
@@ -56,6 +56,7 @@ defMat('EYE_GRN', [55], 0, { flat: true, emis: true });
 defMat('FIREM', [16], 0, { flat: true, emis: true });
 defMat('MAGIC', [59], 0, { flat: true, emis: true });
 defMat('MARK', [20, 21, 22], 1, { span: 0.6 });
+defMat('MARKB', [21, 22, 23], 1, { span: 0.5 });
 defMat('BLOODY', [19, 20, 21, 22], 1, { span: 0.8 });
 
 // ---------------------------------------------------------------- rig builder

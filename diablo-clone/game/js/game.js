@@ -39,7 +39,7 @@ function recalcHero() {
   STAT.maxHp = 40 + (hero.lvl - 1) * 9 + (mods.hp || 0);
   STAT.maxMana = 20 + (hero.lvl - 1) * 4 + (mods.mana || 0);
   STAT.leech = mods.leech || 0;
-  STAT.speed = 3.0 * (1 + (mods.speed || 0) / 100);
+  STAT.speed = 4.2 * (1 + (mods.speed || 0) / 100);
   STAT.slow = !!w?.slow;
   hero.look = { team: hero.team, helm: it('helm')?.look || 'none', chest: it('chest')?.look || 'tunic', weapon: w?.look || 'sword', shield: it('shield')?.look || 'none' };
   hero.hp = Math.min(hero.hp, STAT.maxHp); hero.mana = Math.min(hero.mana, STAT.maxMana);
@@ -318,7 +318,7 @@ function updateHero(dt) {
     const f0 = hero.fi, j0 = hero.fj;
     tryMove(hero, gi * sp, gj * sp);
     const moved = Math.hypot(hero.fi - f0, hero.fj - j0);
-    hero.walk += moved / 0.30;   // one walk frame per 0.30 tiles keeps feet from sliding
+    hero.walk += moved / 0.26;   // one walk frame per 0.26 tiles: the longer stride keeps feet planted
     hero.dir = dirFrom(gi, gj);
     hero.clip = 'walk';
   } else if (!busy) hero.clip = hero.hurtT > 0 ? 'hit' : 'idle';
@@ -402,7 +402,7 @@ function updateEnemy(e, dt) {
   else if (see && d < 3) mv = [dx / d, dy / d];
   else mv = flowDir(e.fi, e.fj);
   if (!mv || d > 18) { e.clip = 'idle'; return; }
-  const l = Math.hypot(mv[0], mv[1]) || 1, sp = m.speed / 16 * dt;
+  const l = Math.hypot(mv[0], mv[1]) || 1, sp = m.speed / 16 * 1.2 * dt;
   const f0 = e.fi, j0 = e.fj;
   tryMove(e, mv[0] / l * sp, mv[1] / l * sp, 0.25);
   e.walk += Math.hypot(e.fi - f0, e.fj - j0) / (e.fam === 'spider' || e.fam === 'hound' ? 0.32 : 0.26);
