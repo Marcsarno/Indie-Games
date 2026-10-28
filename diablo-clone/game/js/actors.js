@@ -45,7 +45,7 @@ function tipRig(rig, pivot, pitch, roll = 0, drop = 0) {
 // a swept blade: emissive crescent from angle a0 to a1 in the swing plane (age-graded colors)
 // SMEAR_MODE: 'full' = bright crescent; 'subtle' = a short, thin, dithered steel streak at the
 // blade tip; 'none' = no trail
-let SMEAR_MODE = 'subtle';   // user chose the subtle streak over the bright crescent (round 9)
+let SMEAR_MODE = 'subtle';   // user disliked the long bright crescent (round 9); 'subtle' is a short thin streak, 'none' turns it off
 function smearArc(rig, pivot, F, U, a0, a1, r0, r1) {
   if (SMEAR_MODE === 'none') return;
   const subtle = SMEAR_MODE === 'subtle', N = subtle ? 4 : 7, span = subtle ? 0.45 : 1;
