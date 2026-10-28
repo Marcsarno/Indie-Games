@@ -35,7 +35,7 @@ const UI = {};
 function uiResize() {
   UI.orbL = [34, H - 34]; UI.orbR = [W - 34, H - 34]; UI.orbR0 = 24;
   UI.attack = [W - 48, H - 100, 21]; UI.skill = [W - 96, H - 72, 13]; UI.potion = [W / 2, H - 22, 12];
-  UI.bag = [W - 15, 15, 11]; UI.map = [W - 40, 15, 11];
+  UI.bag = [W - 15, 15, 11]; UI.map = [W - 40, 15, 11]; UI.sound = [W - 65, 15, 11];
   UI.stickHome = [52, H - 104];
 }
 const stick = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
@@ -110,6 +110,11 @@ function line(x0, y0, x1, y1, c) { const n = Math.max(Math.abs(x1 - x0), Math.ab
 const glyphSword = (cx, cy) => { for (let k = -1; k <= 1; k++) line(cx - 8 + k, cy + 8, cx + 8 + k, cy - 8, k ? 31 : 27); line(cx - 6, cy + 2, cx - 2, cy + 6, 50); line(cx - 9, cy + 9, cx - 6, cy + 6, 35); };
 const glyphBolt = (cx, cy) => { for (let a = 0; a < 8; a++) { const t = a * Math.PI / 4; line(cx, cy, cx + Math.cos(t) * 7, cy + Math.sin(t) * 7, a % 2 ? 50 : 51); } put(cx, cy, 27); };
 const glyphBag = (cx, cy) => { fillRect(cx - 5, cy - 3, 11, 9, 35); frame(cx - 5, cy - 3, 11, 9, 36, 33); line(cx - 3, cy - 3, cx - 1, cy - 6, 36); line(cx + 3, cy - 3, cx + 1, cy - 6, 36); fillRect(cx - 1, cy, 3, 2, 50); };
+const glyphSound = (cx, cy) => {
+  fillRect(cx - 5, cy - 2, 3, 5, 26); for (let k = 0; k < 4; k++) line(cx - 2 + k, cy - 2 - k, cx - 2 + k, cy + 2 + k, 26);
+  if (SFX.muted) { line(cx + 3, cy - 3, cx + 7, cy + 3, 22); line(cx + 7, cy - 3, cx + 3, cy + 3, 22); }
+  else { line(cx + 4, cy - 2, cx + 4, cy + 2, 25); line(cx + 6, cy - 4, cx + 6, cy + 4, 24); }
+};
 const glyphMap = (cx, cy) => { fillRect(cx - 6, cy - 5, 13, 11, 26); frame(cx - 6, cy - 5, 13, 11, 27, 24); line(cx - 4, cy + 3, cx - 1, cy - 1, 22); line(cx - 1, cy - 1, cx + 4, cy + 2, 22); put(cx + 4, cy - 3, 22); };
 
 function drawHud() {
@@ -131,6 +136,7 @@ function drawHud() {
   drawButton(UI.skill, [48, 49, 50, 51], press.skill, glyphBolt);
   drawButton(UI.bag, [33, 34, 35], false, glyphBag);
   drawButton(UI.map, [4, 5, 6, 7], showMap, glyphMap);
+  drawButton(UI.sound, [4, 5, 6, 7], false, glyphSound);
   // movement stick: floating where the thumb lands, ghosted at home otherwise
   const [sx, sy] = stick.id !== null ? [stick.ox, stick.oy] : UI.stickHome;
   for (let a = 0; a < 48; a++) { const t2 = a / 48 * 6.283; put(sx + Math.cos(t2) * 20, sy + Math.sin(t2) * 20, a % 2 ? 30 : 29); }
@@ -264,12 +270,14 @@ function capture(e) { try { cvs.setPointerCapture(e.pointerId); } catch (err) { 
 function clearInput() { stick.id = null; input.mx = input.my = 0; input.attack = false; press.attack = null; press.skill = false; input.keys.clear(); }
 cvs.addEventListener('pointerdown', e => {
   e.preventDefault();
+  audioInit();
   const p = toNative(e);
   if (G.paused) { G.paused = false; last = performance.now(); return; }
-  if (G.mode === 'title') { for (const b of UI.titleBtns || []) if (inRect(p, b)) b.on(); return; }
-  if (G.mode === 'inv') { invTap(p); return; }
+  if (G.mode === 'title') { for (const b of UI.titleBtns || []) if (inRect(p, b)) { sfx('tap'); b.on(); } return; }
+  if (G.mode === 'inv') { sfx('tap'); invTap(p); return; }
   if (hero.dead > 2) { respawn(); return; }
   if (hitCircle(p, UI.bag)) { G.mode = 'inv'; clearInput(); return; }
+  if (hitCircle(p, UI.sound)) { setMuted(!SFX.muted); sfx('tap'); return; }
   if (hitCircle(p, UI.map)) { showMap = !showMap; return; }
   if (hitCircle(p, UI.potion)) { drinkPotion(); return; }
   if (hitCircle(p, UI.skill, 6)) { press.skill = true; heroCast(); return; }
@@ -292,6 +300,8 @@ cvs.addEventListener('pointerup', endPointer);
 cvs.addEventListener('pointercancel', endPointer);
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
+  audioInit();
+  if (k === 'n') setMuted(!SFX.muted);
   if (G.mode === 'title' && (k === 'enter' || k === ' ')) { beginGame(!!loadSave()); return; }
   input.keys.add(k);
   if (k === ' ' || k === 'j') input.attack = true;

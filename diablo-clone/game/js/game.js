@@ -158,6 +158,7 @@ function heroAttack() {
     if (bd > heroReach() + (best.def.unique ? 0.4 : 0.1)) { hero.approach = best; hero.approachT = 1.5; return; }
   }
   hero.approach = null; hero.atk = 0; hero.hitDone = false;
+  sfx(STAT.slow ? 'heavySwing' : 'swing');
 }
 const heroReach = () => hero.look.weapon === 'sword' ? 1.45 : 1.35;
 function heroCast() {
@@ -168,7 +169,7 @@ function heroCast() {
   let best = null, bd = 9;
   for (const e of enemies) { if (!alive(e) || LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] < 0.3) continue; const d = Math.hypot(e.fi - hero.fi, e.fj - hero.fj); if (d < bd && los(hero.fi, hero.fj, e.fi, e.fj)) { bd = d; best = e; } }
   if (best) hero.dir = dirFrom(best.fi - hero.fi, best.fj - hero.fj);
-  hero.mana -= 6; hero.cast = 0.25;
+  hero.mana -= 6; hero.cast = 0.25; sfx('bolt');
   const [dx, dy] = best ? [best.fi - hero.fi, best.fj - hero.fj] : dirVec(hero.dir), l = Math.hypot(dx, dy) || 1;
   projectiles.push({ kind: 'holy', fi: hero.fi + dx / l * 0.6, fj: hero.fj + dy / l * 0.6, vx: dx / l * 8, vy: dy / l * 8, z: 20, life: 1.4, owner: 'hero', dmg: [Math.round(STAT.dmg[0] * 0.9 + 3), Math.round(STAT.dmg[1] * 0.9 + 5)] });
 }
@@ -176,7 +177,7 @@ function drinkPotion() {
   if (G.mode !== 'play' || hero.dead) return;
   if (hero.potions <= 0) { say('NO POTIONS', 22, 1.2); return; }
   if (hero.hp >= STAT.maxHp) return;
-  hero.potions--; hero.hp = Math.min(STAT.maxHp, hero.hp + 30 + hero.lvl * 3);
+  hero.potions--; hero.hp = Math.min(STAT.maxHp, hero.hp + 30 + hero.lvl * 3); sfx('potion');
   const [x, y] = screenOf(hero); burst(4, x, y, 20, 10, 30, 22);
 }
 function damageEnemy(e, dmg, fromFi, fromFj, kill) {
@@ -191,12 +192,13 @@ function damageEnemy(e, dmg, fromFi, fromFj, kill) {
   if (e.hp <= 0) {
     e.dying = 0; e.atk = -1; e.clip = 'death'; e.stop = 0.15; hero.stop = Math.max(hero.stop, 0.15);
     if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.5);
+    sfx('kill');
     if (!bony) stampBlood(Math.round(ex), Math.round(ey), e.def.unique ? 6 : 3, (Math.random() * 1e6) | 0);
     gainXp(e.def.xp * (1 + (LV.level - 1) * 0.3));
     dropLoot(e.fi, e.fj, e.def.unique ? 3 : 1, e.def.unique);
     G.kills++;
   } else {
-    e.stop = 0.07; hero.stop = Math.max(hero.stop, 0.07);
+    e.stop = 0.07; hero.stop = Math.max(hero.stop, 0.07); sfx('hit');
     e.kb = [(e.fi - fromFi) / d * 3, (e.fj - fromFj) / d * 3];
     // hit recovery interrupts an attack in progress if the hit was big enough (Diablo's rule)
     if (dmg >= e.maxHp * 0.18 && !e.def.unique) { e.atk = -1; e.hurt = 0.18; }
@@ -220,20 +222,20 @@ function heroHitResolve() {
   return any;
 }
 function breakBarrel(p) {
-  p.broken = true; LV.solid[tIdx(p.i, p.j)] = 0;
+  p.broken = true; LV.solid[tIdx(p.i, p.j)] = 0; sfx('barrel');
   burst(5, p.wx, p.wy, 8, 14, 50, 35);
   if (Math.random() < 0.35) dropLoot(p.i + 0.5, p.j + 0.5, 1, false);
 }
 function openChest(p) {
   if (p.open) return;
-  p.open = true; say('THE CHEST CREAKS OPEN', 26, 1.5);
+  p.open = true; say('THE CHEST CREAKS OPEN', 26, 1.5); sfx('chest');
   dropLoot(p.i + 0.5, p.j + 1.2, 3, true);
 }
 function gainXp(x) {
   hero.xp += Math.round(x);
   while (hero.xp >= xpFor(hero.lvl)) {
     hero.xp -= xpFor(hero.lvl); hero.lvl++; recalcHero(); hero.hp = STAT.maxHp; hero.mana = STAT.maxMana;
-    say(`LEVEL UP! LEVEL ${hero.lvl}`, 51, 3);
+    say(`LEVEL UP! LEVEL ${hero.lvl}`, 51, 3); sfx('levelUp');
     const [x, y] = screenOf(hero); burst(4, x, y, 10, 24, 40, 51);
   }
 }
@@ -250,11 +252,11 @@ function dropLoot(fi, fj, n, rich) {
   }
 }
 function pickup(g) {
-  if (g.gold) { hero.gold += g.gold; floater(g.gold + ' GOLD', g.fi, g.fj, 10, 50); return true; }
+  if (g.gold) { sfx('gold'); hero.gold += g.gold; floater(g.gold + ' GOLD', g.fi, g.fj, 10, 50); return true; }
   const b = ITEM_BASES[g.item.base];
-  if (b.slot === 'potion') { if (hero.potions >= 8) return false; hero.potions++; say('HEALING POTION', 22, 1.2); return true; }
+  if (b.slot === 'potion') { if (hero.potions >= 8) return false; hero.potions++; sfx('pickup'); say('HEALING POTION', 22, 1.2); return true; }
   if (hero.bag.length >= BAG_SIZE) { if (!g.warned) say('YOUR BAG IS FULL', 22, 1.5); g.warned = true; return false; }
-  hero.bag.push(g.item); say(itemName(g.item), RARITY_COL[g.item.rarity], 2);
+  hero.bag.push(g.item); say(itemName(g.item), RARITY_COL[g.item.rarity], 2); sfx('pickup');
   // an empty slot is filled right away so the new look shows immediately
   if (!hero.equip[b.slot]) equipItem(g.item);
   return true;
@@ -288,6 +290,7 @@ function update(dt) {
   separate();
   updateProjectiles(dt);
   updateParticles(dt);
+  ambience(dt);
   for (const f of floaters) { f.t -= dt; f.y -= dt * 18; }
   floaters = floaters.filter(f => f.t > 0);
   for (const g of groundItems) g.t += dt;
@@ -341,6 +344,7 @@ function updateHero(dt) {
   // stairs
   const s = LV.stairs;
   if (!G.fadeTo && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55) {
+    sfx('stairs');
     G.fadeTo = () => { startLevel(LV.level + 1, (LV.seed * 31 + 17) >>> 0); saveGame(); };
   }
   updateFov(hero.fi, hero.fj);
@@ -378,6 +382,7 @@ function updateEnemy(e, dt) {
       e.hitDone = true;
       if (m.ranged) {
         const l = d || 1, sp = m.ranged === 'arrow' ? 9 : 5.5;
+        sfx(m.ranged === 'arrow' ? 'arrow' : 'fireball');
         projectiles.push({ kind: m.ranged, fi: e.fi + dx / l * 0.5, fj: e.fj + dy / l * 0.5, vx: dx / l * sp, vy: dy / l * sp, z: m.ranged === 'arrow' ? 18 : 14, life: 2, owner: 'enemy', dmg: e.dmg });
       } else if (!hero.dead && d < m.reach + 0.35) hurtHero(roll(e.dmg), e);
     }
@@ -410,13 +415,14 @@ function updateEnemy(e, dt) {
 }
 function hurtHero(dmg, src) {
   if (hero.dead) return;
-  if (Math.random() * 100 < STAT.block) { floater('BLOCK', hero.fi, hero.fj, 44, 31); return; }
+  if (Math.random() * 100 < STAT.block) { floater('BLOCK', hero.fi, hero.fj, 44, 31); sfx('block'); return; }
   dmg = Math.max(1, Math.round(dmg * 40 / (40 + STAT.armor * 2.5)));
-  hero.hp -= dmg; hero.flash = 0.06; hero.hurtT = 0.15;
+  hero.hp -= dmg; hero.flash = 0.06; hero.hurtT = 0.15; sfx('hurt');
   floater(String(dmg), hero.fi, hero.fj, 46, 23);
   const [x, y] = screenOf(hero); burst(1, x, y, 24, 6, 40, 22);
   if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.25);
   if (hero.hp <= 0) {
+    sfx('death');
     hero.hp = 0; hero.dead = 0.001; hero.clip = 'death'; hero.clock = 0; hero.atk = -1;
   }
   void src;
@@ -447,6 +453,7 @@ function updateProjectiles(dt) {
     }
     const [x, y] = iso(p.fi, p.fj);
     if (p.kind !== 'arrow' && Math.random() < 0.7) pspawn(3, x, y, p.z, (Math.random() - 0.5) * 8, 0, 4 + Math.random() * 8, 0.35, p.kind === 'holy' ? 50 : 16);
+    if (p.life <= 0 && p.kind === 'holy') sfx('boltHit');
     if (p.life <= 0 && p.kind !== 'arrow') burst(2, x, y, p.z, 12, 60, p.kind === 'holy' ? 51 : 17);
   }
   projectiles = projectiles.filter(p => p.life > 0);
