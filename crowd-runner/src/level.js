@@ -1,5 +1,5 @@
 // Level data. z runs negative (forward). All distances in metres.
-export const ROAD_HALF = 3.4;          // road is 6.8 wide
+export const ROAD_HALF = 2.5;          // road is 5 wide: about six soldiers across
 export const START_SQUAD = 3;
 
 // kind: add | mul | fire | sub        color: good (green) | up (blue) | bad (red)
@@ -24,7 +24,7 @@ export const LEVEL = {
     { z: -228, n: 44, hp: 5 },
   ],
   // weapon pedestal on the road; a crate barricade in front must be shot down before you can reach it
-  pickups: [{ z: -112, x: -2.3, weapon: 'minigun', price: 50, barricadeHp: 60 }],
-  boss: { z: -262, hp: 3400 },
+  pickups: [{ z: -112, x: -1.6, weapon: 'minigun', price: 50, barricadeHp: 60 }],
+  boss: { z: -262, hp: 4800 },
 };
 export const SPAWN_AHEAD = 62;

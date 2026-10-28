@@ -142,57 +142,92 @@ GUN = "#22252b"
 GUNMETAL = "#3b3f48"
 
 
-def soldier():
-    b = Builder("soldier")
-    # legs swing about the hips (z=0.30)
-    for sx, part in ((-1, 1), (1, 2)):
-        b.box((sx * 0.1, 0.0, 0.2), (0.15, 0.17, 0.2), BLUE, part, bevel=0.015)
-        b.box((sx * 0.1, -0.025, 0.05), (0.16, 0.24, 0.11), BOOT, part, bevel=0.02)
-    b.box((0, 0.0, 0.46), (0.42, 0.26, 0.34), BLUE, bevel=0.03)             # torso
-    b.box((0, 0.0, 0.31), (0.43, 0.27, 0.05), BLUE_DK, bevel=0.01)          # belt
-    b.box((0, 0.2, 0.5), (0.32, 0.15, 0.3), PACK, bevel=0.03)               # backpack
-    b.box((0, 0.2, 0.34), (0.34, 0.16, 0.05), "#25272d", bevel=0.01)
-    for sx in (-1, 1):                                                        # arms raised to the gun
-        b.box((sx * 0.25, -0.12, 0.53), (0.1, 0.3, 0.11), BLUE, bevel=0.02)
-        b.box((sx * 0.22, -0.3, 0.53), (0.1, 0.1, 0.1), SKIN, bevel=0.02)
-    b.box((0, -0.0, 0.76), (0.26, 0.24, 0.2), SKIN, bevel=0.03)             # head
-    b.prism((0, 0.0, 0.9), 0.2, 0.17, 6, HELMET, rotz=math.radians(30), r2=0.17)
-    b.box((0, -0.12, 0.82), (0.3, 0.06, 0.03), BLUE_DK)                     # helmet brim
-    # rifle
-    b.box((0.1, -0.35, 0.56), (0.08, 0.55, 0.1), GUN, bevel=0.015)
-    b.box((0.1, -0.65, 0.57), (0.04, 0.12, 0.04), GUNMETAL)
-    b.box((0.1, -0.22, 0.49), (0.06, 0.1, 0.12), GUN)
-    b.export("soldier.glb")
-
-
-def zombie_like(name, skin, shirt, pants, scale=1.0, bulk=1.0, tint=1, mouth=True, vest=False, filename=None):
+def soldier(name="soldier", pack_color=PACK, cap=False):
+    """Chunky toy soldier ~1 m tall: big head, stubby legs, backpack. The gun is a separate model (see rifle())."""
     b = Builder(name)
-    s = scale
-    w = bulk
-    SK = skin
-    for sx, part in ((-1, 1), (1, 2)):
-        b.box((sx * 0.1 * w * s, 0, 0.2 * s), (0.15 * w * s, 0.17 * s, 0.2 * s), pants, part, bevel=0.015 * s)
-        b.box((sx * 0.1 * w * s, -0.02 * s, 0.05 * s), (0.16 * w * s, 0.23 * s, 0.1 * s), "#3a2a22", part, bevel=0.02 * s)
-    # torso / shirt (tinted per instance)
-    b.box((0, 0, 0.46 * s), (0.42 * w * s, 0.26 * s, 0.34 * s), shirt, 0, tint, bevel=0.03 * s)
-    if vest:
-        b.box((0, -0.0, 0.46 * s), (0.44 * w * s, 0.27 * s, 0.2 * s), "#f1ece4", 0, 0, bevel=0.03 * s)
-        b.box((0.1 * w * s, -0.14 * s, 0.4 * s), (0.1 * s, 0.01 * s, 0.14 * s), "#8c6fb4")  # torn patch
-    # arms stretched forward, hands in skin colour (arm swing in the shader)
-    for sx, part in ((-1, 3), (1, 4)):
-        b.box((sx * 0.26 * w * s, -0.2 * s, 0.54 * s), (0.11 * w * s, 0.4 * s, 0.11 * s), shirt, part, tint, bevel=0.02 * s)
-        b.box((sx * 0.26 * w * s, -0.45 * s, 0.54 * s), (0.12 * w * s, 0.13 * s, 0.12 * s), SK, part, bevel=0.025 * s)
-    # head: low-poly sphere, glowing yellow eyes
-    b.sphere((0, -0.03 * s, 0.8 * s), 0.17 * s * w ** 0.5, SK, scale=(1.05, 1.0, 1.0), subdiv=2)
+    for sx, part in ((-1, 1), (1, 2)):                                        # legs swing about the hips (z=0.30)
+        b.box((sx * 0.095, 0.0, 0.215), (0.15, 0.15, 0.17), BLUE, part, bevel=0.015)
+        b.box((sx * 0.095, -0.035, 0.065), (0.17, 0.26, 0.13), BOOT, part, bevel=0.025)
+    b.box((0, 0.0, 0.45), (0.42, 0.27, 0.3), BLUE, bevel=0.035)              # torso
+    b.box((0, 0.0, 0.325), (0.435, 0.28, 0.05), BLUE_DK, bevel=0.012)        # belt
+    b.box((0, 0.0, 0.325), (0.09, 0.285, 0.055), "#c9b25a")                  # buckle
+    b.box((0, 0.2, 0.47), (0.31, 0.15, 0.27), pack_color, bevel=0.035)       # backpack
+    b.box((0, 0.2, 0.62), (0.29, 0.14, 0.06), "#2b2d33", bevel=0.02)         # roll on top
     for sx in (-1, 1):
-        b.box((sx * 0.065 * s, -0.17 * s, 0.83 * s), (0.065 * s, 0.03 * s, 0.07 * s), "#fff04d", bevel=0.01 * s)
-    if mouth:
-        b.box((0, -0.19 * s, 0.73 * s), (0.1 * s, 0.03 * s, 0.045 * s), "#3b0f12")
+        b.box((sx * 0.185, 0.19, 0.4), (0.08, 0.12, 0.13), "#2b2d33", bevel=0.02)   # side pouches
+        b.box((sx * 0.1, 0.1, 0.5), (0.05, 0.1, 0.24), "#22242a")                   # shoulder straps
+    for sx in (-1, 1):                                                        # arms forward to the gun
+        b.box((sx * 0.26, -0.02, 0.52), (0.11, 0.13, 0.17), BLUE, bevel=0.02)
+        b.box((sx * 0.215, -0.17, 0.5), (0.1, 0.27, 0.1), BLUE_DK, bevel=0.02)
+        b.box((sx * 0.185, -0.33, 0.5), (0.1, 0.1, 0.1), SKIN, bevel=0.025)
+    b.box((0, 0.0, 0.77), (0.35, 0.31, 0.3), SKIN, bevel=0.05)               # head
+    b.box((0, 0.145, 0.77), (0.33, 0.06, 0.2), "#5a3a26", bevel=0.02)        # hair at the nape
+    for sx in (-1, 1):
+        b.box((sx * 0.185, 0.0, 0.76), (0.04, 0.08, 0.1), SKIN)               # ears
+    if cap:
+        b.box((0, 0.0, 0.93), (0.37, 0.33, 0.1), "#2f6bff", bevel=0.03)       # baseball cap
+        b.box((0, 0.17, 0.9), (0.2, 0.04, 0.04), "#1f46b8")                    # adjuster strap at the back
+        b.box((0, -0.22, 0.9), (0.28, 0.16, 0.025), "#1f46b8", bevel=0.01)     # visor
+    else:
+        b.prism((0, 0.0, 0.955), 0.27, 0.12, 6, HELMET, rotz=math.radians(30), r2=0.27)     # hex helmet: lower band
+        b.prism((0, 0.0, 1.05), 0.27, 0.09, 6, "#3874ff", rotz=math.radians(30), r2=0.17)   # sloped crown
+        b.prism((0, 0.0, 1.115), 0.17, 0.04, 6, "#4a86ff", rotz=math.radians(30), r2=0.1)   # top
+        b.prism((0, 0.0, 0.9), 0.29, 0.035, 6, BLUE_DK, rotz=math.radians(30))              # rim
+    b.export(name + ".glb")
+
+
+def soldier_cap():
+    soldier("soldier_cap", pack_color="#6b7a34", cap=True)
+
+
+def rifle():
+    """Held rifle. Origin at the grip, pointing -Y (so +Z in the game, like the characters)."""
+    b = Builder("rifle")
+    b.box((0, -0.18, 0.0), (0.075, 0.5, 0.09), GUN, bevel=0.015)
+    b.box((0, -0.5, 0.0), (0.035, 0.18, 0.035), GUNMETAL)
+    b.box((0, -0.05, -0.1), (0.06, 0.1, 0.13), GUN, bevel=0.01)           # magazine
+    b.box((0, 0.12, -0.02), (0.07, 0.14, 0.12), "#4a4f5a", bevel=0.02)    # stock
+    b.box((0, -0.18, 0.07), (0.04, 0.12, 0.04), "#4a4f5a")                 # sight
+    b.export("rifle.glb")
+
+
+def zombie_like(name, skin, shirt, pants, scale=1.0, bulk=1.0, tint=1, vest=False, filename=None, hair="#2f3b1c"):
+    b = Builder(name)
+    s, w = scale, bulk
+    SK = skin
+    dark = "#2b1f1a"
+    for sx, part in ((-1, 1), (1, 2)):
+        b.box((sx * 0.095 * w * s, 0, 0.215 * s), (0.15 * w * s, 0.15 * s, 0.17 * s), pants, part, bevel=0.015 * s)
+        b.box((sx * 0.095 * w * s, -0.035 * s, 0.065 * s), (0.17 * w * s, 0.26 * s, 0.13 * s), "#3a2a22", part, bevel=0.025 * s)
+    b.box((0, 0, 0.46 * s), (0.42 * w * s, 0.27 * s, 0.33 * s), shirt, 0, tint, bevel=0.035 * s)
+    for i, x in enumerate((-0.15, -0.05, 0.05, 0.15)):                      # torn, jagged hem
+        b.box((x * w * s, -0.02 * s, (0.28 - 0.03 * (i % 2)) * s), (0.09 * w * s, 0.26 * s, 0.07 * s), shirt, 0, tint)
+    b.box((0.12 * w * s, -0.14 * s, 0.4 * s), (0.1 * s, 0.015 * s, 0.12 * s), SK)       # skin showing through a tear
+    if vest:
+        b.box((0, 0, 0.47 * s), (0.45 * w * s, 0.28 * s, 0.2 * s), "#f1ece4", 0, 0, bevel=0.03 * s)
+        b.box((0.1 * w * s, -0.15 * s, 0.42 * s), (0.1 * s, 0.015 * s, 0.14 * s), "#8c6fb4")
+    for sx, part in ((-1, 3), (1, 4)):                                        # arms reaching forward
+        b.box((sx * 0.26 * w * s, -0.03 * s, 0.56 * s), (0.12 * w * s, 0.14 * s, 0.14 * s), shirt, part, tint, bevel=0.02 * s)
+        b.box((sx * 0.26 * w * s, -0.24 * s, 0.56 * s), (0.1 * w * s, 0.34 * s, 0.1 * s), SK, part, bevel=0.02 * s)
+        for fx in (-0.03, 0.0, 0.03):                                         # claws
+            b.box(((sx * 0.26 + fx) * w * s, -0.46 * s, 0.55 * s), (0.025 * s, 0.1 * s, 0.025 * s), SK, part)
+    # head: big faceted sphere, angry glowing eyes, open mouth with teeth, hair tuft
+    b.sphere((0, -0.01 * s, 0.8 * s), 0.215 * s * w ** 0.5, SK, scale=(1.0, 0.95, 0.95), subdiv=2)
+    for sx in (-1, 1):
+        b.box((sx * 0.075 * s, -0.19 * s, 0.84 * s), (0.08 * s, 0.035 * s, 0.085 * s), "#fff04d", bevel=0.012 * s)
+        b.box((sx * 0.078 * s, -0.215 * s, 0.84 * s), (0.03 * s, 0.015 * s, 0.045 * s), "#7a5a00")
+        b.box((sx * 0.08 * s, -0.19 * s, 0.9 * s), (0.11 * s, 0.04 * s, 0.03 * s), dark)                    # brow
+    b.box((0, -0.19 * s, 0.74 * s), (0.15 * s, 0.04 * s, 0.085 * s), "#3b0f12", bevel=0.01 * s)           # mouth
+    for tx in (-0.04, 0.04):
+        b.box((tx * s, -0.215 * s, 0.775 * s), (0.03 * s, 0.015 * s, 0.025 * s), "#f4f0e0")                 # teeth
+    b.box((0, 0.0, 0.99 * s), (0.17 * s, 0.14 * s, 0.07 * s), hair, bevel=0.015 * s)                         # tuft
+    b.box((0.06 * s, 0.02 * s, 1.02 * s), (0.07 * s, 0.07 * s, 0.07 * s), hair)
     b.export(filename or f"{name}.glb")
 
 
 def zombies():
     zombie_like("zombie", "#7ac943", "#ffffff", "#5b3a2a")
+    zombie_like("zombie_b", "#8fd04a", "#ffffff", "#2f4a78", hair="#6b3a1a")
     # brute boss: ~2.6x, purple skin, torn white vest
     zombie_like("brute", "#8e5fb8", "#6f4a99", "#4a3a5a", scale=2.6, bulk=1.35, tint=0, vest=True)
 
@@ -289,6 +324,6 @@ def lamp():
 
 if __name__ == "__main__":
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    for fn in (soldier, zombies, minigun, rocket_launcher, gate_frame, pedestal, pine, crate, barrel, tires, barrier, lamp):
+    for fn in (soldier, soldier_cap, rifle, zombies, minigun, rocket_launcher, gate_frame, pedestal, pine, crate, barrel, tires, barrier, lamp):
         fn()
     print("[build_assets] done ->", OUT)

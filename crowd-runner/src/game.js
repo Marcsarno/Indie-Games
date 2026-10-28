@@ -14,9 +14,9 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 
 export function formation(n) {
   const D = Math.min(n, MAX_DRAW);
-  const cols = Math.max(1, Math.ceil(Math.sqrt(D * 1.5)));
-  const sx = Math.min(0.8, (ROAD_HALF * 2 - 0.9) / cols);
-  const sz = 0.92;
+  const cols = Math.max(1, Math.min(9, Math.ceil(Math.sqrt(D * 1.3))));
+  const sx = Math.min(0.8, (ROAD_HALF * 2 - 0.7) / cols);
+  const sz = Math.max(0.6, 0.92 - D * 0.004);
   const slots = new Array(D);
   for (let i = 0; i < D; i++) {
     const row = (i / cols) | 0, col = i % cols;
@@ -93,7 +93,7 @@ export class Game {
     const L = this.level, s = this.squad;
     while (this.waveIdx < L.waves.length && s.z - L.waves[this.waveIdx].z <= SPAWN_AHEAD) {
       const w = L.waves[this.waveIdx++];
-      const cols = 6, gap = 1.12;
+      const cols = 4, gap = 1.1;
       for (let i = 0; i < w.n; i++) {
         const row = (i / cols) | 0, col = i % cols;
         this.zombies.push({
@@ -174,7 +174,7 @@ export class Game {
       for (const p of this.pickups) {                // crate barricade in front of a pedestal
         if (p.open) continue;
         const bz = p.z + 4.5;
-        if (Math.abs(b.x - p.x) < 1.35 && z0 >= bz - 0.5 && b.z <= bz + 0.5) {
+        if (Math.abs(b.x - p.x) < 1.05 && z0 >= bz - 0.5 && b.z <= bz + 0.5) {
           p.bar -= b.dmg;
           this.emit({ type: 'hit', x: b.x, z: bz, color: 'wood' });
           if (p.bar <= 0) { p.open = true; this.emit({ type: 'float', text: 'OPEN!', cls: 'good', x: p.x, z: bz }); this.emit({ type: 'crash', x: p.x, z: bz }); }
@@ -240,7 +240,7 @@ export class Game {
     if (g) {
       const l = score(g.left), r = score(g.right);
       const left = worst ? l < r : l > r;
-      s.targetX = left ? -1.9 : 1.9;
+      s.targetX = left ? -1.25 : 1.25;
       return;
     }
     const p = this.pickups.find(q => !q.taken && q.z < s.z && q.z > s.z - 46);

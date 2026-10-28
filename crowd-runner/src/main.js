@@ -39,16 +39,23 @@ const hideOverlay = () => $('overlay').classList.remove('show');
 
 function begin(bot = null) {
   game.reset(); game.botMode = bot; hud.squad = hud.coins = -1;
+  if (bot === 'fail') game.setSquad(40);                       // the "ad": a big squad that still manages to lose
+  $('adtag').style.display = bot === 'fail' ? 'block' : 'none';
+  $('adtag').textContent = bot === 'fail' ? 'Only 1% can beat this level!' : '';
   $('fail').style.display = 'none'; $('hint').style.opacity = bot ? 0 : 1;
   $('floaters').innerHTML = '';
   hideOverlay(); game.start();
 }
 $('ovBtn').onclick = () => begin();
 $('ovBtn2').onclick = () => begin('fail');
+const startMenu = () => showOverlay('SQUAD RUSH', 'Drag to steer your squad. Run through the right gates, shoot the horde and the crates, and take down the brute.', 'Play', 'Watch the ad');
 
 function onEnd(win) {
   if (win) setTimeout(() => showOverlay('VICTORY!', `The brute is down. ${game.kills} zombies stopped, ${game.squad.n} soldiers left, ${game.coins} coins.`, 'Play again'), 900);
-  else {
+  else if (game.botMode === 'fail') {
+    $('fail').style.display = 'block';
+    setTimeout(() => showOverlay('EASY, RIGHT?', 'Wrong gates, no gun, one angry brute. You can do better. Try it for real.', 'Play for real', 'Watch again'), 1300);
+  } else {
     $('fail').style.display = 'block';
     setTimeout(() => showOverlay('SQUAD DOWN', 'The horde got through. Pick the green gates, shoot the crates, save your numbers for the brute.', 'Try again'), 1100);
   }
@@ -109,7 +116,7 @@ function frameLoop(now) {
     begin,
   };
   if (params.get('bot')) begin(params.get('bot'));
-  else showOverlay('SQUAD RUSH', 'Drag to steer your squad. Run through the right gates, shoot the horde and the crates, and take down the brute.', 'Play');
+  else startMenu();
   if (!params.get('manual')) requestAnimationFrame(frameLoop);
   window.__ready = true;
 })();

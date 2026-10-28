@@ -143,8 +143,8 @@ export class View {
     });
     scene.fog = new THREE.Fog(0xcfe6ff, 85, 210);
     this.camera = new THREE.PerspectiveCamera(54, 9 / 16, 0.2, 260);
-    scene.add(new THREE.HemisphereLight(0xdcefff, 0x8aa070, 1.55));
-    this.sun = new THREE.DirectionalLight(0xfff2d8, 2.3);
+    scene.add(new THREE.HemisphereLight(0xdcefff, 0x8aa070, 1.25));
+    this.sun = new THREE.DirectionalLight(0xfff0cf, 2.7);
     this.sun.position.set(-8, 14, 6); scene.add(this.sun, this.sun.target);
 
     this.buildWorld();
@@ -216,26 +216,56 @@ export class View {
     place(this.models.pine, vmat(), pines);
     place(this.models.lamp, vmat(), lamps);
     const bi = place(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ roughness: 0.9, flatShading: true }), blds);
-    // roadside clutter (tyres, crates, barrels, barriers), denser later in the level
-    const clutter = { crate: [], barrel: [], tires: [], barrier: [] };
-    for (let z = -10; z > -L.length - 20; z -= rnd(7, 15)) {
-      const sx = Math.random() < 0.5 ? -1 : 1, x = sx * (ROAD_HALF + rnd(1.9, 3.2));
-      const kind = ['crate', 'barrel', 'tires', 'barrier'][(Math.random() * 4) | 0];
-      clutter[kind].push({ x, z, ry: rnd(0, 6), s: kind === 'barrier' ? 1 : rnd(0.9, 1.15) });
-      if (kind === 'barrier') clutter.barrier[clutter.barrier.length - 1].ry = Math.PI / 2;
+    // roadside: a continuous run of concrete/striped barriers, chain-link fence behind it, and piles of props
+    const sides = [-1, 1];
+    const barriers = [];
+    for (let z = z0; z > z0 - len; z -= 2.0) for (const sx of sides) barriers.push({ x: sx * (ROAD_HALF + 0.95), z, ry: Math.PI / 2, s: 1 });
+    const concrete = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
+    place(this.models.barrier, concrete, barriers.filter((_, i) => i % 9 === 0));      // striped ones, scattered
+    const blocks = barriers.filter((_, i) => i % 9 !== 0);
+    place(new THREE.BoxGeometry(0.55, 0.62, 2.0), new THREE.MeshStandardMaterial({ color: 0xb9bcc2, roughness: 0.95, flatShading: true }),
+      blocks.map(b2 => ({ x: b2.x, y: 0.31, z: b2.z, ry: 0 })));
+    const fenceTex = canvasTex(64, 64, (g2, w2) => {
+      g2.clearRect(0, 0, w2, w2); g2.strokeStyle = 'rgba(70,76,88,.9)'; g2.lineWidth = 3;
+      for (let i = -w2; i < w2 * 2; i += 16) { g2.beginPath(); g2.moveTo(i, 0); g2.lineTo(i + w2, w2); g2.moveTo(i + w2, 0); g2.lineTo(i, w2); g2.stroke(); }
+    });
+    fenceTex.wrapS = fenceTex.wrapT = THREE.RepeatWrapping; fenceTex.repeat.set(len / 1.6, 1);
+    for (const sx of sides) {
+      const fence = new THREE.Mesh(new THREE.PlaneGeometry(len, 1.9), new THREE.MeshBasicMaterial({ map: fenceTex, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+      fence.rotation.y = Math.PI / 2; fence.position.set(sx * (ROAD_HALF + 2.2), 0.95, zc); sc.add(fence);
+    }
+    const posts = [];
+    for (let z = z0; z > z0 - len; z -= 6) for (const sx of sides) posts.push({ x: sx * (ROAD_HALF + 2.2), y: 0.95, z, sx: 0.12, sy: 1.9, sz: 0.12 });
+    place(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x55596a, roughness: 0.6 }), posts);
+    const clutter = { crate: [], barrel: [], tires: [] };
+    for (let z = 0; z > -L.length - 30; z -= rnd(5, 11)) {
+      const sx = Math.random() < 0.5 ? -1 : 1, x = sx * (ROAD_HALF + rnd(3.0, 4.6));
+      const kind = ['crate', 'barrel', 'tires'][(Math.random() * 3) | 0];
+      const n = 1 + ((Math.random() * 3) | 0);
+      for (let k = 0; k < n; k++) clutter[kind].push({ x: x + rnd(-0.6, 0.6), z: z + rnd(-1.2, 1.2), ry: rnd(0, 6), s: rnd(0.9, 1.2) });
     }
     for (const k of Object.keys(clutter)) if (clutter[k].length) place(this.models[k], vmat(), clutter[k]);
+
+    // river and a red truss bridge on the right, like the third mock-up
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(70, 190).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x3f9fe6, roughness: 0.25, metalness: 0 }));
+    water.position.set(50, 0.04, -150); sc.add(water);
+    const bridge = new THREE.Group(); bridge.position.set(46, 0.04, -170); sc.add(bridge);
+    const red = new THREE.MeshStandardMaterial({ color: 0xc23b32, roughness: 0.6, flatShading: true });
+    const bx = (w2, h2, d2, x, y, zz, rz = 0) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w2, h2, d2), red); m.position.set(x, y, zz); m.rotation.z = rz; bridge.add(m); };
+    bx(44, 0.5, 5, 0, 3, 0); bx(44, 0.4, 0.4, 0, 8, -2.4); bx(44, 0.4, 0.4, 0, 8, 2.4); bx(44, 0.35, 0.35, 0, 3.4, -2.4); bx(44, 0.35, 0.35, 0, 3.4, 2.4);
+    for (let i = -10; i <= 10; i++) for (const zz of [-2.4, 2.4]) { bx(0.3, 4.6, 0.3, i * 2, 5.7, zz); if (i < 10) bx(0.25, 5.2, 0.25, i * 2 + 1, 5.7, zz, i % 2 ? 0.55 : -0.55); }
+    for (const px of [-14, 0, 14]) { const m = new THREE.Mesh(new THREE.BoxGeometry(3, 6, 4), new THREE.MeshStandardMaterial({ color: 0x8c8f99, roughness: 0.9 })); m.position.set(px, 0, 0); bridge.add(m); }
 
     // gates
     this.gateViews = this.game.gates.map(g => {
       const root = new THREE.Group(); root.position.z = g.z; sc.add(root);
       const sides = [];
-      for (const [side, x] of [['left', -1.72], ['right', 1.72]]) {
+      for (const [side, x] of [['left', -1.27], ['right', 1.27]]) {
         const def = g[side], col = GATE_COL[def.color];
         const frame = new THREE.Mesh(this.models.gate, new THREE.MeshStandardMaterial({ vertexColors: true, color: col, emissive: col, emissiveIntensity: 0.55, roughness: 0.4, flatShading: true }));
-        frame.position.x = x; root.add(frame);
-        const pane = new THREE.Mesh(new THREE.PlaneGeometry(2.76, 2.18), new THREE.MeshBasicMaterial({ map: gateTexture(def), transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false }));
-        pane.position.set(x, 1.2, 0.0); root.add(pane);
+        frame.position.x = x; frame.scale.set(0.78, 0.95, 1); root.add(frame);
+        const pane = new THREE.Mesh(new THREE.PlaneGeometry(2.15, 2.07), new THREE.MeshBasicMaterial({ map: gateTexture(def), transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+        pane.position.set(x, 1.14, 0.0); root.add(pane);
         sides.push({ frame, pane, side });
       }
       return { g, root, sides };
@@ -257,9 +287,9 @@ export class View {
       sign.scale.set(1.9, 0.95, 1); sign.position.set(0.5, 2.5, 0); root.add(sign);
       // crate barricade between the squad and the pedestal
       const crates = new THREE.Group(); crates.position.z = 4.5; root.add(crates);
-      for (let row = 0; row < 2; row++) for (let i = -1; i <= 1; i++) {
+      for (let row = 0; row < 2; row++) for (const i of [-0.5, 0.5]) {
         const c = new THREE.Mesh(this.models.crate, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, flatShading: true }));
-        c.position.set(i * 0.95, row * 0.9, 0); c.rotation.y = rnd(-0.08, 0.08); crates.add(c);
+        c.position.set(i * 1.0, row * 0.9, 0); c.rotation.y = rnd(-0.08, 0.08); crates.add(c);
       }
       const hp = textSprite(() => {}, 256, 128); hp.scale.set(1.7, 0.85, 1); hp.position.set(0, 2.4, 0); crates.add(hp);
       return { p, root, gun, crates, hp, shownHp: -1 };
@@ -283,21 +313,24 @@ export class View {
     soldierMat.onBeforeCompile = ((orig) => (sh) => { orig(sh); sh.uniforms.uMove = this.moveU; sh.vertexShader = sh.vertexShader.replace('uniform float uTime;', 'uniform float uTime; uniform float uMove;').replace('float cs = cos(ang)', 'ang *= uMove; float cs = cos(ang)'); })(soldierMat.onBeforeCompile);
     soldierMat.customProgramCacheKey = () => 'soldier';
     this.soldiers = new Crowd(M.soldier, soldierMat, MAX_DRAW + 20, sc);
+    this.soldiers2 = new Crowd(M.soldier_cap, soldierMat, MAX_DRAW + 20, sc);
     const zm = animatedMaterial({ hip: 0.3, shoulder: 0.54, legSwing: 0.55, armSwing: 0.12, speed: 8, bob: 0.03, tinted: true });
     zm.customProgramCacheKey = () => 'zombie';
     this.zombies = new Crowd(M.zombie, zm, 150, sc);
+    this.zombies2 = new Crowd(M.zombie_b, zm, 150, sc);
     const bm = animatedMaterial({ hip: 0.78, shoulder: 1.4, legSwing: 0.35, armSwing: 0.08, speed: 4.5, bob: 0.08 });
     bm.customProgramCacheKey = () => 'brute';
     this.brute = new Crowd(M.brute, bm, 2, sc);
 
     const gm = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, flatShading: true });
-    this.guns = new THREE.InstancedMesh(M.minigun, gm, 64); this.guns.frustumCulled = false; this.guns.count = 0; sc.add(this.guns);
+    const gunMesh = (geo, n) => { const m = new THREE.InstancedMesh(geo, gm, n); m.frustumCulled = false; m.count = 0; sc.add(m); return m; };
+    this.guns = gunMesh(M.minigun, 64); this.rifles = gunMesh(M.rifle, MAX_DRAW + 20); this.rockets = gunMesh(M.rocket, 64);
 
     this.blobs = new THREE.InstancedMesh(new THREE.CircleGeometry(0.42, 10).rotateX(-Math.PI / 2),
       new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.26, depthWrite: false }), 420);
     this.blobs.frustumCulled = false; this.blobs.renderOrder = 1; sc.add(this.blobs);
 
-    this.bulletMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.06, 0.06, 0.8), new THREE.MeshBasicMaterial({ color: 0xffe25c, fog: false }), 200);
+    this.bulletMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.05, 0.05, 0.6), new THREE.MeshBasicMaterial({ color: 0xffe25c, fog: false }), 200);
     this.bulletMesh.frustumCulled = false; sc.add(this.bulletMesh);
     this.m4 = new THREE.Matrix4(); this.q = new THREE.Quaternion(); this.v = new THREE.Vector3(); this.one = new THREE.Vector3(1, 1, 1);
   }
@@ -309,38 +342,41 @@ export class View {
     this.moveU.value += ((s.hold || g.state !== 'play' ? 0 : 1) - this.moveU.value) * Math.min(1, dt * 6);
 
     // camera follows the squad
-    const cx = s.x * 0.55, d = Math.min(g.form.depth, 7);   // pull back as the block grows deeper
-    this.camera.position.set(cx, 6.2 + d * 0.55, s.z + 8.4 + d * 0.8);
-    this.camera.lookAt(cx, 0.5, s.z - 9.5);
+    const cx = s.x * 0.4, d = Math.min(g.form.depth, 10);   // pull back as the block grows deeper
+    this.camera.position.set(cx, 5.6 + d * 0.6, s.z + 7.2 + d * 0.85);
+    this.camera.lookAt(cx, 0.4, s.z - 8.5);
     this.sun.position.set(s.x - 8, 14, s.z + 6); this.sun.target.position.set(s.x, 0, s.z);
 
-    // soldiers
-    const sd = this.soldiers; sd.begin(); this.guns.count = 0; let gi = 0, bi = 0;
-    const blob = (x, z, k = 1) => { if (bi < 420) { this.m4.compose(this.v.set(x, 0.03, z), this.q.identity(), this.one.set(k, k, k)); this.blobs.setMatrixAt(bi++, this.m4); } };
+    // soldiers: helmet / cap models, each with a rifle, a shoulder rocket launcher or (after the buy) a minigun
+    const sd = this.soldiers, sd2 = this.soldiers2; sd.begin(); sd2.begin();
+    let gi = 0, ri = 0, ki = 0, bi = 0;
+    const up = this.v.set(0, 1, 0); this.q.setFromAxisAngle(up, Math.PI); const qBack = this.q.clone();
+    const blob = (x, z, k = 1) => { if (bi < 420) { this.m4.compose(this.v.set(x + 0.1, 0.03, z + 0.07), this.q.identity(), this.one.set(k, k, k)); this.blobs.setMatrixAt(bi++, this.m4); } };
+    const put = (mesh, idx, x, y, z, k) => { this.m4.compose(this.v.set(x, y, z), qBack, this.one.set(k, k, k)); mesh.setMatrixAt(idx, this.m4); };
     g.form.slots.forEach((sl, i) => {
       const x = s.x + sl.dx, z = s.z + sl.dz;
-      sd.add(x, 0, z, Math.PI, CHAR, i * 0.83);
+      (i % 4 === 2 ? sd2 : sd).add(x, 0, z, Math.PI, CHAR, i * 0.83);
       blob(x, z, 1.3);
-      if (s.weapon === 'minigun' && i % 4 === 0 && gi < 64) {
-        this.q.setFromAxisAngle(this.v.set(0, 1, 0), Math.PI);
-        this.m4.compose(this.v.set(x + 0.2, 0.8, z - 0.62), this.q, this.one.set(1.05, 1.05, 1.05)); this.guns.setMatrixAt(gi++, this.m4);
-      }
+      if (s.weapon === 'minigun' && i % 4 === 0 && gi < 64) put(this.guns, gi++, x, 0.5 * CHAR, z - 0.34 * CHAR, 1.25);
+      else if (i % 6 === 5 && ki < 64) put(this.rockets, ki++, x + 0.2 * CHAR, 0.64 * CHAR, z - 0.1 * CHAR, CHAR);
+      else if (ri < MAX_DRAW + 20) put(this.rifles, ri++, x, 0.5 * CHAR, z - 0.3 * CHAR, CHAR);
     });
-    sd.end(); this.guns.count = gi; this.guns.instanceMatrix.needsUpdate = true;
+    sd.end(); sd2.end();
+    for (const [m, n] of [[this.guns, gi], [this.rifles, ri], [this.rockets, ki]]) { m.count = n; m.instanceMatrix.needsUpdate = true; }
 
     // zombies
-    const zs = this.zombies; zs.begin(); this.brute.begin();
+    const zs = this.zombies, zs2 = this.zombies2; zs.begin(); zs2.begin(); this.brute.begin();
     for (const z of g.zombies) {
       if (z.dead) continue;
       if (z.boss) {
         this.brute.add(z.x, 0, z.z, 0, CHAR, z.phase, 1, 1, 1, z.flash ? 0.35 : 0); blob(z.x, z.z, 4.4);
       } else {
         const c = SHIRTS[z.shade];
-        zs.add(z.x, 0, z.z, Math.sin(z.phase * 0.2) * 0.25, CHAR, z.phase, c.r, c.g, c.b, z.flash ? 1 : 0);
+        (z.shade % 2 ? zs2 : zs).add(z.x, 0, z.z, Math.sin(z.phase * 0.2) * 0.25, CHAR, z.phase, c.r, c.g, c.b, z.flash ? 1 : 0);
         blob(z.x, z.z, 1.3);
       }
     }
-    zs.end(); this.brute.end();
+    zs.end(); zs2.end(); this.brute.end();
     this.blobs.count = bi; this.blobs.instanceMatrix.needsUpdate = true;
 
     // bullets
@@ -373,7 +409,8 @@ export class View {
     for (const e of events) {
       switch (e.type) {
         case 'muzzle': {
-          this.fx.flash.spawn(e.x, 0.9, e.z - 0.2, 0, 0, 0, 0.07, 0.6, 0xffe9a0);
+          this.fx.flash.spawn(e.x, 1.0, e.z - 0.55, 0, 0, 0, 0.07, 0.85, 0xffe9a0);
+          this.fx.spark.spawn(e.x + 0.15, 0.8, e.z + 0.1, rnd(0.8, 2.2), rnd(1.5, 3.2), rnd(0, 1.5), 1.0, 0.16, 0xe0b040, 14);
           if (Math.random() < 0.5) this.fx.spark.spawn(e.x + 0.1, 0.65, e.z, rnd(1, 2.5), rnd(1.5, 3), rnd(0, 2), 0.5, 0.12, 0xffd05a, 14);
           break;
         }

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-const NAMES = ['soldier', 'zombie', 'brute', 'minigun', 'rocket', 'gate', 'pedestal', 'pine', 'crate', 'barrel', 'tires', 'barrier', 'lamp'];
+const NAMES = ['soldier', 'soldier_cap', 'rifle', 'zombie', 'zombie_b', 'brute', 'minigun', 'rocket', 'gate', 'pedestal', 'pine', 'crate', 'barrel', 'tires', 'barrier', 'lamp'];
 
 /** Loads the Blender GLBs. Each file is one mesh with COLOR_0 plus the custom _part/_tint attributes. */
 export async function loadModels(base = 'assets/models/', embedded = window.__MODELS__) {

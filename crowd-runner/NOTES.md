@@ -2,7 +2,7 @@
 
 A clone of the "fake mobile ad" game: rows of blue soldiers auto-fire up a road, run through +/x gates,
 shoot a crate barricade to unlock a minigun, and fight a zombie horde and a brute boss.
-Last updated 2026-10-28 (round 1: first playable).
+Last updated 2026-10-28 (round 2: character redo, narrow road, ad mode).
 Published for phone testing: https://claude.ai/artifact/3YgqkiwapCshU6FPcYtDFQ (republish `dist/artifact.html` to the same artifact after each change).
 
 Read next: `RESEARCH.md` (genre research, level-design rules), `ART-SPEC.md` (read from the user's three
@@ -35,17 +35,21 @@ mock-ups in `reference/mockups/`), `ASSETS.md` (zombie/people source files copie
 Drag anywhere to steer (arrow keys / A, D also work). Squad auto-runs and auto-fires.
 
 ## State of the game
-- Level: 4 gate pairs, 7 zombie waves, one pedestal with a crate barricade (60 HP, shoot it open, then
-  walk the squad over it with 50 coins), brute boss (3400 HP) at the end. About 45 s a run.
-- Bots: a good bot wins about half the time, the fail bot dies at the second gate. Balance is rough, not tuned
-  by a human yet.
-- Rocket launcher model and the zombie variety (torn clothes, open mouths) exist only partly: models are
-  built but squad loadouts are all rifles; the minigun is added on every 4th soldier after the buy.
+- Level: 5 m road, 4 gate pairs, 7 zombie waves, a pedestal on the left with a 2-crate barricade (60 HP: shoot it
+  open, then walk over it with 50 coins for the minigun), brute boss (4800 HP) at the end. About 45 s a run.
+- Round 2 changes: new soldier (big head, dome helmet, pouches, straps) plus a cap/olive-pack variant, separate
+  rifle / shoulder rocket launcher models, zombie with open mouth, teeth, brow, torn hem, hair tuft and a second
+  variant, narrower road with continuous barriers, chain-link fence, crates/barrels/tyres, river and red truss
+  bridge, brass casings, camera pulled back as the block gets deeper.
+- **Ad mode:** "Watch the ad" on the start screen. A 40-soldier squad takes the worst gates, ignores the crate and
+  loses to the brute under an "Only 1% can beat this level!" caption, then offers "Play for real".
+- Bots (`node tools/sim.mjs`): good bot wins about 85 % at boss HP 4800, which is too easy for a careful human
+  and still unproven for a casual one. The bots never take the FIRE RATE gates, so those are untested.
+- Known gaps vs. the mock-up: soldiers and zombies are still blockier and less detailed; no ambient occlusion /
+  soft shadows; the zombie horde looks small at spawn distance; gate frames lack the glow/bloom.
 
 ## Not done / next
-- Compare against the mock-ups side by side (soldier proportions, bigger heads, zombie faces, bridge/river
-  scenery, shell casings, muzzle flash look). Run the pixel review loop the other games use.
-- Scripted "fail ad" intro mode (squad takes the trap gate, loses the crate, the brute wipes them, FAIL).
-- Sound, more levels, coin shop, rocket-launcher loadouts, shootable gates (Mob Control style).
+- Pixel review pass against the mock-ups (zombie readability at distance, soldier side silhouette, gate glow).
+- Sound, more levels, coin shop, shootable gates (Mob Control style), per-soldier weapon choice.
 - Not tested on a real phone yet. Frame time was only checked in software rendering.
 - Licensing: nothing from `yola-zombie` ships in the game; only reference files are in `assets/source/`.

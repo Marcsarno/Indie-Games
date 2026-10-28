@@ -4,7 +4,7 @@ import { Game } from '../src/game.js';
 const runs = +process.argv[2] || 20;
 function play(mode, noisy = 0) {
   const g = new Game();
-  g.botMode = mode; g.start();
+  g.botMode = mode; if (mode === 'fail') g.setSquad(40); g.start();
   const dt = 1 / 60;
   let steps = 0;
   const log = {};
