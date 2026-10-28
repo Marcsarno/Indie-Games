@@ -26,10 +26,11 @@ const TILE_U = 16 * Math.SQRT2;
 // spec = [threshold on n·H, palette index], guaranteed at least 1 px on shiny parts.
 const M = {}, MATS = [null];
 function defMat(name, ramp, mid, opt = {}) {
-  MATS.push({ name, ramp, mid, shiny: !!opt.shiny, flat: !!opt.flat, emis: !!opt.emis, span: opt.span ?? 1, spec: opt.spec || null });
+  MATS.push({ name, ramp, mid, shiny: !!opt.shiny, flat: !!opt.flat, emis: !!opt.emis, span: opt.span ?? 1, spec: opt.spec || null, edge: !!opt.edge });
   M[name] = MATS.length - 1;
 }
 defMat('STEEL', STEEL, 2, { shiny: true, span: 1.3, spec: [0.94, 32] });
+defMat('PLATE', [2, 28, 29, 30, 31, 32], 2, { shiny: true, span: 1.2, spec: [0.95, 32], edge: true });   // plate armor: darker mids, lit edges
 defMat('DSTEEL', [2, 28, 29, 30, 31], 2, { shiny: true, span: 1.3, spec: [0.95, 31] });   // blackened plate
 defMat('BLADE', [29, 30, 31, 32, 27], 3, { shiny: true, span: 1.2, spec: [0.9, 27] });
 defMat('IRON', [2, 28, 29, 30], 1, { span: 0.9, spec: [0.97, 30] });
@@ -56,6 +57,8 @@ defMat('EYE_GRN', [55], 0, { flat: true, emis: true });
 defMat('FIREM', [16], 0, { flat: true, emis: true });
 defMat('MAGIC', [59], 0, { flat: true, emis: true });
 defMat('MARK', [20, 21, 22], 1, { span: 0.6 });
+defMat('HIDE', [2, 28, 29, 30], 2, { span: 0.9 });   // grey dead hide (bone hound)
+defMat('RUST', [28, 29, 35, 49], 1, { span: 0.9, spec: [0.985, 50] });   // rusted iron: grey going orange
 defMat('MARKB', [21, 22, 23], 1, { span: 0.5 });
 defMat('BLOODY', [19, 20, 21, 22], 1, { span: 0.8 });
 
@@ -277,6 +280,15 @@ function shade(w, h, ax, ay, B, rig, R, D, VD) {
     const k = y * w + x; if (t2[k] < 0) continue;
     const edge = !m[k - 1] || !m[k + 1] || !m[k - w] || !m[k + w];
     if (edge && !shad[k] && nx[k] * 0.55 + ny[k] * 0.65 > 0.45 && t2[k] <= MATS[m[k]].mid) t3[k] = t2[k] + 1;
+  }
+  // edge light (plate armor): the rim of a part on the side facing the light catches a bright
+  // line, as hand-drawn plate does; the shadow-side rim keeps the dark seam
+  if (!rig.noEdge) for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    const k = y * w + x; if (t3[k] < 0 || !MATS[m[k]].edge || shad[k]) continue;
+    const p = pid[k];
+    const open = (q) => !m[q] || (pid[q] !== p && dep[q] > dep[k] + 1.5);
+    if (!(open(k - 1) || open(k - w) || open(k - w - 1) || open(k + 1 - w))) continue;
+    if (-nx[k] * 0.55 - ny[k] * 0.65 > 0.15) t3[k] = MATS[m[k]].ramp.length - 1;
   }
   const d = new Uint8Array(n);
   for (let k = 0; k < n; k++) {

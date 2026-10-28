@@ -1,7 +1,7 @@
 # Diablo-clone project notes
 
 Running log of decisions, state and next steps, so work can resume in a fresh session.
-Last updated: 2026-10-28 (round 7: phone feedback fixes).
+Last updated: 2026-10-28 (round 8: sound + mock-up art pass).
 
 ## Goal
 A 2D pixel-art, isometric, Diablo-style action RPG for mobile (portrait). The open question
@@ -24,6 +24,9 @@ committed and pushed before ending a turn.
 | `diablo-clone/tools/combat.cjs` | Deterministic combat recording (two swings at the spider, second kills) to PNG frames |
 | `diablo-clone/tools/rig-sheet.cjs` | Contact sheet for a rig family or monster id: `node tools/rig-sheet.cjs hero|skeleton|fallen|hound|spider|<monster id> <outdir>` |
 | `diablo-clone/tools/bench-game.cjs` | Game benchmark: level load, first 5 s (cold sprite cache) and warm frames, 1× and 4× CPU |
+| `diablo-clone/tools/mock-compare.cjs` | User mock-up (target) beside the game sprite at the same height + directions: `node tools/mock-compare.cjs art/refs/mock-knight.png out.png "getSprite('hero', {...}, d, 'idle', 0)" 1 0 2 3` |
+| `diablo-clone/tools/round8-compare.cjs` | Round 8 sheet: mock / before / after per target + plate-edge blind A/B (paths inside are session-specific; edit before reuse) |
+| `diablo-clone/art/refs/` | The user's mock-ups: knight, skeleton, bone hound, torch, barrel. Art targets for silhouette and big shapes |
 | `diablo-clone/tools/compare-new.cjs` | Old vs new sprites (before/after + blind A/B with base64 keys) and scene before/after → `art-review/new-game/` |
 | `diablo-clone/art/RUBRIC.md` | 5-question gate + pairwise selection rules |
 | `.claude/skills/pixel-sprite/SKILL.md` | Project skill for drawing/revising sprites with the review loop |
@@ -144,10 +147,14 @@ Full detail: `reports/Better code generated pixel art.md` and
 | 5 | Ramp palette + light tables + performance | Steel/bone keep their color under torchlight; 4×-throttled median frame 47.9 → 15.3 ms (p95 74 → 29 ms); desktop 10.4 → 3.7 ms |
 | 6 | New game build from the handoff + all of the above (`diablo-clone/game`) | Playable loop works end to end (touch-tested on Pixel 7 emulation: move+attack together, skill, potion, equip, save/continue, death/rise, pause on background). Warm frames 3.8 ms desktop / 20.3 ms at 4× throttle (≈50 fps), p95 31 ms; level load 0.45 s / 1.6 s. First 5 s at 4×: median 26 ms while sprites build. Stills: old hand-drawn sprites read bigger and more illustrated; new ones win on motion, 8 directions and visible gear |
 | 7 | User's phone test + blind A/B (old prototype vs new rig sprites). Picks: knight new (but "not great"), hound new, skeleton old ("definitely"), big spider old (new is fine as a small spider). User: plays well, gear changes on pickup were a highlight, too slow walking, size OK | Hero 3.0 → 4.2 tiles/s with a longer stride (8) and 0.26 tiles per walk frame; monsters ×1.2. Skeleton rebuilt from the old drawing's strengths (separate rib bars over a dark hollow, back spine + shoulder blades, sword raised in guard, bigger shield, ×1.1). Broodmother gets its own look (low body, 17+17 legs with high knees, red stripe + chevrons, bigger head/eyes/fangs, 128×84 canvas); cave spider unchanged. Knight: full plume, sword out to the side in guard, wider stance. Chitin highlight now bone-grey. Before/after: `art-review/round7/`. Frame time unchanged on the same machine (4× warm 11.9 → 10.4 ms; this machine is faster than round 6's) |
+| 8 | User: walk speed now good; wants silhouettes closer to their 5 mock-ups (`art/refs/mock-*.png`); asked for basic sound, no attempts at realistic flesh/bone | **Sound** (`js/sound.js`): Web Audio synthesis, no files; thump/whoosh/ping recipes for swing, hit, kill, hurt, block, gold, pickup, potion, chest, barrel, bolt, arrow, firebolt, level up, stairs, death, UI tap, faint torch crackle near visible fires; mute button (top bar) and N key; levels checked offline (peaks 0.24–0.45). **Art** (3 passes each, `tools/mock-compare.cjs` side by side with the mock): knight plate = new PLATE material (darker mids + edge light), great helm with crest ridge and a barred visor tipped toward the light, big pauldrons with rivets, poleyns, faulds and tassets, no plume/gold on plate; skeleton warrior = armored (red cowl scarf, rust pauldron/bracers/greaves, belt + buckle, red loincloth, long rusted blade held low, heater shield with a skull), skull face moved up so sockets read from the 30° camera; hound = bone hound (grey hide, bone ribs + spine spikes, 1.3× skull head with forward-curving horns, jaw + teeth, red scarf, studded collar, bone claws, compact body); hell hound = red variant; torch = iron sconce with gold-riveted plate, arm and caged cup glowing between bars, bigger flame with embers; barrel = staves with seams, 3 hoops with rivets, bulge, planked lid. Shader change: edge light (lit-side rims of PLATE parts) → blind A/B for the user. Frame time: warm unchanged (4× 11.2 ms); first 5 s at 4× 16.7 → 19.8 ms (more primitives per sprite) |
 
 ## Waiting on the user
-- **Replay round 7 on the phone** (same link): is the walk speed right now, and do the new skeleton,
-  broodmother and knight read better in play? Real-device frame time is still unmeasured.
+- **Replay round 8 on the phone** (same link): do the sounds feel right (and are any annoying), and
+  do the knight, skeleton warrior, bone hound, torches and barrels read closer to the mock-ups in play?
+- **Blind A/B, plate edge light:** `art-review/round8/plate-edge-blind.png` (A or B per row); key in
+  `plate-edge-key.b64.txt`, don't decode first. Only matters if the edges look wrong in play.
+- Real-device frame time is still unmeasured.
 - **Blind A/B picks** (A or B per character: knight, skeleton, hound, spider) for
   `art-review/ab-blind-1.png` and `art-review/before-after/shading-blind.png`.
 - Whether the new combat feels better in `art-review/before-after/combat.gif`.

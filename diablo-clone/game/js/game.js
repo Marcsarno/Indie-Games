@@ -471,7 +471,7 @@ function updateParticles(dt) {
       pkind[k] = 0;
     }
   }
-  for (const f of fires) if (f.ember && Math.random() < 0.1) pspawn(3, f.wx + (Math.random() - 0.5) * 6, f.wy + 20, 20 + Math.random() * 4, (Math.random() - 0.5) * 6, 0, 16 + Math.random() * 12, 1 + Math.random(), 16);
+  for (const f of fires) if (f.ember && LV.vis[f.tile] > 0.1 && Math.random() < f.ember) pspawn(3, f.wx + (Math.random() - 0.5) * f.w * 1.2, f.wy + 20, 20 + Math.random() * 4, (Math.random() - 0.5) * 6, 0, 16 + Math.random() * 12, 1 + Math.random(), 16);
 }
 
 // ---------------------------------------------------------------- render

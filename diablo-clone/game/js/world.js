@@ -282,8 +282,16 @@ function propSprite(name, build, size, yaw = 0) {
 }
 const PROPS = {
   barrel: () => propSprite('barrel', r => {
-    r.group(() => { r.cyl([0, 0, 0], [0, 0, 15], 5.6, M.WOOD, { mf: p => Math.abs(p[2] - 3) < 0.8 || Math.abs(p[2] - 12) < 0.8 ? M.IRON : 0 }); r.ell([0, 0, 7.5], [6.4, 6.4, 6], M.WOOD, null, { mf: p => Math.abs(p[2] - 3) < 0.8 || Math.abs(p[2] - 12) < 0.8 ? M.IRON : 0 }); });
-  }, [26, 30, 13, 24]),
+    // staves with dark seams, three iron hoops with rivets, a planked lid (mock-up)
+    const band = z => Math.abs(z - 2.6) < 0.9 || Math.abs(z - 8) < 0.9 || Math.abs(z - 13.4) < 0.9;
+    const staves = p => {
+      if (band(p[2])) return M.IRON;
+      const a = Math.atan2(p[1], p[0]) / (Math.PI * 2) * 14;
+      return a - Math.floor(a) < 0.16 ? M.LEATHER : 0;
+    };
+    r.group(() => { r.cyl([0, 0, 0], [0, 0, 16], 5.4, M.WOOD, { mf: p => p[2] > 15.8 ? (Math.hypot(p[0], p[1]) > 4.6 ? M.IRON : (Math.floor(p[0] + 20) % 3 === 0) ? M.LEATHER : M.WOOD) : staves(p) }); r.ell([0, 0, 8], [7.0, 7.0, 6.8], M.WOOD, null, { mf: staves }); });
+    for (const z of [2.6, 8, 13.4]) for (const a of [0.35, 1.2, 2.05]) { const rr = z === 8 ? 6.6 : 6.0; r.sph([Math.cos(a) * rr, Math.sin(a) * rr, z], 0.55, M.STEEL, { noShadow: true }); }
+  }, [28, 32, 14, 26]),
   chest: (open) => propSprite('chest' + (open ? 'o' : ''), r => {
     const ax = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
     r.box([0, 0, 4], [5, 7.5, 4], M.WOOD, ax, { mf: p => Math.abs(p[1]) > 6.4 || Math.abs(p[2] - 4) < 0.7 ? M.GOLD : 0 });
@@ -302,12 +310,19 @@ const PROPS = {
     r.group(() => { r.ell([0, 0, 17], [7, 7, 3.4], M.IRON); r.cyl([0, 0, 17], [0, 0, 19.5], 7.2, M.IRON, { mf: p => p[2] > 19.3 && Math.hypot(p[0], p[1]) < 5.8 ? M.FIREM : 0 }); });
   }, [32, 40, 16, 33]),
   torch: (face) => propSprite('torch' + face, r => {
-    const out = face === 'L' ? [0, 1, 0] : [1, 0, 0];
-    r.box([0, 0, 0], [1.6, 1.6, 2.4], M.IRON);
-    const tip = V.add(V.mul(out, 5), [0, 0, 6]);
-    r.cone(V.mul(out, 1.5), tip, 0.9, 0.9, M.WOOD);
-    r.cyl(V.add(tip, [0, 0, -1]), V.add(tip, [0, 0, 1.5]), 1.8, M.IRON);
-  }, [20, 24, 10, 14]),
+    // iron sconce (mock-up): riveted wall plate, bracket arm, a caged cup glowing from inside
+    const out = face === 'L' ? [0, 1, 0] : [1, 0, 0], up = [0, 0, 1], tan = V.cross(up, out);
+    r.box([0, 0, -1], [0.7, 2.3, 5.2], M.STEEL, [out, tan, up], { mf: p => Math.abs(V.dot(p, tan)) < 0.8 && Math.abs(Math.abs(p[2] + 1) - 3.4) < 0.8 && V.dot(p, out) > 0.4 ? M.GOLD : 0 });
+    const tip = V.mul(out, 6.4);
+    r.cone(V.add(V.mul(out, 0.7), [0, 0, -2.4]), V.add(tip, [0, 0, 1.2]), 1.0, 1.0, M.STEEL);
+    r.cone(V.add(tip, [0, 0, 0.5]), V.add(tip, [0, 0, 4]), 1.1, 1.1, M.STEEL);
+    r.cone(V.add(tip, [0, 0, 4]), V.add(tip, [0, 0, 9]), 2.2, 3.7, M.STEEL, { mf: p => {
+      const q = V.sub(p, tip), z = q[2];
+      if (z > 8.1 || z < 5.2) return 0;                       // solid rim and base
+      const a = Math.atan2(q[1], q[0]) / (Math.PI * 2) * 8;
+      return a - Math.floor(a) < 0.45 ? 0 : M.FIREM;         // bars, with the fire glowing between them
+    } });
+  }, [30, 36, 15, 24]),
 };
 
 // ---------------------------------------------------------------- bake
@@ -405,7 +420,7 @@ function buildWorld() {
     } else if (d.kind === 'brazier') {
       const [x, y] = iso(d.i + 0.5, d.j + 0.5);
       props.push({ depth: d.i + d.j + 1, sp: PROPS.brazier(), wx: x, wy: y, tile: tIdx(d.i, d.j) });
-      fires.push({ wx: x, wy: y - 20, h: 13, w: 5, seed: d.i * 31 + d.j, ember: true, tile: tIdx(d.i, d.j) });
+      fires.push({ wx: x, wy: y - 20, h: 13, w: 5, seed: d.i * 31 + d.j, ember: 0.1, tile: tIdx(d.i, d.j) });
       lights.push({ x, y, z: 30, r: 150, i: 1.1, seed: d.i + d.j * 7 });
     } else if (d.kind === 'bones') {
       const [x, y] = iso(d.fi, d.fj);
@@ -414,8 +429,8 @@ function buildWorld() {
       // torch on the wall face that looks at the floor, 40 px up
       const [x, y] = d.face === 'L' ? iso(d.i + 0.5, d.j + 1) : iso(d.i + 1, d.j + 0.5);
       back.push({ depth: d.i + d.j + 1.5, sp: PROPS.torch(d.face), wx: x, wy: y - 40, z: 40, tile: tIdx(d.i, d.j) });
-      const tip = d.face === 'L' ? iso(d.i + 0.5, d.j + 1 + 5 / TILE_U) : iso(d.i + 1 + 5 / TILE_U, d.j + 0.5);
-      fires.push({ wx: tip[0], wy: tip[1] - 40 - 7, h: 11, w: 2.8, seed: d.i * 13 + d.j, tile: tIdx(d.i, d.j) });
+      const tip2 = d.face === 'L' ? iso(d.i + 0.5, d.j + 1 + 6.4 / TILE_U) : iso(d.i + 1 + 6.4 / TILE_U, d.j + 0.5);
+      fires.push({ wx: tip2[0], wy: tip2[1] - 40 - 8, h: 14, w: 3.6, seed: d.i * 13 + d.j, tile: tIdx(d.i, d.j), ember: 0.03 });
       const g = d.face === 'L' ? iso(d.i + 0.5, d.j + 1.6) : iso(d.i + 1.6, d.j + 0.5);
       lights.push({ x: g[0], y: g[1], z: 48, r: 170, i: 1.0, seed: d.i * 3 + d.j });
     } else if (d.kind === 'barrel' || d.kind === 'chest') {
