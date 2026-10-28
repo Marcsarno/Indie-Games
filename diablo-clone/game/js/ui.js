@@ -178,18 +178,25 @@ function drawHud() {
   text(`${TH().name} ${LV.level}`, 4, 4, 26);
   text(`${hero.gold} GOLD`, 4, 11, 50);
   // floor item labels near the hero (Diablo shows names over loot)
-  for (const g of groundItems) {
-    if (g.gold || Math.hypot(g.fi - hero.fi, g.fj - hero.fj) > 5) continue;
-    const [x, y] = iso(g.fi, g.fj), sx2 = Math.round(x - camX), sy2 = Math.round(y - camY) - 14;
-    if (!LV.vis[tIdx(Math.floor(g.fi), Math.floor(g.fj))]) continue;
-    const name = itemName(g.item);
+  // item labels stack upward instead of overlapping (Diablo does the same)
+  const placed = [];
+  for (const g of groundItems.filter(g => !g.gold && Math.hypot(g.fi - hero.fi, g.fj - hero.fj) <= 5 && LV.vis[tIdx(Math.floor(g.fi), Math.floor(g.fj))]).sort((a, b) => b.fi + b.fj - a.fi - a.fj)) {
+    const [x, y] = iso(g.fi, g.fj), name = itemName(g.item), w = textWidth(name);
+    let sx2 = Math.round(x - camX), sy2 = Math.round(y - camY) - 14;
+    for (let tries = 0; tries < 6 && placed.some(r => Math.abs(r[0] - sx2) * 2 < r[2] + w + 4 && Math.abs(r[1] - sy2) < 7); tries++) sy2 -= 7;
+    placed.push([sx2, sy2, w]);
     textC(name, sx2, sy2, RARITY_COL[g.item.rarity]);
   }
   // floating damage numbers
   for (const fl of floaters) {
     const sx2 = Math.round(fl.x - camX), sy2 = Math.round(fl.y - camY);
     if (fl.t < 0.3 && BAYER[(sx2 & 3) + ((sy2 & 3) << 2)] > fl.t / 0.3) continue;
-    textC(fl.text, sx2, sy2, fl.col);
+    textC(fl.text, sx2, sy2, fl.col, fl.size || 1);
+  }
+  // kill streak banner
+  if (G.streakShow && G.streakShow.t > 0) {
+    const n = G.streakShow.n, word = n >= 10 ? 'MASSACRE' : n >= 6 ? 'RAMPAGE' : 'KILL STREAK';
+    if (G.streakShow.t > 0.3 || BAYER[0] < G.streakShow.t / 0.3) { textC(`${n}`, W / 2, H * 0.2, 51, 3); textC(word, W / 2, H * 0.2 + 18, n >= 6 ? 23 : 50, 1); }
   }
   G.msg.forEach((m, n) => textC(m.text, W / 2, 34 + n * 8, m.col));
   if (hero.dead > 1.2) {

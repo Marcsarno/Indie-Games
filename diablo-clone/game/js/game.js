@@ -147,7 +147,7 @@ function tryMove(e, dfi, dfj, r = 0.28) {
   if (ok(e.fi, e.fj + dfj)) { e.fj += dfj; moved = true; }
   return moved;
 }
-function floater(text, fi, fj, z, col) { const [x, y] = iso(fi, fj); floaters.push({ text, x, y: y - z, t: 0.9, col }); }
+function floater(text, fi, fj, z, col, size = 1) { const [x, y] = iso(fi, fj); floaters.push({ text, x, y: y - z, t: size > 1 ? 1.1 : 0.9, col, size }); }
 const roll = r => r[0] + Math.floor(Math.random() * (r[1] - r[0] + 1));
 
 // ---------------------------------------------------------------- hero actions
@@ -184,30 +184,51 @@ function drinkPotion() {
   hero.potions--; hero.hp = Math.min(STAT.maxHp, hero.hp + 30 + hero.lvl * 3); sfx('potion');
   const [x, y] = screenOf(hero); burst(4, x, y, 20, 10, 30, 22);
 }
-function damageEnemy(e, dmg, fromFi, fromFj, kill) {
-  e.hp -= dmg; e.flash = 0.05;
-  floater(String(dmg), e.fi, e.fj, e.def.chest + 14, 27);
+function damageEnemy(e, dmg, fromFi, fromFj, crit = false) {
+  e.hp -= dmg; e.flash = crit ? 0.09 : 0.05;
+  if (crit) floater(dmg + '!', e.fi, e.fj, e.def.chest + 18, 51, 2); else floater(String(dmg), e.fi, e.fj, e.def.chest + 14, 27);
   if (STAT.leech) hero.hp = Math.min(STAT.maxHp, hero.hp + Math.max(1, Math.round(dmg * STAT.leech / 100)));
   const [ex, ey] = screenOf(e), d = Math.hypot(e.fi - fromFi, e.fj - fromFj) || 1;
-  const bony = e.fam === 'skeleton';
-  burst(bony ? 5 : 1, ex, ey, e.def.chest, bony ? 8 : 12, 50, bony ? 25 : 22, (e.fi - fromFi - (e.fj - fromFj)) / d * 20);
-  burst(2, ex, ey, e.def.chest, 6, 70, 17);
+  const bony = e.fam === 'skeleton', ichor = e.fam === 'spider' ? 54 : 22;   // spiders bleed green
+  burst(bony ? 5 : 1, ex, ey, e.def.chest, bony ? 8 : 12, 50, bony ? 25 : ichor, (e.fi - fromFi - (e.fj - fromFj)) / d * 20);
+  burst(2, ex, ey, e.def.chest, crit ? 16 : 6, crit ? 120 : 70, crit ? 18 : 17);
+  if (crit) { sfx('crit'); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.2); }
   if (e.state === 'sleep') wake(e);
   if (e.hp <= 0) {
-    e.dying = 0; e.atk = -1; e.clip = 'death'; e.stop = 0.15; hero.stop = Math.max(hero.stop, 0.15);
+    e.dying = 0; e.atk = -1; e.clip = 'death'; e.stop = crit ? 0.2 : 0.15; hero.stop = Math.max(hero.stop, e.stop);
     if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.5);
     sfx('kill');
-    if (!bony) stampBlood(Math.round(ex), Math.round(ey), e.def.unique ? 6 : 3, (Math.random() * 1e6) | 0);
-    gainXp(e.def.xp * (1 + (LV.level - 1) * 0.3) * (e.champ ? 3 : 1));
+    if (bony) shatter(e, fromFi, fromFj);   // skeletons burst apart into a heap of bones
+    else stampBlood(Math.round(ex), Math.round(ey), e.def.unique ? 6 : 3, (Math.random() * 1e6) | 0, e.fam === 'spider' ? GREEN : RED);
+    const streak = killStreak();
+    gainXp(e.def.xp * (1 + (LV.level - 1) * 0.3) * (e.champ ? 3 : 1) * (1 + Math.max(0, streak - 2) * 0.1));
     dropLoot(e.fi, e.fj, e.def.unique ? 4 : e.champ ? 2 : 1, e.def.unique || !!e.champ);
     if (e === boss) { say('THE BROODMOTHER IS SLAIN', 51, 4); say('THE WAY DOWN IS OPEN', 26, 4); sfx('levelUp'); }
     G.kills++;
   } else {
-    e.stop = 0.07; hero.stop = Math.max(hero.stop, 0.07); sfx('hit');
+    e.stop = crit ? 0.11 : 0.07; hero.stop = Math.max(hero.stop, e.stop); sfx('hit');
     e.kb = [(e.fi - fromFi) / d * 3, (e.fj - fromFj) / d * 3];
     // hit recovery interrupts an attack in progress if the hit was big enough (Diablo's rule)
     if (dmg >= e.maxHp * 0.18 && !e.def.unique) { e.atk = -1; e.hurt = 0.18; }
   }
+}
+const CRIT_CHANCE = 0.12;
+function shatter(e, fromFi, fromFj) {
+  const [x, y] = screenOf(e), d = Math.hypot(e.fi - fromFi, e.fj - fromFj) || 1, dx = (e.fi - fromFi - (e.fj - fromFj)) / d * 40;
+  burst(5, x, y, e.def.chest, 22, 90, e.look.bone === M.OLDBONE ? 25 : 26, dx);
+  for (let k = 0; k < 9; k++) { const a = Math.random() * 6.283, s = 40 + Math.random() * 60; pspawn(6, x, y, 10 + Math.random() * 20, Math.cos(a) * s + dx, Math.sin(a) * s * 0.5, 50 + Math.random() * 60, 3, 26); }
+  blitWorld(PROPS.bones(Math.floor(Math.random() * 6)), x, y, 0, -1, true);
+  e.corpse = true;   // no tipping corpse: the bones are on the floor now
+}
+// kills within 2.5 s of each other build a streak: bonus xp, a little life back, a rising chime
+function killStreak() {
+  G.streak = G.t - (G.lastKill ?? -9) < 2.5 ? (G.streak || 0) + 1 : 1; G.lastKill = G.t;
+  if (G.streak >= 3) {
+    G.streakShow = { n: G.streak, t: 1.6 };
+    hero.hp = Math.min(STAT.maxHp, hero.hp + STAT.maxHp * 0.03);
+    sfx('streak', G.streak);
+  }
+  return G.streak;
 }
 function wake(e) { if (e.state !== 'sleep') return; e.state = 'hunt'; for (const o of enemies) if (o.state === 'sleep' && Math.hypot(o.fi - e.fi, o.fj - e.fj) < 4) o.state = 'hunt'; }
 function heroHitResolve() {
@@ -217,7 +238,8 @@ function heroHitResolve() {
     if (!alive(e)) continue;
     const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy), rr = reach + (e.def.unique ? 0.5 : 0.2);
     if (d > rr || (d > 0.3 && (dx * fx + dy * fy) / d < 0.35)) continue;
-    damageEnemy(e, heroDmg(), hero.fi, hero.fj); any = true;
+    const crit = Math.random() < CRIT_CHANCE;
+    damageEnemy(e, heroDmg(crit ? 2 : 1), hero.fi, hero.fj, crit); any = true;
   }
   for (const p of dynProps) {
     if (p.broken || (p.kind !== 'barrel' && p.kind !== 'egg')) continue;
@@ -297,6 +319,7 @@ function update(dt) {
   updateParticles(dt);
   ambience(dt);
   for (const f of floaters) { f.t -= dt; f.y -= dt * 18; }
+  if (G.streakShow) G.streakShow.t -= dt;
   floaters = floaters.filter(f => f.t > 0);
   for (const g of groundItems) g.t += dt;
 }
@@ -485,7 +508,9 @@ function updateParticles(dt) {
     if (kind === 2 && plife[k] <= 0) { pkind[k] = 0; continue; }
     if (pz_[k] <= 0) {
       const x = Math.round(px_[k]), y = Math.round(py_[k]);
-      if (kind === 1 && x >= 0 && y >= 0 && x < WW && y < WH && wFloor[y * WW + x] && floorBuf[y * WW + x] !== BLK) setFloor(y * WW + x, hash(x, y, 77) < 0.5 ? RED[2] : RED[1]);
+      const fk = y * WW + x, onFloor = x >= 0 && y >= 0 && x < WW && y < WH && wFloor[fk] && floorBuf[fk] !== BLK;
+      if (kind === 1 && onFloor) setFloor(fk, pcol[k] === 54 ? GREEN[hash(x, y, 77) < 0.5 ? 2 : 1] : hash(x, y, 77) < 0.5 ? RED[2] : RED[1]);
+      if (kind === 6 && onFloor) { setFloor(fk, BONE[1]); if (x + 1 < WW && wFloor[fk + 1]) setFloor(fk + 1, BONE[0]); }
       pkind[k] = 0;
     }
   }
@@ -597,9 +622,10 @@ function render() {
     } });
   });
   for (const p of projectiles) list.push({ depth: p.fi + p.fj, draw: () => drawProjectile(p) });
+  // flames sort with everything else, so a character in front of a brazier hides its fire
+  for (const f of fires) if (LV.vis[f.tile] > 0.1 || LV.seen[f.tile]) list.push({ depth: (f.tile % MW) + Math.floor(f.tile / MW) + (f.depthAdd ?? 1.2), draw: () => flame(f.wx, f.wy, f.h, f.w, t, f.seed) });
   list.sort((a, b) => a.depth - b.depth);
   for (const d of list) d.draw();
-  for (const f of fires) if (LV.vis[f.tile] > 0.1 || LV.seen[f.tile]) flame(f.wx, f.wy, f.h, f.w, t, f.seed);
   drawTelegraph();
   for (let k = 0; k < PN; k++) {
     const kind = pkind[k]; if (!kind) continue;
@@ -608,6 +634,7 @@ function render() {
     const col = kind === 1 ? (pcol[k] === 22 ? RED[3] : pcol[k]) : pcol[k];
     scr[y * W + x] = (kind === 2 || kind === 3 || kind === 4) ? col | EMIS : col;
     zbuf[y * W + x] = clamp(pz_[k] | 0, 0, 255);
+    if (kind === 6 && x + 1 < W && y + 1 < H) { scr[y * W + x + 1] = col; scr[(y + 1) * W + x] = BONE[0]; scr[(y + 1) * W + x + 1] = BONE[0]; }   // bone chunks are 2x2
   }
   lightPass(chars, kx, ky);
   drawHud();

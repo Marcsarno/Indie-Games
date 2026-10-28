@@ -61,7 +61,7 @@ function updateSkills(dt) {
     hero.whirl -= dt; hero.whirlTick -= dt;
     if (hero.whirlTick <= 0) {   // four hits on everything in reach while spinning
       hero.whirlTick = 0.2;
-      for (const e of enemies) if (alive(e) && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < heroReach() + 0.35) damageEnemy(e, heroDmg(0.6), hero.fi, hero.fj);
+      for (const e of enemies) if (alive(e) && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < heroReach() + 0.35) { const crit = Math.random() < CRIT_CHANCE; damageEnemy(e, heroDmg(crit ? 1.2 : 0.6), hero.fi, hero.fj, crit); }
       for (const p of dynProps) if (!p.broken && (p.kind === 'barrel' || p.kind === 'egg') && Math.hypot(p.i + 0.5 - hero.fi, p.j + 0.5 - hero.fj) < 1.7) hitProp(p);
       sfx('swing');
     }
@@ -98,7 +98,7 @@ function makeChampion(e, R) {
   e.hp = e.maxHp = Math.round(e.maxHp * c.hp);
   e.dmg = e.dmg.map(v => Math.round(v * c.dmg));
   e.speedK = c.speed;
-  e.look = { ...e.look, scale: (e.look.scale || 1) * 1.18, tint: c.tint };
+  e.look = { ...e.look, tint: c.tint };   // same body as the base monster, recolored: its sprites are a cheap remap
   e.name = c.prefix + ' ' + e.def.name;
 }
 // tints remap each lit color to the closest-luminance color of the tint ramp; darks and

@@ -472,7 +472,7 @@ function stampLava(wx, wy, size, seed) {
   }
 }
 function setFloor(k, v) { floorBuf[k] = v; if (wFloor[k]) wIdx[k] = v; }
-function stampBlood(wx, wy, size, seed) {
+function stampBlood(wx, wy, size, seed, ramp = RED) {
   const r = rng(seed);
   for (let n = 0; n < 3 + size * 2; n++) {
     const cx = wx + (r() - 0.5) * size * 7, cy = wy + (r() - 0.5) * size * 3;
@@ -483,7 +483,7 @@ function stampBlood(wx, wy, size, seed) {
       const k = y * WW + x;
       if (floorBuf[k] === BLK || !wFloor[k]) continue;
       if (d > 0.75 && hash(x, y, seed) < 0.4) continue;
-      setFloor(k, hash(x, y, seed + 1) < 0.05 ? RED[3] : d < 0.45 ? RED[2] : RED[1]);
+      setFloor(k, hash(x, y, seed + 1) < 0.05 ? ramp[3] : d < 0.45 ? ramp[2] : ramp[1]);
     }
   }
 }
