@@ -11,11 +11,53 @@ const CLIP_FRAMES = { idle: 4, walk: 8, hit: 1, death: 6, go: 1, stop: 1 };
 
 // ---------------------------------------------------------------- attack timing
 // Attacks are poses with hold times (Slynyrd): a held anticipation, short smear keys, the contact
-// key (damage, hitstop, sparks), a held follow-through, recovery. `a` is the weapon angle in the
+// key (damage, hitstop, sparks), a held follow-through, recovery. `a` is the arm's angle in the
 // swing plane (2.3 = raised behind the right shoulder, 0 = level forward, -1 = low across).
+// Keys can also pose the body: ck = blade cocked past the arm (wrist laid back in the wind-up,
+// rolled over in the follow-through), r = hand distance from the shoulder pivot (elbow bent in the
+// wind-up, arm extended at contact), tw = shoulder turn (+ = right shoulder back), ln = lean,
+// bob = hip drop, fl/fr = front/back foot (step in on the strike), mv = tiles of lunge on the key.
+// A swing list's `tilt` sets its plane: 0.65 = diagonal across the body, ~0.2 = overhead.
+const K = (a, ms, o = {}) => Object.assign({ a, ms }, o);
+const withTilt = (keys, tilt, extra = {}) => Object.assign(keys, { tilt }, extra);
 const SWINGS = {
-  light: [{ a: 2.3, ms: 100 }, { a: 1.4, ms: 45, smear: true }, { a: 0.4, ms: 45, smear: true }, { a: -0.35, ms: 50, smear: true, hit: true }, { a: -0.8, ms: 110 }, { a: -0.3, ms: 70 }],
-  heavy: [{ a: 2.6, ms: 220 }, { a: 1.5, ms: 60, smear: true }, { a: 0.3, ms: 60, smear: true }, { a: -0.5, ms: 60, smear: true, hit: true }, { a: -1.0, ms: 180 }, { a: -0.4, ms: 120 }],
+  // forehand: high behind the right shoulder, diagonally down across to the low left
+  light: withTilt([
+    K(1.9, 100, { ck: 0.3, r: 4.8, tw: 0.42, ln: -0.04, bob: -0.4, fl: 1.5, fr: -3.5 }),
+    K(1.2, 45, { smear: true, ck: 0.35, r: 6.2, tw: 0.15, ln: 0.08, bob: -0.6, fl: 3.5, fr: -3.2, mv: 0.05 }),
+    K(0.3, 45, { smear: true, ck: 0.1, r: 7.4, tw: -0.2, ln: 0.16, bob: -1.0, fl: 5, fr: -3.2, mv: 0.05 }),
+    K(-0.45, 50, { smear: true, hit: true, ck: -0.1, r: 7.4, tw: -0.42, ln: 0.2, bob: -1.6, fl: 5.5, fr: -3.6, mv: 0.04 }),
+    K(-0.85, 110, { ck: -0.2, r: 6.2, tw: -0.5, ln: 0.16, bob: -1.4, fl: 5.5, fr: -3.6 }),
+    K(0.6, 70, { ck: 0.3, r: 5.6, tw: -0.12, ln: 0.08, bob: -0.6, fl: 4, fr: -3 }),
+  ], 0.65),
+  // backhand (second swing of a combo): from the low left, rising across to the high right
+  light2: withTilt([
+    K(-1.3, 90, { ck: -0.5, r: 5, tw: -0.5, ln: 0.1, bob: -1.0, fl: 4.5, fr: -3.5 }),
+    K(-0.6, 45, { smear: true, ck: -0.25, r: 6.5, tw: -0.2, ln: 0.12, bob: -0.9, fl: 5, fr: -3.2, mv: 0.04 }),
+    K(0.2, 45, { smear: true, ck: 0, r: 7.4, tw: 0.15, ln: 0.14, bob: -1.1, fl: 5.5, fr: -3.2, mv: 0.04 }),
+    K(0.9, 50, { smear: true, hit: true, ck: 0.15, r: 7.2, tw: 0.36, ln: 0.12, bob: -1.3, fl: 5.5, fr: -3.6, mv: 0.03 }),
+    K(1.5, 110, { ck: 0.4, r: 6, tw: 0.45, ln: 0.06, bob: -0.9, fl: 5, fr: -3.6 }),
+    K(0.6, 80, { ck: 0.2, r: 5.6, tw: 0.15, ln: 0.06, bob: -0.5, fl: 3.5, fr: -3 }),
+  ], 0.65),
+  // heavy: an overhead chop. Rises onto the toes in a long wind-up, drops into a crouch on contact
+  // and holds there (the weight), two hands on the haft unless a shield is carried
+  heavy: withTilt([
+    K(2.0, 220, { ck: 0.25, r: 4.5, tw: 0.3, ln: -0.12, bob: 0.4, fl: 2, fr: -3.5 }),
+    K(1.6, 60, { smear: true, ck: 0.45, r: 6, tw: 0.15, ln: 0.04, bob: -0.2, fl: 4, fr: -3.5, mv: 0.06 }),
+    K(0.6, 60, { smear: true, ck: 0.15, r: 7.4, tw: 0, ln: 0.22, bob: -1.2, fl: 5.5, fr: -3.6, mv: 0.06 }),
+    K(-0.3, 60, { smear: true, hit: true, ck: 0, r: 7.4, tw: -0.1, ln: 0.32, bob: -2.4, fl: 6, fr: -4, mv: 0.03 }),
+    K(-0.6, 180, { ck: -0.1, r: 7, tw: -0.1, ln: 0.3, bob: -2.4, fl: 6, fr: -4 }),
+    K(0.6, 120, { ck: 0.3, r: 5.5, tw: 0, ln: 0.1, bob: -0.8, fl: 4, fr: -3 }),
+  ], 0.22, { twoHand: true }),
+  // heavy combo follow-up: a rising diagonal backhand at heavy timing
+  heavy2: withTilt([
+    K(-1.3, 200, { ck: -0.5, r: 5, tw: -0.5, ln: 0.14, bob: -1.4, fl: 5, fr: -3.6 }),
+    K(-0.6, 60, { smear: true, ck: -0.25, r: 6.5, tw: -0.2, ln: 0.14, bob: -1.2, fl: 5.5, fr: -3.4, mv: 0.05 }),
+    K(0.2, 60, { smear: true, ck: 0, r: 7.4, tw: 0.15, ln: 0.16, bob: -1.4, fl: 6, fr: -3.4, mv: 0.05 }),
+    K(0.9, 60, { smear: true, hit: true, ck: 0.15, r: 7.2, tw: 0.36, ln: 0.14, bob: -1.8, fl: 6, fr: -4, mv: 0.03 }),
+    K(1.4, 190, { ck: 0.4, r: 6, tw: 0.45, ln: 0.08, bob: -1.4, fl: 5.5, fr: -4 }),
+    K(0.5, 130, { ck: 0.2, r: 5.6, tw: 0.15, ln: 0.06, bob: -0.6, fl: 3.5, fr: -3 }),
+  ], 0.65, { twoHand: true }),
   claw: [{ a: 1.6, ms: 160 }, { a: 0.6, ms: 50, smear: true }, { a: -0.3, ms: 60, hit: true }, { a: -0.5, ms: 140 }, { a: 0, ms: 90 }],
   bite: [{ a: 1, ms: 180 }, { a: 0.3, ms: 60 }, { a: -0.2, ms: 70, hit: true }, { a: -0.1, ms: 160 }, { a: 0.5, ms: 90 }],
   bow: [{ a: 0, ms: 140 }, { a: 1, ms: 260 }, { a: 1, ms: 60, hit: true }, { a: 0.4, ms: 200 }],
@@ -105,12 +147,20 @@ function bipedJoints(B, st) {
     bob = -1.4; lean = -0.04; swingArm = -0.5; twist = 0.08; hipF = -0.4;
   }
   if (clip === 'hit') { lean = -0.28; bob = -0.6; footL = [1.5, -B.hipW, 0]; footR = [-1.5, B.hipW, 0]; }
-  if (clip === 'attack' || clip === 'shoot' || clip === 'cast') {
-    const k = st.key;
-    twist = clamp(-k.a * 0.22, -0.5, 0.35); lean = clamp(-k.a * 0.06 + 0.08, -0.1, 0.2);
-    footL = [3, -B.hipW - 0.5, 0]; footR = [-2.5, B.hipW + 0.5, 0];
-    bob = k.hit ? -1.4 : k.a > 1.5 ? 0.4 : -0.6;
-    if (clip !== 'attack') { twist = 0.25 * k.a; lean = 0.02; }
+  if (clip === 'attack' || clip === 'attack2' || clip === 'shoot' || clip === 'cast') {
+    const k = st.key, sc = B.stride / 8;
+    if (k.tw !== undefined) {   // a posed key: shoulder turn, lean, hip drop and a step in
+      twist = k.tw; lean = k.ln; bob = k.bob;
+      footL = [k.fl * sc, -B.hipW - 0.5, 0]; footR = [k.fr * sc, B.hipW + 0.5, 0];
+      // the front foot is in the air while it steps forward
+      if (st.prev && st.prev.fl !== undefined && k.fl > st.prev.fl + 0.8) footL[2] = B.lift * 0.4;
+    } else {
+      // right shoulder back while the weapon is raised, forward through the strike
+      twist = clamp(k.a * 0.2, -0.35, 0.42); lean = clamp(-k.a * 0.06 + 0.08, -0.1, 0.2);
+      footL = [3, -B.hipW - 0.5, 0]; footR = [-2.5, B.hipW + 0.5, 0];
+      bob = k.hit ? -1.4 : k.a > 1.5 ? 0.4 : -0.6;
+    }
+    if (clip === 'shoot' || clip === 'cast') { twist = 0.25 * k.a; lean = 0.02; }
   }
   lean += B.hunch || 0;
   if (clip === 'death') { bob = -[0, 2, 4, 5, 5, 5][f] * B.hipH / 18; lean = 0.15; footL = [2, -B.hipW - 1, 0]; footR = [-1, B.hipW + 1, 0]; }
@@ -151,7 +201,8 @@ const GEAR_LOOKS = {
   shield: ['none', 'buckler', 'round', 'kite', 'tower'],
 };
 const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}`;
-function weaponSwing(eq) { return eq.weapon === 'sword' ? SWINGS.light : SWINGS.heavy; }
+// combo 1 = the second swing of a quick pair (a backhand)
+function weaponSwing(eq, combo = 0) { return eq.weapon === 'sword' ? (combo ? SWINGS.light2 : SWINGS.light) : (combo ? SWINGS.heavy2 : SWINGS.heavy); }
 // how far the weapon's tip is from the swing pivot (smears and reach)
 const WEAPON_LEN = { sword: 21, axe: 16, mace: 16, flail: 17, greatsword: 27 };
 
@@ -209,14 +260,16 @@ function heroRig(eq, st) {
     }),
   });
   // arms: right hand holds the weapon, left the shield
-  const sw = st.clip === 'attack' ? st.key : null;
+  const atk = st.clip === 'attack' || st.clip === 'attack2';
+  const sw = atk ? st.key : null, list = atk ? weaponSwing(eq, st.clip === 'attack2' ? 1 : 0) : null;
   const pivot = V.add(V.add(J.chest, V.mul(sideR, 2.5)), V.add(V.mul(up, 4), V.mul(fwd, 1)));
-  const tilt = 0.65;
+  const tilt = list && list.tilt !== undefined ? list.tilt : 0.65;
   const F = fwd, U = V.norm(V.add(V.mul(up, Math.cos(tilt)), V.mul(sideR, Math.sin(tilt))));
+  const inPlane = a => V.norm(V.add(V.mul(F, Math.cos(a)), V.mul(U, Math.sin(a))));
+  const bladeA = k => k.a + (k.ck || 0);   // the blade leads or trails the arm
   let handR, bd;
   if (sw) {
-    const dir = V.norm(V.add(V.mul(F, Math.cos(sw.a)), V.mul(U, Math.sin(sw.a))));
-    handR = V.mad(pivot, dir, 6.5); bd = dir;
+    handR = V.mad(pivot, inPlane(sw.a), sw.r || 6.5); bd = inPlane(bladeA(sw));
   } else if (st.clip === 'death') {
     handR = V.add(J.shR, [3, 2, -10]); bd = V.norm([1, 0.4, -0.6]);
   } else {
@@ -237,6 +290,13 @@ function heroRig(eq, st) {
   const offSw = -J.swingArm * (eq.shield === 'none' ? 3.6 : 1.6);
   let handL = V.add(V.add(J.shL, V.mul(fwd, 5.5 + offSw)), V.add(V.mul(up, -7.5 + Math.max(0, offSw) * (eq.shield === 'none' ? 0.7 : 0.3)), V.mul(sideR, -0.5)));
   if (st.clip === 'death') handL = V.add(J.shL, [2, -3, -9]);
+  if (sw) {
+    if (list.twoHand && (eq.shield === 'none' || eq.weapon === 'greatsword')) handL = V.mad(handR, bd, -2.6);   // lower on the haft
+    else {   // counterbalance: the off arm reaches toward the target in the wind-up, pulls back on the strike
+      const lf = 4 + (sw.tw || 0) * 6;
+      handL = V.add(V.add(J.shL, V.mul(fwd, lf)), V.add(V.mul(up, eq.shield === 'none' ? -5.5 : -6.5), V.mul(sideR, -1.8)));
+    }
+  }
   const aL = armTo(J, J.shL, handL, B, -1);
   r.cone(J.shL, aL.el, ar[0], ar[1], sleeve); r.cone(aL.el, aL.hand, ar[1], ar[2], foreM);
   r.sph(aL.hand, ar[3], handM);
@@ -356,8 +416,8 @@ function heroRig(eq, st) {
     }
   }
   if (sw && sw.smear && st.prev) {
-    const reach = 6.5 + (WEAPON_LEN[eq.weapon] || 16);
-    smearArc(r, pivot, F, U, st.prev.a, sw.a, reach - 9, reach);
+    const reach = (sw.r || 6.5) + (WEAPON_LEN[eq.weapon] || 16);
+    smearArc(r, pivot, F, U, bladeA(st.prev), bladeA(sw), reach - 9, reach);
   }
   if (st.clip === 'death') deathTip(r, B, st.f, -1);
   return r;

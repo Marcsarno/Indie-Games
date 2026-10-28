@@ -54,9 +54,10 @@ function skeletonRig(look, st) {
     if (st.clip !== 'shoot') { handL = V.add(V.add(J.shL, V.mul(fwd, 4)), V.mul(up, -8)); handR = V.add(V.add(J.shR, V.mul(fwd, 2)), V.mul(up, -9)); }
   } else if (st.clip === 'attack') {
     const F = fwd, U = V.norm(V.add(V.mul(up, 0.8), V.mul(sideR, 0.6))), piv = V.add(V.mad(J.chest, sideR, 2), V.mul(up, 4));
-    bd = V.norm(V.add(V.mul(F, Math.cos(sw.a)), V.mul(U, Math.sin(sw.a))));
-    handR = V.mad(piv, bd, 6);
-    if (sw.smear && st.prev) smearArc(r, piv, F, U, st.prev.a, sw.a, 9, 18);
+    const ba = sw.a + (sw.ck || 0);   // blade cocked past the arm, as the hero's
+    bd = V.norm(V.add(V.mul(F, Math.cos(ba)), V.mul(U, Math.sin(ba))));
+    handR = V.mad(piv, V.norm(V.add(V.mul(F, Math.cos(sw.a)), V.mul(U, Math.sin(sw.a)))), (sw.r || 7) * 0.85);
+    if (sw.smear && st.prev) smearArc(r, piv, F, U, st.prev.a + (st.prev.ck || 0), ba, 9, 18);
     handL = V.add(V.add(J.shL, V.mul(fwd, 5)), V.mul(up, -6));
   } else if (look.armored) {
     // armored warrior's guard (mock-up): long blade held low across the front, shield up
@@ -311,7 +312,7 @@ function spiderRig(look, st) {
 // ---------------------------------------------------------------- family table
 // size: sprite canvas; swing: attack timing; looks: variants (materials, size, gear) of one body
 const FAMILIES = {
-  hero: { size: [72, 72, 36, 60], rig: heroRig, swing: e => weaponSwing(e.look) },
+  hero: { size: [72, 72, 36, 60], rig: heroRig, swing: e => weaponSwing(e.look), swing2: e => weaponSwing(e.look, 1) },
   skeleton: { size: [72, 78, 36, 55], gait: gaitFrameTiles(SKEL_B, 1.1), rig: skeletonRig, swing: e => e.look.weapon === 'bow' ? SWINGS.bow : SWINGS.light },
   fallen: { size: [52, 48, 26, 40], gait: gaitFrameTiles(FALLEN_B), rig: fallenRig, swing: e => e.look.staff ? SWINGS.cast : SWINGS.claw },
   hound: { size: [80, 64, 38, 50], rig: houndRig, swing: () => SWINGS.bite },
@@ -336,13 +337,13 @@ const spriteCache = new Map();
 let spriteBuilds = 0;
 function poseState(fam, ent, clip, f) {
   const st = { clip, f };
-  if (clip === 'attack' || clip === 'shoot' || clip === 'cast') { const sw = FAMILIES[fam].swing(ent); st.key = sw[f]; st.prev = sw[f - 1]; }
+  if (clip === 'attack' || clip === 'attack2' || clip === 'shoot' || clip === 'cast') { const sw = clip === 'attack2' ? FAMILIES[fam].swing2(ent) : FAMILIES[fam].swing(ent); st.key = sw[f]; st.prev = sw[f - 1]; }
   return st;
 }
 // Builds are budgeted per frame: past the budget, a missing pose falls back to the nearest cached
 // frame (same direction) and is queued, so a crowd turning at once never stalls a frame.
 const buildBudget = { ms: Infinity, used: 0 };
-const fallbackOrder = { walk: ['walk', 'idle'], idle: ['idle'], attack: ['attack', 'idle'], shoot: ['shoot', 'idle'], cast: ['cast', 'idle'], hit: ['hit', 'idle'], death: ['death'], go: ['go', 'walk', 'idle'], stop: ['stop', 'idle'] };
+const fallbackOrder = { walk: ['walk', 'idle'], idle: ['idle'], attack: ['attack', 'idle'], attack2: ['attack2', 'attack', 'idle'], shoot: ['shoot', 'idle'], cast: ['cast', 'idle'], hit: ['hit', 'idle'], death: ['death'], go: ['go', 'walk', 'idle'], stop: ['stop', 'idle'] };
 function getSprite(fam, look, dir, clip, f, ent) {
   const lk = fam === 'hero' ? heroKey(look) : lookKey(look);
   const k = `${fam}|${lk}|${dir}|${clip}|${f}`;

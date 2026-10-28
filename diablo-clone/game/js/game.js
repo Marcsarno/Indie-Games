@@ -20,7 +20,7 @@ const SHAKE = params.get('shake') !== '0';
 // ---------------------------------------------------------------- state
 const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0 };
 const hero = {
-  fam: 'hero', fi: 0, fj: 0, dir: 1, clip: 'idle', clock: 0, walk: 0, runT: 0, goT: 0, stopT: 0, atk: -1, hitDone: false, stop: 0, flash: 0,
+  fam: 'hero', fi: 0, fj: 0, dir: 1, clip: 'idle', clock: 0, walk: 0, runT: 0, goT: 0, stopT: 0, atk: -1, combo: 0, swingEnd: -9, hitDone: false, stop: 0, flash: 0,
   hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, hurtT: 0, cast: -1,
   equip: { weapon: null, helm: null, chest: null, shield: null }, bag: [],
   look: { team: 'red', helm: 'none', chest: 'tunic', weapon: 'sword', shield: 'none' },
@@ -161,8 +161,20 @@ function heroAttack() {
     // out of reach: walk to it first (one tap is enough on a phone), then swing
     if (bd > heroReach() + (best.def.unique ? 0.4 : 0.1)) { hero.approach = best; hero.approachT = 1.5; return; }
   }
+  // a swing that follows the last one quickly comes back the other way (forehand, backhand, ...)
+  hero.combo = G.t - (hero.swingEnd ?? -9) < 0.3 ? 1 - (hero.combo || 0) : 0;
   hero.approach = null; hero.atk = 0; hero.hitDone = false;
   sfx(STAT.slow ? 'heavySwing' : 'swing');
+}
+// a small step into the swing: walls stop it, and it never closes in past an enemy in front
+function lungeHero(dist) {
+  const [fx, fy] = dirVec(hero.dir), l = Math.hypot(fx, fy) || 1;
+  for (const e of enemies) {
+    if (!alive(e)) continue;
+    const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy);
+    if (d < 0.9 + (e.def.unique ? 0.5 : 0) && (dx * fx + dy * fy) / (l * (d || 1)) > 0.2) return;
+  }
+  tryMove(hero, fx / l * dist, fy / l * dist);
 }
 const heroReach = () => ({ sword: 1.45, greatsword: 1.75, flail: 1.5 })[hero.look.weapon] || 1.35;
 function heroCast() {
@@ -369,11 +381,12 @@ function updateHero(dt) {
   hero.clock += dt;
   if (hero.cast >= 0) { hero.cast -= dt; hero.clip = 'idle'; if (hero.cast < 0) hero.cast = -1; }
   if (hero.atk >= 0) {
-    hero.clip = 'attack';
+    hero.clip = hero.combo ? 'attack2' : 'attack';
     hero.atk += dt * 1000;
-    const sw = weaponSwing(hero.look), ki = swingKey(sw, hero.atk);
+    const sw = weaponSwing(hero.look, hero.combo), ki = swingKey(sw, hero.atk);
+    if (ki >= 0 && sw[ki].mv) lungeHero(sw[ki].mv * dt * 1000 / sw[ki].ms);
     if (ki >= 0 && sw[ki].hit && !hero.hitDone) { hero.hitDone = true; heroHitResolve(); }
-    if (ki < 0) { hero.atk = -1; hero.clip = 'idle'; if (hero.castQueued) heroCast(); }
+    if (ki < 0) { hero.atk = -1; hero.clip = 'idle'; hero.swingEnd = G.t; if (hero.castQueued) heroCast(); }
   }
   // pick up what we walk over; open chests by walking into them
   for (let n = groundItems.length - 1; n >= 0; n--) {
@@ -533,6 +546,7 @@ function frameOf(e) {
   if (e === hero && hero.dash > 0) return 4;
   if (e.clip === 'idle') return Math.floor(pt / 0.2) % 4;
   if (e.clip === 'walk') return Math.floor(e.walk) % 8;
+  if (e.clip === 'attack2') return Math.max(0, swingKey(FAMILIES[e.fam].swing2(e), e.atk));
   if (e.clip === 'attack' || e.clip === 'shoot' || e.clip === 'cast') return Math.max(0, swingKey(FAMILIES[e.fam].swing(e), e.atk));
   if (e.clip === 'death') return Math.min(5, Math.floor((e === hero ? hero.dead : e.dying) / 0.1));
   return 0;
