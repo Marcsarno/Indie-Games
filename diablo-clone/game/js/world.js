@@ -174,7 +174,12 @@ function placeSpawns(R, level) {
       budget -= m.pack ? 2 : 1;
     }
   });
-  if (level >= 3) { const r = LV.rooms[LV.stairs.room], p = free(r); if (p) S.push({ id: 'broodmother', fi: p[0], fj: p[1] }); }
+  if (isBossFloor(level)) {   // the broodmother's lair: she waits in the stairs room among egg sacs
+    const n = LV.stairs.room, r = LV.rooms[n];
+    for (let k = S.length - 1; k >= 0; k--) if (LV.roomOf[tIdx(Math.floor(S[k].fi), Math.floor(S[k].fj))] === n) S.splice(k, 1);
+    const p = free(r); if (p) S.push({ id: 'broodmother', fi: p[0], fj: p[1] });
+    for (let t = 0, eggs = 0; t < 60 && eggs < 5; t++) { const i = R.int(r.x, r.x + r.w - 1), j = R.int(r.y, r.y + r.h - 1); if (trySolid(i, j)) { LV.decor.push({ kind: 'egg', i, j, seed: R.int(1, 1e6) }); eggs++; } }
+  }
 }
 
 // ---------------------------------------------------------------- textures
@@ -309,6 +314,11 @@ const PROPS = {
     r.cone([0, 0, 2], [0, 0, 14], 1.4, 1.2, M.IRON);
     r.group(() => { r.ell([0, 0, 17], [7, 7, 3.4], M.IRON); r.cyl([0, 0, 17], [0, 0, 19.5], 7.2, M.IRON, { mf: p => p[2] > 19.3 && Math.hypot(p[0], p[1]) < 5.8 ? M.FIREM : 0 }); });
   }, [32, 40, 16, 33]),
+  egg: () => propSprite('egg', r => {   // a clutch of pale, veined egg sacs on a web of strands
+    const veins = p => (Math.abs(Math.sin(p[0] * 1.3 + p[2] * 0.7)) < 0.18 || Math.abs(Math.sin(p[1] * 1.5 - p[2] * 0.6)) < 0.14) ? M.MARK : 0;
+    for (const [x, y, s] of [[0, 0, 1], [-4, 3, 0.75], [3.5, 3.5, 0.65]]) r.ell([x, y, 4.6 * s], [3.8 * s, 3.6 * s, 4.8 * s], M.OLDBONE, null, { mf: veins });
+    for (const a of [0.4, 2.2, 4.1]) r.cone([0, 0, 1], [Math.cos(a) * 9, Math.sin(a) * 9, 0.2], 0.35, 0.3, M.BONE, { noShadow: true });
+  }, [30, 26, 15, 18]),
   torch: (face) => propSprite('torch' + face, r => {
     // iron sconce (mock-up): riveted wall plate, bracket arm, a caged cup glowing from inside
     const out = face === 'L' ? [0, 1, 0] : [1, 0, 0], up = [0, 0, 1], tan = V.cross(up, out);
@@ -433,9 +443,9 @@ function buildWorld() {
       fires.push({ wx: tip2[0], wy: tip2[1] - 40 - 8, h: 14, w: 3.6, seed: d.i * 13 + d.j, tile: tIdx(d.i, d.j), ember: 0.03 });
       const g = d.face === 'L' ? iso(d.i + 0.5, d.j + 1.6) : iso(d.i + 1.6, d.j + 0.5);
       lights.push({ x: g[0], y: g[1], z: 48, r: 170, i: 1.0, seed: d.i * 3 + d.j });
-    } else if (d.kind === 'barrel' || d.kind === 'chest') {
+    } else if (d.kind === 'barrel' || d.kind === 'chest' || d.kind === 'egg') {
       const [x, y] = iso(d.i + 0.5, d.j + 0.5);
-      dynProps.push({ kind: d.kind, i: d.i, j: d.j, depth: d.i + d.j + 1, wx: x, wy: y + (d.kind === 'barrel' ? 3 : 2), hp: 1, open: false, seed: d.seed, tile: tIdx(d.i, d.j) });
+      dynProps.push({ kind: d.kind, i: d.i, j: d.j, depth: d.i + d.j + 1, wx: x, wy: y + (d.kind === 'barrel' ? 3 : 2), hp: d.kind === 'egg' ? EGG_HP : 1, hatch: 3 + (d.seed % 5), open: false, seed: d.seed, tile: tIdx(d.i, d.j) });
     }
   }
   // stairs down: a stepped pit in the floor

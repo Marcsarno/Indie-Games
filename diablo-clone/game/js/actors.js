@@ -110,19 +110,21 @@ const TEAM = { red: M.CLOTH_RED, blue: M.CLOTH_BLUE };
 
 // Equipment is visual family ids, separate from item stats: many items share one look.
 const GEAR_LOOKS = {
-  helm: ['none', 'cap', 'great', 'horned'],
-  chest: ['tunic', 'chain', 'plate'],
-  weapon: ['sword', 'axe', 'mace'],
-  shield: ['none', 'buckler', 'kite'],
+  helm: ['none', 'cap', 'great', 'horned', 'barbute', 'crown'],
+  chest: ['tunic', 'chain', 'brigandine', 'plate', 'darkplate'],
+  weapon: ['sword', 'axe', 'mace', 'flail', 'greatsword'],
+  shield: ['none', 'buckler', 'round', 'kite', 'tower'],
 };
 const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}`;
 function weaponSwing(eq) { return eq.weapon === 'sword' ? SWINGS.light : SWINGS.heavy; }
+// how far the weapon's tip is from the swing pivot (smears and reach)
+const WEAPON_LEN = { sword: 21, axe: 16, mace: 16, flail: 17, greatsword: 27 };
 
 function heroRig(eq, st) {
   const B = HERO_B, J = bipedJoints(B, st), r = new Rig();
   const team = TEAM[eq.team] || M.CLOTH_RED;
-  const plate = eq.chest === 'plate', chain = eq.chest === 'chain';
-  const PL = M.PLATE;
+  const plate = eq.chest === 'plate' || eq.chest === 'darkplate', chain = eq.chest === 'chain', brig = eq.chest === 'brigandine';
+  const PL = eq.chest === 'darkplate' ? M.DSTEEL : M.PLATE;
   const legM = plate ? PL : M.LEATHER, torsoM = plate ? PL : chain ? M.CHAIN : team;
   const { fwd, sideR, up } = J;
 
@@ -149,7 +151,10 @@ function heroRig(eq, st) {
   }
   // torso
   r.ell(J.chest, [5.2, 6.8, 6.6], torsoM, frameAlong(fwd, up), {
-    mf: chain ? (p => {   // a tabard panel over the mail
+    mf: brig ? (p => {   // brigandine: cloth over plates, rows of gold rivets
+      const q = V.sub(p, J.chest), u = V.dot(q, sideR) * 0.62, v = V.dot(q, up) * 0.62;
+      return Math.abs(u - Math.round(u)) < 0.22 && Math.abs(v - Math.round(v)) < 0.22 ? M.GOLD : 0;
+    }) : chain ? (p => {   // a tabard panel over the mail
       const q = V.sub(p, J.chest);
       return V.dot(q, fwd) > 2.5 && Math.abs(V.dot(q, sideR)) < 3.2 && V.dot(q, up) < 3 ? team : 0;
     }) : plate ? (p => {  // breastplate: a bright center ridge and the seam of the plackart below it
@@ -190,7 +195,7 @@ function heroRig(eq, st) {
   // pauldrons: big rounded plates with a bright lower rim and a rivet (plate); pads otherwise
   if (eq.chest !== 'tunic') for (const [sh, sd] of [[J.shL, -1], [J.shR, 1]]) {
     const c = plate ? V.add(V.mad(sh, up, 1.4), V.mul(sideR, sd * 1.2)) : V.mad(sh, up, 1.0);
-    r.ell(c, plate ? [5.0, 5.0, 4.4] : [4.2, 4.0, 3.4], plate ? PL : M.LEATHER, frameAlong(fwd, up));
+    r.ell(c, plate ? [5.0, 5.0, 4.4] : [4.2, 4.0, 3.4], plate ? PL : M.LEATHER, frameAlong(fwd, up), { mf: eq.chest === 'darkplate' ? (p => V.dot(V.sub(p, c), up) < -2.6 ? M.MARKB : 0) : null });
     if (plate) r.sph(V.add(V.add(c, V.mul(fwd, 4.4)), V.mul(up, -1)), 0.9, M.STEEL);
   }
   // head
@@ -206,7 +211,16 @@ function heroRig(eq, st) {
     if (eq.helm === 'cap') r.ell(V.mad(hd, up, 2.2), [5.0, 4.9, 3.6], M.IRON, helmF);
     if (eq.helm === 'none') r.cone(V.mad(V.mad(hd, up, -1), fwd, 3.8), V.mad(V.mad(hd, up, -4), fwd, 3.2), 1.6, 1.2, M.HAIR);   // beard
   } else {
-    if (eq.helm === 'great') {
+    if (eq.helm === 'barbute') {
+      // barbute: close round helm with a T-shaped face opening
+      const hc = V.mad(hd, up, 0.4);
+      r.ell(hc, [5.4, 5.3, 6.4], M.STEEL, helmF, { mf: p => {
+        const q = V.sub(p, hc), f2 = V.dot(q, fwd), s2 = Math.abs(V.dot(q, sideR)), z2 = V.dot(q, up);
+        if (f2 < 1.6) return 0;
+        return (Math.abs(z2 - 1.8) < 1.1 && s2 < 3.8) || (s2 < 1.2 && z2 < 1.8 && z2 > -3.4) ? M.DARK : 0;   // set high and wide so it reads from above
+      } });
+      r.box(V.mad(hc, up, 5.8), [4.6, 0.6, 0.9], M.STEEL, helmF);
+    } else if (eq.helm === 'great' || eq.helm === 'crown') {
       // great helm: tall dome with a raised crest ridge and a barred visor plate on the front
       const hc = V.mad(hd, up, 0.6);
       r.ell(hc, [5.6, 5.4, 7.2], PL, helmF);
@@ -220,6 +234,11 @@ function heroRig(eq, st) {
         return 0;
       } });
       for (const sd of [-1, 1]) r.sph(V.add(V.add(V.mad(hd, fwd, 3.2), V.mul(sideR, sd * 4.4)), V.mul(up, 0.4)), 1.0, M.STEEL);   // visor rivets
+      if (eq.helm === 'crown') {   // a gold circlet with points and a red stone
+        r.cyl(V.mad(hc, up, 3.2), V.mad(hc, up, 4.6), 5.0, M.GOLD);
+        for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2, b = V.add(V.mad(hc, up, 4.4), V.add(V.mul(fwd, Math.cos(a) * 4.6), V.mul(sideR, Math.sin(a) * 4.6))); r.cone(b, V.mad(b, up, 2.6), 0.9, 0.2, M.GOLD); }
+        r.sph(V.add(V.mad(hc, up, 3.9), V.mul(fwd, 5.1)), 0.8, M.EYE_RED, { noShadow: true });
+      }
     } else {
     r.ell(hd, [5.9, 5.7, 6.7], M.STEEL, helmF, { mf: p => {
       const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up);
@@ -241,14 +260,21 @@ function heroRig(eq, st) {
     const c = V.mad(V.mad(aL.hand, n, 1.6), up, 1.5);
     const ax = [n, V.norm(V.cross(up, n)), up];
     const big = eq.shield === 'kite';
-    const rad = big ? [1.0, 5.0, 7.0] : [1.1, 4.2, 4.2];
-    r.ell(c, rad, team, ax, { mf: p => {
-      const q = V.sub(p, c), u = V.dot(q, ax[1]) / rad[1], v = V.dot(q, ax[2]) / rad[2];
-      if (u * u + v * v > 0.62) return M.GOLD;
-      if (big && (Math.abs(u) < 0.14 || Math.abs(v - 0.15) < 0.11)) return M.GOLD;
-      if (!big && u * u + v * v < 0.07) return M.IRON;
-      return 0;
-    } });
+    if (eq.shield === 'tower') {   // tall rectangle: team field, iron rim, gold stripe
+      const tc = V.mad(c, up, 0.8);
+      r.box(tc, [0.8, 4.4, 8.2], team, ax, { mf: p => { const q = V.sub(p, tc), u = Math.abs(V.dot(q, ax[1])), v = Math.abs(V.dot(q, ax[2])); return u > 3.5 || v > 7.3 ? M.IRON : u < 0.8 ? M.GOLD : 0; } });
+    } else if (eq.shield === 'round') {   // wooden round shield, iron rim and boss
+      r.ell(c, [1.1, 5.3, 5.3], M.WOOD, ax, { mf: p => { const q = V.sub(p, c), d2 = (V.dot(q, ax[1]) ** 2 + V.dot(q, ax[2]) ** 2) / 28; return d2 > 0.74 || d2 < 0.06 ? M.IRON : 0; } });
+    } else {
+      const rad = big ? [1.0, 5.0, 7.0] : [1.1, 4.2, 4.2];
+      r.ell(c, rad, team, ax, { mf: p => {
+        const q = V.sub(p, c), u = V.dot(q, ax[1]) / rad[1], v = V.dot(q, ax[2]) / rad[2];
+        if (u * u + v * v > 0.62) return M.GOLD;
+        if (big && (Math.abs(u) < 0.14 || Math.abs(v - 0.15) < 0.11)) return M.GOLD;
+        if (!big && u * u + v * v < 0.07) return M.IRON;
+        return 0;
+      } });
+    }
   }
   // weapon
   const g = aR.hand;
@@ -260,6 +286,17 @@ function heroRig(eq, st) {
     r.box(V.mad(g, bd, 1.8), [0.7, 3.4, 0.8], M.GOLD, wf);
     r.box(V.mad(g, bd, 11.4), [9.2, 1.15, 0.4], M.BLADE, wf);
     r.cone(V.mad(g, bd, 20.4), V.mad(g, bd, 21.8), 0.9, 0.3, M.BLADE);
+  } else if (eq.weapon === 'greatsword') {   // two-handed: long grip, wide guard, long broad blade
+    r.box(V.mad(g, bd, 2), [0.8, 4.6, 0.9], M.IRON, wf);
+    r.box(V.mad(g, bd, 14.2), [11.6, 1.5, 0.45], M.BLADE, wf);
+    r.cone(V.mad(g, bd, 25.6), V.mad(g, bd, 27.4), 1.2, 0.3, M.BLADE);
+  } else if (eq.weapon === 'flail') {   // short haft, three chain links, spiked ball
+    r.cone(V.mad(g, bd, 1.2), V.mad(g, bd, 7), 0.9, 0.9, M.WOOD);
+    const sag = V.norm(V.add(bd, V.mul(up, -0.5)));
+    for (let k = 1; k <= 3; k++) r.sph(V.mad(V.mad(g, bd, 7), sag, k * 1.6), 0.6, M.IRON, { noShadow: true });
+    const ball = V.mad(V.mad(g, bd, 7), sag, 7.6);
+    r.sph(ball, 2.5, M.IRON);
+    for (const d of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) r.cone(V.mad(ball, d, 2), V.mad(ball, d, 3.8), 0.7, 0.15, M.IRON, { noShadow: true });
   } else {
     r.cone(V.mad(g, bd, 1.2), V.mad(g, bd, 13), 0.9, 0.9, M.WOOD);
     if (eq.weapon === 'axe') {
@@ -270,7 +307,7 @@ function heroRig(eq, st) {
     }
   }
   if (sw && sw.smear && st.prev) {
-    const reach = eq.weapon === 'sword' ? 6.5 + 21 : 6.5 + 16;
+    const reach = 6.5 + (WEAPON_LEN[eq.weapon] || 16);
     smearArc(r, pivot, F, U, st.prev.a, sw.a, reach - 9, reach);
   }
   if (st.clip === 'death') deathTip(r, B, st.f, -1);

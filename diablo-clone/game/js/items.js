@@ -16,6 +16,14 @@ const ITEM_BASES = {
   plate_mail: { slot: 'chest', look: 'plate', name: 'PLATE MAIL', armor: 11, lvl: 2 },
   buckler: { slot: 'shield', look: 'buckler', name: 'BUCKLER', armor: 3, block: 10, lvl: 1 },
   kite_shield: { slot: 'shield', look: 'kite', name: 'KITE SHIELD', armor: 6, block: 20, lvl: 2 },
+  flail: { slot: 'weapon', look: 'flail', name: 'FLAIL', dmg: [5, 13], lvl: 2, slow: true },
+  greatsword: { slot: 'weapon', look: 'greatsword', name: 'GREATSWORD', dmg: [8, 18], lvl: 3, slow: true },
+  barbute: { slot: 'helm', look: 'barbute', name: 'BARBUTE', armor: 4, lvl: 2 },
+  crown_helm: { slot: 'helm', look: 'crown', name: 'CROWNED HELM', armor: 7, lvl: 4 },
+  brigandine: { slot: 'chest', look: 'brigandine', name: 'BRIGANDINE', armor: 8, lvl: 2 },
+  dark_plate: { slot: 'chest', look: 'darkplate', name: 'DARK PLATE', armor: 15, lvl: 4 },
+  round_shield: { slot: 'shield', look: 'round', name: 'ROUND SHIELD', armor: 4, block: 15, lvl: 1 },
+  tower_shield: { slot: 'shield', look: 'tower', name: 'TOWER SHIELD', armor: 10, block: 28, lvl: 3 },
   heal: { slot: 'potion', name: 'HEALING POTION', heal: 30, lvl: 1 },
 };
 const AFFIXES = [
@@ -50,7 +58,7 @@ function rollItem(R, level, forceBase) {
 }
 function itemName(it) {
   const b = ITEM_BASES[it.base];
-  if (it.rarity === 'rare') return it.title;
+  if (it.rarity === 'rare' && it.title) return it.title;
   return [it.prefix, b.name, it.suffix].filter(Boolean).join(' ');
 }
 function itemLines(it) {
@@ -82,6 +90,8 @@ function itemIcon(it) {
     const wide = V.norm(V.cross(bd, [0, 0, 1])), wf = [bd, wide, V.cross(bd, wide)];
     r.cone(V.mad(g, bd, -2.5), V.mad(g, bd, 1.2), 0.9, 0.9, M.LEATHER); r.sph(V.mad(g, bd, -3.1), 1.2, M.GOLD);
     if (b.look === 'sword') { r.box(V.mad(g, bd, 1.8), [0.7, 3.4, 0.8], M.GOLD, wf); r.box(V.mad(g, bd, 9.6), [7.4, 1.2, 0.4], M.BLADE, wf); }
+    else if (b.look === 'greatsword') { r.box(V.mad(g, bd, 1.8), [0.8, 4.2, 0.9], M.IRON, wf); r.box(V.mad(g, bd, 10.2), [8.4, 1.5, 0.45], M.BLADE, wf); }
+    else if (b.look === 'flail') { r.cone(V.mad(g, bd, 1.2), V.mad(g, bd, 7), 0.9, 0.9, M.WOOD); r.sph(V.mad(V.mad(g, bd, 9), [0, 0, -1], 3), 2.6, M.IRON); }
     else {
       r.cone(V.mad(g, bd, 1.2), V.mad(g, bd, 13), 0.9, 0.9, M.WOOD);
       if (b.look === 'axe') r.box(V.add(V.mad(g, bd, 11.5), V.mul(wide, 3)), [2.8, 3.0, 0.5], M.BLADE, wf);
@@ -90,16 +100,20 @@ function itemIcon(it) {
   } else if (b.slot === 'helm') {
     const hd = [0, 0, 4], fwd = [1, 0, 0], up = [0, 0, 1], sd = [0, 1, 0];
     if (b.look === 'cap') r.ell([0, 0, 3], [5.2, 5.1, 4.0], M.IRON);
+    else if (b.look === 'barbute') r.ell(hd, [5.4, 5.3, 6.2], M.STEEL, null, { mf: p => { const q = V.sub(p, hd); return q[0] > 2.4 && ((Math.abs(q[2] - 0.8) < 0.75 && Math.abs(q[1]) < 3.2) || (Math.abs(q[1]) < 0.8 && q[2] < 0.8 && q[2] > -4)) ? M.DARK : 0; } });
     else {
       r.ell(hd, [5.6, 5.4, 6.2], M.STEEL, null, { mf: p => { const q = V.sub(p, hd); if (Math.abs(q[2] - 2.2) < 0.8) return M.GOLD; if (q[0] > 2.6 && Math.abs(q[2] - 0.4) < 0.75 && Math.abs(q[1]) < 4) return M.DARK; return 0; } });
       if (b.look === 'horned') for (const s of [-1, 1]) r.cone(V.add(hd, [0, s * 5, 2.5]), V.add(hd, [0, s * 8.5, 8]), 1.4, 0.4, M.HORN);
+      if (b.look === 'crown') { r.cyl(V.add(hd, [0, 0, 3]), V.add(hd, [0, 0, 4.6]), 5.2, M.GOLD); for (let k = 0; k < 6; k++) { const a = k / 6 * 6.283; r.cone(V.add(hd, [Math.cos(a) * 4.8, Math.sin(a) * 4.8, 4.4]), V.add(hd, [Math.cos(a) * 4.8, Math.sin(a) * 4.8, 7]), 0.9, 0.2, M.GOLD); } }
       void fwd; void up; void sd;
     }
   } else if (b.slot === 'chest') {
-    const m = b.look === 'plate' ? M.STEEL : b.look === 'chain' ? M.CHAIN : team;
+    const m = b.look === 'plate' ? M.PLATE : b.look === 'darkplate' ? M.DSTEEL : b.look === 'chain' ? M.CHAIN : team;
     r.ell([0, 0, 3], [4.6, 6.6, 6.4], m);
     for (const s of [-1, 1]) r.ell([0, s * 7, 6.5], [3.6, 3.4, 3], b.look === 'tunic' ? M.LEATHER : m);
   } else if (b.slot === 'shield') {
+    if (b.look === 'tower') { r.box([0, 0, 4], [0.8, 4.4, 7.4], team, null, { mf: p => Math.abs(p[1]) > 3.5 || Math.abs(p[2] - 4) > 6.5 ? M.IRON : Math.abs(p[1]) < 0.8 ? M.GOLD : 0 }); return (iconCache[k] = renderRig(r, Math.PI / 4, 26, 26, 13, 17)); }
+    if (b.look === 'round') { r.ell([0, 0, 4], [1, 5, 5], M.WOOD, null, { mf: p => { const d2 = (p[1] ** 2 + (p[2] - 4) ** 2) / 25; return d2 > 0.74 || d2 < 0.06 ? M.IRON : 0; } }); return (iconCache[k] = renderRig(r, Math.PI / 4, 26, 26, 13, 17)); }
     const big = b.look === 'kite', rad = big ? [1, 5, 7] : [1, 4.4, 4.4], ax = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
     r.ell([0, 0, 4], rad, team, ax, { mf: p => { const u = p[1] / rad[1], v = (p[2] - 4) / rad[2]; return u * u + v * v > 0.62 ? M.GOLD : (big && (Math.abs(u) < 0.14 || Math.abs(v - 0.15) < 0.11)) ? M.GOLD : 0; } });
   } else {   // potion

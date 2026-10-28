@@ -34,12 +34,12 @@ function sprite(sp, x, y, z = 1, L = 4) {
 const UI = {};
 function uiResize() {
   UI.orbL = [34, H - 34]; UI.orbR = [W - 34, H - 34]; UI.orbR0 = 24;
-  UI.attack = [W - 48, H - 100, 21]; UI.skill = [W - 96, H - 72, 13]; UI.potion = [W / 2, H - 22, 12];
+  UI.attack = [W - 48, H - 100, 21]; UI.skills = [[W - 96, H - 70, 12], [W - 104, H - 110, 12], [W - 88, H - 146, 12], [W - 50, H - 158, 12]]; UI.potion = [W / 2, H - 22, 12];
   UI.bag = [W - 15, 15, 11]; UI.map = [W - 40, 15, 11]; UI.sound = [W - 65, 15, 11];
   UI.stickHome = [52, H - 104];
 }
 const stick = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
-const press = { attack: null, skill: false };
+const press = { attack: null, skill: -1 };
 let showMap = false;
 const hitCircle = (p, c, pad = 4) => Math.hypot(p[0] - c[0], p[1] - c[1]) <= c[2] + pad;
 
@@ -108,6 +108,10 @@ function drawButton(c, ramp, active, glyph) {
 // a little sword / star / bag / map glyph for the buttons, drawn with lines
 function line(x0, y0, x1, y1, c) { const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) + 1; for (let s = 0; s <= n; s++) put(x0 + (x1 - x0) * s / n, y0 + (y1 - y0) * s / n, c); }
 const glyphSword = (cx, cy) => { for (let k = -1; k <= 1; k++) line(cx - 8 + k, cy + 8, cx + 8 + k, cy - 8, k ? 31 : 27); line(cx - 6, cy + 2, cx - 2, cy + 6, 50); line(cx - 9, cy + 9, cx - 6, cy + 6, 35); };
+const glyphBash = (cx, cy) => { for (let y = -5; y <= 5; y++) { const hw = y < 2 ? 4 : 4 - (y - 1) * 1.2; for (let x = -hw; x <= hw; x++) put(cx + x, cy + y, Math.abs(x) > hw - 1.2 || y === -5 ? 50 : 22); } };
+const glyphWhirl = (cx, cy) => { for (let a = 0; a < 40; a++) { const t = a / 40 * Math.PI * 3.2, r = 1.5 + a * 0.16; put(cx + Math.cos(t) * r, cy + Math.sin(t) * r * 0.9, a > 30 ? 27 : 31); } };
+const glyphCry = (cx, cy) => { for (const r of [3, 5.5, 8]) for (let a = -0.7; a <= 0.7; a += 0.12) put(cx - 3 + Math.cos(a) * r, cy + Math.sin(a) * r, r > 6 ? 49 : 51); fillRect(cx - 6, cy - 2, 3, 5, 27); };
+const SKILL_GLYPH = [null, glyphBash, glyphWhirl, glyphCry];
 const glyphBolt = (cx, cy) => { for (let a = 0; a < 8; a++) { const t = a * Math.PI / 4; line(cx, cy, cx + Math.cos(t) * 7, cy + Math.sin(t) * 7, a % 2 ? 50 : 51); } put(cx, cy, 27); };
 const glyphBag = (cx, cy) => { fillRect(cx - 5, cy - 3, 11, 9, 35); frame(cx - 5, cy - 3, 11, 9, 36, 33); line(cx - 3, cy - 3, cx - 1, cy - 6, 36); line(cx + 3, cy - 3, cx + 1, cy - 6, 36); fillRect(cx - 1, cy, 3, 2, 50); };
 const glyphSound = (cx, cy) => {
@@ -133,7 +137,32 @@ function drawHud() {
   drawButton(UI.potion, [19, 20, 21, 22], false, (cx, cy) => { sprite(itemIcon({ base: 'heal' }), cx, cy + 4, 1, 4); });
   text(`${hero.potions}`, UI.potion[0] + 9, UI.potion[1] + 4, 27);
   drawButton(UI.attack, [28, 29, 30, 31], !!press.attack, glyphSword);
-  drawButton(UI.skill, [48, 49, 50, 51], press.skill, glyphBolt);
+  SKILLS.forEach((sk, i) => {
+    const c = UI.skills[i], locked = hero.lvl < sk.lvl;
+    drawButton(c, locked ? [3, 4, 5] : [[48, 49, 50, 51], [19, 20, 21, 22], [28, 29, 30, 31], [33, 34, 35, 36]][i], press.skill === i, i ? SKILL_GLYPH[i] : glyphBolt);
+    // cooldown: the button darkens from the top and clears as it recharges; locked buttons stay dark
+    const f = locked ? 1 : CD[sk.id] / sk.cd, low = !locked && hero.mana < sk.mana;
+    if (f > 0 || low) for (let y = c[1] - c[2]; y <= c[1] + c[2]; y++) for (let x = c[0] - c[2]; x <= c[0] + c[2]; x++) {
+      if (Math.hypot(x - c[0], y - c[1]) > c[2] - 1) continue;
+      const covered = (y - (c[1] - c[2])) / (2 * c[2]) < f;
+      if ((covered && BAYER[((y & 3) << 2) | (x & 3)] < 0.7) || (low && ((x + y) & 1))) put(x, y, K1);
+    }
+    if (locked) textC(`LV${sk.lvl}`, c[0], c[1] - 2, 25);
+  });
+  if (hero.buff > 0) textC(`WAR CRY ${Math.ceil(hero.buff)}`, W / 2, H - 46, 51);
+  // the boss's health bar, once she is awake
+  if (bossAlive() && boss.state !== 'sleep') {
+    const bw = 150, bx = Math.round(W / 2 - bw / 2), by = 24, f = boss.hp / boss.maxHp;
+    textC('BROODMOTHER', W / 2, by - 8, 22);
+    fillRect(bx - 1, by - 1, bw + 2, 6, BLK);
+    for (let x = 0; x < bw; x++) for (let y = 0; y < 4; y++) put(bx + x, by + y, x < bw * f ? (y === 0 ? 23 : y === 3 ? 20 : 22) : 3);
+  }
+  // champion names over their heads
+  for (const e of enemies) {
+    if (!e.champ || !alive(e) || LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] < 0.5 || Math.hypot(e.fi - hero.fi, e.fj - hero.fj) > 7) continue;
+    const [x, y] = iso(e.fi, e.fj);
+    textC(e.name, Math.round(x - camX), Math.round(y - camY) - e.def.chest * 1.6 - 20, { red: 23, grey: 31, green: 55, purple: 59 }[e.champ.tint]);
+  }
   drawButton(UI.bag, [33, 34, 35], false, glyphBag);
   drawButton(UI.map, [4, 5, 6, 7], showMap, glyphMap);
   drawButton(UI.sound, [4, 5, 6, 7], false, glyphSound);
@@ -267,7 +296,7 @@ function invTap(p) {
 // ---------------------------------------------------------------- input
 function toNative(e) { const r = cvs.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H]; }
 function capture(e) { try { cvs.setPointerCapture(e.pointerId); } catch (err) { /* synthetic or already-ended pointer */ } }
-function clearInput() { stick.id = null; input.mx = input.my = 0; input.attack = false; press.attack = null; press.skill = false; input.keys.clear(); }
+function clearInput() { stick.id = null; input.mx = input.my = 0; input.attack = false; press.attack = null; press.skill = -1; input.keys.clear(); }
 cvs.addEventListener('pointerdown', e => {
   e.preventDefault();
   audioInit();
@@ -280,7 +309,7 @@ cvs.addEventListener('pointerdown', e => {
   if (hitCircle(p, UI.sound)) { setMuted(!SFX.muted); sfx('tap'); return; }
   if (hitCircle(p, UI.map)) { showMap = !showMap; return; }
   if (hitCircle(p, UI.potion)) { drinkPotion(); return; }
-  if (hitCircle(p, UI.skill, 6)) { press.skill = true; heroCast(); return; }
+  for (let i = 0; i < UI.skills.length; i++) if (hitCircle(p, UI.skills[i], 5)) { press.skill = i; useSkill(i); return; }
   if (hitCircle(p, UI.attack, 10) || (p[0] > W * 0.55 && p[1] > H * 0.3)) { press.attack = e.pointerId; input.attack = true; heroAttack(); capture(e); return; }
   if (p[0] < W * 0.55 && stick.id === null) { stick.id = e.pointerId; stick.ox = p[0]; stick.oy = p[1]; stick.x = p[0]; stick.y = p[1]; capture(e); }
 }, { passive: false });
@@ -294,7 +323,7 @@ cvs.addEventListener('pointermove', e => {
 const endPointer = e => {
   if (e.pointerId === stick.id) { stick.id = null; input.mx = input.my = 0; }
   if (e.pointerId === press.attack) { press.attack = null; input.attack = false; }
-  press.skill = false;
+  press.skill = -1;
 };
 cvs.addEventListener('pointerup', endPointer);
 cvs.addEventListener('pointercancel', endPointer);
@@ -305,7 +334,10 @@ addEventListener('keydown', e => {
   if (G.mode === 'title' && (k === 'enter' || k === ' ')) { beginGame(!!loadSave()); return; }
   input.keys.add(k);
   if (k === ' ' || k === 'j') input.attack = true;
-  if (k === 'k') heroCast();
+  if (k === 'k' || k === '1') useSkill(0);
+  if (k === '2' || k === 'l') useSkill(1);
+  if (k === '3') useSkill(2);
+  if (k === '4') useSkill(3);
   if (k === 'q') drinkPotion();
   if (k === 'i' || k === 'b') { G.mode = G.mode === 'inv' ? 'play' : 'inv'; INV.sel = null; }
   if (k === 'm' || k === 'tab') showMap = !showMap;

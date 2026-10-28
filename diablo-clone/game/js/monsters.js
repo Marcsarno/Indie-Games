@@ -358,6 +358,7 @@ function getSprite(fam, look, dir, clip, f, ent) {
     const F = FAMILIES[fam], [w, h, ax, ay] = look.size || F.size;
     const ex = ent || { look };
     sp = renderRig(F.rig(look, poseState(fam, ex, clip, f)), yawOf(dir), w, h, ax, ay);
+    if (look.tint) sp = tintSprite(sp, look.tint);
     if (spriteCache.size > 3000) spriteCache.clear();
     spriteCache.set(k, sp); spriteBuilds++;
     buildBudget.used += performance.now() - t0;

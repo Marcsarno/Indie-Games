@@ -53,11 +53,14 @@ function startLevel(level, seed) {
   buildWorld();
   hero.fi = LV.start.cx + 0.5; hero.fj = LV.start.cy + 0.5; hero.atk = -1; hero.clip = 'idle'; hero.dead = 0;
   enemies = LV.spawns.map((s, n) => makeEnemy(s.id, s.fi, s.fj, n));
+  { const R = rng(seed ^ 0x5bd1); for (const e of enemies) if (!e.def.unique && R() < champChance(level)) makeChampion(e, R); }
+  resetSkills(); setupBoss();
   groundItems = []; projectiles = []; floaters = []; pclear();
   updateFov(hero.fi, hero.fj);
   flowT = 0; computeFlow();
   warmStep(1e9, prewarm());   // idle poses + the hero's walk now, behind the level fade; the rest during play
   say(`CRYPT LEVEL ${level}`, 51, 3);
+  if (isBossFloor(level)) say('SOMETHING VAST STIRS IN THE DARK', 22, 4);
 }
 function makeEnemy(id, fi, fj, n) {
   const m = MONSTERS[id], lv = LV.level;
@@ -148,7 +151,7 @@ const roll = r => r[0] + Math.floor(Math.random() * (r[1] - r[0] + 1));
 
 // ---------------------------------------------------------------- hero actions
 function heroAttack() {
-  if (G.mode !== 'play' || hero.dead || hero.atk >= 0 || hero.cast >= 0) return;
+  if (G.mode !== 'play' || hero.dead || heroBusy()) return;
   // target assist: face the nearest enemy within reach of a step or two
   let best = null, bd = 4.2;
   for (const e of enemies) { if (!alive(e) || LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] < 0.3) continue; const d = Math.hypot(e.fi - hero.fi, e.fj - hero.fj); if (d < bd) { bd = d; best = e; } }
@@ -160,9 +163,9 @@ function heroAttack() {
   hero.approach = null; hero.atk = 0; hero.hitDone = false;
   sfx(STAT.slow ? 'heavySwing' : 'swing');
 }
-const heroReach = () => hero.look.weapon === 'sword' ? 1.45 : 1.35;
+const heroReach = () => ({ sword: 1.45, greatsword: 1.75, flail: 1.5 })[hero.look.weapon] || 1.35;
 function heroCast() {
-  if (G.mode !== 'play' || hero.dead || hero.cast >= 0) return;
+  if (G.mode !== 'play' || hero.dead || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0) return;
   if (hero.atk >= 0) { hero.castQueued = true; return; }   // fires when the swing ends
   hero.castQueued = false;
   if (hero.mana < 6) { say('NOT ENOUGH MANA', 40, 1.2); return; }
@@ -171,7 +174,7 @@ function heroCast() {
   if (best) hero.dir = dirFrom(best.fi - hero.fi, best.fj - hero.fj);
   hero.mana -= 6; hero.cast = 0.25; sfx('bolt');
   const [dx, dy] = best ? [best.fi - hero.fi, best.fj - hero.fj] : dirVec(hero.dir), l = Math.hypot(dx, dy) || 1;
-  projectiles.push({ kind: 'holy', fi: hero.fi + dx / l * 0.6, fj: hero.fj + dy / l * 0.6, vx: dx / l * 8, vy: dy / l * 8, z: 20, life: 1.4, owner: 'hero', dmg: [Math.round(STAT.dmg[0] * 0.9 + 3), Math.round(STAT.dmg[1] * 0.9 + 5)] });
+  projectiles.push({ kind: 'holy', fi: hero.fi + dx / l * 0.6, fj: hero.fj + dy / l * 0.6, vx: dx / l * 8, vy: dy / l * 8, z: 20, life: 1.4, owner: 'hero', dmg: [Math.round((STAT.dmg[0] * 0.9 + 3) * (hero.buff > 0 ? 1.4 : 1)), Math.round((STAT.dmg[1] * 0.9 + 5) * (hero.buff > 0 ? 1.4 : 1))] });
 }
 function drinkPotion() {
   if (G.mode !== 'play' || hero.dead) return;
@@ -194,8 +197,9 @@ function damageEnemy(e, dmg, fromFi, fromFj, kill) {
     if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.5);
     sfx('kill');
     if (!bony) stampBlood(Math.round(ex), Math.round(ey), e.def.unique ? 6 : 3, (Math.random() * 1e6) | 0);
-    gainXp(e.def.xp * (1 + (LV.level - 1) * 0.3));
-    dropLoot(e.fi, e.fj, e.def.unique ? 3 : 1, e.def.unique);
+    gainXp(e.def.xp * (1 + (LV.level - 1) * 0.3) * (e.champ ? 3 : 1));
+    dropLoot(e.fi, e.fj, e.def.unique ? 4 : e.champ ? 2 : 1, e.def.unique || !!e.champ);
+    if (e === boss) { say('THE BROODMOTHER IS SLAIN', 51, 4); say('THE WAY DOWN IS OPEN', 26, 4); sfx('levelUp'); }
     G.kills++;
   } else {
     e.stop = 0.07; hero.stop = Math.max(hero.stop, 0.07); sfx('hit');
@@ -212,12 +216,12 @@ function heroHitResolve() {
     if (!alive(e)) continue;
     const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy), rr = reach + (e.def.unique ? 0.5 : 0.2);
     if (d > rr || (d > 0.3 && (dx * fx + dy * fy) / d < 0.35)) continue;
-    damageEnemy(e, roll(STAT.dmg), hero.fi, hero.fj); any = true;
+    damageEnemy(e, heroDmg(), hero.fi, hero.fj); any = true;
   }
   for (const p of dynProps) {
-    if (p.broken || p.kind !== 'barrel') continue;
+    if (p.broken || (p.kind !== 'barrel' && p.kind !== 'egg')) continue;
     const dx = p.i + 0.5 - hero.fi, dy = p.j + 0.5 - hero.fj, d = Math.hypot(dx, dy);
-    if (d < 1.6 && (dx * fx + dy * fy) / (d || 1) > 0.3) breakBarrel(p);
+    if (d < 1.6 && (dx * fx + dy * fy) / (d || 1) > 0.3) hitProp(p);
   }
   return any;
 }
@@ -299,6 +303,7 @@ function updateHero(dt) {
   if (hero.dead) { hero.dead += dt; hero.clock += dt; hero.flash = 0; return; }
   hero.flash = Math.max(0, hero.flash - dt); hero.hurtT = Math.max(0, hero.hurtT - dt);
   hero.hp = Math.min(STAT.maxHp, hero.hp + dt * 0.25); hero.mana = Math.min(STAT.maxMana, hero.mana + dt * 1.2);
+  updateSkills(dt);
   if (input.attack) heroAttack();
   let vx = input.mx, vy = input.my;
   const K = input.keys;
@@ -312,12 +317,12 @@ function updateHero(dt) {
     else { const g = flowDir(hero.fi, hero.fj); vx = (dx - dy) / d; vy = (dx + dy) / d; void g; }
   } else if (Math.hypot(vx, vy) >= 0.18) hero.approach = null;
   const l = Math.hypot(vx, vy);
-  const busy = hero.atk >= 0 || hero.cast >= 0;
+  const busy = hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0;
   const moving = l > 0.18 && !busy;
   if (moving) {
     if (l > 1) { vx /= l; vy /= l; }
     // screen direction -> ground direction (isotropic): right = +i-j, down = +i+j
-    const gi = (vx + vy) * Math.SQRT1_2, gj = (vy - vx) * Math.SQRT1_2, sp = STAT.speed * Math.min(1, l) * dt;
+    const gi = (vx + vy) * Math.SQRT1_2, gj = (vy - vx) * Math.SQRT1_2, sp = STAT.speed * (hero.whirl > 0 ? 0.6 : 1) * Math.min(1, l) * dt;
     const f0 = hero.fi, j0 = hero.fj;
     tryMove(hero, gi * sp, gj * sp);
     const moved = Math.hypot(hero.fi - f0, hero.fj - j0);
@@ -325,6 +330,8 @@ function updateHero(dt) {
     hero.dir = dirFrom(gi, gj);
     hero.clip = 'walk';
   } else if (!busy) hero.clip = hero.hurtT > 0 ? 'hit' : 'idle';
+  if (hero.whirl > 0) { hero.clip = 'attack'; hero.dir = Math.floor(G.t / 0.05) % 8; }   // spin through all 8 facings
+  if (hero.dash > 0) hero.clip = 'attack';
   if (hero.stop > 0) { hero.stop -= dt; return; }
   hero.clock += dt;
   if (hero.cast >= 0) { hero.cast -= dt; hero.clip = 'idle'; if (hero.cast < 0) hero.cast = -1; }
@@ -343,10 +350,14 @@ function updateHero(dt) {
   for (const p of dynProps) if (p.kind === 'chest' && !p.open && Math.hypot(p.i + 0.5 - hero.fi, p.j + 0.5 - hero.fj) < 1.15) openChest(p);
   // stairs
   const s = LV.stairs;
-  if (!G.fadeTo && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55) {
+  if (!G.fadeTo && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55 && bossAlive()) {
+    if (!(G.sealT > 0)) { say('THE BROODMOTHER GUARDS THE WAY DOWN', 22, 2); G.sealT = 3; }
+  } else if (!G.fadeTo && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55) {
     sfx('stairs');
     G.fadeTo = () => { startLevel(LV.level + 1, (LV.seed * 31 + 17) >>> 0); saveGame(); };
   }
+  G.sealT = (G.sealT || 0) - dt;
+  hatchEggs(dt);
   updateFov(hero.fi, hero.fj);
 }
 function updateEnemy(e, dt) {
@@ -368,7 +379,13 @@ function updateEnemy(e, dt) {
     const k = Math.exp(-14 * dt); e.kb[0] *= k; e.kb[1] *= k;
   }
   if (e.hurt > 0) { e.hurt -= dt; e.clip = 'hit'; return; }
+  if (e.stun > 0) {   // dazed: stars circle the head
+    e.stun -= dt; e.clip = 'hit'; e.atk = -1;
+    if (Math.random() < dt * 10) { const [x, y] = screenOf(e), a = G.t * 9; pspawn(4, x + Math.cos(a) * 5, y + Math.sin(a) * 2, e.def.chest + 14, 0, 0, 0, 0.25, 51); }
+    return;
+  }
   const m = e.def, dx = hero.fi - e.fi, dy = hero.fj - e.fj, d = Math.hypot(dx, dy);
+  if (e === boss && e.state !== 'sleep' && !hero.dead && updateBoss(e, dt, d, dx, dy)) return;
   if (e.state === 'sleep') {
     e.clip = 'idle';
     if (!hero.dead && d < 7 && los(e.fi, e.fj, hero.fi, hero.fj)) wake(e);
@@ -407,7 +424,7 @@ function updateEnemy(e, dt) {
   else if (see && d < 3) mv = [dx / d, dy / d];
   else mv = flowDir(e.fi, e.fj);
   if (!mv || d > 18) { e.clip = 'idle'; return; }
-  const l = Math.hypot(mv[0], mv[1]) || 1, sp = m.speed / 16 * 1.2 * dt;
+  const l = Math.hypot(mv[0], mv[1]) || 1, sp = m.speed / 16 * 1.2 * (e.speedK || 1) * dt;
   const f0 = e.fi, j0 = e.fj;
   tryMove(e, mv[0] / l * sp, mv[1] / l * sp, 0.25);
   e.walk += Math.hypot(e.fi - f0, e.fj - j0) / (e.fam === 'spider' || e.fam === 'hound' ? 0.32 : 0.26);
@@ -416,7 +433,7 @@ function updateEnemy(e, dt) {
 function hurtHero(dmg, src) {
   if (hero.dead) return;
   if (Math.random() * 100 < STAT.block) { floater('BLOCK', hero.fi, hero.fj, 44, 31); sfx('block'); return; }
-  dmg = Math.max(1, Math.round(dmg * 40 / (40 + STAT.armor * 2.5)));
+  dmg = Math.max(1, Math.round(dmg * 40 / (40 + STAT.armor * (hero.buff > 0 ? 1.5 : 1) * 2.5)));
   hero.hp -= dmg; hero.flash = 0.06; hero.hurtT = 0.15; sfx('hurt');
   floater(String(dmg), hero.fi, hero.fj, 46, 23);
   const [x, y] = screenOf(hero); burst(1, x, y, 24, 6, 40, 22);
@@ -477,6 +494,8 @@ function updateParticles(dt) {
 // ---------------------------------------------------------------- render
 function frameOf(e) {
   const pt = e.clock;
+  if (e === hero && hero.whirl > 0) return 3;   // the sword held out level, smeared
+  if (e === hero && hero.dash > 0) return 4;
   if (e.clip === 'idle') return Math.floor(pt / 0.2) % 4;
   if (e.clip === 'walk') return Math.floor(e.walk) % 8;
   if (e.clip === 'attack' || e.clip === 'shoot' || e.clip === 'cast') return Math.max(0, swingKey(FAMILIES[e.fam].swing(e), e.atk));
@@ -558,13 +577,14 @@ function render() {
   });
   for (const p of dynProps) {
     if (p.broken) continue;
-    const sp = p.kind === 'barrel' ? PROPS.barrel() : PROPS.chest(p.open);
-    list.push({ depth: p.depth, draw: () => blit(sp, p.wx, p.wy, false, 0, p.tile) });
+    const sp = p.kind === 'barrel' ? PROPS.barrel() : p.kind === 'egg' ? PROPS.egg() : PROPS.chest(p.open);
+    if (p.flash > 0) p.flash -= 1 / 60;
+    list.push({ depth: p.depth, draw: () => blit(sp, p.wx, p.wy, p.flash > 0, 0, p.tile) });
   }
   for (const g of groundItems) {
     const [x, y] = iso(g.fi, g.fj), bounce = g.t < 0.4 ? Math.round(Math.sin(g.t / 0.4 * Math.PI) * 8) : 0;
     const tile = tIdx(Math.floor(g.fi), Math.floor(g.fj));
-    list.push({ depth: g.fi + g.fj - 0.3, draw: () => g.gold ? drawGold(x, y - bounce, tile) : blit(itemIcon(g.item), x, y - bounce + 4, false, 0, tile) });
+    list.push({ depth: g.fi + g.fj - 0.3, draw: () => { if (g.gold) return drawGold(x, y - bounce, tile); if (g.item.rarity !== 'normal' && g.t > 0.4) drawBeam(x, y, RARITY_COL[g.item.rarity], tile, g.item.id); blit(itemIcon(g.item), x, y - bounce + 4, false, 0, tile); } });
   }
   chars.forEach((c, n) => {
     const [x, y] = screenOf(c);
@@ -579,6 +599,7 @@ function render() {
   list.sort((a, b) => a.depth - b.depth);
   for (const d of list) d.draw();
   for (const f of fires) if (LV.vis[f.tile] > 0.1 || LV.seen[f.tile]) flame(f.wx, f.wy, f.h, f.w, t, f.seed);
+  drawTelegraph();
   for (let k = 0; k < PN; k++) {
     const kind = pkind[k]; if (!kind) continue;
     const x = Math.round(px_[k] - camX), y = Math.round(py_[k] - pz_[k] - camY);
@@ -590,6 +611,17 @@ function render() {
   lightPass(chars, kx, ky);
   drawHud();
   ctx.putImageData(outImg, 0, 0);
+}
+// magic and rare drops send up a thin flickering beam of their color so they're easy to spot
+function drawBeam(x, y, col, tile, seed) {
+  const sx = Math.round(x - camX), sy = Math.round(y - camY) + 2, hgt = 26;
+  for (let r = 0; r < hgt; r++) {
+    const yy = sy - r; if (yy < 0 || yy >= H || sx < 1 || sx >= W - 1) continue;
+    const fadeK = r / hgt, b = BAYER[((yy & 3) << 2) | (sx & 3)];
+    if (b < fadeK || (r + Math.floor(G.t * 20 + seed)) % 7 === 0) continue;
+    const o = yy * W + sx; scr[o] = col | EMIS; tbuf[o] = tile;
+    if (r < hgt * 0.5 && b > fadeK * 2) { scr[o - 1] = col | EMIS; tbuf[o - 1] = tile; }
+  }
 }
 function drawGold(x, y, tile) {
   const sx = Math.round(x - camX), sy = Math.round(y - camY);

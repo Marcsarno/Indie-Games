@@ -57,6 +57,7 @@ const RECIPES = {
   levelUp: () => [523, 659, 784, 1047].forEach((f, i) => tone('triangle', f, f, 0.16, 0.18, i * 0.08)),
   stairs: () => [392, 330, 262].forEach((f, i) => tone('triangle', f, f * 0.98, 0.2, 0.18, i * 0.13)),
   death: () => { tone('sawtooth', 200, 45, 0.9, 0.14); tone('sine', 110, 40, 0.9, 0.35); },
+  cry: () => { tone('sawtooth', 140, 110, 0.5, 0.12); tone('sawtooth', 210, 160, 0.45, 0.08, 0.02); noise(0.3, 0.2, 'lowpass', 900, 300); },
   tap: () => tone('square', 820, 820, 0.04, 0.2),
   crackle: v => noise(0.02 + Math.random() * 0.03, 0.03 * v, 'highpass', 2500, 1500, 0.7),
 };
