@@ -7,7 +7,7 @@
 const DIRS = 8;
 const yawOf = d => d * Math.PI / 4;   // d=1 faces the camera, d=7 faces screen right
 // pose clip lengths in frames (100 ms each unless a clip lists its own hold times)
-const CLIP_FRAMES = { idle: 4, walk: 8, hit: 1, death: 6 };
+const CLIP_FRAMES = { idle: 4, walk: 8, hit: 1, death: 6, go: 1, stop: 1 };
 
 // ---------------------------------------------------------------- attack timing
 // Attacks are poses with hold times (Slynyrd): a held anticipation, short smear keys, the contact
@@ -60,6 +60,20 @@ function smearArc(rig, pivot, F, U, a0, a1, r0, r1) {
   }
 }
 
+// ---------------------------------------------------------------- gait
+// One foot over a cycle phase p (0..1): planted for the first `duty` of the cycle, sliding back
+// from +stride to -stride at exactly the body's speed (so it stays put on the floor), then
+// swinging forward with the heel kicked up behind. Returns [forward, height].
+function gaitFoot(B, p) {
+  p = ((p % 1) + 1) % 1;
+  const A = B.stride, d = B.duty;
+  if (p < d) return [A - 2 * A * p / d, 0];
+  const u = (p - d) / (1 - d), e = u * u * (3 - 2 * u);
+  return [-A + 2 * A * e, B.lift * Math.sin(Math.PI * Math.pow(u, 0.65))];
+}
+// tiles of travel per walk frame (8 frames a cycle) that keep the planted foot still on the floor
+const gaitFrameTiles = (B, scale = 1) => 2 * B.stride * scale / B.duty / 8 / TILE_U;
+
 // ---------------------------------------------------------------- biped skeleton
 // Proportions are chunky on purpose (big head and hands) so actions read at ~40 px tall.
 function bipedJoints(B, st) {
@@ -67,13 +81,28 @@ function bipedJoints(B, st) {
   let bob = 0, lean = 0, twist = 0;
   const sw0 = B.stance || 0;   // a wider, staggered planted stance for the hero
   let footL = [0.5 + sw0, -B.hipW - sw0, 0], footR = [-0.5 - sw0 * 0.6, B.hipW + sw0, 0];
-  let swingArm = 0;
+  let swingArm = 0, sway = 0, hipF = 0;   // swingArm: +1 = right arm forward (left foot forward)
   if (clip === 'idle') { bob = [0, -0.4, -0.6, -0.3][f % 4]; }
   if (clip === 'walk') {
-    const ph = f / 8 * Math.PI * 2;
-    footL = [-B.stride * Math.cos(ph), -B.hipW, B.lift * Math.max(0, Math.sin(ph))];
-    footR = [-B.stride * Math.cos(ph + Math.PI), B.hipW, B.lift * Math.max(0, Math.sin(ph + Math.PI))];
-    bob = -1.2 * Math.abs(Math.cos(ph)) + 0.4; lean = 0.12; swingArm = Math.cos(ph);
+    const g = gaitFoot(B, f / 8), h = gaitFoot(B, f / 8 + 0.5), A = B.stride;
+    footL = [g[0], -B.hipW, g[1]]; footR = [h[0], B.hipW, h[1]];
+    // a run (duty < 0.5) is lowest at mid-stance and rises in flight; a walk vaults over the
+    // planted leg, so it is highest at mid-stance and lowest when both feet are down
+    const c = Math.cos(4 * Math.PI * (f / 8 - B.duty / 2)), run = B.duty < 0.5;
+    bob = (run ? -c : c) * (B.bob || 0.7) + (run ? 0 : -0.3);
+    sway = -Math.cos(2 * Math.PI * (f / 8 - B.duty / 2)) * (B.sway || 0.4);   // hips over the planted foot
+    lean = B.runLean || 0.12;
+    swingArm = (footL[0] - footR[0]) / (2 * A);
+    twist = -swingArm * (B.counter || 0.16);   // shoulders turn against the hips
+    hipF = swingArm * 0.9;                     // and the hips turn with the legs
+  }
+  if (clip === 'go') {   // first step: pushing off the back foot, leaning into the run
+    footL = [B.stride * 0.55, -B.hipW, B.lift * 0.8]; footR = [-B.stride * 0.8, B.hipW, 0];
+    bob = -0.8; lean = (B.runLean || 0.12) + 0.14; swingArm = 0.7; twist = -0.12; hipF = 0.6;
+  }
+  if (clip === 'stop') {   // planting the front foot and sitting back onto it
+    footL = [B.stride * 0.7, -B.hipW - 0.3, 0]; footR = [-B.stride * 0.45, B.hipW + 0.3, B.lift * 0.25];
+    bob = -1.4; lean = -0.04; swingArm = -0.5; twist = 0.08; hipF = -0.4;
   }
   if (clip === 'hit') { lean = -0.28; bob = -0.6; footL = [1.5, -B.hipW, 0]; footR = [-1.5, B.hipW, 0]; }
   if (clip === 'attack' || clip === 'shoot' || clip === 'cast') {
@@ -85,13 +114,13 @@ function bipedJoints(B, st) {
   }
   lean += B.hunch || 0;
   if (clip === 'death') { bob = -[0, 2, 4, 5, 5, 5][f] * B.hipH / 18; lean = 0.15; footL = [2, -B.hipW - 1, 0]; footR = [-1, B.hipW + 1, 0]; }
-  const pelvis = [0, 0, B.hipH + bob];
+  const pelvis = [0, sway, B.hipH + bob];
   const up = V.rotY([0, 0, 1], lean);
   const chest = V.mad(pelvis, up, B.spine);
   const sideR = V.rotZ([0, 1, 0], twist), fwd = V.rotZ([1, 0, 0], twist);
   const shR = V.add(V.mad(chest, sideR, B.shW), V.mul(up, B.shZ)), shL = V.add(V.mad(chest, sideR, -B.shW), V.mul(up, B.shZ));
   const head = V.add(V.mad(chest, up, B.neck), V.mul(fwd, lean * 3));
-  const hipR = V.add(pelvis, [0, B.hipW, 0]), hipL = V.add(pelvis, [0, -B.hipW, 0]);
+  const hipR = V.add(pelvis, [-hipF, B.hipW, 0]), hipL = V.add(pelvis, [hipF, -B.hipW, 0]);
   const ankle = ft => V.add(ft, [0, 0, B.ankle]);
   const legR = ik(hipR, ankle(footR), B.thigh, B.shin, [1, 0, 0.1]), legL = ik(hipL, ankle(footL), B.thigh, B.shin, [1, 0, 0.1]);
   return { pelvis, chest, head, up, fwd, sideR, shR, shL, hipR, hipL, kneeR: legR.joint, kneeL: legL.joint, ankR: legR.end, ankL: legL.end, twist, lean, swingArm };
@@ -109,7 +138,9 @@ function deathTip(rig, B, f, dir = -1, side = 1) {
 }
 
 // ---------------------------------------------------------------- the hero (knight)
-const HERO_B = { hipH: 18, thigh: 9.5, shin: 8.5, ankle: 1.8, spine: 8, shW: 7.0, shZ: 4, neck: 12.5, upper: 6.5, fore: 6, hipW: 3.0, stride: 8, lift: 3.4, stance: 1.6 };
+const HERO_B = { hipH: 18, thigh: 9.5, shin: 8.5, ankle: 1.8, spine: 8, shW: 7.0, shZ: 4, neck: 12.5, upper: 6.5, fore: 6, hipW: 3.0, stride: 8, lift: 4.2, stance: 1.6,
+  duty: 0.38, bob: 0.9, sway: 0.45, runLean: 0.2, counter: 0.2 };   // the hero's travel speed is a jog
+const HERO_GAIT = gaitFrameTiles(HERO_B);
 const TEAM = { red: M.CLOTH_RED, blue: M.CLOTH_BLUE };
 
 // Equipment is visual family ids, separate from item stats: many items share one look.
@@ -190,8 +221,9 @@ function heroRig(eq, st) {
     handR = V.add(J.shR, [3, 2, -10]); bd = V.norm([1, 0.4, -0.6]);
   } else {
     // guard: blade held out at the side, point up and forward, so it reads from the front too
-    const s = J.swingArm * 2.5;
-    handR = V.add(V.add(J.shR, V.mul(fwd, 4 + s)), V.add(V.mul(up, -8.5), V.mul(sideR, 2.6)));
+    // the sword arm swings a little (the blade is carried), rising slightly as it comes forward
+    const s = J.swingArm * 1.8;
+    handR = V.add(V.add(J.shR, V.mul(fwd, 4 + s)), V.add(V.mul(up, -8.5 + Math.max(0, J.swingArm) * 1.2), V.mul(sideR, 2.6)));
     bd = V.norm(V.add(V.add(V.mul(fwd, 0.55), V.mul(up, 0.7)), V.mul(sideR, 0.45)));
   }
   const aR = armTo(J, J.shR, handR, B, 1);
@@ -200,7 +232,10 @@ function heroRig(eq, st) {
   const sleeve = eq.chest === 'tunic' ? team : armM, foreM = eq.chest === 'tunic' ? M.SKIN : armM, handM = plate ? PL : eq.chest === 'tunic' ? M.SKIN : M.LEATHER;
   r.cone(J.shR, aR.el, ar[0], ar[1], sleeve); r.cone(aR.el, aR.hand, ar[1], ar[2], foreM);
   r.sph(aR.hand, ar[3], handM);
-  let handL = V.add(V.add(J.shL, V.mul(fwd, 5.5 - J.swingArm * 2)), V.add(V.mul(up, -7.5), V.mul(sideR, -0.5)));
+  // off hand swings against the sword arm: a free hand pumps (elbow bent, rising forward), a
+  // shield only rocks
+  const offSw = -J.swingArm * (eq.shield === 'none' ? 3.6 : 1.6);
+  let handL = V.add(V.add(J.shL, V.mul(fwd, 5.5 + offSw)), V.add(V.mul(up, -7.5 + Math.max(0, offSw) * (eq.shield === 'none' ? 0.7 : 0.3)), V.mul(sideR, -0.5)));
   if (st.clip === 'death') handL = V.add(J.shL, [2, -3, -9]);
   const aL = armTo(J, J.shL, handL, B, -1);
   r.cone(J.shL, aL.el, ar[0], ar[1], sleeve); r.cone(aL.el, aL.hand, ar[1], ar[2], foreM);

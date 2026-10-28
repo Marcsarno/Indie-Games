@@ -3,7 +3,7 @@
 // spider (eight legs). Each takes a `look` (the variant) and a pose state {clip, f, key, prev}.
 
 // ---------------------------------------------------------------- skeleton
-const SKEL_B = { hipH: 16, thigh: 8, shin: 7.5, ankle: 1.2, spine: 8, shW: 6, shZ: 3, neck: 10.5, upper: 6, fore: 5.5, hipW: 2.6, stride: 5.5, lift: 2.5 };
+const SKEL_B = { hipH: 16, thigh: 8, shin: 7.5, ankle: 1.2, spine: 8, shW: 6, shZ: 3, neck: 10.5, upper: 6, fore: 5.5, hipW: 2.6, stride: 5.5, lift: 2.5, duty: 0.55, bob: 0.6, sway: 0.5, runLean: 0.1, counter: 0.14 };
 function skullAt(r, hd, fwd, sideR, up, bone, eye, jawOpen = 0, k = 1) {
   r.sph(hd, 4.1 * k, bone, { mf: p => {
     const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up);
@@ -131,7 +131,7 @@ function skeletonRig(look, st) {
 }
 
 // ---------------------------------------------------------------- fallen (imp)
-const FALLEN_B = { hipH: 9.5, thigh: 5.2, shin: 5, ankle: 1, spine: 6.5, shW: 4.6, shZ: 2, neck: 7.8, upper: 4.6, fore: 4.4, hipW: 2.2, stride: 4.5, lift: 2.6, hunch: 0.35 };
+const FALLEN_B = { hipH: 9.5, thigh: 5.2, shin: 5, ankle: 1, spine: 6.5, shW: 4.6, shZ: 2, neck: 7.8, upper: 4.6, fore: 4.4, hipW: 2.2, stride: 4.5, lift: 2.6, hunch: 0.35, duty: 0.42, bob: 0.6, sway: 0.35, runLean: 0.1, counter: 0.18 };
 function fallenRig(look, st) {
   const B = FALLEN_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J;
   const skin = look.skin || M.FLESH;
@@ -312,8 +312,8 @@ function spiderRig(look, st) {
 // size: sprite canvas; swing: attack timing; looks: variants (materials, size, gear) of one body
 const FAMILIES = {
   hero: { size: [72, 72, 36, 60], rig: heroRig, swing: e => weaponSwing(e.look) },
-  skeleton: { size: [72, 78, 36, 55], rig: skeletonRig, swing: e => e.look.weapon === 'bow' ? SWINGS.bow : SWINGS.light },
-  fallen: { size: [52, 48, 26, 40], rig: fallenRig, swing: e => e.look.staff ? SWINGS.cast : SWINGS.claw },
+  skeleton: { size: [72, 78, 36, 55], gait: gaitFrameTiles(SKEL_B, 1.1), rig: skeletonRig, swing: e => e.look.weapon === 'bow' ? SWINGS.bow : SWINGS.light },
+  fallen: { size: [52, 48, 26, 40], gait: gaitFrameTiles(FALLEN_B), rig: fallenRig, swing: e => e.look.staff ? SWINGS.cast : SWINGS.claw },
   hound: { size: [80, 64, 38, 50], rig: houndRig, swing: () => SWINGS.bite },
   spider: { size: [80, 60, 40, 46], rig: spiderRig, swing: () => SWINGS.bite },
 };
@@ -342,7 +342,7 @@ function poseState(fam, ent, clip, f) {
 // Builds are budgeted per frame: past the budget, a missing pose falls back to the nearest cached
 // frame (same direction) and is queued, so a crowd turning at once never stalls a frame.
 const buildBudget = { ms: Infinity, used: 0 };
-const fallbackOrder = { walk: ['walk', 'idle'], idle: ['idle'], attack: ['attack', 'idle'], shoot: ['shoot', 'idle'], cast: ['cast', 'idle'], hit: ['hit', 'idle'], death: ['death'] };
+const fallbackOrder = { walk: ['walk', 'idle'], idle: ['idle'], attack: ['attack', 'idle'], shoot: ['shoot', 'idle'], cast: ['cast', 'idle'], hit: ['hit', 'idle'], death: ['death'], go: ['go', 'walk', 'idle'], stop: ['stop', 'idle'] };
 function getSprite(fam, look, dir, clip, f, ent) {
   const lk = fam === 'hero' ? heroKey(look) : lookKey(look);
   const k = `${fam}|${lk}|${dir}|${clip}|${f}`;

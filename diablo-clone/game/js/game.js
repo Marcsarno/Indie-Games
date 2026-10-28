@@ -20,7 +20,7 @@ const SHAKE = params.get('shake') !== '0';
 // ---------------------------------------------------------------- state
 const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0 };
 const hero = {
-  fam: 'hero', fi: 0, fj: 0, dir: 1, clip: 'idle', clock: 0, walk: 0, atk: -1, hitDone: false, stop: 0, flash: 0,
+  fam: 'hero', fi: 0, fj: 0, dir: 1, clip: 'idle', clock: 0, walk: 0, runT: 0, goT: 0, stopT: 0, atk: -1, hitDone: false, stop: 0, flash: 0,
   hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, hurtT: 0, cast: -1,
   equip: { weapon: null, helm: null, chest: null, shield: null }, bag: [],
   look: { team: 'red', helm: 'none', chest: 'tunic', weapon: 'sword', shield: 'none' },
@@ -299,7 +299,7 @@ function unequip(slot) {
   if (!hero.equip[slot] || hero.bag.length >= BAG_SIZE) return;
   hero.bag.push(hero.equip[slot]); hero.equip[slot] = null; recalcHero(); prewarmHero();
 }
-function prewarmHero() { for (let d = 0; d < 8; d++) { warmQueue.unshift([ 'hero', hero.look, d, 'idle', 0]); for (let f = 0; f < 8; f++) warmQueue.push(['hero', hero.look, d, 'walk', f]); } }
+function prewarmHero() { for (let d = 0; d < 8; d++) { warmQueue.unshift([ 'hero', hero.look, d, 'idle', 0]); for (let f = 0; f < 8; f++) warmQueue.push(['hero', hero.look, d, 'walk', f]); warmQueue.push(['hero', hero.look, d, 'go', 0], ['hero', hero.look, d, 'stop', 0]); } }
 
 // ---------------------------------------------------------------- update
 const input = { mx: 0, my: 0, attack: false, keys: new Set() };
@@ -350,10 +350,19 @@ function updateHero(dt) {
     const f0 = hero.fi, j0 = hero.fj;
     tryMove(hero, gi * sp, gj * sp);
     const moved = Math.hypot(hero.fi - f0, hero.fj - j0);
-    hero.walk += moved / 0.26;   // one walk frame per 0.26 tiles: the longer stride keeps feet planted
+    // from a standstill: one push-off pose, then the cycle starts on the left foot's plant
+    if (hero.runT === 0) { hero.walk = 0; hero.goT = 0.08; }
+    hero.runT += dt; hero.stopT = 0;
+    hero.walk += moved / HERO_GAIT;   // frames advance with distance, so the planted foot stays put
     hero.dir = dirFrom(gi, gj);
-    hero.clip = 'walk';
-  } else if (!busy) hero.clip = hero.hurtT > 0 ? 'hit' : 'idle';
+    hero.clip = hero.goT > 0 ? 'go' : 'walk'; hero.goT -= dt;
+  } else {
+    // stopping after a real run plants the front foot for a beat before standing
+    if (hero.runT > 0.25 && !busy) hero.stopT = 0.11;
+    hero.runT = 0;
+    if (!busy) hero.clip = hero.hurtT > 0 ? 'hit' : hero.stopT > 0 ? 'stop' : 'idle';
+    hero.stopT -= dt;
+  }
   if (hero.whirl > 0) { hero.clip = 'attack'; hero.dir = Math.floor(G.t / 0.05) % 8; }   // spin through all 8 facings
   if (hero.dash > 0) hero.clip = 'attack';
   if (hero.stop > 0) { hero.stop -= dt; return; }
@@ -451,7 +460,7 @@ function updateEnemy(e, dt) {
   const l = Math.hypot(mv[0], mv[1]) || 1, sp = m.speed / 16 * 1.2 * (e.speedK || 1) * dt;
   const f0 = e.fi, j0 = e.fj;
   tryMove(e, mv[0] / l * sp, mv[1] / l * sp, 0.25);
-  e.walk += Math.hypot(e.fi - f0, e.fj - j0) / (e.fam === 'spider' || e.fam === 'hound' ? 0.32 : 0.26);
+  e.walk += Math.hypot(e.fi - f0, e.fj - j0) / (FAMILIES[e.fam].gait || 0.32);
   e.dir = dirFrom(mv[0], mv[1]); e.clip = 'walk';
 }
 function hurtHero(dmg, src) {
