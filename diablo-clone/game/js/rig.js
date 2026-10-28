@@ -30,7 +30,7 @@ function defMat(name, ramp, mid, opt = {}) {
   M[name] = MATS.length - 1;
 }
 defMat('STEEL', STEEL, 2, { shiny: true, span: 1.3, spec: [0.94, 32] });
-defMat('PLATE', [2, 28, 29, 30, 31, 32], 2, { shiny: true, span: 1.2, spec: [0.95, 32], edge: true });   // plate armor: darker mids, lit edges
+defMat('PLATE', [2, 28, 29, 30, 31, 32], 2, { shiny: true, span: 1.2, spec: [0.95, 32] });   // plate armor: darker mids (edge light was tried and rejected in a blind A/B)
 defMat('DSTEEL', [2, 28, 29, 30, 31], 2, { shiny: true, span: 1.3, spec: [0.95, 31] });   // blackened plate
 defMat('BLADE', [29, 30, 31, 32, 27], 3, { shiny: true, span: 1.2, spec: [0.9, 27] });
 defMat('IRON', [2, 28, 29, 30], 1, { span: 0.9, spec: [0.97, 30] });
