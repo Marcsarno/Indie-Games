@@ -49,6 +49,9 @@ SCHOOL_DR = rd.Road("School Dr", [(56, -43), (66, -43), (74, -43)], hw=3.0, rank
 CIVIC_DR = rd.Road("Civic Dr", [(66, -86), (56, -86), (50, -86)], hw=3.0, rank=5, flare=4.5)
 PALM = rd.Road("Palm Lane", [(-3, 29), (-20, 28), (-34, 31), (-52, 30), (-66, 35), (-77, 50), (-77, 62), (-70, 69.5), (-61.5, 72)], hw=3.5, rank=6)
 CYPRESS = rd.Road("Cypress Ln", [(-152, -114), (-120, -118), (-90, -112), (-60, -116), (-30, -111), (0, -115), (30, -118), (60, -113), (90, -118), (120, -112), (152, -116)], hw=3.5, rank=5, flare=5.0)
+MAGNOLIA = rd.Road("Magnolia Ln", [(-152, 118), (-120, 114), (-90, 119), (-60, 115), (-30, 120), (0, 116), (30, 119), (60, 114), (90, 119), (120, 115), (152, 118)], hw=3.5, rank=5, flare=5.0)
+BANYAN = rd.Road("Banyan Ln", [(-112, -152), (-116, -120), (-111, -90), (-117, -55), (-113, -20), (-116, 15), (-112, 50), (-117, 85), (-113, 120), (-116, 152)], hw=3.5, rank=4, flare=5.0)
+SAWGRASS = rd.Road("Sawgrass Ln", [(116, -152), (112, -120), (117, -90), (113, -55), (117, -20), (113, 15), (116, 50), (112, 85), (117, 120), (114, 152)], hw=3.5, rank=4, flare=5.0)
 HERON = rd.Road("Heron Way", [(-12, 77.5), (4, 78.4), (22, 79.0), (40, 79.1), (58, 78.7), (70, 78.0), (80, 78.6)], hw=3.5, rank=6)
 HERON_CT = rd.ring_road("Heron Ct", 84, 78.5, 6.0, 2.8, rank=7, seam=-math.pi / 2 - 1.0, flare=1.6)
 PARK_DR = rd.Road("Park Dr", [(17, -87), (6, -87.4), (-18, -87.6), (-34, -87.2), (-45, -87.1)], hw=3.0, rank=5, flare=4.5)
@@ -62,7 +65,7 @@ def organic(cx, cy, rx, ry, seed, n=12, wob=.28, rot=0.0):                      
 LAKES_CTRL = {"windmill": organic(-46, -44, 24, 17, 3, 14, .3, .25), "pond_w": organic(-84, -62, 11, 8, 5, 9, .25, .6), "wiles": organic(-54, 9, 23, 8.5, 8, 12, .28, -.08),
               "north": organic(88, 47, 11, 12.5, 11, 11, .22, .2),
               "w_frame": organic(-161, 70, 9, 32, 31, 12, .1, 0), "e_frame": organic(162, -70, 8, 32, 32, 12, .1, 0), "n_frame": organic(70, 162, 36, 6.5, 33, 12, .1, 0), "s_frame": organic(-70, -162, 36, 6.5, 34, 12, .1, 0),
-              "nw_inner": organic(-113, 104, 8, 14, 35, 10, .15, 0), "se_frame": organic(103, -162, 19, 6.5, 36, 12, .1, 0)}
+              "sw_frame": organic(-165, -70, 6.5, 30, 41, 12, .1, 0), "ne_frame": organic(162, 70, 8, 32, 42, 12, .1, 0), "se_frame": organic(91, -162, 9.5, 6.5, 36, 12, .1, 0)}
 # ---- city skeleton: perimeter loop (sound wall + tree belt outside), four curved arterials, four roundabouts where they meet
 H_, RC_ = 186.0, 30.0
 def loop_points():
@@ -92,7 +95,7 @@ CORNER_RINGS = []
 for (A_, B_, nm) in ((LYONS, HILLS, "NW"), (SAMPLE, HILLS, "NE"), (LYONS, ATLANTIC, "SW"), (SAMPLE, ATLANTIC, "SE")):
     cx_, cy_ = crossing(A_, B_); CORNER_RINGS.append(rd.ring_road(f"Roundabout {nm}", cx_, cy_, 15.0, 4.5, rank=12, seam=math.pi * .25, flare=5.0, swo=0))
 SKELETON = [LOOP, LYONS, SAMPLE, HILLS, ATLANTIC] + CORNER_RINGS
-net = rd.build_network([PKWY, WILES, RING, WILES_E, ENTRY, LAKEVIEW, PLAZA_DR, PALM, CUL, SCHOOL_DR, CIVIC_DR, HERON, HERON_CT, PARK_DR] + SKELETON + [CYPRESS])
+net = rd.build_network([PKWY, WILES, RING, WILES_E, ENTRY, LAKEVIEW, PLAZA_DR, PALM, CUL, SCHOOL_DR, CIVIC_DR, HERON, HERON_CT, PARK_DR] + SKELETON + [CYPRESS, MAGNOLIA, BANYAN, SAWGRASS])
 tick_('network')
 # water, banks (flat meshes) + trails around the big lake
 LAKES = {}
@@ -402,7 +405,24 @@ for (road_, side_, a_, b_, cl_) in ((CYPRESS, 1, 6, CYPRESS.L - 4, 1.0), (CYPRES
     row_along(road_, side_, a_, b_, 13.4, "shome", home_maker, 12, 9, gap=1.6, clear=.3)
 for side_ in (1, -1): row_along(LAKEVIEW, side_, LAKEVIEW.nearest(66, -100)[1], LAKEVIEW.L - 8, 13.4, "shome", home_maker, 12, 9, gap=1.6, clear=.3)
 for side_ in (1, -1): row_along(PKWY, side_, PKWY.nearest(20, -104)[1], PKWY.nearest(26, -186)[1], 13.4, "shome", home_maker, 12, 9, gap=1.6, clear=.3)
-fill("shome", home_maker, 12, 9, 200, 12, .4, step=5, seed=3, region=(-186, -186, 186, -100))                                # leftover frontage in the south
+fill("shome", home_maker, 12, 9, 200, 12, .4, step=5, seed=3, region=(-186, -186, 186, -100))
+# -- north, west and east bands (same recipe, mirrored): frontage street rows, rows along the arterial's outer side and inside the loop
+def band_rows(road_, side_, a_, b_, kind):
+    row_along(road_, side_, a_, b_, 13.4, kind, home_maker, 12, 9, gap=1.6, clear=.3)
+NT0, NT1 = LOOP.nearest(150, 186)[1], LOOP.nearest(-150, 186)[1]
+WS0, WS1 = LOOP.nearest(-186, 150)[1], LOOP.nearest(-186, -150)[1]
+ES0, ES1 = LOOP.nearest(186, -150)[1], LOOP.nearest(186, 150)[1]
+for side_ in (1, -1): band_rows(MAGNOLIA, side_, 6, MAGNOLIA.L - 4, "nbhome")
+band_rows(HILLS, 1, 6, HILLS.L - 4, "nbhome"); band_rows(LOOP, 1, NT0, NT1, "nbhome")
+for side_ in (1, -1): band_rows(BANYAN, side_, 6, BANYAN.L - 4, "wbhome")
+band_rows(LYONS, 1, 6, LYONS.L - 4, "wbhome"); band_rows(LOOP, 1, WS0, WS1, "wbhome")
+for side_ in (1, -1): band_rows(SAWGRASS, side_, 6, SAWGRASS.L - 4, "ebhome")
+band_rows(SAMPLE, -1, 6, SAMPLE.L - 4, "ebhome"); band_rows(LOOP, 1, ES0, ES1, "ebhome")
+fill("nbhome", home_maker, 12, 9, 120, 12, .4, step=5, seed=4, region=(-186, 100, 186, 186))
+fill("wbhome", home_maker, 12, 9, 120, 12, .4, step=5, seed=5, region=(-186, -100, -100, 100))
+fill("ebhome", home_maker, 12, 9, 120, 12, .4, step=5, seed=6, region=(100, -100, 186, 100))
+for (xa, ya) in ((-150, 128), (150, 128), (-120, 160), (120, 160), (0, 160), (-30, 128), (60, 150), (-150, 20), (150, 20), (-125, -40), (125, 40), (-160, -20), (160, -20)):
+    try_place("apt", lambda nm, n=PLACED.get("apt", 0): apt_maker(nm, n % 8), xa, ya, road_facing_rz(xa, ya), 22, 11, 2.0, near=16, variants=8, vkey=PLACED.get("apt", 0))                                # leftover frontage in the south
 for (xa, ya) in ((-150, -128), (150, -128), (-120, -160), (120, -160), (0, -160), (-30, -128), (60, -150)):               # apartment blocks near the arterial corners and Pkwy
     try_place("apt", lambda nm, n=PLACED.get("apt", 0): apt_maker(nm, n % 8), xa, ya, road_facing_rz(xa, ya), 22, 11, 2.0, near=16, variants=8, vkey=PLACED.get("apt", 0))
 # -- south-west lakeside park: Park Dr + lot, pavilions, courts, picnic tables
@@ -467,7 +487,7 @@ while s_ < LOOP.L:                                                              
     px_, py_ = LOOP.off(s_, wall_o0 - 4.0 + R_.uniform(-1, 1)); prop("oak" if kk_ % 3 else "palm_medium", px_, py_, R_.uniform(1.0, 1.3), col=False)
     if kk_ % 2 == 0: px_, py_ = LOOP.off(s_ + 3.0, wall_o0 - 11.0 + R_.uniform(-2, 2)); prop("oak", px_, py_, R_.uniform(1.1, 1.4), col=False)
     s_ += 7.0; kk_ += 1
-for road_ in (LOOP, LYONS, SAMPLE, HILLS, ATLANTIC, CYPRESS):
+for road_ in (LOOP, LYONS, SAMPLE, HILLS, ATLANTIC, CYPRESS, MAGNOLIA, BANYAN, SAWGRASS):
     sides_ = (1,) if road_ is LOOP else (1, -1)                                                                                     # the loop has its sidewalk on the inner (left) side only
     for side_ in sides_:
         for (x, y, tx, ty, s__) in along(road_, side_ * (road_.hw + CURB_SW + 1.6), 26, 6 + (13 if side_ < 0 else 0)): prop("palm_tall" if int(s__ / 26) % 2 else "oak", x, y, 1.0 if True else None)
@@ -551,7 +571,7 @@ if not os.environ.get("NORENDER"):
         o = bpy.data.objects.new(p["k"], tmpl[p["k"]].data); bpy.context.scene.collection.objects.link(o); o.location = (p["x"], p["y"], 0)
         o.rotation_euler = (0, 0, math.radians(p["rz"])); o.scale = (p["s"], p["s"], p["s"]) if p["k"] != "hedge" else (1, 1, 1)
     nwx, nwy = CORNER_RINGS[0].island[0], CORNER_RINGS[0].island[1]
-    SHOTS = {"cc_city": ((0, 0, 0), 60, 560, 1200, 1200), "cc_sw": ((-70, -140, 0), 50, 110, 1100, 700), "cc_se": ((70, -140, 0), 50, 110, 1100, 700), "cc_game": ((START["x"], START["y"] + 8, 0), 45, 44, 540, 960), "cc_homes": ((-100, -150, 0), 48, 50, 1000, 640)}
+    SHOTS = {"cc_city": ((0, 0, 0), 60, 560, 1200, 1200), "cc_nw": ((-90, 125, 0), 50, 110, 1100, 700), "cc_ne": ((90, 125, 0), 50, 110, 1100, 700), "cc_w": ((-135, 0, 0), 50, 110, 1100, 700), "cc_e": ((135, 0, 0), 50, 110, 1100, 700), "cc_game": ((START["x"], START["y"] + 8, 0), 45, 44, 540, 960)}
     if os.environ.get("SHOT"): x_, y_, p_, d_ = [float(v) for v in os.environ["SHOT"].split(",")]; SHOTS = {"dbg": ((x_, y_, 0), p_, d_, 1000, 700)}
     for nm, (tgt, pitch, dist, w, h) in SHOTS.items():
         for o in [x for x in bpy.context.scene.objects if x.type == "CAMERA"]: bpy.data.objects.remove(o)
