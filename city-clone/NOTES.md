@@ -1,5 +1,11 @@
 # City-clone notes
 
+**SETTING CHANGE (user, 2026-10-29): the city is now Coconut Creek, Florida, working title "Grand Theft Coconut Creek" (GTCC).** Target art = `art/coconut-*.png`
+(the Chinatown concepts moved to `art/chinatown-superseded/`). Bright sunny suburb: palms, stucco + terracotta, canals, shopping plazas, low-rise (2-4 floors), so tall
+leaning walls matter less than in Chinatown. Camera note: the concept shows an oblique "overhead driving camera" and an OVER-THE-SHOULDER on-foot camera; the user's
+chosen play camera is still 45 deg / 44 m (ask before adopting the over-the-shoulder look). The Chinatown arch/signs/stalls are kept in the repo as an optional district.
+Driving + physics (step 2) continues unchanged in the existing Chinatown test arena; the Florida art pass comes after it.
+
 Read `HANDOFF.md` first. Last updated 2026-10-29.
 
 ## Decisions
