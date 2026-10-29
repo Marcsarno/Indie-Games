@@ -55,7 +55,7 @@ for sx in (-1, 1):
 for (x, y, rz) in ((-(R + 1.3), ARCH_Y - 6, 90), (R + 1.3, ARCH_Y - 9, -90), (-(R + 1.3), ARCH_Y - 11, 90)): cbox(x, y, 2.4, 1.1, rz)   # market stalls
 cbox(-(R + 1.6), -R - 20, 2.5, 1.5, 90); cbox(R + 1.5, R + 30, 2.4, .6, 90); ccir(R + 1.2, R + 26, .3); cbox(-(R + 2.2), R + 3.0, 1.3, .5, 90); cbox(R + 1.7, -R - 10, 1.2, 1.2)
 for c in CARS:
-    if c["name"].startswith("parked"): cbox(c["x"], c["y"], 1.8, 4.5, c["rz"])
+    if c["name"].startswith("parked"): cbox(c["x"], c["y"], 1.8, 4.5, c["rz"]); COL[-1]["car"] = c["name"]   # page rebuilds car colliders from live poses
 for (x, y) in [(R + 1.4, R + 7), (-R - 1.4, R + 15), (R + 1.4, -R - 5), (-R - 1.4, -R - 11), (R + 1.4, R + 15)]: ccir(x, y, .3)   # tree trunks
 ccir(R + .6, -R - 4, .28); ccir(-R - .6, R + 5, .28)                                         # hydrants
 for (x, y) in ((R + 2.3, R + 4.5), (-R - 2.3, -R - 6.5), (R + 2.3, -R - 9)): ccir(x, y, .36)  # bins

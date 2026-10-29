@@ -99,7 +99,27 @@ def enter_fn(side): return keyed(enter_keys(side))
 def exit_fn(side):
     f = enter_fn(side); return lambda t: f(1 - t)
 
-CLIPS = {"idle": (idle, 48, True), "walk": (walk, 24, True), "run": (run, 16, True), "punch": (punch, 20, False), "enter_L": (enter_fn(-1), 58, False), "enter_R": (enter_fn(1), 58, False), "exit_L": (exit_fn(-1), 58, False), "exit_R": (exit_fn(1), 58, False)}
+# ---- combat clips -------------------------------------------------------------------------------------------------------
+def mirror_pose(fn):
+    """Left/right mirror of a pose function (second punch = the other arm)."""
+    sw = {"armL": "armR", "armR": "armL", "foreL": "foreR", "foreR": "foreL", "legL": "legR", "legR": "legL", "shinL": "shinR", "shinR": "shinL"}
+    def f(t):
+        pose, off = fn(t); out = {}
+        for j, (rx, ry, rz) in pose.items(): out[sw.get(j, j)] = (rx, -ry, -rz)
+        if isinstance(off, tuple): off = (-off[0], off[1], off[2])
+        return out, off
+    return f
+
+HIT = keyed([(0.0, {}, (0, 0, 0)),
+             (0.30, {"torso": (.38, 0, -.12), "head": (.35, 0, .15), "pelvis": (.10, 0, 0), "armL": (.2, 0, -.7), "armR": (.2, 0, .7), "foreL": (.4, 0, 0), "foreR": (.4, 0, 0), "legL": (.2, 0, 0), "legR": (-.15, 0, 0)}, (0, -.08, -.03)),
+             (1.0, {}, (0, 0, 0))])
+FALL = keyed([(0.0, {}, (0, 0, 0)),
+              (0.28, {"torso": (.45, 0, 0), "head": (.4, 0, 0), "pelvis": (.35, 0, 0), "armL": (.5, 0, -1.1), "armR": (.5, 0, 1.1), "legL": (.5, 0, 0), "legR": (-.3, 0, 0), "shinL": (-.5, 0, 0)}, (0, -.25, -.12)),
+              (0.62, {"torso": (.2, 0, 0), "head": (.25, 0, 0), "pelvis": (1.25, 0, 0), "armL": (.3, 0, -1.3), "armR": (.3, 0, 1.3), "legL": (.25, 0, 0), "legR": (.1, 0, 0.1), "shinL": (-.3, 0, 0)}, (0, -.55, -.62)),
+              (1.0, {"torso": (0, 0, 0), "head": (-.15, 0, 0), "pelvis": (1.57, 0, 0), "armL": (0.1, 0, -.9), "armR": (0.1, 0, .9), "legL": (.05, 0, -.08), "legR": (0, 0, .12)}, (0, -.62, -.74))])
+def getup_fn(t): return FALL(1 - t)
+
+CLIPS = {"idle": (idle, 48, True), "walk": (walk, 24, True), "run": (run, 16, True), "punch": (punch, 20, False), "punch2": (mirror_pose(punch), 20, False), "hit": (HIT, 11, False), "fall": (FALL, 18, False), "getup": (getup_fn, 26, False), "enter_L": (enter_fn(-1), 58, False), "enter_R": (enter_fn(1), 58, False), "exit_L": (exit_fn(-1), 58, False), "exit_R": (exit_fn(1), 58, False)}
 
 def apply_pose(root, name, clip, t):
     pose, dz = CLIPS[clip][0](t)

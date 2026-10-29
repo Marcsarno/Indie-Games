@@ -75,8 +75,27 @@ Gotchas: Blender fits the lens to the LONGER image side (use `sensor_fit=HORIZON
 - Gotchas: Playwright screenshot of the WebGL page can time out at deviceScaleFactor 2 (use 1 and a long timeout); the taxi collider is refreshed in `update`, so tests that teleport
   the taxi must call `tick(0.0001)`; write non-ASCII UI glyphs as `\u` escapes in JS (the local test server sent no charset).
 
+**Step 3 (on foot, punching, any car), `art-review/round5/`:** published to the same page.
+- Blender: new clips `punch2` (mirrored jab), `hit` (flinch), `fall` (tips onto the back, head away from the attacker), `getup` (fall reversed, 26 frames) in `character.py`; 12 clips total.
+- Vehicles: one state object per car (`vehs`); only the ACTIVE car is simulated (`drive`, null while on foot); every other car is a static SAT collider rebuilt from its live pose
+  (`setCarCollider` / `parkVehicle`); the scripted taxi is the exception. `hmode` = 'driving' | 'foot' | 'busy' (door animation). Parked-car entries in colliders.json carry a `car` tag and are
+  ignored by the page.
+- Hero on foot (`footStep`): floating-free on-screen stick (also WASD/arrows), analog speed (walk up to 2.6 m/s, run to 4.8), 11/s velocity smoothing, turns toward motion, circle-vs-polygon
+  push-out against the same 48 colliders + cars (blocked by walls and cars, verified). Run button / Shift forces a run.
+- Punch (`startPunch`/`strike`/`applyHit`): jab, cross alternating (combo if the next press lands within 0.45 s; one more press is queued while swinging), clip at 1.5x, strike at 36% of
+  the swing, auto-aim to the nearest target within 2.8 m in front with a lunge that closes the gap, cone hit test (1.7 m, 63 deg). Hit = 75 ms hitstop (130 ms on a knockdown) that freezes
+  animation and movement but not camera/effects, white flash 60 ms, camera shake, victim turns to the attacker and is thrown back (5.2 m/s, 8.5 on a knockdown, eased out), `hit` flinch;
+  3 hp, every third punch of a combo is a finisher (knockdown): `fall`, lies 2.4 s, `getup` 1.1 s, hp back to 3, walks on. Punch thud reuses the crash synth.
+- Enter/steal (`interact`): when slow it exits the driver door; on foot it picks the nearest door of any car except the scripted taxi within 4.2 m and runs the step 1 enter animation,
+  then drives that car (its collider is removed, the old car becomes a collider). Works for any of the four doors.
+- Test hooks: `tick(dt, draw=false)` steps the whole sim with no render (in manual mode each drawn frame costs 1+ s in software GL; always pass false for logic tests and true only for a
+  captured frame), `__city.drive` is a getter. Tests: exit 2.7 s, run 4.8 m/s, half stick walk 1.5 m/s, blocked by car and wall without penetration, three punches -> hit, hit, knockdown,
+  getup and walk on, steal parked0 and drive it. Driving regression numbers unchanged.
+- Not done: pedestrians never fight back or flee, no kicks/weapons, cars still ignore pedestrians, hero has no health, no police, cannot pick up/drop anything; hero is invisible in a car.
+- Gotcha: `pkill -f <name>` in a Bash command kills the shell running it when the command text contains the name.
+
 ## Next
-(Agreed order: 1 DONE modular car doors + enter/exit animation, 2 DONE drive + arcade physics + collisions, 3 on-foot control + punch + enter/exit button, 4 dynamic camera zoom, 5 pedestrian reactions, then baked lighting and more content.)
+(Agreed order: 1 DONE modular car doors + enter/exit animation, 2 DONE drive + arcade physics + collisions, 3 DONE on-foot control + punch + enter any car, 4 dynamic camera zoom, 5 pedestrian reactions, then baked lighting and more content.)
 0. User feedback on the phone page (look, camera angle, mood, frame rate on the real device).
 1. Quick test scene (crossroads, two tall buildings, one car) built with the Blender scripts, shown from the game camera.
 2. Prototype per `HANDOFF.md`: block, drivable car with crash physics, hero walking and punching; publish as an Artifact.

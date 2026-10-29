@@ -53,6 +53,8 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 .pb.sm { width: 60px; height: 60px; font-size: 12px; }
 .pb.on { color: var(--night); background: var(--lamp); border-color: var(--lamp); }
 .pb.dim { opacity: .35; pointer-events: none; }
+.stick { position: relative; width: 132px; height: 132px; border-radius: 50%; border: 2px dashed rgba(255, 236, 200, .5); background: var(--panel); pointer-events: auto; touch-action: none; }
+.knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: var(--lamp); opacity: .85; pointer-events: none; }
 .pb i { display: block; width: 26px; height: 26px; background: currentColor; margin: 0 auto; }
 .pb i.l { clip-path: polygon(70% 8%, 70% 92%, 8% 50%); } .pb i.r { clip-path: polygon(30% 8%, 30% 92%, 92% 50%); }
 #loading { position: fixed; inset: 0; display: grid; place-content: center; gap: 10px; text-align: center; background: var(--night); font: 600 22px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; z-index: 8; }
@@ -81,6 +83,13 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
   <div class="cr">
     <div class="r2"><button class="pb sm" id="b-door">Exit</button><button class="pb sm" id="b-hand">Hand<br>brake</button></div>
     <div class="r2"><button class="pb" id="b-brake">Brake</button><button class="pb big" id="b-gas">Gas</button></div>
+  </div>
+</div>
+<div class="hud pad" id="padf" hidden>
+  <div class="cl"><div class="stick" id="stick" aria-label="Move"><div class="knob" id="knob"></div></div></div>
+  <div class="cr">
+    <div class="r2"><button class="pb sm" id="b-enter">Enter<br>car</button><button class="pb sm" id="b-run">Run</button></div>
+    <div class="r2"><button class="pb big" id="b-punch">Punch</button></div>
   </div>
 </div>
 <div id="loading">Loading block<div class="bar"><i id="bar"></i></div><small id="loadtxt">4 MB of models and textures</small></div>
@@ -178,12 +187,13 @@ function makePerson(opts = {}) {
   const root = charGltf.scene.clone(true); root.scale.setScalar(.92);
   const cols = { char_jacket: opts.jacket || pick(JACKETS), char_pants: pick(PANTS), char_skin: pick(SKINS), char_hair: pick(HAIR) };
   root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.material = o.material.clone(); if (cols[o.material.name]) o.material.color.set(cols[o.material.name]); } });
-  const mixer = new THREE.AnimationMixer(root); const act = {};
+  const mixer = new THREE.AnimationMixer(root); const act = {}, mats = [];
+  root.traverse(o => { if (o.isMesh) mats.push(o.material); });
   for (const c of charGltf.animations) act[c.name] = mixer.clipAction(c);
-  scene.add(root); mixers.push(mixer); return { root, mixer, act, cur: null };
+  scene.add(root); mixers.push(mixer); return { root, mixer, act, cur: null, mats };
 }
 function play(a, name, { once = false, fade = .15, timeScale = 1 } = {}) {
-  const next = a.act[name]; if (a.cur === next && !once) return next;
+  const next = a.act[name]; if (a.cur === next && !once) { next.timeScale = timeScale; return next; }
   if (a.cur && a.cur !== next) a.cur.fadeOut(fade);
   next.reset(); next.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); next.clampWhenFinished = once; next.timeScale = timeScale; next.fadeIn(fade).play(); a.cur = next; return next;
 }
@@ -218,7 +228,7 @@ const walkers = [];
 for (let i = 0; i < 12; i++) {
   const p = makePerson(); const alongY = i % 2 === 0, dir = i % 4 < 2 ? 1 : -1, side = (i % 3 === 0) ? -1 : 1;
   const w = { ...p, alongY, dir, lane: side * (i % 2 ? 7.3 : 5.6), pos: (rnd() - .5) * 70, speed: 1.15 + rnd() * .5 };
-  w.act.walk.timeScale = w.speed / 1.4; w.act.walk.play(); w.act.walk.time = rnd(); walkers.push(w);
+  w.act.walk.timeScale = w.speed / 1.4; w.act.walk.play(); w.act.walk.time = rnd(); w.cur = w.act.walk; Object.assign(w, { hp: 3, state: 'walk', st: 0, off: { x: 0, z: 0 }, kb: { x: 0, z: 0 } }); walkers.push(w);
 }
 const hero = makePerson({ jacket: '#2f6b3a' }), victim = makePerson({ jacket: '#7a2f2a' });
 const fightAt = b2t(6.55, 7.3);
@@ -253,8 +263,11 @@ const TUNE = { ...TUNE_DEF };
 try { Object.assign(TUNE, JSON.parse(localStorage.getItem('gtcc-tune') || '{}')); } catch (e) { /* storage may be blocked */ }
 const TUNE_UI = [['top', 'Top speed', 12, 45, 1, 'm/s'], ['accel', 'Accel', 6, 30, .5, ''], ['brake', 'Braking', 10, 50, 1, ''], ['grip', 'Grip', 2, 14, .5, ''], ['drift', 'Slide grip', .3, 5, .1, ''], ['steer', 'Steering', .5, 1.6, .05, ''], ['bounce', 'Bounce', 0, .8, .05, '']];
 const CAR = { L: 4.5, W: 1.8, mass: 1400, wb: 2.7 }; CAR.I = CAR.mass * (CAR.L * CAR.L + CAR.W * CAR.W) / 12;
-const drive = { x: 1.3, z: 10, th: 0, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, mode: 'driving', hardest: 0, hits: 0 };
-const input = { left: false, right: false, gas: false, brake: false, hand: false };
+const vehs = {};                                  // one state per car; only the ACTIVE one is simulated, the rest are static colliders
+for (const [name, car] of Object.entries(allCars)) { const g = car.group; vehs[name] = { car, name, x: g.position.x, z: g.position.z, th: g.rotation.y, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, mode: 'parked', hardest: 0, hits: 0 }; }
+let drive = vehs.player; drive.mode = 'driving';
+let hmode = 'driving';                            // 'driving' | 'foot' | 'busy' (door animation playing)
+const input = { left: false, right: false, gas: false, brake: false, hand: false, run: false };
 
 const rot = (lx, lz, th) => [lx * Math.cos(th) + lz * Math.sin(th), -lx * Math.sin(th) + lz * Math.cos(th)];
 function polyBox(cx, cy, w, d, rzDeg) {          // Blender box (centre x,y; size w x d; rz deg CCW) -> polygon in three XZ
@@ -264,7 +277,7 @@ function polyBox(cx, cy, w, d, rzDeg) {          // Blender box (centre x,y; siz
 }
 const polyCircle = (cx, cy, r) => Array.from({ length: 8 }, (_, k) => [cx + r * Math.cos((k + .5) * Math.PI / 4), -cy + r * Math.sin((k + .5) * Math.PI / 4)]);
 const cen = P => { let x = 0, z = 0; for (const p of P) { x += p[0]; z += p[1]; } return [x / P.length, z / P.length]; };
-const colliders = colList.map(c => { const poly = c.t === 'box' ? polyBox(c.x, c.y, c.w, c.d, c.rz) : polyCircle(c.x, c.y, c.r); const [cx, cz] = cen(poly); let r = 0; for (const p of poly) r = Math.max(r, Math.hypot(p[0] - cx, p[1] - cz)); return { poly, cx, cz, r, vx: 0, vz: 0 }; });
+const colliders = colList.filter(c => !c.car).map(c => { const poly = c.t === 'box' ? polyBox(c.x, c.y, c.w, c.d, c.rz) : polyCircle(c.x, c.y, c.r); const [cx, cz] = cen(poly); let r = 0; for (const p of poly) r = Math.max(r, Math.hypot(p[0] - cx, p[1] - cz)); return { poly, cx, cz, r, vx: 0, vz: 0 }; });
 const taxiCol = { poly: [], cx: 0, cz: 0, r: 2.6, vx: 8, vz: 0 }; colliders.push(taxiCol);     // the scripted taxi: moving obstacle
 const carPoly = (x, z, th) => { const fx = -Math.sin(th), fz = -Math.cos(th), rx = Math.cos(th), rz = -Math.sin(th), hl = CAR.L / 2, hw = CAR.W / 2; return [[x + fx * hl + rx * hw, z + fz * hl + rz * hw], [x + fx * hl - rx * hw, z + fz * hl - rz * hw], [x - fx * hl - rx * hw, z - fz * hl - rz * hw], [x - fx * hl + rx * hw, z - fz * hl + rz * hw]]; };
 
@@ -316,7 +329,7 @@ function crashSound(power) {
 function updateAudio(dt, speed, slip) {
   if (!audio) return; const t = audio.ctx.currentTime, k = .08;
   audio.eng.frequency.setTargetAtTime(46 + speed * 4.4 + (input.gas ? 12 : 0), t, k); audio.lp.frequency.setTargetAtTime(330 + speed * 22, t, k);
-  audio.eg.gain.setTargetAtTime(drive.mode === 'driving' ? (muted ? 0 : .045 + (input.gas ? .045 : 0)) : 0, t, k); audio.sg.gain.setTargetAtTime(muted ? 0 : clamp(slip, 0, 1) * .16, t, .05);
+  audio.eg.gain.setTargetAtTime(hmode === 'driving' ? (muted ? 0 : .045 + (input.gas ? .045 : 0)) : 0, t, k); audio.sg.gain.setTargetAtTime(muted ? 0 : clamp(slip, 0, 1) * .16, t, .05);
 }
 
 function contact(c, B, e) {              // resolve one polygon overlap between the car and collider B with an impulse; returns impact speed (m/s) or 0
@@ -335,12 +348,13 @@ function onImpact(c, v) {
   rig.shake = Math.min(1, rig.shake + v / 16); burst(c.cx, .6, c.cz, c.cnx, c.cnz, v); crashSound(v);
   if (v > 9) {                                    // a hard hit throws the doors on the struck side open for a moment
     const side = c.crx * Math.cos(c.th) - c.crz * Math.sin(c.th) > 0 ? 'R' : 'L';
-    for (const row of ['F', 'R']) { playerCar.setDoor(row + side, .55 + Math.random() * .4); }
-    clearTimeout(c.doorT); c.doorT = setTimeout(() => { if (c.mode === 'driving') playerCar.setAll(false); }, 2200);
+    for (const row of ['F', 'R']) c.car.setDoor(row + side, .55 + Math.random() * .4);
+    clearTimeout(c.doorT); c.doorT = setTimeout(() => { if (c.mode === 'driving') c.car.setAll(false); }, 2200);
   }
-  playerCar.setDamage(c.damage);
+  c.car.setDamage(c.damage);
 }
 function physicsStep(dt) {
+  if (!drive) return;
   const c = drive, driving = c.mode === 'driving';
   const sn = Math.sin(c.th), cs = Math.cos(c.th), fx = -sn, fz = -cs, rx = cs, rz = -sn;
   let vf = c.vx * fx + c.vz * fz, vl = c.vx * rx + c.vz * rz;
@@ -371,7 +385,19 @@ function physicsStep(dt) {
   }
 }
 let acc = 0; const FIXED = 1 / 120;
-function resetCar(x = 1.3, z = 10, th = 0) { Object.assign(drive, { x, z, th, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, hardest: 0, hits: 0 }); playerCar.setDamage(0); playerCar.setAll(false); }
+const carCols = new Map();
+function setCarCollider(v) {                      // a parked car is a static polygon at its current pose
+  removeCarCollider(v); const poly = carPoly(v.x, v.z, v.th), [cx, cz] = cen(poly), col = { poly, cx, cz, r: 2.6, vx: 0, vz: 0 }; colliders.push(col); carCols.set(v.name, col);
+}
+function removeCarCollider(v) { const col = carCols.get(v.name); if (col) { const i = colliders.indexOf(col); if (i >= 0) colliders.splice(i, 1); carCols.delete(v.name); } }
+function parkVehicle(v) { v.vx = v.vz = v.w = 0; v.mode = 'parked'; setCarCollider(v); }
+for (const v of Object.values(vehs)) if (v.name !== 'taxi' && v !== drive) setCarCollider(v);
+function resetCar(x = 1.3, z = 10, th = 0) {      // put the player's own car back and the hero in it
+  if (drive && drive !== vehs.player) parkVehicle(drive);
+  const v = vehs.player; removeCarCollider(v); drive = v; hmode = 'driving';
+  Object.assign(v, { x, z, th, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, hardest: 0, hits: 0, mode: 'driving' }); v.car.setDamage(0); v.car.setAll(false);
+  v.car.group.position.set(x, 0, z); v.car.group.rotation.y = th; pilot.root.visible = false; v.car.occupants.FL = pilot;
+}
 
 /* ---------- controls ---------- */
 function hold(el, key) {
@@ -379,24 +405,111 @@ function hold(el, key) {
   const up = () => { input[key] = false; el.classList.remove('on'); };
   el.addEventListener('pointerdown', dn); for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) el.addEventListener(t, up);
 }
-hold($('b-left'), 'left'); hold($('b-right'), 'right'); hold($('b-gas'), 'gas'); hold($('b-brake'), 'brake'); hold($('b-hand'), 'hand');
+hold($('b-left'), 'left'); hold($('b-right'), 'right'); hold($('b-gas'), 'gas'); hold($('b-brake'), 'brake'); hold($('b-hand'), 'hand'); hold($('b-run'), 'run');
 const KEYS = { ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right', ArrowUp: 'gas', w: 'gas', W: 'gas', ArrowDown: 'brake', s: 'brake', S: 'brake', ' ': 'hand' };
-addEventListener('keydown', e => { if (KEYS[e.key]) { input[KEYS[e.key]] = true; ensureAudio(); e.preventDefault(); } else if (e.key === 'f' || e.key === 'F') toggleDoor(); });
-addEventListener('keyup', e => { if (KEYS[e.key]) input[KEYS[e.key]] = false; });
-const pilot = makePerson({ jacket: '#2f6b3a' }); pilot.root.visible = false; playerCar.occupants.FL = pilot;
+addEventListener('keydown', e => {
+  if (e.key === 'Shift') input.run = true;
+  if (KEYS[e.key]) { input[KEYS[e.key]] = true; ensureAudio(); e.preventDefault(); if (e.key === ' ' && !e.repeat) startPunch(); }
+  else if (!e.repeat && (e.key === 'f' || e.key === 'F')) interact();
+  else if (!e.repeat && (e.key === 'j' || e.key === 'J')) startPunch();
+});
+addEventListener('keyup', e => { if (e.key === 'Shift') input.run = false; if (KEYS[e.key]) input[KEYS[e.key]] = false; });
+const pilot = makePerson({ jacket: '#2f6b3a' }); pilot.root.visible = false; playerCar_occupy();
+function playerCar_occupy() { vehs.player.car.occupants.FL = pilot; }
 let busy = false;
-async function toggleDoor() {
-  if (busy) return; const speed = Math.hypot(drive.vx, drive.vz);
-  if (drive.mode === 'driving' && speed < 1.6) { busy = true; drive.mode = 'exiting'; await exitCar(pilot, playerCar, 'FL'); drive.mode = 'out'; busy = false; }
-  else if (drive.mode === 'out') { busy = true; drive.mode = 'entering'; await enterCar(pilot, playerCar, 'FL'); drive.mode = 'driving'; busy = false; }
+const setHidden = (el, v) => { if (el.hidden !== v) el.hidden = v; };
+
+/* ---------- on foot: walk / run / punch / get into any car ---------- */
+const foot = { x: 0, z: 0, vx: 0, vz: 0, face: 0, lx: 0, lz: 0 };           // lx, lz = lunge velocity from a punch
+const stickIn = { x: 0, y: 0 };                                               // y > 0 = down the screen = south
+const combat = { state: 'idle', t: 0, dur: 0, struck: false, n: 0, queued: false, hits: 0, lastEnd: -9, clip: 'punch' };
+let hitstop = 0, simT = 0; const flashes = [];
+const heroPoly = (x, z, r) => Array.from({ length: 8 }, (_, k) => [x + r * Math.cos((k + .5) * Math.PI / 4), z + r * Math.sin((k + .5) * Math.PI / 4)]);
+function pushOut(x, z, r) {
+  for (const B of colliders) {
+    if (!B.poly.length || Math.hypot(B.cx - x, B.cz - z) > B.r + r + .6) continue;
+    const h = sat(heroPoly(x, z, r), B.poly); if (!h) continue;
+    x += h.nx * h.depth; z += h.nz * h.depth; const vn = foot.vx * h.nx + foot.vz * h.nz; if (vn < 0) { foot.vx -= vn * h.nx; foot.vz -= vn * h.nz; }
+  } return [x, z];
 }
-$('b-door').addEventListener('pointerdown', e => { e.preventDefault(); ensureAudio(); toggleDoor(); });
+function footStep(dt) {
+  if (hmode !== 'foot' || dt <= 0) return;
+  let sx = stickIn.x, sy = stickIn.y; if (!sx && !sy) { sx = (input.right ? 1 : 0) - (input.left ? 1 : 0); sy = (input.brake ? 1 : 0) - (input.gas ? 1 : 0); }
+  const m0 = Math.hypot(sx, sy), mag = m0 < .12 ? 0 : Math.min(1, m0), ux = mag ? sx / m0 : 0, uz = mag ? sy / m0 : 0;
+  const maxS = input.run ? 4.8 : (mag < .85 ? mag / .85 * 2.6 : 2.6 + (mag - .85) / .15 * 2.2), punching = combat.state === 'punch';
+  const tgt = mag ? maxS * (punching ? .2 : 1) : 0, k = 1 - Math.exp(-11 * dt);
+  foot.vx += (ux * tgt - foot.vx) * k; foot.vz += (uz * tgt - foot.vz) * k; const kd = Math.exp(-9 * dt); foot.lx *= kd; foot.lz *= kd;
+  const [nx, nz] = pushOut(foot.x + (foot.vx + foot.lx) * dt, foot.z + (foot.vz + foot.lz) * dt, .35); foot.x = nx; foot.z = nz;
+  const sp = Math.hypot(foot.vx, foot.vz);
+  if (sp > .35 && !punching) { let d = Math.atan2(-foot.vx, -foot.vz) - foot.face; d = Math.atan2(Math.sin(d), Math.cos(d)); foot.face += d * (1 - Math.exp(-14 * dt)); }
+  pilot.root.position.set(foot.x, 0, foot.z); pilot.root.rotation.y = foot.face;
+  if (combat.state === 'idle') { if (sp < .25) play(pilot, 'idle'); else if (sp < 3.0) play(pilot, 'walk', { timeScale: clamp(sp / 1.4, .5, 2) }); else play(pilot, 'run', { timeScale: clamp(sp / 4.2, .7, 1.4) }); }
+}
+const targets = () => walkers.filter(w => w.state === 'walk' || w.state === 'hit');
+function startPunch() {
+  if (hmode !== 'foot') return; ensureAudio();
+  if (combat.state === 'punch') { combat.queued = true; return; }
+  const chain = simT - combat.lastEnd < .45; combat.n = chain ? combat.n + 1 : 0; combat.clip = combat.n % 2 ? 'punch2' : 'punch';
+  let best = null, bd = 2.8;                      // auto-aim: turn to the nearest target in front and step in (phone friendly)
+  for (const w of targets()) { const dx = w.root.position.x - foot.x, dz = w.root.position.z - foot.z, d = Math.hypot(dx, dz), fx = -Math.sin(foot.face), fz = -Math.cos(foot.face); if (d < bd && (d < 1.2 || (dx * fx + dz * fz) / d > .2)) { bd = d; best = w; } }
+  if (best) { const dx = best.root.position.x - foot.x, dz = best.root.position.z - foot.z; foot.face = Math.atan2(-dx, -dz); const want = Math.max(0, bd - .95); foot.lx = dx / bd * want * 9; foot.lz = dz / bd * want * 9; }
+  else { foot.lx = -Math.sin(foot.face) * 1.8; foot.lz = -Math.cos(foot.face) * 1.8; }
+  const act = play(pilot, combat.clip, { once: true, fade: .04, timeScale: 1.5 }); combat.dur = act.getClip().duration / 1.5; combat.t = 0; combat.state = 'punch'; combat.struck = false; combat.queued = false;
+}
+function combatStep(dt) {
+  simT += dt; if (combat.state === 'idle' || dt <= 0) return; combat.t += dt;
+  if (combat.state === 'punch') {
+    if (!combat.struck && combat.t >= combat.dur * .36) { combat.struck = true; strike(); }
+    if (combat.queued && combat.t >= combat.dur * .62) { combat.state = 'recover'; combat.lastEnd = simT; startPunch(); return; }
+    if (combat.t >= combat.dur) { combat.state = 'recover'; combat.lastEnd = simT; combat.t = 0; }
+  } else if (combat.t > .1) combat.state = 'idle';
+}
+function strike() {
+  const fx = -Math.sin(foot.face), fz = -Math.cos(foot.face); let best = null, bd = 1.7;
+  for (const w of targets()) { const dx = w.root.position.x - foot.x, dz = w.root.position.z - foot.z, d = Math.hypot(dx, dz); if (d < bd && (dx * fx + dz * fz) / (d || 1) > .45) { bd = d; best = w; } }
+  if (best) { combat.hits++; applyHit(best, fx, fz, combat.n % 3 === 2); } else crashSound(3);
+}
+function applyHit(w, dx, dz, finisher) {
+  w.hp -= finisher ? 3 : 1; const down = w.hp <= 0;
+  hitstop = down ? .13 : .075; rig.shake = Math.min(1, rig.shake + (down ? .4 : .22)); crashSound(down ? 8 : 5);
+  for (const m of w.mats) m.emissive.setScalar(.85); flashes.push({ w, t: .06 });
+  const sp = down ? 8.5 : 5.2; w.kb.x = dx * sp; w.kb.z = dz * sp; w.root.rotation.y = Math.atan2(dx, dz);          // victim turns to face the attacker, then is thrown away from them
+  w.state = down ? 'down' : 'hit'; w.st = 0; play(w, down ? 'fall' : 'hit', { once: true, fade: .03 });
+}
+function nearestDoor() {
+  let best = null, bd = 4.2;
+  for (const [name, car] of Object.entries(allCars)) { if (name === 'taxi') continue; car.group.updateWorldMatrix(true, true);
+    for (const tag of Object.keys(car.stand)) { const p = car.stand[tag].getWorldPosition(new THREE.Vector3()), d = Math.hypot(p.x - foot.x, p.z - foot.z); if (d < bd) { bd = d; best = { name, car, tag }; } } }
+  return best;
+}
+async function interact() {
+  if (busy) return; ensureAudio();
+  if (hmode === 'driving' && drive && Math.hypot(drive.vx, drive.vz) < 1.6) {
+    busy = true; hmode = 'busy'; const v = drive; v.mode = 'parked';
+    await exitCar(pilot, v.car, 'FL');
+    foot.x = pilot.root.position.x; foot.z = pilot.root.position.z; foot.face = pilot.root.rotation.y; foot.vx = foot.vz = foot.lx = foot.lz = 0;
+    parkVehicle(v); drive = null; hmode = 'foot'; busy = false;
+  } else if (hmode === 'foot' && combat.state === 'idle') {
+    const pick = nearestDoor(); if (!pick) return;
+    busy = true; hmode = 'busy'; await enterCar(pilot, pick.car, pick.tag);
+    const v = vehs[pick.name]; removeCarCollider(v); v.vx = v.vz = v.w = 0; v.mode = 'driving'; drive = v; hmode = 'driving'; busy = false;
+  }
+}
+$('b-door').addEventListener('pointerdown', e => { e.preventDefault(); interact(); });
+$('b-enter').addEventListener('pointerdown', e => { e.preventDefault(); interact(); });
+$('b-punch').addEventListener('pointerdown', e => { e.preventDefault(); startPunch(); });
+{ const stick = $('stick'), knob = $('knob'); let sid = null;                 // on-screen stick
+  const move = e => { const r = stick.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, max = r.width / 2; let dx = e.clientX - cx, dy = e.clientY - cy; const m = Math.hypot(dx, dy), k = m > max ? max / m : 1; dx *= k; dy *= k; stickIn.x = dx / max; stickIn.y = dy / max; knob.style.transform = `translate(${dx}px, ${dy}px)`; };
+  const end = e => { if (e.pointerId !== sid) return; sid = null; stickIn.x = stickIn.y = 0; knob.style.transform = 'translate(0, 0)'; };
+  stick.addEventListener('pointerdown', e => { e.preventDefault(); sid = e.pointerId; try { stick.setPointerCapture(sid); } catch (x) { /* ok */ } ensureAudio(); move(e); });
+  stick.addEventListener('pointermove', e => { if (e.pointerId === sid) move(e); });
+  for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) stick.addEventListener(t, end); }
 $('snd').addEventListener('click', () => { muted = !muted; $('snd').setAttribute('aria-pressed', String(!muted)); if (!muted) ensureAudio(); });
 
 /* ---------- panels, views, tuning ---------- */
 const VIEWS = { drive: { mode: 'drive', pitch: 45, dist: 44 }, enter: { mode: 'free', tx: -3.2, tz: 31.5, pitch: 50, dist: 15 }, town: { mode: 'free', tx: 0, tz: -(ARCH_Y - 8), pitch: 60, dist: 24 }, over: { mode: 'free', tx: 0, tz: -4, pitch: 42, dist: 55 }, top: { mode: 'free', tx: 0, tz: 0, pitch: 85, dist: 34 } };
 const IDS = { drive: 'v-drive', enter: 'v-enter', town: 'v-town', over: 'v-over', top: 'v-top' };
-function setView(k) { Object.assign(rig, VIEWS[k]); for (const [id, v] of Object.entries(IDS)) $(v).setAttribute('aria-pressed', String(id === k)); $('pad').hidden = k !== 'drive'; syncSliders(); }
+function setView(k) { Object.assign(rig, VIEWS[k]); for (const [id, v] of Object.entries(IDS)) $(v).setAttribute('aria-pressed', String(id === k)); syncSliders(); }
 const syncSliders = () => { $('tilt').value = rig.pitch; $('zoom').value = rig.dist; $('tiltv').textContent = Math.round(rig.pitch) + '\u00b0'; $('zoomv').textContent = Math.round(rig.dist) + ' m'; };
 for (const [k, id] of Object.entries(IDS)) $(id).addEventListener('click', () => setView(k));
 $('tilt').addEventListener('input', e => { rig.pitch = +e.target.value; syncSliders(); });
@@ -430,41 +543,56 @@ cv.addEventListener('wheel', e => { e.preventDefault(); rig.dist = clamp(rig.dis
 $('loading').hidden = true;
 const clock = new THREE.Clock(); let fpsN = 0, fpsT = 0, manual = false, lastStat = '';
 const SPAN = 42, upd = { speedZoom: 0 };
-function update(dt) {
+function update(dt, draw = true) {
   const ws = frameWaiters; frameWaiters = []; for (const r of ws) r(dt);
+  hitstop = Math.max(0, hitstop - dt); const dta = hitstop > 0 ? 0 : dt;          // hitstop freezes the action, never the camera or the effects
   acc += dt; let n = 0; while (acc >= FIXED && n++ < 12) { physicsStep(FIXED); acc -= FIXED; } if (acc > FIXED) acc = 0;
-  playerCar.group.position.set(drive.x, 0, drive.z); playerCar.group.rotation.y = drive.th;
+  if (drive) { drive.car.group.position.set(drive.x, 0, drive.z); drive.car.group.rotation.y = drive.th; }
   taxi.position.x += 8 * dt; if (taxi.position.x > 40) taxi.position.x = -40;                       // scripted taxi, east along its lane
   taxiCol.poly = carPoly(taxi.position.x, taxi.position.z, -Math.PI / 2); const tc = cen(taxiCol.poly); taxiCol.cx = tc[0]; taxiCol.cz = tc[1];
-  for (const w of walkers) {
-    w.pos += w.dir * w.speed * dt; if (w.pos > SPAN) w.pos = -SPAN; if (w.pos < -SPAN) w.pos = SPAN;
-    if (w.alongY) { w.root.position.set(w.lane, 0, -w.pos); w.root.rotation.y = w.dir > 0 ? 0 : Math.PI; }
-    else { w.root.position.set(w.pos, 0, -w.lane); w.root.rotation.y = w.dir > 0 ? -Math.PI / 2 : Math.PI / 2; }
+  footStep(dta); combatStep(dta);
+  for (const w of walkers) {                                                    // pedestrians: walk a sidewalk loop, or react to being hit
+    if (w.state === 'walk') { w.pos += w.dir * w.speed * dta; if (w.pos > SPAN) w.pos = -SPAN; if (w.pos < -SPAN) w.pos = SPAN; const f = Math.exp(-.8 * dta); w.off.x *= f; w.off.z *= f; }
+    else {
+      w.st += dta;
+      if (w.state === 'hit' && w.st > .5) { w.state = 'walk'; play(w, 'walk', { timeScale: w.speed / 1.4 }); }
+      else if (w.state === 'down' && w.st > 2.4) { w.state = 'getup'; w.st = 0; play(w, 'getup', { once: true, fade: .05 }); }
+      else if (w.state === 'getup' && w.st > 1.1) { w.state = 'walk'; w.hp = 3; play(w, 'walk', { timeScale: w.speed / 1.4 }); }
+    }
+    w.off.x += w.kb.x * dta; w.off.z += w.kb.z * dta; const kd = Math.exp(-6 * dta); w.kb.x *= kd; w.kb.z *= kd;
+    const bx = w.alongY ? w.lane : w.pos, bz = w.alongY ? -w.pos : -w.lane;
+    w.root.position.set(bx + w.off.x, 0, bz + w.off.z);
+    if (w.state === 'walk') w.root.rotation.y = w.alongY ? (w.dir > 0 ? 0 : Math.PI) : (w.dir > 0 ? -Math.PI / 2 : Math.PI / 2);
   }
-  punchT += dt; if (punchT > 2.2) { punchT = 0; hero.act.punch.reset().play(); hit = 1; }
-  hit = Math.max(0, hit - dt * 2); victim.root.position.x = fightAt.x - .55 - .25 * Math.sin(Math.min(1, (1 - hit) * 2) * Math.PI) * (hit > 0 ? 1 : 0);
-  for (const m of mixers) m.update(dt);
+  for (let i = flashes.length - 1; i >= 0; i--) { flashes[i].t -= dt; if (flashes[i].t <= 0) { for (const m of flashes[i].w.mats) m.emissive.setScalar(0); flashes.splice(i, 1); } }
+  punchT += dta; if (punchT > 2.2) { punchT = 0; hero.act.punch.reset().play(); hit = 1; }
+  hit = Math.max(0, hit - dta * 2); victim.root.position.x = fightAt.x - .55 - .25 * Math.sin(Math.min(1, (1 - hit) * 2) * Math.PI) * (hit > 0 ? 1 : 0);
+  for (const m of mixers) m.update(dta);
   for (const c of [...Object.values(allCars), demo.sedan, demo.taxi]) updateDoors(c, dt);
   for (let i = 0; i < SP; i++) if (spLife[i] > 0) { spLife[i] -= dt; spPos[i * 3] += spVel[i * 3] * dt; spPos[i * 3 + 1] += spVel[i * 3 + 1] * dt; spPos[i * 3 + 2] += spVel[i * 3 + 2] * dt; spVel[i * 3 + 1] -= 14 * dt; if (spLife[i] <= 0) spPos[i * 3 + 1] = -100; }
   spGeo.attributes.position.needsUpdate = true;
-  const speed = Math.hypot(drive.vx, drive.vz);
-  updateAudio(dt, speed, drive.slide ? clamp(speed / 14, 0, 1) : 0);
-  const stat = `${Math.round(speed * 3.6)} km/h \u00b7 ${Math.round(drive.damage * 100)}% damage`; if (stat !== lastStat) { $('stat').textContent = stat; $('stat').classList.toggle('hot', drive.damage > .6); lastStat = stat; }
-  const out = drive.mode === 'out' || drive.mode === 'exiting' || drive.mode === 'entering';
-  $('b-door').textContent = drive.mode === 'out' ? 'Enter' : 'Exit'; $('b-door').classList.toggle('dim', busy || (drive.mode === 'driving' && speed > 1.6));
-  for (const id of ['b-left', 'b-right', 'b-gas', 'b-brake', 'b-hand']) $(id).classList.toggle('dim', out);
-  // camera: follow with a little look-ahead, and ease out a little at speed
-  if (rig.mode === 'drive') { rig.tx += (drive.x + drive.vx * .55 - rig.tx) * Math.min(1, dt * 5); rig.tz += (drive.z + drive.vz * .55 - rig.tz) * Math.min(1, dt * 5); }
-  upd.speedZoom += ((rig.mode === 'drive' ? Math.min(speed, 28) / 28 * .22 : 0) - upd.speedZoom) * Math.min(1, dt * 2);
+  const speed = drive ? Math.hypot(drive.vx, drive.vz) : 0;
+  updateAudio(dt, speed, drive && drive.slide ? clamp(speed / 14, 0, 1) : 0);
+  const stat = hmode === 'foot' ? `On foot · ${combat.hits} hits` : drive ? `${Math.round(speed * 3.6)} km/h · ${Math.round(drive.damage * 100)}% damage` : '';
+  if (stat !== lastStat) { $('stat').textContent = stat; $('stat').classList.toggle('hot', !!drive && drive.damage > .6 && hmode === 'driving'); lastStat = stat; }
+  const playView = rig.mode === 'drive'; setHidden($('pad'), !(playView && hmode === 'driving')); setHidden($('padf'), !(playView && hmode === 'foot'));
+  $('b-door').classList.toggle('dim', busy || speed > 1.6);
+  for (const id of ['b-left', 'b-right', 'b-gas', 'b-brake', 'b-hand']) $(id).classList.toggle('dim', busy);
+  if (hmode === 'foot') $('b-enter').classList.toggle('dim', !nearestDoor() || combat.state !== 'idle');
+  // camera: follow whoever the player is (car or hero), a little look-ahead, ease out a little at speed
+  let fx, fz, fvx = 0, fvz = 0, la = .55;
+  if (hmode === 'foot') { fx = foot.x; fz = foot.z; fvx = foot.vx; fvz = foot.vz; la = .3; } else if (drive) { fx = drive.x; fz = drive.z; fvx = drive.vx; fvz = drive.vz; } else { fx = pilot.root.position.x; fz = pilot.root.position.z; }
+  if (playView) { rig.tx += (fx + fvx * la - rig.tx) * Math.min(1, dt * 5); rig.tz += (fz + fvz * la - rig.tz) * Math.min(1, dt * 5); }
+  upd.speedZoom += ((playView && hmode === 'driving' ? Math.min(speed, 28) / 28 * .22 : 0) - upd.speedZoom) * Math.min(1, dt * 2);
   rig.tx = clamp(rig.tx, -44, 44); rig.tz = clamp(rig.tz, -52, 52);
   const p = rig.pitch * Math.PI / 180, dist = rig.dist * (1 + upd.speedZoom);
   rig.shake = Math.max(0, rig.shake - dt * 2.2); const sh = rig.shake * rig.shake * 1.1;
   camera.position.set(rig.tx + (Math.random() - .5) * sh, Math.sin(p) * dist + (Math.random() - .5) * sh * .5, rig.tz + Math.cos(p) * dist + (Math.random() - .5) * sh); camera.lookAt(rig.tx, 0, rig.tz);
   sun.target.position.set(rig.tx, 0, rig.tz); sun.position.set(rig.tx - SUNDIR.x * 60, -SUNDIR.y * 60, rig.tz - SUNDIR.z * 60);
-  renderer.render(scene, camera);
+  if (draw) renderer.render(scene, camera);
   fpsN++; fpsT += dt; if (fpsT > .5) { $('fps').textContent = Math.round(fpsN / fpsT) + ' fps'; fpsN = 0; fpsT = 0; }
 }
 function frame() { if (!manual) update(Math.min(clock.getDelta(), .05)); requestAnimationFrame(frame); }
 syncSliders(); setView('drive'); frame();
-window.__city = { rig, renderer, scene, camera, setView, demo, allCars, hero, victim, drive, input, TUNE, colliders, resetCar, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive.hits, hardest: drive.hardest }) };
+window.__city = { rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }) };
 </script>
