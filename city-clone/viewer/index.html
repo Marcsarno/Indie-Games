@@ -1,4 +1,4 @@
-<title>Chinatown Block</title>
+<title>Grand Theft Coconut Creek</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500&display=swap">
 <style>
@@ -35,7 +35,7 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 #stat { color: var(--paper); margin-left: auto; }
 #stat.hot { color: var(--warn); }
 .panel { position: fixed; z-index: 4; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); top: calc(100px + env(safe-area-inset-top, 0px)); padding: 10px 12px 12px; display: grid; gap: 10px; max-height: calc(100% - 330px); overflow-y: auto; touch-action: pan-y; }
-.views { display: grid; grid-template-columns: repeat(5, 1fr); overflow: hidden; border: 1px solid var(--line); border-radius: 6px; }
+.views { display: grid; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; }
 .views button { all: unset; box-sizing: border-box; text-align: center; padding: 10px 2px 9px; font: 600 14px/1 var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--dim); cursor: pointer; border-left: 1px solid var(--line); }
 .views button:first-child { border-left: 0; }
 .views button[aria-pressed="true"] { color: var(--night); background: var(--lamp); }
@@ -53,6 +53,13 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 .pb.sm { width: 60px; height: 60px; font-size: 12px; }
 .pb.on { color: var(--night); background: var(--lamp); border-color: var(--lamp); }
 .pb.dim { opacity: .35; pointer-events: none; }
+.corner { top: calc(104px + env(safe-area-inset-top, 0px)); display: grid; justify-items: end; gap: 4px; z-index: 2; }
+#cash { font: 600 22px/1 var(--display); letter-spacing: .05em; color: var(--paper); text-shadow: 0 1px 3px rgba(0, 0, 0, .7); font-variant-numeric: tabular-nums; }
+.hpbar { width: 92px; height: 8px; background: rgba(0, 0, 0, .45); border: 1px solid var(--line); border-radius: 2px; overflow: hidden; }
+.hpbar i { display: block; height: 100%; width: 100%; background: var(--warn); transform-origin: left; }
+.mini { position: relative; width: 100px; height: 100px; border-radius: 50%; border: 3px solid #101418; background: #2a3a2a; overflow: hidden; box-shadow: 0 0 0 1px rgba(255, 255, 255, .5), 0 2px 8px rgba(0, 0, 0, .5); }
+.mini canvas { width: 100%; height: 100%; display: block; }
+.mini b { position: absolute; left: 50%; top: 1px; transform: translateX(-50%); font: 600 11px/1 var(--display); color: #fff; text-shadow: 0 0 3px #000; }
 .stick { position: relative; width: 132px; height: 132px; border-radius: 50%; border: 2px dashed rgba(255, 236, 200, .5); background: var(--panel); pointer-events: auto; touch-action: none; }
 .knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: var(--lamp); opacity: .85; pointer-events: none; }
 .pb i { display: block; width: 26px; height: 26px; background: currentColor; margin: 0 auto; }
@@ -64,11 +71,11 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 #err { position: fixed; inset: 0; z-index: 9; display: grid; place-content: center; padding: 24px; text-align: center; background: var(--night); }
 </style>
 <canvas id="view"></canvas>
-<div class="hud top"><div class="chip title"><b>Chinatown Block</b><span>Test arena &middot; driving</span></div><div class="tr"><button class="btn" id="snd" aria-pressed="true">Sound</button><div class="chip" id="fps">&ndash; fps</div></div></div>
+<div class="hud top"><div class="chip title"><b id="wtitle">Coconut Creek</b><span>Grand Theft Coconut Creek &middot; test build</span></div><div class="tr"><button class="btn" id="snd" aria-pressed="true">Sound</button><div class="chip" id="fps">&ndash; fps</div></div></div>
 <div class="hud row2"><button class="btn" id="t-view" aria-expanded="false" aria-controls="p-view">View</button><button class="btn" id="t-tune" aria-expanded="false" aria-controls="p-tune">Tune</button><div class="chip" id="stat">0 km/h &middot; 0% damage</div></div>
 
 <div class="chip panel" id="p-view" hidden>
-  <div class="views" role="group" aria-label="Camera view"><button id="v-drive" aria-pressed="true">Play</button><button id="v-enter" aria-pressed="false">Enter</button><button id="v-town" aria-pressed="false">Arch</button><button id="v-over" aria-pressed="false">Overview</button><button id="v-top" aria-pressed="false">Top</button></div>
+  <div class="views" id="viewbtns" role="group" aria-label="Camera view"></div>
   <div class="sl"><label for="tilt">Tilt <output id="tiltv">45&deg;</output><input id="tilt" type="range" min="35" max="85" step="1" value="45"></label><label for="zoom">Zoom <output id="zoomv">44 m</output><input id="zoom" type="range" min="10" max="70" step="1" value="44"></label></div>
   <button class="btn" id="doorbtn" aria-pressed="false">Open all parked doors</button>
 </div>
@@ -78,6 +85,7 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
   <button class="btn" id="tunereset">Reset to defaults</button>
 </div>
 
+<div class="hud corner" id="corner"><div id="cash">$0</div><div class="hpbar"><i id="hp"></i></div><div class="mini" id="minibox"><canvas id="mini" width="200" height="200"></canvas><b>N</b></div></div>
 <div class="hud pad" id="pad">
   <div class="cl"><button class="pb" id="b-left" aria-label="Steer left"><i class="l"></i></button><button class="pb" id="b-right" aria-label="Steer right"><i class="r"></i></button></div>
   <div class="cr">
@@ -99,9 +107,13 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
 
 const $ = id => document.getElementById(id);
-const R = 4.6, ARCH_Y = 24;                          // street half-width and arch position, from the Blender scripts (metres)
+const WN = location.hash === '#chinatown' ? 'chinatown' : 'coconut', WD = 'worlds/' + WN + '/';      // which world to load (hash #chinatown or default)
+addEventListener('hashchange', () => location.reload());
+const world = await fetch(WD + 'world.json').then(r => r.json());
+$('wtitle').textContent = world.title;
 const b2t = (x, y, z = 0) => new THREE.Vector3(x, z, -y);   // Blender (x east, y north, z up) -> three (x, y up, -z north)
 const rad = d => d * Math.PI / 180;
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -111,21 +123,19 @@ try { renderer = new THREE.WebGLRenderer({ canvas: $('view'), antialias: true, p
 catch (e) { $('err').hidden = false; $('loading').hidden = true; throw e; }
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.AgXToneMapping; renderer.toneMappingExposure = 1.15;
+renderer.toneMapping = THREE.AgXToneMapping; renderer.toneMappingExposure = world.exposure;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x141c3a); scene.fog = new THREE.Fog(0x141c3a, 55, 120);
-scene.add(new THREE.HemisphereLight(0x5a6fb8, 0x3a3a50, 1.45));
-const sun = new THREE.DirectionalLight(0xff9a55, 3.1); sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -32, right: 32, top: 32, bottom: -32, near: 1, far: 140 });
+scene.background = new THREE.Color(world.sky); scene.fog = new THREE.Fog(world.fog[0], world.fog[1], world.fog[2]);
+scene.add(new THREE.HemisphereLight(world.hemi[0], world.hemi[1], world.hemi[2]));
+const sun = new THREE.DirectionalLight(world.sun.color, world.sun.intensity); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -34, right: 34, top: 34, bottom: -34, near: 1, far: 160 });
 sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.05; scene.add(sun, sun.target);
-const SUNDIR = new THREE.Vector3(0.55, -0.42, 0.45).normalize();
-for (const [sx, sy] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
-  const l = new THREE.PointLight(0xffc27a, 60, 16, 2); l.position.copy(b2t(sx * 3.8, sy * (R + .7), 4.3)); scene.add(l);
-}
+const SUNDIR = new THREE.Vector3(...world.sun.dir).normalize();
+for (const [lx, ly, lz] of world.lamps) { const l = new THREE.PointLight(0xffc27a, 60, 16, 2); l.position.copy(b2t(lx, ly, lz)); scene.add(l); }
 
 const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 300);
-const rig = { tx: 1.3, tz: 6, pitch: 45, dist: 44, mode: 'drive', shake: 0 };      // user's chosen game camera: 45 deg tilt, 44 m
+const rig = { tx: world.start.x, tz: -world.start.y, pitch: 45, dist: 44, mode: 'drive', shake: 0 };      // user's chosen game camera: 45 deg tilt, 44 m
 const HFOV = 54.4 * Math.PI / 180;
 function resize() {
   const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h;
@@ -140,14 +150,23 @@ async function loadGlb(url, bar) {            // the page host serves no .glb: b
   for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
   return new Promise((ok, fail) => loader.parse(u8.buffer, '', g => { if (bar) $('bar').style.width = bar; ok(g); }, fail));
 }
-let city, charGltf, sedanG, taxiG, carList, colList;
+let city, charGltf, sedanG, taxiG, carList, colList, propList, vegG;
 try {
-  [city, charGltf, sedanG, taxiG, carList, colList] = await Promise.all([loadGlb('test_scene.glb.b64.txt', '70%'), loadGlb('character.glb.b64.txt'), loadGlb('car_sedan.glb.b64.txt'), loadGlb('car_taxi.glb.b64.txt'), fetch('cars.json').then(r => r.json()), fetch('colliders.json').then(r => r.json())]);
+  [city, charGltf, sedanG, taxiG, carList, colList, propList, vegG] = await Promise.all([loadGlb(WD + 'scene.glb.b64.txt', '70%'), loadGlb('character.glb.b64.txt'), loadGlb('car_sedan.glb.b64.txt'), loadGlb('car_taxi.glb.b64.txt'), fetch(WD + 'cars.json').then(r => r.json()), fetch(WD + 'colliders.json').then(r => r.json()), fetch(WD + 'props.json').then(r => r.json()), loadGlb('veg.glb.b64.txt')]);
   $('bar').style.width = '100%';
 } catch (e) { $('loadtxt').textContent = 'Could not load the models: ' + (e.message || e); throw e; }
 scene.add(city.scene);
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(700, 700), new THREE.MeshLambertMaterial({ color: 0x20222e })); ground.rotation.x = -Math.PI / 2; ground.position.y = -.3; ground.receiveShadow = true; scene.add(ground);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(700, 700), new THREE.MeshLambertMaterial({ color: new THREE.Color(world.ground) })); ground.rotation.x = -Math.PI / 2; ground.position.y = -.3; ground.receiveShadow = true; scene.add(ground);
 city.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+/* Vegetation is instanced: one InstancedMesh per sub-mesh of each kit piece (palms, shrubs, hedges, oaks), placed from props.json. */
+const instances = []; { const byKind = {};
+  for (const p of propList) (byKind[p.k] = byKind[p.k] || []).push(p);
+  for (const [kind, list] of Object.entries(byKind)) {
+    const node = vegG.scene.getObjectByName(kind); if (!node) continue; node.updateWorldMatrix(true, true); const dummy = new THREE.Object3D();
+    node.traverse(o => { if (!o.isMesh) return; const im = new THREE.InstancedMesh(o.geometry, o.material, list.length); im.castShadow = true; im.receiveShadow = true;
+      list.forEach((p, i) => { dummy.position.copy(b2t(p.x, p.y, 0)); dummy.rotation.set(0, rad(p.rz), 0); dummy.scale.setScalar(kind === 'hedge' ? 1 : p.s); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); });
+      im.instanceMatrix.needsUpdate = true; scene.add(im); instances.push(im); });
+  } }
 
 /* ---------- async helpers: scripted sequences await frames, so they pause and resume with the loop ---------- */
 let frameWaiters = [];
@@ -176,7 +195,9 @@ const updateDoors = (car, dt) => { const k = 1 - Math.exp(-dt * 9); for (const d
 for (const c of carList) {
   const car = makeCar(c.kind, c.color); car.group.position.copy(b2t(c.x, c.y, 0)); car.group.rotation.y = rad(c.rz); allCars[c.name] = car;
 }
-const playerCar = allCars.player, taxi = allCars.taxi.group;
+const playerCar = allCars.player;
+const traffic = world.traffic.map(t => { const g = allCars[t.name].group; const along = t.axis === 'x' ? g.position.x : -g.position.z; return { ...t, g, pos: along, rz: g.rotation.y, vx: t.axis === 'x' ? t.dir * t.speed : 0, vz: t.axis === 'y' ? -t.dir * t.speed : 0 }; });
+const trafficNames = new Set(world.traffic.map(t => t.name));
 
 /* ---------- people ---------- */
 const JACKETS = ['#3f6b3a', '#7a2f2a', '#2f4f8a', '#b08a2a', '#5a5a62', '#8a4a7a', '#2b2b30', '#a8a090'];
@@ -184,9 +205,9 @@ const PANTS = ['#26303f', '#3a3228', '#1c1c22', '#4a4f5a'], SKINS = ['#d9a577', 
 let seed = 11; const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296; const pick = a => a[Math.floor(rnd() * a.length)];
 const mixers = [];
 function makePerson(opts = {}) {
-  const root = charGltf.scene.clone(true); root.scale.setScalar(.92);
+  const root = skClone(charGltf.scene); root.scale.setScalar(.92);
   const cols = { char_jacket: opts.jacket || pick(JACKETS), char_pants: pick(PANTS), char_skin: pick(SKINS), char_hair: pick(HAIR) };
-  root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.material = o.material.clone(); if (cols[o.material.name]) o.material.color.set(cols[o.material.name]); } });
+  root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; o.material = o.material.clone(); if (cols[o.material.name]) o.material.color.set(cols[o.material.name]); } });
   const mixer = new THREE.AnimationMixer(root); const act = {}, mats = [];
   root.traverse(o => { if (o.isMesh) mats.push(o.material); });
   for (const c of charGltf.animations) act[c.name] = mixer.clipAction(c);
@@ -223,37 +244,40 @@ async function exitCar(a, car, tag) {
   await wait(T * .85); car.setDoor(tag, false); await wait(T * .15); play(a, 'idle', { fade: .15 });
 }
 
-/* ---------- life: walkers, a fight, scripted taxi ---------- */
+/* ---------- life: walkers, a fight, scripted traffic ---------- */
 const walkers = [];
-for (let i = 0; i < 12; i++) {
-  const p = makePerson(); const alongY = i % 2 === 0, dir = i % 4 < 2 ? 1 : -1, side = (i % 3 === 0) ? -1 : 1;
-  const w = { ...p, alongY, dir, lane: side * (i % 2 ? 7.3 : 5.6), pos: (rnd() - .5) * 70, speed: 1.15 + rnd() * .5 };
+for (let i = 0; i < world.walkers; i++) {
+  const p = makePerson(), seg = world.walk[i % world.walk.length], dir = (i >> 1) % 2 ? 1 : -1;
+  const w = { ...p, seg, dir, pos: seg.lo + rnd() * (seg.hi - seg.lo), speed: 1.15 + rnd() * .5 };
   w.act.walk.timeScale = w.speed / 1.4; w.act.walk.play(); w.act.walk.time = rnd(); w.cur = w.act.walk; Object.assign(w, { hp: 3, state: 'walk', st: 0, off: { x: 0, z: 0 }, kb: { x: 0, z: 0 } }); walkers.push(w);
 }
-const hero = makePerson({ jacket: '#2f6b3a' }), victim = makePerson({ jacket: '#7a2f2a' });
-const fightAt = b2t(6.55, 7.3);
-hero.root.position.copy(fightAt).add(new THREE.Vector3(.5, 0, 0)); hero.root.rotation.y = Math.PI / 2;
-victim.root.position.copy(fightAt).add(new THREE.Vector3(-.55, 0, 0)); victim.root.rotation.y = -Math.PI / 2;
-hero.act.idle.play(); victim.act.idle.play(); hero.act.punch.setLoop(THREE.LoopOnce, 1);
+let hero = null, victim = null, fightAt = null;
+if (world.fight) {
+  hero = makePerson({ jacket: '#2f6b3a' }); victim = makePerson({ jacket: '#7a2f2a' }); fightAt = b2t(world.fight.x, world.fight.y);
+  hero.root.position.copy(fightAt).add(new THREE.Vector3(.5, 0, 0)); hero.root.rotation.y = Math.PI / 2;
+  victim.root.position.copy(fightAt).add(new THREE.Vector3(-.55, 0, 0)); victim.root.rotation.y = -Math.PI / 2;
+  hero.act.idle.play(); victim.act.idle.play(); hero.act.punch.setLoop(THREE.LoopOnce, 1);
+}
 let punchT = 0, hit = 0;
 
-/* door demo (Enter view): a pedestrian takes the taxi's passenger door, another person the sedan's driver door */
-const demo = { sedan: makeCar('sedan', '#c8201c'), taxi: makeCar('taxi', '#f2b61c'), hero: makePerson({ jacket: '#2f6b3a' }), npc: makePerson({ jacket: '#8a4a7a' }) };
-demo.sedan.group.position.copy(b2t(-3.6, -26)); demo.sedan.group.rotation.y = Math.PI;
-demo.taxi.group.position.copy(b2t(-3.6, -34)); demo.taxi.group.rotation.y = Math.PI;
-const heroHome = b2t(-0.9, -30), npcHome = b2t(-6.4, -37);
-async function demoLoop() {
-  for (;;) {
-    for (const [a, home] of [[demo.hero, heroHome], [demo.npc, npcHome]]) { a.root.position.copy(home); a.root.visible = true; play(a, 'idle', { fade: .01 }); }
-    await wait(1.0);
-    await Promise.all([enterCar(demo.hero, demo.sedan, 'FL'), (async () => { await wait(.8); await enterCar(demo.npc, demo.taxi, 'FR'); })()]);
-    await wait(1.6);
-    await Promise.all([exitCar(demo.hero, demo.sedan, 'FL'), (async () => { await wait(.5); await exitCar(demo.npc, demo.taxi, 'FR'); })()]);
-    await Promise.all([walkTo(demo.hero, heroHome.clone().add(new THREE.Vector3(.4, 0, 5))), walkTo(demo.npc, npcHome.clone().add(new THREE.Vector3(0, 0, 4)))]);
-    play(demo.hero, 'idle'); play(demo.npc, 'idle'); await wait(1.4);
-  }
+/* door demo (Enter view): a pedestrian takes the taxi's passenger door, another person the sedan's driver door; only worlds with a `demo` block have it */
+let demo = null;
+if (world.demo) {
+  const d = world.demo; demo = { sedan: makeCar('sedan', '#c8201c'), taxi: makeCar('taxi', '#f2b61c'), hero: makePerson({ jacket: '#2f6b3a' }), npc: makePerson({ jacket: '#8a4a7a' }) };
+  demo.sedan.group.position.copy(b2t(d.sedan.x, d.sedan.y)); demo.sedan.group.rotation.y = rad(d.sedan.rz); demo.taxi.group.position.copy(b2t(d.taxi.x, d.taxi.y)); demo.taxi.group.rotation.y = rad(d.taxi.rz);
+  const heroHome = b2t(...d.heroHome), npcHome = b2t(...d.npcHome);
+  (async function demoLoop() {
+    for (;;) {
+      for (const [a, home] of [[demo.hero, heroHome], [demo.npc, npcHome]]) { a.root.position.copy(home); a.root.visible = true; play(a, 'idle', { fade: .01 }); }
+      await wait(1.0);
+      await Promise.all([enterCar(demo.hero, demo.sedan, 'FL'), (async () => { await wait(.8); await enterCar(demo.npc, demo.taxi, 'FR'); })()]);
+      await wait(1.6);
+      await Promise.all([exitCar(demo.hero, demo.sedan, 'FL'), (async () => { await wait(.5); await exitCar(demo.npc, demo.taxi, 'FR'); })()]);
+      await Promise.all([walkTo(demo.hero, heroHome.clone().add(new THREE.Vector3(.4, 0, 5))), walkTo(demo.npc, npcHome.clone().add(new THREE.Vector3(0, 0, 4)))]);
+      play(demo.hero, 'idle'); play(demo.npc, 'idle'); await wait(1.4);
+    }
+  })();
 }
-demoLoop();
 
 /* =====================  DRIVING  =====================
    Arcade top-down model in the XZ plane (three axes: +x east, -z north). Heading th: forward f = (-sin th, -cos th), right r = (cos th, -sin th).
@@ -278,7 +302,7 @@ function polyBox(cx, cy, w, d, rzDeg) {          // Blender box (centre x,y; siz
 const polyCircle = (cx, cy, r) => Array.from({ length: 8 }, (_, k) => [cx + r * Math.cos((k + .5) * Math.PI / 4), -cy + r * Math.sin((k + .5) * Math.PI / 4)]);
 const cen = P => { let x = 0, z = 0; for (const p of P) { x += p[0]; z += p[1]; } return [x / P.length, z / P.length]; };
 const colliders = colList.filter(c => !c.car).map(c => { const poly = c.t === 'box' ? polyBox(c.x, c.y, c.w, c.d, c.rz) : polyCircle(c.x, c.y, c.r); const [cx, cz] = cen(poly); let r = 0; for (const p of poly) r = Math.max(r, Math.hypot(p[0] - cx, p[1] - cz)); return { poly, cx, cz, r, vx: 0, vz: 0 }; });
-const taxiCol = { poly: [], cx: 0, cz: 0, r: 2.6, vx: 8, vz: 0 }; colliders.push(taxiCol);     // the scripted taxi: moving obstacle
+const moveCols = traffic.map(t => { const c = { poly: [], cx: 0, cz: 0, r: 2.6, vx: t.vx, vz: t.vz }; colliders.push(c); return c; });     // scripted traffic: moving obstacles
 const carPoly = (x, z, th) => { const fx = -Math.sin(th), fz = -Math.cos(th), rx = Math.cos(th), rz = -Math.sin(th), hl = CAR.L / 2, hw = CAR.W / 2; return [[x + fx * hl + rx * hw, z + fz * hl + rz * hw], [x + fx * hl - rx * hw, z + fz * hl - rz * hw], [x - fx * hl - rx * hw, z - fz * hl - rz * hw], [x - fx * hl + rx * hw, z - fz * hl + rz * hw]]; };
 
 function sat(A, B) {                              // minimum translation to push polygon A out of B: {depth, nx, nz (from B toward A)} or null
@@ -344,6 +368,7 @@ function contact(c, B, e) {              // resolve one polygon overlap between 
   c.cx = px; c.cz = pz; c.cnx = h.nx; c.cnz = h.nz; c.crx = rx; c.crz = rz; return -vn;
 }
 function onImpact(c, v) {
+  if (c === drive) game.hp = Math.max(0, game.hp - Math.max(0, v - 9) * 2.2);
   c.hits++; c.hardest = Math.max(c.hardest, v); const dmg = Math.max(0, v - 2.5) * .02; c.damage = Math.min(1, c.damage + dmg);
   rig.shake = Math.min(1, rig.shake + v / 16); burst(c.cx, .6, c.cz, c.cnx, c.cnz, v); crashSound(v);
   if (v > 9) {                                    // a hard hit throws the doors on the struck side open for a moment
@@ -391,8 +416,8 @@ function setCarCollider(v) {                      // a parked car is a static po
 }
 function removeCarCollider(v) { const col = carCols.get(v.name); if (col) { const i = colliders.indexOf(col); if (i >= 0) colliders.splice(i, 1); carCols.delete(v.name); } }
 function parkVehicle(v) { v.vx = v.vz = v.w = 0; v.mode = 'parked'; setCarCollider(v); }
-for (const v of Object.values(vehs)) if (v.name !== 'taxi' && v !== drive) setCarCollider(v);
-function resetCar(x = 1.3, z = 10, th = 0) {      // put the player's own car back and the hero in it
+for (const v of Object.values(vehs)) if (!trafficNames.has(v.name) && v !== drive) setCarCollider(v);
+function resetCar(x = world.start.x, z = -world.start.y, th = rad(world.start.rz)) {      // put the player's own car back and the hero in it
   if (drive && drive !== vehs.player) parkVehicle(drive);
   const v = vehs.player; removeCarCollider(v); drive = v; hmode = 'driving';
   Object.assign(v, { x, z, th, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, hardest: 0, hits: 0, mode: 'driving' }); v.car.setDamage(0); v.car.setAll(false);
@@ -470,7 +495,7 @@ function strike() {
   if (best) { combat.hits++; applyHit(best, fx, fz, combat.n % 3 === 2); } else crashSound(3);
 }
 function applyHit(w, dx, dz, finisher) {
-  w.hp -= finisher ? 3 : 1; const down = w.hp <= 0;
+  w.hp -= finisher ? 3 : 1; const down = w.hp <= 0; if (down) game.money += 25;
   hitstop = down ? .13 : .075; rig.shake = Math.min(1, rig.shake + (down ? .4 : .22)); crashSound(down ? 8 : 5);
   for (const m of w.mats) m.emissive.setScalar(.85); flashes.push({ w, t: .06 });
   const sp = down ? 8.5 : 5.2; w.kb.x = dx * sp; w.kb.z = dz * sp; w.root.rotation.y = Math.atan2(dx, dz);          // victim turns to face the attacker, then is thrown away from them
@@ -478,7 +503,7 @@ function applyHit(w, dx, dz, finisher) {
 }
 function nearestDoor() {
   let best = null, bd = 4.2;
-  for (const [name, car] of Object.entries(allCars)) { if (name === 'taxi') continue; car.group.updateWorldMatrix(true, true);
+  for (const [name, car] of Object.entries(allCars)) { if (trafficNames.has(name)) continue; car.group.updateWorldMatrix(true, true);
     for (const tag of Object.keys(car.stand)) { const p = car.stand[tag].getWorldPosition(new THREE.Vector3()), d = Math.hypot(p.x - foot.x, p.z - foot.z); if (d < bd) { bd = d; best = { name, car, tag }; } } }
   return best;
 }
@@ -507,11 +532,14 @@ $('b-punch').addEventListener('pointerdown', e => { e.preventDefault(); startPun
 $('snd').addEventListener('click', () => { muted = !muted; $('snd').setAttribute('aria-pressed', String(!muted)); if (!muted) ensureAudio(); });
 
 /* ---------- panels, views, tuning ---------- */
-const VIEWS = { drive: { mode: 'drive', pitch: 45, dist: 44 }, enter: { mode: 'free', tx: -3.2, tz: 31.5, pitch: 50, dist: 15 }, town: { mode: 'free', tx: 0, tz: -(ARCH_Y - 8), pitch: 60, dist: 24 }, over: { mode: 'free', tx: 0, tz: -4, pitch: 42, dist: 55 }, top: { mode: 'free', tx: 0, tz: 0, pitch: 85, dist: 34 } };
-const IDS = { drive: 'v-drive', enter: 'v-enter', town: 'v-town', over: 'v-over', top: 'v-top' };
+const VIEWS = {}, IDS = {};
+for (const [k, v] of Object.entries(world.views)) { VIEWS[k] = v.mode === 'drive' ? { mode: 'drive', pitch: v.pitch, dist: v.dist } : { mode: 'free', tx: v.tx, tz: -v.ty, pitch: v.pitch, dist: v.dist }; IDS[k] = 'v-' + k; }
+{ const box = $('viewbtns'); box.style.gridTemplateColumns = `repeat(${Object.keys(world.views).length}, 1fr)`;
+  for (const [k, v] of Object.entries(world.views)) { const bt = document.createElement('button'); bt.id = 'v-' + k; bt.textContent = v.label; bt.setAttribute('aria-pressed', 'false'); box.appendChild(bt); } }
 function setView(k) { Object.assign(rig, VIEWS[k]); for (const [id, v] of Object.entries(IDS)) $(v).setAttribute('aria-pressed', String(id === k)); syncSliders(); }
 const syncSliders = () => { $('tilt').value = rig.pitch; $('zoom').value = rig.dist; $('tiltv').textContent = Math.round(rig.pitch) + '\u00b0'; $('zoomv').textContent = Math.round(rig.dist) + ' m'; };
 for (const [k, id] of Object.entries(IDS)) $(id).addEventListener('click', () => setView(k));
+$('v-drive').setAttribute('aria-pressed', 'true');
 $('tilt').addEventListener('input', e => { rig.pitch = +e.target.value; syncSliders(); });
 $('zoom').addEventListener('input', e => { rig.dist = +e.target.value; syncSliders(); });
 let doorsOpen = false;
@@ -539,8 +567,23 @@ cv.addEventListener('pointermove', e => {
 for (const t of ['pointerup', 'pointercancel']) cv.addEventListener(t, e => ptr.delete(e.pointerId));
 cv.addEventListener('wheel', e => { e.preventDefault(); rig.dist = clamp(rig.dist * (1 + Math.sign(e.deltaY) * .08), 10, 70); syncSliders(); }, { passive: false });
 
+/* ---------- HUD: cash, health, minimap ---------- */
+const game = { money: world.money, hp: 100 };
+const mini = $('mini'), mx = mini.getContext('2d'); let miniT = 0, lastCash = -1, lastHp = -1;
+if (!world.map) $('minibox').hidden = true;
+function drawMini(px, py, face) {                 // north-up map around the player (px, py in Blender metres); arrow shows heading
+  const W = mini.width, c = W / 2, k = c / 55; mx.fillStyle = '#4d8a38'; mx.fillRect(0, 0, W, W);
+  for (const r of world.map || []) {
+    mx.fillStyle = r[4]; const x0 = c + (r[0] - px) * k, x1 = c + (r[2] - px) * k, y0 = c - (r[3] - py) * k, y1 = c - (r[1] - py) * k;
+    if (r[5] === 'o') { mx.beginPath(); mx.ellipse((x0 + x1) / 2, (y0 + y1) / 2, Math.abs(x1 - x0) / 2, Math.abs(y1 - y0) / 2, 0, 0, 7); mx.fill(); } else mx.fillRect(x0, y0, x1 - x0, y1 - y0);
+  }
+  mx.save(); mx.translate(c, c); mx.rotate(Math.atan2(-Math.sin(face), Math.cos(face))); mx.beginPath(); mx.moveTo(0, -16); mx.lineTo(11, 12); mx.lineTo(0, 6); mx.lineTo(-11, 12); mx.closePath();
+  mx.fillStyle = '#5cff7a'; mx.fill(); mx.lineWidth = 3; mx.strokeStyle = '#0b1a10'; mx.stroke(); mx.restore();
+}
+
 /* ---------- loop ---------- */
 $('loading').hidden = true;
+const q = { ratio: Math.min(devicePixelRatio || 1, 2), slow: 0 };
 const clock = new THREE.Clock(); let fpsN = 0, fpsT = 0, manual = false, lastStat = '';
 const SPAN = 42, upd = { speedZoom: 0 };
 function update(dt, draw = true) {
@@ -548,11 +591,14 @@ function update(dt, draw = true) {
   hitstop = Math.max(0, hitstop - dt); const dta = hitstop > 0 ? 0 : dt;          // hitstop freezes the action, never the camera or the effects
   acc += dt; let n = 0; while (acc >= FIXED && n++ < 12) { physicsStep(FIXED); acc -= FIXED; } if (acc > FIXED) acc = 0;
   if (drive) { drive.car.group.position.set(drive.x, 0, drive.z); drive.car.group.rotation.y = drive.th; }
-  taxi.position.x += 8 * dt; if (taxi.position.x > 40) taxi.position.x = -40;                       // scripted taxi, east along its lane
-  taxiCol.poly = carPoly(taxi.position.x, taxi.position.z, -Math.PI / 2); const tc = cen(taxiCol.poly); taxiCol.cx = tc[0]; taxiCol.cz = tc[1];
+  traffic.forEach((t, i) => {                                                   // scripted traffic loops along its lane
+    t.pos += t.dir * t.speed * dt; const lim = world.extent; if (t.pos > lim) t.pos = -lim; if (t.pos < -lim) t.pos = lim;
+    if (t.axis === 'y') t.g.position.set(t.lane, 0, -t.pos); else t.g.position.set(t.pos, 0, -t.lane);
+    const c = moveCols[i]; c.poly = carPoly(t.g.position.x, t.g.position.z, t.rz); const cc = cen(c.poly); c.cx = cc[0]; c.cz = cc[1];
+  });
   footStep(dta); combatStep(dta);
   for (const w of walkers) {                                                    // pedestrians: walk a sidewalk loop, or react to being hit
-    if (w.state === 'walk') { w.pos += w.dir * w.speed * dta; if (w.pos > SPAN) w.pos = -SPAN; if (w.pos < -SPAN) w.pos = SPAN; const f = Math.exp(-.8 * dta); w.off.x *= f; w.off.z *= f; }
+    if (w.state === 'walk') { w.pos += w.dir * w.speed * dta; if (w.pos > w.seg.hi) w.pos = w.seg.lo; if (w.pos < w.seg.lo) w.pos = w.seg.hi; const f = Math.exp(-.8 * dta); w.off.x *= f; w.off.z *= f; }
     else {
       w.st += dta;
       if (w.state === 'hit' && w.st > .5) { w.state = 'walk'; play(w, 'walk', { timeScale: w.speed / 1.4 }); }
@@ -560,15 +606,20 @@ function update(dt, draw = true) {
       else if (w.state === 'getup' && w.st > 1.1) { w.state = 'walk'; w.hp = 3; play(w, 'walk', { timeScale: w.speed / 1.4 }); }
     }
     w.off.x += w.kb.x * dta; w.off.z += w.kb.z * dta; const kd = Math.exp(-6 * dta); w.kb.x *= kd; w.kb.z *= kd;
-    const bx = w.alongY ? w.lane : w.pos, bz = w.alongY ? -w.pos : -w.lane;
+    const alongY = w.seg.axis === 'y', bx = alongY ? w.seg.c : w.pos, bz = alongY ? -w.pos : -w.seg.c;
     w.root.position.set(bx + w.off.x, 0, bz + w.off.z);
-    if (w.state === 'walk') w.root.rotation.y = w.alongY ? (w.dir > 0 ? 0 : Math.PI) : (w.dir > 0 ? -Math.PI / 2 : Math.PI / 2);
+    if (w.state === 'walk') w.root.rotation.y = alongY ? (w.dir > 0 ? 0 : Math.PI) : (w.dir > 0 ? -Math.PI / 2 : Math.PI / 2);
   }
   for (let i = flashes.length - 1; i >= 0; i--) { flashes[i].t -= dt; if (flashes[i].t <= 0) { for (const m of flashes[i].w.mats) m.emissive.setScalar(0); flashes.splice(i, 1); } }
-  punchT += dta; if (punchT > 2.2) { punchT = 0; hero.act.punch.reset().play(); hit = 1; }
-  hit = Math.max(0, hit - dta * 2); victim.root.position.x = fightAt.x - .55 - .25 * Math.sin(Math.min(1, (1 - hit) * 2) * Math.PI) * (hit > 0 ? 1 : 0);
+  if (hero) { punchT += dta; if (punchT > 2.2) { punchT = 0; hero.act.punch.reset().play(); hit = 1; }
+    hit = Math.max(0, hit - dta * 2); victim.root.position.x = fightAt.x - .55 - .25 * Math.sin(Math.min(1, (1 - hit) * 2) * Math.PI) * (hit > 0 ? 1 : 0); }
   for (const m of mixers) m.update(dta);
-  for (const c of [...Object.values(allCars), demo.sedan, demo.taxi]) updateDoors(c, dt);
+  for (const c of [...Object.values(allCars), ...(demo ? [demo.sedan, demo.taxi] : [])]) {                  // draw only nearby cars, and only those close by cast shadows
+    const dd = Math.hypot(c.group.position.x - rig.tx, c.group.position.z - rig.tz); c.group.visible = dd < 70 || c === (drive && drive.car);
+    const near = dd < 40; if (near !== c.shadowOn) { c.shadowOn = near; c.group.traverse(o => { if (o.isMesh) o.castShadow = near; }); }
+    if (c.group.visible) updateDoors(c, dt);
+  }
+  for (const w of walkers) { const dd = Math.hypot(w.root.position.x - rig.tx, w.root.position.z - rig.tz); const vis = dd < 55; if (vis !== w.root.visible) w.root.visible = vis; const near = dd < 38; if (near !== w.shadowOn) { w.shadowOn = near; w.root.traverse(o => { if (o.isMesh) o.castShadow = near; }); } }
   for (let i = 0; i < SP; i++) if (spLife[i] > 0) { spLife[i] -= dt; spPos[i * 3] += spVel[i * 3] * dt; spPos[i * 3 + 1] += spVel[i * 3 + 1] * dt; spPos[i * 3 + 2] += spVel[i * 3 + 2] * dt; spVel[i * 3 + 1] -= 14 * dt; if (spLife[i] <= 0) spPos[i * 3 + 1] = -100; }
   spGeo.attributes.position.needsUpdate = true;
   const speed = drive ? Math.hypot(drive.vx, drive.vz) : 0;
@@ -584,15 +635,22 @@ function update(dt, draw = true) {
   if (hmode === 'foot') { fx = foot.x; fz = foot.z; fvx = foot.vx; fvz = foot.vz; la = .3; } else if (drive) { fx = drive.x; fz = drive.z; fvx = drive.vx; fvz = drive.vz; } else { fx = pilot.root.position.x; fz = pilot.root.position.z; }
   if (playView) { rig.tx += (fx + fvx * la - rig.tx) * Math.min(1, dt * 5); rig.tz += (fz + fvz * la - rig.tz) * Math.min(1, dt * 5); }
   upd.speedZoom += ((playView && hmode === 'driving' ? Math.min(speed, 28) / 28 * .22 : 0) - upd.speedZoom) * Math.min(1, dt * 2);
-  rig.tx = clamp(rig.tx, -44, 44); rig.tz = clamp(rig.tz, -52, 52);
+  rig.tx = clamp(rig.tx, -world.extent, world.extent); rig.tz = clamp(rig.tz, -world.extent, world.extent);
   const p = rig.pitch * Math.PI / 180, dist = rig.dist * (1 + upd.speedZoom);
   rig.shake = Math.max(0, rig.shake - dt * 2.2); const sh = rig.shake * rig.shake * 1.1;
   camera.position.set(rig.tx + (Math.random() - .5) * sh, Math.sin(p) * dist + (Math.random() - .5) * sh * .5, rig.tz + Math.cos(p) * dist + (Math.random() - .5) * sh); camera.lookAt(rig.tx, 0, rig.tz);
   sun.target.position.set(rig.tx, 0, rig.tz); sun.position.set(rig.tx - SUNDIR.x * 60, -SUNDIR.y * 60, rig.tz - SUNDIR.z * 60);
+  game.hp = Math.min(100, game.hp + dt * 1.2); if (game.hp <= 0) { game.hp = 100; game.money = Math.max(0, game.money - 100); resetCar(); }     // HUD
+  const cash = Math.round(game.money), hpv = Math.round(game.hp); if (cash !== lastCash) { $('cash').textContent = '$' + cash.toLocaleString('en-US'); lastCash = cash; }
+  if (hpv !== lastHp) { $('hp').style.transform = `scaleX(${hpv / 100})`; lastHp = hpv; }
+  miniT += dt; if (world.map && miniT > .1 && draw) { miniT = 0; drawMini(fx, -fz, hmode === 'foot' ? foot.face : (drive ? drive.th : 0)); }
   if (draw) renderer.render(scene, camera);
-  fpsN++; fpsT += dt; if (fpsT > .5) { $('fps').textContent = Math.round(fpsN / fpsT) + ' fps'; fpsN = 0; fpsT = 0; }
+  fpsN++; fpsT += dt; if (fpsT > .5) {
+    const f = fpsN / fpsT; $('fps').textContent = Math.round(f) + ' fps'; fpsN = 0; fpsT = 0;
+    if (!manual && draw) { q.slow = f < 27 ? q.slow + 1 : 0; if (q.slow >= 4 && q.ratio > .7) { q.ratio = Math.max(.7, q.ratio - .15); renderer.setPixelRatio(q.ratio); resize(); q.slow = 0; } }       // adaptive resolution: shed pixels when the frame rate is low
+  }
 }
 function frame() { if (!manual) update(Math.min(clock.getDelta(), .05)); requestAnimationFrame(frame); }
 syncSliders(); setView('drive'); frame();
-window.__city = { rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }) };
+window.__city = { world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }) };
 </script>

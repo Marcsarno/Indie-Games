@@ -148,3 +148,44 @@ if __name__ == "__main__":
     p = export_glb("character_test") if False else None
     bpy.ops.export_scene.gltf(filepath=os.path.join(OUT, "character_test.glb"), export_format="GLB", export_animations=True, export_animation_mode="NLA_TRACKS", export_yup=True)
     print("TRACKS", [t.name for t in bpy.data.objects["hero.pelvis"].animation_data.nla_tracks])
+
+
+# ---- skinned export: one mesh + one armature (about 5 draw calls per person instead of ~20) -----------------------------------
+def make_skinned(name="ped", **kw):
+    """Build the rigid character, then bake it into ONE mesh skinned to an armature whose bones sit at the joints (bone axes = world axes at rest, so
+    the pose functions apply unchanged). Returns the armature object."""
+    root = make_character(name, **kw); bpy.context.view_layer.update()
+    heads = {jn: bpy.data.objects[f"{name}.{jn}"].matrix_world.translation.copy() for jn in JOINTS}
+    parts = [bpy.data.objects[f"{name}.{jn}"] for jn in JOINTS]
+    arm_data = bpy.data.armatures.new(name + "_arm"); arm = bpy.data.objects.new(name + "_rig", arm_data); bpy.context.scene.collection.objects.link(arm)
+    bpy.context.view_layer.objects.active = arm; bpy.ops.object.mode_set(mode="EDIT")
+    for jn, (par, off) in JOINTS.items():
+        eb = arm_data.edit_bones.new(jn); eb.head = heads[jn]; eb.tail = heads[jn] + Vector((0, .12, 0)); eb.roll = 0
+        if par: eb.parent = arm_data.edit_bones[par]
+    bpy.ops.object.mode_set(mode="OBJECT")
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in parts: o.select_set(True)
+    bpy.context.view_layer.objects.active = parts[0]
+    bpy.ops.object.parent_clear(type="CLEAR_KEEP_TRANSFORM"); bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    for jn, o in zip(JOINTS, parts):
+        vg = o.vertex_groups.new(name=jn); vg.add(list(range(len(o.data.vertices))), 1.0, "REPLACE")
+    bpy.ops.object.join(); mesh = bpy.context.object; mesh.name = name + "_body"
+    mod = mesh.modifiers.new("Armature", "ARMATURE"); mod.object = arm; mesh.parent = arm
+    for pb in arm.pose.bones: pb.rotation_mode = "XYZ"
+    bpy.data.objects.remove(root)
+    return arm
+
+def apply_pose_skinned(arm, clip, t):
+    pose, dz = CLIPS[clip][0](t); d3 = dz if isinstance(dz, tuple) else (0, 0, dz)
+    for jn in JOINTS:
+        pb = arm.pose.bones[jn]; pb.rotation_euler = pose.get(jn, (0, 0, 0)); pb.location = d3 if jn == "pelvis" else (0, 0, 0)
+
+def bake_clips_skinned(arm):
+    ad = arm.animation_data_create()
+    for clip, (fn, n, loop) in CLIPS.items():
+        act = bpy.data.actions.new(clip); ad.action = act
+        for f in range(n + (1 if loop else 0)):
+            apply_pose_skinned(arm, clip, (f % n) / n if loop else f / (n - 1))
+            for pb in arm.pose.bones: pb.keyframe_insert("rotation_euler", frame=f); pb.keyframe_insert("location", frame=f)
+        tr = ad.nla_tracks.new(); tr.name = clip; tr.strips.new(clip, 0, act); ad.action = None
+    apply_pose_skinned(arm, "idle", 0)

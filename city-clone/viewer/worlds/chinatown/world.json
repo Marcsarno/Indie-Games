@@ -1,0 +1,177 @@
+{
+ "name": "chinatown",
+ "title": "Chinatown Block",
+ "extent": 44,
+ "sky": "#141c3a",
+ "fog": [
+  "#141c3a",
+  55,
+  120
+ ],
+ "hemi": [
+  "#5a6fb8",
+  "#3a3a50",
+  1.45
+ ],
+ "sun": {
+  "color": "#ff9a55",
+  "intensity": 3.1,
+  "dir": [
+   0.55,
+   -0.42,
+   0.45
+  ]
+ },
+ "exposure": 1.15,
+ "tone": "AgX",
+ "lamps": [
+  [
+   -3.8,
+   -5.3,
+   4.3
+  ],
+  [
+   -3.8,
+   5.3,
+   4.3
+  ],
+  [
+   3.8,
+   -5.3,
+   4.3
+  ],
+  [
+   3.8,
+   5.3,
+   4.3
+  ]
+ ],
+ "ground": "#20222e",
+ "start": {
+  "x": 1.3,
+  "y": -10,
+  "rz": 0
+ },
+ "money": 1250,
+ "traffic": [
+  {
+   "name": "taxi",
+   "axis": "x",
+   "lane": -1.3,
+   "dir": 1,
+   "speed": 8
+  }
+ ],
+ "walk": [
+  {
+   "axis": "y",
+   "c": 5.6,
+   "lo": -42,
+   "hi": 42
+  },
+  {
+   "axis": "y",
+   "c": -5.6,
+   "lo": -42,
+   "hi": 42
+  },
+  {
+   "axis": "y",
+   "c": 7.3,
+   "lo": -42,
+   "hi": 42
+  },
+  {
+   "axis": "y",
+   "c": -7.3,
+   "lo": -42,
+   "hi": 42
+  },
+  {
+   "axis": "x",
+   "c": 5.6,
+   "lo": -42,
+   "hi": 42
+  },
+  {
+   "axis": "x",
+   "c": -5.6,
+   "lo": -42,
+   "hi": 42
+  },
+  {
+   "axis": "x",
+   "c": 7.3,
+   "lo": -42,
+   "hi": 42
+  },
+  {
+   "axis": "x",
+   "c": -7.3,
+   "lo": -42,
+   "hi": 42
+  }
+ ],
+ "walkers": 12,
+ "fight": {
+  "x": 6.55,
+  "y": 7.3
+ },
+ "demo": {
+  "sedan": {
+   "x": -3.6,
+   "y": -26,
+   "rz": 180
+  },
+  "taxi": {
+   "x": -3.6,
+   "y": -34,
+   "rz": 180
+  },
+  "heroHome": [
+   -0.9,
+   -30
+  ],
+  "npcHome": [
+   -6.4,
+   -37
+  ]
+ },
+ "views": {
+  "drive": {
+   "label": "Play",
+   "mode": "drive",
+   "pitch": 45,
+   "dist": 44
+  },
+  "enter": {
+   "label": "Enter",
+   "tx": -3.2,
+   "ty": -31.5,
+   "pitch": 50,
+   "dist": 15
+  },
+  "town": {
+   "label": "Arch",
+   "tx": 0,
+   "ty": 16,
+   "pitch": 60,
+   "dist": 24
+  },
+  "over": {
+   "label": "Overview",
+   "tx": 0,
+   "ty": 4,
+   "pitch": 42,
+   "dist": 55
+  },
+  "top": {
+   "label": "Top",
+   "tx": 0,
+   "ty": 0,
+   "pitch": 85,
+   "dist": 34
+  }
+ },
+ "map": null
+}

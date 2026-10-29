@@ -96,6 +96,22 @@ Gotchas: Blender fits the lens to the LONGER image side (use `sensor_fit=HORIZON
 - Not done: pedestrians never fight back or flee, no kicks/weapons, cars still ignore pedestrians, hero has no health, no police, cannot pick up/drop anything; hero is invisible in a car.
 - Gotcha: `pkill -f <name>` in a Bash command kills the shell running it when the command text contains the name.
 
+**Florida pass, first slice (round 6, `art-review/round6/`):** published to the same page, title now "Grand Theft Coconut Creek".
+- Page is data-driven: `worlds/<name>/{world.json, scene.glb.b64.txt, colliders.json, cars.json, props.json}`; hash `#chinatown` loads the old block, default is `coconut`. `world.json` holds sky/fog/hemi/sun,
+  exposure, lamps, start, scripted traffic loops (axis, lane, dir, speed), walker sidewalk segments, optional fight pair and door demo, view buttons, minimap rectangles, money. Vegetation is instanced
+  from `props.json` using `veg.glb` (palms x3, shrubs x2 with flowers, hedge, oak).
+- Blender: `textures.py` (grass, stucco tints, terracotta tiles, water, wood, text signs), `vegetation.py`, `building_fl.py` (`make_house`, `make_row` townhomes, `make_plaza` with awnings, signs, tower),
+  `street_fl.py` (boulevard with palm median, cross road, sidewalks, crosswalks, parking lot with islands, signals, lamps, street signs), `coconut_scene.py` (layout + exports; `NORENDER=1` to export only).
+  Layout (metres, x east / y north): boulevard x=0 (2 lanes each way + 3.2 m palm median), Wiles Rd y=0; NE shopping plaza + 52x33 m lot; NW townhomes (2 rows of 5) + pool + clubhouse; SW two-pond park with fountain,
+  bridge (decorative), gazebo; SE city hall + lawn. Store name is the fictional PALM MARKET (concept art used a real chain name; avoid real brands in shipped art).
+- Performance work: plain colours are merged into ONE vertex-coloured material per model (`Builder.build(vc=True)`: cars 25 -> 12 draw calls, buildings/terrain similar), people are ONE skinned mesh on an 11-bone
+  armature (`make_skinned`, 6 materials), cars beyond 70 m are hidden and beyond 40 m do not cast shadows, walkers likewise, adaptive pixel ratio when fps < 27 for 2 s. Draw calls in the 44 m play view (both
+  passes): 608 -> 322; plaza view 240; ~124k triangles. NOT measured on a real phone.
+- HUD: cash ($1,250 start, +$25 per knockdown), health bar (hard crashes above 9 m/s cost 2.2%/m/s, regen 1.2%/s, at 0 respawn at the start and lose $100), circular north-up minimap (55 m radius) drawn from `world.map`.
+- Tests: all earlier driving/foot tests pass unchanged on `#chinatown`; Coconut: 184 colliders, run up the boulevard clean, wall/plaza/flagpole/shop-front stops, walkers finite.
+- Gaps vs concept: no pool water shimmer, no tennis courts/playground, no Publix-style big sign (fictional name), buildings are boxy with simple window geometry, grass is uniform (no flower beds), no
+  golf course, bus, school, or varied vehicles (only sedan/taxi recoloured), no cart/bike NPCs, water is a flat textured plane, bridge is decorative (water collider blocks it), far horizon shows a sky/ground gradient.
+
 ## Next
 (Agreed order: 1 DONE modular car doors + enter/exit animation, 2 DONE drive + arcade physics + collisions, 3 DONE on-foot control + punch + enter any car, 4 dynamic camera zoom, 5 pedestrian reactions, then baked lighting and more content.)
 0. User feedback on the phone page (look, camera angle, mood, frame rate on the real device).

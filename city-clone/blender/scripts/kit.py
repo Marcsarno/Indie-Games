@@ -73,17 +73,26 @@ class Builder:
         bmesh.ops.recalc_face_normals(bm, faces=new)
         if mat_fn:
             for f in new: f.material_index = self._mi(mat_fn(f.normal))
+    def ribbon(self, m, pts, widths, dirv, fold=.18):
+        """A folded leaf blade along the 3D polyline pts (midrib), half-widths `widths`, horizontal direction dirv=(dx,dy). Single-winding; use a double-sided material."""
+        bm = self.bm; sx, sy = -dirv[1], dirv[0]; L = []; Mv = []; Rv = []
+        for p_, w in zip(pts, widths):
+            Mv.append(bm.verts.new(p_)); L.append(bm.verts.new((p_[0] + sx * w, p_[1] + sy * w, p_[2] - fold * w))); Rv.append(bm.verts.new((p_[0] - sx * w, p_[1] - sy * w, p_[2] - fold * w)))
+        mi = self._mi(m)
+        for i in range(len(pts) - 1):
+            for a, b in ((L, Mv), (Mv, Rv)): self._quad([a[i], a[i + 1], b[i + 1], b[i]], mi)
     def cyl(self, m, center, r, depth, axis="x", segs=12, r2=None):
         rot = {"x": Matrix.Rotation(math.radians(90), 4, "Y"), "y": Matrix.Rotation(math.radians(90), 4, "X"), "z": Matrix.Identity(4)}[axis]
         mat = Matrix.Translation(center) @ rot
         res = bmesh.ops.create_cone(self.bm, cap_ends=True, cap_tris=False, segments=segs, radius1=r, radius2=(r if r2 is None else r2), depth=depth, matrix=mat)
         for f in {f for v in res["verts"] for f in v.link_faces}: f.material_index = self._mi(m)
-    def build(self, bevel=0.0, collection=None):
+    def build(self, bevel=0.0, collection=None, vc=False):
         bmesh.ops.recalc_face_normals(self.bm, faces=self.bm.faces[:])
         me = bpy.data.meshes.new(self.name); self.bm.to_mesh(me); self.bm.free()
         for m in self.mats: me.materials.append(m)
         o = bpy.data.objects.new(self.name, me); (collection or bpy.context.scene.collection).objects.link(o)
         for p in me.polygons: p.use_smooth = False
+        if vc: _merge_plain_materials(me)
         uv = me.uv_layers.new(name="UVMap")                   # world-metre box projection, scaled per material tile (or fitted per face)
         for poly in me.polygons:
             m = me.materials[poly.material_index]; tile = m.get("tile", 1.0) or 1.0; n = poly.normal
@@ -103,3 +112,39 @@ class Builder:
             bpy.ops.object.select_all(action="DESELECT"); o.select_set(True)
             bpy.ops.object.modifier_apply(modifier="bevel")
         return o
+
+
+def vc_material():
+    """One shared material that reads the 'Col' vertex colour (used for every plain, un-textured, non-emissive, non-paint material of a model)."""
+    m = bpy.data.materials.get("vc_plain")
+    if m: return m
+    m = bpy.data.materials.new("vc_plain"); m.use_nodes = True; b = m.node_tree.nodes["Principled BSDF"]
+    a = m.node_tree.nodes.new("ShaderNodeVertexColor"); a.layer_name = "Col"; m.node_tree.links.new(a.outputs["Color"], b.inputs["Base Color"])
+    b.inputs["Roughness"].default_value = .85
+    for k in ("Specular IOR Level", "Metallic"):
+        if k in b.inputs: b.inputs[k].default_value = 0
+    return m
+
+def _merge_plain_materials(me):
+    """Collapse plain colour materials into one vertex-coloured material: far fewer draw calls (one per model instead of one per colour)."""
+    mats = list(me.materials); mergeable = []
+    for m in mats:
+        has_tex = any(n.type == "TEX_IMAGE" for n in m.node_tree.nodes) if m.use_nodes else False
+        emissive = False
+        if m.use_nodes:
+            bsdf = m.node_tree.nodes.get("Principled BSDF"); emissive = bool(bsdf and "Emission Strength" in bsdf.inputs and bsdf.inputs["Emission Strength"].default_value > 0)
+        mergeable.append(not has_tex and not emissive and not m.name.startswith("paint_"))
+    if sum(mergeable) < 2: return
+    vcm = vc_material(); keep = [m for m, g in zip(mats, mergeable) if not g]; newidx = {}
+    for i, (m, g) in enumerate(zip(mats, mergeable)): newidx[i] = (len(keep) if g else keep.index(m))
+    col = me.color_attributes.new("Col", "FLOAT_COLOR", "CORNER"); final = []
+    for poly in me.polygons:
+        i = poly.material_index
+        if mergeable[i]:
+            c = mats[i].diffuse_color
+            for li in poly.loop_indices: col.data[li].color = (c[0], c[1], c[2], 1.0)
+        final.append(newidx[i])
+    me.materials.clear()                       # clearing resets the face indices, so assign them AFTER re-adding the materials
+    for m in keep: me.materials.append(m)
+    me.materials.append(vcm)
+    for poly, k in zip(me.polygons, final): poly.material_index = k

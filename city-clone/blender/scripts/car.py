@@ -42,7 +42,7 @@ def make_car(kind="sedan", color="#c8201c", name="car", doors=4):
             b.cyl(tire, (s * .80, y, .34), .34, .26, "x", 12); b.cyl(hub, (s * .80 + s * .11, y, .34), .17, .06, "x", 8)
     if kind == "taxi":
         sign = M("taxi_sign", "#fff7d0", emit=1.2); b.box(sign, -.36, .36, -.25, .25, 1.40, 1.58); b.box(dark, -.36, .36, -.05, .05, 1.52, 1.58)
-    body = b.build(bevel=0.04); body.parent = root
+    body = b.build(bevel=0.04, vc=True); body.parent = root
 
     names = []
     specs = [("F", 1.00, -.13), ("R", -.17, -1.20)] if doors == 4 else [("F", 1.00, -1.00)]      # (row, hinge y = front edge, rear edge y)
@@ -59,7 +59,7 @@ def make_car(kind="sedan", color="#c8201c", name="car", doors=4):
             d.prism(glass, (xb[0], xb[1], wy0 - yh, wy1 - yh), (xt[0], xt[1], wy0 - yh, wy1 - yh), .93, 1.38)   # window, follows the cabin slope
             dbox(dark, .95, .985, yr + .10, yr + .32, .78, .83)                               # handle
             if row == "F": dbox(paint, .90, 1.05, yh - .24, yh + .02, 1.0, 1.10)             # mirror rides on the front door
-            door = d.build(bevel=0.02); door.parent = root; door.location = (s * HW, yh, 0)
+            door = d.build(bevel=0.02, vc=True); door.parent = root; door.location = (s * HW, yh, 0)
             door["side"] = s; door["max_open_deg"] = DOOR_DEG; door["tag"] = tag
             names.append(tag)
     for tag in names:
