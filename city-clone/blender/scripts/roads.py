@@ -230,3 +230,10 @@ def lake_colliders(ring, cx, cy, shrink=.4):
 def lane_path(road, off, rev=False, step=3.0, s0=0.0, s1=None):
     s1 = road.L if s1 is None else s1; xs = _samples(road, s0, s1); pts = [road.off(s, off) for s in xs]
     return pts[::-1] if rev else pts
+
+
+def flat_blob(R, mat, ctrl, z, step=3.0):
+    """Flat star-shaped blob (fairways, greens, bunkers) from closed Catmull control points; returns the ring."""
+    ring = blob(ctrl, step); cx = sum(p[0] for p in ring) / len(ring); cy = sum(p[1] for p in ring) / len(ring)
+    for i in range(len(ring)): R.poly(mat, [(cx, cy, z), (*ring[i], z), (*ring[(i + 1) % len(ring)], z)])
+    return ring

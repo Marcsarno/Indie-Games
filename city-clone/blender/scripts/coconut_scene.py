@@ -2,7 +2,7 @@
 Exports to out/: coconut_scene.glb (static), props.json (vegetation instances), colliders.json, cars.json, world.json."""
 import sys, os, json, math, random; sys.path.insert(0, os.path.dirname(__file__)); sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'plan'))
 import layout as LY
-from kit import *; from street_fl import *; from building_fl import make_house, make_row, make_plaza; import vegetation as veg; from car import make_car; import mood; import roads as rd; import civic; import time as _t; T0 = _t.time()
+from kit import *; from street_fl import *; from building_fl import make_house, make_row, make_plaza; import vegetation as veg; from car import make_car; import mood; import roads as rd; import civic; import district_kits as dk; import time as _t; T0 = _t.time()
 def tick_(n): print('T', n, round(_t.time() - T0, 1))
 
 reset(); mood.florida(); mood._transform(); R_ = random.Random(7)
@@ -43,7 +43,26 @@ PKWY = rd.Road("Coconut Creek Pkwy", [(40, -190), (30, -150), (18, -120), (16, -
 WILES = rd.Road("Wiles Rd", [(-182, -16), (-150, -17), (-128, -16), (-104, -14), (-72, -16), (-40, -10), (-12, -6), (8, -5), (30, -9), (51.5, -7.6)], hw=3.5, rank=8, flare=5.5)
 RING = rd.ring_road("Plaza Circle", 58, -8, 10, 3.6, rank=9, seam=math.pi * 1.5)
 WILES_E = rd.Road("Wiles Rd E", [(66.5, -8), (80, -7), (104, -2), (130, 2), (156, 6), (176, 6)], hw=3.5, rank=8, flare=5.5)
-ENTRY = rd.Road("Plaza Entry", [(58, 0.5), (58, 5), (58, 12)], hw=3.0, rank=6, flare=4.5)
+ENTRY = rd.Road("Plaza Entry", [(58, 0.5), (57, 4), (53, 9), (47.6, 14.4), (44, 15)], hw=3.0, rank=6, flare=4.5)
+EGRET = rd.Road("Egret Way", [(58, 84), (57, 70), (60, 55), (63, 40), (61, 28), (60, 23)], hw=3.5, rank=5)
+DEPOT_RD = rd.Road("Depot Rd", [(156, -124), (154, -150), (156, -182)], hw=4.5, rank=5, flare=6.0, sw=(0, 0))
+PROM = rd.Road("Promenade", [(86, 132), (110, 146), (134, 160), (152, 171)], hw=5.0, rank=3, sw=(0, 0), mark=False, surf="walk", curbs=False, flare=0)
+def cds(name, cx, cy): return rd.ring_road(name, cx, cy, 6.0, 2.8, rank=7, seam=-math.pi / 2 - 1.0, flare=1.6)
+SUB1 = rd.Road("Orchid Way", [(-116, -68), (-138, -72), (-158, -82), (-172, -80)], hw=3.5, rank=5)
+SUB2 = rd.Road("Jasmine Lane", [(-114, -100), (-130, -108), (-124, -130), (-122, -154), (-130, -176)], hw=3.5, rank=5)
+SUB3 = rd.Road("Palmetto Lane", [(-114, -46), (-138, -44), (-160, -50), (-172, -58)], hw=3.5, rank=5)
+SUB4 = rd.Road("Gumbo Limbo Way", [(-100, -136), (-110, -150), (-128, -162), (-122, -180)], hw=3.5, rank=4)
+SUB_CTS = [cds("Orchid Ct", -178, -79), cds("Palmetto Ct", -178, -60), cds("Gumbo Ct", -122, -186)]
+GATED = rd.Road("Gated Lane", [(-124, 126), (-146, 128), (-160, 134), (-166, 140)], hw=3.5, rank=5)
+GATED_CT = cds("Gated Ct", -168, 143)
+CONDO_DR = rd.Road("Condo Dr", [(30, -164), (58, -166), (82, -166)], hw=4.0, rank=5, flare=5.0)
+CONDO_CIRCLE = rd.ring_road("Condo Circle", 92, -166, 12.0, 4.0, rank=7, seam=math.pi * .25, flare=4.0, swo=0)
+PRESERVE_RD = rd.Road("Preserve Rd", [(-82, -130), (-80, -150), (-74, -172)], hw=3.0, rank=5, flare=4.5)
+BOARDWALK = rd.Road("Boardwalk", [(-70, -168), (-62, -150), (-76, -138), (-92, -150), (-86, -170)], hw=1.4, rank=1, sw=(0, 0), mark=False, surf="wood", curbs=False, flare=0)
+CAMPUS_DR = rd.Road("Campus Dr", [(-116, 52), (-138, 53), (-152, 57)], hw=3.5, rank=5)
+CLUB_DR = rd.Road("Club Dr", [(116, 44), (136, 48), (150, 56)], hw=3.5, rank=5)
+CARTPATH = rd.Road("Cart path", [(142, 90), (176, 84), (186, 50), (170, 20), (146, 10), (138, 40)], hw=1.1, closed=True, rank=1, sw=(0, 0), mark=False, surf="walk", curbs=False, flare=0)
+EGRET_CT = rd.ring_road("Egret Ct", 60, 17.5, 6.0, 2.8, rank=7, seam=-math.pi / 2 - 1.0, flare=1.6)
 LAKEVIEW = rd.Road("Lakeview Dr", [(58, -15.5), (58, -34), (64, -56), (60, -80), (64, -104), (68, -128), (70, -133)], hw=3.5, rank=6)
 PLAZA_DR = rd.Road("Plaza Dr", [(16, 17.6), (2, 17.9), (-14, 17.6)], hw=3.0, rank=6, flare=4.5)
 SCHOOL_DR = rd.Road("School Dr", [(56, -43), (66, -43), (74, -43)], hw=3.0, rank=5, flare=4.5)
@@ -60,7 +79,7 @@ def organic(cx, cy, rx, ry, seed, n=12, wob=.28, rot=0.0):                      
         x, y = rx * f * math.cos(a), ry * f * math.sin(a); c_, s_ = math.cos(rot), math.sin(rot); out.append((cx + x * c_ - y * s_, cy + x * s_ + y * c_))
     return out
 LAKES_CTRL = {"windmill": organic(-46, -44, 24, 17, 3, 14, .3, .25), "pond_w": organic(-84, -62, 11, 8, 5, 9, .25, .6), "wiles": organic(-54, 9, 23, 8.5, 8, 12, .28, -.08),
-              "north": organic(88, 47, 11, 12.5, 11, 11, .22, .2)}
+              "north": organic(88, 47, 11, 12.5, 11, 11, .22, .2), "golf1": organic(168, 66, 9, 6, 52, 9, .2, .3), "marsh1": organic(-76, -122, 7, 4, 54, 9, .2, 0), "marsh2": organic(-94, -166, 6, 4, 55, 9, .2, 0)}
 # ---- plan roads (plan/layout.py): arterials and collectors outside the kept centre
 MAINS = {nm: rd.Road(nm, d["pts"], hw=d["hw"], rank=d["rank"], sw=d["sw"], flare=5.5 if d["hw"] > 4 else 4.5) for nm, d in LY.MAIN_ROADS.items()}
 def crossing(A_, B_):
@@ -72,7 +91,7 @@ def crossing(A_, B_):
     return best[1]
 sx_, sy_ = crossing(PKWY, MAINS["Lyons Rd"]); SHORE_CIRCLE = rd.ring_road("Shore Circle", sx_, sy_, 14.0, 4.5, rank=12, seam=math.pi * .25, flare=5.0, swo=0)
 coast = rd.Road("coast", LY.OUTLINE, hw=1.0, closed=True, rank=0, sw=(0, 0), mark=False, flare=0); land_poly = coast.d[::6]
-net = rd.build_network([PKWY, WILES, RING, WILES_E, ENTRY, LAKEVIEW, PLAZA_DR, PALM, CUL, SCHOOL_DR, CIVIC_DR, HERON, HERON_CT, PARK_DR, SHORE_CIRCLE] + list(MAINS.values()))
+net = rd.build_network([PKWY, WILES, RING, WILES_E, ENTRY, LAKEVIEW, PLAZA_DR, PALM, CUL, SCHOOL_DR, CIVIC_DR, HERON, HERON_CT, PARK_DR, SHORE_CIRCLE, EGRET, EGRET_CT, DEPOT_RD, PROM, SUB1, SUB2, SUB3, SUB4, GATED, GATED_CT, CONDO_DR, CONDO_CIRCLE, PRESERVE_RD, CAMPUS_DR, CLUB_DR] + SUB_CTS + list(MAINS.values()))
 tick_('network')
 # water, banks (flat meshes) + trails around the big lake
 LAKES = {}
@@ -164,19 +183,18 @@ def lamp_round(x, y, dx, dy, h=5.5):                                            
 MAP.insert(0, [0, 0, 0, 0, "#5d9a3a", "poly", [[round(p[0], 1), round(p[1], 1)] for p in coast.d[::10]]])
 # NE: shopping plaza + parking lot (axis-aligned rectangle, entered from Plaza Dr (aisle y=15) and Plaza Entry (x=58))
 OY = 2.6
-LX0, LX1, LY0, LY1 = 14, 66, 6.4 + OY, 39.0 + OY
-T.box(m["conc"], LX0, LX1, 39.0 + OY, 42.0 + OY, 0, .12)
-rows = [(6.8 + OY, 12.0 + OY), (18.0 + OY, 23.2 + OY), (23.2 + OY, 28.4 + OY), (34.4 + OY, 39.0 + OY)]
+LX0, LX1, LY0, LY1 = 14, 46, 9.0, 26.0                                                                                   # the shopping plaza is now small: 32 x 17 m lot, 28 x 12 m building
+T.box(m["conc"], LX0, LX1, LY1, LY1 + 3.0, 0, .12)
+rows = [(9.0, 14.2), (20.8, 26.0)]
 islands, stalls = parking_lot(T, m, LX0, LX1, LY0, LY1, rows, 15.0)
-mapr(LX0, LY0, LX1, LY1, "#5a5c60"); mapr(LX0, 39 + OY, LX1, 42 + OY, "#a9a69c"); NOGO.append((LX0 - 2, LY0 - 2, LX1 + 2, 63))
+mapr(LX0, LY0, LX1, LY1, "#5a5c60"); mapr(LX0, LY1, LX1, LY1 + 3, "#a9a69c"); NOGO.append((LX0 - 2, LY0 - 2, LX1 + 2, 44))
 for (ix, iy, iw, idp) in islands:
     cbox(ix, iy, iw, idp, soft="bush")
     if R_.random() < .4: prop("palm_medium", ix, iy, 1.0, col=False)
     else: prop("shrub_a", ix, iy, 1.0, col=False)
-plaza = put(make_plaza("plaza", 44, 16, tower_x=10), 40, 50 + OY, 0, 0, 44.5, 17.5); mapr(18, 42 + OY, 62, 58 + OY, "#c9b48a")
-for k in range(11):
-    if k % 4 == 1: prop("palm_tall", 17 + k * 4.6, 40.6 + OY, 1.0)
-for x in (24, 40, 56): lamp(T, x, 30.5 + OY, 1); lamp(T, x, 14.5 + OY, -1)
+plaza = put(make_plaza("plaza", 28, 12, tower_x=-4), 30, 35, 0, 0, 28.5, 12.5); mapr(16, 29, 44, 41, "#c9b48a")
+for x in (19, 31, 43): prop("palm_tall", x, 27.8, 1.0)
+for x in (20, 32, 44): lamp(T, x, 12.0, -1)
 # NW: townhomes, pool + clubhouse, single-family homes laid out along the streets (house fronts face the road)
 rowA = put(make_row("rowA", 5, 6.4, 10, 2, 3), -38, 44, 0, 0, 32, 10.2); rowB = put(make_row("rowB", 4, 6.4, 10, 2, 5), -35, 58, 0, 0, 25.6, 10.2)
 mapr(-54, 39, -22, 49, "#b5603e"); mapr(-47.8, 53, -22.2, 63, "#b5603e"); NOGO += [(-56, 36, -20, 65)]
@@ -264,11 +282,11 @@ def corridor_dist(road, x, y, cap=45.0):
             for idx in cells.get((i, j), ()):
                 if idx in seen: continue
                 seen.add(idx); ax, ay, bx, by = segs[idx]; dx, dy = bx - ax, by - ay; l2 = dx * dx + dy * dy or 1; t = max(0, min(1, ((x - ax) * dx + (y - ay) * dy) / l2)); best = min(best, math.hypot(x - ax - dx * t, y - ay - dy * t))
-    return (best if best < 1e9 else 1e3) - (road.hw + rd.CURB + rd.SWK)
+    return (best if best < 1e9 else 1e3) - (road.hw + rd.CURB + (rd.SWK if any(road.sw) else 0.0))
 FOOTREG = []                                                                                                                      # footprints added by try_place (same tuple format as footprints())
 def footprints():
     R = lambda nm, x0, y0, x1, y1, allow=(): (nm, (x0 + x1) / 2, (y0 + y1) / 2, x1 - x0, y1 - y0, 0.0, allow)
-    F = [R("plaza lot", LX0, LY0, LX1, LY1, ("Plaza Dr", "Plaza Entry")), R("plaza building", 18, 42 + OY, 62, 58 + OY), R("townhomes A", -54, 39, -22, 49), R("townhomes B", -47.8, 53, -22.2, 63), R("pool deck", *POOL),
+    F = [R("plaza lot", LX0, LY0, LX1, LY1, ("Plaza Dr", "Plaza Entry")), R("plaza building", 16, 29, 44, 41), R("townhomes A", -54, 39, -22, 49), R("townhomes B", -47.8, 53, -22.2, 63), R("pool deck", *POOL),
          R("clubhouse", -43, 80, -29, 90), R("city hall", HALL[0] - 14.3, HALL[1] - 7.3, HALL[0] + 14.3, HALL[1] + 7.3), R("hall lot", *HL, ("Civic Dr",))]
     for k_, (cx_, cy_) in enumerate(COURTS): F.append(R(f"court {k_ + 1}", cx_ - 6.8, cy_ - 14.3, cx_ + 6.8, cy_ + 14.3))
     F += [R("playground", PLAY[0] - 4.5, PLAY[1] - 3.5, PLAY[0] + 4.5, PLAY[1] + 3.5), R("school", SB[0] - 12.2, SB[1] - 5.2, SB[0] + 12.2, SB[1] + 5.2), R("school lot", *SL, ("School Dr",)), R("sports field + track", fx_ - 12.4, fy_ - 20.9, fx_ + 12.4, fy_ + 20.9)]
@@ -327,6 +345,8 @@ def check_layout():
             if r.surf != "asphalt": continue
             worst = min(corridor_dist(r, x, y, cap=8) for (x, y) in ring)
             if worst < 1.3: bad.append(f"lake {lk} shore is within {worst:.1f} m of the corridor of {r.name} (needs 1.3 m of bank)")
+    for lk, (ring, _) in LAKES.items():
+        if any(not on_land(x, y, 4.0) for (x, y) in ring[::3]): bad.append(f"lake {lk} is too close to the coast")
     for tr in (TRAIL, TRAIL2):
         pts_ = [tr.at(i * tr.L / 80)[:2] for i in range(80)]
         for r in net:
@@ -370,7 +390,7 @@ WALLS = ["cream", "peach", "butter", "sand", "white"]
 def row_along(road, side, s0, s1, step, kind, make, w, d, gap=1.5, near=60, clear=1.2):
     n = 0; s_ = s0
     while s_ < s1:
-        x, y, tx, ty = road.at(s_); off = side * (road.hw + rd.CURB + rd.SWK + gap + d / 2); px, py = road.off(s_, off)
+        x, y, tx, ty = road.at(s_); off = side * (road.hw + rd.CURB + (rd.SWK if any(road.sw) else 0.0) + gap + d / 2); px, py = road.off(s_, off)
         rz = math.degrees(math.atan2(ty, tx)) if side > 0 else math.degrees(math.atan2(-ty, -tx))
         if try_place(kind, lambda nm, n=n: make(nm, n % 8), px, py, rz, w, d, clear, near=near, variants=8, vkey=n): n += 1
         s_ += step
@@ -383,6 +403,10 @@ for side, cl_ in ((1, .5), (-1, 2.6)): row_along(HERON, side, 6, HERON.L - 4, 13
 for k_, ang in enumerate((-90, 0, 180, 90)):                                                                               # homes around the Heron Ct bulb, fronts toward the island
     a_ = math.radians(ang); dist = 6 + 2.8 + rd.CURB + rd.SWK + 2.0 + 4.5; px, py = 84 + math.cos(a_) * dist, 78.5 + math.sin(a_) * dist
     try_place("ctrhome", lambda nm, k_=k_: home_maker(nm, k_ + 5), px, py, math.degrees(a_) - 90, 12, 9, 0.4)
+for side in (1, -1): row_along(EGRET, side, 6, EGRET.L - 4, 13.4, "ehome", home_maker, 12, 9, gap=1.6, clear=.3)
+for k_, ang in enumerate((-90, 0, 180, 90)):                                                                               # homes around the Egret Ct bulb
+    a_ = math.radians(ang); dist = 6 + 2.8 + rd.CURB + rd.SWK + 1.8 + 4.5; px, py = 60 + math.cos(a_) * dist, 17.5 + math.sin(a_) * dist
+    try_place("ehome", lambda nm, k_=k_: home_maker(nm, k_ + 3), px, py, math.degrees(a_) - 90, 12, 9, 0.4)
 # -- east: gas station + apartments along Wiles Rd E, apartments where the street grid allows
 gas_done = False
 for gx_ in range(68, 90, 2):
@@ -392,7 +416,7 @@ for gx_ in range(68, 90, 2):
             fx0, fy0 = gx_ + 9.5, gy_ + 9.5; cbox(fx0, fy0 + 6, 9.4, 6.4); [ccir(fx0 + sx_, fy0 + sy_, .2) for sx_ in (-4.8, 4.8) for sy_ in (-5.4, -.3)]; gas_done = True
             sq = WILES_E.nearest(fx0, fy0 - 9.5)[1]; ex_, ey_ = WILES_E.off(sq, WILES_E.hw + .1); T.box(m["asphalt"], fx0 - 3.6, fx0 + 3.6, min(ey_, fy0 - 9.4) - 0.2, fy0 - 9.4, 0, .16)       # driveway apron to the street
             break
-row_along(WILES_E, 1, 8, WILES_E.L - 2, 24.0, "apt", apt_maker, 22, 11, gap=2.5, clear=1.0)
+row_along(WILES_E, 1, 8, min(WILES_E.L - 2, WILES_E.nearest(122, -1)[1]), 24.0, "apt", apt_maker, 22, 11, gap=2.5, clear=1.0)
 row_along(HERON, -1, 6, HERON.L - 4, 25.0, "apt", apt_maker, 22, 11, gap=3.0, clear=1.0)
 for ya in range(4, 40, 6):                                                                                                  # apartments in the east strip, facing the nearest street
     for xa in range(70, 92, 6):
@@ -433,6 +457,151 @@ for (tr, side_) in ((TRAIL, 1), (TRAIL, -1), (TRAIL2, 1)):                      
         add_static(lambda B_, px=px, py=py: civic.picnic(B_, CM, cbs, px, py), px, py, 2.4, 2.6, "picnic", .6)
 
 tick_('districts')
+def scatter(kind, n, x0, y0, x1, y1, pad=3.0, gap=9.0, shrub_too=True):
+    placed = []; tries = 0
+    while len(placed) < n and tries < n * 40:
+        tries += 1; x, y = R_.uniform(x0, x1), R_.uniform(y0, y1)
+        if not free(x, y, pad) or any(math.hypot(x - a, y - b) < gap for a, b in placed): continue
+        placed.append((x, y)); prop(kind, x, y, R_.uniform(1.0, 1.25) if kind == "oak" else 1.0)
+        if shrub_too and R_.random() < .6: prop("shrub_a" if R_.random() < .5 else "shrub_b", x + R_.uniform(-2, 2), y + R_.uniform(-2, 2))
+# ================================================================  PLAN DISTRICTS (phase 2): east-centre homes, industrial, retail commons, promenade  ================
+fill("ehome", home_maker, 12, 9, 14, 12, .4, step=5, seed=12, region=(44, 6, 100, 100))
+# -- industrial lobe (south-east): warehouses along Dock St, Depot Rd and the south arterial, container yards, trucks, water tower
+def wh_maker(nm, n): return dk.warehouse(nm, 24, 18, 100 + n)
+SA = MAINS["South Arterial"]
+for (road_, side_, a_, b_) in ((SA, -1, SA.nearest(122, -128)[1], SA.nearest(188, -140)[1]), (SA, 1, SA.nearest(122, -128)[1], SA.nearest(188, -140)[1]), (DEPOT_RD, 1, 18, DEPOT_RD.L - 4), (DEPOT_RD, -1, 18, DEPOT_RD.L - 4)):
+    row_along(road_, side_, a_, b_, 4.0, "wh", wh_maker, 24, 18, gap=1.8, clear=.8)
+IND_BOX = (118, -190, 196, -100)
+rr_ = random.Random(33)
+for _ in range(300):
+    x, y = rr_.uniform(IND_BOX[0] + 8, IND_BOX[2] - 8), rr_.uniform(IND_BOX[1] + 6, IND_BOX[3] - 6); rz_ = rr_.choice((0, 90)); w_, d_ = (20.0, 7.0) if rz_ == 0 else (7.0, 20.0)
+    if PLACED.get("yard", 0) < 9 and try_place("yard", lambda nm, sd=rr_.randint(1, 99): dk.containers(nm, 3, 2, 2, sd), x, y, rz_, 20.0, 7.0, 2.0, near=22): pass
+    elif PLACED.get("truck", 0) < 8 and try_place("truck", lambda nm, sd=rr_.randint(1, 99): dk.truck(nm, sd), x, y, rr_.choice((0, 90)), 3.0, 13.0, 1.5, near=22): pass
+for (x, y) in ((150, -150), (146, -152), (160, -152), (172, -150), (140, -146)):
+    if try_place("tower", lambda nm: dk.water_tower(nm), x, y, 0, 10, 10, 2.0): break
+# -- retail commons (north-west): big-box + two strip plazas, each with its own lot facing Lyons Rd
+LY_ = MAINS["Lyons Rd"]
+def retail_block(xc, side, w, d_b, name, lot_d=16.0):
+    sa = LY_.nearest(xc, 150)[1]; rx, ry, tx, ty = LY_.at(sa); inner = LY_.hw + rd.CURB + rd.SWK + 3.2
+    ys_ = [LY_.at(LY_.nearest(xc + dxx * w / 2, 150)[1])[1] for dxx in (-1, -.5, 0, .5, 1)]; ry = max(ys_) if side > 0 else min(ys_)
+    y_lot0 = ry + inner if side > 0 else ry - inner - lot_d; y_lot1 = y_lot0 + lot_d
+    y_b0, y_b1 = (y_lot1, y_lot1 + d_b) if side > 0 else (y_lot0 - d_b, y_lot0)
+    f = (f"{name}", xc, (y_lot0 + y_b1) / 2 if side > 0 else (y_b0 + y_lot1) / 2, w, lot_d + d_b, 0.0, ())
+    pr_ = fp_problems(f, footprints(), 1.5)
+    if pr_:
+        if os.environ.get('DEBUGPLACE'): print('SKIP retail', name, round(xc), pr_[:2])
+        return False
+    rows_ = [(y_lot0, y_lot0 + 5.2), (y_lot1 - 5.2, y_lot1)]
+    isl, stl = parking_lot(T, m, xc - w / 2, xc + w / 2, y_lot0, y_lot1, rows_, xc - w / 2 + 1.0)
+    for (ix, iy, iw, idp) in isl: cbox(ix, iy, iw, idp, soft="bush"); prop("shrub_a" if R_.random() < .5 else "palm_small", ix, iy, 1.0, col=False)
+    bo = make_plaza(name + "_b", w, d_b, 7.5 if d_b < 20 else 9.0, tower_x=-w / 2 + 8); put(bo, xc, (y_b0 + y_b1) / 2, 0, 0 if side > 0 else 180, w + .5, d_b + .5)
+    ry_c = LY_.at(LY_.nearest(xc, 150)[1])[1]; edge_y = ry_c + side * (LY_.hw + .2); T.box(m["asphalt"], xc - 3.6, xc + 3.6, min(edge_y, y_lot0 if side > 0 else y_lot1), max(edge_y, y_lot0 if side > 0 else y_lot1), 0, .16)
+    print('RETAIL placed', name, round(xc), round(f[2]))
+    FOOTREG.append(f); NOGO.append((xc - w / 2 - 2, f[2] - f[4] / 2 - 2, xc + w / 2 + 2, f[2] + f[4] / 2 + 2)); mapr(xc - w / 2, y_lot0, xc + w / 2, y_lot1, "#5a5c60"); mapr(xc - w / 2, y_b0, xc + w / 2, y_b1, "#c9b48a")
+    for (sx_s, sy_s) in stl:
+        if R_.random() < .33: PARKED.append((sx_s, sy_s, 0 if sy_s < (y_lot0 + y_lot1) / 2 else 180))
+    return True
+PARKED = []
+for (xc, side, w, d_b, nm) in ((-75, -1, 46, 18, "bigbox"), (-75, 1, 34, 14, "strip0"), (-52, -1, 30, 14, "strip1"), (-100, 1, 30, 14, "strip2"), (-48, 1, 30, 14, "strip3")):
+    for dx_ in (0, -6, 6, -12, 12, -18, 18, -24, 24, -30, 30):
+        if retail_block(xc + dx_, side, w, d_b, nm): break
+# -- promenade (north-east, along the north bay): pedestrian lane, shop rows on both sides, fountain square, garage
+PROM_SHOPS = (("restaurant_fl", 7, "#8c1c1c"), ("nails", 5, "#7a2f6a"), ("coffee", 6, "#21453a"), ("pizza", 5, "#b8321f"), ("cleaners", 6, "#a63c2a"))
+def prom_maker(nm, n): return make_plaza(nm, 29, 12, 8.0, shops=PROM_SHOPS[n % 5:] + PROM_SHOPS[:n % 5], tower_x=-8, seed=n)
+for side in (1, -1): row_along(PROM, side, 2, PROM.L - 12, 30.5, "shop", prom_maker, 29, 12, gap=0.6, clear=.5, near=30)
+fx_p, fy_p = PROM.at(PROM.L - 4)[:2]
+T.cyl(m["conc"], (fx_p, fy_p, .06), 11.0, .12, "z", 24); T.cyl(m["bank"], (fx_p, fy_p, .14), 4.4, .3, "z", 16); T.cyl(m["water"], (fx_p, fy_p, .25), 3.9, .1, "z", 16)
+FB_ = Builder("fountain2"); FB_.cyl(M("fount", "#e8f0f4"), (fx_p, fy_p, 1.3), .4, 2.6, "z", 8, r2=.14); STATIC.append(FB_.build()); ccir(fx_p, fy_p, 4.6)
+for q_ in range(1, int(PROM.L // 9)):                                                                                       # planters (soft) and bollards at both ends
+    px_, py_, tx_, ty_ = PROM.at(q_ * 9.0); 
+    for sd_ in (1, -1): prop("shrub_b" if (q_ + (sd_ > 0)) % 2 else "shrub_a", px_ - ty_ * sd_ * 3.4, py_ + tx_ * sd_ * 3.4, .8)
+for sA_ in (1.0, PROM.L - 1.0):
+    px_, py_, tx_, ty_ = PROM.at(sA_)
+    for sd_ in (-3.5, 0.0, 3.5): ccir(px_ - ty_ * sd_, py_ + tx_ * sd_, .25, "pole")
+try_place("garage", lambda nm: dk.garage(nm, 44, 24, 3), 112, 113, 0, 44, 24, 2.0, near=40) or try_place("garage", lambda nm: dk.garage(nm, 44, 24, 3), 128, 132, 0, 44, 24, 2.0, near=40)
+
+def first_fit(kind, maker, w, d, region, step=6, near=None, clear=1.5, rz_fn=None, tries=400):
+    xs = list(range(int(region[0]), int(region[2]) + 1, step)); ys = list(range(int(region[1]), int(region[3]) + 1, step)); rr2 = random.Random(len(kind)); cand = [(x, y) for x in xs for y in ys]; rr2.shuffle(cand)
+    for (x, y) in cand[:tries]:
+        if try_place(kind, maker, x, y, rz_fn(x, y) if rz_fn else 0, w, d, clear, near=near): return True
+    return False
+# -- suburbs (south-west / west): curvy streets, roomy lots, cul-de-sac bulbs
+def ring_homes(cx, cy, kind, n=6, r=6.0, seed=0, gap=2.0):
+    for k_ in range(n):
+        a_ = math.radians(k_ * 360 / n + 20); dist = r + 2.8 + rd.CURB + rd.SWK + gap + 4.5; px, py = cx + math.cos(a_) * dist, cy + math.sin(a_) * dist
+        try_place(kind, lambda nm, k_=k_: home_maker(nm, (k_ + seed) % 8), px, py, math.degrees(a_) - 90, 12, 9, 0.4, variants=8, vkey=k_ + seed)
+for rd_ in (SUB1, SUB2, SUB3, SUB4):
+    for side in (1, -1): row_along(rd_, side, 6, rd_.L - 4, 15.5, "sub", home_maker, 12, 9, gap=3.0, clear=.4)
+for k_, ct in enumerate(SUB_CTS): ring_homes(ct.island[0], ct.island[1] if False else ct.island[1], "sub", 6, 6.0, k_ * 2)
+for k_, ct in enumerate(SUB_CTS): pass
+# -- gated townhome community (north-west): gate arch over Gated Lane, townhome rows, clubhouse + pool by the bulb
+gx_, gy_, gtx, gty = GATED.at(30.0); gate_o = dk.gate("gate_obj", 15)
+put(gate_o, gx_, gy_, 0, math.degrees(math.atan2(gty, gtx)) - 90, None, None, col=False)
+for sd_ in (-1, 1): ccir(gx_ - gty * sd_ * 7.5, gy_ + gtx * sd_ * 7.5, .9)
+FOOTREG.append(("gate", gx_, gy_, 18, 6, math.degrees(math.atan2(gty, gtx)) - 90, ("Gated Lane",)))
+def trow_maker(nm, n): return make_row(nm, 4, 6.4, 10, 2, 60 + n)
+for side in (1, -1): row_along(GATED, side, 22, GATED.L - 6, 7.0, "grow", trow_maker, 25.6, 10.2, gap=2.2, clear=.6)
+first_fit("gclub", lambda nm: make_house(nm, 14, 10, 1, "cream", 2, balcony=False, roof_h=3.2), 14, 10, (-165, 110, -130, 150), 4, 14, 1.5, road_facing_rz)
+# -- lakeside homes along Lyons Rd's shore side and the north end of the boulevard
+for (road_, side_, a_, b_) in ((MAINS["Lyons Rd"], 1, MAINS["Lyons Rd"].nearest(-58, 146)[1], MAINS["Lyons Rd"].nearest(0, 118)[1]), (PKWY, 1, PKWY.L - 50, PKWY.L - 12), (PKWY, -1, PKWY.L - 50, PKWY.L - 12)):
+    row_along(road_, side_, a_, b_, 15.0, "lakeh", home_maker, 12, 9, gap=2.5, clear=.4)
+# -- condos (south): towers around Condo Dr and Condo Circle, 5-7 floors
+def condo_maker(nm, n): return dk.condo(nm, 26, 14, 5 + n % 3, 200 + n)
+for side in (1, -1): row_along(CONDO_DR, side, 3, CONDO_DR.L - 2, 6.0, "condo", condo_maker, 26, 14, gap=3.0, clear=1.2)
+for k_ in range(6):
+    a_ = math.radians(k_ * 60 + 10); px, py = 92 + math.cos(a_) * 31, -166 + math.sin(a_) * 31
+    try_place("condo", lambda nm, k_=k_: condo_maker(nm, k_), px, py, math.degrees(a_) - 90, 26, 14, 1.5, variants=8, vkey=k_)
+fill("condo", condo_maker, 26, 14, 8, 20, 1.5, step=9, seed=14, region=(30, -196, 112, -136))
+# -- nature preserve (south-west): boardwalk, visitor centre, butterfly dome, dense native trees
+BOARDWALK.pieces = [(0.0, BOARDWALK.L, 0, 0, 0, 0)]; rd.draw_road(RB, BOARDWALK, m)
+first_fit("visitor", lambda nm: make_house(nm, 16, 10, 1, "white", 3, balcony=False, roof_h=3.0), 16, 10, (-96, -190, -52, -120), 4, 14, 1.5, road_facing_rz)
+first_fit("dome", lambda nm: dk.dome(nm), 16, 12, (-96, -190, -52, -120), 4, None, 1.5)
+PRES_BOX = (-100, -196, -50, -112)
+scatter("oak", 22, *PRES_BOX, pad=2.0, gap=5.5, shrub_too=True); scatter("palm_medium", 12, *PRES_BOX, pad=2.0, gap=7.0, shrub_too=False)
+# -- hospital (east): H-shaped block with helipad, facing the East Collector
+def _scaled(o, k): o.scale = (k, k, k); return o
+first_fit("hospital", lambda nm: _scaled(dk.hospital(nm), .8), 34, 29, (122, -100, 168, -34), 3, 30, 3.0)
+# -- school campus and stadium (west arm)
+def place_stadium(cx, cy, k=.65):                                                                                              # oval stadium, long axis east-west, scaled by k (the west arm is narrow)
+    f = ("stadium", cx, cy, 58 * k, 40 * k, 0.0, ())
+    pr_ = fp_problems(f, footprints(), .5)
+    if pr_:
+        if os.environ.get("DEBUGPLACE"): print("SKIP stadium", round(cx), round(cy), pr_[:2])
+        return False
+    civic.field(civic.SwapB(T), CM, cy, cx, 16 * k, 30 * k, bleachers=False)
+    tr = rd.Road("stad_track", [(cx - 10 * k, cy - 10 * k), (cx + 10 * k, cy - 10 * k), (cx + 16.8 * k, cy - 7.5 * k), (cx + 18.5 * k, cy), (cx + 16.8 * k, cy + 7.5 * k), (cx + 10 * k, cy + 10 * k), (cx - 10 * k, cy + 10 * k), (cx - 16.8 * k, cy + 7.5 * k), (cx - 18.5 * k, cy), (cx - 16.8 * k, cy - 7.5 * k)], hw=2.4 * k, closed=True, rank=1, sw=(0, 0), mark=False, surf="track", curbs=False, flare=0)
+    m["track"] = CM["track"]; tr.pieces = [(0.0, tr.L, 0, 0, 0, 0)]; rd.draw_road(RB, tr, m)
+    for (o0, o1, hh) in ((-6.0 * k, -3.0 * k, 1.4), (-9.0 * k, -6.0 * k, 2.8), (-12.0 * k, -9.0 * k, 4.2)): rd.strip(RB, CM["steel"], tr, 0.0, tr.L - .5, o0, o1, hh, solid=0.0)
+    pl_ = Builder("floodlights")
+    for (lx, ly) in ((cx - 25 * k, cy - 15 * k), (cx + 25 * k, cy - 15 * k), (cx - 25 * k, cy + 15 * k), (cx + 25 * k, cy + 15 * k)): pl_.cyl(M("flood_pole", "#8a8d92"), (lx, ly, 9), .25, 18, "z", 6); pl_.box(M("flood_head", "#f0f0e0", emit=.6), lx - .5, lx + .5, ly - 1.2, ly + 1.2, 17.5, 18.6)
+    STATIC.append(pl_.build()); cbox(cx, cy, 52 * k, 34 * k, 0); FOOTREG.append(f); NOGO.append((cx - 31 * k, cy - 22 * k, cx + 31 * k, cy + 22 * k)); mapr(cx - 29 * k, cy - 20 * k, cx + 29 * k, cy + 20 * k, "#b3503c"); print("STADIUM placed", round(cx), round(cy)); return True
+_c = [(x + .5 * dx, y) for x in range(-156, -142, 1) for dx in (0, 1) for y in range(-6, 40, 2)]; random.Random(5).shuffle(_c)
+for (px, py) in _c:
+    if place_stadium(px, py): break
+first_fit("school2", lambda nm: make_house(nm, 30, 10, 2, "butter", 21, garage=False, balcony=False, roof_h=3.0), 30, 10, (-186, -28, -112, 76), 4, 20, 2.0, road_facing_rz)
+for (px, py) in ((-150, -22), (-132, 56), (-118, 40), (-130, -18)):
+    if add_static(lambda B_, px=px, py=py: civic.field(B_, CM, px, py, 20, 34, bleachers=False), px, py, 22, 36, "sfield", 2.0): break
+# -- golf course (east): fairways, greens, bunkers, cart path, clubhouse + lot
+FAIR_M = M("fairway", "#6bbd57", rough=.95); GREEN_M = M("golf_green", "#4fae45", rough=.9); SAND_M = M("bunker", "#e6d9a8", rough=.95)
+for (cx, cy, rx, ry, rot, sd) in ((158, 72, 30, 8, -.35, 1), (160, 36, 28, 7, .2, 2), (156, -8, 26, 6, -.1, 3), (150, 92, 20, 6, .1, 4)):
+    ctrl = organic(cx, cy, rx, ry, 70 + sd, 12, .12, rot)
+    if all(on_land(px, py, 4) for (px, py) in ctrl): rd.flat_blob(RB, FAIR_M, ctrl, .02)
+for (gx2, gy2) in ((186, 78), (186, 34), (182, -12), (134, 94)):
+    ctrl = organic(gx2, gy2, 6.5, 6.0, 80 + int(gx2 + gy2) % 7, 9, .1, 0)
+    if all(on_land(px, py, 3) for (px, py) in ctrl):
+        rd.flat_blob(RB, GREEN_M, ctrl, .025); fl = Builder("flag"); fl.cyl(M("flag_pole2", "#f0f0f0"), (gx2, gy2, 1.2), .03, 2.4, "z", 4); fl.box(M("flag_red2", "#dd2222"), gx2, gx2 + .8, gy2 - .02, gy2 + .02, 1.8, 2.3); STATIC.append(fl.build())
+        for (bx, by) in ((gx2 - 8, gy2 + 3), (gx2 + 2, gy2 - 8)):
+            bc = organic(bx, by, 3.2, 2.4, 90 + int(bx) % 5, 8, .15, 0)
+            if all(on_land(px, py, 3) for (px, py) in bc): rd.flat_blob(RB, SAND_M, bc, .03)
+CARTPATH.pieces = [(0.0, CARTPATH.L, 0, 0, 0, 0)]
+if all(on_land(*CARTPATH.at(i * CARTPATH.L / 40)[:2], 3) for i in range(40)): rd.draw_road(RB, CARTPATH, m)
+GL = (138, 38, 158, 58); gl_rows = [(38, 43.2), (52.8, 58)]
+gl_isl, gl_stalls = parking_lot(T, m, GL[0], GL[2], GL[1], GL[3], gl_rows, 139.0); mapr(*GL, "#5a5c60"); NOGO.append((GL[0] - 2, GL[1] - 2, GL[2] + 2, GL[3] + 2)); FOOTREG.append(("golf lot", (GL[0] + GL[2]) / 2, (GL[1] + GL[3]) / 2, 20, 20, 0.0, ("Club Dr",)))
+for (ix, iy, iw, idp) in gl_isl: cbox(ix, iy, iw, idp, soft="bush"); prop("shrub_a", ix, iy, 1.0, col=False)
+for (px, py) in ((148, 70), (152, 74), (144, 66), (150, 80)):
+    if try_place("clubhouse2", lambda nm: make_house(nm, 22, 12, 2, "cream", 5, balcony=True, roof_h=3.4), px, py, 0, 22, 12, 1.5): break
+scatter("oak", 8, 128, -20, 196, 100, pad=3.0, gap=14.0, shrub_too=False); scatter("palm_tall", 8, 128, -20, 196, 100, pad=3.0, gap=16.0, shrub_too=False)
+
 # ================================================================  STREET FURNITURE & VEGETATION  =========================================
 sx_ = CURB_SW + 1.5
 for (x, y, tx, ty, s) in along(PKWY, 0, 21, 10):                                                                         # a few median palms, soft shrub beds between
@@ -442,7 +611,7 @@ for (x, y, tx, ty, s) in along(PKWY, 0, 7, 3.5):
 for side, ph in ((1, 0), (-1, 9)):                                                                                       # verge palms ~18 m apart, staggered between the two sides
     for (x, y, tx, ty, s) in along(PKWY, side * (PKWY.hw + sx_), 18, 6 + ph): prop("palm_tall" if int(s / 9) % 2 else "palm_medium", x, y, 1.0)
     for (x, y, tx, ty, s) in along(PKWY, side * (PKWY.hw + CURB_SW - .6), 38, 12 + ph * 2): lamp_round(x, y, -ty * -side * 1.0, tx * -side * 1.0 if False else tx * 0, 5.5) if False else lamp_round(x, y, ty * side, -tx * side, 5.5)
-for road, sp in ((WILES, 22), (WILES_E, 22), (LAKEVIEW, 19), (PALM, 17)):
+for road, sp in ((WILES, 22), (WILES_E, 22), (LAKEVIEW, 19), (PALM, 17), (EGRET, 20), (DEPOT_RD, 30), (SUB1, 22), (SUB2, 22), (SUB3, 22), (GATED, 24), (CONDO_DR, 26), (CAMPUS_DR, 22), (CLUB_DR, 26)) + tuple((r_m, 24) for r_m in MAINS.values()):
     for side, ph in ((1, 0), (-1, 9)):
         for (x, y, tx, ty, s) in along(road, side * (road.hw + sx_), sp, 5 + ph): prop("palm_medium" if int(s) % 2 else "palm_tall", x, y, 1.0)
     for side in (1, -1):
@@ -462,13 +631,6 @@ for j in PKWY.junctions:
         sign_pole(T, px + 11.0, py + 11.4 + 0 if False else py + 12.0, "pkwy", 3.2); sign_pole(T, px - 12.0, py - 12.5, "pkwy", 3.2); sign_pole(T, px + 12.0, py - 8.5, "wiles", 2.2); sign_pole(T, px - 12.5, py + 8.5, "wiles", 2.2)
         for dx_, dy_ in ((11.0, 12.0), (-12.0, -12.5), (12.0, -8.5), (-12.5, 8.5)): ccir(px + dx_, py + dy_, .1, "pole")
 # scattered trees/shrubs fill the lawns (oaks, shrubs; palms kept rare)
-def scatter(kind, n, x0, y0, x1, y1, pad=3.0, gap=9.0, shrub_too=True):
-    placed = []; tries = 0
-    while len(placed) < n and tries < n * 40:
-        tries += 1; x, y = R_.uniform(x0, x1), R_.uniform(y0, y1)
-        if not free(x, y, pad) or any(math.hypot(x - a, y - b) < gap for a, b in placed): continue
-        placed.append((x, y)); prop(kind, x, y, R_.uniform(1.0, 1.25) if kind == "oak" else 1.0)
-        if shrub_too and R_.random() < .6: prop("shrub_a" if R_.random() < .5 else "shrub_b", x + R_.uniform(-2, 2), y + R_.uniform(-2, 2))
 scatter("oak", 14, -98, -98, -12, -14); scatter("oak", 9, 14, -98, 56, -56); scatter("oak", 8, 66, -34, 98, -12); scatter("oak", 8, 66, 56, 98, 98); scatter("oak", 8, -12, 66, 62, 98)
 scatter("palm_medium", 6, -98, -98, -12, -14, gap=14, shrub_too=False); scatter("palm_tall", 4, 66, -34, 98, 98, gap=14, shrub_too=False); scatter("oak", 8, -98, 20, -12, 36, pad=2.5)
 for (x, y) in ((-33, 36.2), (-43, 36.2), (-24, 36.2), (-33, 69.8), (-44, 69.8)): prop("shrub_a" if R_.random() < .5 else "shrub_b", x, y)
@@ -501,19 +663,21 @@ for t in TRAFFIC:
     p0 = t["path"][0]; addcar(t["kind"], t["color"], t["name"], p0[0], p0[1], 0)
 PAL = ["#e6e6e2", "#2b2d33", "#9aa0a8", "#2e5fa3", "#c8201c", "#3d7a52", "#d8b04a", "#7a3a2a"]
 k = 0
-for (stl, aisle_y, prob) in ((stalls, 15.0 + OY, .30), (hl_stalls, -86.2, .35), (sch_stalls, -43.25, .45), (pl_stalls, -87.1, .25)):
+for (sx_s, sy_s, rz) in PARKED:
+    addcar("sedan", R_.choice(PAL), f"parked{k}", sx_s, sy_s, rz); cbox(sx_s, sy_s, 1.8, 4.5, rz); COL[-1]["car"] = f"parked{k}"; k += 1
+for (stl, aisle_y, prob) in ((stalls, 17.5, .30), (hl_stalls, -86.2, .35), (sch_stalls, -43.25, .45), (pl_stalls, -87.1, .25)):
     for (sx_s, sy_s) in stl:
         if R_.random() < prob:
-            rz = (0 if sy_s < 15 + OY or 23.2 + OY <= sy_s < 28.4 + OY else 180) if stl is stalls else (0 if sy_s < aisle_y else 180)
+            rz = 0 if sy_s < aisle_y else 180
             addcar("sedan", R_.choice(PAL), f"parked{k}", sx_s, sy_s, rz); cbox(sx_s, sy_s, 1.8, 4.5, rz); COL[-1]["car"] = f"parked{k}"; k += 1
 # ================================================================  WORLD EDGE + DATA  =======================================================
 T.cyl(M("shadow_dummy", "#000000"), (0, 0, -5), .01, .01, "z", 3); terr = T.build(vc=True); STATIC.append(terr); STATIC.extend(RB.build(vc=True, recalc=False))
 def sidewalk_path(road, side): return [[round(a, 2), round(b, 2)] for a, b in rd.lane_path(road, side * (road.hw + rd.CURB + 1.2))]
 WALK = [{"path": sidewalk_path(PKWY, 1)}, {"path": sidewalk_path(PKWY, -1)}, {"path": sidewalk_path(WILES, 1)}, {"path": sidewalk_path(WILES, -1)}, {"path": sidewalk_path(PALM, 1)}, {"path": sidewalk_path(PALM, -1)},
-        {"path": [[15, 40.4 + OY], [65, 40.4 + OY]]}, {"path": [[round(a, 2), round(b, 2)] for a, b in rd.lane_path(TRAIL, 0)], "closed": True}, {"path": sidewalk_path(LAKEVIEW, 1)}, {"path": sidewalk_path(HERON, 1)}, {"path": sidewalk_path(HERON, -1)}, {"path": sidewalk_path(PARK_DR, 1)}]
+        {"path": [[15, 27.8], [45, 27.8]]}, {"path": [[round(a, 2), round(b, 2)] for a, b in rd.lane_path(TRAIL, 0)], "closed": True}, {"path": sidewalk_path(LAKEVIEW, 1)}, {"path": sidewalk_path(HERON, 1)}, {"path": sidewalk_path(HERON, -1)}, {"path": sidewalk_path(PARK_DR, 1)}]
 ROADLINES = [{"pts": [[round(a, 1), round(b, 1)] for a, b in rd.lane_path(r, 0, step=6, s0=p[0], s1=p[1])], "w": round(2 * r.hw, 1), "closed": r.closed} for r in net if r.surf == "asphalt" for p in r.pieces]
 WORLD = {"name": "coconut", "title": "Coconut Creek", "glb": "scene.glb", "mapbg": "#2d78b8", "extent": EXT - 4, "sky": "#8fc3f5", "fog": ["#c4dcf2", 110, 320], "hemi": ["#cfe4ff", "#6f8a4a", 1.55], "sun": {"color": "#fff0d6", "intensity": 3.7, "dir": [-0.5, -0.74, 0.45]},
-         "exposure": 1.0, "tone": "AgX", "lamps": [], "ground": "#5d9a3a", "start": START, "money": 1250, "traffic": TRAFFIC, "walk": WALK, "walkers": 16, "fight": {"x": 24, "y": 40.4 + OY}, "demo": None,
+         "exposure": 1.0, "tone": "AgX", "lamps": [], "ground": "#5d9a3a", "start": START, "money": 1250, "traffic": TRAFFIC, "walk": WALK, "walkers": 16, "fight": {"x": 24, "y": 27.8}, "demo": None,
          "views": {"drive": {"label": "Play", "mode": "drive", "pitch": 45, "dist": 44}, "plaza": {"label": "Plaza", "tx": 38, "ty": 32, "pitch": 48, "dist": 34}, "homes": {"label": "Homes", "tx": -62, "ty": 62, "pitch": 48, "dist": 40},
                    "park": {"label": "Park", "tx": -45, "ty": -42, "pitch": 48, "dist": 46}, "over": {"label": "Overview", "tx": 0, "ty": 0, "pitch": 40, "dist": 300}},
          "map": MAP, "roads": ROADLINES}
@@ -538,7 +702,8 @@ if not os.environ.get("NORENDER"):
     for p in PROPS:
         o = bpy.data.objects.new(p["k"], tmpl[p["k"]].data); bpy.context.scene.collection.objects.link(o); o.location = (p["x"], p["y"], 0)
         o.rotation_euler = (0, 0, math.radians(p["rz"])); o.scale = (p["s"], p["s"], p["s"]) if p["k"] != "hedge" else (1, 1, 1)
-    SHOTS = {"cc_city": ((0, 0, 0), 60, 560, 1200, 1200), "cc_ne": ((120, 120, 0), 50, 120, 1100, 700), "cc_sw": ((-130, -120, 0), 50, 120, 1100, 700), "cc_game": ((START["x"], START["y"] + 8, 0), 45, 44, 540, 960)}
+    SHOTS = {"cc_city": ((0, 0, 0), 60, 560, 1200, 1200), "cc_ind": ((150, -150, 0), 52, 120, 1000, 640), "cc_retail": ((-75, 140, 0), 50, 110, 1000, 640), "cc_prom": ((118, 142, 0), 50, 110, 1000, 640), "cc_sub": ((-145, -100, 0), 50, 120, 1000, 640),
+             "cc_gated": ((-150, 135, 0), 50, 100, 1000, 640), "cc_condo": ((70, -160, 0), 50, 110, 1000, 640), "cc_golf": ((160, 50, 0), 50, 120, 1000, 640), "cc_school": ((-150, 20, 0), 50, 120, 1000, 640), "cc_pres": ((-75, -150, 0), 50, 100, 1000, 640), "cc_hosp": ((140, -65, 0), 50, 100, 1000, 640), "cc_game": ((START["x"], START["y"] + 8, 0), 45, 44, 540, 960)}
     if os.environ.get("SHOT"): x_, y_, p_, d_ = [float(v) for v in os.environ["SHOT"].split(",")]; SHOTS = {"dbg": ((x_, y_, 0), p_, d_, 1000, 700)}
     for nm, (tgt, pitch, dist, w, h) in SHOTS.items():
         for o in [x for x in bpy.context.scene.objects if x.type == "CAMERA"]: bpy.data.objects.remove(o)

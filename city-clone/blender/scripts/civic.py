@@ -95,3 +95,11 @@ def gas_station(name="gas"):
     for px in (-3.2, 0.0, 3.2): b.box(conc, px - .6, px + .6, -4.2, -1.6, .08, .25); b.box(red, px - .3, px + .3, -3.5, -2.3, .25, 1.45)
     b.cyl(metal, (7.8, -8.0, 3.2), .12, 6.4, "z", 6); b.box(trim, 6.6, 9.0, -8.1, -7.9, 5.4, 7.4); b.box(M("price_yel", "#f2c030", emit=.4), 6.8, 8.8, -8.12, -8.08, 5.6, 7.2)
     return b.build()
+
+
+class SwapB:
+    """Proxy builder that swaps x and y, so axis-aligned pieces (the field) can be drawn long-axis-east-west."""
+    def __init__(self, b): self.b = b
+    def box(self, m, x0, x1, y0, y1, z0, z1): return self.b.box(m, y0, y1, x0, x1, z0, z1)
+    def cyl(self, m, center, r, depth, axis="x", segs=12, r2=None):
+        ax = {"x": "y", "y": "x", "z": "z"}[axis]; return self.b.cyl(m, (center[1], center[0], center[2]), r, depth, ax, segs, r2)
