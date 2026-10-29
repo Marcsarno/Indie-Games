@@ -44,6 +44,9 @@ class Builder:
         return self.mats.index(m)
     def _quad(self, vs, mi):
         f = self.bm.faces.new(vs); f.material_index = mi; return f
+    def poly(self, m, pts3, ):
+        """A single face from 3D points, winding kept as given (counter-clockwise seen from above = faces up)."""
+        f = self.bm.faces.new([self.bm.verts.new(p) for p in pts3]); f.material_index = self._mi(m); return f
     def box(self, m, x0, x1, y0, y1, z0, z1):
         return self.prism(m, (x0, x1, y0, y1), (x0, x1, y0, y1), z0, z1)
     def prism(self, m, b, t, z0, z1, mat_fn=None):
@@ -86,8 +89,8 @@ class Builder:
         mat = Matrix.Translation(center) @ rot
         res = bmesh.ops.create_cone(self.bm, cap_ends=True, cap_tris=False, segments=segs, radius1=r, radius2=(r if r2 is None else r2), depth=depth, matrix=mat)
         for f in {f for v in res["verts"] for f in v.link_faces}: f.material_index = self._mi(m)
-    def build(self, bevel=0.0, collection=None, vc=False):
-        bmesh.ops.recalc_face_normals(self.bm, faces=self.bm.faces[:])
+    def build(self, bevel=0.0, collection=None, vc=False, recalc=True):
+        if recalc: bmesh.ops.recalc_face_normals(self.bm, faces=self.bm.faces[:])       # recalc=False keeps the winding of hand-built open surfaces (roads)
         me = bpy.data.meshes.new(self.name); self.bm.to_mesh(me); self.bm.free()
         for m in self.mats: me.materials.append(m)
         o = bpy.data.objects.new(self.name, me); (collection or bpy.context.scene.collection).objects.link(o)

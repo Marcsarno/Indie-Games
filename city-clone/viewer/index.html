@@ -161,11 +161,12 @@ city.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow 
 /* Vegetation is instanced: one InstancedMesh per sub-mesh of each kit piece (palms, shrubs, hedges, oaks), placed from props.json. */
 const instances = []; { const byKind = {};
   for (const p of propList) (byKind[p.k] = byKind[p.k] || []).push(p);
-  for (const [kind, list] of Object.entries(byKind)) {
+  for (const [kind, all] of Object.entries(byKind)) {
     const node = vegG.scene.getObjectByName(kind); if (!node) continue; node.updateWorldMatrix(true, true); const dummy = new THREE.Object3D();
-    node.traverse(o => { if (!o.isMesh) return; const im = new THREE.InstancedMesh(o.geometry, o.material, list.length); im.castShadow = true; im.receiveShadow = true;
+    const tiles = {}; for (const p of all) (tiles[Math.floor(p.x / 80) + ',' + Math.floor(p.y / 80)] = tiles[Math.floor(p.x / 80) + ',' + Math.floor(p.y / 80)] || []).push(p);   // 80 m tiles so frustum culling can drop far vegetation
+    for (const list of Object.values(tiles)) node.traverse(o => { if (!o.isMesh) return; const im = new THREE.InstancedMesh(o.geometry, o.material, list.length); im.castShadow = true; im.receiveShadow = true;
       list.forEach((p, i) => { dummy.position.copy(b2t(p.x, p.y, 0)); dummy.rotation.set(0, rad(p.rz), 0); dummy.scale.setScalar(kind === 'hedge' ? 1 : p.s); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); });
-      im.instanceMatrix.needsUpdate = true; scene.add(im); instances.push(im); });
+      im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); im.boundingSphere.radius += 6; scene.add(im); instances.push(im); });
   } }
 
 /* ---------- async helpers: scripted sequences await frames, so they pause and resume with the loop ---------- */
@@ -196,7 +197,21 @@ for (const c of carList) {
   const car = makeCar(c.kind, c.color); car.group.position.copy(b2t(c.x, c.y, 0)); car.group.rotation.y = rad(c.rz); allCars[c.name] = car;
 }
 const playerCar = allCars.player;
-const traffic = world.traffic.map(t => { const g = allCars[t.name].group; const along = t.axis === 'x' ? g.position.x : -g.position.z; return { ...t, g, pos: along, rz: g.rotation.y, vx: t.axis === 'x' ? t.dir * t.speed : 0, vz: t.axis === 'y' ? -t.dir * t.speed : 0 }; });
+function makePath(pts, closed) {                 // polyline in Blender metres -> three XZ with arc length; at(s) = {x, z, yaw (car heading), fx, fz}
+  const P = pts.map(p => [p[0], -p[1]]), n = P.length, m = closed ? n : n - 1, cum = [0];
+  for (let i = 0; i < m; i++) cum.push(cum[i] + Math.hypot(P[(i + 1) % n][0] - P[i][0], P[(i + 1) % n][1] - P[i][1]));
+  const L = cum[m], out = { x: 0, z: 0, yaw: 0, fx: 0, fz: -1 };
+  return { L, closed, at(s) {
+    s = closed ? ((s % L) + L) % L : clamp(s, 0, L); let i = 0; while (i < m - 1 && cum[i + 1] < s) i++;
+    const a = P[i], b = P[(i + 1) % n], l = cum[i + 1] - cum[i] || 1, t = (s - cum[i]) / l, fx = (b[0] - a[0]) / l, fz = (b[1] - a[1]) / l;
+    out.x = a[0] + (b[0] - a[0]) * t; out.z = a[1] + (b[1] - a[1]) * t; out.fx = fx; out.fz = fz; out.yaw = Math.atan2(-fx, -fz); return out;
+  } };
+}
+const traffic = world.traffic.map(t => {
+  const g = allCars[t.name].group;
+  if (t.path) { const path = makePath(t.path, t.closed); return { ...t, g, path, pos: t.s0 || 0, rz: 0, vx: 0, vz: 0 }; }
+  const along = t.axis === 'x' ? g.position.x : -g.position.z; return { ...t, g, pos: along, rz: g.rotation.y, vx: t.axis === 'x' ? t.dir * t.speed : 0, vz: t.axis === 'y' ? -t.dir * t.speed : 0 };
+});
 const trafficNames = new Set(world.traffic.map(t => t.name));
 
 /* ---------- people ---------- */
@@ -248,7 +263,7 @@ async function exitCar(a, car, tag) {
 const walkers = [];
 for (let i = 0; i < world.walkers; i++) {
   const p = makePerson(), seg = world.walk[i % world.walk.length], dir = (i >> 1) % 2 ? 1 : -1;
-  const w = { ...p, seg, dir, pos: seg.lo + rnd() * (seg.hi - seg.lo), speed: 1.15 + rnd() * .5 };
+  const path = seg.path ? makePath(seg.path, seg.closed) : null, w = { ...p, seg, path, dir, pos: path ? rnd() * path.L : seg.lo + rnd() * (seg.hi - seg.lo), speed: 1.15 + rnd() * .5 };
   w.act.walk.timeScale = w.speed / 1.4; w.act.walk.play(); w.act.walk.time = rnd(); w.cur = w.act.walk; Object.assign(w, { hp: 3, state: 'walk', st: 0, off: { x: 0, z: 0 }, kb: { x: 0, z: 0 } }); walkers.push(w);
 }
 let hero = null, victim = null, fightAt = null;
@@ -301,7 +316,7 @@ function polyBox(cx, cy, w, d, rzDeg) {          // Blender box (centre x,y; siz
 }
 const polyCircle = (cx, cy, r) => Array.from({ length: 8 }, (_, k) => [cx + r * Math.cos((k + .5) * Math.PI / 4), -cy + r * Math.sin((k + .5) * Math.PI / 4)]);
 const cen = P => { let x = 0, z = 0; for (const p of P) { x += p[0]; z += p[1]; } return [x / P.length, z / P.length]; };
-const colliders = colList.filter(c => !c.car).map(c => { const soft = c.soft || null, poly = c.t === 'box' ? polyBox(c.x, c.y, c.w, c.d, c.rz) : polyCircle(c.x, c.y, c.r); const [cx, cz] = cen(poly); let r = 0; for (const p of poly) r = Math.max(r, Math.hypot(p[0] - cx, p[1] - cz)); return { poly, cx, cz, r, vx: 0, vz: 0, soft }; });
+const colliders = colList.filter(c => !c.car).map(c => { const soft = c.soft || null, poly = c.t === 'box' ? polyBox(c.x, c.y, c.w, c.d, c.rz) : c.t === 'poly' ? c.pts.map(p => [p[0], -p[1]]) : polyCircle(c.x, c.y, c.r); const [cx, cz] = cen(poly); let r = 0; for (const p of poly) r = Math.max(r, Math.hypot(p[0] - cx, p[1] - cz)); return { poly, cx, cz, r, vx: 0, vz: 0, soft }; });
 const moveCols = traffic.map(t => { const c = { poly: [], cx: 0, cz: 0, r: 2.6, vx: t.vx, vz: t.vz }; colliders.push(c); return c; });     // scripted traffic: moving obstacles
 const carPoly = (x, z, th) => { const fx = -Math.sin(th), fz = -Math.cos(th), rx = Math.cos(th), rz = -Math.sin(th), hl = CAR.L / 2, hw = CAR.W / 2; return [[x + fx * hl + rx * hw, z + fz * hl + rz * hw], [x + fx * hl - rx * hw, z + fz * hl - rz * hw], [x - fx * hl - rx * hw, z - fz * hl - rz * hw], [x - fx * hl + rx * hw, z - fz * hl + rz * hw]]; };
 
@@ -590,10 +605,18 @@ const mini = $('mini'), mx = mini.getContext('2d'); let miniT = 0, lastCash = -1
 if (!world.map) $('minibox').hidden = true;
 function drawMini(px, py, face) {                 // north-up map around the player (px, py in Blender metres); arrow shows heading
   const W = mini.width, c = W / 2, k = c / 55; mx.fillStyle = '#4d8a38'; mx.fillRect(0, 0, W, W);
-  for (const r of world.map || []) {
-    mx.fillStyle = r[4]; const x0 = c + (r[0] - px) * k, x1 = c + (r[2] - px) * k, y0 = c - (r[3] - py) * k, y1 = c - (r[1] - py) * k;
+  const X = x => c + (x - px) * k, Y = y => c - (y - py) * k;
+  const rects = (pass) => { (world.map || []).forEach((r, i) => {
+    const base = i === 0 || r[5] === 'poly'; if (base !== pass) return;
+    mx.fillStyle = r[4];
+    if (r[5] === 'poly') { mx.beginPath(); r[6].forEach((p, j) => j ? mx.lineTo(X(p[0]), Y(p[1])) : mx.moveTo(X(p[0]), Y(p[1]))); mx.closePath(); mx.fill(); return; }
+    const x0 = X(r[0]), x1 = X(r[2]), y0 = Y(r[3]), y1 = Y(r[1]);
     if (r[5] === 'o') { mx.beginPath(); mx.ellipse((x0 + x1) / 2, (y0 + y1) / 2, Math.abs(x1 - x0) / 2, Math.abs(y1 - y0) / 2, 0, 0, 7); mx.fill(); } else mx.fillRect(x0, y0, x1 - x0, y1 - y0);
-  }
+  }); };
+  rects(true);
+  mx.strokeStyle = '#6a6c70'; mx.lineJoin = 'round'; mx.lineCap = 'butt';
+  for (const rd of world.roads || []) { mx.lineWidth = Math.max(2, rd.w * k); mx.beginPath(); rd.pts.forEach((p, j) => j ? mx.lineTo(X(p[0]), Y(p[1])) : mx.moveTo(X(p[0]), Y(p[1]))); if (rd.closed) mx.closePath(); mx.stroke(); }
+  rects(false);
   mx.save(); mx.translate(c, c); mx.rotate(Math.atan2(-Math.sin(face), Math.cos(face))); mx.beginPath(); mx.moveTo(0, -16); mx.lineTo(11, 12); mx.lineTo(0, 6); mx.lineTo(-11, 12); mx.closePath();
   mx.fillStyle = '#5cff7a'; mx.fill(); mx.lineWidth = 3; mx.strokeStyle = '#0b1a10'; mx.stroke(); mx.restore();
 }
@@ -609,13 +632,16 @@ function update(dt, draw = true) {
   acc += dt; let n = 0; while (acc >= FIXED && n++ < 12) { physicsStep(FIXED); acc -= FIXED; } if (acc > FIXED) acc = 0;
   if (drive) { drive.car.group.position.set(drive.x, 0, drive.z); drive.car.group.rotation.y = drive.th; }
   traffic.forEach((t, i) => {                                                   // scripted traffic loops along its lane
-    t.pos += t.dir * t.speed * dt; const lim = world.extent; if (t.pos > lim) t.pos = -lim; if (t.pos < -lim) t.pos = lim;
-    if (t.axis === 'y') t.g.position.set(t.lane, 0, -t.pos); else t.g.position.set(t.pos, 0, -t.lane);
+    if (t.path) { t.pos += t.speed * dt; if (!t.path.closed && t.pos > t.path.L) t.pos = 0; const a = t.path.at(t.pos); t.g.position.set(a.x, 0, a.z); t.g.rotation.y = t.rz = a.yaw; moveCols[i].vx = a.fx * t.speed; moveCols[i].vz = a.fz * t.speed; }
+    else {
+      t.pos += t.dir * t.speed * dt; const lim = world.extent; if (t.pos > lim) t.pos = -lim; if (t.pos < -lim) t.pos = lim;
+      if (t.axis === 'y') t.g.position.set(t.lane, 0, -t.pos); else t.g.position.set(t.pos, 0, -t.lane);
+    }
     const c = moveCols[i]; c.poly = carPoly(t.g.position.x, t.g.position.z, t.rz); const cc = cen(c.poly); c.cx = cc[0]; c.cz = cc[1];
   });
   footStep(dta); combatStep(dta);
   for (const w of walkers) {                                                    // pedestrians: walk a sidewalk loop, or react to being hit
-    if (w.state === 'walk') { w.pos += w.dir * w.speed * dta; if (w.pos > w.seg.hi) w.pos = w.seg.lo; if (w.pos < w.seg.lo) w.pos = w.seg.hi; const f = Math.exp(-.8 * dta); w.off.x *= f; w.off.z *= f; }
+    if (w.state === 'walk') { w.pos += w.dir * w.speed * dta; if (w.path) { if (!w.path.closed) { if (w.pos > w.path.L) { w.pos = w.path.L; w.dir = -1; } else if (w.pos < 0) { w.pos = 0; w.dir = 1; } } } else { if (w.pos > w.seg.hi) w.pos = w.seg.lo; if (w.pos < w.seg.lo) w.pos = w.seg.hi; } const f = Math.exp(-.8 * dta); w.off.x *= f; w.off.z *= f; }
     else {
       w.st += dta;
       if (w.state === 'hit' && w.st > .5) { w.state = 'walk'; play(w, 'walk', { timeScale: w.speed / 1.4 }); }
@@ -623,9 +649,13 @@ function update(dt, draw = true) {
       else if (w.state === 'getup' && w.st > 1.1) { w.state = 'walk'; w.hp = 3; play(w, 'walk', { timeScale: w.speed / 1.4 }); }
     }
     w.off.x += w.kb.x * dta; w.off.z += w.kb.z * dta; const kd = Math.exp(-6 * dta); w.kb.x *= kd; w.kb.z *= kd;
-    const alongY = w.seg.axis === 'y', bx = alongY ? w.seg.c : w.pos, bz = alongY ? -w.pos : -w.seg.c;
-    w.root.position.set(bx + w.off.x, 0, bz + w.off.z);
-    if (w.state === 'walk') w.root.rotation.y = alongY ? (w.dir > 0 ? 0 : Math.PI) : (w.dir > 0 ? -Math.PI / 2 : Math.PI / 2);
+    if (w.path) {
+      const a = w.path.at(w.pos); w.root.position.set(a.x + w.off.x, 0, a.z + w.off.z); if (w.state === 'walk') w.root.rotation.y = Math.atan2(-a.fx * w.dir, -a.fz * w.dir);
+    } else {
+      const alongY = w.seg.axis === 'y', bx = alongY ? w.seg.c : w.pos, bz = alongY ? -w.pos : -w.seg.c;
+      w.root.position.set(bx + w.off.x, 0, bz + w.off.z);
+      if (w.state === 'walk') w.root.rotation.y = alongY ? (w.dir > 0 ? 0 : Math.PI) : (w.dir > 0 ? -Math.PI / 2 : Math.PI / 2);
+    }
   }
   for (let i = flashes.length - 1; i >= 0; i--) { flashes[i].t -= dt; if (flashes[i].t <= 0) { for (const m of flashes[i].w.mats) m.emissive.setScalar(0); flashes.splice(i, 1); } }
   if (hero) { punchT += dta; if (punchT > 2.2) { punchT = 0; hero.act.punch.reset().play(); hit = 1; }
