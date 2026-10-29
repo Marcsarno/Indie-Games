@@ -65,12 +65,14 @@ def world(color=(0.55, 0.57, 0.55), strength=1.0):
     bg = w.node_tree.nodes["Background"]; bg.inputs[0].default_value = (*color, 1); bg.inputs[1].default_value = strength
     bpy.context.scene.world = w
 
-def sun(rot=(math.radians(50), 0, math.radians(35)), energy=3.0):
-    l = bpy.data.lights.new("sun", "SUN"); l.energy = energy
-    o = bpy.data.objects.new("sun", l); bpy.context.scene.collection.objects.link(o); o.rotation_euler = rot
+def sun(direction=(0.5, -0.4, -0.78), energy=4.0, color=(1.0, 0.88, 0.70), angle_deg=4):
+    """Light travels along `direction` (default: from upper-left/north, shadows fall to the lower right like the concept art)."""
+    l = bpy.data.lights.new("sun", "SUN"); l.energy = energy; l.color = color; l.angle = math.radians(angle_deg)
+    o = bpy.data.objects.new("sun", l); bpy.context.scene.collection.objects.link(o)
+    o.rotation_euler = Vector(direction).to_track_quat("-Z", "Y").to_euler()
 
 def camera(loc, target=(0, 0, 0), lens=35, ortho=False, ortho_scale=6):
-    c = bpy.data.cameras.new("cam"); c.lens = lens
+    c = bpy.data.cameras.new("cam"); c.lens = lens; c.sensor_fit = "HORIZONTAL"   # width-based, like a phone game camera
     if ortho: c.type = "ORTHO"; c.ortho_scale = ortho_scale
     o = bpy.data.objects.new("cam", c); bpy.context.scene.collection.objects.link(o)
     o.location = loc
@@ -85,7 +87,8 @@ def render(path, w=640, h=480, engine="EEVEE", ink=False, samples=16):
         engine = "BLENDER_EEVEE" if "BLENDER_EEVEE" in ids else "BLENDER_EEVEE_NEXT"
     s.render.engine = engine; s.render.resolution_x, s.render.resolution_y = w, h
     s.render.film_transparent = False; s.render.filepath = path
-    s.view_settings.view_transform = "Standard"
+    try: s.view_settings.view_transform = "Khronos PBR Neutral"
+    except TypeError: s.view_settings.view_transform = "Standard"
     if engine.startswith("BLENDER_EEVEE"): s.eevee.taa_render_samples = samples
     s.render.use_freestyle = ink
     if ink:
@@ -127,3 +130,10 @@ def export_glb(name, objs=None):
         for o in objs: o.select_set(True)
     bpy.ops.export_scene.gltf(filepath=p, export_format="GLB", use_selection=use_sel, export_apply=True, export_yup=True)
     return p
+
+
+def game_camera(target=(0, 0, 0), pitch=65, dist=35, lens=35, yaw=0):
+    """The in-game camera: north-up, steep perspective. dist = distance from target along the view axis."""
+    p = math.radians(pitch); y = math.radians(yaw)
+    off = Vector((math.sin(y) * -math.cos(p), -math.cos(y) * math.cos(p), math.sin(p))) * dist
+    return camera(Vector(target) + off, target, lens)
