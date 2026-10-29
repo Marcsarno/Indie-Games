@@ -1,6 +1,6 @@
 # Headless Blender tooling (city-clone)
 
-Models are made by Python scripts run in headless Blender 4.5 LTS, reviewed as rendered
+Models are made by Python scripts run in headless Blender 5.2 LTS, reviewed as rendered
 images, revised, then exported as `.glb` for the Three.js game. No hand-built meshes in Three.js.
 
 ## Setup (once per fresh cloud session; the container is wiped)
@@ -20,7 +20,7 @@ Look at the sheet, fix the script, rerun. Filter noise with `2>&1 | grep -E "GLB
 - `scripts/pipeline_test.py` is a throwaway red box car that proves the loop. It is not the real car.
 
 ## Verified
-Blender 4.5.15 LTS (Python 3.11) runs without a GPU; EEVEE, Workbench and Cycles all render; the exported GLB
+Blender 5.2.3 LTS (Python 3.13) runs without a GPU; EEVEE, Workbench and Cycles all render; the exported GLB
 loads in Three.js r170 with its materials and outline (checked in headless Chromium).
-Ignore the `EGL_BAD_MATCH` messages (software GL). Needs libEGL etc., which `setup.sh` installs.
+`lib.py` picks the EEVEE engine name for either Blender 4.x or 5.x. Ignore the `EGL_BAD_MATCH` messages (software GL). Needs libEGL etc., which `setup.sh` installs.
 Not yet done: rigged/animated hero, texture baking (window textures), lighting tuned to the screenshots.

@@ -12,7 +12,7 @@ Read `HANDOFF.md` first. Last updated 2026-10-29.
 - Reuse from Diablo: sound synth, touch controls, the before/after review habit.
 
 ## State
-Blender 4.5 LTS tooling is installed and verified end to end. No game or real models yet.
+Blender 5.2.3 LTS tooling is installed and verified end to end. No game or real models yet.
 
 ## Next
 1. Quick test scene (crossroads, two tall buildings, one car) built with the Blender scripts, shown from the game camera.
