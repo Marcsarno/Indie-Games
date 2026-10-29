@@ -48,6 +48,7 @@ PLAZA_DR = rd.Road("Plaza Dr", [(16, 17.6), (2, 17.9), (-14, 17.6)], hw=3.0, ran
 SCHOOL_DR = rd.Road("School Dr", [(56, -43), (66, -43), (74, -43)], hw=3.0, rank=5, flare=4.5)
 CIVIC_DR = rd.Road("Civic Dr", [(66, -86), (56, -86), (50, -86)], hw=3.0, rank=5, flare=4.5)
 PALM = rd.Road("Palm Lane", [(-3, 29), (-20, 28), (-34, 31), (-52, 30), (-66, 35), (-77, 50), (-77, 62), (-70, 69.5), (-61.5, 72)], hw=3.5, rank=6)
+CYPRESS = rd.Road("Cypress Ln", [(-152, -114), (-120, -118), (-90, -112), (-60, -116), (-30, -111), (0, -115), (30, -118), (60, -113), (90, -118), (120, -112), (152, -116)], hw=3.5, rank=5, flare=5.0)
 HERON = rd.Road("Heron Way", [(-12, 77.5), (4, 78.4), (22, 79.0), (40, 79.1), (58, 78.7), (70, 78.0), (80, 78.6)], hw=3.5, rank=6)
 HERON_CT = rd.ring_road("Heron Ct", 84, 78.5, 6.0, 2.8, rank=7, seam=-math.pi / 2 - 1.0, flare=1.6)
 PARK_DR = rd.Road("Park Dr", [(17, -87), (6, -87.4), (-18, -87.6), (-34, -87.2), (-45, -87.1)], hw=3.0, rank=5, flare=4.5)
@@ -61,7 +62,7 @@ def organic(cx, cy, rx, ry, seed, n=12, wob=.28, rot=0.0):                      
 LAKES_CTRL = {"windmill": organic(-46, -44, 24, 17, 3, 14, .3, .25), "pond_w": organic(-84, -62, 11, 8, 5, 9, .25, .6), "wiles": organic(-54, 9, 23, 8.5, 8, 12, .28, -.08),
               "north": organic(88, 47, 11, 12.5, 11, 11, .22, .2),
               "w_frame": organic(-161, 70, 9, 32, 31, 12, .1, 0), "e_frame": organic(162, -70, 8, 32, 32, 12, .1, 0), "n_frame": organic(70, 162, 36, 6.5, 33, 12, .1, 0), "s_frame": organic(-70, -162, 36, 6.5, 34, 12, .1, 0),
-              "nw_inner": organic(-113, 104, 8, 14, 35, 10, .15, 0), "se_inner": organic(114, -112, 8, 16, 36, 10, .15, 0)}
+              "nw_inner": organic(-113, 104, 8, 14, 35, 10, .15, 0), "se_frame": organic(103, -162, 19, 6.5, 36, 12, .1, 0)}
 # ---- city skeleton: perimeter loop (sound wall + tree belt outside), four curved arterials, four roundabouts where they meet
 H_, RC_ = 186.0, 30.0
 def loop_points():
@@ -91,7 +92,7 @@ CORNER_RINGS = []
 for (A_, B_, nm) in ((LYONS, HILLS, "NW"), (SAMPLE, HILLS, "NE"), (LYONS, ATLANTIC, "SW"), (SAMPLE, ATLANTIC, "SE")):
     cx_, cy_ = crossing(A_, B_); CORNER_RINGS.append(rd.ring_road(f"Roundabout {nm}", cx_, cy_, 15.0, 4.5, rank=12, seam=math.pi * .25, flare=5.0, swo=0))
 SKELETON = [LOOP, LYONS, SAMPLE, HILLS, ATLANTIC] + CORNER_RINGS
-net = rd.build_network([PKWY, WILES, RING, WILES_E, ENTRY, LAKEVIEW, PLAZA_DR, PALM, CUL, SCHOOL_DR, CIVIC_DR, HERON, HERON_CT, PARK_DR] + SKELETON)
+net = rd.build_network([PKWY, WILES, RING, WILES_E, ENTRY, LAKEVIEW, PLAZA_DR, PALM, CUL, SCHOOL_DR, CIVIC_DR, HERON, HERON_CT, PARK_DR] + SKELETON + [CYPRESS])
 tick_('network')
 # water, banks (flat meshes) + trails around the big lake
 LAKES = {}
@@ -335,14 +336,20 @@ def road_facing_rz(x, y):                                                       
         if best is None or d_ < best[0]: best = (d_, r.at(s_)[:2])
     dx, dy = best[1][0] - x, best[1][1] - y; l = math.hypot(dx, dy) or 1; return math.degrees(math.atan2(dx / l, -dy / l))
 PLACED = {}
-def try_place(kind, maker, x, y, rz, w, d, clearance=1.2, near=None, allow=(), collide=True, tag=None):
+VCACHE = {}
+def try_place(kind, maker, x, y, rz, w, d, clearance=1.2, near=None, allow=(), collide=True, tag=None, variants=0, vkey=None):
     f = (f"{kind}{PLACED.get(kind, 0)}", round(x, 2), round(y, 2), w, d, rz, allow)
     if near is not None and not near_road(x, y, near): return None
     pr_ = fp_problems(f, footprints(), clearance)
     if pr_:
         if os.environ.get('DEBUGPLACE'): print('SKIP', pr_[:2])
         return None
-    o = maker(f[0]); put(o, x, y, 0, rz, (w + .2) if collide else None, (d + .2) if collide else None, col=collide); FOOTREG.append(f); PLACED[kind] = PLACED.get(kind, 0) + 1
+    if variants:                                                                                                      # a few house variants, linked duplicates share mesh data (smaller glb, faster parse)
+        key = (kind, (vkey if vkey is not None else PLACED.get(kind, 0)) % variants)
+        if key in VCACHE: o = bpy.data.objects.new(f[0], VCACHE[key].data); bpy.context.scene.collection.objects.link(o)
+        else: o = maker(f[0]); VCACHE[key] = o
+    else: o = maker(f[0])
+    put(o, x, y, 0, rz, (w + .2) if collide else None, (d + .2) if collide else None, col=collide); FOOTREG.append(f); PLACED[kind] = PLACED.get(kind, 0) + 1
     NOGO.append((x - max(w, d) / 2 - .5, y - max(w, d) / 2 - .5, x + max(w, d) / 2 + .5, y + max(w, d) / 2 + .5)); MAP.append([round(x - w / 2, 1), round(y - d / 2, 1), round(x + w / 2, 1), round(y + d / 2, 1), "#b5603e"]); return o
 WALLS = ["cream", "peach", "butter", "sand", "white"]
 def row_along(road, side, s0, s1, step, kind, make, w, d, gap=1.5, near=60, clear=1.2):
@@ -350,7 +357,7 @@ def row_along(road, side, s0, s1, step, kind, make, w, d, gap=1.5, near=60, clea
     while s_ < s1:
         x, y, tx, ty = road.at(s_); off = side * (road.hw + rd.CURB + rd.SWK + gap + d / 2); px, py = road.off(s_, off)
         rz = math.degrees(math.atan2(ty, tx)) if side > 0 else math.degrees(math.atan2(-ty, -tx))
-        if try_place(kind, lambda nm, n=n: make(nm, n), px, py, rz, w, d, clear, near=near): n += 1
+        if try_place(kind, lambda nm, n=n: make(nm, n % 8), px, py, rz, w, d, clear, near=near, variants=8, vkey=n): n += 1
         s_ += step
     return n
 def home_maker(nm, n): return make_house(nm, 12, 9, 2 if n % 2 else 1, WALLS[(n * 2 + 1) % 5], 30 + n, garage=True)
@@ -380,15 +387,24 @@ for xa in range(-92, -18, 12):                                                  
     for ya in range(66, 96, 10):
         if PLACED.get("trow", 0) >= 4: break
         try_place("trow", lambda nm, n=len(FOOTREG): row_maker(nm, n), xa, ya, road_facing_rz(xa, ya), 25.6, 10.2, 2.0, near=24)
-def fill(kind, maker, w, d, count, near, clear, excl=(), step=7, seed=5):                                                  # try grid spots over the whole map (shuffled), fronts toward the nearest street
-    rr_ = random.Random(seed); cand = [(x, y) for x in range(-92, 93, step) for y in range(-92, 93, step)]; rr_.shuffle(cand)
+def fill(kind, maker, w, d, count, near, clear, excl=(), step=7, seed=5, region=(-92, -92, 92, 92)):                                                  # try grid spots over the whole map (shuffled), fronts toward the nearest street
+    rr_ = random.Random(seed); cand = [(x, y) for x in range(region[0], region[2] + 1, step) for y in range(region[1], region[3] + 1, step)]; rr_.shuffle(cand)
     for (x, y) in cand:
         if PLACED.get(kind, 0) >= count: break
         if any(x0 <= x <= x1 and y0 <= y <= y1 for (x0, y0, x1, y1) in excl): continue
-        try_place(kind, lambda nm, n=len(FOOTREG): maker(nm, n), x, y, road_facing_rz(x, y), w, d, clear, near=near)
+        try_place(kind, lambda nm, n=PLACED.get(kind, 0): maker(nm, n % 8), x, y, road_facing_rz(x, y), w, d, clear, near=near, variants=8, vkey=PLACED.get(kind, 0))
 PARKBOX = (-98, -98, -12, -26)
 fill("apt", apt_maker, 22, 11, 4, 12, 2.0, excl=(PARKBOX,))                                                               # apartments close to a street
 fill("fhome", home_maker, 12, 9, 12, 9, 1.5, excl=(PARKBOX,), step=6, seed=9)                                              # single-family fillers in leftover frontage
+# -- south-east / south-west bands: frontage streets and rows of homes (variants share meshes)
+SB0, SB1 = LOOP.nearest(-150, -186)[1], LOOP.nearest(150, -186)[1]
+for (road_, side_, a_, b_, cl_) in ((CYPRESS, 1, 6, CYPRESS.L - 4, 1.0), (CYPRESS, -1, 6, CYPRESS.L - 4, 1.0), (ATLANTIC, -1, 6, ATLANTIC.L - 4, 1.0), (LOOP, 1, SB0, SB1, 1.0)):
+    row_along(road_, side_, a_, b_, 13.4, "shome", home_maker, 12, 9, gap=1.6, clear=.3)
+for side_ in (1, -1): row_along(LAKEVIEW, side_, LAKEVIEW.nearest(66, -100)[1], LAKEVIEW.L - 8, 13.4, "shome", home_maker, 12, 9, gap=1.6, clear=.3)
+for side_ in (1, -1): row_along(PKWY, side_, PKWY.nearest(20, -104)[1], PKWY.nearest(26, -186)[1], 13.4, "shome", home_maker, 12, 9, gap=1.6, clear=.3)
+fill("shome", home_maker, 12, 9, 200, 12, .4, step=5, seed=3, region=(-186, -186, 186, -100))                                # leftover frontage in the south
+for (xa, ya) in ((-150, -128), (150, -128), (-120, -160), (120, -160), (0, -160), (-30, -128), (60, -150)):               # apartment blocks near the arterial corners and Pkwy
+    try_place("apt", lambda nm, n=PLACED.get("apt", 0): apt_maker(nm, n % 8), xa, ya, road_facing_rz(xa, ya), 22, 11, 2.0, near=16, variants=8, vkey=PLACED.get("apt", 0))
 # -- south-west lakeside park: Park Dr + lot, pavilions, courts, picnic tables
 PLOT = (-66, -95.2, -44, -79)
 plot_rows = [(-95.2, -90.0), (-84.2, -79.0)]
@@ -451,7 +467,7 @@ while s_ < LOOP.L:                                                              
     px_, py_ = LOOP.off(s_, wall_o0 - 4.0 + R_.uniform(-1, 1)); prop("oak" if kk_ % 3 else "palm_medium", px_, py_, R_.uniform(1.0, 1.3), col=False)
     if kk_ % 2 == 0: px_, py_ = LOOP.off(s_ + 3.0, wall_o0 - 11.0 + R_.uniform(-2, 2)); prop("oak", px_, py_, R_.uniform(1.1, 1.4), col=False)
     s_ += 7.0; kk_ += 1
-for road_ in (LOOP, LYONS, SAMPLE, HILLS, ATLANTIC):
+for road_ in (LOOP, LYONS, SAMPLE, HILLS, ATLANTIC, CYPRESS):
     sides_ = (1,) if road_ is LOOP else (1, -1)                                                                                     # the loop has its sidewalk on the inner (left) side only
     for side_ in sides_:
         for (x, y, tx, ty, s__) in along(road_, side_ * (road_.hw + CURB_SW + 1.6), 26, 6 + (13 if side_ < 0 else 0)): prop("palm_tall" if int(s__ / 26) % 2 else "oak", x, y, 1.0 if True else None)
@@ -535,7 +551,7 @@ if not os.environ.get("NORENDER"):
         o = bpy.data.objects.new(p["k"], tmpl[p["k"]].data); bpy.context.scene.collection.objects.link(o); o.location = (p["x"], p["y"], 0)
         o.rotation_euler = (0, 0, math.radians(p["rz"])); o.scale = (p["s"], p["s"], p["s"]) if p["k"] != "hedge" else (1, 1, 1)
     nwx, nwy = CORNER_RINGS[0].island[0], CORNER_RINGS[0].island[1]
-    SHOTS = {"cc_city": ((0, 0, 0), 60, 560, 1200, 1200), "cc_ring": ((nwx, nwy, 0), 50, 70, 1000, 700), "cc_edge": ((182, 30, 0), 45, 70, 1000, 700), "cc_game": ((START["x"], START["y"] + 8, 0), 45, 44, 540, 960), "cc_south": ((24, -150, 0), 50, 110, 1100, 700)}
+    SHOTS = {"cc_city": ((0, 0, 0), 60, 560, 1200, 1200), "cc_sw": ((-70, -140, 0), 50, 110, 1100, 700), "cc_se": ((70, -140, 0), 50, 110, 1100, 700), "cc_game": ((START["x"], START["y"] + 8, 0), 45, 44, 540, 960), "cc_homes": ((-100, -150, 0), 48, 50, 1000, 640)}
     if os.environ.get("SHOT"): x_, y_, p_, d_ = [float(v) for v in os.environ["SHOT"].split(",")]; SHOTS = {"dbg": ((x_, y_, 0), p_, d_, 1000, 700)}
     for nm, (tgt, pitch, dist, w, h) in SHOTS.items():
         for o in [x for x in bpy.context.scene.objects if x.type == "CAMERA"]: bpy.data.objects.remove(o)
