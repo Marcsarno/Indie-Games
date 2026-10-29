@@ -8,6 +8,11 @@ Live test build (Artifact, private, one link, republish the same file path to up
 Playable today: drive (drift, handbrake, crashes with spin/sparks/damage/skid marks), get out, walk/run, punch (combo, hitstop, knockback, knockdown), steal any parked car, minimap + cash + health HUD,
 Tune panel for the car handling. Controls are touch (stick/pads) with keyboard fallback.
 
+## Where it lives
+- Code: GitHub `Marcsarno/Indie-Games`, folder `city-clone/` (public repo; a dedicated repo could not be created from the cloud session, the GitHub integration has no create-repo permission).
+- Live page: **https://grand-theft-coconut-creek.vercel.app** (Vercel project `grand-theft-coconut-creek`, team `marcsarno`, id `prj_Vp3U4Sb8OzejV0fShlphy6XIckyr`). Root directory `city-clone/viewer`, `viewer/vercel.json` runs `bash build.sh` (builds the base64 model files, which are gitignored) and serves the folder. Every push to `main` that changes files under `city-clone/viewer` redeploys production (the ignored-build-step command skips other pushes). Deploy by hand: Vercel MCP `create_deployment` with `gitSource {type: github, org: Marcsarno, repo: Indie-Games, ref: main}`, `target: production`.
+- The Claude Artifact link (https://claude.ai/artifact/TkdXc4ziagunseRsvdKziw) is still updated by hand (step 4) and can be dropped once the Vercel page is the main test link.
+
 ## How to work on it (new session checklist)
 1. `bash city-clone/blender/setup.sh` (Blender 5.2.3 LTS + libs; the container is wiped each session). Scripts: `blender -b --python scripts/<x>.py` from `city-clone/blender` (see `blender/README.md`).
 2. Textures: `python3 scripts/textures.py`. World export: `NORENDER=1 blender -b --python scripts/coconut_scene.py` (Chinatown: `scripts/test_scene.py`); characters `scripts/export_character.py`; cars `scripts/export_cars.py`; vegetation `scripts/vegetation.py`.
