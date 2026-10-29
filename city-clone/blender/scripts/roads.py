@@ -68,6 +68,8 @@ def build_network(roads):
                         if dm * da > 0: lo = mid
                         else: hi = mid
                     sB = (lo + hi) / 2
+                    mx0, my0, _, _ = B.at(sB); dA0, sA0 = A.nearest(mx0, my0)
+                    if dA0 > .5: continue                                              # sign flipped only because we passed the end-line extension of A, not A itself
                     if prev is not None and abs(sB - prev) < 4: continue
                     prev = sB; mx, my, _, _ = B.at(sB); _, sA = A.nearest(mx, my)
                     def scan(direction):

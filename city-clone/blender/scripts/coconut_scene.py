@@ -1,7 +1,7 @@
 """Coconut Creek first slice. Run: blender -b --python scripts/coconut_scene.py   (env NORENDER=1 to only export; needs out/tex from textures.py)
 Exports to out/: coconut_scene.glb (static), props.json (vegetation instances), colliders.json, cars.json, world.json."""
 import sys, os, json, math, random; sys.path.insert(0, os.path.dirname(__file__))
-from kit import *; from street_fl import *; from building_fl import make_house, make_row, make_plaza; import vegetation as veg; from car import make_car; import mood; import roads as rd
+from kit import *; from street_fl import *; from building_fl import make_house, make_row, make_plaza; import vegetation as veg; from car import make_car; import mood; import roads as rd; import civic
 
 reset(); mood.florida(); mood._transform(); R_ = random.Random(7)
 EXT = 100; m = mats(); T = Builder("terrain"); T.box(m["grass"], -EXT, EXT, -EXT, EXT, -.3, 0)
@@ -44,6 +44,8 @@ WILES_E = rd.Road("Wiles Rd E", [(66.5, -8), (80, -7), (104, -2)], hw=3.5, rank=
 ENTRY = rd.Road("Plaza Entry", [(58, 0.5), (58, 4), (58, 9)], hw=3.0, rank=6, flare=4.5)
 LAKEVIEW = rd.Road("Lakeview Dr", [(58, -15.5), (58, -34), (64, -56), (60, -80), (64, -104)], hw=3.5, rank=6)
 PLAZA_DR = rd.Road("Plaza Dr", [(16, 15), (2, 15.3), (-14, 15)], hw=3.0, rank=6, flare=4.5)
+SCHOOL_DR = rd.Road("School Dr", [(56, -35), (66, -35), (72, -35)], hw=3.0, rank=5, flare=4.5)
+CIVIC_DR = rd.Road("Civic Dr", [(66, -81), (56, -81), (50, -81)], hw=3.0, rank=5, flare=4.5)
 PALM = rd.Road("Palm Lane", [(-3, 29), (-20, 28), (-34, 31), (-52, 30), (-68, 36), (-80, 52), (-80, 66), (-72, 74), (-63.5, 77)], hw=3.5, rank=6)
 CUL = rd.ring_road("Palm Ct", -60, 80, 6.0, 2.8, rank=7, seam=-math.pi / 2 - 1.0)
 def organic(cx, cy, rx, ry, seed, n=12, wob=.28, rot=0.0):                                                                  # lumpy pond outline: noisy radius around an ellipse
@@ -53,8 +55,8 @@ def organic(cx, cy, rx, ry, seed, n=12, wob=.28, rot=0.0):                      
         x, y = rx * f * math.cos(a), ry * f * math.sin(a); c_, s_ = math.cos(rot), math.sin(rot); out.append((cx + x * c_ - y * s_, cy + x * s_ + y * c_))
     return out
 LAKES_CTRL = {"windmill": organic(-46, -44, 24, 17, 3, 14, .3, .25), "pond_w": organic(-84, -62, 11, 8, 5, 9, .25, .6), "wiles": organic(-54, 9, 23, 8.5, 8, 12, .28, -.08),
-              "north": organic(88, 36, 13, 19, 11, 11, .25, .2), "east": organic(88, -66, 12, 26, 14, 12, .22, .15)}
-net = rd.build_network([PKWY, WILES, RING, WILES_E, ENTRY, LAKEVIEW, PLAZA_DR, PALM, CUL])
+              "north": organic(88, 36, 13, 19, 11, 11, .25, .2), "east": organic(88, -94.5, 9, 3.6, 14, 10, .12, 0)}
+net = rd.build_network([PKWY, WILES, RING, WILES_E, ENTRY, LAKEVIEW, PLAZA_DR, PALM, CUL, SCHOOL_DR, CIVIC_DR])
 # water, banks (flat meshes) + trails around the big lake
 LAKES = {}
 for k, c in LAKES_CTRL.items():
@@ -142,10 +144,36 @@ G = Builder("gazebo"); gx, gy = -17, -30; gw = M("gaz_roof", "#2f7a4a", rough=.7
 for sx_ in (-2, 2):
     for sy_ in (-2, 2): G.cyl(M("gaz_post", "#f1ece0"), (gx + sx_, gy + sy_, 1.4), .13, 2.8, "z", 6); ccir(gx + sx_, gy + sy_, .2)
 G.box(m["wood"], gx - 2.6, gx + 2.6, gy - 2.6, gy + 2.6, 0, .25); G.prism(gw, (gx - 3.2, gx + 3.2, gy - 3.2, gy + 3.2), (gx - .15, gx + .15, gy - .15, gy + .15), 2.8, 4.4); STATIC.append(G.build()); mapr(gx - 3, gy - 3, gx + 3, gy + 3, "#2f7a4a"); NOGO.append((gx - 4, gy - 4, gx + 4, gy + 4))
-# SE: city hall + lawn + flagpole
-hall = put(make_plaza("cityhall", 28, 14, 7.0, shops=(), tower_x=0, tower_sign="cityhall"), 34, -46, 0, 180, 28.5, 22, col=True); mapr(20, -53, 48, -39, "#d8c9a0"); NOGO.append((18, -56, 50, -36))
-Fp = Builder("flagpole"); Fp.cyl(M("flag_pole", "#d8d8d8"), (28, -27, 4.5), .07, 9, "z", 6); Fp.box(M("flag_red", "#c22a3a"), 28.1, 30.2, -27.05, -26.95, 7.4, 8.9); Fp.box(M("flag_blue", "#2a3a8a"), 28.1, 29.1, -27.05, -26.95, 8.1, 8.9); STATIC.append(Fp.build()); ccir(28, -27, .12, "pole")
-
+# SE civic district: city hall + its lot, tennis courts, playground, school campus (building, bus row, lot, football field + track)
+CM = civic.civic_mats()
+def cbs(x, y, w, d, soft=None): cbox(x, y, w, d, 0, None, soft)
+def ccs(x, y, r, soft=None): ccir(x, y, r, soft)
+hall = put(make_plaza("cityhall", 28, 14, 7.0, shops=(), tower_x=0, tower_sign="cityhall"), 34, -60, 0, 0, 28.5, 22, col=True); mapr(20, -67, 48, -53, "#d8c9a0"); NOGO.append((18, -70, 50, -50))
+Fp = Builder("flagpole"); Fp.cyl(M("flag_pole", "#d8d8d8"), (22, -68.7, 4.5), .07, 9, "z", 6); Fp.box(M("flag_red", "#c22a3a"), 22.1, 24.2, -68.75, -68.65, 7.4, 8.9); Fp.box(M("flag_blue", "#2a3a8a"), 22.1, 23.1, -68.75, -68.65, 8.1, 8.9); STATIC.append(Fp.build()); ccir(22, -68.7, .12, "pole")
+T.box(m["conc"], 22, 46, -69.8, -66.9, 0, .12); mapr(22, -69.8, 46, -66.9, "#a9a69c")                                                             # forecourt in front of the hall
+hall_rows = [(-90, -84.8), (-77.2, -72)]
+hl_isl, hl_stalls = parking_lot(T, m, 14, 52, -92, -70, hall_rows, 15.0)
+mapr(14, -92, 52, -70, "#5a5c60"); NOGO.append((12, -94, 54, -68))
+for (ix, iy, iw, idp) in hl_isl:
+    cbox(ix, iy, iw, idp, soft="bush"); prop("shrub_a" if R_.random() < .5 else "palm_small", ix, iy, 1.0, col=False)
+for cx_ in (21.0, 35.0):                                                                                                                          # two tennis courts
+    civic.tennis_court(T, CM, cbs, cx_, -30); NOGO.append((cx_ - 7.5, -45, cx_ + 7.5, -15))
+mapr(14, -44, 28, -16, "#3f7a52"); mapr(28, -44, 42, -16, "#3f7a52")
+civic.playground(T, CM, cbs, ccs, 47.5, -30); NOGO.append((42, -36, 53, -24)); mapr(42.5, -35, 52.5, -25, "#b5503a")
+for (x, y) in ((44, -41), (50, -41), (44, -19), (50, -19)): prop("shrub_b", x, y)                                                                  # flower beds around the playground
+sch = put(make_house("school", 30, 10, 2, "butter", 21, garage=False, balcony=False, roof_h=3.0, windows=True), 84, -20, 0, 0, 30.4, 10.4); mapr(69, -25, 99, -15, "#b5603e"); NOGO.append((66, -27, 101, -13))
+sch_rows = [(-43, -37.8), (-32.2, -27)]
+sc_isl, sc_stalls = parking_lot(T, m, 68, 98, -43, -27, sch_rows, 69.0)
+mapr(68, -43, 98, -27, "#5a5c60"); NOGO.append((66, -45, 100, -25))
+for (ix, iy, iw, idp) in sc_isl:
+    cbox(ix, iy, iw, idp, soft="bush"); prop("shrub_a", ix, iy, 1.0, col=False)
+BUS = civic.make_bus("bus_template"); BUS.hide_render = True; BUS.location = (0, 0, -60)
+for k_, bx_ in enumerate((73.5, 85, 96.5)):                                                                                                           # a row of school buses (static scenery) along the north row of the lot
+    bo = bpy.data.objects.new(f"bus{k_}", BUS.data); bpy.context.scene.collection.objects.link(bo); bo.location = (bx_, -40.4, 0); bo.rotation_euler = (0, 0, math.radians(90)); STATIC.append(bo); cbox(bx_, -40.4, 10.4, 2.7, 0)
+sch_stalls = [p for p in sc_stalls if not (p[1] < -38)]
+fx_, fy_ = 84, -66; civic.field(T, CM, fx_, fy_, 16, 30); cbox(fx_ - 11.2, fy_, 4, 12.4, 0)
+TRACK = rd.Road("track", [(fx_ + 11, fy_ - 10), (fx_ + 11, fy_ + 10), (fx_ + 8, fy_ + 17), (fx_, fy_ + 19), (fx_ - 8, fy_ + 17), (fx_ - 11, fy_ + 10), (fx_ - 11, fy_ - 10), (fx_ - 8, fy_ - 17), (fx_, fy_ - 19), (fx_ + 8, fy_ - 17)], hw=2.8, closed=True, rank=1, sw=(0, 0), mark=False, surf="track", curbs=False, flare=0)
+m["track"] = CM["track"]; TRACK.pieces = [(0.0, TRACK.L, 0, 0, 0, 0)]; net.append(TRACK); rd.draw_road(RB, TRACK, m); NOGO.append((fx_ - 15, fy_ - 23, fx_ + 15, fy_ + 23)); mapr(fx_ - 14, fy_ - 22, fx_ + 14, fy_ + 22, "#b3503c"); mapr(fx_ - 8, fy_ - 15, fx_ + 8, fy_ + 15, "#4c9a45")
 # ================================================================  STREET FURNITURE & VEGETATION  =========================================
 sx_ = CURB_SW + 1.5
 for (x, y, tx, ty, s) in along(PKWY, 0, 21, 10):                                                                         # a few median palms, soft shrub beds between
@@ -212,9 +240,11 @@ for t in TRAFFIC:
     p0 = t["path"][0]; addcar(t["kind"], t["color"], t["name"], p0[0], p0[1], 0)
 PAL = ["#e6e6e2", "#2b2d33", "#9aa0a8", "#2e5fa3", "#c8201c", "#3d7a52", "#d8b04a", "#7a3a2a"]
 k = 0
-for (sx_s, sy_s) in stalls:
-    if R_.random() < .30:
-        rz = 0 if sy_s < 15 or 23.2 <= sy_s < 28.4 else 180; addcar("sedan", R_.choice(PAL), f"parked{k}", sx_s, sy_s, rz); cbox(sx_s, sy_s, 1.8, 4.5, rz); COL[-1]["car"] = f"parked{k}"; k += 1
+for (stl, aisle_y, prob) in ((stalls, 15.0, .30), (hl_stalls, -81.0, .35), (sch_stalls, -35.0, .45)):
+    for (sx_s, sy_s) in stl:
+        if R_.random() < prob:
+            rz = (0 if sy_s < 15 or 23.2 <= sy_s < 28.4 else 180) if stl is stalls else (0 if sy_s < aisle_y else 180)
+            addcar("sedan", R_.choice(PAL), f"parked{k}", sx_s, sy_s, rz); cbox(sx_s, sy_s, 1.8, 4.5, rz); COL[-1]["car"] = f"parked{k}"; k += 1
 # ================================================================  WORLD EDGE + DATA  =======================================================
 for (x, y, w, d) in ((0, EXT - .5, 2 * EXT, 3), (0, -EXT + .5, 2 * EXT, 3), (EXT - .5, 0, 3, 2 * EXT), (-EXT + .5, 0, 3, 2 * EXT)): cbox(x, y, w, d)
 T.cyl(M("shadow_dummy", "#000000"), (0, 0, -5), .01, .01, "z", 3); terr = T.build(vc=True); STATIC.append(terr); STATIC.extend(RB.build(vc=True, recalc=False))
@@ -239,7 +269,8 @@ if not os.environ.get("NORENDER"):
         o = bpy.data.objects.new(p["k"], tmpl[p["k"]].data); bpy.context.scene.collection.objects.link(o); o.location = (p["x"], p["y"], 0)
         o.rotation_euler = (0, 0, math.radians(p["rz"])); o.scale = (p["s"], p["s"], p["s"]) if p["k"] != "hedge" else (1, 1, 1)
     SHOTS = {"cc_game": ((START["x"], START["y"] + 8, 0), 45, 44, 540, 960), "cc_over": ((0, 0, 0), 55, 170, 1100, 1100), "cc_plaza": ((38, 18, 0), 48, 60, 1000, 640), "cc_homes": ((-62, 62, 0), 48, 60, 1000, 640),
-             "cc_park": ((-45, -40, 0), 50, 70, 1000, 640), "cc_junc": ((-3, -5, 0), 50, 50, 1000, 640)}
+             "cc_park": ((-45, -40, 0), 50, 70, 1000, 640), "cc_junc": ((-3, -5, 0), 50, 50, 1000, 640), "cc_civic": ((38, -52, 0), 50, 80, 1100, 800), "cc_school": ((84, -42, 0), 50, 62, 1000, 640)}
+    if os.environ.get("SHOT"): x_, y_, p_, d_ = [float(v) for v in os.environ["SHOT"].split(",")]; SHOTS = {"dbg": ((x_, y_, 0), p_, d_, 1000, 700)}
     for nm, (tgt, pitch, dist, w, h) in SHOTS.items():
         for o in [x for x in bpy.context.scene.objects if x.type == "CAMERA"]: bpy.data.objects.remove(o)
         game_camera(tgt, pitch, dist); render(os.path.join(OUT, nm + ".png"), w, h, samples=20, keep_transform=True)
