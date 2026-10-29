@@ -80,15 +80,16 @@ def camera(loc, target=(0, 0, 0), lens=35, ortho=False, ortho_scale=6):
     bpy.context.scene.camera = o
     return o
 
-def render(path, w=640, h=480, engine="EEVEE", ink=False, samples=16):
+def render(path, w=640, h=480, engine="EEVEE", ink=False, samples=16, keep_transform=False):
     s = bpy.context.scene
     if engine == "EEVEE":  # renamed between Blender 4.x (BLENDER_EEVEE_NEXT) and 5.x (BLENDER_EEVEE)
         ids = {e.identifier for e in s.render.bl_rna.properties["engine"].enum_items}
         engine = "BLENDER_EEVEE" if "BLENDER_EEVEE" in ids else "BLENDER_EEVEE_NEXT"
     s.render.engine = engine; s.render.resolution_x, s.render.resolution_y = w, h
     s.render.film_transparent = False; s.render.filepath = path
-    try: s.view_settings.view_transform = "Khronos PBR Neutral"
-    except TypeError: s.view_settings.view_transform = "Standard"
+    if not keep_transform:
+        try: s.view_settings.view_transform = "Khronos PBR Neutral"
+        except TypeError: s.view_settings.view_transform = "Standard"
     if engine.startswith("BLENDER_EEVEE"): s.eevee.taa_render_samples = samples
     s.render.use_freestyle = ink
     if ink:

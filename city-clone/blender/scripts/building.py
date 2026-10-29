@@ -3,12 +3,12 @@ Faces: S=-Y (toward the game camera), N=+Y, E=+X, W=-X."""
 import sys, os, random; sys.path.insert(0, os.path.dirname(__file__)); from kit import *
 
 def make_building(name, w, d, floors, wall="#8e3b2e", band="#7a3126", trim="#cdbf9f", floor_h=3.1, seed=1, lit=0.3,
-                  storefront=("S",), awning="#b5302a", fire_escape=("S", 0.78), roof="ac", sign=None):
+                  storefront=("S",), awning="#b5302a", fire_escape=("S", 0.78), roof="ac", sign=(), shop_sign=None):
     rnd = random.Random(seed); b = Builder(name); H = floors * floor_h
-    wall_m, band_m, trim_m = M("wall_" + wall[1:], wall), M("band_" + band[1:], band), M("trim_" + trim[1:], trim)
+    wall_m, band_m, trim_m = M("wall_" + wall[1:], wall, tex="brick_" + wall[1:], tile=3.2), M("band_" + band[1:], band), M("trim_" + trim[1:], trim)
     glass = M("win_dark", "#27384a", rough=0.2); glass2 = M("win_dark2", "#1d2c3b", rough=0.2)
     glow = M("win_lit", "#ffc860", emit=1.6); shop = M("shop_glass", "#ffd68a", emit=1.0); shop_dark = M("shop_dark", "#2a2f38")
-    roofm = M("roof_tar", "#4b4a4c"); metal = M("metal_dark", "#25282c"); grey = M("ac_grey", "#8d9198"); awn = M("awning_" + awning[1:], awning)
+    roofm = M("roof_tar", "#4b4a4c", tex="roof", tile=3.0); metal = M("metal_dark", "#25282c"); grey = M("ac_grey", "#8d9198"); awn = M("awning_" + awning[1:], awning)
     plinth = M("plinth", "#5d5a56")
     hx, hy = w / 2, d / 2
     # shell + roof
@@ -39,6 +39,8 @@ def make_building(name, w, d, floors, wall="#8e3b2e", band="#7a3126", trim="#cdb
                     c = -L / 2 + pitch * (i + .5)
                     fb(face, c - pitch * .38, c + pitch * .38, .5, 2.7, .08, .14, shop if rnd.random() < .7 else glass)
                 fb(face, -L / 2, L / 2, 3.1, 3.5, .1, .35, trim_m)       # sign band
+                if shop_sign and face == "S":
+                    sm = M("shopsign_" + shop_sign, "#ffffff", emit=.9, tex="sign_" + shop_sign, fit=True); fb("S", -2.6, 2.6, 3.05, 4.4, .36, .42, sm)
                 # awning (slanted)
                 x0, x1 = -L / 2 + .4, L / 2 - .4
                 if face == "S": b.prism(awn, (x0, x1, -hy - .15, -hy - .15), (x0, x1, -hy - 1.7, -hy - 1.7), 3.0, 2.5)
@@ -75,7 +77,7 @@ def make_building(name, w, d, floors, wall="#8e3b2e", band="#7a3126", trim="#cdb
         if roof == "tank" and abs(ax - hx * .35) < 2.4 and abs(ay + hy * .1) < 2.4: continue
         b.box(grey, ax - .7, ax + .7, ay - .5, ay + .5, H + .1, H + .85); b.box(metal, ax - .45, ax + .45, ay - .3, ay + .3, H + .85, H + .92)
     b.box(wall_m, -hx + 1.2, -hx + 3.6, hy - 3.4, hy - 1.2, H, H + 2.6); b.box(roofm, -hx + 1.1, -hx + 3.7, hy - 3.5, hy - 1.1, H + 2.6, H + 2.75)   # stair bulkhead
-    if sign:                                                                         # vertical blade sign on the S face, left corner
-        col, edge = sign; s1 = M("sign_" + col[1:], col, emit=1.4); s2 = M("signedge_" + edge[1:], edge)
-        fb("S", -hx + .3, -hx + 1.6, 3.8, 3.8 + 5.2, .5, .75, s2); fb("S", -hx + .42, -hx + 1.48, 3.95, 3.8 + 5.05, .75, .8, s1)
+    for (tname, uc, z0, sw, sh) in sign:                                              # vertical blade signs on the S face: (texture, u, z0, width, height)
+        sm = M("blade_" + tname, "#ffffff", emit=.9, tex="sign_" + tname, fit=True); edge = M("blade_edge", "#3a1410")
+        fb("S", uc - sw / 2 - .06, uc + sw / 2 + .06, z0 - .06, z0 + sh + .06, .45, .6, edge); fb("S", uc - sw / 2, uc + sw / 2, z0, z0 + sh, .6, .66, sm)
     return b.build()

@@ -1,12 +1,14 @@
 """Crossroads at the origin: asphalt, markings, sidewalks, curbs, lamps, hydrants."""
 import sys, os; sys.path.insert(0, os.path.dirname(__file__)); from kit import *
-R = 5.2          # half road width: driving lane 3.2 + parking lane 2.0 each side
+LANE = 2.6       # driving lane
+PARK = 2.0       # parking lane (fits a 1.8 m car)
+R = LANE + PARK  # half road width = 4.6
 SW = 3.0         # sidewalk width
 EXT = 46
 
 def make_street():
     b = Builder("street")
-    asphalt = M("asphalt", "#4b4d50"); slab = M("sidewalk", "#9d9a92"); curb = M("curb", "#bdb9ae"); white = M("paint_white", "#d9d6cc"); yel = M("paint_yellow", "#d9ac2a")
+    asphalt = M("asphalt", "#4b4d50", tex="asphalt", tile=4.0); slab = M("sidewalk", "#9d9a92", tex="sidewalk", tile=3.0); curb = M("curb", "#bdb9ae"); white = M("paint_white", "#d9d6cc"); yel = M("paint_yellow", "#d9ac2a")
     b.box(asphalt, -EXT, EXT, -EXT, EXT, -.2, 0)
     for sx in (-1, 1):
         for sy in (-1, 1):
@@ -25,7 +27,7 @@ def make_street():
         rect(R + 3.7, R + 4.1, 0, R - .1, white) if ay == 1 or ax == -1 else rect(R + 3.7, R + 4.1, -R + .1, 0, white)  # stop line on the approaching side
         rect(R + 4.6, EXT, -.22, -.1, yel); rect(R + 4.6, EXT, .1, .22, yel)                                           # double yellow
         a = R + 5
-        while a < EXT - 2: rect(a, a + 2, -(R - 2.0) - .06, -(R - 2.0) + .06, white); rect(a, a + 2, (R - 2.0) - .06, (R - 2.0) + .06, white); a += 4.5  # parking-lane edge, dashed
+        while a < EXT - 2: rect(a, a + 2, -(R - PARK) - .06, -(R - PARK) + .06, white); rect(a, a + 2, (R - PARK) - .06, (R - PARK) + .06, white); a += 4.5  # parking-lane edge, dashed
     return b.build()
 
 def make_props():
@@ -69,3 +71,55 @@ def make_extras():
     for yy in (R + 12.0, R + 12.4): b.box(bench_m, -R - 2.9, -R - 2.8, yy, yy + .1, .0, .45); b.box(bench_m, -R - 1.2, -R - 1.1, yy, yy + .1, .0, .45)
     b.box(box, R + 2.0, R + 2.8, -R - 12.6, -R - 11.8, .16, .76)
     return b.build()
+
+
+ARCH_Y = 24.0
+def make_arch(name="arch"):
+    """Chinatown gate across the north arm: red pillars on stone bases, beam, two-tier green roof, lanterns, lettered board."""
+    b = Builder(name)
+    red = M("arch_red", "#b32018"); dred = M("arch_dred", "#7e1510"); green = M("arch_green", "#1f6b4a", rough=.7); dgreen = M("arch_dgreen", "#16493a")
+    stone = M("arch_stone", "#8f8c84"); gold = M("arch_gold", "#d9a62b"); lan = M("lantern", "#ff3a1a", emit=2.2)
+    board = M("arch_board", "#ffffff", emit=.8, tex="sign_chinatown", fit=True)
+    X = R + 1.5
+    for sx in (-1, 1):
+        b.box(stone, sx * X - .75, sx * X + .75, -.75, .75, 0, .9)
+        b.box(red, sx * X - .42, sx * X + .42, -.42, .42, .9, 7.0)
+        b.box(gold, sx * X - .5, sx * X + .5, -.5, .5, 6.3, 6.5)
+        b.prism(green, (sx * X - 1.5, sx * X + 1.5, -1.3, 1.3), (sx * X - .7, sx * X + .7, -.6, .6), 7.0, 7.9)         # cap roof over each pillar
+    L = X + 1.0
+    b.box(dred, -L, L, -.45, .45, 5.7, 6.9); b.box(gold, -L, L, -.5, .5, 6.9, 7.0)
+    b.prism(green, (-L - .8, L + .8, -1.6, 1.6), (-L + .6, L - .6, -.9, .9), 7.0, 8.0)                                   # lower main roof
+    b.box(dgreen, -L + .6, L - .6, -.25, .25, 8.0, 8.25)
+    b.box(board, -2.5, 2.5, -.2, .2, 8.25, 10.0)                                                                        # lettered board
+    b.prism(green, (-3.6, 3.6, -1.3, 1.3), (-2.4, 2.4, -.7, .7), 10.0, 10.9); b.box(dgreen, -2.4, 2.4, -.25, .25, 10.9, 11.15)  # upper roof
+    for i in range(-5, 6):                                                                                                # lanterns under the beam
+        x = i * (L - .7) / 5; b.cyl(lan, (x, -.55, 5.35), .26, .5, "z", 8, r2=.2); b.box(gold, x - .03, x + .03, -.58, -.52, 5.6, 5.7)
+    return b.build()
+
+def make_stall(name="stall", awn_a="#1f6b4a", awn_b="#e8e2c8"):
+    b = Builder(name)
+    wood = M("stall_wood", "#7a5232"); dwood = M("stall_dwood", "#4e3420"); a = M("stall_awn_a_" + awn_a[1:], awn_a); c = M("stall_awn_b", awn_b)
+    prod = [M("fruit_o", "#e0801a"), M("fruit_r", "#c4301f"), M("fruit_g", "#5c9a2e"), M("fruit_y", "#e8c030")]; lan = M("lantern", "#ff3a1a", emit=2.2)
+    b.box(wood, -1.1, 1.1, -.5, .5, 0, .85); b.box(dwood, -1.15, 1.15, -.55, .55, .85, .92)
+    for i, x in enumerate((-.85, -.3, .25, .8)): b.box(prod[i % 4], x - .22, x + .22, -.3, .3, .92, 1.1)
+    for sx in (-1, 1): b.box(dwood, sx * 1.1 - .05, sx * 1.1 + .05, -.55, -.45, 0, 2.3)
+    for i in range(6):                                                     # striped slanted awning
+        x0 = -1.35 + i * .45; b.prism(a if i % 2 == 0 else c, (x0, x0 + .45, .4, .4), (x0, x0 + .45, -.95, -.95), 2.45, 1.95)
+    b.cyl(lan, (0, -.9, 1.75), .2, .36, "z", 8, r2=.16)
+    return b.build()
+
+def make_misc():
+    """Small movable props, one object each: returns dict name -> object (origin at ground centre)."""
+    out = {}
+    dump = M("dumpster", "#2d5a45"); dlid = M("dumpster_lid", "#1c3a2c"); jer = M("jersey", "#b8b5ad"); barrel = M("barrel", "#e0701a"); wht = M("barrel_stripe", "#ece8dc")
+    news = M("newsbox", "#d9b020"); news2 = M("newsbox2", "#2a4f9a"); pal = M("pallet", "#9a7a4a"); crate = M("crate2", "#7a6240")
+    b = Builder("dumpster"); b.box(dump, -1.2, 1.2, -.7, .7, .1, 1.4); b.box(dlid, -1.25, 1.25, -.75, .75, 1.4, 1.5); out["dumpster"] = b.build()
+    b = Builder("barrier"); b.box(jer, -1.2, 1.2, -.3, .3, 0, .35); b.prism(jer, (-1.2, 1.2, -.2, .2), (-1.2, 1.2, -.1, .1), .35, .95); out["barrier"] = b.build()
+    b = Builder("barrel"); b.cyl(barrel, (0, 0, .45), .3, .9, "z", 8); b.cyl(wht, (0, 0, .55), .31, .16, "z", 8); out["barrel"] = b.build()
+    b = Builder("newsboxes"); b.box(news, -.65, -.05, -.25, .25, 0, 1.0); b.box(news2, .05, .65, -.25, .25, 0, 1.0); out["newsboxes"] = b.build()
+    b = Builder("pallet"); b.box(pal, -.6, .6, -.6, .6, 0, .15); b.box(crate, -.5, .5, -.5, .5, .15, .95); out["pallet"] = b.build()
+    return out
+
+def lamp_heads():
+    """World positions of the 4 corner lamp heads (for point lights)."""
+    return [(sx * (R + .7) - sx * 1.5, sy * (R + .7), 4.5) for sx in (-1, 1) for sy in (-1, 1)]

@@ -10,9 +10,13 @@ def lin(hexstr):
     return tuple(x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4 for x in c)
 
 _mats = {}
-def M(name, hexstr, emit=0.0, rough=0.9):
-    """Cached material. emit>0 makes it glow (windows, lamps, signs) in both Blender and glTF."""
-    key = (name, hexstr, emit)
+TEXDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "out", "tex")
+
+def M(name, hexstr, emit=0.0, rough=0.9, tex=None, tile=1.0, fit=False):
+    """Cached material. emit>0 makes it glow (windows, lamps, signs) in both Blender and glTF.
+    tex = PNG name in out/tex (made by textures.py); tile = metres per texture repeat; fit = map the texture once over each face (signs)."""
+    if tex and not os.path.exists(os.path.join(TEXDIR, tex + ".png")): tex = None
+    key = (name, hexstr, emit, tex, tile, fit)
     if key in _mats and _mats[key].name in bpy.data.materials: return _mats[key]
     m = bpy.data.materials.new(name); m.use_nodes = True
     b = m.node_tree.nodes["Principled BSDF"]
@@ -21,7 +25,12 @@ def M(name, hexstr, emit=0.0, rough=0.9):
         if k in b.inputs: b.inputs[k].default_value = 0
     if emit:
         b.inputs["Emission Color"].default_value = (*lin(hexstr), 1); b.inputs["Emission Strength"].default_value = emit
-    m.diffuse_color = (*lin(hexstr), 1)
+    if tex:
+        img = bpy.data.images.load(os.path.join(TEXDIR, tex + ".png")); img.colorspace_settings.name = "sRGB"; img.pack()
+        t = m.node_tree.nodes.new("ShaderNodeTexImage"); t.image = img; t.interpolation = "Linear"
+        m.node_tree.links.new(t.outputs["Color"], b.inputs["Base Color"])
+        if emit: m.node_tree.links.new(t.outputs["Color"], b.inputs["Emission Color"])
+    m.diffuse_color = (*lin(hexstr), 1); m["tile"] = float(tile); m["fit"] = bool(fit)
     _mats[key] = m
     return m
 
@@ -73,6 +82,19 @@ class Builder:
         for m in self.mats: me.materials.append(m)
         o = bpy.data.objects.new(self.name, me); (collection or bpy.context.scene.collection).objects.link(o)
         for p in me.polygons: p.use_smooth = False
+        uv = me.uv_layers.new(name="UVMap")                   # world-metre box projection, scaled per material tile (or fitted per face)
+        for poly in me.polygons:
+            m = me.materials[poly.material_index]; tile = m.get("tile", 1.0) or 1.0; n = poly.normal
+            pts = []
+            for li in poly.loop_indices:
+                c = me.vertices[me.loops[li].vertex_index].co
+                pts.append((c.x, c.y) if abs(n.z) > .7 else ((c.y, c.z) if abs(n.x) > abs(n.y) else (c.x, c.z)))
+            if m.get("fit", False):
+                us = [q[0] for q in pts]; vs = [q[1] for q in pts]; du = (max(us) - min(us)) or 1; dv = (max(vs) - min(vs)) or 1
+                pts = [((q[0] - min(us)) / du, (q[1] - min(vs)) / dv) for q in pts]
+                if n.y > .7 or n.x < -.7: pts = [(1 - u, v) for u, v in pts]      # text reads left-to-right when seen from outside
+            else: pts = [(q[0] / tile, q[1] / tile) for q in pts]
+            for li, q in zip(poly.loop_indices, pts): uv.data[li].uv = q
         if bevel:
             bpy.context.view_layer.objects.active = o
             md = o.modifiers.new("bevel", "BEVEL"); md.width = bevel; md.segments = 1; md.limit_method = "ANGLE"; md.angle_limit = math.radians(50)

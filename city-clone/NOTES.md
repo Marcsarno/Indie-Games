@@ -12,16 +12,28 @@ Read `HANDOFF.md` first. Last updated 2026-10-29.
 - Reuse from Diablo: sound synth, touch controls, the before/after review habit.
 
 ## State
-Blender 5.2.3 LTS tooling is installed and verified end to end. Concept art saved in `art/` (target = concept-4).
-**Round 1 test scene** (`blender/scripts/test_scene.py`, renders in `art-review/round1/`): crossroads, 4 buildings (6/8/2/3 floors) from one
-parametric generator (`building.py`), sedan/taxi from one car generator (`car.py`), street, lamps, trees, parked cars, GLB export (1.1 MB).
-Game camera = `lib.game_camera`: north-up, perspective, 65 deg pitch, width-fitted lens (Blender fits the LONGER side by default; that
-mistake made portrait shots look 2x zoomed until fixed). ~21 m of street visible across a portrait phone.
-Honest gaps vs concept-4: far less density (no pedestrians, little street clutter, plain sidewalks), brighter/flatter palette
-(concept is warm dusk, darker, more contrast), streets too wide (buildings only a sliver in portrait), no textures/brick/signage text,
-car is chunky with a plain interior-less look, fire-escape rails read as solid slabs. Lighting is live EEVEE shadows; for the game it must be baked.
+Blender 5.2.3 LTS tooling installed and verified (`blender/README.md`). Concept art saved in `art/` (target = concept-4).
+Phone page (Artifact): https://claude.ai/artifact/TkdXc4ziagunseRsvdKziw  (source `viewer/index.html`; republish the same file path to update).
+The host serves no `.glb`, so the page loads base64 text copies: re-export models into `viewer/`, run `viewer/build.sh`, publish `index.html` with
+`files` = `test_scene.glb.b64.txt` + `character.glb.b64.txt`.
+
+**Round 1** (`art-review/round1/`): crossroads + generators for buildings (`building.py`), cars (`car.py`), street (`street.py`), kit (`kit.py`).
+**Round 2** (`art-review/round2/`, before/after sheet `compare_round1_round2_concept.png`):
+- Road narrowed to R=4.6 (lane 2.6 + parking 2.0). Dusk look: warm low sun, blue ambient, lamp point lights, AgX high contrast (`mood.py`).
+- Procedural textures (`textures.py`: brick per colour, asphalt, sidewalk slabs, roof; numpy+PIL) mapped by world-metre box projection in `Builder.build`.
+- Signs with real Chinese characters drawn with WenQuanYi Zen Hei (海鮮酒家, 金行, 餃子, 酒家, 金龍酒樓, 華埠) as emissive textures.
+- Chinatown arch, 3 market stalls, dumpster, barriers, barrels, news boxes, pallets, 6 buildings, 14 cars, 5 trees.
+- Rigged pedestrian (`character.py`): rigid blocky parts in a joint hierarchy (no skinning), pose functions -> keyframes -> NLA tracks
+  idle/walk/run/punch -> glTF animations. Verified playing in Three.js (walk cycle, jab with stagger). Blender 5 slotted actions worked with
+  NLA export (`export_animation_mode="NLA_TRACKS"`).
+- Viewer: Drive (follows the red sedan), Arch, Overview, Top; Tilt and Zoom sliders; drag to pan, pinch to zoom; fps readout;
+  12 walking pedestrians, a fighting pair, looping traffic. Lights are live Three.js lights + a shadow-mapped sun (not baked yet).
+Honest gaps vs concept-4: still far fewer people/props, no storefront clutter, road a little wide, arch roofs flat dark green, characters are
+faceless blocks, no baked lighting/AO, only measured in software GL (about 20 fps in headless SwiftShader, meaningless for phones; need a real
+device reading from the fps chip). Pedestrians clip trees/bins slightly (walk lanes ignore props). Camera passing under the arch is hidden by it.
+Gotchas: Blender fits the lens to the LONGER image side (use `sensor_fit=HORIZONTAL`); `[hidden]` needs `display:none!important` when a rule sets display.
 
 ## Next
-0. Round 2 art pass on the gaps above (narrower road ~R=4.2, dusk grade, ground/brick textures, signage with a CJK font, props, pedestrians).
+0. User feedback on the phone page (look, camera angle, mood, frame rate on the real device).
 1. Quick test scene (crossroads, two tall buildings, one car) built with the Blender scripts, shown from the game camera.
 2. Prototype per `HANDOFF.md`: block, drivable car with crash physics, hero walking and punching; publish as an Artifact.
