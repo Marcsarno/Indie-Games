@@ -46,8 +46,8 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 <div class="hud top"><div class="chip title"><b>Chinatown Block</b><span>Test scene &middot; built in Blender</span></div><div class="chip" id="fps">&ndash; fps</div></div>
 <div class="hud bottom">
   <div class="chip cam">
-    <label for="tilt">Tilt <output id="tiltv">65&deg;</output><input id="tilt" type="range" min="35" max="85" step="1" value="65"></label>
-    <label for="zoom">Zoom <output id="zoomv">21 m</output><input id="zoom" type="range" min="12" max="70" step="1" value="21"></label>
+    <label for="tilt">Tilt <output id="tiltv">45&deg;</output><input id="tilt" type="range" min="35" max="85" step="1" value="45"></label>
+    <label for="zoom">Zoom <output id="zoomv">44 m</output><input id="zoom" type="range" min="12" max="70" step="1" value="44"></label>
   </div>
   <div class="chip views" role="group" aria-label="Camera view">
     <button id="v-drive" aria-pressed="true">Drive</button><button id="v-town" aria-pressed="false">Arch</button><button id="v-over" aria-pressed="false">Overview</button><button id="v-top" aria-pressed="false">Top</button>
@@ -84,7 +84,7 @@ for (const [sx, sy] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {      // four corn
 }
 
 const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 300);
-const rig = { tx: 1.3, tz: 6, pitch: 65, dist: 21, mode: 'drive' };
+const rig = { tx: 1.3, tz: 6, pitch: 45, dist: 44, mode: 'drive' };      // user's chosen game camera: 45 deg tilt, 44 m
 const HFOV = 54.4 * Math.PI / 180;                    // phone game camera: width-fitted, like the Blender renders
 function resize() {
   const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h;
@@ -139,7 +139,7 @@ for (const c of [hero, victim]) c.act.punch.setLoop(THREE.LoopOnce, 1);
 let punchT = 0, hit = 0;
 
 /* ---------- camera views ---------- */
-const VIEWS = { drive: { mode: 'drive', pitch: 65, dist: 21 }, town: { mode: 'free', tx: 0, tz: -(ARCH_Y - 8), pitch: 60, dist: 24 }, over: { mode: 'free', tx: 0, tz: -4, pitch: 42, dist: 55 }, top: { mode: 'free', tx: 0, tz: 0, pitch: 85, dist: 34 } };
+const VIEWS = { drive: { mode: 'drive', pitch: 45, dist: 44 }, town: { mode: 'free', tx: 0, tz: -(ARCH_Y - 8), pitch: 60, dist: 24 }, over: { mode: 'free', tx: 0, tz: -4, pitch: 42, dist: 55 }, top: { mode: 'free', tx: 0, tz: 0, pitch: 85, dist: 34 } };
 function setView(k) {
   Object.assign(rig, VIEWS[k]); for (const [id, v] of [['drive', 'v-drive'], ['town', 'v-town'], ['over', 'v-over'], ['top', 'v-top']]) $(v).setAttribute('aria-pressed', String(id === k));
   syncSliders();

@@ -12,6 +12,7 @@ Read `HANDOFF.md` first. Last updated 2026-10-29.
 - Reuse from Diablo: sound synth, touch controls, the before/after review habit.
 
 ## State
+**User verdict on the round 2 phone page: "nailed it". Chosen game camera: 45 deg tilt, 44 m zoom** (now the page default). At that zoom a car is ~4% of the screen width and a person is tiny, so doors/people need either a closer on-foot zoom (~20-24 m) or exaggerated readability.
 Blender 5.2.3 LTS tooling installed and verified (`blender/README.md`). Concept art saved in `art/` (target = concept-4).
 Phone page (Artifact): https://claude.ai/artifact/TkdXc4ziagunseRsvdKziw  (source `viewer/index.html`; republish the same file path to update).
 The host serves no `.glb`, so the page loads base64 text copies: re-export models into `viewer/`, run `viewer/build.sh`, publish `index.html` with
@@ -34,6 +35,7 @@ device reading from the fps chip). Pedestrians clip trees/bins slightly (walk la
 Gotchas: Blender fits the lens to the LONGER image side (use `sensor_fit=HORIZONTAL`); `[hidden]` needs `display:none!important` when a rule sets display.
 
 ## Next
+(Agreed order: 1 modular car doors + enter/exit animation, 2 drive + arcade physics + collisions, 3 on-foot control + punch + enter/exit button, 4 dynamic camera zoom, 5 pedestrian reactions, then baked lighting and more content.)
 0. User feedback on the phone page (look, camera angle, mood, frame rate on the real device).
 1. Quick test scene (crossroads, two tall buildings, one car) built with the Blender scripts, shown from the game camera.
 2. Prototype per `HANDOFF.md`: block, drivable car with crash physics, hero walking and punching; publish as an Artifact.
