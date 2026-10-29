@@ -25,6 +25,7 @@ Tune panel for the car handling. Controls are touch (stick/pads) with keyboard f
 - Do not ship real brand names (the concept used a real supermarket name; we use PALM MARKET).
 
 ## State
+(Round 8 replaced the straight-road Florida slice layout described below with the curved-road world; see Next item 2. The driving, combat and page notes still apply.)
 **User verdict on the round 2 phone page: "nailed it". Chosen game camera: 45 deg tilt, 44 m zoom** (now the page default). At that zoom a car is ~4% of the screen width and a person is tiny, so doors/people need either a closer on-foot zoom (~20-24 m) or exaggerated readability.
 Blender 5.2.3 LTS tooling installed and verified (`blender/README.md`). Concept art saved in `art/` (target = concept-4).
 Phone page (Artifact): https://claude.ai/artifact/TkdXc4ziagunseRsvdKziw  (source `viewer/index.html`; republish the same file path to update).
