@@ -9,20 +9,22 @@ def civic_mats():
                 dark=M("bus_dark", "#1e2328", rough=.4), glass=M("bus_glass", "#2a4656", rough=.2), pole_y=M("goal_yellow", "#e8c02c"), red=M("play_red", "#c8362a"), ylw=M("play_yel", "#f0c030"))
 
 def tennis_court(b, cm, cb, x, y):
-    """Apron 14 x 28, court 11 x 24 (long axis = y), net, white lines, fence rails + posts."""
-    b.box(cm["court_apron"], x - 7, x + 7, y - 14, y + 14, .03, .04); b.box(cm["court_blue"], x - 5.5, x + 5.5, y - 11.9, y + 11.9, .04, .05); L = cm["line"]; z0, z1 = .05, .056
+    """Apron 13 x 28, court 11 x 24 (long axis = y), net, white lines, fence rails + posts."""
+    A = 6.5
+    b.box(cm["court_apron"], x - A, x + A, y - 14, y + 14, .03, .04); b.box(cm["court_blue"], x - 5.5, x + 5.5, y - 11.9, y + 11.9, .04, .05); L = cm["line"]; z0, z1 = .05, .056
     for sx in (-5.5, 5.5): b.box(L, x + sx - .04, x + sx + .04, y - 11.9, y + 11.9, z0, z1)
     for sy in (-11.9, 11.9, -6.4, 6.4): b.box(L, x - 5.5, x + 5.5, y + sy - .04, y + sy + .04, z0, z1)
     b.box(L, x - .04, x + .04, y - 6.4, y + 6.4, z0, z1)
-    b.box(cm["net"], x - 6.2, x + 6.2, y - .03, y + .03, .05, 1.0)
-    for sx in (-6.2, 6.2): b.box(cm["post"], x + sx - .06, x + sx + .06, y - .06, y + .06, .05, 1.1)
-    for (x0, x1, y0, y1) in ((x - 7.2, x + 7.2, y - 14.2, y - 14.1), (x - 7.2, x + 7.2, y + 14.1, y + 14.2), (x - 7.2, x - 7.1, y - 14.2, y + 14.2), (x + 7.1, x + 7.2, y - 14.2, y + 14.2)):
+    b.box(cm["net"], x - 6.0, x + 6.0, y - .03, y + .03, .05, 1.0)
+    for sx in (-6.0, 6.0): b.box(cm["post"], x + sx - .06, x + sx + .06, y - .06, y + .06, .05, 1.1)
+    F = A + .2
+    for (x0, x1, y0, y1) in ((x - F, x + F, y - 14.2, y - 14.1), (x - F, x + F, y + 14.1, y + 14.2), (x - F, x - F + .1, y - 14.2, y + 14.2), (x + F - .1, x + F, y - 14.2, y + 14.2)):
         b.box(cm["fence"], x0, x1, y0, y1, 2.9, 3.0); b.box(cm["fence"], x0, x1, y0, y1, 1.4, 1.46)
     for k in range(-4, 5):
-        for (px, py) in ((x - 7.15, y + k * 3.5), (x + 7.15, y + k * 3.5)): b.box(cm["fence"], px - .05, px + .05, py - .05, py + .05, 0, 3.0)
+        for (px, py) in ((x - F + .05, y + k * 3.5), (x + F - .05, y + k * 3.5)): b.box(cm["fence"], px - .05, px + .05, py - .05, py + .05, 0, 3.0)
     for k in range(-2, 3):
-        for py in (y - 14.15, y + 14.15): b.box(cm["fence"], x + k * 3.5 - .05, x + k * 3.5 + .05, py - .05, py + .05, 0, 3.0)
-    cb(x, y - 14.15, 14.4, .3, "bush"); cb(x, y + 14.15, 14.4, .3, "bush"); cb(x - 7.15, y, .3, 28.4, "bush"); cb(x + 7.15, y, .3, 28.4, "bush")
+        for py in (y - 14.15, y + 14.15): b.box(cm["fence"], x + k * 3.2 - .05, x + k * 3.2 + .05, py - .05, py + .05, 0, 3.0)
+    cb(x, y - 14.15, 2 * F, .3, "bush"); cb(x, y + 14.15, 2 * F, .3, "bush"); cb(x - F + .05, y, .3, 28.4, "bush"); cb(x + F - .05, y, .3, 28.4, "bush")
 
 def playground(b, cm, cb, cc, x, y, w=10, d=10):
     b.box(cm["rubber_r"], x - w / 2, x + w / 2, y - d / 2, y + d / 2, .03, .06); b.box(cm["rubber_b"], x - w / 2 + 1, x + 0, y - d / 2 + 1, y + 1, .06, .075); b.box(cm["rubber_y"], x + 0.5, x + w / 2 - 1, y + 1.5, y + d / 2 - 1, .06, .075)
@@ -35,7 +37,7 @@ def playground(b, cm, cb, cc, x, y, w=10, d=10):
     b.box(cm["post"], x + 1.5, x + 3.5, y + 2.0, y + 2.1, 1.95, 2.05)
     cb(x - 2.6, y - 1.6, 2.2, 1.8, "bush")
 
-def field(b, cm, x, y, w=16, d=30, stripes=8):
+def field(b, cm, x, y, w=16, d=30, stripes=8, bleachers=True):
     """Football field (long axis y) with mowing stripes, lines, goals and bleachers on the west side."""
     sh = d / stripes
     for k in range(stripes): b.box(cm["turf"] if k % 2 else cm["turf2"], x - w / 2, x + w / 2, y - d / 2 + k * sh, y - d / 2 + (k + 1) * sh, .03, .04)
@@ -46,6 +48,7 @@ def field(b, cm, x, y, w=16, d=30, stripes=8):
         gy = y + sy * (d / 2 + .6)
         for sx in (-1.5, 1.5): b.box(cm["pole_y"], x + sx - .05, x + sx + .05, gy - .05, gy + .05, 0, 3.0)
         b.box(cm["pole_y"], x - 1.55, x + 1.55, gy - .05, gy + .05, 3.0, 3.1)
+    if not bleachers: return
     bx = x - w / 2 - 3.2
     for k in range(4): b.box(cm["steel"], bx - k * .0 - 1.2 + 0, bx + 1.2 + 0, y - 6, y + 6, 0, .45 + k * .45) if False else b.box(cm["steel"], bx - k * .7, bx - k * .7 + .7, y - 6, y + 6, 0, .5 + k * .5)
 
