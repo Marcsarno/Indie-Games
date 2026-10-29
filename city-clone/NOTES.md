@@ -1,23 +1,28 @@
-# City-clone notes
+# City-clone notes: "Grand Theft Coconut Creek" (GTCC)
 
-**SETTING CHANGE (user, 2026-10-29): the city is now Coconut Creek, Florida, working title "Grand Theft Coconut Creek" (GTCC).** Target art = `art/coconut-*.png`
-(the Chinatown concepts moved to `art/chinatown-superseded/`). Bright sunny suburb: palms, stucco + terracotta, canals, shopping plazas, low-rise (2-4 floors), so tall
-leaning walls matter less than in Chinatown. Camera note: the concept shows an oblique "overhead driving camera" and an OVER-THE-SHOULDER on-foot camera; the user's
-chosen play camera is still 45 deg / 44 m (ask before adopting the over-the-shoulder look). The Chinatown arch/signs/stalls are kept in the repo as an optional district.
-**User-supplied gameplay-angle art saved (art/coconut-5, coconut-6) and judged by the user to nail the style; use it as THE camera/look target for the Florida pass** (oblique ~45-55 deg,
-wide, dense palms, terracotta + stucco, bright warm daylight, GTA-style HUD with minimap, money, health bar, fist icon). It matches the 45 deg camera the user chose.
-Driving + physics (step 2) continues unchanged in the existing Chinatown test arena; the Florida art pass comes after it.
+Last updated 2026-10-29. **Start here.** `HANDOFF.md` is only the original brief (pixel-art plan, now superseded).
 
-Read `HANDOFF.md` first. Last updated 2026-10-29.
+## What this is
+A top-down open-city crime game for portrait phones in the browser, set in Coconut Creek, Florida. Real 3D (Three.js) with every model made by Python scripts in headless Blender.
+Live test build (Artifact, private, one link, republish the same file path to update): https://claude.ai/artifact/TkdXc4ziagunseRsvdKziw  (`#chinatown` on the link loads the old Chinatown block).
+Playable today: drive (drift, handbrake, crashes with spin/sparks/damage/skid marks), get out, walk/run, punch (combo, hitstop, knockback, knockdown), steal any parked car, minimap + cash + health HUD,
+Tune panel for the car handling. Controls are touch (stick/pads) with keyboard fallback.
 
-## Decisions
-- **Look:** real 3D like Chinatown Wars (tilted perspective camera, ink outlines, flat muted colors), not pixel art.
-  The user's reference screenshots were mobile Chinatown Wars: leaning building walls, black outlines, muted grey/green/brown.
-- **Engine:** Three.js in the browser (not Godot): small download, publishes as an Artifact, and the driving is
-  arcade physics written by hand (heading, velocity, lateral grip, footprint collisions) either way.
-- **Art pipeline:** every model is made by Python scripts in headless Blender and reviewed as renders first.
-  Nothing is built purely in Three.js. See `blender/README.md`. Diablo's pixel renderer is not used here.
-- Reuse from Diablo: sound synth, touch controls, the before/after review habit.
+## How to work on it (new session checklist)
+1. `bash city-clone/blender/setup.sh` (Blender 5.2.3 LTS + libs; the container is wiped each session). Scripts: `blender -b --python scripts/<x>.py` from `city-clone/blender` (see `blender/README.md`).
+2. Textures: `python3 scripts/textures.py`. World export: `NORENDER=1 blender -b --python scripts/coconut_scene.py` (Chinatown: `scripts/test_scene.py`); characters `scripts/export_character.py`; cars `scripts/export_cars.py`; vegetation `scripts/vegetation.py`.
+3. Copy exports into `viewer/` (`veg.glb`, `character.glb`, `car_*.glb`, `worlds/<w>/{scene.glb, colliders.json, cars.json, props.json, world.json}`), run `viewer/build.sh` (the Artifact host serves no `.glb`; the page loads base64 `.txt`).
+4. Publish with the Artifact tool, `file_path` = `city-clone/viewer/index.html`, `files` = the 4 shared `.b64.txt` + per world `worlds/<w>/{world.json, scene.glb.b64.txt, colliders.json, cars.json, props.json}` (both worlds).
+5. Test in headless Chromium with Playwright (software GL): load `?`/`#chinatown`, `window.__city.setManual(true)`, `tick(dt, draw=false)` for logic tests (drawing each frame is ~1 s), `step(dt)` = physics only. Scripted tests live only in the session scratchpad; rewrite from the hooks.
+6. Show the user before/after or concept-vs-ours sheets and animated GIFs captured with the stepped sim; commit and push to `main` after each round.
+
+## User decisions and preferences (keep)
+- Look: bright stylized low-poly, soft shading, no ink outlines. Target art: `art/coconut-*.png` (esp. coconut-5/6 gameplay angle: oblique ~45-55 deg, north-up). Chinatown art in `art/chinatown-superseded/`.
+- Play camera: **45 deg tilt, 44 m zoom**, north-up, follows the car/hero. **No dynamic zoom for pedestrians: people stay small, user is fine with that** (also easier for AI-made models).
+- Engine/pipeline: Three.js, Blender scripts for all models, no Godot, no models built purely in Three.js. Sound: basic synthesized effects only.
+- "Plan first" on big work, short status updates, before/after comparisons, commit + push to `main`.
+- **Feedback on Florida slice 1: too many palm trees; too easy to crash. Reduce palms as the world expands and make driving more forgiving (see Next).**
+- Do not ship real brand names (the concept used a real supermarket name; we use PALM MARKET).
 
 ## State
 **User verdict on the round 2 phone page: "nailed it". Chosen game camera: 45 deg tilt, 44 m zoom** (now the page default). At that zoom a car is ~4% of the screen width and a person is tiny, so doors/people need either a closer on-foot zoom (~20-24 m) or exaggerated readability.
@@ -112,8 +117,13 @@ Gotchas: Blender fits the lens to the LONGER image side (use `sensor_fit=HORIZON
 - Gaps vs concept: no pool water shimmer, no tennis courts/playground, no Publix-style big sign (fictional name), buildings are boxy with simple window geometry, grass is uniform (no flower beds), no
   golf course, bus, school, or varied vehicles (only sedan/taxi recoloured), no cart/bike NPCs, water is a flat textured plane, bridge is decorative (water collider blocks it), far horizon shows a sky/ground gradient.
 
-## Next
-(Agreed order: 1 DONE modular car doors + enter/exit animation, 2 DONE drive + arcade physics + collisions, 3 DONE on-foot control + punch + enter any car, 4 dynamic camera zoom, 5 pedestrian reactions, then baked lighting and more content.)
-0. User feedback on the phone page (look, camera angle, mood, frame rate on the real device).
-1. Quick test scene (crossroads, two tall buildings, one car) built with the Blender scripts, shown from the game camera.
-2. Prototype per `HANDOFF.md`: block, drivable car with crash physics, hero walking and punching; publish as an Artifact.
+## Next (in order; user has not yet picked the next phase, ask first)
+1. **Forgiving crashes + fewer palms** (user feedback): palms every ~14-18 m instead of 7-9, none on most median stretches; make small things non-lethal (shrubs, bollards, signs, hydrants, lamp poles as pass-through/soft or knock-over with a small slowdown), thinner trunk colliders, more wall sliding (lower restitution/tangent damping near glancing hits), maybe light steering assist. Keep the Tune panel for the user to dial it.
+2. **Road layout is too gridded (answered to the user: yes, break it up).** Real Coconut Creek and the concept art have curved neighbourhood streets, cul-de-sacs, rounded corner radii, a roundabout, a diagonal or bending main road. Plan: describe roads as polylines/splines with widths in data, generate asphalt ribbons, curbs, sidewalks and lane markings along them in Blender (with rounded fillets at junctions), export the same graph for traffic paths and the minimap, keep colliders for buildings/props only (cars may mount curbs), UV along the ribbon. Keep the main boulevard roughly straight with gentle bends; rotated buildings are already supported (`rz`). Needs traffic to follow splines instead of axis lanes and walkers to follow polylines.
+3. **Pedestrian reactions** (old step 5): flee when punched or when a car is near, cars hit and knock them down, small money/health consequences.
+4. **Fill the Florida gaps vs concept**: vehicle variety (SUV, pickup, van, bus, school bus, police cruiser, golf cart via the modular door generator), tennis courts, playground, flower beds, golf course edge, school, varied building shapes, real water look, walkable bridge, signage variety.
+5. Police / wanted level, missions (delivery, chase), safehouse; baked lighting/AO and a day-night cycle.
+6. Real-phone measurements: fps chip, touch feel, multi-touch (steer + gas), audio, memory. Everything so far is tested in desktop Chromium with software GL only.
+
+## Known gaps / gotchas
+See the Step 2, Step 3 and Florida sections above. Highlights: cars ignore pedestrians; parked cars and props are static; hero is invisible while seated; Blender fits lenses to the LONGER image side; clearing a mesh's materials resets face indices (assign after re-adding); `pkill -f name` inside a Bash command kills its own shell; drawing a frame in manual mode costs ~1 s in software GL.
