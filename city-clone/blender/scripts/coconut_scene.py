@@ -6,17 +6,24 @@ from kit import *; from street_fl import *; from building_fl import make_house, 
 reset(); mood.florida(); mood._transform(); R_ = random.Random(7)
 m = mats(); T = Builder("terrain"); terrain(T, m)
 COL, PROPS, CARS, STATIC, MAP = [], [], [], [], []
-def cbox(x, y, w, d, rz=0, car=None): COL.append({"t": "box", "x": round(x, 2), "y": round(y, 2), "w": round(w, 2), "d": round(d, 2), "rz": rz}); return COL[-1]
-def ccir(x, y, r): COL.append({"t": "circle", "x": round(x, 2), "y": round(y, 2), "r": r})
+def cbox(x, y, w, d, rz=0, car=None, soft=None):
+    COL.append({"t": "box", "x": round(x, 2), "y": round(y, 2), "w": round(w, 2), "d": round(d, 2), "rz": rz})
+    if soft: COL[-1]["soft"] = soft
+    return COL[-1]
+def ccir(x, y, r, soft=None):                                                                                           # soft = "bush" (drag + rustle) or "pole" (thin sign/signal post): cars push through, no impulse
+    COL.append({"t": "circle", "x": round(x, 2), "y": round(y, 2), "r": r}); 
+    if soft: COL[-1]["soft"] = soft
 def mapr(x0, y0, x1, y1, c): MAP.append([round(x0, 1), round(y0, 1), round(x1, 1), round(y1, 1), c])
 def prop(kind, x, y, s=None, col=True):
     s = s or R_.uniform(.9, 1.15); PROPS.append({"k": kind, "x": round(x, 2), "y": round(y, 2), "rz": round(R_.uniform(0, 360)), "s": round(s, 2)})
-    if col: ccir(x, y, {"palm_tall": .32, "palm_medium": .3, "palm_small": .25, "shrub_a": .5, "shrub_b": .5, "oak": .5}.get(kind, .3) * (1 if kind.startswith("palm") else s))
+    if col:
+        if kind.startswith("shrub"): ccir(x, y, .5 * s, "bush")
+        else: ccir(x, y, {"palm_tall": .2, "palm_medium": .19, "palm_small": .16, "oak": .4}.get(kind, .3) * (1 if kind.startswith("palm") else s))   # thin trunks only
 def hedge(x0, y0, x1, y1):
     n = max(1, int(max(abs(x1 - x0), abs(y1 - y0))))                       # a straight run of unit hedges (instanced), one collider box for the whole run
     for i in range(n):
         t = (i + .5) / n; PROPS.append({"k": "hedge", "x": round(x0 + (x1 - x0) * t, 2), "y": round(y0 + (y1 - y0) * t, 2), "rz": 0 if abs(x1 - x0) > abs(y1 - y0) else 90, "s": 1.0})
-    cbox((x0 + x1) / 2, (y0 + y1) / 2, max(abs(x1 - x0), .9), max(abs(y1 - y0), .9))
+    cbox((x0 + x1) / 2, (y0 + y1) / 2, max(abs(x1 - x0), .9), max(abs(y1 - y0), .9), soft="bush")
 def put(o, x, y, z=0, rz=0, w=None, d=None, col=True):
     o.location = (x, y, z); o.rotation_euler = (0, 0, math.radians(rz)); STATIC.append(o)
     if w and col: cbox(x, y, w, d, rz)
@@ -31,12 +38,13 @@ rows = [(6.8, 12.0), (18.0, 23.2), (23.2, 28.4), (34.4, 39.0)]
 islands, stalls = parking_lot(T, m, LX0, LX1, LY0, LY1, rows, 15.0)
 mapr(LX0, LY0, LX1, LY1, "#5a5c60"); mapr(LX0, 39, LX1, 42, "#a9a69c")
 for (ix, iy, iw, idp) in islands:
-    cbox(ix, iy, iw, idp); prop("palm_medium", ix, iy, 1.0, col=False)
-    if R_.random() < .6: prop("shrub_a", ix, iy + (1.2 if R_.random() < .5 else -1.2), 1.0, col=False)
+    cbox(ix, iy, iw, idp, soft="bush")                                                                                  # planted island: a kerbed shrub bed, cars may plough through slowly
+    if R_.random() < .4: prop("palm_medium", ix, iy, 1.0, col=False)
+    else: prop("shrub_a", ix, iy, 1.0, col=False)
 plaza = put(make_plaza("plaza", 44, 16, tower_x=10), 40, 50, 0, 0, 44.5, 17.5); mapr(18, 42, 62, 58, "#c9b48a")
 plaza2 = put(make_plaza("plaza2", 22, 14, 6.5, shops=(("cleaners", 6, "#a63c2a"), ("coffee", 6, "#21453a")), tower_x=-4, tower_sign="palmmarket"), -7 + 66 - 15, 58, 0, 0, 22.5, 15.5) if False else None
 for k in range(11):                                                                                                    # lot trees and lamps along the shop front
-    if k % 2 == 0: prop("palm_tall", 17 + k * 4.6, 40.6, 1.0)
+    if k % 4 == 1: prop("palm_tall", 17 + k * 4.6, 40.6, 1.0)
 for x in (24, 40, 56): lamp(T, x, 30.5, 1); lamp(T, x, 14.5, -1)
 # NW: townhome community (Palm Lane at y 11..17)
 T.box(m["asphalt"], -EXT, -BLV - 2.7, 11.0, 17.0, 0, .03); T.box(m["white"], -EXT, -BLV - 2.7, 13.95, 14.05, .03, .035); T.box(m["walk"], -EXT, -BLV - 2.7, 17.0, 19.2, 0, .15); T.box(m["walk"], -EXT, -BLV - 2.7, 8.6, 11.0, 0, .15)
@@ -44,12 +52,12 @@ mapr(-EXT, 11, -BLV - 2.7, 17, "#6a6c70")
 rowA = put(make_row("rowA", 5, 6.4, 10, 2, 3), -38, 24.2, 0, 0, 32, 10.2); rowB = put(make_row("rowB", 5, 6.4, 10, 2, 5), -38, 42.2, 0, 0, 32, 10.2); mapr(-54, 19.2, -22, 29.2, "#b5603e"); mapr(-54, 37.2, -22, 47.2, "#b5603e")
 T.box(m["conc"], -69, -55, 44, 56, 0, .12); T.box(m["bank"], -66.4, -57.6, 46.2, 53.8, .12, .2); T.box(m["water"], -66.0, -58.0, 46.6, 53.4, .2, .24); mapr(-69, 44, -55, 56, "#a9a69c"); mapr(-66, 46.6, -58, 53.4, "#2d78b8"); cbox(-62, 50, 8.6, 7.6)
 club = put(make_house("clubhouse", 14, 10, 1, "cream", 2, balcony=False, roof_h=3.2), -60, 64, 0, 0, 14.2, 10.2); mapr(-67, 59, -53, 69, "#b5603e")
-for (x, y) in ((-60, 45), (-64, 55), (-56, 55)): ccir(x, y, .3); T.cyl(M("umbrella_t", "#1f6b8a"), (x, y, 1.0), .05, 2.0, "z", 6); T.cyl(M("umbrella_c", "#2f9aa8"), (x, y, 2.15), 1.0, .25, "z", 8, r2=.12)
-for x in range(-66, -20, 7): prop("palm_medium", x, 31.5, 1.0)
+for (x, y) in ((-60, 45), (-64, 55), (-56, 55)): ccir(x, y, .3, "pole"); T.cyl(M("umbrella_t", "#1f6b8a"), (x, y, 1.0), .05, 2.0, "z", 6); T.cyl(M("umbrella_c", "#2f9aa8"), (x, y, 2.15), 1.0, .25, "z", 8, r2=.12)
+for x in range(-62, -20, 15): prop("palm_medium", x, 31.5, 1.0)
 for x in range(-66, -20, 9): prop("palm_small", x, 20.2 + 0, .9) if False else None
 hedge(-69, 19.9, -55, 19.9); hedge(-22, 19.9, -14, 19.9)
 for (x, y) in ((-30, 33), (-46, 33), (-52, 33), (-24, 8.2), (-40, 8.2), (-58, 8.2)): prop("shrub_a" if R_.random() < .5 else "shrub_b", x, y)
-for y in range(22, 66, 9): prop("palm_tall", -12.8, y, 1.0)
+for y in range(26, 66, 18): prop("palm_tall", -12.8, y, 1.0)
 # SW: pond park
 for (cx, cy, r) in ((-38, -36, 14.0), (-58, -30, 8.0)):
     T.cyl(m["bank"], (cx, cy, .03), r + .9, .06, "z", 20); T.cyl(m["water"], (cx, cy, .075), r, .06, "z", 20)
@@ -60,9 +68,9 @@ for sx_ in (-2, 2):
     for sy_ in (-2, 2): G.cyl(M("gaz_post", "#f1ece0"), (gx + sx_, gy + sy_, 1.4), .13, 2.8, "z", 6); ccir(gx + sx_, gy + sy_, .2)
 G.box(m["wood"], gx - 2.6, gx + 2.6, gy - 2.6, gy + 2.6, 0, .25); G.prism(gw, (gx - 3.2, gx + 3.2, gy - 3.2, gy + 3.2), (gx - .15, gx + .15, gy - .15, gy + .15), 2.8, 4.4); STATIC.append(G.build()); mapr(gx - 3, gy - 3, gx + 3, gy + 3, "#2f7a4a")
 for (x, y) in ((-26, -48), (-52, -50), (-62, -14), (-24, -8), (-70, -40)): prop("oak", x, y, 1.1)
-for (x, y) in ((-16, -16), (-16, -32), (-16, -48), (-30, -58), (-46, -56), (-66, -22), (-14, -62)): prop("palm_tall", x, y, 1.0)
+for (x, y) in ((-16, -24), (-16, -48), (-46, -56), (-66, -22)): prop("palm_tall", x, y, 1.0)
 for (x, y) in ((-24, -26), (-20, -26), (-24, -18), (-44, -18), (-52, -18)): prop("shrub_a", x, y)
-for (x, y) in ((-24, -34), (-26, -44), (-34, -52), (-46, -50), (-56, -42), (-66, -32), (-64, -20), (-50, -20), (-40, -20), (-30, -20), (-20, -40)): prop("palm_medium" if R_.random() < .6 else "palm_small", x, y, 1.0)
+for (x, y) in ((-26, -44), (-56, -42), (-64, -20), (-40, -20), (-20, -40)): prop("palm_medium" if R_.random() < .6 else "palm_small", x, y, 1.0)
 for (x, y) in ((-24, -38), (-30, -49), (-42, -52), (-52, -45), (-62, -37), (-68, -28), (-48, -21), (-36, -21)): prop("shrub_a" if R_.random() < .5 else "shrub_b", x, y)
 B = Builder("bridge"); bw = M("bridge_wood", "#8a5a34", tex="wood", tile=2.0); rail = M("bridge_rail", "#6a4426")
 B.box(bw, -52.5, -46.5, -34.6, -31.4, .25, .45)
@@ -72,19 +80,21 @@ STATIC.append(B.build())
 # SE: city hall + lawn
 hall = put(make_plaza("cityhall", 28, 14, 7.0, shops=(), tower_x=0, tower_sign="cityhall"), 46, -34, 0, 180, 28.5, 22, col=True); mapr(32, -41, 60, -27, "#d8c9a0")
 Fp = Builder("flagpole"); Fp.cyl(M("flag_pole", "#d8d8d8"), (30, -16, 4.5), .07, 9, "z", 6); Fp.box(M("flag_red", "#c22a3a"), 30.1, 32.2, -16.05, -15.95, 7.4, 8.9); Fp.box(M("flag_blue", "#2a3a8a"), 30.1, 31.1, -16.05, -15.95, 8.1, 8.9); STATIC.append(Fp.build()); ccir(30, -16, .12)
-for (x, y) in ((22, -14), (24, -50), (60, -14), (64, -50), (40, -52)): prop("oak" if R_.random() < .5 else "palm_tall", x, y, 1.1)
-for x in range(18, 66, 6): prop("palm_medium", x, -10.5, 1.0)
-for y in range(-64, -8, 9): prop("palm_tall", 12.8, y, 1.0)
+for (x, y) in ((22, -14), (24, -50), (64, -50), (40, -52)): prop("oak" if R_.random() < .6 else "palm_tall", x, y, 1.1)
+for x in range(22, 66, 15): prop("palm_medium", x, -10.5, 1.0)
+for y in range(-60, -8, 18): prop("palm_tall", 12.8, y, 1.0)
 for y in range(-64, -8, 9): prop("palm_tall", 66, y, 1.0) if False else None
 # boulevard: palm median + verge palms + lamps + signals + signs
-for y in list(range(10, 68, 7)) + list(range(-10, -68, -7)): prop("palm_medium", 0, y + (0 if y > 0 else 0), 1.0, col=True)
+for y in list(range(10, 68, 21)) + list(range(-10, -68, -21)): prop("palm_medium", 0, y, 1.0, col=True)            # few median palms ...
+for y in list(range(17, 68, 7)) + list(range(-17, -68, -7)):
+    if (y - 10) % 21: prop("shrub_a" if y % 14 else "shrub_b", 0, y, .9)                                              # ... and soft shrub beds between them
 for sx in (-1, 1):
-    for y in list(range(14, 68, 9)) + list(range(-14, -68, -9)):
-        if not (sx > 0 and 6 < y < 40 and False): prop("palm_tall" if (y // 9) % 2 else "palm_medium", sx * 12.6, y + .5 * sx, 1.0)
+    for y in list(range(14 + (9 if sx > 0 else 0), 68, 18)) + list(range(-14 - (9 if sx > 0 else 0), -68, -18)):         # verge palms ~18 m apart, staggered between the two sides
+        prop("palm_tall" if (y // 9) % 2 else "palm_medium", sx * 12.6, y, 1.0)
     for y in (20, 44, -20, -44): lamp(T, sx * 10.6, y, -sx)
-    for sy in (-1, 1): signal(T, sx * 9.9, sy * 5.0, (-sx, 0)); ccir(sx * 9.9, sy * 5.0, .14)
+    for sy in (-1, 1): signal(T, sx * 9.9, sy * 5.0, (-sx, 0)); ccir(sx * 9.9, sy * 5.0, .14, "pole")
 sign_pole(T, 10.7, 7.5, "pkwy", 3.2); sign_pole(T, -10.7, -7.5, "pkwy", 3.2); sign_pole(T, -10.6, 7.5, "wiles", 2.2); sign_pole(T, 10.6, -7.5, "wiles", 2.2)
-for (x, y) in ((11.4, 7.5), (-11.4, -7.5), (-11.4, 7.5), (11.4, -7.5)): ccir(x, y, .1)
+for (x, y) in ((11.4, 7.5), (-11.4, -7.5), (-11.4, 7.5), (11.4, -7.5)): ccir(x, y, .1, "pole")
 # ---- vehicles (rebuilt in the page from car_*.glb) --------------------------------------------------------------------
 def addcar(kind, color, name, x, y, rz=0):
     root = make_car(kind, color, name); root.location = (x, y, .03); root.rotation_euler = (0, 0, math.radians(rz)); CARS.append({"name": name, "kind": kind, "color": color, "x": x, "y": y, "rz": rz}); return root
