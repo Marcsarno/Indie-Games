@@ -80,4 +80,5 @@ def make_building(name, w, d, floors, wall="#8e3b2e", band="#7a3126", trim="#cdb
     for (tname, uc, z0, sw, sh) in sign:                                              # vertical blade signs on the S face: (texture, u, z0, width, height)
         sm = M("blade_" + tname, "#ffffff", emit=.9, tex="sign_" + tname, fit=True); edge = M("blade_edge", "#3a1410")
         fb("S", uc - sw / 2 - .06, uc + sw / 2 + .06, z0 - .06, z0 + sh + .06, .45, .6, edge); fb("S", uc - sw / 2, uc + sw / 2, z0, z0 + sh, .6, .66, sm)
-    return b.build()
+    o = b.build(); o["w"] = w; o["d"] = d                                          # footprint, read by the collider export
+    return o

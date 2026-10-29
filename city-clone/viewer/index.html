@@ -2,59 +2,85 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500&display=swap">
 <style>
-/* Layout: one full-bleed WebGL canvas; HUD pinned to the edges (title chip top-left, fps top-right, view/camera controls bottom). */
+/* Layout: one full-bleed WebGL canvas. Top rows hold status and two collapsible panels (View, Tune); the bottom holds the thumb controls:
+   steer arrows left, brake / gas / handbrake / door right. */
 :root {
   --night: #0c1222;        /* page + panel base, deep blue-black */
   --panel: rgba(12, 18, 34, .78);
-  --line: rgba(255, 236, 200, .16);
+  --line: rgba(255, 236, 200, .18);
   --paper: #f3ead6;        /* warm text, like lit signage paper */
   --dim: #a9a79f;
   --lamp: #ffb347;         /* sodium-lamp amber, the one accent */
-  --lantern: #e0361f;
+  --warn: #e0361f;
   --display: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
   --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
   color-scheme: dark;
 }
 [hidden] { display: none !important; }
 html, body { height: 100%; }
-body { margin: 0; background: var(--night); color: var(--paper); font: 500 14px/1.35 var(--body); overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; }
+body { margin: 0; background: var(--night); color: var(--paper); font: 500 14px/1.35 var(--body); overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 .hud { position: fixed; left: 0; right: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); pointer-events: none; }
 .top { top: 0; padding-top: calc(12px + env(safe-area-inset-top, 0px)); display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-.bottom { bottom: 0; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 8px; }
+.row2 { top: calc(62px + env(safe-area-inset-top, 0px)); display: flex; gap: 8px; align-items: center; }
 .chip { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); pointer-events: auto; }
 .title { padding: 7px 11px 6px; }
 .title b { display: block; font: 600 19px/1 var(--display); letter-spacing: .06em; text-transform: uppercase; }
 .title span { color: var(--dim); font-size: 12px; }
-#doorbtn { all: unset; box-sizing: border-box; padding: 5px 10px; font: 600 14px var(--display); letter-spacing: .09em; text-transform: uppercase; color: var(--paper); cursor: pointer; }
-#doorbtn[aria-pressed="true"] { color: var(--night); background: var(--lamp); border-radius: 6px; }
-#doorbtn:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
 .tr { display: flex; gap: 8px; align-items: center; }
-#fps { padding: 5px 9px; font: 500 13px var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
-.views { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; overflow: hidden; }
-.views button { all: unset; box-sizing: border-box; text-align: center; padding: 11px 2px 10px; font: 600 15px/1 var(--display); letter-spacing: .07em; text-transform: uppercase; color: var(--dim); cursor: pointer; border-left: 1px solid var(--line); }
+.btn { all: unset; box-sizing: border-box; padding: 6px 10px 5px; font: 600 14px/1 var(--display); letter-spacing: .09em; text-transform: uppercase; color: var(--paper); cursor: pointer; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; pointer-events: auto; }
+.btn[aria-pressed="true"], .btn[aria-expanded="true"] { color: var(--night); background: var(--lamp); border-color: var(--lamp); }
+.btn:focus-visible, .views button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
+#fps, #stat { padding: 5px 9px; font: 500 13px var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
+#stat { color: var(--paper); margin-left: auto; }
+#stat.hot { color: var(--warn); }
+.panel { position: fixed; z-index: 4; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); top: calc(100px + env(safe-area-inset-top, 0px)); padding: 10px 12px 12px; display: grid; gap: 10px; max-height: calc(100% - 330px); overflow-y: auto; touch-action: pan-y; }
+.views { display: grid; grid-template-columns: repeat(5, 1fr); overflow: hidden; border: 1px solid var(--line); border-radius: 6px; }
+.views button { all: unset; box-sizing: border-box; text-align: center; padding: 10px 2px 9px; font: 600 14px/1 var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--dim); cursor: pointer; border-left: 1px solid var(--line); }
 .views button:first-child { border-left: 0; }
 .views button[aria-pressed="true"] { color: var(--night); background: var(--lamp); }
-.views button:focus-visible { outline: 2px solid var(--paper); outline-offset: -3px; }
-.cam { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 8px 12px 9px; }
-.cam label { display: grid; gap: 3px; font: 600 12px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
-.cam label output { float: right; color: var(--paper); font-variant-numeric: tabular-nums; }
-.cam input { width: 100%; margin: 0; accent-color: var(--lamp); touch-action: pan-x; }
-#loading { position: fixed; inset: 0; display: grid; place-content: center; gap: 10px; text-align: center; background: var(--night); font: 600 22px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; z-index: 5; }
+.sl { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
+.sl label { display: grid; gap: 3px; font: 600 12px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.sl label output { float: right; color: var(--paper); font-variant-numeric: tabular-nums; }
+.sl input { width: 100%; margin: 0; accent-color: var(--lamp); touch-action: pan-x; }
+.note { margin: 0; color: var(--dim); font-size: 12px; }
+.pad { bottom: 0; padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: space-between; align-items: flex-end; }
+.cl, .cr { display: flex; gap: 10px; align-items: flex-end; }
+.cr { flex-direction: column; align-items: flex-end; }
+.cr .r2 { display: flex; gap: 10px; align-items: flex-end; }
+.pb { all: unset; box-sizing: border-box; width: 72px; height: 72px; border-radius: 50%; display: grid; place-content: center; text-align: center; font: 600 13px/1.05 var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--paper); background: var(--panel); border: 2px dashed rgba(255, 236, 200, .5); pointer-events: auto; touch-action: none; cursor: pointer; }
+.pb.big { width: 98px; height: 98px; font-size: 17px; border-color: var(--lamp); }
+.pb.sm { width: 60px; height: 60px; font-size: 12px; }
+.pb.on { color: var(--night); background: var(--lamp); border-color: var(--lamp); }
+.pb.dim { opacity: .35; pointer-events: none; }
+.pb i { display: block; width: 26px; height: 26px; background: currentColor; margin: 0 auto; }
+.pb i.l { clip-path: polygon(70% 8%, 70% 92%, 8% 50%); } .pb i.r { clip-path: polygon(30% 8%, 30% 92%, 92% 50%); }
+#loading { position: fixed; inset: 0; display: grid; place-content: center; gap: 10px; text-align: center; background: var(--night); font: 600 22px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; z-index: 8; }
 #loading small { font: 500 13px var(--body); letter-spacing: 0; text-transform: none; color: var(--dim); }
 #loading .bar { width: 200px; height: 3px; background: var(--line); margin: 0 auto; }
 #loading .bar i { display: block; height: 100%; width: 0; background: var(--lamp); }
-#err { position: fixed; inset: 0; z-index: 6; display: grid; place-content: center; padding: 24px; text-align: center; background: var(--night); }
+#err { position: fixed; inset: 0; z-index: 9; display: grid; place-content: center; padding: 24px; text-align: center; background: var(--night); }
 </style>
 <canvas id="view"></canvas>
-<div class="hud top"><div class="chip title"><b>Chinatown Block</b><span>Test scene &middot; built in Blender</span></div><div class="tr"><button class="chip" id="doorbtn" aria-pressed="false">Doors</button><div class="chip" id="fps">&ndash; fps</div></div></div>
-<div class="hud bottom">
-  <div class="chip cam">
-    <label for="tilt">Tilt <output id="tiltv">45&deg;</output><input id="tilt" type="range" min="35" max="85" step="1" value="45"></label>
-    <label for="zoom">Zoom <output id="zoomv">44 m</output><input id="zoom" type="range" min="12" max="70" step="1" value="44"></label>
-  </div>
-  <div class="chip views" role="group" aria-label="Camera view">
-    <button id="v-drive" aria-pressed="true">Drive</button><button id="v-enter" aria-pressed="false">Enter</button><button id="v-town" aria-pressed="false">Arch</button><button id="v-over" aria-pressed="false">Overview</button><button id="v-top" aria-pressed="false">Top</button>
+<div class="hud top"><div class="chip title"><b>Chinatown Block</b><span>Test arena &middot; driving</span></div><div class="tr"><button class="btn" id="snd" aria-pressed="true">Sound</button><div class="chip" id="fps">&ndash; fps</div></div></div>
+<div class="hud row2"><button class="btn" id="t-view" aria-expanded="false" aria-controls="p-view">View</button><button class="btn" id="t-tune" aria-expanded="false" aria-controls="p-tune">Tune</button><div class="chip" id="stat">0 km/h &middot; 0% damage</div></div>
+
+<div class="chip panel" id="p-view" hidden>
+  <div class="views" role="group" aria-label="Camera view"><button id="v-drive" aria-pressed="true">Play</button><button id="v-enter" aria-pressed="false">Enter</button><button id="v-town" aria-pressed="false">Arch</button><button id="v-over" aria-pressed="false">Overview</button><button id="v-top" aria-pressed="false">Top</button></div>
+  <div class="sl"><label for="tilt">Tilt <output id="tiltv">45&deg;</output><input id="tilt" type="range" min="35" max="85" step="1" value="45"></label><label for="zoom">Zoom <output id="zoomv">44 m</output><input id="zoom" type="range" min="10" max="70" step="1" value="44"></label></div>
+  <button class="btn" id="doorbtn" aria-pressed="false">Open all parked doors</button>
+</div>
+<div class="chip panel" id="p-tune" hidden>
+  <div class="sl" id="tunegrid"></div>
+  <p class="note">Changes apply instantly and are remembered on this device. Tell me the numbers you like.</p>
+  <button class="btn" id="tunereset">Reset to defaults</button>
+</div>
+
+<div class="hud pad" id="pad">
+  <div class="cl"><button class="pb" id="b-left" aria-label="Steer left"><i class="l"></i></button><button class="pb" id="b-right" aria-label="Steer right"><i class="r"></i></button></div>
+  <div class="cr">
+    <div class="r2"><button class="pb sm" id="b-door">Exit</button><button class="pb sm" id="b-hand">Hand<br>brake</button></div>
+    <div class="r2"><button class="pb" id="b-brake">Brake</button><button class="pb big" id="b-gas">Gas</button></div>
   </div>
 </div>
 <div id="loading">Loading block<div class="bar"><i id="bar"></i></div><small id="loadtxt">4 MB of models and textures</small></div>
@@ -69,6 +95,7 @@ const $ = id => document.getElementById(id);
 const R = 4.6, ARCH_Y = 24;                          // street half-width and arch position, from the Blender scripts (metres)
 const b2t = (x, y, z = 0) => new THREE.Vector3(x, z, -y);   // Blender (x east, y north, z up) -> three (x, y up, -z north)
 const rad = d => d * Math.PI / 180;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 let renderer;
 try { renderer = new THREE.WebGLRenderer({ canvas: $('view'), antialias: true, powerPreference: 'high-performance' }); }
@@ -83,14 +110,14 @@ scene.add(new THREE.HemisphereLight(0x5a6fb8, 0x3a3a50, 1.45));
 const sun = new THREE.DirectionalLight(0xff9a55, 3.1); sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -32, right: 32, top: 32, bottom: -32, near: 1, far: 140 });
 sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.05; scene.add(sun, sun.target);
-const SUNDIR = new THREE.Vector3(0.55, -0.42, 0.45).normalize();   // light travel direction (Blender (0.55,-0.45,-0.42) mapped to three)
-for (const [sx, sy] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {      // four corner lamps
+const SUNDIR = new THREE.Vector3(0.55, -0.42, 0.45).normalize();
+for (const [sx, sy] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
   const l = new THREE.PointLight(0xffc27a, 60, 16, 2); l.position.copy(b2t(sx * 3.8, sy * (R + .7), 4.3)); scene.add(l);
 }
 
 const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 300);
-const rig = { tx: 1.3, tz: 6, pitch: 45, dist: 44, mode: 'drive' };      // user's chosen game camera: 45 deg tilt, 44 m
-const HFOV = 54.4 * Math.PI / 180;                    // phone game camera: width-fitted, like the Blender renders
+const rig = { tx: 1.3, tz: 6, pitch: 45, dist: 44, mode: 'drive', shake: 0 };      // user's chosen game camera: 45 deg tilt, 44 m
+const HFOV = 54.4 * Math.PI / 180;
 function resize() {
   const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h;
   camera.fov = w / h < 1 ? 2 * Math.atan(Math.tan(HFOV / 2) / camera.aspect) * 180 / Math.PI : 42; camera.updateProjectionMatrix();
@@ -99,53 +126,48 @@ addEventListener('resize', resize); resize();
 
 /* ---------- load ---------- */
 const loader = new GLTFLoader();
-// The page host serves no .glb, so each model is a base64 text file: fetch, decode, parse.
-async function loadGlb(url, bar) {
+async function loadGlb(url, bar) {            // the page host serves no .glb: base64 text -> bytes -> parse
   const txt = await (await fetch(url)).text(); const bin = atob(txt.trim()); const u8 = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
   return new Promise((ok, fail) => loader.parse(u8.buffer, '', g => { if (bar) $('bar').style.width = bar; ok(g); }, fail));
 }
-let city, charGltf, sedanG, taxiG, carList;
+let city, charGltf, sedanG, taxiG, carList, colList;
 try {
-  [city, charGltf, sedanG, taxiG, carList] = await Promise.all([loadGlb('test_scene.glb.b64.txt', '70%'), loadGlb('character.glb.b64.txt'), loadGlb('car_sedan.glb.b64.txt'), loadGlb('car_taxi.glb.b64.txt'), fetch('cars.json').then(r => r.json())]);
+  [city, charGltf, sedanG, taxiG, carList, colList] = await Promise.all([loadGlb('test_scene.glb.b64.txt', '70%'), loadGlb('character.glb.b64.txt'), loadGlb('car_sedan.glb.b64.txt'), loadGlb('car_taxi.glb.b64.txt'), fetch('cars.json').then(r => r.json()), fetch('colliders.json').then(r => r.json())]);
   $('bar').style.width = '100%';
 } catch (e) { $('loadtxt').textContent = 'Could not load the models: ' + (e.message || e); throw e; }
 scene.add(city.scene);
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(700, 700), new THREE.MeshLambertMaterial({ color: 0x20222e })); ground.rotation.x = -Math.PI / 2; ground.position.y = -.3; ground.receiveShadow = true; scene.add(ground);   // dark ground past the street slab
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(700, 700), new THREE.MeshLambertMaterial({ color: 0x20222e })); ground.rotation.x = -Math.PI / 2; ground.position.y = -.3; ground.receiveShadow = true; scene.add(ground);
 city.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
 
-/* ---------- async helpers: every script step awaits frames, so it pauses and resumes with the render loop ---------- */
+/* ---------- async helpers: scripted sequences await frames, so they pause and resume with the loop ---------- */
 let frameWaiters = [];
 const nextFrame = () => new Promise(r => frameWaiters.push(r));
 const wait = async s => { let t = 0; while (t < s) t += await nextFrame(); };
-const tween = async (dur, fn) => { let t = 0; while (t < dur) { t += await nextFrame(); fn(Math.min(1, t / dur)); } fn(1); };
-const smooth = u => u * u * (3 - 2 * u);
 
 /* ---------- cars: body + 4 hinged doors, built from car_*.glb ---------- */
 const allCars = {};
 function makeCar(kind, color) {
-  const src = (kind === 'taxi' ? taxiG : sedanG).scene.clone(true); const mats = new Map();
-  src.traverse(o => {
-    if (!o.isMesh) return; o.castShadow = o.receiveShadow = true;
-    o.material = (a => Array.isArray(a) ? a.map(m => cm(m)) : cm(a))(o.material);
-  });
-  function cm(m) { if (!mats.has(m)) { const c = m.clone(); if (m.name.startsWith('paint_')) c.color.set(color); mats.set(m, c); } return mats.get(m); }
+  const src = (kind === 'taxi' ? taxiG : sedanG).scene.clone(true); const mats = new Map(), paint = [];
+  function cm(m) { if (!mats.has(m)) { const c = m.clone(); if (m.name.startsWith('paint_')) { c.color.set(color); paint.push({ m: c, base: c.color.clone() }); } mats.set(m, c); } return mats.get(m); }
+  src.traverse(o => { if (!o.isMesh) return; o.castShadow = o.receiveShadow = true; o.material = Array.isArray(o.material) ? o.material.map(cm) : cm(o.material); });
   const group = new THREE.Group(); group.add(src);
-  const car = { group, doors: {}, seat: {}, stand: {}, occupants: {} };
+  const car = { group, doors: {}, seat: {}, stand: {}, occupants: {}, paint };
   src.traverse(o => {
     let m = /door_(FL|FR|RL|RR)$/.exec(o.name); if (m) car.doors[m[1]] = { node: o, side: o.userData.side, max: rad(o.userData.max_open_deg || 62), cur: 0, target: 0 };
     m = /seat_(FL|FR|RL|RR)$/.exec(o.name); if (m) car.seat[m[1]] = o;
     m = /stand_(FL|FR|RL|RR)$/.exec(o.name); if (m) car.stand[m[1]] = o;
   });
-  car.setDoor = (tag, open) => { if (car.doors[tag]) car.doors[tag].target = open ? 1 : 0; };
+  car.setDoor = (tag, open) => { if (car.doors[tag]) car.doors[tag].target = open === true ? 1 : open === false ? 0 : open; };
   car.setAll = open => { for (const t in car.doors) car.setDoor(t, open); };
+  car.setDamage = d => { const burnt = new THREE.Color(0x2b2321); for (const p of car.paint) p.m.color.copy(p.base).lerp(burnt, clamp(d, 0, 1) * .75); };
   scene.add(group); return car;
 }
 const updateDoors = (car, dt) => { const k = 1 - Math.exp(-dt * 9); for (const d of Object.values(car.doors)) { d.cur += (d.target - d.cur) * k; d.node.rotation.y = d.side * d.max * d.cur; } };
 for (const c of carList) {
   const car = makeCar(c.kind, c.color); car.group.position.copy(b2t(c.x, c.y, 0)); car.group.rotation.y = rad(c.rz); allCars[c.name] = car;
 }
-const player = allCars.player.group, taxi = allCars.taxi.group;
+const playerCar = allCars.player, taxi = allCars.taxi.group;
 
 /* ---------- people ---------- */
 const JACKETS = ['#3f6b3a', '#7a2f2a', '#2f4f8a', '#b08a2a', '#5a5a62', '#8a4a7a', '#2b2b30', '#a8a090'];
@@ -160,7 +182,7 @@ function makePerson(opts = {}) {
   for (const c of charGltf.animations) act[c.name] = mixer.clipAction(c);
   scene.add(root); mixers.push(mixer); return { root, mixer, act, cur: null };
 }
-function play(a, name, { once = false, fade = .15, timeScale = 1 } = {}) {      // crossfade to a clip; once = play through and hold the last pose
+function play(a, name, { once = false, fade = .15, timeScale = 1 } = {}) {
   const next = a.act[name]; if (a.cur === next && !once) return next;
   if (a.cur && a.cur !== next) a.cur.fadeOut(fade);
   next.reset(); next.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); next.clampWhenFinished = once; next.timeScale = timeScale; next.fadeIn(fade).play(); a.cur = next; return next;
@@ -173,8 +195,7 @@ async function walkTo(a, target, speed = 1.5) {
     d.normalize(); p.addScaledVector(d, Math.min(dist, speed * dt)); faceDir(a, d.x, d.z);
   }
 }
-/* Where an actor stands to use a door: the stand marker's world position, facing the seat marker. Works for any car pose and any door. */
-function standInfo(car, tag) {
+function standInfo(car, tag) {         // where an actor stands at a door: the stand marker, facing the seat marker (any car pose, any door)
   car.group.updateWorldMatrix(true, true);
   const pos = car.stand[tag].getWorldPosition(new THREE.Vector3()), seat = car.seat[tag].getWorldPosition(new THREE.Vector3());
   const d = seat.sub(pos); d.y = 0; d.normalize(); return { pos, dir: d };
@@ -182,36 +203,33 @@ function standInfo(car, tag) {
 async function enterCar(a, car, tag) {
   const { pos, dir } = standInfo(car, tag); await walkTo(a, pos); faceDir(a, dir.x, dir.z); play(a, 'idle', { fade: .1 });
   const act = play(a, 'enter_' + tag[1], { once: true, fade: .1 }), T = act.getClip().duration;
-  await wait(T * .10); car.setDoor(tag, true);            // door starts opening as the hand reaches the handle
-  await wait(T * .75); car.setDoor(tag, false);           // closes once he is seated
-  await wait(T * .15 + .2); a.root.visible = false; car.occupants[tag] = a;
+  await wait(T * .10); car.setDoor(tag, true); await wait(T * .75); car.setDoor(tag, false); await wait(T * .15 + .2);
+  a.root.visible = false; car.occupants[tag] = a;
 }
 async function exitCar(a, car, tag) {
   const { pos, dir } = standInfo(car, tag); a.root.position.copy(pos); faceDir(a, dir.x, dir.z); a.root.visible = true; delete car.occupants[tag];
   car.setDoor(tag, true); await wait(.35);
   const act = play(a, 'exit_' + tag[1], { once: true, fade: .05 }), T = act.getClip().duration;
-  await wait(T * .85); car.setDoor(tag, false); await wait(T * .15);
-  play(a, 'idle', { fade: .15 });
+  await wait(T * .85); car.setDoor(tag, false); await wait(T * .15); play(a, 'idle', { fade: .15 });
 }
 
-/* ---------- life: walkers, a fight, traffic ---------- */
+/* ---------- life: walkers, a fight, scripted taxi ---------- */
 const walkers = [];
 for (let i = 0; i < 12; i++) {
   const p = makePerson(); const alongY = i % 2 === 0, dir = i % 4 < 2 ? 1 : -1, side = (i % 3 === 0) ? -1 : 1;
-  const lane = side * (i % 2 ? 7.3 : 5.6);
-  const w = { ...p, alongY, dir, lane, pos: (rnd() - .5) * 70, speed: 1.15 + rnd() * .5 };
+  const w = { ...p, alongY, dir, lane: side * (i % 2 ? 7.3 : 5.6), pos: (rnd() - .5) * 70, speed: 1.15 + rnd() * .5 };
   w.act.walk.timeScale = w.speed / 1.4; w.act.walk.play(); w.act.walk.time = rnd(); walkers.push(w);
 }
-const hero = makePerson({ jacket: '#2f6b3a' }), victim = makePerson({ jacket: '#7a2f2a' });   // a fight to show the punch clip
+const hero = makePerson({ jacket: '#2f6b3a' }), victim = makePerson({ jacket: '#7a2f2a' });
 const fightAt = b2t(6.55, 7.3);
 hero.root.position.copy(fightAt).add(new THREE.Vector3(.5, 0, 0)); hero.root.rotation.y = Math.PI / 2;
 victim.root.position.copy(fightAt).add(new THREE.Vector3(-.55, 0, 0)); victim.root.rotation.y = -Math.PI / 2;
 hero.act.idle.play(); victim.act.idle.play(); hero.act.punch.setLoop(THREE.LoopOnce, 1);
 let punchT = 0, hit = 0;
 
-/* ---------- door demo: the hero takes a sedan's driver door, a pedestrian the taxi's passenger door ---------- */
+/* door demo (Enter view): a pedestrian takes the taxi's passenger door, another person the sedan's driver door */
 const demo = { sedan: makeCar('sedan', '#c8201c'), taxi: makeCar('taxi', '#f2b61c'), hero: makePerson({ jacket: '#2f6b3a' }), npc: makePerson({ jacket: '#8a4a7a' }) };
-demo.sedan.group.position.copy(b2t(-3.6, -26)); demo.sedan.group.rotation.y = Math.PI;       // west parking lane, nose south
+demo.sedan.group.position.copy(b2t(-3.6, -26)); demo.sedan.group.rotation.y = Math.PI;
 demo.taxi.group.position.copy(b2t(-3.6, -34)); demo.taxi.group.rotation.y = Math.PI;
 const heroHome = b2t(-0.9, -30), npcHome = b2t(-6.4, -37);
 async function demoLoop() {
@@ -219,7 +237,7 @@ async function demoLoop() {
     for (const [a, home] of [[demo.hero, heroHome], [demo.npc, npcHome]]) { a.root.position.copy(home); a.root.visible = true; play(a, 'idle', { fade: .01 }); }
     await wait(1.0);
     await Promise.all([enterCar(demo.hero, demo.sedan, 'FL'), (async () => { await wait(.8); await enterCar(demo.npc, demo.taxi, 'FR'); })()]);
-    await wait(1.6);                                                          // both sit in their cars
+    await wait(1.6);
     await Promise.all([exitCar(demo.hero, demo.sedan, 'FL'), (async () => { await wait(.5); await exitCar(demo.npc, demo.taxi, 'FR'); })()]);
     await Promise.all([walkTo(demo.hero, heroHome.clone().add(new THREE.Vector3(.4, 0, 5))), walkTo(demo.npc, npcHome.clone().add(new THREE.Vector3(0, 0, 4)))]);
     play(demo.hero, 'idle'); play(demo.npc, 'idle'); await wait(1.4);
@@ -227,58 +245,226 @@ async function demoLoop() {
 }
 demoLoop();
 
-/* ---------- camera views ---------- */
+/* =====================  DRIVING  =====================
+   Arcade top-down model in the XZ plane (three axes: +x east, -z north). Heading th: forward f = (-sin th, -cos th), right r = (cos th, -sin th).
+   Positive yaw rate turns left. Collisions: SAT polygon test, impulse with spin, from the colliders exported by Blender. */
+const TUNE_DEF = { top: 28, accel: 15, brake: 34, grip: 8, drift: 2.4, steer: 1.0, bounce: .35 };
+const TUNE = { ...TUNE_DEF };
+try { Object.assign(TUNE, JSON.parse(localStorage.getItem('gtcc-tune') || '{}')); } catch (e) { /* storage may be blocked */ }
+const TUNE_UI = [['top', 'Top speed', 12, 45, 1, 'm/s'], ['accel', 'Accel', 6, 30, .5, ''], ['brake', 'Braking', 10, 50, 1, ''], ['grip', 'Grip', 2, 14, .5, ''], ['drift', 'Slide grip', .3, 5, .1, ''], ['steer', 'Steering', .5, 1.6, .05, ''], ['bounce', 'Bounce', 0, .8, .05, '']];
+const CAR = { L: 4.5, W: 1.8, mass: 1400, wb: 2.7 }; CAR.I = CAR.mass * (CAR.L * CAR.L + CAR.W * CAR.W) / 12;
+const drive = { x: 1.3, z: 10, th: 0, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, mode: 'driving', hardest: 0, hits: 0 };
+const input = { left: false, right: false, gas: false, brake: false, hand: false };
+
+const rot = (lx, lz, th) => [lx * Math.cos(th) + lz * Math.sin(th), -lx * Math.sin(th) + lz * Math.cos(th)];
+function polyBox(cx, cy, w, d, rzDeg) {          // Blender box (centre x,y; size w x d; rz deg CCW) -> polygon in three XZ
+  const th = rad(rzDeg), pts = [];
+  for (const [lx, ly] of [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]]) { const [dx, dz] = rot(lx, -ly, th); pts.push([cx + dx, -cy + dz]); }
+  return pts;
+}
+const polyCircle = (cx, cy, r) => Array.from({ length: 8 }, (_, k) => [cx + r * Math.cos((k + .5) * Math.PI / 4), -cy + r * Math.sin((k + .5) * Math.PI / 4)]);
+const cen = P => { let x = 0, z = 0; for (const p of P) { x += p[0]; z += p[1]; } return [x / P.length, z / P.length]; };
+const colliders = colList.map(c => { const poly = c.t === 'box' ? polyBox(c.x, c.y, c.w, c.d, c.rz) : polyCircle(c.x, c.y, c.r); const [cx, cz] = cen(poly); let r = 0; for (const p of poly) r = Math.max(r, Math.hypot(p[0] - cx, p[1] - cz)); return { poly, cx, cz, r, vx: 0, vz: 0 }; });
+const taxiCol = { poly: [], cx: 0, cz: 0, r: 2.6, vx: 8, vz: 0 }; colliders.push(taxiCol);     // the scripted taxi: moving obstacle
+const carPoly = (x, z, th) => { const fx = -Math.sin(th), fz = -Math.cos(th), rx = Math.cos(th), rz = -Math.sin(th), hl = CAR.L / 2, hw = CAR.W / 2; return [[x + fx * hl + rx * hw, z + fz * hl + rz * hw], [x + fx * hl - rx * hw, z + fz * hl - rz * hw], [x - fx * hl - rx * hw, z - fz * hl - rz * hw], [x - fx * hl + rx * hw, z - fz * hl + rz * hw]]; };
+
+function sat(A, B) {                              // minimum translation to push polygon A out of B: {depth, nx, nz (from B toward A)} or null
+  let best = Infinity, bnx = 0, bnz = 0;
+  for (const P of [A, B]) for (let i = 0; i < P.length; i++) {
+    const j = (i + 1) % P.length; let nx = P[j][1] - P[i][1], nz = P[i][0] - P[j][0]; const l = Math.hypot(nx, nz); if (l < 1e-9) continue; nx /= l; nz /= l;
+    let amin = 1e9, amax = -1e9, bmin = 1e9, bmax = -1e9;
+    for (const p of A) { const d = p[0] * nx + p[1] * nz; if (d < amin) amin = d; if (d > amax) amax = d; }
+    for (const p of B) { const d = p[0] * nx + p[1] * nz; if (d < bmin) bmin = d; if (d > bmax) bmax = d; }
+    const o = Math.min(amax, bmax) - Math.max(amin, bmin); if (o <= 0) return null;
+    if (o < best) { best = o; bnx = nx; bnz = nz; }
+  }
+  const ca = cen(A), cb = cen(B); if ((ca[0] - cb[0]) * bnx + (ca[1] - cb[1]) * bnz < 0) { bnx = -bnx; bnz = -bnz; }
+  return { depth: best, nx: bnx, nz: bnz };
+}
+
+/* effects: sparks, skid marks, shake, sound */
+const SP = 160, spPos = new Float32Array(SP * 3).fill(-100), spVel = new Float32Array(SP * 3), spLife = new Float32Array(SP); let spHead = 0;
+const spGeo = new THREE.BufferGeometry(); spGeo.setAttribute('position', new THREE.BufferAttribute(spPos, 3));
+const sparks = new THREE.Points(spGeo, new THREE.PointsMaterial({ color: 0xffc060, size: .3, transparent: true, opacity: .95, depthWrite: false, blending: THREE.AdditiveBlending })); sparks.frustumCulled = false; scene.add(sparks);
+function burst(x, y, z, nx, nz, power) {
+  const n = Math.min(36, Math.floor(power * 2.5)); for (let k = 0; k < n; k++) {
+    const i = (spHead++) % SP, sp = 3 + Math.random() * power * .5; spPos.set([x, y, z], i * 3);
+    spVel.set([nx * sp + (Math.random() - .5) * 5, 1.5 + Math.random() * 4, nz * sp + (Math.random() - .5) * 5], i * 3); spLife[i] = .3 + Math.random() * .35;
+  }
+}
+const SK = 700, skid = new THREE.InstancedMesh(new THREE.PlaneGeometry(.22, .7), new THREE.MeshBasicMaterial({ color: 0x08080b, transparent: true, opacity: .55, depthWrite: false }), SK);
+skid.frustumCulled = false; scene.add(skid); const dummy = new THREE.Object3D(); dummy.rotation.order = 'YXZ'; dummy.position.set(0, -100, 0); dummy.updateMatrix(); for (let i = 0; i < SK; i++) skid.setMatrixAt(i, dummy.matrix);
+let skHead = 0, skAcc = 0, skCount = 0;
+function stamp(x, z, ang) { dummy.position.set(x, .03, z); dummy.rotation.set(-Math.PI / 2, ang, 0); dummy.updateMatrix(); skid.setMatrixAt(skHead++ % SK, dummy.matrix); skid.instanceMatrix.needsUpdate = true; skCount++; }
+
+let audio = null, muted = false;
+function ensureAudio() {
+  if (audio || muted) return; const A = window.AudioContext || window.webkitAudioContext; if (!A) return;
+  try {
+    const ctx = new A(), master = ctx.createGain(); master.gain.value = .5; master.connect(ctx.destination);
+    const eng = ctx.createOscillator(); eng.type = 'sawtooth'; const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420; const eg = ctx.createGain(); eg.gain.value = 0; eng.connect(lp); lp.connect(eg); eg.connect(master); eng.start();
+    const nb = ctx.createBuffer(1, ctx.sampleRate * 1.5, ctx.sampleRate), ch = nb.getChannelData(0); for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
+    const sk = ctx.createBufferSource(); sk.buffer = nb; sk.loop = true; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1700; bp.Q.value = .8; const sg = ctx.createGain(); sg.gain.value = 0; sk.connect(bp); bp.connect(sg); sg.connect(master); sk.start();
+    audio = { ctx, master, eng, eg, lp, sg, nb };
+  } catch (e) { audio = null; }
+}
+function crashSound(power) {
+  if (!audio || muted) return; const { ctx, master, nb } = audio, t = ctx.currentTime, g = clamp(power / 18, .12, .8);
+  const s = ctx.createBufferSource(); s.buffer = nb; const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 500 + power * 60; const e = ctx.createGain(); e.gain.setValueAtTime(g, t); e.gain.exponentialRampToValueAtTime(.001, t + .35); s.connect(f); f.connect(e); e.connect(master); s.start(t, Math.random()); s.stop(t + .4);
+  const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(40, t + .25); const oe = ctx.createGain(); oe.gain.setValueAtTime(g * .9, t); oe.gain.exponentialRampToValueAtTime(.001, t + .3); o.connect(oe); oe.connect(master); o.start(t); o.stop(t + .32);
+}
+function updateAudio(dt, speed, slip) {
+  if (!audio) return; const t = audio.ctx.currentTime, k = .08;
+  audio.eng.frequency.setTargetAtTime(46 + speed * 4.4 + (input.gas ? 12 : 0), t, k); audio.lp.frequency.setTargetAtTime(330 + speed * 22, t, k);
+  audio.eg.gain.setTargetAtTime(drive.mode === 'driving' ? (muted ? 0 : .045 + (input.gas ? .045 : 0)) : 0, t, k); audio.sg.gain.setTargetAtTime(muted ? 0 : clamp(slip, 0, 1) * .16, t, .05);
+}
+
+function contact(c, B, e) {              // resolve one polygon overlap between the car and collider B with an impulse; returns impact speed (m/s) or 0
+  const A = carPoly(c.x, c.z, c.th), h = sat(A, B.poly); if (!h) return 0;
+  c.x += h.nx * h.depth; c.z += h.nz * h.depth;
+  let px = 0, pz = 0, dmin = 1e9; for (const p of A) { const d = p[0] * h.nx + p[1] * h.nz; if (d < dmin) { dmin = d; px = p[0] + h.nx * h.depth; pz = p[1] + h.nz * h.depth; } }
+  const rx = px - c.x, rz = pz - c.z, vcx = c.vx + c.w * rz - B.vx, vcz = c.vz - c.w * rx - B.vz, vn = vcx * h.nx + vcz * h.nz; if (vn >= 0) return 0;
+  const rxn = rz * h.nx - rx * h.nz, j = -(1 + e) * vn / (1 / CAR.mass + rxn * rxn / CAR.I);
+  c.vx += j * h.nx / CAR.mass; c.vz += j * h.nz / CAR.mass; c.w += j * rxn / CAR.I;
+  const tx = -h.nz, tz = h.nx, vt = (c.vx + c.w * rz - B.vx) * tx + (c.vz - c.w * rx - B.vz) * tz, rxt = rz * tx - rx * tz;
+  const jt = clamp(-vt / (1 / CAR.mass + rxt * rxt / CAR.I), -.35 * j, .35 * j); c.vx += jt * tx / CAR.mass; c.vz += jt * tz / CAR.mass; c.w += jt * rxt / CAR.I;
+  c.cx = px; c.cz = pz; c.cnx = h.nx; c.cnz = h.nz; c.crx = rx; c.crz = rz; return -vn;
+}
+function onImpact(c, v) {
+  c.hits++; c.hardest = Math.max(c.hardest, v); const dmg = Math.max(0, v - 2.5) * .02; c.damage = Math.min(1, c.damage + dmg);
+  rig.shake = Math.min(1, rig.shake + v / 16); burst(c.cx, .6, c.cz, c.cnx, c.cnz, v); crashSound(v);
+  if (v > 9) {                                    // a hard hit throws the doors on the struck side open for a moment
+    const side = c.crx * Math.cos(c.th) - c.crz * Math.sin(c.th) > 0 ? 'R' : 'L';
+    for (const row of ['F', 'R']) { playerCar.setDoor(row + side, .55 + Math.random() * .4); }
+    clearTimeout(c.doorT); c.doorT = setTimeout(() => { if (c.mode === 'driving') playerCar.setAll(false); }, 2200);
+  }
+  playerCar.setDamage(c.damage);
+}
+function physicsStep(dt) {
+  const c = drive, driving = c.mode === 'driving';
+  const sn = Math.sin(c.th), cs = Math.cos(c.th), fx = -sn, fz = -cs, rx = cs, rz = -sn;
+  let vf = c.vx * fx + c.vz * fz, vl = c.vx * rx + c.vz * rz;
+  const tgt = driving ? (input.right ? 1 : 0) - (input.left ? 1 : 0) : 0;
+  c.steer += (tgt - c.steer) * (1 - Math.exp(-(tgt === 0 ? 8 : 5) * dt));
+  let a = 0;
+  if (driving && input.gas) a += TUNE.accel * Math.max(0, 1 - Math.max(0, vf) / TUNE.top);
+  if (driving && input.brake) a -= vf > .8 ? TUNE.brake : TUNE.accel * .55 * Math.max(0, 1 - Math.max(0, -vf) / (TUNE.top * .3));
+  vf += a * dt;
+  const hand = !driving || input.hand;
+  if (hand) { const hb = Math.min(Math.abs(vf), 9 * dt); vf -= Math.sign(vf) * hb; }
+  const roll = Math.min(Math.abs(vf), (.5 + .06 * Math.abs(vf)) * dt); if (!(driving && input.gas)) vf -= Math.sign(vf) * roll;
+  c.slide = c.slide ? (Math.abs(vl) > 1.5 || (hand && driving)) : ((hand && driving && Math.abs(vf) > 4) || Math.abs(vl) > 5.5);
+  vl *= Math.exp(-(c.slide ? TUNE.drift : TUNE.grip) * dt);
+  const sp = Math.abs(vf), maxSteer = (0.50 + (0.12 - 0.50) * Math.min(1, sp / TUNE.top)) * TUNE.steer;
+  let wT = -Math.tan(c.steer * maxSteer) * vf / CAR.wb; if (c.slide) wT *= 1.2; if (driving && input.hand) wT += -c.steer * sp * .12;
+  c.w += (wT - c.w) * (1 - Math.exp(-10 * dt));
+  c.vx = fx * vf + rx * vl; c.vz = fz * vf + rz * vl;
+  c.x += c.vx * dt; c.z += c.vz * dt; c.th += c.w * dt;
+  for (let pass = 0; pass < 2; pass++) for (const B of colliders) {
+    if (Math.hypot(B.cx - c.x, B.cz - c.z) > B.r + 3.2) continue;
+    const v = contact(c, B, TUNE.bounce); if (v > 1.2) onImpact(c, v);
+  }
+  // skid marks where the rear wheels slide
+  const spd = Math.hypot(c.vx, c.vz);
+  if ((c.slide || (hand && driving && spd > 3)) && spd > 3) {
+    skAcc += spd * dt; if (skAcc > .35) { skAcc = 0; const ang = Math.atan2(-c.vx, -c.vz); for (const s of [-1, 1]) stamp(c.x - fx * 1.35 + rx * s * .8, c.z - fz * 1.35 + rz * s * .8, ang); }
+  }
+}
+let acc = 0; const FIXED = 1 / 120;
+function resetCar(x = 1.3, z = 10, th = 0) { Object.assign(drive, { x, z, th, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, hardest: 0, hits: 0 }); playerCar.setDamage(0); playerCar.setAll(false); }
+
+/* ---------- controls ---------- */
+function hold(el, key) {
+  const dn = e => { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch (x) { /* ok */ } input[key] = true; el.classList.add('on'); ensureAudio(); };
+  const up = () => { input[key] = false; el.classList.remove('on'); };
+  el.addEventListener('pointerdown', dn); for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) el.addEventListener(t, up);
+}
+hold($('b-left'), 'left'); hold($('b-right'), 'right'); hold($('b-gas'), 'gas'); hold($('b-brake'), 'brake'); hold($('b-hand'), 'hand');
+const KEYS = { ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right', ArrowUp: 'gas', w: 'gas', W: 'gas', ArrowDown: 'brake', s: 'brake', S: 'brake', ' ': 'hand' };
+addEventListener('keydown', e => { if (KEYS[e.key]) { input[KEYS[e.key]] = true; ensureAudio(); e.preventDefault(); } else if (e.key === 'f' || e.key === 'F') toggleDoor(); });
+addEventListener('keyup', e => { if (KEYS[e.key]) input[KEYS[e.key]] = false; });
+const pilot = makePerson({ jacket: '#2f6b3a' }); pilot.root.visible = false; playerCar.occupants.FL = pilot;
+let busy = false;
+async function toggleDoor() {
+  if (busy) return; const speed = Math.hypot(drive.vx, drive.vz);
+  if (drive.mode === 'driving' && speed < 1.6) { busy = true; drive.mode = 'exiting'; await exitCar(pilot, playerCar, 'FL'); drive.mode = 'out'; busy = false; }
+  else if (drive.mode === 'out') { busy = true; drive.mode = 'entering'; await enterCar(pilot, playerCar, 'FL'); drive.mode = 'driving'; busy = false; }
+}
+$('b-door').addEventListener('pointerdown', e => { e.preventDefault(); ensureAudio(); toggleDoor(); });
+$('snd').addEventListener('click', () => { muted = !muted; $('snd').setAttribute('aria-pressed', String(!muted)); if (!muted) ensureAudio(); });
+
+/* ---------- panels, views, tuning ---------- */
 const VIEWS = { drive: { mode: 'drive', pitch: 45, dist: 44 }, enter: { mode: 'free', tx: -3.2, tz: 31.5, pitch: 50, dist: 15 }, town: { mode: 'free', tx: 0, tz: -(ARCH_Y - 8), pitch: 60, dist: 24 }, over: { mode: 'free', tx: 0, tz: -4, pitch: 42, dist: 55 }, top: { mode: 'free', tx: 0, tz: 0, pitch: 85, dist: 34 } };
 const IDS = { drive: 'v-drive', enter: 'v-enter', town: 'v-town', over: 'v-over', top: 'v-top' };
-function setView(k) { Object.assign(rig, VIEWS[k]); for (const [id, v] of Object.entries(IDS)) $(v).setAttribute('aria-pressed', String(id === k)); syncSliders(); }
-const syncSliders = () => { $('tilt').value = rig.pitch; $('zoom').value = rig.dist; $('tiltv').textContent = Math.round(rig.pitch) + '°'; $('zoomv').textContent = Math.round(rig.dist) + ' m'; };
+function setView(k) { Object.assign(rig, VIEWS[k]); for (const [id, v] of Object.entries(IDS)) $(v).setAttribute('aria-pressed', String(id === k)); $('pad').hidden = k !== 'drive'; syncSliders(); }
+const syncSliders = () => { $('tilt').value = rig.pitch; $('zoom').value = rig.dist; $('tiltv').textContent = Math.round(rig.pitch) + '\u00b0'; $('zoomv').textContent = Math.round(rig.dist) + ' m'; };
 for (const [k, id] of Object.entries(IDS)) $(id).addEventListener('click', () => setView(k));
 $('tilt').addEventListener('input', e => { rig.pitch = +e.target.value; syncSliders(); });
 $('zoom').addEventListener('input', e => { rig.dist = +e.target.value; syncSliders(); });
 let doorsOpen = false;
 $('doorbtn').addEventListener('click', () => { doorsOpen = !doorsOpen; $('doorbtn').setAttribute('aria-pressed', String(doorsOpen)); for (const [n, c] of Object.entries(allCars)) if (n.startsWith('parked')) c.setAll(doorsOpen); });
-// drag to pan, pinch / wheel to zoom
-const ptr = new Map(); let pinch0 = 0, dist0 = 0;
-const cv = $('view');
+for (const [btn, panel, other] of [['t-view', 'p-view', 'p-tune'], ['t-tune', 'p-tune', 'p-view']]) $(btn).addEventListener('click', () => {
+  const open = $(panel).hidden; $(panel).hidden = !open; $(other).hidden = true; $('t-view').setAttribute('aria-expanded', String(!$('p-view').hidden)); $('t-tune').setAttribute('aria-expanded', String(!$('p-tune').hidden));
+});
+const outs = {};
+for (const [k, label, min, max, step, unit] of TUNE_UI) {
+  const l = document.createElement('label'); l.htmlFor = 'tn-' + k; l.innerHTML = `${label} <output id="to-${k}"></output><input id="tn-${k}" type="range" min="${min}" max="${max}" step="${step}">`; $('tunegrid').appendChild(l);
+  const inp = l.querySelector('input'), out = l.querySelector('output'); outs[k] = () => { inp.value = TUNE[k]; out.textContent = (+TUNE[k]).toFixed(step < 1 ? (step < .1 ? 2 : 1) : 0) + (unit ? ' ' + unit : ''); };
+  inp.addEventListener('input', () => { TUNE[k] = +inp.value; outs[k](); try { localStorage.setItem('gtcc-tune', JSON.stringify(TUNE)); } catch (e) { /* ok */ } }); outs[k]();
+}
+$('tunereset').addEventListener('click', () => { Object.assign(TUNE, TUNE_DEF); for (const k in outs) outs[k](); try { localStorage.removeItem('gtcc-tune'); } catch (e) { /* ok */ } });
+// canvas: pinch / wheel zoom always; drag pans only in the free views (in Play the camera follows the car)
+const ptr = new Map(); let pinch0 = 0, dist0 = 0; const cv = $('view');
 cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); ptr.set(e.pointerId, [e.clientX, e.clientY]); if (ptr.size === 2) { const [a, b] = [...ptr.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]); dist0 = rig.dist; } });
 cv.addEventListener('pointermove', e => {
   if (!ptr.has(e.pointerId)) return; const [px, py] = ptr.get(e.pointerId); ptr.set(e.pointerId, [e.clientX, e.clientY]);
-  if (ptr.size === 2) { const [a, b] = [...ptr.values()]; rig.dist = Math.min(70, Math.max(10, dist0 * pinch0 / Math.max(20, Math.hypot(a[0] - b[0], a[1] - b[1])))); syncSliders(); return; }
-  if (rig.mode === 'drive') { rig.mode = 'free'; Object.values(IDS).forEach(id => $(id).setAttribute('aria-pressed', 'false')); }
+  if (ptr.size === 2) { const [a, b] = [...ptr.values()]; rig.dist = clamp(dist0 * pinch0 / Math.max(20, Math.hypot(a[0] - b[0], a[1] - b[1])), 10, 70); syncSliders(); return; }
+  if (rig.mode === 'drive') return;
   const k = 2 * rig.dist * Math.tan(HFOV / 2) / innerWidth, p = rig.pitch * Math.PI / 180;
   rig.tx -= (e.clientX - px) * k; rig.tz -= (e.clientY - py) * k / Math.max(.3, Math.sin(p));
 });
 for (const t of ['pointerup', 'pointercancel']) cv.addEventListener(t, e => ptr.delete(e.pointerId));
-cv.addEventListener('wheel', e => { e.preventDefault(); rig.dist = Math.min(70, Math.max(10, rig.dist * (1 + Math.sign(e.deltaY) * .08))); syncSliders(); }, { passive: false });
-$('zoom').min = 10;
+cv.addEventListener('wheel', e => { e.preventDefault(); rig.dist = clamp(rig.dist * (1 + Math.sign(e.deltaY) * .08), 10, 70); syncSliders(); }, { passive: false });
 
 /* ---------- loop ---------- */
 $('loading').hidden = true;
-const clock = new THREE.Clock(); let fpsN = 0, fpsT = 0, manual = false;
-const SPAN = 42;
+const clock = new THREE.Clock(); let fpsN = 0, fpsT = 0, manual = false, lastStat = '';
+const SPAN = 42, upd = { speedZoom: 0 };
 function update(dt) {
-  const ws = frameWaiters; frameWaiters = []; for (const r of ws) r(dt);       // resume scripted sequences (demo, enter/exit)
-  player.position.z -= 9 * dt; if (player.position.z < -40) player.position.z = 32;           // traffic: red sedan north, taxi east
-  taxi.position.x += 8 * dt; if (taxi.position.x > 40) taxi.position.x = -40;
+  const ws = frameWaiters; frameWaiters = []; for (const r of ws) r(dt);
+  acc += dt; let n = 0; while (acc >= FIXED && n++ < 12) { physicsStep(FIXED); acc -= FIXED; } if (acc > FIXED) acc = 0;
+  playerCar.group.position.set(drive.x, 0, drive.z); playerCar.group.rotation.y = drive.th;
+  taxi.position.x += 8 * dt; if (taxi.position.x > 40) taxi.position.x = -40;                       // scripted taxi, east along its lane
+  taxiCol.poly = carPoly(taxi.position.x, taxi.position.z, -Math.PI / 2); const tc = cen(taxiCol.poly); taxiCol.cx = tc[0]; taxiCol.cz = tc[1];
   for (const w of walkers) {
     w.pos += w.dir * w.speed * dt; if (w.pos > SPAN) w.pos = -SPAN; if (w.pos < -SPAN) w.pos = SPAN;
-    if (w.alongY) { w.root.position.set(w.lane, 0, -w.pos); w.root.rotation.y = w.dir > 0 ? 0 : Math.PI; }     // north = -z
+    if (w.alongY) { w.root.position.set(w.lane, 0, -w.pos); w.root.rotation.y = w.dir > 0 ? 0 : Math.PI; }
     else { w.root.position.set(w.pos, 0, -w.lane); w.root.rotation.y = w.dir > 0 ? -Math.PI / 2 : Math.PI / 2; }
   }
-  punchT += dt;                                                    // fight loop: jab every 2.2 s, victim staggers back
-  if (punchT > 2.2) { punchT = 0; hero.act.punch.reset().play(); hit = 1; }
+  punchT += dt; if (punchT > 2.2) { punchT = 0; hero.act.punch.reset().play(); hit = 1; }
   hit = Math.max(0, hit - dt * 2); victim.root.position.x = fightAt.x - .55 - .25 * Math.sin(Math.min(1, (1 - hit) * 2) * Math.PI) * (hit > 0 ? 1 : 0);
   for (const m of mixers) m.update(dt);
   for (const c of [...Object.values(allCars), demo.sedan, demo.taxi]) updateDoors(c, dt);
-  if (rig.mode === 'drive') { rig.tx += (player.position.x - rig.tx) * Math.min(1, dt * 4); rig.tz += (player.position.z - 3 - rig.tz) * Math.min(1, dt * 4); }
-  rig.tx = Math.max(-30, Math.min(30, rig.tx)); rig.tz = Math.max(-52, Math.min(52, rig.tz));
-  const p = rig.pitch * Math.PI / 180;
-  camera.position.set(rig.tx, Math.sin(p) * rig.dist, rig.tz + Math.cos(p) * rig.dist); camera.lookAt(rig.tx, 0, rig.tz);
+  for (let i = 0; i < SP; i++) if (spLife[i] > 0) { spLife[i] -= dt; spPos[i * 3] += spVel[i * 3] * dt; spPos[i * 3 + 1] += spVel[i * 3 + 1] * dt; spPos[i * 3 + 2] += spVel[i * 3 + 2] * dt; spVel[i * 3 + 1] -= 14 * dt; if (spLife[i] <= 0) spPos[i * 3 + 1] = -100; }
+  spGeo.attributes.position.needsUpdate = true;
+  const speed = Math.hypot(drive.vx, drive.vz);
+  updateAudio(dt, speed, drive.slide ? clamp(speed / 14, 0, 1) : 0);
+  const stat = `${Math.round(speed * 3.6)} km/h \u00b7 ${Math.round(drive.damage * 100)}% damage`; if (stat !== lastStat) { $('stat').textContent = stat; $('stat').classList.toggle('hot', drive.damage > .6); lastStat = stat; }
+  const out = drive.mode === 'out' || drive.mode === 'exiting' || drive.mode === 'entering';
+  $('b-door').textContent = drive.mode === 'out' ? 'Enter' : 'Exit'; $('b-door').classList.toggle('dim', busy || (drive.mode === 'driving' && speed > 1.6));
+  for (const id of ['b-left', 'b-right', 'b-gas', 'b-brake', 'b-hand']) $(id).classList.toggle('dim', out);
+  // camera: follow with a little look-ahead, and ease out a little at speed
+  if (rig.mode === 'drive') { rig.tx += (drive.x + drive.vx * .55 - rig.tx) * Math.min(1, dt * 5); rig.tz += (drive.z + drive.vz * .55 - rig.tz) * Math.min(1, dt * 5); }
+  upd.speedZoom += ((rig.mode === 'drive' ? Math.min(speed, 28) / 28 * .22 : 0) - upd.speedZoom) * Math.min(1, dt * 2);
+  rig.tx = clamp(rig.tx, -44, 44); rig.tz = clamp(rig.tz, -52, 52);
+  const p = rig.pitch * Math.PI / 180, dist = rig.dist * (1 + upd.speedZoom);
+  rig.shake = Math.max(0, rig.shake - dt * 2.2); const sh = rig.shake * rig.shake * 1.1;
+  camera.position.set(rig.tx + (Math.random() - .5) * sh, Math.sin(p) * dist + (Math.random() - .5) * sh * .5, rig.tz + Math.cos(p) * dist + (Math.random() - .5) * sh); camera.lookAt(rig.tx, 0, rig.tz);
   sun.target.position.set(rig.tx, 0, rig.tz); sun.position.set(rig.tx - SUNDIR.x * 60, -SUNDIR.y * 60, rig.tz - SUNDIR.z * 60);
   renderer.render(scene, camera);
   fpsN++; fpsT += dt; if (fpsT > .5) { $('fps').textContent = Math.round(fpsN / fpsT) + ' fps'; fpsN = 0; fpsT = 0; }
 }
 function frame() { if (!manual) update(Math.min(clock.getDelta(), .05)); requestAnimationFrame(frame); }
-syncSliders(); frame();
-window.__city = { rig, renderer, scene, camera, setView, demo, allCars, hero, victim, tick: update, setManual: v => { manual = v; } };   // tick/setManual let a test step the simulation at an exact rate
+syncSliders(); setView('drive'); frame();
+window.__city = { rig, renderer, scene, camera, setView, demo, allCars, hero, victim, drive, input, TUNE, colliders, resetCar, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive.hits, hardest: drive.hardest }) };
 </script>

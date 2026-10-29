@@ -56,8 +56,27 @@ Gotchas: Blender fits the lens to the LONGER image side (use `sensor_fit=HORIZON
   door geometry must be hinge-relative (object origin is the hinge); the host serves no `.glb` (base64 `.txt` via `viewer/build.sh`).
 - Not done: seated people are hidden once the door closes (roof hides them anyway), no door sounds, no hijack animation (pulling a driver out), the car does not drive yet.
 
+**Step 2 (driving + physics + collisions), `art-review/round4/`:** published to the same page.
+- Model (`viewer/index.html`, "DRIVING" block): fixed 120 Hz steps in the XZ plane. Bicycle-style yaw (w = -tan(steer*maxSteer)*vf/wheelbase, maxSteer 0.50 rad at rest -> 0.12 at top
+  speed), longitudinal accel with a soft top-speed curve, rolling friction, brake that becomes reverse below 0.8 m/s, lateral grip as exponential damping of the sideways
+  velocity (grip 8 normally, "slide grip" 2.4 once sliding; slide starts with handbrake above 4 m/s or sideways speed above 5.5 and ends below 1.5 m/s), handbrake adds a little yaw.
+- Collisions: SAT polygon test between the 4.5 x 1.8 car box and the 48 colliders exported from Blender (`colliders.json`, written by `test_scene.py`: buildings, arch pillars, stalls,
+  props, trees, lamps, parked cars, world-edge walls) + the scripted taxi as a moving obstacle. Resolution = push out along the minimum axis, impulse with the contact-point arm
+  (so hits spin the car), restitution = Bounce slider (0.35), tangential friction 0.35. Parked cars and props are static for now.
+- Feedback: damage (0.02 per m/s above 2.5 m/s of impact speed) darkens the paint toward charcoal; sparks (pooled Points); 700 skid-mark quads; camera shake (trauma^2);
+  hits above 9 m/s throw the struck side's doors open for ~2 s; synth sound (sawtooth engine pitched by speed, band-passed noise skid, noise+sine crash thump; starts on first touch,
+  Sound chip mutes).
+- Controls: left arrows steer; right: Gas (big), Brake (reverses when stopped), Hand brake, Exit/Enter (uses the step 1 routines when slower than 1.6 m/s). Keyboard: arrows/WASD,
+  Space, F. Panels: View (Play/Enter/Arch/Overview/Top, tilt, zoom, open parked doors) and Tune (7 sliders saved in localStorage as `gtcc-tune`).
+- Tested in Chromium with scripted input: 0-18 m/s in 2 s, 25 m/s at 4 s (cap 28); 12 m/s head-on wall hit -> rebound 3.4 m/s, no penetration, damage 0.2;
+  60 s random-input soak finite and in bounds; handbrake drift gives 10+ m/s sideways speed and skid marks. Frame capture hook: `__city.tick(dt)`, `__city.step(dt)` (physics only).
+- NOT verified on a real phone: touch feel, multi-touch (steer + gas together), audio, frame rate. Known gaps: pedestrians are ghosts to cars, parked cars do not move, no curb bump or
+  grass/sidewalk surface change, no traffic AI, no damage deformation (colour only), door button is the only on-foot action (hero cannot walk yet).
+- Gotchas: Playwright screenshot of the WebGL page can time out at deviceScaleFactor 2 (use 1 and a long timeout); the taxi collider is refreshed in `update`, so tests that teleport
+  the taxi must call `tick(0.0001)`; write non-ASCII UI glyphs as `\u` escapes in JS (the local test server sent no charset).
+
 ## Next
-(Agreed order: 1 DONE modular car doors + enter/exit animation, 2 drive + arcade physics + collisions, 3 on-foot control + punch + enter/exit button, 4 dynamic camera zoom, 5 pedestrian reactions, then baked lighting and more content.)
+(Agreed order: 1 DONE modular car doors + enter/exit animation, 2 DONE drive + arcade physics + collisions, 3 on-foot control + punch + enter/exit button, 4 dynamic camera zoom, 5 pedestrian reactions, then baked lighting and more content.)
 0. User feedback on the phone page (look, camera angle, mood, frame rate on the real device).
 1. Quick test scene (crossroads, two tall buildings, one car) built with the Blender scripts, shown from the game camera.
 2. Prototype per `HANDOFF.md`: block, drivable car with crash physics, hero walking and punching; publish as an Artifact.

@@ -9,7 +9,13 @@ reset()
 make_street(); make_props(); make_extras()
 (mood.dusk(lamp_heads()) if MOOD == "dusk" else mood.day()); mood._transform()
 edge = R + SW
-def put(o, x, y, z=.16, rz=0): o.location = (x, y, z); o.rotation_euler = (0, 0, math.radians(rz)); return o
+COL = []                                         # collision shapes in Blender metres (x east, y north); rz degrees CCW
+def cbox(x, y, w, d, rz=0): COL.append({"t": "box", "x": x, "y": y, "w": w, "d": d, "rz": rz})
+def ccir(x, y, r): COL.append({"t": "circle", "x": x, "y": y, "r": r})
+def put(o, x, y, z=.16, rz=0):
+    o.location = (x, y, z); o.rotation_euler = (0, 0, math.radians(rz))
+    if "w" in o.keys(): cbox(x, y, o["w"] + .12, o["d"] + .12, rz)      # buildings
+    return o
 
 # buildings: (name, w, d, floors, center x, center y, kwargs)
 put(make_building("tenement", 12, 11, 6, wall="#8e3b2e", band="#74301f", seed=3, roof="ac", fire_escape=("S", .78), shop_sign="restaurant",
@@ -42,11 +48,27 @@ for i, (x, y, rz, col) in enumerate([(pk, 14, 0, "#d9d9d6"), (-pk, 19, 180, "#2b
 for i, (x, y) in enumerate([(R + 1.4, R + 7), (-R - 1.4, R + 15), (R + 1.4, -R - 5), (-R - 1.4, -R - 11), (R + 1.4, R + 15)]):
     put(make_tree(f"tree{i}", i), x, y, .16)
 
+# colliders for everything solid that is not a building or a moving car
+for sx in (-1, 1):
+    cbox(sx * (R + 1.5), ARCH_Y, 1.5, 1.5)                                                   # arch pillars
+    for sy in (-1, 1): ccir(sx * (R + .7), sy * (R + .7), .16)                               # corner lamp poles
+for (x, y, rz) in ((-(R + 1.3), ARCH_Y - 6, 90), (R + 1.3, ARCH_Y - 9, -90), (-(R + 1.3), ARCH_Y - 11, 90)): cbox(x, y, 2.4, 1.1, rz)   # market stalls
+cbox(-(R + 1.6), -R - 20, 2.5, 1.5, 90); cbox(R + 1.5, R + 30, 2.4, .6, 90); ccir(R + 1.2, R + 26, .3); cbox(-(R + 2.2), R + 3.0, 1.3, .5, 90); cbox(R + 1.7, -R - 10, 1.2, 1.2)
+for c in CARS:
+    if c["name"].startswith("parked"): cbox(c["x"], c["y"], 1.8, 4.5, c["rz"])
+for (x, y) in [(R + 1.4, R + 7), (-R - 1.4, R + 15), (R + 1.4, -R - 5), (-R - 1.4, -R - 11), (R + 1.4, R + 15)]: ccir(x, y, .3)   # tree trunks
+ccir(R + .6, -R - 4, .28); ccir(-R - .6, R + 5, .28)                                         # hydrants
+for (x, y) in ((R + 2.3, R + 4.5), (-R - 2.3, -R - 6.5), (R + 2.3, -R - 9)): ccir(x, y, .36)  # bins
+cbox(-R - 2.4, R + 3.2, .7, .6)                                                              # mailbox
+for (x, y) in ((R + 1.0, R + 10), (R + 1.0, R + 10.8), (-R - 1.0, -R - 14)): ccir(x, y, .13) # bollards
+cbox(-R - 2.0, R + 12.25, 1.8, .6); cbox(R + 2.4, -R - 12.2, .8, .8)                         # bench, crate
+for (x, y, w, d) in ((0, 47.5, 100, 3), (0, -47.5, 100, 3), (47.5, 0, 3, 100), (-47.5, 0, 3, 100)): cbox(x, y, w, d)   # world edge
+
 SHOTS = {"game_portrait": ((0, -3, 0), 65, 21, 540, 960), "street_run": ((0, 17, 0), 65, 21, 540, 960), "chinatown_run": ((0, ARCH_Y - 7, 0), 62, 21, 540, 960),
          "game_wide": ((0, 0, 0), 65, 27, 960, 600), "oblique": ((0, 6, 3), 42, 55, 960, 600)}
 if __name__ == "__main__":
-    want = os.environ.get("SHOTS"); 
-    for name, (tgt, pitch, dist, w, h) in SHOTS.items():
+    want = os.environ.get("SHOTS"); norender = os.environ.get("NORENDER")
+    for name, (tgt, pitch, dist, w, h) in ({} if norender else SHOTS).items():
         if want and name not in want.split(","): continue
         for o in [x for x in bpy.context.scene.objects if x.type == "CAMERA"]: bpy.data.objects.remove(o)
         game_camera(tgt, pitch, dist); render(os.path.join(OUT, f"scene_{name}.png"), w, h, ink=False, samples=24, keep_transform=True)
@@ -59,3 +81,5 @@ if __name__ == "__main__":
         for r in [bpy.data.objects[c["name"]] for c in CARS]: walk(r)
         export_glb("test_scene", [o for o in bpy.context.scene.objects if o not in fam and o.type in ("MESH", "EMPTY")])
         json.dump(CARS, open(os.path.join(OUT, "cars.json"), "w"), indent=1)
+        json.dump(COL, open(os.path.join(OUT, "colliders.json"), "w"))
+        print("COLLIDERS", len(COL))
