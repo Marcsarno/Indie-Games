@@ -43,7 +43,7 @@ def _walk(t, amp=1.0, flex=1.0, bob=.025, lean=.0, arm=.5):
         pose["leg" + side] = (amp * .55 * sw(ph), 0, 0)
         pose["shin" + side] = (-flex * .9 * max(0, math.cos(ph)) - .05, 0, 0)
         pose["arm" + side] = (-amp * arm * sw(ph), 0, 0); pose["fore" + side] = (.25 + (.35 * amp if arm > .6 else .0), 0, 0)
-    pose["pelvis"] = (lean * .5, 0, .10 * amp * math.sin(p)); pose["torso"] = (lean * .5, 0, -.14 * amp * math.sin(p)); pose["head"] = (-lean * .3, 0, .05 * amp * math.sin(p))
+    pose["pelvis"] = (-lean * .5, 0, .10 * amp * math.sin(p)); pose["torso"] = (-lean * .5, 0, -.14 * amp * math.sin(p)); pose["head"] = (lean * .4, 0, .05 * amp * math.sin(p))   # forward lean = NEGATIVE x
     return pose, bob * amp * math.cos(2 * p)
 
 def walk(t): return _walk(t)
@@ -66,13 +66,47 @@ def punch(t):
     keys = set(a) | set(b); z = (0, 0, 0)
     return {j: tuple(seg(a.get(j, z)[i], b.get(j, z)[i], u) for i in range(3)) for j in keys}, -.05 * (1 if .22 <= t < .5 else 0) * min(1, (t - .22) / .1 if t < .32 else 1)
 
-CLIPS = {"idle": (idle, 48, True), "walk": (walk, 24, True), "run": (run, 16, True), "punch": (punch, 20, False)}
+SEAT_DIST = 1.13 / .92      # stand->seat distance in car space (1.55 - 0.42) divided by the 0.92 character scale used in the city
+SEAT_DZ = -.44              # pelvis drop when seated
+
+def _smooth(u): return u * u * u * (u * (u * 6 - 15) + 10)
+def keyed(keys):
+    """keys: [(t, {joint: (rx, ry, rz)}, (dx, dy, dz))] -> pose fn(t). Smootherstep between keys; missing joints are rest."""
+    def fn(t):
+        t = min(max(t, 0), 1)
+        for (t0, p0, o0), (t1, p1, o1) in zip(keys, keys[1:]):
+            if t <= t1:
+                u = _smooth((t - t0) / (t1 - t0) if t1 > t0 else 1); z3 = (0, 0, 0)
+                pose = {j: tuple(p0.get(j, z3)[i] + (p1.get(j, z3)[i] - p0.get(j, z3)[i]) * u for i in range(3)) for j in set(p0) | set(p1)}
+                return pose, tuple(o0[i] + (o1[i] - o0[i]) * u for i in range(3))
+        return keys[-1][1], keys[-1][2]
+    return fn
+
+def enter_keys(side):          # side +1 = right door (turn clockwise to face forward), -1 = left door (counter-clockwise)
+    sg = -side; Y = math.pi / 2 * sg                  # Blender: +z yaw is counter-clockwise
+    D, DZ = SEAT_DIST, SEAT_DZ
+    seated = {"pelvis": (0, 0, Y), "torso": (-.14, 0, 0), "legL": (1.45, 0, 0), "legR": (1.45, 0, 0), "shinL": (-1.45, 0, 0), "shinR": (-1.45, 0, 0),
+              "armL": (.95, 0, 0), "armR": (.95, 0, 0), "foreL": (.55, 0, 0), "foreR": (.55, 0, 0), "head": (0, 0, 0)}
+    return [(0.00, {}, (0, 0, 0)),
+            (0.12, {"armR": (1.15, 0, .1), "foreR": (.25, 0, 0), "torso": (-.05, 0, 0)}, (0, 0, 0)),
+            (0.26, {"armR": (.55, 0, .1), "foreR": (.5, 0, 0), "torso": (-.12, 0, 0), "legL": (.25, 0, 0)}, (0, .06 * D, 0)),
+            (0.44, {"torso": (-.55, 0, 0), "head": (.35, 0, 0), "pelvis": (0, 0, Y * .28), "legL": (.8, 0, 0), "shinL": (-.7, 0, 0), "legR": (-.2, 0, 0), "armR": (.3, 0, 0), "foreR": (.4, 0, 0), "armL": (.3, 0, 0)}, (0, .45 * D, -.05)),
+            (0.62, {"torso": (-.45, 0, 0), "head": (.3, 0, 0), "pelvis": (0, 0, Y * .75), "legL": (1.0, 0, 0), "shinL": (-1.0, 0, 0), "legR": (.7, 0, 0), "shinR": (-.8, 0, 0), "armL": (.6, 0, 0), "armR": (.6, 0, 0), "foreL": (.5, 0, 0), "foreR": (.5, 0, 0)}, (0, .85 * D, DZ * .55)),
+            (0.80, seated, (0, D, DZ)),
+            (1.00, seated, (0, D, DZ))]
+
+def enter_fn(side): return keyed(enter_keys(side))
+def exit_fn(side):
+    f = enter_fn(side); return lambda t: f(1 - t)
+
+CLIPS = {"idle": (idle, 48, True), "walk": (walk, 24, True), "run": (run, 16, True), "punch": (punch, 20, False), "enter_L": (enter_fn(-1), 58, False), "enter_R": (enter_fn(1), 58, False), "exit_L": (exit_fn(-1), 58, False), "exit_R": (exit_fn(1), 58, False)}
 
 def apply_pose(root, name, clip, t):
     pose, dz = CLIPS[clip][0](t)
+    d3 = dz if isinstance(dz, tuple) else (0, 0, dz)
     for jn, (par, off) in JOINTS.items():
         o = bpy.data.objects[f"{name}.{jn}"]; o.rotation_euler = pose.get(jn, (0, 0, 0))
-        o.location = (off[0], off[1], off[2] + (dz if jn == "pelvis" else 0))
+        o.location = (off[0] + (d3[0] if jn == "pelvis" else 0), off[1] + (d3[1] if jn == "pelvis" else 0), off[2] + (d3[2] if jn == "pelvis" else 0))
 
 def bake_clips(name):
     """Keyframe every clip into per-object actions and stack them as NLA tracks named after the clip (what the glTF exporter groups on)."""

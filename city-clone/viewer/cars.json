@@ -1,0 +1,82 @@
+[
+ {
+  "name": "player",
+  "kind": "sedan",
+  "color": "#c8201c",
+  "x": 1.3,
+  "y": -10,
+  "rz": 0
+ },
+ {
+  "name": "taxi",
+  "kind": "taxi",
+  "color": "#f2b61c",
+  "x": -9,
+  "y": -1.3,
+  "rz": -90
+ },
+ {
+  "name": "parked0",
+  "kind": "sedan",
+  "color": "#d9d9d6",
+  "x": 3.5999999999999996,
+  "y": 14,
+  "rz": 0
+ },
+ {
+  "name": "parked1",
+  "kind": "sedan",
+  "color": "#2b2d33",
+  "x": -3.5999999999999996,
+  "y": 19,
+  "rz": 180
+ },
+ {
+  "name": "parked2",
+  "kind": "sedan",
+  "color": "#2e5fa3",
+  "x": 3.5999999999999996,
+  "y": -19,
+  "rz": 0
+ },
+ {
+  "name": "parked3",
+  "kind": "sedan",
+  "color": "#3d7a52",
+  "x": -3.5999999999999996,
+  "y": -14,
+  "rz": 180
+ },
+ {
+  "name": "parked4",
+  "kind": "sedan",
+  "color": "#8a8d92",
+  "x": 13,
+  "y": -3.5999999999999996,
+  "rz": -90
+ },
+ {
+  "name": "parked5",
+  "kind": "sedan",
+  "color": "#a23a2e",
+  "x": -14,
+  "y": 3.5999999999999996,
+  "rz": 90
+ },
+ {
+  "name": "parked6",
+  "kind": "sedan",
+  "color": "#c8201c",
+  "x": 3.5999999999999996,
+  "y": 33,
+  "rz": 0
+ },
+ {
+  "name": "parked7",
+  "kind": "taxi",
+  "color": "#f2b61c",
+  "x": -1.3,
+  "y": 31,
+  "rz": 180
+ }
+]

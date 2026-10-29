@@ -34,8 +34,24 @@ faceless blocks, no baked lighting/AO, only measured in software GL (about 20 fp
 device reading from the fps chip). Pedestrians clip trees/bins slightly (walk lanes ignore props). Camera passing under the arch is hidden by it.
 Gotchas: Blender fits the lens to the LONGER image side (use `sensor_fit=HORIZONTAL`); `[hidden]` needs `display:none!important` when a rule sets display.
 
+**Step 1 (modular doors + enter/exit), `art-review/round3/`:**
+- `car.py`: `make_car(kind, color, name)` -> root Empty + `_body` + four hinged doors `_door_FL/FR/RL/RR` (origin at the front-edge hinge; open angle = side * 62 deg
+  about Z in Blender = Y in three; side/max angle ride in glTF extras -> `userData`) + `_seat_XX` / `_stand_XX` empties. Dark interior recess shows when a door opens.
+  Works for sedan and taxi (`doors=2` option for coupes). Cars are exported alone (`export_cars.py` -> car_sedan/car_taxi.glb) and rebuilt in the page from
+  `cars.json` (name, kind, colour, x, y, rz); the scene GLB no longer contains cars. Paint material names start `paint_`: the page recolours per instance.
+- `character.py`: clips `enter_L/R`, `exit_L/R` (58 frames, 2.4 s). Pelvis translates SEAT_DIST = 1.13/.92 forward and drops 0.44 while yawing 90 deg, so the clip
+  assumes the character root sits at the car's stand marker facing the seat marker (stand-to-seat = 1.13 m in car space, character scale 0.92). Exit = enter reversed.
+  Door timing used by the page: opens at 10% of the clip, closes at 85%; on exit it opens 0.35 s before the clip and closes at 85%.
+- Page (`viewer/index.html`): `makeCar` (doors damped with exp ease), generic `enterCar(actor, car, tag)` / `exitCar(...)` that work for any actor, any car pose and any door
+  (hero or pedestrian, L or R), `walkTo`, async helpers `wait/tween/nextFrame` driven by the render loop. Demo (Enter view): hero uses a sedan's driver door on the road side,
+  a pedestrian the taxi's passenger door from the sidewalk, loop ~21 s. `Doors` chip opens/closes all parked cars. `__city.tick(dt)` / `setManual(true)` step the sim for
+  deterministic capture (that is how `enter_exit_demo.gif` was made; headless software GL records far too slowly for video).
+- Gotchas: positive X rotation tips a body BACK (forward lean = negative X; fixed the run cycle); Builder materials cache must survive `reset()` (catch ReferenceError);
+  door geometry must be hinge-relative (object origin is the hinge); the host serves no `.glb` (base64 `.txt` via `viewer/build.sh`).
+- Not done: seated people are hidden once the door closes (roof hides them anyway), no door sounds, no hijack animation (pulling a driver out), the car does not drive yet.
+
 ## Next
-(Agreed order: 1 modular car doors + enter/exit animation, 2 drive + arcade physics + collisions, 3 on-foot control + punch + enter/exit button, 4 dynamic camera zoom, 5 pedestrian reactions, then baked lighting and more content.)
+(Agreed order: 1 DONE modular car doors + enter/exit animation, 2 drive + arcade physics + collisions, 3 on-foot control + punch + enter/exit button, 4 dynamic camera zoom, 5 pedestrian reactions, then baked lighting and more content.)
 0. User feedback on the phone page (look, camera angle, mood, frame rate on the real device).
 1. Quick test scene (crossroads, two tall buildings, one car) built with the Blender scripts, shown from the game camera.
 2. Prototype per `HANDOFF.md`: block, drivable car with crash physics, hero walking and punching; publish as an Artifact.

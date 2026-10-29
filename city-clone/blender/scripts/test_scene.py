@@ -29,13 +29,16 @@ for (x, y, rz, a1) in ((-(R + 1.3), ARCH_Y - 6, 90, "#1f6b4a"), (R + 1.3, ARCH_Y
 mi = make_misc()
 put(mi["dumpster"], -(R + 1.6), -R - 20, .16, 90); put(mi["barrier"], R + 1.5, R + 30, .16, 90); put(mi["barrel"], R + 1.2, R + 26, .16); put(mi["newsboxes"], -(R + 2.2), R + 3.0, .16, 90)
 put(mi["pallet"], R + 1.7, -R - 10, .16)
-# vehicles
-put(make_car("sedan", "#c8201c", "player"), LANE / 2, -10, 0)
-put(make_car("taxi", "#f2b61c", "taxi"), -9, -LANE / 2, 0, rz=-90)
+# vehicles: modular cars (body + 4 hinged doors). The page rebuilds them from car_*.glb using cars.json, so they are not in test_scene.glb.
+CARS = []
+def addcar(kind, color, name, x, y, rz=0):
+    root = make_car(kind, color, name); put(root, x, y, 0, rz); CARS.append({"name": name, "kind": kind, "color": color, "x": x, "y": y, "rz": rz}); return root
+addcar("sedan", "#c8201c", "player", LANE / 2, -10)
+addcar("taxi", "#f2b61c", "taxi", -9, -LANE / 2, -90)
 pk = R - PARK / 2
 for i, (x, y, rz, col) in enumerate([(pk, 14, 0, "#d9d9d6"), (-pk, 19, 180, "#2b2d33"), (pk, -19, 0, "#2e5fa3"), (-pk, -14, 180, "#3d7a52"),
                                       (13, -pk, -90, "#8a8d92"), (-14, pk, 90, "#a23a2e"), (pk, 33, 0, "#c8201c"), (-LANE / 2, 31, 180, "#f2b61c")]):
-    put(make_car("taxi" if col == "#f2b61c" else "sedan", col, f"parked{i}"), x, y, 0, rz)
+    addcar("taxi" if col == "#f2b61c" else "sedan", col, f"parked{i}", x, y, rz)
 for i, (x, y) in enumerate([(R + 1.4, R + 7), (-R - 1.4, R + 15), (R + 1.4, -R - 5), (-R - 1.4, -R - 11), (R + 1.4, R + 15)]):
     put(make_tree(f"tree{i}", i), x, y, .16)
 
@@ -47,4 +50,12 @@ if __name__ == "__main__":
         if want and name not in want.split(","): continue
         for o in [x for x in bpy.context.scene.objects if x.type == "CAMERA"]: bpy.data.objects.remove(o)
         game_camera(tgt, pitch, dist); render(os.path.join(OUT, f"scene_{name}.png"), w, h, ink=False, samples=24, keep_transform=True)
-    if not want: export_glb("test_scene")
+    if not want:
+        import json
+        fam = set()
+        def walk(o):
+            fam.add(o)
+            for c in o.children: walk(c)
+        for r in [bpy.data.objects[c["name"]] for c in CARS]: walk(r)
+        export_glb("test_scene", [o for o in bpy.context.scene.objects if o not in fam and o.type in ("MESH", "EMPTY")])
+        json.dump(CARS, open(os.path.join(OUT, "cars.json"), "w"), indent=1)

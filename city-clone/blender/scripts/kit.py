@@ -17,7 +17,9 @@ def M(name, hexstr, emit=0.0, rough=0.9, tex=None, tile=1.0, fit=False):
     tex = PNG name in out/tex (made by textures.py); tile = metres per texture repeat; fit = map the texture once over each face (signs)."""
     if tex and not os.path.exists(os.path.join(TEXDIR, tex + ".png")): tex = None
     key = (name, hexstr, emit, tex, tile, fit)
-    if key in _mats and _mats[key].name in bpy.data.materials: return _mats[key]
+    try:
+        if key in _mats and _mats[key].name in bpy.data.materials: return _mats[key]
+    except ReferenceError: _mats.clear()          # scene was reset; cached materials are gone
     m = bpy.data.materials.new(name); m.use_nodes = True
     b = m.node_tree.nodes["Principled BSDF"]
     b.inputs["Base Color"].default_value = (*lin(hexstr), 1); b.inputs["Roughness"].default_value = rough

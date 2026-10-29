@@ -129,7 +129,7 @@ def export_glb(name, objs=None):
     use_sel = objs is not None
     if use_sel:
         for o in objs: o.select_set(True)
-    bpy.ops.export_scene.gltf(filepath=p, export_format="GLB", use_selection=use_sel, export_apply=True, export_yup=True)
+    bpy.ops.export_scene.gltf(filepath=p, export_format="GLB", use_selection=use_sel, export_apply=True, export_yup=True, export_extras=True)
     return p
 
 
