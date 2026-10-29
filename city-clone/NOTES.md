@@ -4,6 +4,8 @@
 (the Chinatown concepts moved to `art/chinatown-superseded/`). Bright sunny suburb: palms, stucco + terracotta, canals, shopping plazas, low-rise (2-4 floors), so tall
 leaning walls matter less than in Chinatown. Camera note: the concept shows an oblique "overhead driving camera" and an OVER-THE-SHOULDER on-foot camera; the user's
 chosen play camera is still 45 deg / 44 m (ask before adopting the over-the-shoulder look). The Chinatown arch/signs/stalls are kept in the repo as an optional district.
+**User-supplied gameplay-angle art saved (art/coconut-5, coconut-6) and judged by the user to nail the style; use it as THE camera/look target for the Florida pass** (oblique ~45-55 deg,
+wide, dense palms, terracotta + stucco, bright warm daylight, GTA-style HUD with minimap, money, health bar, fist icon). It matches the 45 deg camera the user chose.
 Driving + physics (step 2) continues unchanged in the existing Chinatown test arena; the Florida art pass comes after it.
 
 Read `HANDOFF.md` first. Last updated 2026-10-29.
