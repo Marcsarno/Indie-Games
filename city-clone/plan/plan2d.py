@@ -21,9 +21,12 @@ def offset_poly(poly, d):                                   # inward (d>0) offse
     return out
 
 # ---- outline: a deliberately lumpy coastline (CCW). Bays are water, the land has peninsulas, notches and arms.
-OUTLINE = [(120, -196), (196, -172), (198, -104), (166, -62), (140, -30), (186, 8), (198, 78), (172, 132), (160, 188), (104, 196), (74, 156), (36, 128), (-4, 142), (-30, 176), (-70, 192), (-132, 196), (-190, 152), (-198, 76), (-164, 34), (-198, -26), (-188, -92), (-146, -118), (-150, -182), (-64, -196), (-50, -150), (18, -166), (30, -194)]
+import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from layout import OUTLINE
 outline = catmull(OUTLINE)
-EDGES = [(0, 5, "forest", "#2f6f3a"), (5, 8, "fence", "#8a6a2a"), (8, 10, "water", "#2d78b8"), (10, 13, "water", "#2d78b8"), (13, 16, "forest", "#2f6f3a"), (16, 20, "highway", "#444"), (20, 23, "forest", "#2f6f3a"), (23, 26, "water", "#2d78b8")]
+from layout import EDGES as _E, EDGE_COLORS
+EDGES = [(i0, i1, k, EDGE_COLORS[k]) for (i0, i1, k) in _E]
 
 # ---- districts: polygons (x, y) in metres, clipped to the outline when drawn
 RES, COM, CIV, GRN, IND, MIX = "residential", "commercial", "civic / school / health", "park / green", "industrial", "roads / transition"

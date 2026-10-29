@@ -605,7 +605,7 @@ const game = { money: world.money, hp: 100 };
 const mini = $('mini'), mx = mini.getContext('2d'); let miniT = 0, lastCash = -1, lastHp = -1;
 if (!world.map) $('minibox').hidden = true;
 function drawMini(px, py, face) {                 // north-up map around the player (px, py in Blender metres); arrow shows heading
-  const W = mini.width, c = W / 2, k = c / 55; mx.fillStyle = '#4d8a38'; mx.fillRect(0, 0, W, W);
+  const W = mini.width, c = W / 2, k = c / 55; mx.fillStyle = world.mapbg || '#4d8a38'; mx.fillRect(0, 0, W, W);
   const X = x => c + (x - px) * k, Y = y => c - (y - py) * k;
   const rects = (pass) => { (world.map || []).forEach((r, i) => {
     const base = i === 0 || r[5] === 'poly'; if (base !== pass) return;
