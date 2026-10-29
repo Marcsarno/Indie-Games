@@ -43,8 +43,16 @@ class Road:
     def off(self, s, o):               # point at lateral offset o (positive = left of travel)
         x, y, tx, ty = self.at(s); return (x - ty * o, y + tx * o)
     def nearest(self, x, y):
-        best = (1e18, 0.0); n = len(self.d)
-        for i in range(n - (0 if self.closed else 1)):
+        n = len(self.d); step = 8
+        if n > 80:                                                      # coarse pass over every 8th vertex, then refine the segments around the best one
+            bi, bd = 0, 1e18
+            for i in range(0, n, step):
+                dd = (self.d[i][0] - x) ** 2 + (self.d[i][1] - y) ** 2
+                if dd < bd: bd, bi = dd, i
+            idx = [(bi + k) % n for k in range(-2 * step, 2 * step + 1)] if self.closed else [k for k in range(bi - 2 * step, bi + 2 * step + 1) if 0 <= k < n - 1]
+        else: idx = list(range(n - (0 if self.closed else 1)))
+        best = (1e18, 0.0)
+        for i in idx:
             a, b = self.d[i], self.d[(i + 1) % n]; dx, dy = b[0] - a[0], b[1] - a[1]; l2 = dx * dx + dy * dy or 1
             t = max(0, min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / l2)); px, py = a[0] + dx * t, a[1] + dy * t; d = math.hypot(x - px, y - py)
             if d < best[0]: best = (d, self.s[i] + math.sqrt(l2) * t)
@@ -59,10 +67,10 @@ def build_network(roads):
             prev = None
             def sd(p):                                                      # signed distance to A's centre-line (positive = left of A's travel) and A's s there
                 d_, s_ = A.nearest(*p); t_ = A.at(s_); sg = (p[0] - t_[0]) * -t_[3] + (p[1] - t_[1]) * t_[2]; return (d_ if sg >= 0 else -d_), s_
-            for i in range(0, len(B.d) - 2, 2):
-                p, q = B.d[i], B.d[i + 2]; da, sa = sd(p); db, sb = sd(q)
+            for i in range(0, len(B.d) - 8, 8):
+                p, q = B.d[i], B.d[i + 8]; da, sa = sd(p); db, sb = sd(q)
                 if da * db < 0 and abs(da) < 60 and abs(db) < 60 and (A.closed or abs(sa - sb) < 15):
-                    lo, hi = B.s[i], B.s[i + 2]
+                    lo, hi = B.s[i], B.s[i + 8]
                     for _ in range(18):
                         mid = (lo + hi) / 2; mx, my, _, _ = B.at(mid); dm, _ = sd((mx, my))
                         if dm * da > 0: lo = mid
@@ -88,6 +96,10 @@ def build_network(roads):
             if lo - cur >= 5: pieces.append((cur, lo, fl0, R, e0, sB - lo))
             cur = hi; fl0 = R; e0 = hi - sB
         if B.L - cur >= 5: pieces.append((cur, B.L, fl0, 0, e0, 0.0))
+        for A_ in roads:                                                                                  # a pass-through road leaves a piece inside a roundabout island: drop it
+            if A_.closed and A_.island is not None and A_ is not B:
+                icx, icy, ir = A_.island
+                pieces = [p for p in pieces if math.hypot(B.at((p[0] + p[1]) / 2)[0] - icx, B.at((p[0] + p[1]) / 2)[1] - icy) > ir + .5]
         B.pieces = pieces
         for (lo, hi, A, R, sA, P, sB) in cuts:          # gaps on the parent where the (remaining) child pieces attach
             ta = A.at(sA); w = B.hw + R

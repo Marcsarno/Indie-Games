@@ -145,14 +145,15 @@ addEventListener('resize', resize); resize();
 
 /* ---------- load ---------- */
 const loader = new GLTFLoader();
-async function loadGlb(url, bar) {            // the page host serves no .glb: base64 text -> bytes -> parse
-  const txt = await (await fetch(url)).text(); const bin = atob(txt.trim()); const u8 = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-  return new Promise((ok, fail) => loader.parse(u8.buffer, '', g => { if (bar) $('bar').style.width = bar; ok(g); }, fail));
+async function loadGlb(url, bar) {            // *.glb is fetched as binary (Vercel); anything else is base64 text -> bytes (hosts that serve no .glb)
+  let buf;
+  if (url.endsWith('.glb')) buf = await (await fetch(url)).arrayBuffer();
+  else { const txt = await (await fetch(url)).text(); const bin = atob(txt.trim()); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); buf = u8.buffer; }
+  return new Promise((ok, fail) => loader.parse(buf, '', g => { if (bar) $('bar').style.width = bar; ok(g); }, fail));
 }
 let city, charGltf, sedanG, taxiG, carList, colList, propList, vegG;
 try {
-  [city, charGltf, sedanG, taxiG, carList, colList, propList, vegG] = await Promise.all([loadGlb(WD + 'scene.glb.b64.txt', '70%'), loadGlb('character.glb.b64.txt'), loadGlb('car_sedan.glb.b64.txt'), loadGlb('car_taxi.glb.b64.txt'), fetch(WD + 'cars.json').then(r => r.json()), fetch(WD + 'colliders.json').then(r => r.json()), fetch(WD + 'props.json').then(r => r.json()), loadGlb('veg.glb.b64.txt')]);
+  [city, charGltf, sedanG, taxiG, carList, colList, propList, vegG] = await Promise.all([loadGlb(WD + (world.glb || 'scene.glb.b64.txt'), '70%'), loadGlb('character.glb.b64.txt'), loadGlb('car_sedan.glb.b64.txt'), loadGlb('car_taxi.glb.b64.txt'), fetch(WD + 'cars.json').then(r => r.json()), fetch(WD + 'colliders.json').then(r => r.json()), fetch(WD + 'props.json').then(r => r.json()), loadGlb('veg.glb.b64.txt')]);
   $('bar').style.width = '100%';
 } catch (e) { $('loadtxt').textContent = 'Could not load the models: ' + (e.message || e); throw e; }
 scene.add(city.scene);
@@ -626,6 +627,18 @@ $('loading').hidden = true;
 const q = { ratio: Math.min(devicePixelRatio || 1, 2), slow: 0 };
 const clock = new THREE.Clock(); let fpsN = 0, fpsT = 0, manual = false, lastStat = '';
 const SPAN = 42, upd = { speedZoom: 0 };
+/* distance culling of static scenery: the play camera never sees farther than ~90 m, so far tiles of roads, buildings and vegetation are switched off (frustum culling alone keeps the whole far trapezoid) */
+const cullables = []; let cullT = 9;
+function collectCullables() {
+  city.scene.updateMatrixWorld(true);
+  const add = o => { const bs = o.isInstancedMesh ? (o.boundingSphere || (o.computeBoundingSphere(), o.boundingSphere)) : (o.geometry.boundingSphere || (o.geometry.computeBoundingSphere(), o.geometry.boundingSphere)); const c = bs.center.clone().applyMatrix4(o.matrixWorld); cullables.push({ o, x: c.x, z: c.z, r: bs.radius * Math.max(o.matrixWorld.getMaxScaleOnAxis(), 1) }); };
+  city.scene.traverse(o => { if (o.isMesh) add(o); }); for (const im of instances) add(im);
+}
+function cullStep(dt) {
+  cullT += dt; if (cullT < .2) return; cullT = 0; if (!cullables.length) collectCullables();
+  const R = 82; for (const c of cullables) c.o.visible = Math.hypot(c.x - rig.tx, c.z - rig.tz) - c.r < R;
+}
+
 function update(dt, draw = true) {
   const ws = frameWaiters; frameWaiters = []; for (const r of ws) r(dt);
   hitstop = Math.max(0, hitstop - dt); const dta = hitstop > 0 ? 0 : dt;          // hitstop freezes the action, never the camera or the effects
@@ -662,7 +675,7 @@ function update(dt, draw = true) {
     hit = Math.max(0, hit - dta * 2); victim.root.position.x = fightAt.x - .55 - .25 * Math.sin(Math.min(1, (1 - hit) * 2) * Math.PI) * (hit > 0 ? 1 : 0); }
   for (const m of mixers) m.update(dta);
   for (const c of [...Object.values(allCars), ...(demo ? [demo.sedan, demo.taxi] : [])]) {                  // draw only nearby cars, and only those close by cast shadows
-    const dd = Math.hypot(c.group.position.x - rig.tx, c.group.position.z - rig.tz); c.group.visible = dd < 70 || c === (drive && drive.car);
+    const dd = Math.hypot(c.group.position.x - rig.tx, c.group.position.z - rig.tz); c.group.visible = dd < 62 || c === (drive && drive.car);
     const near = dd < 40; if (near !== c.shadowOn) { c.shadowOn = near; c.group.traverse(o => { if (o.isMesh) o.castShadow = near; }); }
     if (c.group.visible) updateDoors(c, dt);
   }
@@ -683,6 +696,7 @@ function update(dt, draw = true) {
   if (playView) { rig.tx += (fx + fvx * la - rig.tx) * Math.min(1, dt * 5); rig.tz += (fz + fvz * la - rig.tz) * Math.min(1, dt * 5); }
   upd.speedZoom += ((playView && hmode === 'driving' ? Math.min(speed, 28) / 28 * .22 : 0) - upd.speedZoom) * Math.min(1, dt * 2);
   rig.tx = clamp(rig.tx, -world.extent, world.extent); rig.tz = clamp(rig.tz, -world.extent, world.extent);
+  if (rig.mode === 'drive') cullStep(dt); else for (const c of cullables) c.o.visible = true;
   const p = rig.pitch * Math.PI / 180, dist = rig.dist * (1 + upd.speedZoom);
   rig.shake = Math.max(0, rig.shake - dt * 2.2); const sh = rig.shake * rig.shake * 1.1;
   camera.position.set(rig.tx + (Math.random() - .5) * sh, Math.sin(p) * dist + (Math.random() - .5) * sh * .5, rig.tz + Math.cos(p) * dist + (Math.random() - .5) * sh); camera.lookAt(rig.tx, 0, rig.tz);
