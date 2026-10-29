@@ -61,3 +61,37 @@ def make_bus(name="bus"):
     for sy_ in (-3.8, 3.2):
         for sx in (-1, 1): b.cyl(cmt["dark"], (sx * (hx - .1), sy_, .5), .52, .3, "x", 10)
     return b.build()
+
+def basketball(b, cm, cb, x, y):
+    """Outdoor court 15 x 9 (long axis x): blue apron, orange key areas, lines, two hoops."""
+    b.box(cm["court_blue"], x - 7.5, x + 7.5, y - 4.5, y + 4.5, .03, .04); org = M("court_orange", "#c8662a")
+    for sx in (-1, 1): b.box(org, x + sx * 7.5 - (0 if sx < 0 else 3.6), x + sx * 7.5 + (3.6 if sx < 0 else 0), y - 2.4, y + 2.4, .04, .046)
+    L = cm["line"]; b.box(L, x - 7.5, x + 7.5, y - 4.5, y - 4.42, .046, .052); b.box(L, x - 7.5, x + 7.5, y + 4.42, y + 4.5, .046, .052); b.box(L, x - .04, x + .04, y - 4.5, y + 4.5, .046, .052)
+    for sx in (-1, 1):
+        px = x + sx * 7.2; b.box(cm["steel"], px - .06, px + .06, y - .06, y + .06, 0, 3.0); b.box(cm["line"], px - .05 + sx * .35, px + .05 + sx * .35 - sx * .3, y - .9, y + .9, 2.6, 3.4); cb(px, y, .4, .4, "bush")
+
+def picnic(b, cm, cb, x, y, along_x=True):
+    wood = M("picnic_wood", "#8a5a34", rough=.8); lx, ly = (.9, .45) if along_x else (.45, .9)
+    b.box(wood, x - lx, x + lx, y - ly, y + ly, .75, .85)
+    for s_ in (-1, 1):
+        bx0, bx1, by0, by1 = (x - lx, x + lx, y + s_ * .75 - .2, y + s_ * .75 + .2) if along_x else (x + s_ * .75 - .2, x + s_ * .75 + .2, y - ly, y + ly); b.box(wood, bx0, bx1, by0, by1, .42, .5)
+    b.box(cm["post"], x - .08, x + .08, y - .08, y + .08, 0, .75); cb(x, y, 2.2, 2.4, "bush")
+
+def pavilion(b, cm, cb, cc, x, y):
+    gw = M("gaz_roof", "#2f7a4a", rough=.7)
+    for sx_ in (-2, 2):
+        for sy_ in (-2, 2): b.cyl(M("gaz_post", "#f1ece0"), (x + sx_, y + sy_, 1.4), .13, 2.8, "z", 6); cc(x + sx_, y + sy_, .2, None)
+    b.box(M("wood", "#8a5a34", rough=.8), x - 2.6, x + 2.6, y - 2.6, y + 2.6, 0, .25); b.prism(gw, (x - 3.2, x + 3.2, y - 3.2, y + 3.2), (x - .15, x + .15, y - .15, y + .15), 2.8, 4.4)
+
+def gas_station(name="gas"):
+    """Corner gas station, front (canopy) toward -y: slab 18 x 19, store 9 x 6 at the back, canopy 12 x 6.5 over three pump islands, price sign pole."""
+    cmt = civic_mats(); b = Builder(name); conc = M("gas_slab", "#9a9890", rough=.95); wall = M("gas_wall", "#e9dcb8", rough=.9); trim = M("gas_trim", "#2a5aa8"); roof = M("gas_roof", "#f2efe6")
+    red = M("pump_red", "#c8362a"); glass = M("shop_glass_fl", "#2c5a66", rough=.2); metal = M("metal_dark", "#25282c")
+    b.box(conc, -9, 9, -9.5, 9.5, 0, .08)
+    b.box(wall, -4.5, 4.5, 3.0, 9.0, .08, 3.8); b.box(roof, -4.8, 4.8, 2.7, 9.3, 3.8, 4.1); b.box(trim, -4.8, 4.8, 2.65, 2.7, 3.8, 4.4); b.box(glass, -4.0, 4.0, 2.94, 3.0, .6, 3.0)
+    b.box(roof, -6.0, 6.0, -6.2, .3, 4.6, 5.1); b.box(trim, -6.1, 6.1, -6.3, -6.2, 4.5, 5.3); b.box(trim, -6.1, 6.1, .3, .4, 4.5, 5.3)
+    for sx in (-4.8, 4.8):
+        for sy in (-5.4, -.3): b.box(metal, sx - .18, sx + .18, sy - .18, sy + .18, .08, 4.6)
+    for px in (-3.2, 0.0, 3.2): b.box(conc, px - .6, px + .6, -4.2, -1.6, .08, .25); b.box(red, px - .3, px + .3, -3.5, -2.3, .25, 1.45)
+    b.cyl(metal, (7.8, -8.0, 3.2), .12, 6.4, "z", 6); b.box(trim, 6.6, 9.0, -8.1, -7.9, 5.4, 7.4); b.box(M("price_yel", "#f2c030", emit=.4), 6.8, 8.8, -8.12, -8.08, 5.6, 7.2)
+    return b.build()
