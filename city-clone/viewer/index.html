@@ -23,7 +23,7 @@
 html, body { position: fixed; inset: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
 #drv, #trk { position: fixed; z-index: 3; left: max(16px, env(safe-area-inset-left, 0px)); top: calc(64px + env(safe-area-inset-top, 0px)); max-width: calc(100% - 150px); padding: 5px 9px; font: 500 12px/1.35 ui-monospace, Menlo, monospace; color: var(--paper); pointer-events: none; white-space: pre-wrap; }
 #trk { top: calc(150px + env(safe-area-inset-top, 0px)); }
-.tg { margin: 8px 0 0; font: 600 12px var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--lamp); }
+.tg { grid-column: 1 / -1; margin: 8px 0 0; font: 600 12px var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--lamp); }
 #tunecopy { width: 100%; height: 90px; box-sizing: border-box; background: rgba(0,0,0,.4); color: var(--paper); border: 1px solid var(--line); border-radius: 6px; font: 11px ui-monospace, monospace; -webkit-user-select: text; user-select: text; }
 body { margin: 0; background: var(--night); color: var(--paper); font: 500 14px/1.35 var(--body); overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
