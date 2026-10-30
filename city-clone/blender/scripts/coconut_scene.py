@@ -2,7 +2,7 @@
 Exports to out/: coconut_scene.glb (static), props.json (vegetation instances), colliders.json, cars.json, world.json."""
 import sys, os, json, math, random; sys.stdout.reconfigure(line_buffering=True); sys.path.insert(0, os.path.dirname(__file__)); sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'plan'))
 import map_px as MP
-from kit import *; from street_fl import *; from building_fl import make_house, make_row, make_plaza; import vegetation as veg; from car import make_car; import mood; import roads as rd; import civic; import district_kits as dk; import time as _t; T0 = _t.time()
+from kit import *; from street_fl import *; from building_fl import make_house, make_row, make_plaza; import vegetation as veg; from car import make_car; import vehicles as VH; import mood; import roads as rd; import civic; import district_kits as dk; import time as _t; T0 = _t.time()
 def tick_(n): print('T', n, round(_t.time() - T0, 1))
 
 reset(); mood.florida(); mood._transform(); R_ = random.Random(7)
@@ -44,9 +44,9 @@ EXT = 290
 ROADS_M = MP.roads_m(); BRIDGE_ZONES = []
 def mk_road(d):
     nm, hw = d["name"], d["hw"]; kw = dict(hw=hw, rank=d["rank"], flare=5.5 if hw > 4 else 4.5)
-    if nm == "Coconut Creek Pkwy": kw.update(mh=1.6, xwalk=True)
+    if nm == "Lyons Rd": kw.update(mh=2.0, xwalk=True, flare=7.0)                                                          # the big main road: 3 lanes each way + palm median
     if nm == "South Loop Rd": kw.update(mh=1.2, xwalk=True)
-    if nm in ("Wiles Rd", "Palm Blvd", "Northridge Rd", "Creekview Dr", "West Creek Rd", "Creekside Loop"): kw.update(xwalk=True)
+    if nm in ("Wiles Rd", "Coconut Creek Pkwy", "Northridge Rd", "Creekview Dr", "West Creek Rd", "Creekside Loop"): kw.update(xwalk=True)
     if nm == "Lyons Promenade": kw.update(sw=(0, 0), mark=False, surf="walk", curbs=False, flare=0)
     return rd.Road(nm, d["pts"], **kw)
 def extend_ends(pts, push, ends):
@@ -57,7 +57,7 @@ def extend_ends(pts, push, ends):
 ROAD = {}
 for d in ROADS_M:
     ROAD[d["name"]] = mk_road(dict(d, pts=extend_ends(d["pts"], 5.5, d["push"])))                                              # T-junction ends are pushed 5.5 m through the parent so the cutter sees a crossing
-PKWY, WILES = ROAD["Coconut Creek Pkwy"], ROAD["Wiles Rd"]
+PKWY, WILES = ROAD["Lyons Rd"], ROAD["Wiles Rd"]
 coast = rd.Road("coast", MP.coast_m(), hw=1.0, closed=True, rank=0, sw=(0, 0), mark=False, flare=0); land_poly = coast.d[::4]
 net = rd.build_network(list(ROAD.values()))
 tick_('network')
@@ -382,7 +382,7 @@ def commercial_block(poly, name, maker_b, bw, bd, lot_w=None, lot_d=17.0, step=3
     return made
 
 def addcar(kind, color, name, x, y, rz=0):
-    root = make_car(kind, color, name); root.location = (x, y, .03); root.rotation_euler = (0, 0, math.radians(rz)); CARS.append({"name": name, "kind": kind, "color": color, "x": round(x, 2), "y": round(y, 2), "rz": round(rz, 1)}); return root
+    root = VH.make_vehicle(kind, color, name); root.location = (x, y, .03); root.rotation_euler = (0, 0, math.radians(rz)); CARS.append({"name": name, "kind": kind, "color": color, "x": round(x, 2), "y": round(y, 2), "rz": round(rz, 1)}); return root
 def pose(road, off, s, rev=False):
     x, y, tx, ty = road.at(s); px, py = road.off(s, off); a = math.degrees(math.atan2(-tx, ty)) + (180 if rev else 0); return px, py, a
 LANE = (PKWY.mh + (PKWY.hw - PKWY.mh) * .27)
@@ -742,24 +742,49 @@ def signals_at(parent, child_name):
                     x = px + ta[2] * a * (j["w"] + .5) + nx_ * b * (parent.hw + .9); y = py + ta[3] * a * (j["w"] + .5) + ny_ * b * (parent.hw + .9); dx, dy = -nx_ * b, -ny_ * b
                     ad = (1 if dx > 0 else -1, 0) if abs(dx) >= abs(dy) else (0, 1 if dy > 0 else -1)
                     signal(T, x, y, ad); ccir(x, y, .14, "pole")
-for (par, ch) in ((WILES, "Coconut Creek Pkwy"), (ROAD["Palm Blvd"], "Coconut Creek Pkwy"), (ROAD["Northridge Rd"], "Coconut Creek Pkwy")): signals_at(par, ch)
+            SIGN = {"Lyons Rd": "lyons", "Wiles Rd": "wiles", "Coconut Creek Pkwy": "pkwy", "Northridge Rd": "northridge"}
+            for k_, (nm_, a, b) in enumerate(((parent.name, 1, 1), (child_name, -1, -1))):
+                if nm_ not in SIGN: continue
+                x = px + ta[2] * a * (j["w"] + 3.0) + nx_ * b * (parent.hw + 3.2); y = py + ta[3] * a * (j["w"] + 3.0) + ny_ * b * (parent.hw + 3.2)
+                sign_pole(T, x, y, SIGN[nm_], 3.0 if len(nm_) > 9 else 2.2); ccir(x, y, .1, "pole")
+for ch in ("Wiles Rd", "Coconut Creek Pkwy", "Northridge Rd", "Southgate Rd", "Retail Dr", "School Dr", "Industrial Row"): signals_at(PKWY, ch)
 tick_('furniture')
 # ================================================================  CARS + WORLD DATA  ===========================================================
 def route(road, off, rev=False, s0=0.0, s1=None): return [[round(a, 2), round(b, 2)] for a, b in rd.lane_path(road, off, rev, s0=s0, s1=s1)]
-PAL = ["#e6e6e2", "#2b2d33", "#9aa0a8", "#2e5fa3", "#c8201c", "#3d7a52", "#d8b04a", "#7a3a2a"]
+PAL = ["#e6e6e2", "#2b2d33", "#9aa0a8", "#2e5fa3", "#c8201c", "#3d7a52", "#d8b04a", "#7a3a2a", "#1fb3a8", "#7a9cc4", "#6b7a3a"]
+PASSENGER = ["sedan"] * 4 + ["hatchback"] * 3 + ["suv"] * 3 + ["minivan"] * 2 + ["pickup"] * 2 + ["coupe"]
+FIXED = {"police": "#1c1c20", "taxi": "#f2c21c", "ambulance": "#f4f4f2", "tow": "#f0f0ee", "bus": "#f2f2f0", "garbage": "#3f8a44", "boxtruck": "#3d8a46", "flatbed": "#e8b623", "van": "#ecebe6"}
+def kc(kind): return FIXED.get(kind) or R_.choice(PAL)
+pol = [f for f in FOOTREG if f[0] == "police"]; npol = 0
 k = 0
 for (sx_s, sy_s, rz, prob) in LOTS:
-    if R_.random() < prob:
-        addcar("sedan", R_.choice(PAL), f"parked{k}", sx_s, sy_s, rz); cbox(sx_s, sy_s, 1.8, 4.5, rz); COL[-1]["car"] = f"parked{k}"; k += 1
+    near_pol = pol and math.hypot(sx_s - pol[0][1], sy_s - pol[0][2]) < 30
+    if near_pol and npol < 4: kind = "police" if npol < 3 else "ambulance"; npol += 1
+    elif R_.random() < prob: kind = R_.choice(PASSENGER)
+    else: continue
+    addcar(kind, kc(kind), f"parked{k}", sx_s, sy_s, rz); cbox(sx_s, sy_s, 1.8, 4.5, rz); COL[-1]["car"] = f"parked{k}"; k += 1
+def park_curb(road_name, s_list, kinds, side=1):                                                                                # work vehicles parked at the curb (industrial park, landfill, gas station)
+    global k
+    r = ROAD[road_name]
+    for s_, kind in zip(s_list, kinds):
+        x, y, tx, ty = r.at(s_); px, py = r.off(s_, side * (r.hw - 1.3)); rz = math.degrees(math.atan2(-tx, ty)) + (0 if side < 0 else 180)
+        if not free(px, py, 0.0, own=r) and False: continue
+        addcar(kind, kc(kind), f"parked{k}", px, py, rz); k += 1
+park_curb("Industrial Row", (40, 90, 140, 175), ("boxtruck", "flatbed", "van", "boxtruck"))
+park_curb("Creekside Rd", (30, 70), ("flatbed", "van"), -1)
+park_curb("Landfill Rd", (8,), ("garbage",))
+park_curb("Gas Station Rd", (20,), ("tow",))
 TRAFFIC = []
-def add_traffic(name, road, off, rev, speed, s0, kind="sedan", color="#2e5fa3", a=0.0, b=None):
-    p = route(road, off, rev, a, b); TRAFFIC.append({"name": name, "path": p, "speed": speed, "s0": s0, "kind": kind, "color": color}); addcar(kind, color, name, p[0][0], p[0][1], 0)
-add_traffic("traffic0", PKWY, -LANE, False, 9, 40, color="#2e5fa3"); add_traffic("traffic1", PKWY, LANE, True, 8, 60, color="#e6e6e2")
-add_traffic("traffic2", WILES, -2.5, False, 8, 30, "taxi", "#f2b61c"); add_traffic("traffic3", WILES, 2.5, True, 7.5, 80, color="#9aa0a8")
-add_traffic("traffic4", ROAD["Palm Blvd"], -2.2, False, 7.5, 50, color="#3d7a52"); add_traffic("traffic5", ROAD["Palm Blvd"], 2.2, True, 7, 20, "taxi", "#f2b61c")
-add_traffic("traffic6", ROAD["Northridge Rd"], -2.2, False, 7, 10, color="#7a3a2a"); add_traffic("traffic7", ROAD["South Loop Rd"], -LANE, False, 8, 30, color="#d8b04a")
+def add_traffic(name, road, off, rev, speed, s0, kind="sedan", color=None, a=0.0, b=None):
+    p = route(road, off, rev, a, b); color = color or kc(kind); TRAFFIC.append({"name": name, "path": p, "speed": speed, "s0": s0, "kind": kind, "color": color}); addcar(kind, color, name, p[0][0], p[0][1], 0)
+L3 = PKWY.mh + (PKWY.hw - PKWY.mh) * .5                                                                                          # Lyons Rd middle lane
+add_traffic("traffic0", PKWY, -LANE, False, 7, 40, "bus"); add_traffic("traffic1", PKWY, LANE, True, 9, 60, "sedan", "#e6e6e2"); add_traffic("traffic8", PKWY, -L3, False, 10, 200, "coupe", "#d42a24"); add_traffic("traffic9", PKWY, L3, True, 8.5, 300, "suv")
+add_traffic("traffic2", WILES, -2.5, False, 8, 30, "taxi"); add_traffic("traffic3", WILES, 2.5, True, 7, 80, "boxtruck")
+add_traffic("traffic4", ROAD["Coconut Creek Pkwy"], -2.5, False, 7.5, 50, "hatchback"); add_traffic("traffic5", ROAD["Coconut Creek Pkwy"], 2.5, True, 7, 20, "taxi")
+add_traffic("traffic6", ROAD["Northridge Rd"], -2.2, False, 7, 10, "minivan"); add_traffic("traffic7", ROAD["South Loop Rd"], -LANE * .8, False, 7, 30, "garbage")
+add_traffic("traffic10", ROAD["Creekview Dr"], -2.2, False, 7.5, 40, "pickup"); add_traffic("traffic11", ROAD["West Creek Rd"], 2.2, True, 7, 60, "van")
 def sidewalk_path(road, side): return [[round(a, 2), round(b, 2)] for a, b in rd.lane_path(road, side * (road.hw + rd.CURB + 1.2))]
-WALK = [{"path": sidewalk_path(PKWY, 1)}, {"path": sidewalk_path(PKWY, -1)}, {"path": sidewalk_path(WILES, 1)}, {"path": sidewalk_path(WILES, -1)}, {"path": sidewalk_path(ROAD["Palm Blvd"], 1)}, {"path": sidewalk_path(ROAD["Palm Blvd"], -1)},
+WALK = [{"path": sidewalk_path(PKWY, 1)}, {"path": sidewalk_path(PKWY, -1)}, {"path": sidewalk_path(WILES, 1)}, {"path": sidewalk_path(WILES, -1)}, {"path": sidewalk_path(ROAD["Coconut Creek Pkwy"], 1)}, {"path": sidewalk_path(ROAD["Coconut Creek Pkwy"], -1)},
         {"path": [[round(a, 2), round(b, 2)] for a, b in rd.lane_path(PROM, 0)]}, {"path": sidewalk_path(ROAD["Northridge Rd"], 1)}]
 
 # ================================================================  WORLD EDGE + DATA  =======================================================

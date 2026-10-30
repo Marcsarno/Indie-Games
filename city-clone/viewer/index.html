@@ -171,9 +171,11 @@ async function loadGlb(url, bar) {            // *.glb is fetched as binary (Ver
   else { const txt = await (await fetch(url)).text(); const bin = atob(txt.trim()); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); buf = u8.buffer; }
   return new Promise((ok, fail) => loader.parse(buf, '', g => { if (bar) $('bar').style.width = bar; ok(g); }, fail));
 }
-let city, charGltf, sedanG, taxiG, carList, colList, propList, vegG;
+let city, charGltf, carList, colList, propList, vegG; const KG = {};      // KG: vehicle glTF per kind (car_<kind>.glb)
 try {
-  [city, charGltf, sedanG, taxiG, carList, colList, propList, vegG] = await Promise.all([loadGlb(WD + (world.glb || 'scene.glb.b64.txt'), '70%'), loadGlb('character.glb.b64.txt'), loadGlb('car_sedan.glb.b64.txt'), loadGlb('car_taxi.glb.b64.txt'), fetch(WD + 'cars.json').then(r => r.json()), fetch(WD + 'colliders.json').then(r => r.json()), fetch(WD + 'props.json').then(r => r.json()), loadGlb('veg.glb.b64.txt')]);
+  carList = await fetch(WD + 'cars.json').then(r => r.json()); const kinds = [...new Set(['sedan', 'taxi', ...carList.map(c => c.kind), ...(world.traffic || []).map(t => t.kind)])];
+  const kg = await Promise.all(kinds.map(k => loadGlb(`car_${k}.glb`).catch(() => null))); kinds.forEach((k, i) => { if (kg[i]) KG[k] = kg[i]; });
+  [city, charGltf, carList, colList, propList, vegG] = await Promise.all([loadGlb(WD + (world.glb || 'scene.glb.b64.txt'), '70%'), loadGlb('character.glb.b64.txt'), fetch(WD + 'cars.json').then(r => r.json()), fetch(WD + 'colliders.json').then(r => r.json()), fetch(WD + 'props.json').then(r => r.json()), loadGlb('veg.glb.b64.txt')]);
   $('bar').style.width = '100%';
 } catch (e) { $('loadtxt').textContent = 'Could not load the models: ' + (e.message || e); throw e; }
 scene.add(city.scene);
@@ -216,11 +218,11 @@ const wait = async s => { let t = 0; while (t < s) t += await nextFrame(); };
 /* ---------- cars: body + 4 hinged doors, built from car_*.glb ---------- */
 const allCars = {};
 function makeCar(kind, color) {
-  const src = (kind === 'taxi' ? taxiG : sedanG).scene.clone(true); const mats = new Map(), paint = [];
+  const G = KG[kind] || KG.sedan, src = G.scene.clone(true); const mats = new Map(), paint = []; const dims = (G.scene.children[0] && G.scene.children[0].userData.dims) || [4.5, 1.8, 2.7];
   function cm(m) { if (!mats.has(m)) { const c = m.clone(); if (m.name.startsWith('paint_')) { c.color.set(color); paint.push({ m: c, base: c.color.clone() }); } mats.set(m, c); } return mats.get(m); }
   src.traverse(o => { if (!o.isMesh) return; o.castShadow = o.receiveShadow = true; o.material = Array.isArray(o.material) ? o.material.map(cm) : cm(o.material); });
   const group = new THREE.Group(); group.add(src);
-  const car = { group, doors: {}, seat: {}, stand: {}, occupants: {}, paint };
+  const car = { group, doors: {}, seat: {}, stand: {}, occupants: {}, paint, kind, dims };
   src.traverse(o => {
     let m = /door_(FL|FR|RL|RR)$/.exec(o.name); if (m) car.doors[m[1]] = { node: o, side: o.userData.side, max: rad(o.userData.max_open_deg || 62), cur: 0, target: 0 };
     m = /seat_(FL|FR|RL|RR)$/.exec(o.name); if (m) car.seat[m[1]] = o;
@@ -342,7 +344,7 @@ try { Object.assign(TUNE, JSON.parse(localStorage.getItem('gtcc-tune') || '{}'))
 const TUNE_UI = [['top', 'Top speed', 12, 45, 1, 'm/s'], ['accel', 'Accel', 6, 30, .5, ''], ['brake', 'Braking', 10, 50, 1, ''], ['grip', 'Grip', 2, 14, .5, ''], ['drift', 'Slide grip', .3, 5, .1, ''], ['steer', 'Steering', .5, 1.6, .05, ''], ['bounce', 'Bounce', 0, .8, .05, ''], ['forgive', 'Forgiving', 0, 1, .05, '']];
 const CAR = { L: 4.5, W: 1.8, mass: 1400, wb: 2.7 }; CAR.I = CAR.mass * (CAR.L * CAR.L + CAR.W * CAR.W) / 12;
 const vehs = {};                                  // one state per car; only the ACTIVE one is simulated, the rest are static colliders
-for (const [name, car] of Object.entries(allCars)) { const g = car.group; vehs[name] = { car, name, x: g.position.x, z: g.position.z, th: g.rotation.y, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, mode: 'parked', hardest: 0, hits: 0 }; }
+for (const [name, car] of Object.entries(allCars)) { const g = car.group; const D_ = car.dims, M_ = 320 * D_[0] * D_[1]; vehs[name] = { car, name, mass: M_, perf: ({ coupe: 1.15, police: 1.1, hatchback: .95, suv: .95, minivan: .9, pickup: .95, van: .85, tow: .8, ambulance: .85, boxtruck: .72, flatbed: .75, garbage: .65, bus: .62 })[car.kind] || 1, I: M_ * (D_[0] * D_[0] + D_[1] * D_[1]) / 12, x: g.position.x, z: g.position.z, th: g.rotation.y, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, mode: 'parked', hardest: 0, hits: 0 }; }
 let drive = vehs.player; drive.mode = 'driving';
 let hmode = 'driving';                            // 'driving' | 'foot' | 'busy' (door animation playing)
 const input = { left: false, right: false, gas: false, brake: false, hand: false, run: false };
@@ -357,7 +359,7 @@ const polyCircle = (cx, cy, r) => Array.from({ length: 8 }, (_, k) => [cx + r * 
 const cen = P => { let x = 0, z = 0; for (const p of P) { x += p[0]; z += p[1]; } return [x / P.length, z / P.length]; };
 const colliders = colList.filter(c => !c.car).map(c => { const soft = c.soft || null, poly = c.t === 'box' ? polyBox(c.x, c.y, c.w, c.d, c.rz) : c.t === 'poly' ? c.pts.map(p => [p[0], -p[1]]) : polyCircle(c.x, c.y, c.r); const [cx, cz] = cen(poly); let r = 0; for (const p of poly) r = Math.max(r, Math.hypot(p[0] - cx, p[1] - cz)); return { poly, cx, cz, r, vx: 0, vz: 0, soft }; });
 const moveCols = traffic.map(t => { const c = { poly: [], cx: 0, cz: 0, r: 2.6, vx: t.vx, vz: t.vz }; colliders.push(c); return c; });     // scripted traffic: moving obstacles
-const carPoly = (x, z, th) => { const fx = -Math.sin(th), fz = -Math.cos(th), rx = Math.cos(th), rz = -Math.sin(th), hl = CAR.L / 2, hw = CAR.W / 2; return [[x + fx * hl + rx * hw, z + fz * hl + rz * hw], [x + fx * hl - rx * hw, z + fz * hl - rz * hw], [x - fx * hl - rx * hw, z - fz * hl - rz * hw], [x - fx * hl + rx * hw, z - fz * hl + rz * hw]]; };
+const carPoly = (x, z, th, d) => { const fx = -Math.sin(th), fz = -Math.cos(th), rx = Math.cos(th), rz = -Math.sin(th), hl = (d ? d[0] : CAR.L) / 2, hw = (d ? d[1] : CAR.W) / 2; return [[x + fx * hl + rx * hw, z + fz * hl + rz * hw], [x + fx * hl - rx * hw, z + fz * hl - rz * hw], [x - fx * hl - rx * hw, z - fz * hl - rz * hw], [x - fx * hl + rx * hw, z - fz * hl + rz * hw]]; };
 
 function sat(A, B) {                              // minimum translation to push polygon A out of B: {depth, nx, nz (from B toward A)} or null
   let best = Infinity, bnx = 0, bnz = 0;
@@ -412,16 +414,16 @@ function updateAudio(dt, speed, slip) {
 
 const wrapA = a => Math.atan2(Math.sin(a), Math.cos(a));
 function contact(c, B, e) {              // resolve one polygon overlap between the car and collider B with an impulse; returns impact speed (m/s) or 0
-  const A = carPoly(c.x, c.z, c.th), h = sat(A, B.poly); if (!h) return 0;
+  const A = carPoly(c.x, c.z, c.th, c.car.dims), h = sat(A, B.poly); if (!h) return 0;
   c.x += h.nx * h.depth; c.z += h.nz * h.depth;
   let px = 0, pz = 0, dmin = 1e9; for (const p of A) { const d = p[0] * h.nx + p[1] * h.nz; if (d < dmin) { dmin = d; px = p[0] + h.nx * h.depth; pz = p[1] + h.nz * h.depth; } }
   const rx = px - c.x, rz = pz - c.z, vcx = c.vx + c.w * rz - B.vx, vcz = c.vz - c.w * rx - B.vz, vn = vcx * h.nx + vcz * h.nz; if (vn >= 0) return 0;
   const f = TUNE.forgive, tx = -h.nz, tz = h.nx, vt0 = vcx * tx + vcz * tz;
   e *= 1 - f + f * clamp((-vn - 2) / 8, 0, 1);                                     // forgiving: slow bumps do not bounce at all, hard ones still do
-  const rxn = rz * h.nx - rx * h.nz, j = -(1 + e) * vn / (1 / CAR.mass + rxn * rxn / CAR.I);
-  c.vx += j * h.nx / CAR.mass; c.vz += j * h.nz / CAR.mass; c.w += j * rxn / CAR.I;
+  const MS = c.mass || CAR.mass, IN = c.I || CAR.I, rxn = rz * h.nx - rx * h.nz, j = -(1 + e) * vn / (1 / MS + rxn * rxn / IN);
+  c.vx += j * h.nx / MS; c.vz += j * h.nz / MS; c.w += j * rxn / IN;
   const vt = (c.vx + c.w * rz - B.vx) * tx + (c.vz - c.w * rx - B.vz) * tz, rxt = rz * tx - rx * tz, mu = .35 * (1 - .65 * f);
-  const jt = clamp(-vt / (1 / CAR.mass + rxt * rxt / CAR.I), -mu * j, mu * j); c.vx += jt * tx / CAR.mass; c.vz += jt * tz / CAR.mass; c.w += jt * rxt / CAR.I;
+  const jt = clamp(-vt / (1 / MS + rxt * rxt / IN), -mu * j, mu * j); c.vx += jt * tx / MS; c.vz += jt * tz / MS; c.w += jt * rxt / IN;
   const glance = clamp(1 - (-vn) / (.45 * Math.abs(vt0) + 1e-3), 0, 1) * f;      // a shallow angle against a wall: ease the nose around so the car slides along it
   if (glance > 0 && Math.abs(vt0) > 2) {
     const sgn = Math.sign(c.vx * tx + c.vz * tz) || 1, vf = c.vx * -Math.sin(c.th) + c.vz * -Math.cos(c.th), dx = sgn * tx * (vf >= 0 ? 1 : -1), dz = sgn * tz * (vf >= 0 ? 1 : -1), th2 = Math.atan2(-dx, -dz);
@@ -430,7 +432,7 @@ function contact(c, B, e) {              // resolve one polygon overlap between 
   c.cx = px; c.cz = pz; c.cnx = h.nx; c.cnz = h.nz; c.crx = rx; c.crz = rz; return -vn;
 }
 function brush(c, B, dt) {               // soft scenery (shrubs, hedges, sign and signal posts): the car ploughs through, slowed, with no impulse and no damage
-  const A = carPoly(c.x, c.z, c.th); if (!sat(A, B.poly)) return false;
+  const A = carPoly(c.x, c.z, c.th, c.car.dims); if (!sat(A, B.poly)) return false;
   const k = B.soft === 'bush' ? 1.2 : .5, d = Math.exp(-k * dt); c.vx *= d; c.vz *= d; c.w *= Math.exp(-1.5 * dt);
   if (!c.inSoft.has(B)) { const sp = Math.hypot(c.vx, c.vz), cut = B.soft === 'bush' ? .94 : .82; c.vx *= cut; c.vz *= cut; rig.shake = Math.min(1, rig.shake + (B.soft === 'bush' ? .05 : .15) * Math.min(1, sp / 10)); if (sp > 3) crashSound(B.soft === 'bush' ? 1.5 : 3); }
   c.nowSoft.add(B); return true;
@@ -454,7 +456,8 @@ function physicsStep(dt) {
   const tgt = driving ? (input.right ? 1 : 0) - (input.left ? 1 : 0) : 0;
   c.steer += (tgt - c.steer) * (1 - Math.exp(-(tgt === 0 ? 8 : 5) * dt));
   let a = 0;
-  if (driving && input.gas) a += TUNE.accel * Math.max(0, 1 - Math.max(0, vf) / TUNE.top);
+  const pf = c.perf || 1, TOP = TUNE.top * pf;
+  if (driving && input.gas) a += TUNE.accel * pf * Math.max(0, 1 - Math.max(0, vf) / TOP);
   if (driving && input.brake) a -= vf > .8 ? TUNE.brake : TUNE.accel * .55 * Math.max(0, 1 - Math.max(0, -vf) / (TUNE.top * .3));
   vf += a * dt;
   const hand = !driving || input.hand;
@@ -463,7 +466,7 @@ function physicsStep(dt) {
   c.slide = c.slide ? (Math.abs(vl) > 1.5 || (hand && driving)) : ((hand && driving && Math.abs(vf) > 4) || Math.abs(vl) > 5.5);
   vl *= Math.exp(-(c.slide ? TUNE.drift : TUNE.grip) * dt);
   const sp = Math.abs(vf), maxSteer = (0.50 + (0.12 - 0.50) * Math.min(1, sp / TUNE.top)) * TUNE.steer;
-  let wT = -Math.tan(c.steer * maxSteer) * vf / CAR.wb; if (c.slide) wT *= 1.2; if (driving && input.hand) wT += -c.steer * sp * .12;
+  let wT = -Math.tan(c.steer * maxSteer) * vf / (c.car.dims[2] || CAR.wb); if (c.slide) wT *= 1.2; if (driving && input.hand) wT += -c.steer * sp * .12;
   c.w += (wT - c.w) * (1 - Math.exp(-10 * dt));
   c.vx = fx * vf + rx * vl; c.vz = fz * vf + rz * vl;
   { const [gx, gz] = groundGrad(c.x, c.z); if (gx || gz) { c.vx -= 9.8 * gx * dt * .85; c.vz -= 9.8 * gz * dt * .85; } }     // hills: gravity pulls the car down the slope
@@ -484,7 +487,7 @@ function physicsStep(dt) {
 let acc = 0; const FIXED = 1 / 120;
 const carCols = new Map();
 function setCarCollider(v) {                      // a parked car is a static polygon at its current pose
-  removeCarCollider(v); const poly = carPoly(v.x, v.z, v.th), [cx, cz] = cen(poly), col = { poly, cx, cz, r: 2.6, vx: 0, vz: 0 }; colliders.push(col); carCols.set(v.name, col);
+  removeCarCollider(v); const poly = carPoly(v.x, v.z, v.th, v.car.dims), [cx, cz] = cen(poly), col = { poly, cx, cz, r: Math.hypot(v.car.dims[0], v.car.dims[1]) / 2 + .2, vx: 0, vz: 0 }; colliders.push(col); carCols.set(v.name, col);
 }
 function removeCarCollider(v) { const col = carCols.get(v.name); if (col) { const i = colliders.indexOf(col); if (i >= 0) colliders.splice(i, 1); carCols.delete(v.name); } }
 function parkVehicle(v) { v.vx = v.vz = v.w = 0; v.mode = 'parked'; setCarCollider(v); }
@@ -689,7 +692,7 @@ function update(dt, draw = true) {
       t.pos += t.dir * t.speed * dt; const lim = world.extent; if (t.pos > lim) t.pos = -lim; if (t.pos < -lim) t.pos = lim;
       if (t.axis === 'y') t.g.position.set(t.lane, 0, -t.pos); else t.g.position.set(t.pos, 0, -t.lane);
     }
-    const c = moveCols[i]; c.poly = carPoly(t.g.position.x, t.g.position.z, t.rz); const cc = cen(c.poly); c.cx = cc[0]; c.cz = cc[1];
+    const c = moveCols[i]; c.poly = carPoly(t.g.position.x, t.g.position.z, t.rz, allCars[t.name].dims); c.r = Math.hypot(allCars[t.name].dims[0], allCars[t.name].dims[1]) / 2 + .2; const cc = cen(c.poly); c.cx = cc[0]; c.cz = cc[1];
   });
   footStep(dta); combatStep(dta);
   for (const w of walkers) {                                                    // pedestrians: walk a sidewalk loop, or react to being hit
