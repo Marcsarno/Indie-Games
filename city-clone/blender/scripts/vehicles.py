@@ -30,7 +30,7 @@ def _m(n, h, **kw): return M("veh_" + n, h, **kw)
 def make_vehicle(kind="sedan", color=None, name="car"):
     S = SPECS[kind]; L, W, r, belt, roof = S["L"], S["W"], S["r"], S["belt"], S["roof"]; hx, hy = W / 2, L / 2; color = color or S["color"]
     paint = M("paint_" + color.lstrip("#"), color, rough=.5)                      # recoloured per car by the page
-    glass = _m("glass", "#2e3e52", rough=.2); dark = _m("trim", "#1b1c1f"); tire = _m("tire", "#131315"); hub = _m("hub", "#9a9da2"); inner = _m("interior", "#16171a")
+    glass = _m("glass", "#56708a", rough=.12); dark = _m("trim", "#232428"); tire = _m("tire", "#18181b"); hub = _m("hub", "#c9ccd1", rough=.35); hubc = _m("hubcap", "#7d8188"); inner = _m("interior", "#16171a")
     head = _m("head", "#fff2c8", emit=2.0); tail = _m("tail", "#e01818", emit=1.5); amber = _m("amber", "#f29a1c", emit=1.2); grey = _m("grey", "#8d9096"); white = _m("white", "#f4f4f2")
     body_m = paint
     if kind == "police": body_m = _m("police_black", "#1c1c20", rough=.5)
@@ -41,12 +41,15 @@ def make_vehicle(kind="sedan", color=None, name="car"):
     # wheels + arches
     for ay in S["axles"]:
         for s in (-1, 1):
-            b.cyl(tire, (s * (hx - .22), ay, r), r, .30, "x", 12); b.cyl(hub, (s * (hx - .06), ay, r), r * .5, .05, "x", 8)
+            b.cyl(tire, (s * (hx - .13), ay, r), r, .32, "x", 14); b.cyl(hub, (s * (hx + .03), ay, r), r * .62, .03, "x", 10); b.cyl(hubc, (s * (hx + .05), ay, r), r * .2, .03, "x", 8)
+            if S["body"] not in ("bus",): b.box(dark, s * hx - .012, s * hx + .012, ay - r * 1.15, ay + r * 1.15, z0 - .02, z0 + r * .55)                  # wheel arch
     # bumpers / lights
-    b.box(dark, -hx + .02, hx - .02, hy - .16, hy + .04, z0 - .12, z0 + .28); b.box(dark, -hx + .02, hx - .02, -hy - .04, -hy + .16, z0 - .12, z0 + .28)
+    bump = body_m if S["body"] in ("car", "van") else dark
+    b.box(bump, -hx + .03, hx - .03, hy - .14, hy + .02, z0 + .02, z0 + .26); b.box(dark, -hx + .08, hx - .08, hy - .12, hy, z0 - .1, z0 + .03)
+    b.box(bump, -hx + .03, hx - .03, -hy - .02, -hy + .14, z0 + .02, z0 + .26); b.box(dark, -hx + .08, hx - .08, -hy, -hy + .12, z0 - .1, z0 + .03)
     def lights(yf, zf, yb, zb):
         for s in (-1, 1):
-            b.box(head, s * (hx - .32) - .17, s * (hx - .32) + .17, yf - .02, yf + .05, zf, zf + .16); b.box(amber, s * (hx - .1) - .06, s * (hx - .1) + .06, yf - .04, yf + .04, zf, zf + .14)
+            b.box(grey, s * (hx - .32) - .2, s * (hx - .32) + .2, yf - .03, yf + .03, zf - .03, zf + .19); b.box(head, s * (hx - .32) - .17, s * (hx - .32) + .17, yf - .02, yf + .06, zf, zf + .16); b.box(amber, s * (hx - .1) - .06, s * (hx - .1) + .06, yf - .04, yf + .04, zf, zf + .14)
             b.box(tail, s * (hx - .25) - .15, s * (hx - .25) + .15, yb - .05, yb + .02, zb, zb + .2)
     kindb = S["body"]
     if kindb == "car":
@@ -55,8 +58,11 @@ def make_vehicle(kind="sedan", color=None, name="car"):
         b.prism(body_m, (-hx, hx, cy1 - .02, hy - .06), (-hx + .05, hx - .05, cy1 - .02, hy - .25), belt, max(belt, hood) + .0)  # hood slab (flat top at belt)
         if trunk is not None: b.box(body_m, -hx, hx, -hy + .06, cy0 + .02, belt, trunk + .02)
         tw = .14                                                                                        # cabin taper
-        b.prism(glass, (-hx + .04, hx - .04, cy0, cy1), (-hx + tw + .04, hx - tw - .04, cy0 + (.35 if trunk is not None else .08), cy1 - .42), belt, roof - .06)
-        b.prism(body_m, (-hx + tw + .03, hx - tw - .03, cy0 + (.33 if trunk is not None else .06), cy1 - .40), (-hx + tw + .06, hx - tw - .06, cy0 + (.36 if trunk is not None else .09), cy1 - .44), roof - .07, roof)
+        rb, fb = (.42 if trunk is not None else .10), .58                                                # rake of the rear and front glass
+        b.prism(glass, (-hx + .04, hx - .04, cy0, cy1), (-hx + tw + .04, hx - tw - .04, cy0 + rb, cy1 - fb), belt, roof - .06)
+        b.prism(body_m, (-hx + tw + .03, hx - tw - .03, cy0 + rb - .02, cy1 - fb + .02), (-hx + tw + .07, hx - tw - .07, cy0 + rb + .02, cy1 - fb - .03), roof - .07, roof)
+        for s in (-1, 1):
+            b.box(dark, s * hx - .012, s * hx + .012, -hy + .35, hy - .4, belt - .36, belt - .3)           # side trim strip
         for s in (-1, 1):                                                                               # pillars
             for py in ((cy0 + cy1) / 2,):
                 b.prism(body_m, (s * (hx - .04) - .04, s * (hx - .04) + .04, py - .05, py + .05), (s * (hx - tw - .04) - .04, s * (hx - tw - .04) + .04, py - .05, py + .05), belt, roof - .06)
@@ -133,7 +139,7 @@ def make_vehicle(kind="sedan", color=None, name="car"):
     if S.get("extra") == "ambulance":
         y1b = S["box"][1]
         for k, xx in enumerate((-.9, -.5, -.1, .3, .7)): b.box(_m("bar_red", "#e01c1c", emit=1.5) if k % 2 == 0 else white, xx, xx + .3, y1b - .2, y1b, S["box"][2] + .02, S["box"][2] + .16)
-    body = b.build(bevel=0.03, vc=True); body.parent = root
+    body = b.build(bevel=0.05, vc=True); body.parent = root
     # doors: panels on the outside of the body sides, hinge at the front edge
     names = []
     hinge_x = hx + .02

@@ -1,6 +1,6 @@
 """Front three-quarter review tiles of every vehicle (like the concept sheets). blender -b --python scripts/vehicles_sheet.py -> art-review/round19/vehicles_sheet.png"""
 import sys, os; sys.path.insert(0, os.path.dirname(__file__)); from vehicles import *; import mood
-D = os.path.join(os.path.dirname(__file__), "..", "..", "art-review", "round19"); os.makedirs(D, exist_ok=True); tiles = []
+D = os.path.join(os.path.dirname(__file__), "..", "..", "art-review", os.environ.get("VROUND", "round19")); os.makedirs(D, exist_ok=True); tiles = []
 for kind in KINDS:
     reset(); mood.florida(); mood._transform(); g = Builder("ground"); g.box(M("veh_ground", "#d8d6d0"), -30, 30, -30, 30, -.1, 0); g.build()
     make_vehicle(kind, None, "v"); L = SPECS[kind]["L"]; k = max(1.0, L / 4.5) ** .85
