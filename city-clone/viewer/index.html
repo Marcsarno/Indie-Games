@@ -20,7 +20,11 @@
   color-scheme: dark;
 }
 [hidden] { display: none !important; }
-html, body { height: 100%; }
+html, body { position: fixed; inset: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
+#drv, #trk { position: fixed; z-index: 3; left: max(16px, env(safe-area-inset-left, 0px)); top: calc(64px + env(safe-area-inset-top, 0px)); max-width: calc(100% - 150px); padding: 5px 9px; font: 500 12px/1.35 ui-monospace, Menlo, monospace; color: var(--paper); pointer-events: none; white-space: pre-wrap; }
+#trk { top: calc(150px + env(safe-area-inset-top, 0px)); }
+.tg { margin: 8px 0 0; font: 600 12px var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--lamp); }
+#tunecopy { width: 100%; height: 90px; box-sizing: border-box; background: rgba(0,0,0,.4); color: var(--paper); border: 1px solid var(--line); border-radius: 6px; font: 11px ui-monospace, monospace; -webkit-user-select: text; user-select: text; }
 body { margin: 0; background: var(--night); color: var(--paper); font: 500 14px/1.35 var(--body); overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 .hud { position: fixed; left: 0; right: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); pointer-events: none; }
@@ -102,11 +106,12 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 </style>
 <canvas id="view"></canvas>
 <div class="hud top"><button class="mbtn" id="b-menu" aria-label="Pause menu"><i></i><i></i><i></i></button><div class="chip" id="fps" hidden>&ndash; fps</div></div>
+<div class="chip" id="drv" hidden></div><div class="chip" id="trk" hidden></div>
 <div class="hud row2" hidden><b id="wtitle" hidden></b><button class="btn" id="t-view" aria-expanded="false" aria-controls="p-view">View</button><button class="btn" id="t-tune" aria-expanded="false" aria-controls="p-tune">Tune</button><div class="chip" id="stat"></div></div>
 <div id="menu" hidden><div class="mcard" role="dialog" aria-label="Paused">
   <h1>Grand Theft<br>Coconut Creek</h1><p class="msub">Paused</p>
   <button class="btn mbig" id="m-resume">Resume</button>
-  <div class="mgrid"><button class="btn" id="snd" aria-pressed="true">Sound: on</button><button class="btn" id="m-ctrl">Controls: joystick</button><button class="btn" id="m-tune">Tune the car</button><button class="btn" id="m-view">Camera</button><button class="btn" id="m-fps">Show FPS: off</button><button class="btn" id="m-new">New game</button></div>
+  <div class="mgrid"><button class="btn" id="snd" aria-pressed="true">Sound: on</button><button class="btn" id="m-ctrl">Controls: joystick</button><button class="btn" id="m-tune">Tune the car</button><button class="btn" id="m-view">Camera</button><button class="btn" id="m-fps">Show FPS: off</button><button class="btn" id="m-track">Test track</button><button class="btn" id="m-new">New game</button></div>
   <p class="msub">Test build</p>
 </div></div>
 
@@ -119,6 +124,7 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
   <div class="sl" id="tunegrid"></div>
   <p class="note">Changes apply instantly and are remembered on this device. Tell me the numbers you like.</p>
   <button class="btn" id="tunereset">Reset to defaults</button>
+  <button class="btn" id="tunecopybtn">Copy settings + track results</button><textarea id="tunecopy" readonly hidden></textarea>
 </div>
 
 <div class="hud corner" id="corner"><div id="stars" aria-label="Wanted level"><i>★</i><i>★</i><i>★</i><i>★</i></div><div id="cash">$0</div><div class="hpbar"><i id="hp"></i></div><div class="hpbar dmgbar" id="dmgbox" hidden><i id="dmg"></i></div><div class="mini" id="minibox"><canvas id="mini" width="200" height="200"></canvas><b>N</b></div><div id="spd"></div></div>
@@ -156,10 +162,12 @@ import { createTraffic, TT } from './traffic.js';
 import { createPeople, PT } from './people.js';
 import { createPolice, POL } from './police.js';
 import { createMissions } from './missions.js';
+import { createTrack, PAD } from './track.js';
 
 const $ = id => document.getElementById(id);
 for (const t of ['gesturestart', 'gesturechange', 'dblclick', 'contextmenu', 'selectstart']) document.addEventListener(t, e => { if (!(e.target.closest && e.target.closest('input, textarea'))) e.preventDefault(); }, { passive: false });   // iOS: no page zoom, no copy/paste popup while playing
 { let lastEnd = 0; document.addEventListener('touchend', e => { const t = performance.now(); if (t - lastEnd < 320 && !(e.target.closest && e.target.closest('input, textarea'))) e.preventDefault(); lastEnd = t; }, { passive: false }); }   // double-tap zoom
+for (const el of [$('view'), $('pad'), $('padf')]) for (const t of ['touchstart', 'touchmove']) el.addEventListener(t, e => e.preventDefault(), { passive: false });   // iOS: no long-press magnifier, no swipe-back while a thumb is on the game (the controls use pointer events, which still fire)
 const WN = location.hash === '#chinatown' ? 'chinatown' : 'coconut', WD = 'worlds/' + WN + '/';      // which world to load (hash #chinatown or default)
 addEventListener('hashchange', () => location.reload());
 const MAN = JSON.parse('__MANIFEST__'.startsWith('__') ? '{}' : '__MANIFEST__');            // content hash per asset, written by build.sh on Vercel: unchanged files stay in the browser cache across deploys
@@ -434,11 +442,25 @@ if (world.demo) {
 /* =====================  DRIVING  =====================
    Arcade top-down model in the XZ plane (three axes: +x east, -z north). Heading th: forward f = (-sin th, -cos th), right r = (cos th, -sin th).
    Positive yaw rate turns left. Collisions: SAT polygon test, impulse with spin, from the colliders exported by Blender. */
-const TUNE_DEF = { top: 28, accel: 15, brake: 34, grip: 8, drift: 2.4, steer: 1.0, bounce: .35, forgive: .7, heroMass: 2.2, blood: 1, stickDrive: 1 };      // joystick drive is the default (round 22); Tune switches back to buttons      // heroMass: your car counts this much heavier in car-vs-car hits
+const TUNE_DEF = {          // round 24: every driving-feel number lives here (units and safe ranges in TUNE_UI below). These defaults are exactly what the game used before round 24.
+  top: 28, accel: 15, brake: 34, hand: 9, coast: .5, coastK: .06, revTop: .3,                  // pace: m/s, m/s2, m/s2, handbrake m/s2, coasting drag m/s2 + per m/s, reverse top as a share of top
+  lockLow: 28.6, lockHigh: 6.9, steer: 1.0, steerIn: 5, steerOut: 8, yawEase: 10,               // steering: wheel angle (deg) at standstill and at top speed, overall x, wheel in/return rate per s, turn-rate ease per s (the car's weight)
+  grip: 8, drift: 2.4, slideIn: 5.5, slideOut: 1.5,                                             // grip: sideways bleed per s (normal, sliding); sideways m/s where a slide starts / ends
+  dead: .15, stickGain: 1.6, revAngle: 137.5, revSpeed: 3,                                      // joystick: dead zone (share of travel), steering per radian of error, reverse when the stick is more than revAngle deg behind and slower than revSpeed m/s
+  bounce: .35, forgive: .7, heroMass: 2.2, damage: 0,                                           // crashes; damage 0 = off while testing (no dents, no damage bar, no health lost in crashes)
+  camFollow: 5, camLook: .55, camZoom: .22,                                                     // camera: follow rate per s, look-ahead s of velocity, extra zoom-out at top speed (share)
+  footEven: 1, blood: 1, readout: 0, stickDrive: 1 };      // footEven: on-foot speed looks the same in every screen direction (1) or raw (0); readout: driving numbers on screen      // joystick drive is the default (round 22); Tune switches back to buttons      // heroMass: your car counts this much heavier in car-vs-car hits
 const TUNE = { ...TUNE_DEF };
 try { const st = JSON.parse(localStorage.getItem('gtcc-tune') || '{}'); if (st.v !== 2) delete st.stickDrive; Object.assign(TUNE, st); TUNE.v = 2; } catch (e) { /* storage may be blocked */ }      // v2: older saves do not turn the joystick off
 if (/[?&]drive=stick/.test(location.search)) TUNE.stickDrive = 1; if (/[?&]drive=buttons/.test(location.search)) TUNE.stickDrive = 0;
-const TUNE_UI = [['top', 'Top speed', 12, 45, 1, 'm/s'], ['accel', 'Accel', 6, 30, .5, ''], ['brake', 'Braking', 10, 50, 1, ''], ['grip', 'Grip', 2, 14, .5, ''], ['drift', 'Slide grip', .3, 5, .1, ''], ['steer', 'Steering', .5, 1.6, .05, ''], ['bounce', 'Bounce', 0, .8, .05, ''], ['forgive', 'Forgiving', 0, 1, .05, ''], ['heroMass', 'Car weight', 1, 4, .1, 'x'], ['blood', 'Blood', 0, 1, 1, ''], ['stickDrive', 'Joystick drive', 0, 1, 1, '']];
+const TUNE_UI = [         // [key, label, min, max, step, unit]; ['#', heading] starts a group
+  ['#', 'Speed and brakes'], ['top', 'Top speed', 12, 45, 1, 'm/s'], ['accel', 'Acceleration', 6, 30, .5, 'm/s²'], ['brake', 'Brakes', 10, 50, 1, 'm/s²'], ['hand', 'Handbrake', 3, 20, .5, 'm/s²'], ['coast', 'Coasting drag', 0, 2, .05, 'm/s²'], ['coastK', 'Drag per m/s', 0, .2, .01, ''], ['revTop', 'Reverse top speed', .1, .6, .05, '× top'],
+  ['#', 'Steering'], ['lockLow', 'Steering when slow', 15, 45, .5, '°'], ['lockHigh', 'Steering at top speed', 2, 15, .5, '°'], ['steer', 'Steering overall', .5, 1.6, .05, '×'], ['steerIn', 'Wheel turn-in rate', 1, 15, .5, '/s'], ['steerOut', 'Wheel return rate', 1, 20, .5, '/s'], ['yawEase', 'Turn response (weight)', 2, 25, .5, '/s'],
+  ['#', 'Grip'], ['grip', 'Grip', 2, 14, .5, '/s'], ['drift', 'Grip while sliding', .3, 5, .1, '/s'], ['slideIn', 'Slide starts at', 2, 10, .5, 'm/s'], ['slideOut', 'Slide ends at', .5, 4, .25, 'm/s'],
+  ['#', 'Joystick'], ['dead', 'Dead zone', 0, .4, .01, ''], ['stickGain', 'Stick steering strength', .5, 4, .1, ''], ['revAngle', 'Reverse if stick behind by', 90, 180, 2.5, '°'], ['revSpeed', '…and slower than', 0, 10, .5, 'm/s'],
+  ['#', 'Crashes'], ['bounce', 'Bounce', 0, .8, .05, ''], ['forgive', 'Forgiving walls', 0, 1, .05, ''], ['heroMass', 'Car weight in crashes', 1, 4, .1, '×'], ['damage', 'Car damage', 0, 1, 1, ''],
+  ['#', 'Camera'], ['camFollow', 'Camera follow rate', 1, 15, .5, '/s'], ['camLook', 'Camera look-ahead', 0, 1.5, .05, 's'], ['camZoom', 'Zoom out at speed', 0, .6, .02, ''],
+  ['#', 'Other'], ['footEven', 'Even on-foot speed', 0, 1, .1, ''], ['blood', 'Blood', 0, 1, 1, ''], ['readout', 'Driving readout', 0, 1, 1, ''], ['stickDrive', 'Joystick drive', 0, 1, 1, '']];
 const CAR = { L: 4.5, W: 1.8, mass: 1400, wb: 2.7 }; CAR.I = CAR.mass * (CAR.L * CAR.L + CAR.W * CAR.W) / 12;
 const vehs = {};                                  // one state per car; only the ACTIVE one is simulated, the rest are static colliders
 function makeVeh(name, car) { const g = car.group; const D_ = car.dims, M_ = 320 * D_[0] * D_[1]; return vehs[name] = { car, name, mass: M_, perf: ({ coupe: 1.15, police: 1.1, hatchback: .95, suv: .95, minivan: .9, pickup: .95, van: .85, tow: .8, ambulance: .85, boxtruck: .72, flatbed: .75, garbage: .65, bus: .62 })[car.kind] || 1, I: M_ * (D_[0] * D_[0] + D_[1] * D_[1]) / 12, x: g.position.x, z: g.position.z, th: g.rotation.y, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, mode: 'parked', hardest: 0, hits: 0 }; }
@@ -446,6 +468,7 @@ for (const [name, car] of Object.entries(allCars)) makeVeh(name, car);
 let drive = vehs.player; drive.mode = 'driving';
 let hmode = 'driving';                            // 'driving' | 'foot' | 'busy' (door animation playing)
 const input = { left: false, right: false, gas: false, brake: false, hand: false, run: false };
+let gasOn = false;                                // the car is on the gas this step (Gas button or joystick); the engine sound reads it
 
 const rot = (lx, lz, th) => [lx * Math.cos(th) + lz * Math.sin(th), -lx * Math.sin(th) + lz * Math.cos(th)];
 function polyBox(cx, cy, w, d, rzDeg) {          // Blender box (centre x,y; size w x d; rz deg CCW) -> polygon in three XZ
@@ -472,6 +495,13 @@ const cops = graph ? createPolice(graph, { THREE, makeCar, carPoly: (x, z, th, d
   onStars: W => showStars(W), onBusted: () => busted(), onWreck: c => { crashSound(12); burst(c.x, .8, c.z, 0, 0, 14); game.money += 50; } }) : null;
 const missions = graph ? createMissions(graph, { THREE, scene, groundH, banner: t => banner(t), addMoney: v => { game.money += v; }, cops, heights: world.heights }) : null;
 const MPX = { x: 0, z: 0, speed: 0, driving: false };
+function addStatic(poly) {                        // a solid collider added after load (test track walls): straight into the static grid
+  const [cx, cz] = cen(poly); let r = 0; for (const p of poly) r = Math.max(r, Math.hypot(p[0] - cx, p[1] - cz)); const c = { poly, cx, cz, r, vx: 0, vz: 0, soft: null };
+  for (let gx = Math.floor((cx - r) / CELL); gx <= Math.floor((cx + r) / CELL); gx++) for (let gz = Math.floor((cz - r) / CELL); gz <= Math.floor((cz + r) / CELL); gz++) { const k = gx * 4096 + gz; if (!GRID.has(k)) GRID.set(k, []); GRID.get(k).push(c); }
+  return c;
+}
+const track = createTrack({ THREE, scene, addStatic, sat: (a, b) => sat(a, b), carPoly: (x, z, th, d) => carPoly(x, z, th, d), banner: t => banner(t) });
+track.onLog = L => { const el = $('trk'); el.textContent = L.slice(-4).join('\n'); el.hidden = false; };
 /* Breakable trees: a hit above walking pace knocks the tree over (you lose a little speed), it sinks away, and grows back once you are far off.
    Each tree's collider is the circle exported at the same spot as its prop. */
 const TREES = []; {
@@ -563,6 +593,7 @@ function stamp(x, z, ang) { dummy.position.set(x, .03, z); dummy.rotation.set(-M
 let audio = null, muted = false;
 function ensureAudio() {
   if (audio || muted) return; const A = window.AudioContext || window.webkitAudioContext; if (!A) return;
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* iOS 17+: play even with the ringer switch on silent */ }
   try {
     const ctx = new A(), master = ctx.createGain(); master.gain.value = .5; master.connect(ctx.destination);
     // engine: a saw + a detuned square an octave down through a low-pass, with a firing-rate tremolo (rumble); pitch follows a simple gearbox
@@ -597,10 +628,10 @@ function updateAudio(dt, speed, slip) {
   if (!audio) return; const A = audio, t = A.ctx.currentTime, k = .08, driving = hmode === 'driving';
   const G = [0, 7, 13, 19, 25, 99]; let g = 1; while (g < 5 && speed > G[g]) g++;                            // 5-speed box by road speed
   if (g !== A.gear) { A.shiftT = g > A.gear ? .18 : .1; A.gear = g; } A.shiftT = Math.max(0, A.shiftT - dt);
-  const frac = clamp((speed - G[g - 1]) / Math.max(1, G[g] - G[g - 1]), 0, 1), rpm = .22 + frac * .78 * (A.shiftT > 0 ? .55 : 1) + (input.gas ? .06 : 0);
+  const frac = clamp((speed - G[g - 1]) / Math.max(1, G[g] - G[g - 1]), 0, 1), rpm = .22 + frac * .78 * (A.shiftT > 0 ? .55 : 1) + (gasOn ? .06 : 0);
   const f = 38 + rpm * 78; A.eng.frequency.setTargetAtTime(f, t, k); A.eng2.frequency.setTargetAtTime(f * .5 * 1.01, t, k); A.lfo.frequency.setTargetAtTime(f * .25, t, k);
-  A.lp.frequency.setTargetAtTime(260 + rpm * 900 + (input.gas ? 300 : 0), t, k);
-  A.eg.gain.setTargetAtTime(driving && !muted ? .05 + rpm * .03 + (input.gas ? .03 : 0) : 0, t, k);
+  A.lp.frequency.setTargetAtTime(260 + rpm * 900 + (gasOn ? 300 : 0), t, k);
+  A.eg.gain.setTargetAtTime(driving && !muted ? .05 + rpm * .03 + (gasOn ? .03 : 0) : 0, t, k);
   A.sg.gain.setTargetAtTime(muted ? 0 : clamp(slip, 0, 1) * .14, t, .05); A.bp.frequency.setTargetAtTime(1700 + clamp(slip, 0, 1) * 600, t, .05);
   A.wg.gain.setTargetAtTime(muted || !driving ? 0 : clamp((speed - 8) / 25, 0, 1) * .05, t, .2);
   if (!muted && !paused) { A.birdT -= dt; A.hornT -= dt; if (A.birdT <= 0) { A.birdT = 4 + Math.random() * 9; chirp(); } if (A.hornT <= 0) { A.hornT = 12 + Math.random() * 20; farHorn(); } }
@@ -635,9 +666,9 @@ function brush(c, B, dt) {               // soft scenery (shrubs, hedges, sign a
   c.nowSoft.add(B); return true;
 }
 function onImpact(c, v) {
-  if (c === drive) game.hp = Math.max(0, game.hp - Math.max(0, v - (9 + 4 * TUNE.forgive)) * 2.2);
+  if (c === drive && TUNE.damage) game.hp = Math.max(0, game.hp - Math.max(0, v - (9 + 4 * TUNE.forgive)) * 2.2);
   if (ppl && c === drive && v > 6) ppl.panic(c.x, c.z, 18);
-  c.hits++; c.hardest = Math.max(c.hardest, v); const dmg = Math.max(0, v - 2.5) * .02 * (1 - .4 * TUNE.forgive); c.damage = Math.min(1, c.damage + dmg);
+  c.hits++; c.hardest = Math.max(c.hardest, v); const dmg = Math.max(0, v - 2.5) * .02 * (1 - .4 * TUNE.forgive); if (TUNE.damage) c.damage = Math.min(1, c.damage + dmg);
   rig.shake = Math.min(1, rig.shake + v / 16); burst(c.cx, .6, c.cz, c.cnx, c.cnz, v); crashSound(v);
   if (v > 9) {                                    // a hard hit throws the doors on the struck side open for a moment
     const side = c.crx * Math.cos(c.th) - c.crz * Math.sin(c.th) > 0 ? 'R' : 'L';
@@ -647,50 +678,52 @@ function onImpact(c, v) {
   c.car.setDamage(c.damage);
 }
 function physicsStep(dt) {
-  if (!drive) return;
-  const c = drive, driving = c.mode === 'driving';
+  if (!drive) { gasOn = false; return; }
+  const c = drive, driving = c.mode === 'driving'; c.px = c.x; c.pz = c.z; c.pth = c.th;     // last pose, for drawing between steps
   const sn = Math.sin(c.th), cs = Math.cos(c.th), fx = -sn, fz = -cs, rx = cs, rz = -sn;
   let vf = c.vx * fx + c.vz * fz, vl = c.vx * rx + c.vz * rz;
   let tgt = driving ? (input.right ? 1 : 0) - (input.left ? 1 : 0) : 0, gasK = driving && input.gas ? 1 : 0, slow = 0, rev = false;
-  const pf = c.perf || 1, TOP = TUNE.top * pf;
-  if (driving && TUNE.stickDrive && !input.brake) {                                   // joystick drive: the stick points where you want to go (north-up screen), how far = how fast
+  const pf = c.perf || 1, TOP = TUNE.top * pf, G = TUNE.stickGain, DZ = TUNE.dead;
+  if (driving && TUNE.stickDrive) {                                   // joystick drive: the stick points where you want to go (north-up screen), how far = how fast
     const sx = dstickIn.x, sz = dstickIn.y, m = Math.min(1, Math.hypot(sx, sz));
-    if (m > .15) {
-      const ang = Math.atan2(fx * sz - fz * sx, fx * sx + fz * sz);
-      if (Math.abs(ang) > 2.4 && vf < 3) { rev = true; tgt = clamp(Math.atan2(-fx * sz + fz * sx, -fx * sx - fz * sz) * -1.6, -1, 1); }     // pointing behind you while slow: back up, tail toward the stick
+    if (m > DZ) {
+      const ang = Math.atan2(fx * sz - fz * sx, fx * sx + fz * sz), back = clamp(Math.atan2(-fx * sz + fz * sx, -fx * sx - fz * sz) * -G, -1, 1);     // back: steering that swings the tail toward the stick while reversing
+      if (input.brake) tgt = vf > .8 ? clamp(ang * G, -1, 1) : back;                                            // Brake held: the stick still steers (it used to be ignored, so you could not steer while backing up)
+      else if (Math.abs(ang) > rad(TUNE.revAngle) && vf < TUNE.revSpeed) { rev = true; tgt = back; }            // pointing behind you while slow: back up, tail toward the stick
       else {
-        tgt = clamp(ang * 1.6, -1, 1); const want = (m - .15) / .85 * TOP * (.5 + .5 * Math.cos(Math.min(Math.abs(ang), Math.PI / 2)));     // ease off for sharp turns
+        tgt = clamp(ang * G, -1, 1); const want = (m - DZ) / (1 - DZ) * TOP * (.5 + .5 * Math.cos(Math.min(Math.abs(ang), Math.PI / 2)));     // ease off for sharp turns
         if (vf < want - .5) gasK = Math.min(1, (want - vf) / 4); else if (vf > want + 1.5) slow = Math.min(TUNE.brake * .5, (vf - want) * 1.6);
       }
     }
-    input.gas = gasK > .1;
   }
-  c.steer += (tgt - c.steer) * (1 - Math.exp(-(tgt === 0 ? 8 : 5) * dt));
+  gasOn = gasK > .1; c.tgt = tgt;      // input.gas stays the real Gas key (the joystick used to overwrite it, and it leaked into walking as auto-run)
+  c.steer += (tgt - c.steer) * (1 - Math.exp(-(tgt === 0 ? TUNE.steerOut : TUNE.steerIn) * dt));
   let a = 0;
   if (gasK > 0) a += TUNE.accel * pf * gasK * Math.max(0, 1 - Math.max(0, vf) / TOP);
   a -= Math.sign(vf) * Math.min(Math.abs(vf) / dt, slow);
-  if (driving && (input.brake || rev)) a -= vf > .8 ? TUNE.brake : TUNE.accel * .55 * Math.max(0, 1 - Math.max(0, -vf) / (TUNE.top * .3));
+  if (driving && (input.brake || rev)) a -= vf > .8 ? TUNE.brake : TUNE.accel * .55 * Math.max(0, 1 - Math.max(0, -vf) / (TUNE.top * TUNE.revTop));
   vf += a * dt;
   const hand = !driving || input.hand;
-  if (hand) { const hb = Math.min(Math.abs(vf), 9 * dt); vf -= Math.sign(vf) * hb; }
-  const roll = Math.min(Math.abs(vf), (.5 + .06 * Math.abs(vf)) * dt); if (!(gasK > 0)) vf -= Math.sign(vf) * roll;
-  c.slide = c.slide ? (Math.abs(vl) > 1.5 || (hand && driving)) : ((hand && driving && Math.abs(vf) > 4) || Math.abs(vl) > 5.5);
-  vl *= Math.exp(-(c.slide ? TUNE.drift : TUNE.grip) * dt);
-  const sp = Math.abs(vf), maxSteer = (0.50 + (0.12 - 0.50) * Math.min(1, sp / TUNE.top)) * TUNE.steer;
+  if (hand) { const hb = Math.min(Math.abs(vf), TUNE.hand * dt); vf -= Math.sign(vf) * hb; }
+  const roll = Math.min(Math.abs(vf), (TUNE.coast + TUNE.coastK * Math.abs(vf)) * dt); if (!(gasK > 0)) vf -= Math.sign(vf) * roll;
+  c.slide = c.slide ? (Math.abs(vl) > TUNE.slideOut || (hand && driving)) : ((hand && driving && Math.abs(vf) > 4) || Math.abs(vl) > TUNE.slideIn);
+  vl *= Math.exp(-(c.slide ? TUNE.drift : TUNE.grip) * dt); c.slip = Math.atan2(Math.abs(vl), Math.max(1, Math.abs(vf))) * 180 / Math.PI;
+  const sp = Math.abs(vf), maxSteer = (rad(TUNE.lockLow) + (rad(TUNE.lockHigh) - rad(TUNE.lockLow)) * Math.min(1, sp / TUNE.top)) * TUNE.steer;
   let wT = -Math.tan(c.steer * maxSteer) * vf / (c.car.dims[2] || CAR.wb); if (c.slide) wT *= 1.2; if (driving && input.hand) wT += -c.steer * sp * .12;
-  c.w += (wT - c.w) * (1 - Math.exp(-10 * dt));
+  c.w += (wT - c.w) * (1 - Math.exp(-TUNE.yawEase * dt));
   c.vx = fx * vf + rx * vl; c.vz = fz * vf + rz * vl;
   { const [gx, gz] = groundGrad(c.x, c.z); if (gx || gz) { c.vx -= 9.8 * gx * dt * .85; c.vz -= 9.8 * gz * dt * .85; } }     // hills: gravity pulls the car down the slope
   c.x += c.vx * dt; c.z += c.vz * dt; c.th += c.w * dt;
-  c.nowSoft = new Set(); c.inSoft = c.inSoft || new Set();
+  c.nowSoft = new Set(); c.inSoft = c.inSoft || new Set(); c.inContact = false;
   const near_ = nearCols(c.x, c.z, 6).slice();
   for (let pass = 0; pass < 2; pass++) for (const B of near_) {
     if (Math.hypot(B.cx - c.x, B.cz - c.z) > B.r + 3.2) continue;
     if (B.soft) { if (pass === 0) brush(c, B, dt); continue; }
     if (B.tree && c === drive && hitTree(c, B)) continue;
-    const v = contact(c, B, TUNE.bounce); if (v > 1.2) { onImpact(c, B.mass ? v * .7 : v); if (c === drive && B.onHit) B.onHit(v); if (c === drive && B.ai && v > 10 && cops) cops.crime('carcrash', .25); }
+    const v = contact(c, B, TUNE.bounce); if (v > 0) c.inContact = true; if (v > 1.2) { onImpact(c, B.mass ? v * .7 : v); if (c === drive && B.onHit) B.onHit(v); if (c === drive && B.ai && v > 10 && cops) cops.crime('carcrash', .25); }
   }
   c.inSoft = c.nowSoft;
+  if (c.inContact) { if ((c.free ?? 9) >= .25) c.touches = (c.touches || 0) + 1; c.free = 0; } else c.free = (c.free ?? 9) + dt;     // wall touches: a new one only after a quarter second clear of everything (scraping along a wall is one touch)
   // skid marks where the rear wheels slide
   const spd = Math.hypot(c.vx, c.vz);
   if ((c.slide || (hand && driving && spd > 3)) && spd > 3) {
@@ -791,7 +824,8 @@ function footStep(dt) {
   const m0 = Math.hypot(sx, sy), mag = m0 < .12 ? 0 : Math.min(1, m0), ux = mag ? sx / m0 : 0, uz = mag ? sy / m0 : 0;
   const maxS = input.run ? 4.8 : (mag < .85 ? mag / .85 * 2.6 : 2.6 + (mag - .85) / .15 * 2.2), punching = combat.state === 'punch';
   const tgt = mag ? maxS * (punching ? .2 : 1) : 0, k = 1 - Math.exp(-11 * dt);
-  foot.vx += (ux * tgt - foot.vx) * k; foot.vz += (uz * tgt - foot.vz) * k; const kd = Math.exp(-9 * dt); foot.lx *= kd; foot.lz *= kd;
+  const ev = Math.pow(Math.max(.3, Math.sin(rad(rig.pitch))), .5 * TUNE.footEven);     // the tilted camera squashes up/down on screen by sin(tilt): a bit slower sideways, a bit faster up/down, so every direction looks the same speed
+  foot.vx += (ux * tgt * ev - foot.vx) * k; foot.vz += (uz * tgt / ev - foot.vz) * k; const kd = Math.exp(-9 * dt); foot.lx *= kd; foot.lz *= kd;
   const [nx, nz] = pushOut(foot.x + (foot.vx + foot.lx) * dt, foot.z + (foot.vz + foot.lz) * dt, .35); foot.x = nx; foot.z = nz;
   const sp = Math.hypot(foot.vx, foot.vz);
   if (sp > .35 && !punching) { let d = Math.atan2(-foot.vx, -foot.vz) - foot.face; d = Math.atan2(Math.sin(d), Math.cos(d)); foot.face += d * (1 - Math.exp(-14 * dt)); }
@@ -871,6 +905,11 @@ for (const [stick, knob, out] of [[$('stick'), $('knob'), stickIn], [$('dstick')
   stick.addEventListener('pointerdown', e => { e.preventDefault(); sid = e.pointerId; try { stick.setPointerCapture(sid); } catch (x) { /* ok */ } ensureAudio(); move(e); });
   stick.addEventListener('pointermove', e => { if (e.pointerId === sid) move(e); });
   for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) stick.addEventListener(t, end); }
+function releaseAll() {                           // a system gesture, app switch or rotation can swallow the finger-up: let go of everything so nothing stays held
+  for (const k in input) input[k] = false; stickIn.x = stickIn.y = dstickIn.x = dstickIn.y = 0;
+  for (const id of ['knob', 'dknob']) $(id).style.transform = 'translate(0, 0)'; for (const b of document.querySelectorAll('.pb.on')) b.classList.remove('on');
+}
+for (const t of ['blur', 'pagehide', 'orientationchange']) addEventListener(t, releaseAll); document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
 $('snd').addEventListener('click', () => { muted = !muted; $('snd').setAttribute('aria-pressed', String(!muted)); $('snd').textContent = 'Sound: ' + (muted ? 'off' : 'on'); if (!muted) ensureAudio(); });
 
 /* ---------- panels, views, tuning ---------- */
@@ -928,15 +967,30 @@ for (const id of ['p-view', 'p-tune']) { const b = document.createElement('butto
 let showFps = false; try { showFps = localStorage.getItem('gtcc-fps') === '1'; } catch (e) { /* ok */ }
 const fpsLabel = () => { $('m-fps').textContent = 'Show FPS: ' + (showFps ? 'on' : 'off'); $('fps').hidden = !showFps; };
 $('m-fps').addEventListener('click', () => { showFps = !showFps; try { localStorage.setItem('gtcc-fps', showFps ? '1' : '0'); } catch (e) { /* ok */ } fpsLabel(); });
+const trackLabel = () => { $('m-track').textContent = track.active ? 'Leave test track' : 'Test track'; };
+$('m-track').addEventListener('click', () => {      // the drills lot 700 m east of the city; leaving puts you back where you were
+  if (!track.active) {
+    const d = hmode === 'driving' && drive ? drive : null; track.back = d ? [d.x, d.z, d.th] : [foot.x, foot.z, 0];
+    track.enter(); resetCar(PAD.x, PAD.z, PAD.th); if (cops) cops.clear(); rig.tx = PAD.x; rig.tz = PAD.z; banner('TEST TRACK');
+  } else { const b = track.back || [world.start.x, -world.start.y, rad(world.start.rz)]; track.leave(); resetCar(b[0], b[1], b[2]); rig.tx = b[0]; rig.tz = b[1]; $('trk').hidden = true; }
+  trackLabel(); setPaused(false);
+});
 $('m-new').addEventListener('click', () => { if (!confirm('Start a new game? Your cash and finished missions are cleared.')) return; noSave = true; try { localStorage.removeItem('gtcc-save'); } catch (e) { /* ok */ } location.reload(); });
 let noSave = false;
 const outs = {};
 setTimeout(() => { ctrlLabel(); fpsLabel(); }, 0);
 for (const [k, label, min, max, step, unit] of TUNE_UI) {
+  if (k === '#') { const h = document.createElement('h3'); h.className = 'tg'; h.textContent = label; $('tunegrid').appendChild(h); continue; }
   const l = document.createElement('label'); l.htmlFor = 'tn-' + k; l.innerHTML = `${label} <output id="to-${k}"></output><input id="tn-${k}" type="range" min="${min}" max="${max}" step="${step}">`; $('tunegrid').appendChild(l);
   const inp = l.querySelector('input'), out = l.querySelector('output'); outs[k] = () => { inp.value = TUNE[k]; out.textContent = (+TUNE[k]).toFixed(step < 1 ? (step < .1 ? 2 : 1) : 0) + (unit ? ' ' + unit : ''); };
   inp.addEventListener('input', () => { TUNE[k] = +inp.value; outs[k](); try { localStorage.setItem('gtcc-tune', JSON.stringify(TUNE)); } catch (e) { /* ok */ } }); outs[k]();
 }
+$('tunecopybtn').addEventListener('click', () => {      // settings (only the ones changed from default) + the last test-track results, as plain text to paste back to Claude
+  const ch = {}; for (const k in TUNE_DEF) if (TUNE[k] !== TUNE_DEF[k]) ch[k] = TUNE[k];
+  const txt = `GTCC tune (round 24): ${Object.keys(ch).length ? JSON.stringify(ch) : 'all defaults'}\n` + (track.log.length ? 'Track:\n' + track.log.slice(-12).join('\n') : 'Track: no runs yet');
+  const ta = $('tunecopy'); ta.value = txt; ta.hidden = false; ta.focus(); ta.select();
+  try { navigator.clipboard.writeText(txt).then(() => banner('COPIED'), () => {}); } catch (e) { /* the text box above can be copied by hand */ }
+});
 $('tunereset').addEventListener('click', () => { Object.assign(TUNE, TUNE_DEF); for (const k in outs) outs[k](); try { localStorage.removeItem('gtcc-tune'); } catch (e) { /* ok */ } });
 // canvas: pinch / wheel zoom always; drag pans only in the free views (in Play the camera follows the car)
 const ptr = new Map(); let pinch0 = 0, dist0 = 0; const cv = $('view');
@@ -981,6 +1035,7 @@ function drawMini(px, py, face) {                 // north-up map around the pla
 /* robustness: unstick, warm-up draw, save/restore, lost-display recovery */
 const STK = { t: 0, shown: false };
 function unstick() {                              // back onto the nearest road lane, pointing along it, stopped
+  if (track.active) { resetCar(PAD.x, PAD.z, PAD.th); STK.t = 0; return; }
   if (!drive || !ai) { resetCar(); return; } let best = null, bd = 1e18;
   for (const e of ai.E) for (let u = 3; u < e.L - 3; u += 4) { let k = 1; while (k < e.cum.length - 1 && e.cum[k] < u) k++; const a = e.P[k - 1], b = e.P[k], l = e.cum[k] - e.cum[k - 1] || 1, t = (u - e.cum[k - 1]) / l, fx = (b[0] - a[0]) / l, fz = (b[1] - a[1]) / l;
     for (const dir of [1, -1]) { const x = a[0] + (b[0] - a[0]) * t - fz * dir * e.lane, z = a[1] + (b[1] - a[1]) * t + fx * dir * e.lane, d = (x - drive.x) ** 2 + (z - drive.z) ** 2; if (d < bd) { bd = d; best = [x, z, Math.atan2(-fx * dir, -fz * dir)]; } } }
@@ -998,7 +1053,7 @@ function stuckStep(dt) {                         // the button only shows when y
   for (const o of vis) o.visible = false; for (const [o, f] of fc) o.frustumCulled = f;
 })();
 const SAVE_KEY = 'gtcc-save';
-function saveGame() { if (noSave) return; try { const d = drive && hmode === 'driving' && drive === vehs.player ? drive : null; localStorage.setItem(SAVE_KEY, JSON.stringify({ t: Date.now(), money: Math.round(game.money), car: d ? [+d.x.toFixed(1), +d.z.toFixed(1), +d.th.toFixed(3)] : null, done: missions ? missions.list.filter(m => m.done).map(m => m.id) : [] })); } catch (e) { /* storage may be blocked */ } }
+function saveGame() { if (noSave) return; try { const d = drive && hmode === 'driving' && drive === vehs.player ? drive : null; localStorage.setItem(SAVE_KEY, JSON.stringify({ t: Date.now(), money: Math.round(game.money), car: track.active && track.back ? track.back.map(v => +v.toFixed(3)) : d ? [+d.x.toFixed(1), +d.z.toFixed(1), +d.th.toFixed(3)] : null, done: missions ? missions.list.filter(m => m.done).map(m => m.id) : [] })); } catch (e) { /* storage may be blocked */ } }
 try { const sv = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
   if (sv && Date.now() - sv.t < 14 * 864e5 && !/[?&]fresh/.test(location.search)) { game.money = sv.money; if (missions) { for (const m of missions.list) if ((sv.done || []).includes(m.id)) m.done = true; missions.refresh(); } if (sv.car && Math.abs(sv.car[0]) < 400 && Math.abs(sv.car[1]) < 400) resetCar(sv.car[0], sv.car[1], sv.car[2]); }
 } catch (e) { /* ok */ }
@@ -1032,7 +1087,11 @@ function update(dt, draw = true) {
   const ws = frameWaiters; frameWaiters = []; for (const r of ws) r(dt);
   hitstop = Math.max(0, hitstop - dt); const dta = hitstop > 0 ? 0 : dt;          // hitstop freezes the action, never the camera or the effects
   acc += dt; let n = 0; while (acc >= FIXED && n++ < 12) { physicsStep(FIXED); acc -= FIXED; } if (acc > FIXED) acc = 0; PF.mark('phys');
-  if (drive) placeOnGround(drive.car.group, drive.x, drive.z, drive.th);
+  if (drive) {                                    // draw the car between its last two physics steps (physics runs at 120 Hz, the screen at 60 or 30): no stutter against the camera
+    let x = drive.x, z = drive.z, th = drive.th; const al = Math.min(1, acc / FIXED);
+    if (drive.px !== undefined && Math.abs(drive.px - x) + Math.abs(drive.pz - z) < 3) { x = drive.px + (x - drive.px) * al; z = drive.pz + (z - drive.pz) * al; th = drive.pth + wrapA(th - drive.pth) * al; }
+    drive.rx = x; drive.rz = z; placeOnGround(drive.car.group, x, z, th);
+  }
   if (loose.size) looseStep(dta);
   debrisStep(dta); splatStep(dta); treeStep(dta);
   traffic.forEach((t, i) => {                                                   // scripted traffic loops along its lane
@@ -1088,8 +1147,12 @@ function update(dt, draw = true) {
   spGeo.attributes.position.needsUpdate = true;
   const speed = drive ? Math.hypot(drive.vx, drive.vz) : 0;
   updateAudio(dt, speed, drive && drive.slide ? clamp(speed / 14, 0, 1) : 0);
-  const stat = hmode === 'driving' && drive ? `${Math.round(speed * 3.6)} km/h` : '', dmgK = hmode === 'driving' && drive ? Math.round(drive.damage * 50) / 50 : -1;
+  const stat = hmode === 'driving' && drive ? `${Math.round(speed * 3.6)} km/h` : '', dmgK = hmode === 'driving' && drive && TUNE.damage ? Math.round(drive.damage * 50) / 50 : -1;
   if (stat !== lastStat) { $('spd').textContent = stat; lastStat = stat; }
+  if (!TUNE.damage && drive && drive.damage) { drive.damage = 0; drive.car.setDamage(0); }
+  if (track.active && hmode === 'driving' && drive) { drive.topSpeed = TUNE.top * (drive.perf || 1); track.step(dt, drive); }
+  { const ro = !!(TUNE.readout || track.active); if (ro !== upd.ro) { upd.ro = ro; $('drv').hidden = !ro; } upd.drvT = (upd.drvT || 0) + dt;
+    if (ro && upd.drvT > .25) { upd.drvT = 0; const c = drive, pc = v => Math.round((v || 0) * 100) + '%'; $('drv').textContent = c && hmode === 'driving' ? `${Math.round(Math.hypot(c.vx, c.vz) * 2.237)} mph  slide ${Math.round(c.slip || 0)}°\nsteer asked ${pc(c.tgt)} got ${pc(c.steer)}\nwall touches ${c.touches || 0}  ${Math.round(upd.fps || 0)} fps` : `on foot  ${Math.round(upd.fps || 0)} fps`; } }
   if (dmgK !== upd.lastDmg) { upd.lastDmg = dmgK; $('dmgbox').hidden = dmgK <= 0; if (dmgK > 0) $('dmg').style.transform = `scaleX(${dmgK})`; }
   const playView = rig.mode === 'drive'; setHidden($('pad'), !(playView && hmode === 'driving'));
   if (TUNE.stickDrive !== lastStickMode) { lastStickMode = TUNE.stickDrive; const on = !!TUNE.stickDrive; for (const id of ['b-left', 'b-right', 'b-gas']) $(id).style.display = on ? 'none' : ''; $('dstick').hidden = !on; if (!on) { dstickIn.x = dstickIn.y = 0; input.gas = false; } } setHidden($('padf'), !(playView && hmode === 'foot'));
@@ -1097,12 +1160,12 @@ function update(dt, draw = true) {
   for (const id of ['b-left', 'b-right', 'b-gas', 'b-brake', 'b-hand']) $(id).classList.toggle('dim', busy);
   if (hmode === 'foot') $('b-enter').classList.toggle('dim', !nearestDoor() || combat.state !== 'idle');
   // camera: follow whoever the player is (car or hero), a little look-ahead, ease out a little at speed
-  let fx, fz, fvx = 0, fvz = 0, la = .55;
-  if (hmode === 'foot') { fx = foot.x; fz = foot.z; fvx = foot.vx; fvz = foot.vz; la = .3; } else if (drive) { fx = drive.x; fz = drive.z; fvx = drive.vx; fvz = drive.vz; } else { fx = pilot.root.position.x; fz = pilot.root.position.z; }
-  if (playView) { rig.tx += (fx + fvx * la - rig.tx) * Math.min(1, dt * 5); rig.tz += (fz + fvz * la - rig.tz) * Math.min(1, dt * 5); }
+  let fx, fz, fvx = 0, fvz = 0, la = TUNE.camLook;
+  if (hmode === 'foot') { fx = foot.x; fz = foot.z; fvx = foot.vx; fvz = foot.vz; la = .3; } else if (drive) { fx = drive.rx ?? drive.x; fz = drive.rz ?? drive.z; fvx = drive.vx; fvz = drive.vz; } else { fx = pilot.root.position.x; fz = pilot.root.position.z; }
+  if (playView) { const ck = 1 - Math.exp(-TUNE.camFollow * dt); rig.tx += (fx + fvx * la - rig.tx) * ck; rig.tz += (fz + fvz * la - rig.tz) * ck; }
   if (upd.bench) { rig.tx = upd.bench.x; rig.tz = upd.bench.z; }                 // ?bench=1 drives the camera on a fixed path
-  upd.speedZoom += ((playView && hmode === 'driving' ? Math.min(speed, 28) / 28 * .22 : 0) - upd.speedZoom) * Math.min(1, dt * 2);
-  rig.tx = clamp(rig.tx, -world.extent, world.extent); rig.tz = clamp(rig.tz, -world.extent, world.extent);
+  upd.speedZoom += ((playView && hmode === 'driving' ? Math.min(speed, 28) / 28 * TUNE.camZoom : 0) - upd.speedZoom) * (1 - Math.exp(-2 * dt));
+  { const ext = track.active ? 1e5 : world.extent; rig.tx = clamp(rig.tx, -ext, ext); rig.tz = clamp(rig.tz, -ext, ext); }
   if (rig.mode === 'drive') cullStep(dt); else for (const c of cullables) c.o.visible = true;
   const p = rig.pitch * Math.PI / 180, dist = rig.dist * (1 + upd.speedZoom);
   rig.shake = Math.max(0, rig.shake - dt * 2.2); const sh = rig.shake * rig.shake * 1.1;
@@ -1115,13 +1178,13 @@ function update(dt, draw = true) {
   miniT += dt; if (world.map && miniT > .1 && draw) { miniT = 0; drawMini(fx, -fz, hmode === 'foot' ? foot.face : (drive ? drive.th : 0)); }
   PF.mark('misc'); if (draw) renderer.render(scene, camera); PF.mark('render');
   fpsN++; fpsT += dt; if (fpsT > .5) {
-    const f = fpsN / fpsT; $('fps').textContent = Math.round(f) + ' fps'; fpsN = 0; fpsT = 0;
+    const f = fpsN / fpsT; upd.fps = f; $('fps').textContent = Math.round(f) + ' fps'; fpsN = 0; fpsT = 0;
     if (!manual && !q.lock && draw) { q.slow = f < 27 ? q.slow + 1 : 0; if (q.slow >= 4 && q.ratio > .7) { q.ratio = Math.max(.7, q.ratio - .15); renderer.setPixelRatio(q.ratio); resize(); q.slow = 0; } }       // adaptive resolution: shed pixels when the frame rate is low
   }
 }
 let frameHook = null;                                          // hud.js hooks frame timing here
 function frame(t) { const t0 = performance.now(); const dt_ = Math.min(clock.getDelta(), .05); if (!manual && !paused) { update(dt_); if (!titleShown) showTitle(); } else if (paused) renderer.render(scene, camera); if (frameHook) frameHook(t, performance.now() - t0); requestAnimationFrame(frame); }
 syncSliders(); setView('drive'); requestAnimationFrame(frame);
-window.__city = { world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, ppl, cops, missions, sun, setFrameHook: f => { frameHook = f; }, upd };
+window.__city = { dstickIn, track, world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, ppl, cops, missions, sun, setFrameHook: f => { frameHook = f; }, upd };
 if (/[?&](hud|bench)=/.test(location.search)) import('./hud.js?v=' + (MAN['hud.js'] || '1')).then(m => m.start(window.__city, THREE)).catch(e => console.error('hud', e));
 </script>
