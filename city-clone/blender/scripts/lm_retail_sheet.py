@@ -1,4 +1,4 @@
-"""Review renders for lm_retail.py: PALM MARKET + police station side by side on a small lot, ~45 deg views like the concept art.
+"""Review renders for lm_retail.py: Publix + police station side by side on a small lot, ~45 deg views like the concept art.
 Run: python3 scripts/tex_retail.py && blender -b --python scripts/lm_retail_sheet.py   -> art-review/round18/{supermarket,police_station}.png (+ *_game.png north-up)"""
 import sys, os; sys.path.insert(0, os.path.dirname(__file__)); from kit import *; import mood; import lm_retail as lr
 

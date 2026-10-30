@@ -1,4 +1,4 @@
-"""Sign + stone textures for lm_retail.py (PALM MARKET supermarket, police station). Run with system python: python3 scripts/tex_retail.py
+"""Sign + stone textures for lm_retail.py (Publix supermarket, police station). Run with system python: python3 scripts/tex_retail.py
 Writes into blender/out/tex/: sign_lr_palmmarket.png, sign_lr_police.png, lr_stone.png."""
 import sys, os; sys.path.insert(0, os.path.dirname(__file__))
 import numpy as np
@@ -36,7 +36,7 @@ def letters(name, text, w, h, bg, fg, shadow, fill=.66, font="/usr/share/fonts/t
     im.save(os.path.join(T.OUT, f"sign_{name}.png"), optimize=True)
 
 if __name__ == "__main__":
-    letters("lr_palmmarket", "PALM MARKET", 1024, 230, WALL_TAN, "#3d8a46", "#1f4a26", fill=.58)
+    letters("lr_palmmarket", "Publix", 1024, 230, WALL_TAN, "#3d8a46", "#1f4a26", fill=.74)
     letters("lr_police", "POLICE", 520, 140, POLICE_BLUE, "#ffffff", "#17335c", fill=.56, font="/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
     stone()
     print("wrote", [f for f in sorted(os.listdir(T.OUT)) if "lr_" in f])

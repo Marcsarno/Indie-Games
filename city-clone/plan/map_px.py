@@ -123,7 +123,7 @@ DISTRICTS = {
  "Palm View (small homes)": (RES, "#f7c59f", [(412, 556), (684, 556), (684, 812), (412, 812)]),
  "Creekside Industrial Park": (IND, "#b9b4d6", [(110, 832), (650, 832), (650, 1055), (260, 1055), (150, 970), (110, 880)]),
  "Retail Commons (west shops)": (COM, "#8ec5ea", [(700, 300), (758, 300), (758, 544), (700, 544)]),
- "PALM MARKET shopping center": (COM, "#f08080", [(766, 300), (970, 300), (970, 444), (766, 444)]),
+ "Publix shopping center": (COM, "#f08080", [(766, 300), (970, 300), (970, 444), (766, 444)]),
  "Retail outparcels": (COM, "#9fd0ee", [(766, 454), (970, 454), (970, 544), (766, 544)]),
  "Retail Commons (east)": (COM, "#8ec5ea", [(980, 300), (1092, 300), (1092, 544), (980, 544)]),
  "Civic Center (City Hall + Police)": (CIV, "#a8c8f0", [(870, 554), (1086, 554), (1086, 686), (870, 686)]),
@@ -133,7 +133,7 @@ DISTRICTS = {
  "Northridge Homes": (RES, "#f4b183", [(700, 68), (930, 68), (930, 290), (700, 290)]),
  "Windmill Park": (GRN, "#b8e0a0", [(938, 56), (1100, 56), (1104, 290), (938, 290)]),
  "Creekview Golf Club": (GOLF, "#9acd6a", [(1102, 292), (1345, 292), (1345, 590), (1262, 590), (1266, 432), (1102, 432)]),
- "Coconut Creek Casino": (COM, "#e8a060", [(1102, 436), (1262, 436), (1256, 556), (1150, 560), (1102, 548)]),
+ "Seminole Casino Coconut Creek": (COM, "#e8a060", [(1102, 436), (1262, 436), (1256, 556), (1150, 560), (1102, 548)]),
  "Casino garage": (COM, "#d89050", [(1100, 600), (1222, 600), (1290, 702), (1100, 702)]),
  "Canal Ridge Condos": (RES, "#ff9a8a", [(1102, 708), (1338, 708), (1338, 905), (1102, 905)]),
  "Gas station + Lyons Mart": (COM, "#8ec5ea", [(880, 830), (1030, 830), (1030, 948), (880, 948)]),
@@ -144,7 +144,7 @@ DISTRICTS = {
  "Trash Mountain (landfill)": ("landfill", "#9a8a5a", [(140, 1030), (395, 1048), (402, 1100), (388, 1160), (320, 1190), (232, 1188), (170, 1156), (142, 1095)]),
  "Harbor lots": (IND, "#b9b4d6", [(60, 832), (190, 832), (190, 960), (110, 960), (60, 900)]),
 }
-LANDMARKS = [("PALM MARKET", (868, 372)), ("City Hall", (930, 620)), ("Police", (1030, 640)), ("Casino", (1180, 495)), ("Retail Commons", (1030, 400)), ("Gas station", (960, 895)), ("Lyons Promenade", (1120, 960)),
+LANDMARKS = [("Publix", (868, 372)), ("City Hall", (930, 620)), ("Police", (1030, 640)), ("Seminole Casino", (1180, 495)), ("Retail Commons", (1030, 400)), ("Gas station", (960, 895)), ("Lyons Promenade", (1120, 960)),
              ("Trash Mountain", (265, 1100)), ("Windmill Park", (1020, 190)), ("Lakeside Park", (300, 690)), ("Stadium", (1015, 735)), ("Elementary", (830, 745)), ("Gas station west", (360, 585))]
 
 

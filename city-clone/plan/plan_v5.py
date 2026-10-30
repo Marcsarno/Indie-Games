@@ -60,7 +60,7 @@ def clean(path):
             d.text((tx, y_), ln, fill="#1a1a1a", font=F2, anchor="mm")
     for nm, p in M.LANDMARKS:
         x, y = PX(p); d.ellipse([x - 5, y - 5, x + 5, y + 5], fill="#e22", outline="#fff")
-    d.text((20, 14), "Grand Theft Coconut Creek: plan v6 (schematic roads, PALM MARKET, City Hall + Police, Casino, Promenade, Trash Mountain)", fill="#fff", font=F3)
+    d.text((20, 14), "Grand Theft Coconut Creek: plan v6 (schematic roads, Publix, City Hall + Police, Seminole Casino, Promenade, Trash Mountain)", fill="#fff", font=F3)
     y_ = 52
     for cat, a in sorted(cats.items(), key=lambda t: -t[1]): d.text((20, y_), f"{cat}: {100 * a / tot:.0f}%", fill="#fff", font=F); y_ += 20
     d.text((20, y_ + 4), f"land {tot / 1000:.0f}k m2, about {(max(p[0] for p in TR['coast']) - min(p[0] for p in TR['coast'])) * M.SCALE:.0f} x {(max(p[1] for p in TR['coast']) - min(p[1] for p in TR['coast'])) * M.SCALE:.0f} m", fill="#fff", font=F)

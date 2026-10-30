@@ -501,12 +501,12 @@ def frontage_lot(poly, name, parts, lot_d=17.0, count=1, roads=None, max_rank=8.
                 FOOTREG.append(f_); NOGO.append((min(p[0] for p in corners) - 1, min(p[1] for p in corners) - 1, max(p[0] for p in corners) + 1, max(p[1] for p in corners) + 1)); PLACED[name] = PLACED.get(name, 0) + 1; made += 1; print("FRONT", name, nm, round(cx), round(cy), round(rz)); s_ += W + 4
     if made < count: print("FRONT MISS", name, made, "/", count, WHY.get(name))
     return made
-# -- PALM MARKET shopping center (inline shops + the supermarket anchor, one big lot facing Retail Dr)
+# -- Publix shopping center (inline shops + the supermarket anchor, one big lot facing Retail Dr)
 SHOPS_A = (("restaurant_fl", 7, "#8c1c1c"), ("nails", 5, "#7a2f6a"), ("coffee", 6, "#21453a"))
 SHOPS_B = (("pizza", 5, "#b8321f"), ("cleaners", 6, "#a63c2a"), ("coffee", 6, "#21453a"))
 def strip(w, d, shops, seed, H=6.8): return lambda nm: make_plaza(nm, w, d, H, shops=shops, tower_x=None, seed=seed)
 market_anchor = lm(LMR, "supermarket", plaza_maker(46, 28, 8.5, 0))
-frontage_lot(D("PALM MARKET shopping center"), "palmmarket", [(strip(20, 14, SHOPS_A, 11), 20, 14, 0.0), (market_anchor, 46, 28, 3.6)], lot_d=17, roads=("Retail Dr",), prob=.5, rows2=True, clear=.6)
+frontage_lot(D("Publix shopping center"), "publix", [(strip(20, 14, SHOPS_A, 11), 20, 14, 0.0), (market_anchor, 46, 28, 3.6)], lot_d=17, roads=("Retail Dr",), prob=.5, rows2=True, clear=.6)
 frontage_lot(D("Retail Commons (west shops)"), "coffee", [(lambda nm: make_house(nm, 12, 9, 1, "mint", 610, garage=False, balcony=False, roof_h=1.4, tile_hex=ROOF["slate"]), 12, 9, 0.0)], lot_d=11, count=2)
 frontage_lot(D("Retail Commons (east)"), "strip_e", [(strip(26, 12, SHOPS_A + SHOPS_B[:1], 13), 26, 12, 0.0)], lot_d=17, count=3)
 for k_, (nm_, wall_) in enumerate((("bank", "white"), ("pharmacy", "sky"), ("burger", "coral"))):
@@ -523,7 +523,7 @@ police_maker = lm(LMR, "police_station", lambda nm: make_house(nm, 30, 20, 2, "w
 frontage_lot(CIV, "police", [(police_maker, 30, 20, 7.0)], lot_d=12, prob=.0)
 frontage_lot(D("Elementary School"), "school", [(lambda nm: make_house(nm, 24, 10, 2, "butter", 21, garage=False, balcony=False, roof_h=3.0, windows=True), 24, 10, 0.0)], lot_d=12, prob=.4)
 # -- casino + parking garage (east of Creekview Dr)
-CAS = D("Coconut Creek Casino")
+CAS = D("Seminole Casino Coconut Creek")
 casino_maker = lm(LMC, "casino", plaza_maker(56, 36, 11.0, 0))
 if not frontage_lot(CAS, "casino", [(casino_maker, 56, 36, 0.0)], lot_d=17, prob=.55, roads=("Creekview Dr", "Club Dr")):
     frontage_lot(CAS, "casino", [(lambda nm: _scaled(casino_maker(nm), .8), 45, 29, 0.0)], lot_d=17, prob=.55)
@@ -769,7 +769,7 @@ MAP.insert(0, [0, 0, 0, 0, "#5d9a3a", "poly", [[round(p[0], 1), round(p[1], 1)] 
 def V(nm, pitch=48, dist=40): x_, y_ = LM[nm]; return {"label": nm, "tx": round(x_, 1), "ty": round(y_, 1), "pitch": pitch, "dist": dist}
 WORLD = {"name": "coconut", "title": "Coconut Creek", "glb": "scene.glb", "mapbg": "#2d78b8", "extent": EXT - 4, "sky": "#8fc3f5", "fog": ["#c4dcf2", 110, 320], "hemi": ["#cfe4ff", "#6f8a4a", 1.55], "sun": {"color": "#fff0d6", "intensity": 3.7, "dir": [-0.5, -0.74, 0.45]},
          "heights": HEIGHTS, "exposure": 1.0, "tone": "AgX", "lamps": [], "ground": "#5d9a3a", "start": START, "money": 1250, "traffic": TRAFFIC, "walk": WALK, "walkers": 16, "fight": {"x": round(START["x"] + 6, 1), "y": START["y"]}, "demo": None,
-         "views": {"drive": {"label": "Play", "mode": "drive", "pitch": 45, "dist": 44}, "plaza": dict(V("PALM MARKET", 48, 34), label="Plaza"), "homes": dict(V("Lakeside Park", 48, 40), label="Park"), "over": {"label": "Overview", "tx": 0, "ty": -14, "pitch": 40, "dist": 440}},
+         "views": {"drive": {"label": "Play", "mode": "drive", "pitch": 45, "dist": 44}, "plaza": dict(V("Publix", 48, 34), label="Plaza"), "homes": dict(V("Lakeside Park", 48, 40), label="Park"), "over": {"label": "Overview", "tx": 0, "ty": -14, "pitch": 40, "dist": 440}},
          "map": MAP, "roads": ROADLINES}
 json.dump(COL, open(os.path.join(OUT, "colliders_coconut.json"), "w")); json.dump(PROPS, open(os.path.join(OUT, "props_coconut.json"), "w")); json.dump(CARS, open(os.path.join(OUT, "cars_coconut.json"), "w")); json.dump(WORLD, open(os.path.join(OUT, "world_coconut.json"), "w"))
 pc = {}
@@ -783,7 +783,7 @@ if not os.environ.get("NORENDER"):
         o = bpy.data.objects.new(p["k"], tmpl[p["k"]].data); bpy.context.scene.collection.objects.link(o); o.location = (p["x"], p["y"], 0)
         o.rotation_euler = (0, 0, math.radians(p["rz"])); o.scale = (p["s"], p["s"], p["s"]) if p["k"] != "hedge" else (1, 1, 1)
     def sh(nm, tx, ty, pitch=50, dist=110, w=1000, h=640): return (nm, ((tx, ty, 0), pitch, dist, w, h))
-    SHOTS = dict([("cc_city", ((0, -14, 0), 62, 700, 1400, 1200))] + [sh("cc_" + k_, *MP.to_m(v_), 50, 110) for k_, v_ in (("market", (790, 490)), ("lakes", (540, 420)), ("palmview", (540, 660)), ("ind", (400, 930)), ("civic", (960, 620)), ("prom", (1120, 960)), ("golf", (1230, 450)), ("canal", (1210, 790)), ("lakeview", (520, 160)), ("north", (830, 170)), ("west", (160, 640)), ("south", (790, 980)))])
+    SHOTS = dict([("cc_city", ((0, -14, 0), 62, 700, 1400, 1200))] + [sh("cc_" + k_, *MP.to_m(v_), 50, 110) for k_, v_ in (("market", (790, 490)), ("lakes", (540, 420)), ("palmview", (540, 660)), ("ind", (400, 930)), ("civic", (960, 620)), ("prom", (1120, 960)), ("golf", (1230, 450)), ("canal", (1210, 790)), ("lakeview", (520, 160)), ("north", (830, 170)), ("west", (160, 640)), ("south", (790, 980)), ("casino", (1180, 495)), ("trash", (265, 1100)))])
     SHOTS["cc_game"] = ((START["x"], START["y"] + 8, 0), 45, 44, 500, 900)
     if os.environ.get("SHOT"): x_, y_, p_, d_ = [float(v) for v in os.environ["SHOT"].split(",")]; SHOTS = {"dbg": ((x_, y_, 0), p_, d_, 1000, 700)}
     for nm, (tgt, pitch, dist, w, h) in SHOTS.items():

@@ -1,7 +1,7 @@
 """Civic landmarks (concepts art/coconut-16-city-hall.png and art/coconut-15-casino.png).
 Every maker returns ONE built object: footprint centred on the origin, ground at z=0, front / entrance toward -y (like building_fl / district_kits).
 city_hall -> two-storey stucco city hall with a glass entrance tower.   butterfly -> monarch sculpture on a plinth (forecourt prop).
-casino -> COCONUT CREEK CASINO with an arched porte-cochere and two terracotta-roofed towers (its parking garage is district_kits.garage)."""
+casino -> SEMINOLE CASINO COCONUT CREEK with an arched porte-cochere and two terracotta-roofed towers (its parking garage is district_kits.garage)."""
 import sys, os, math; sys.path.insert(0, os.path.dirname(__file__)); from kit import *
 from mathutils import Vector
 
@@ -150,7 +150,7 @@ def butterfly(name="butterfly"):
 
 # ---- casino -----------------------------------------------------------------------------------------------------------------
 def casino(name="casino"):
-    """COCONUT CREEK CASINO. Footprint 56 x 36 m (x -28..28, y -18..18): main hall 50 x 24 (9.6 m + parapet) from y = -6 to 18, an arched
+    """SEMINOLE CASINO COCONUT CREEK. Footprint 56 x 36 m (x -28..28, y -18..18): main hall 50 x 24 (9.6 m + parapet) from y = -6 to 18, an arched
     porte-cochere 18 m wide on four pillars reaching y = -18, a curved sign parapet (top 15 m), two square towers with terracotta pyramid
     roofs (front-right 8 x 8 to 19 m, front-left 6.5 x 6.5 to 16 m). Front = -y. Parking garage is a separate model (district_kits.garage)."""
     b = Builder(name); H = 9.6

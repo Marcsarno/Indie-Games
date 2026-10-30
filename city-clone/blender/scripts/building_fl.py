@@ -71,7 +71,7 @@ def make_row(name, units=4, uw=6.4, d=10, floors=2, seed=3):
             xx1 = min(x1 + uw, W / 2); hip_roof(b, tile, x0, xx1, -hy, hy, H, 2.7, .55, "x", trim)
     return b.build(vc=True)
 
-def make_plaza(name, w=40, d=16, H=7.0, shops=(("restaurant_fl", 7, "#8c1c1c"), ("nails", 5, "#7a2f6a"), ("coffee", 6, "#21453a"), ("pizza", 5, "#b8321f")), tower_x=None, tower_sign="palmmarket", seed=2, wall="cream"):
+def make_plaza(name, w=40, d=16, H=7.0, shops=(("restaurant_fl", 7, "#8c1c1c"), ("nails", 5, "#7a2f6a"), ("coffee", 6, "#21453a"), ("pizza", 5, "#b8321f")), tower_x=None, tower_sign="shops", seed=2, wall="cream"):
     """Shopping plaza. `shops` = (sign texture, width m, awning colour) packed left-to-right from -w/2 + 2; the rest is a big-box anchor with a sign tower at tower_x."""
     r = random.Random(seed); b = Builder(name); hx, hy = w / 2, d / 2; wm = _mats(wall); trim = M("fl_trim", TRIM); tile = M("terracotta", TILE, tex="tiles", tile=2.5)
     glass = M("shop_glass_fl", "#2c5a66", rough=.2); roofm = M("roof_tar", "#6a6a6c", tex="roof", tile=3.0); grey = M("ac_grey", "#a9adb4"); dk = M("metal_dark", "#25282c"); plinth = M("fl_plinth", "#b8ab90")

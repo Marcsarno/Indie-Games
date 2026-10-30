@@ -111,7 +111,7 @@ def florida():
     grass(); water(); wood(); tiles()
     for h_ in ("#bcb6aa", "#7a5a44", "#5d6670", "#b8463a"): tiles(h_, name="tiles_" + h_[1:])          # roof colours for the district house styles
     for k, c in (("cream", "#e9dcb8"), ("peach", "#e8c4a0"), ("sand", "#d8c490"), ("white", "#eee8dc"), ("butter", "#ecd890"), ("mint", "#c4e2cc"), ("sky", "#c2d8e8"), ("coral", "#efb9a4"), ("lilac", "#d8c8e6"), ("stone", "#cfc8bc")): stucco(k, c)
-    label("palmmarket", "PALM MARKET", 512, 128, "#f3ecd8", "#1f6b3a", border="#1f6b3a")
+    label("palmmarket", "Publix", 512, 128, "#f3ecd8", "#1f6b3a", border="#1f6b3a"); label("shops", "SHOPS", 384, 128, "#f3ecd8", "#7a3a2a", border="#7a3a2a")
     label("restaurant_fl", "RESTAURANT", 384, 96, "#8c1c1c", "#ffffff"); label("nails", "NAILS", 256, 96, "#f0e6d0", "#8a2f6a", border="#8a2f6a")
     label("coffee", "COFFEE", 256, 96, "#21453a", "#f3ecd8"); label("pizza", "PIZZA", 256, 96, "#b8321f", "#ffe9a0"); label("cleaners", "CLEANERS", 320, 96, "#a63c2a", "#ffffff")
     label("pkwy", "Coconut Creek Pkwy", 512, 96, "#14683f", "#ffffff", border="#ffffff"); label("wiles", "Wiles Rd", 320, 96, "#14683f", "#ffffff", border="#ffffff")

@@ -1,9 +1,9 @@
-"""Retail / civic landmarks from the concept sheets: PALM MARKET supermarket (art/coconut-14) and the police station (art/coconut-13).
+"""Retail / civic landmarks from the concept sheets: Publix supermarket (art/coconut-14) and the police station (art/coconut-13).
 Every maker returns ONE built object centred on the origin (footprint centre x=0, y=0), ground at z=0, entrance toward -y, like building_fl / district_kits.
 Sign textures come from scripts/tex_retail.py (run it with python3 first, it writes out/tex/sign_lr_*.png and lr_stone.png)."""
 import sys, os, math, random; sys.path.insert(0, os.path.dirname(__file__)); from kit import *
 
-SM_WALL = "#e4d0a8"           # tan stucco; tex_retail.py paints the PALM MARKET sign on exactly this colour
+SM_WALL = "#e4d0a8"           # tan stucco; tex_retail.py paints the Publix sign on exactly this colour
 PD_BLUE = "#2e5b97"           # police blue; same in tex_retail.py
 
 def _solid_xz(b, m, pts, y0, y1):
@@ -32,7 +32,7 @@ def _ac(b, grey, dark, x, y, z, w=2.2, d=1.6, h=1.1):
 
 
 def supermarket(name="palm_market"):
-    """PALM MARKET grocery anchor (concept art/coconut-14). Footprint 46 x 28 m (w x d): the main box spans x -23..23, y -14..14.
+    """Publix grocery anchor (concept art/coconut-14). Footprint 46 x 28 m (w x d): the main box spans x -23..23, y -14..14.
     Walls 7.4 m (+ parapet to ~8.2), the raised entrance bay with the arched sign parapet reaches 11.4 m; pilasters and awnings stick out up to ~3.6 m in front (to y = -17.6)."""
     b = Builder(name); W, D = 46.0, 28.0; hx, hy = W / 2, D / 2; H = 7.4; P = 8.1
     wall = M("lr_tan", SM_WALL); brown = M("lr_brown", "#a8805c"); green = M("lr_green", "#4f7a4c"); rib = M("lr_green_rib", "#628d5c")
