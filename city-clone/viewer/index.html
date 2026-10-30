@@ -114,6 +114,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { createTraffic, TT } from './traffic.js';
+import { createPeople, PT } from './people.js';
 
 const $ = id => document.getElementById(id);
 const WN = location.hash === '#chinatown' ? 'chinatown' : 'coconut', WD = 'worlds/' + WN + '/';      // which world to load (hash #chinatown or default)
@@ -347,7 +348,10 @@ async function exitCar(a, car, tag) {
 
 /* ---------- life: walkers, a fight, scripted traffic ---------- */
 const walkers = [];
-for (let i = 0; i < world.walkers; i++) {
+if (graph && new URLSearchParams(location.search).get('peds')) PT.count = Math.max(0, Math.min(80, +new URLSearchParams(location.search).get('peds')));
+const ppl = graph ? createPeople(graph, { THREE, makePerson, play, scene, camera, pushCircle: (x, z, r) => pushCircle(x, z, r), onKnock: (w, sp) => { crashSound(Math.min(9, 3 + sp * .3)); rig.shake = Math.min(1, rig.shake + .15); } }) : null;     // sidewalk AI (worlds with a lane graph)
+if (ppl) walkers.push(...ppl.people);
+for (let i = 0; i < (ppl ? 0 : world.walkers); i++) {
   const p = makePerson(), seg = world.walk[i % world.walk.length], dir = (i >> 1) % 2 ? 1 : -1;
   const path = seg.path ? makePath(seg.path, seg.closed) : null, w = { ...p, seg, path, dir, pos: path ? rnd() * path.L : seg.lo + rnd() * (seg.hi - seg.lo), speed: 1.15 + rnd() * .5 };
   w.act.walk.timeScale = w.speed / 1.4; w.act.walk.play(); w.act.walk.time = rnd(); w.cur = w.act.walk; Object.assign(w, { hp: 3, state: 'walk', st: 0, off: { x: 0, z: 0 }, kb: { x: 0, z: 0 } }); walkers.push(w);
@@ -486,6 +490,7 @@ function brush(c, B, dt) {               // soft scenery (shrubs, hedges, sign a
 }
 function onImpact(c, v) {
   if (c === drive) game.hp = Math.max(0, game.hp - Math.max(0, v - (9 + 4 * TUNE.forgive)) * 2.2);
+  if (ppl && c === drive && v > 6) ppl.panic(c.x, c.z, 18);
   c.hits++; c.hardest = Math.max(c.hardest, v); const dmg = Math.max(0, v - 2.5) * .02 * (1 - .4 * TUNE.forgive); c.damage = Math.min(1, c.damage + dmg);
   rig.shake = Math.min(1, rig.shake + v / 16); burst(c.cx, .6, c.cz, c.cnx, c.cnz, v); crashSound(v);
   if (v > 9) {                                    // a hard hit throws the doors on the struck side open for a moment
@@ -572,6 +577,10 @@ const stickIn = { x: 0, y: 0 };                                               //
 const combat = { state: 'idle', t: 0, dur: 0, struck: false, n: 0, queued: false, hits: 0, lastEnd: -9, clip: 'punch' };
 let hitstop = 0, simT = 0; const flashes = [];
 const heroPoly = (x, z, r) => Array.from({ length: 8 }, (_, k) => [x + r * Math.cos((k + .5) * Math.PI / 4), z + r * Math.sin((k + .5) * Math.PI / 4)]);
+function pushCircle(x, z, r) {                       // push a circle out of the static colliders (fleeing pedestrians)
+  for (const B of colliders) { if (!B.poly.length || B.soft || Math.abs(B.cx - x) > B.r + r + .6 || Math.abs(B.cz - z) > B.r + r + .6) continue; const h = sat(heroPoly(x, z, r), B.poly); if (h) { x += h.nx * h.depth; z += h.nz * h.depth; } }
+  return [x, z];
+}
 function pushOut(x, z, r) {
   for (const B of colliders) {
     if (!B.poly.length || Math.hypot(B.cx - x, B.cz - z) > B.r + r + .6) continue;
@@ -592,7 +601,7 @@ function footStep(dt) {
   pilot.root.position.set(foot.x, groundH(foot.x, foot.z), foot.z); pilot.root.rotation.y = foot.face;
   if (combat.state === 'idle') { if (sp < .25) play(pilot, 'idle'); else if (sp < 3.0) play(pilot, 'walk', { timeScale: clamp(sp / 1.4, .5, 2) }); else play(pilot, 'run', { timeScale: clamp(sp / 4.2, .7, 1.4) }); }
 }
-const targets = () => walkers.filter(w => w.state === 'walk' || w.state === 'hit');
+const targets = () => walkers.filter(w => w.on !== false && (w.state === 'walk' || w.state === 'hit' || w.state === 'flee' || w.state === 'freeze'));
 function startPunch() {
   if (hmode !== 'foot') return; ensureAudio();
   if (combat.state === 'punch') { combat.queued = true; return; }
@@ -622,6 +631,7 @@ function applyHit(w, dx, dz, finisher) {
   for (const m of w.mats) m.emissive.setScalar(.85); flashes.push({ w, t: .06 });
   const sp = down ? 8.5 : 5.2; w.kb.x = dx * sp; w.kb.z = dz * sp; w.root.rotation.y = Math.atan2(dx, dz);          // victim turns to face the attacker, then is thrown away from them
   w.state = down ? 'down' : 'hit'; w.st = 0; play(w, down ? 'fall' : 'hit', { once: true, fade: .03 });
+  if (ppl) ppl.panic(w.root.position.x, w.root.position.z);
 }
 function nearestDoor() {
   let best = null, bd = 4.2;
@@ -714,7 +724,7 @@ function drawMini(px, py, face) {                 // north-up map around the pla
 /* ---------- loop ---------- */
 $('loading').hidden = true;
 const q = { ratio: Math.min(devicePixelRatio || 1, 2), slow: 0, lock: false };
-const AIX = { cx: 0, cz: 0, player: null, foot: null, p: { x: 0, z: 0, vx: 0, vz: 0, L: 4.5, W: 1.8 }, f: { x: 0, z: 0, vx: 0, vz: 0, L: .6, W: .6 } };
+const AIX = { cx: 0, cz: 0, player: null, foot: null, p: { x: 0, z: 0, vx: 0, vz: 0, L: 4.5, W: 1.8, th: 0 }, peds: null, f: { x: 0, z: 0, vx: 0, vz: 0, L: .6, W: .6 } };
 const PF = { on: false, last: 0, ms: { phys: 0, traffic: 0, anim: 0, misc: 0, render: 0 }, mark(k) { if (!this.on) return; const t = performance.now(); this.ms[k] = t - this.last; this.last = t; } };   // per-system ms for the ?hud=1 panel (hud.js)
 const clock = new THREE.Clock(); let fpsN = 0, fpsT = 0, manual = false, lastStat = '';
 const SPAN = 42, upd = { speedZoom: 0 };
@@ -746,13 +756,14 @@ function update(dt, draw = true) {
   });
   if (ai) {
     AIX.cx = rig.tx; AIX.cz = rig.tz;
-    if (drive && hmode === 'driving') { const P = AIX.p; P.x = drive.x; P.z = drive.z; P.vx = drive.vx; P.vz = drive.vz; P.L = drive.car.dims[0]; P.W = drive.car.dims[1]; AIX.player = P; } else AIX.player = null;
+    if (drive && hmode === 'driving') { const P = AIX.p; P.x = drive.x; P.z = drive.z; P.vx = drive.vx; P.vz = drive.vz; P.L = drive.car.dims[0]; P.W = drive.car.dims[1]; P.th = drive.th; AIX.player = P; } else AIX.player = null;
     if (hmode === 'foot') { AIX.f.x = foot.x; AIX.f.z = foot.z; AIX.foot = AIX.f; } else AIX.foot = null;
-    ai.step(dta, AIX);
+    AIX.peds = ppl ? ppl.people : null; ai.step(dta, AIX);
   }
   PF.mark('traffic');
   footStep(dta); combatStep(dta);
-  for (const w of walkers) {                                                    // pedestrians: walk a sidewalk loop, or react to being hit
+  if (ppl) ppl.step(dta, AIX);
+  else for (const w of walkers) {                                               // pedestrians: walk a sidewalk loop, or react to being hit
     if (w.state === 'walk') { w.pos += w.dir * w.speed * dta; if (w.path) { if (!w.path.closed) { if (w.pos > w.path.L) { w.pos = w.path.L; w.dir = -1; } else if (w.pos < 0) { w.pos = 0; w.dir = 1; } } } else { if (w.pos > w.seg.hi) w.pos = w.seg.lo; if (w.pos < w.seg.lo) w.pos = w.seg.hi; } const f = Math.exp(-.8 * dta); w.off.x *= f; w.off.z *= f; }
     else {
       w.st += dta;
@@ -772,13 +783,13 @@ function update(dt, draw = true) {
   for (let i = flashes.length - 1; i >= 0; i--) { flashes[i].t -= dt; if (flashes[i].t <= 0) { for (const m of flashes[i].w.mats) m.emissive.setScalar(0); flashes.splice(i, 1); } }
   if (hero) { punchT += dta; if (punchT > 2.2) { punchT = 0; hero.act.punch.reset().play(); hit = 1; }
     hit = Math.max(0, hit - dta * 2); victim.root.position.x = fightAt.x - .55 - .25 * Math.sin(Math.min(1, (1 - hit) * 2) * Math.PI) * (hit > 0 ? 1 : 0); }
-  for (const m of mixers) m.update(dta); PF.mark('anim');
+  for (const m of mixers) if (m.getRoot().visible) m.update(dta); PF.mark('anim');
   for (const c of [...Object.values(allCars), ...(demo ? [demo.sedan, demo.taxi] : [])]) {                  // draw only nearby cars, and only those close by cast shadows
     const dd = Math.hypot(c.group.position.x - rig.tx, c.group.position.z - rig.tz); c.group.visible = dd < 90 || c === (drive && drive.car);
     const sh = dd < 32 || c === (drive && drive.car); if (c.shadowOn !== sh) { c.shadowOn = sh; c.group.traverse(o => { if (o.isMesh) o.castShadow = sh; }); }      // only nearby cars cast shadows (halves the far-car draw calls)
     if (c.group.visible) updateDoors(c, dt);
   }
-  for (const w of walkers) { const dd = Math.hypot(w.root.position.x - rig.tx, w.root.position.z - rig.tz); const vis = dd < 80; if (vis !== w.root.visible) w.root.visible = vis; const near = dd < 38; if (near !== w.shadowOn) { w.shadowOn = near; w.root.traverse(o => { if (o.isMesh) o.castShadow = near; }); } }
+  for (const w of walkers) { const dd = Math.hypot(w.root.position.x - rig.tx, w.root.position.z - rig.tz); const vis = dd < 80 && w.on !== false; if (vis !== w.root.visible) w.root.visible = vis; const near = dd < 38; if (near !== w.shadowOn) { w.shadowOn = near; w.root.traverse(o => { if (o.isMesh) o.castShadow = near; }); } }
   for (let i = 0; i < SP; i++) if (spLife[i] > 0) { spLife[i] -= dt; spPos[i * 3] += spVel[i * 3] * dt; spPos[i * 3 + 1] += spVel[i * 3 + 1] * dt; spPos[i * 3 + 2] += spVel[i * 3 + 2] * dt; spVel[i * 3 + 1] -= 14 * dt; if (spLife[i] <= 0) spPos[i * 3 + 1] = -100; }
   spGeo.attributes.position.needsUpdate = true;
   const speed = drive ? Math.hypot(drive.vx, drive.vz) : 0;
@@ -815,6 +826,6 @@ function update(dt, draw = true) {
 let frameHook = null;                                          // hud.js hooks frame timing here
 function frame(t) { const t0 = performance.now(); if (!manual) update(Math.min(clock.getDelta(), .05)); if (frameHook) frameHook(t, performance.now() - t0); requestAnimationFrame(frame); }
 syncSliders(); setView('drive'); requestAnimationFrame(frame);
-window.__city = { world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, sun, setFrameHook: f => { frameHook = f; }, upd };
+window.__city = { world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, ppl, sun, setFrameHook: f => { frameHook = f; }, upd };
 if (/[?&](hud|bench)=/.test(location.search)) import('./hud.js?v=' + (MAN['hud.js'] || '1')).then(m => m.start(window.__city, THREE)).catch(e => console.error('hud', e));
 </script>

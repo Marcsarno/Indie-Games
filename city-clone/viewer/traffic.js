@@ -163,6 +163,11 @@ export function createTraffic(G, deps) {
         const l = Math.abs(dx * c.fz - dz * c.fx); if (l > hw + (p.W || .6) / 2 + .6) continue;
         const g = f - (len + (p.L || .6)) / 2; if (g < gap) { c.blk = pi ? 'foot' : 'player'; gap = g; vl = Math.max(0, (p.vx || 0) * c.fx + (p.vz || 0) * c.fz); }
       }
+      if (ctx.peds) for (const w of ctx.peds) {                                                 // people crossing (or lying) in the road
+        if (!w.on || !(w.inRoad || w.state === 'down' || w.state === 'getup' || w.state === 'flee')) continue;
+        const dx = w.x - c.x, dz = w.z - c.z, f = dx * c.fx + dz * c.fz; if (f <= 0 || f > 16) continue;
+        if (Math.abs(dx * c.fz - dz * c.fx) > hw + .9) continue; const g = f - len / 2 - .4; if (g < gap) { gap = g; vl = 0; c.blk = 'ped'; }
+      }
       // the stop line: a virtual stopped car until the gate opens
       if (!c.turn) {
         const [, s1] = trims(c.e, c.dir), toEnd = s1 - c.s, n = endNode(c.e, c.dir);
