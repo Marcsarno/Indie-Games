@@ -51,7 +51,8 @@ RAW_ROADS = {
  # industrial
  "Industrial Row": (6, 3.5, [(172, 948), (250, 952), (330, 958), (397, 960), (497, 962), (542, 966), (620, 964), (692, 960)]),
  "Creekside Rd": (5, 3.2, [(397, 826), (397, 960), (398, 1016)]),
- "Landfill Rd": (5, 3.6, [(300, 1006), (298, 1036), (270, 1046), (215, 1048), (190, 1068), (182, 1110), (188, 1138), (202, 1154)]),
+ "Landfill Rd": (5, 3.6, [(906, 206), (916, 210), (925, 221)]),
+ "Windmill Park Rd": (5, 3.2, [(300, 1006), (298, 1036), (270, 1046), (215, 1050), (192, 1070)]),
  "Dock Ln": (5, 3.2, [(487, 962), (487, 1024)]),
  "Harbor Lot Rd": (5, 3.2, [(176, 858), (140, 872), (118, 900), (135, 930), (170, 947)]),
  # south-east
@@ -66,7 +67,7 @@ RAW_ROADS = {
  "Lyons Promenade": (3, 5.5, [(1049, 911), (1080, 935), (1110, 949), (1150, 961), (1184, 968)]),
  "Canal Ridge Dr": (6, 3.5, [(1128, 874), (1128, 840), (1135, 818), (1170, 812), (1215, 818), (1280, 835), (1318, 846)]),
 }
-OK_ENDS = {("Landfill Rd", -1), ("Club Dr", -1), ("Casino Dr", -1), ("Hospital Dr", -1), ("Coconut Creek Pkwy", 0), ("Heron Point Dr", -1), ("Hospital Dr", -1), ("Lyons Ln", -1), ("Wiles Rd", 0), ("Wiles Rd", -1)}   # coast / bridge-gate / lot / cul-de-sac ends allowed
+OK_ENDS = {("Landfill Rd", -1), ("Windmill Park Rd", -1), ("Club Dr", -1), ("Casino Dr", -1), ("Hospital Dr", -1), ("Coconut Creek Pkwy", 0), ("Heron Point Dr", -1), ("Hospital Dr", -1), ("Lyons Ln", -1), ("Wiles Rd", 0), ("Wiles Rd", -1)}   # coast / bridge-gate / lot / cul-de-sac ends allowed
 SNAP = 17.0
 def _cr(pts, step=4.0):
     import math
@@ -130,7 +131,6 @@ DISTRICTS = {
  "Elementary School": (CIV, "#f2d38a", [(768, 694), (864, 694), (864, 816), (768, 816)]),
  "Sports fields + stadium": (CIV, "#d8e8a0", [(870, 694), (1086, 694), (1086, 812), (870, 812)]),
  "Northridge Homes": (RES, "#f4b183", [(700, 68), (930, 68), (930, 290), (700, 290)]),
- "Windmill Park": (GRN, "#b8e0a0", [(938, 56), (1100, 56), (1104, 290), (938, 290)]),
  "Creekview Golf Club": (GOLF, "#9acd6a", [(1102, 292), (1345, 292), (1345, 590), (1262, 590), (1266, 432), (1102, 432)]),
  "Seminole Casino Coconut Creek": (COM, "#e8a060", [(1102, 436), (1262, 436), (1256, 556), (1150, 560), (1102, 548)]),
  "Casino garage": (COM, "#d89050", [(1100, 600), (1222, 600), (1290, 702), (1100, 702)]),
@@ -140,11 +140,12 @@ DISTRICTS = {
  "Southgate Homes": (RES, "#f4b183", [(700, 835), (885, 835), (885, 1095), (730, 1105), (700, 1050)]),
  "Heron Preserve (pond + boardwalk)": (GRN, "#b8e0a0", [(900, 960), (1005, 962), (1012, 1090), (908, 1092)]),
  "Bayview homes (SE tip)": (RES, "#f4b183", [(1010, 1012), (1190, 1044), (1300, 1056), (1300, 1105), (1060, 1112), (1010, 1090)]),
- "Trash Mountain (landfill)": ("landfill", "#9a8a5a", [(140, 1030), (395, 1048), (402, 1100), (388, 1160), (320, 1190), (232, 1188), (170, 1156), (142, 1095)]),
+ "Trash Mountain (landfill)": ("landfill", "#9a8a5a", [(922, 116), (1072, 116), (1072, 250), (922, 250)]),
+ "Windmill Park": (GRN, "#b8e0a0", [(140, 1030), (395, 1048), (402, 1100), (388, 1160), (320, 1190), (232, 1188), (170, 1156), (142, 1095)]),
  "Harbor lots": (IND, "#b9b4d6", [(60, 832), (190, 832), (190, 960), (110, 960), (60, 900)]),
 }
 LANDMARKS = [("Publix", (868, 372)), ("City Hall", (930, 620)), ("Police", (1030, 640)), ("Seminole Casino", (1180, 495)), ("Retail Commons", (1030, 400)), ("Gas station", (960, 895)), ("Lyons Promenade", (1120, 960)),
-             ("Trash Mountain", (265, 1100)), ("Windmill Park", (1020, 190)), ("Lakeside Park", (300, 690)), ("Stadium", (1015, 735)), ("Elementary", (830, 745)), ("Gas station west", (360, 585))]
+             ("Trash Mountain", (997, 183)), ("Windmill Park", (265, 1100)), ("Lakeside Park", (300, 690)), ("Stadium", (1015, 735)), ("Elementary", (830, 745)), ("Gas station west", (360, 585))]
 
 
 # ---------------- metre-space data for the 3D build ----------------

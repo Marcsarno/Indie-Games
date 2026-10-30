@@ -4,7 +4,7 @@ const PX = p => [(p[0] - 690) * .43, -(p[1] - 545) * .43];   // -> Blender metre
 export const MISSIONS = [
   { id: 'publix', title: 'Publix Run', brief: 'Groceries for a customer in Lakeview Estates.', from: [868, 446], to: [560, 205], time: 75, reward: 200 },
   { id: 'casino', title: 'Casino Shuttle', brief: 'A high roller wants the Promenade cinema. Now.', from: [1094, 500], to: [1170, 958], time: 60, reward: 250 },
-  { id: 'summit', title: 'Trash Mountain Summit', brief: 'Drive to the top of Trash Mountain.', from: [298, 1012], to: 'summit', time: 70, reward: 300 },
+  { id: 'summit', title: 'Trash Mountain Summit', brief: 'Drive to the top of Trash Mountain.', from: [900, 180], to: 'summit', time: 70, reward: 300 },
   { id: 'heat', title: 'Heat Check', brief: 'Get two stars, then shake the police.', from: [1062, 640], to: 'lose', time: 120, reward: 400 },
 ];
 
