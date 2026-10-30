@@ -3,7 +3,7 @@ make_house -> villa / townhome unit / clubhouse.   make_row -> attached townhome
 import sys, os, random; sys.path.insert(0, os.path.dirname(__file__)); from kit import *
 
 def _mats(wall):
-    st = M("stucco_" + wall, {"cream": "#e9dcb8", "peach": "#e8c4a0", "sand": "#d8c490", "white": "#eee8dc", "butter": "#ecd890"}[wall], tex="stucco_" + wall, tile=3.0)
+    st = M("stucco_" + wall, {"cream": "#e9dcb8", "peach": "#e8c4a0", "sand": "#d8c490", "white": "#eee8dc", "butter": "#ecd890", "mint": "#c4e2cc", "sky": "#c2d8e8", "coral": "#efb9a4", "lilac": "#d8c8e6", "stone": "#cfc8bc"}[wall], tex="stucco_" + wall, tile=3.0)
     return st
 
 TRIM = "#f4efe4"; TILE = "#a9573a"
@@ -20,7 +20,7 @@ def hip_roof(b, tile, x0, x1, y0, y1, z0, h, over=.6, ridge_along="x", fascia=No
 
 def make_house(name, w=12, d=9, floors=2, wall="cream", seed=1, garage=False, balcony=True, shutters="#2f6a4a", roof_h=None, floor_h=3.1, tile_hex=TILE, door_u=None, windows=True, hip=True):
     r = random.Random(seed); b = Builder(name); H = floors * floor_h; hx, hy = w / 2, d / 2
-    wm = _mats(wall); trim = M("fl_trim", TRIM); tile = M("terracotta", tile_hex, tex="tiles", tile=2.5); glass = M("fl_glass", "#35566a", rough=.2)
+    wm = _mats(wall); trim = M("fl_trim", TRIM); tile = M("terracotta" if tile_hex == TILE else "roof_" + tile_hex[1:], tile_hex, tex="tiles" if tile_hex == TILE else "tiles_" + tile_hex[1:], tile=2.5); glass = M("fl_glass", "#35566a", rough=.2)
     shut = M("shutter_" + shutters[1:], shutters); door = M("fl_door", "#5a3a22"); garm = M("garage_door", "#d8d2c2"); plinth = M("fl_plinth", "#b8ab90")
     b.box(wm, -hx, hx, -hy, hy, 0, H); b.box(plinth, -hx - .05, hx + .05, -hy - .05, hy + .05, 0, .5)
     for f in range(1, floors): b.box(trim, -hx - .08, hx + .08, -hy - .08, hy + .08, f * floor_h - .12, f * floor_h + .12)          # string course

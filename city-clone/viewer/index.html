@@ -115,6 +115,22 @@ addEventListener('hashchange', () => location.reload());
 const world = await fetch(WD + 'world.json').then(r => r.json());
 $('wtitle').textContent = world.title;
 const b2t = (x, y, z = 0) => new THREE.Vector3(x, z, -y);   // Blender (x east, y north, z up) -> three (x, y up, -z north)
+let HFS = (world.heights || []);                                                // terrain height fields (world.heights): Trash Mountain etc. Everywhere else the ground is flat (0)
+function groundH(x, z) {                                       // three coords in, metres up out (bilinear)
+  const by = -z;
+  for (const f of HFS) {
+    const u = (x - f.x0) / f.dx, v = (by - f.y0) / f.dx; if (u < 0 || v < 0 || u >= f.nx - 1 || v >= f.ny - 1) continue;
+    const i = Math.floor(u), j = Math.floor(v), a = u - i, b = v - j, h = f.h, n = f.nx;                // same triangle split as the Blender mesh: diagonal (i,j)-(i+1,j+1)
+    const h00 = h[j * n + i], h10 = h[j * n + i + 1], h01 = h[(j + 1) * n + i], h11 = h[(j + 1) * n + i + 1];
+    return a >= b ? h00 + a * (h10 - h00) + b * (h11 - h10) : h00 + b * (h01 - h00) + a * (h11 - h01);
+  }
+  return 0;
+}
+function groundGrad(x, z) { const e = .6; return [(groundH(x + e, z) - groundH(x - e, z)) / (2 * e), (groundH(x, z + e) - groundH(x, z - e)) / (2 * e)]; }
+function placeOnGround(g, x, z, th) {                          // set a car group on the terrain, pitched and rolled to the slope
+  const h = groundH(x, z); g.position.set(x, h, z); g.rotation.order = 'YXZ'; g.rotation.y = th;
+  if (h > 0 || g.rotation.x || g.rotation.z) { const [gx, gz] = groundGrad(x, z), fx = -Math.sin(th), fz = -Math.cos(th), rx = Math.cos(th), rz = -Math.sin(th); g.rotation.x = Math.atan(gx * fx + gz * fz); g.rotation.z = Math.atan(gx * rx + gz * rz); }
+}
 const rad = d => d * Math.PI / 180;
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
@@ -428,6 +444,7 @@ function physicsStep(dt) {
   let wT = -Math.tan(c.steer * maxSteer) * vf / CAR.wb; if (c.slide) wT *= 1.2; if (driving && input.hand) wT += -c.steer * sp * .12;
   c.w += (wT - c.w) * (1 - Math.exp(-10 * dt));
   c.vx = fx * vf + rx * vl; c.vz = fz * vf + rz * vl;
+  { const [gx, gz] = groundGrad(c.x, c.z); if (gx || gz) { c.vx -= 9.8 * gx * dt * .85; c.vz -= 9.8 * gz * dt * .85; } }     // hills: gravity pulls the car down the slope
   c.x += c.vx * dt; c.z += c.vz * dt; c.th += c.w * dt;
   c.nowSoft = new Set(); c.inSoft = c.inSoft || new Set();
   for (let pass = 0; pass < 2; pass++) for (const B of colliders) {
@@ -500,7 +517,7 @@ function footStep(dt) {
   const [nx, nz] = pushOut(foot.x + (foot.vx + foot.lx) * dt, foot.z + (foot.vz + foot.lz) * dt, .35); foot.x = nx; foot.z = nz;
   const sp = Math.hypot(foot.vx, foot.vz);
   if (sp > .35 && !punching) { let d = Math.atan2(-foot.vx, -foot.vz) - foot.face; d = Math.atan2(Math.sin(d), Math.cos(d)); foot.face += d * (1 - Math.exp(-14 * dt)); }
-  pilot.root.position.set(foot.x, 0, foot.z); pilot.root.rotation.y = foot.face;
+  pilot.root.position.set(foot.x, groundH(foot.x, foot.z), foot.z); pilot.root.rotation.y = foot.face;
   if (combat.state === 'idle') { if (sp < .25) play(pilot, 'idle'); else if (sp < 3.0) play(pilot, 'walk', { timeScale: clamp(sp / 1.4, .5, 2) }); else play(pilot, 'run', { timeScale: clamp(sp / 4.2, .7, 1.4) }); }
 }
 const targets = () => walkers.filter(w => w.state === 'walk' || w.state === 'hit');
@@ -643,9 +660,9 @@ function update(dt, draw = true) {
   const ws = frameWaiters; frameWaiters = []; for (const r of ws) r(dt);
   hitstop = Math.max(0, hitstop - dt); const dta = hitstop > 0 ? 0 : dt;          // hitstop freezes the action, never the camera or the effects
   acc += dt; let n = 0; while (acc >= FIXED && n++ < 12) { physicsStep(FIXED); acc -= FIXED; } if (acc > FIXED) acc = 0;
-  if (drive) { drive.car.group.position.set(drive.x, 0, drive.z); drive.car.group.rotation.y = drive.th; }
+  if (drive) placeOnGround(drive.car.group, drive.x, drive.z, drive.th);
   traffic.forEach((t, i) => {                                                   // scripted traffic loops along its lane
-    if (t.path) { t.pos += t.speed * dt; if (!t.path.closed && t.pos > t.path.L) t.pos = 0; const a = t.path.at(t.pos); t.g.position.set(a.x, 0, a.z); t.g.rotation.y = t.rz = a.yaw; moveCols[i].vx = a.fx * t.speed; moveCols[i].vz = a.fz * t.speed; }
+    if (t.path) { t.pos += t.speed * dt; if (!t.path.closed && t.pos > t.path.L) t.pos = 0; const a = t.path.at(t.pos); t.g.position.set(a.x, groundH(a.x, a.z), a.z); t.g.rotation.y = t.rz = a.yaw; moveCols[i].vx = a.fx * t.speed; moveCols[i].vz = a.fz * t.speed; }
     else {
       t.pos += t.dir * t.speed * dt; const lim = world.extent; if (t.pos > lim) t.pos = -lim; if (t.pos < -lim) t.pos = lim;
       if (t.axis === 'y') t.g.position.set(t.lane, 0, -t.pos); else t.g.position.set(t.pos, 0, -t.lane);
@@ -699,7 +716,8 @@ function update(dt, draw = true) {
   if (rig.mode === 'drive') cullStep(dt); else for (const c of cullables) c.o.visible = true;
   const p = rig.pitch * Math.PI / 180, dist = rig.dist * (1 + upd.speedZoom);
   rig.shake = Math.max(0, rig.shake - dt * 2.2); const sh = rig.shake * rig.shake * 1.1;
-  camera.position.set(rig.tx + (Math.random() - .5) * sh, Math.sin(p) * dist + (Math.random() - .5) * sh * .5, rig.tz + Math.cos(p) * dist + (Math.random() - .5) * sh); camera.lookAt(rig.tx, 0, rig.tz);
+  upd.gy = (upd.gy || 0) + (groundH(rig.tx, rig.tz) - (upd.gy || 0)) * Math.min(1, dt * 4);
+  camera.position.set(rig.tx + (Math.random() - .5) * sh, upd.gy + Math.sin(p) * dist + (Math.random() - .5) * sh * .5, rig.tz + Math.cos(p) * dist + (Math.random() - .5) * sh); camera.lookAt(rig.tx, upd.gy, rig.tz);
   sun.target.position.set(rig.tx, 0, rig.tz); sun.position.set(rig.tx - SUNDIR.x * 60, -SUNDIR.y * 60, rig.tz - SUNDIR.z * 60);
   game.hp = Math.min(100, game.hp + dt * 1.2); if (game.hp <= 0) { game.hp = 100; game.money = Math.max(0, game.money - 100); resetCar(); }     // HUD
   const cash = Math.round(game.money), hpv = Math.round(game.hp); if (cash !== lastCash) { $('cash').textContent = '$' + cash.toLocaleString('en-US'); lastCash = cash; }

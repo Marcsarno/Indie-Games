@@ -77,7 +77,7 @@ def grass(n=256):
 def stucco(name, hexc, n=128):
     save("stucco_" + name, rgb(hexc) * (1 + noise(n, 36, .035) + noise(n, 6, .03))[..., None])
 
-def tiles(hexc="#a9573a", n=256, rows=16):
+def tiles(hexc="#a9573a", n=256, rows=16, name="tiles"):
     """Terracotta barrel tiles: vertical ribs + staggered course shadows."""
     base = rgb(hexc); img = np.zeros((n, n, 3)); rw = n // 16
     for x in range(n):
@@ -87,7 +87,7 @@ def tiles(hexc="#a9573a", n=256, rows=16):
     for r in range(rows):
         img[r * ch:r * ch + 2, :] *= .70; img[r * ch + 2:r * ch + 5, :] *= .90
     img *= (1 + noise(n, 30, .08) + noise(n, 5, .06))[..., None]
-    save("tiles", img)
+    save(name, img)
 
 def water(n=256):
     base = rgb("#2d78b8"); v = 1 + noise(n, 24, .10) + noise(n, 6, .08)
@@ -109,7 +109,8 @@ def label(name, text, w, h, bg, fg, size=None, border=None, font="/usr/share/fon
 
 def florida():
     grass(); water(); wood(); tiles()
-    for k, c in (("cream", "#e9dcb8"), ("peach", "#e8c4a0"), ("sand", "#d8c490"), ("white", "#eee8dc"), ("butter", "#ecd890")): stucco(k, c)
+    for h_ in ("#bcb6aa", "#7a5a44", "#5d6670", "#b8463a"): tiles(h_, name="tiles_" + h_[1:])          # roof colours for the district house styles
+    for k, c in (("cream", "#e9dcb8"), ("peach", "#e8c4a0"), ("sand", "#d8c490"), ("white", "#eee8dc"), ("butter", "#ecd890"), ("mint", "#c4e2cc"), ("sky", "#c2d8e8"), ("coral", "#efb9a4"), ("lilac", "#d8c8e6"), ("stone", "#cfc8bc")): stucco(k, c)
     label("palmmarket", "PALM MARKET", 512, 128, "#f3ecd8", "#1f6b3a", border="#1f6b3a")
     label("restaurant_fl", "RESTAURANT", 384, 96, "#8c1c1c", "#ffffff"); label("nails", "NAILS", 256, 96, "#f0e6d0", "#8a2f6a", border="#8a2f6a")
     label("coffee", "COFFEE", 256, 96, "#21453a", "#f3ecd8"); label("pizza", "PIZZA", 256, 96, "#b8321f", "#ffe9a0"); label("cleaners", "CLEANERS", 320, 96, "#a63c2a", "#ffffff")
