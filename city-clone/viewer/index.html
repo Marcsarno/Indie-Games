@@ -79,8 +79,8 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 #chars { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); top: calc(10px + env(safe-area-inset-top, 0px)); display: flex; gap: 8px; }
 #chars button { all: unset; cursor: pointer; width: 42px; height: 42px; border-radius: 50%; overflow: hidden; border: 2px solid rgba(255, 255, 255, .55); box-shadow: 0 2px 6px rgba(0, 0, 0, .5); background: #222; pointer-events: auto; opacity: .8; }
 #chars button.on { border: 3px solid #ffd23f; opacity: 1; } #chars img { width: 100%; height: 100%; object-fit: cover; display: block; }
-#mission { margin-top: 44px; }
-#place { position: fixed; z-index: 3; left: max(16px, env(safe-area-inset-left, 0px)); top: calc(118px + env(safe-area-inset-top, 0px)); max-width: calc(100% - 170px); pointer-events: none; opacity: 0; transition: opacity .5s; text-shadow: 0 2px 6px rgba(0, 0, 0, .85); color: #fff; }
+#mission { margin-top: 44px; left: max(16px, env(safe-area-inset-left, 0px)) !important; transform: none !important; max-width: calc(100% - 150px); flex-wrap: wrap; row-gap: 2px; }
+#place { position: fixed; z-index: 3; left: max(16px, env(safe-area-inset-left, 0px)); top: calc(178px + env(safe-area-inset-top, 0px)); max-width: calc(100% - 170px); pointer-events: none; opacity: 0; transition: opacity .5s; text-shadow: 0 2px 6px rgba(0, 0, 0, .85); color: #fff; }
 #place.show { opacity: 1; } #place b { display: block; font: 700 22px/1.05 var(--display); letter-spacing: .06em; text-transform: uppercase; } #place span { display: block; margin-top: 3px; font: 600 15px/1.2 var(--display); letter-spacing: .05em; color: #ffd27f; }
 #mission b { color: #ffd23f; font-weight: 700; text-transform: uppercase; } #mission em { font-style: normal; font-variant-numeric: tabular-nums; } #mission em.hot { color: #ff5a4a; }
 .mbtn { all: unset; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; pointer-events: auto; cursor: pointer; width: 46px; height: 46px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); display: grid; align-content: center; justify-items: center; gap: 5px; }
@@ -118,7 +118,7 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 <div id="menu" hidden><div class="mcard" role="dialog" aria-label="Paused">
   <h1>Grand Theft<br>Coconut Creek</h1><p class="msub">Paused</p>
   <button class="btn mbig" id="m-resume">Resume</button>
-  <div class="mgrid"><button class="btn" id="snd" aria-pressed="true">Sound: on</button><button class="btn" id="m-ctrl">Controls: arrows</button><button class="btn" id="m-cam">Camera: follows car</button><button class="btn" id="m-tune">Tune the car</button><button class="btn" id="m-view">Camera</button><button class="btn" id="m-fps">Show FPS: off</button><button class="btn" id="m-track">Test track</button><button class="btn" id="m-new">New game</button></div>
+  <div class="mgrid"><button class="btn" id="snd" aria-pressed="true">Sound: on</button><button class="btn" id="m-ctrl">Controls: arrows</button><button class="btn" id="m-cam">Camera: follows car</button><button class="btn" id="m-tune">Tune the car</button><button class="btn" id="m-view">Camera</button><button class="btn" id="m-fps">Show FPS: off</button><button class="btn" id="m-track">Test track</button><button class="btn" id="m-mission">Restart mission</button><button class="btn" id="m-new">New game</button></div>
   <p class="msub">Test build</p>
 </div></div>
 
@@ -171,6 +171,7 @@ import { createTraffic, TT } from './traffic.js';
 import { createPeople, PT } from './people.js';
 import { createPolice, POL } from './police.js';
 import { createMissions } from './missions.js';
+import { createDave } from './dave.js';
 import { createTrack, PAD } from './track.js';
 
 const $ = id => document.getElementById(id);
@@ -517,8 +518,17 @@ const ai = graph ? createTraffic(graph, { THREE, makeCar, carPoly: (x, z, th, d)
 if (ai) for (const c of ai.cars) c.col.ai = true;
 const cops = graph ? createPolice(graph, { THREE, makeCar, carPoly: (x, z, th, d) => carPoly(x, z, th, d), colliders, placeOnGround, scene, camera, pushCircle: (x, z, r, sk) => pushCircle(x, z, r, sk), audio: () => (muted ? null : audio),
   onStars: W => showStars(W), onBusted: () => busted(), onWreck: c => { crashSound(12); burst(c.x, .8, c.z, 0, 0, 14); game.money += 50; } }) : null;
-const missions = graph ? createMissions(graph, { THREE, scene, groundH, banner: t => banner(t), addMoney: v => { game.money += v; }, cops, heights: world.heights }) : null;
-const MPX = { x: 0, z: 0, speed: 0, driving: false };
+const DEV = /[?&]dev=1/.test(location.search);       // round 29: the showcase is the Dave mission; the old test missions and the tuning extras only with ?dev=1
+const DENV = {                                     // what the Dave mission reads from the game (getters, so it always sees the current values)
+  get foot() { return foot; }, get hmode() { return hmode; }, get cur() { return cur; }, get CHARS() { return CHARS; }, get respawning() { return respawning; }, lastDeath: '',
+  get carMass() { return drive ? drive.mass * TUNE.heroMass * (drive.st ? drive.st.ram : 1) : 2000; },
+  switchTo: i => switchTo(i, true), addMoney: v => { game.money += v; }, heal: () => { game.hp = 100; }, resetCar: (x, z, th) => resetCar(x, z, th),
+  hurt: (amt, dx, dz) => { game.hp = Math.max(0, game.hp - amt); rig.shake = Math.min(1, rig.shake + .35); if (hmode === 'foot') { foot.lx += dx * 6; foot.lz += dz * 6; } },
+  sound: k => { if (k === 'crash') crashSound(12); },
+};
+const missions = !graph ? null : DEV ? createMissions(graph, { THREE, scene, groundH, banner: t => banner(t), addMoney: v => { game.money += v; }, cops, heights: world.heights })
+  : createDave({ THREE, scene, makePerson: o => makePerson(o), makeCar: (k, c) => makeCar(k, c), play: (a, n, o) => play(a, n, o), walkers, colliders, carPoly: (x, z, th, d) => carPoly(x, z, th, d), placeOnGround, banner: t => banner(t), cops, graph, env: DENV });
+const MPX = { x: 0, z: 0, vx: 0, vz: 0, th: 0, speed: 0, driving: false };
 function addStatic(poly) {                        // a solid collider added after load (test track walls): straight into the static grid
   const [cx, cz] = cen(poly); let r = 0; for (const p of poly) r = Math.max(r, Math.hypot(p[0] - cx, p[1] - cz)); const c = { poly, cx, cz, r, vx: 0, vz: 0, soft: null };
   for (let gx = Math.floor((cx - r) / CELL); gx <= Math.floor((cx + r) / CELL); gx++) for (let gz = Math.floor((cz - r) / CELL); gz <= Math.floor((cz + r) / CELL); gz++) { const k = gx * 4096 + gz; if (!GRID.has(k)) GRID.set(k, []); GRID.get(k).push(c); }
@@ -825,7 +835,7 @@ function sidewalkNear(x, z) {                     // a sidewalk spot next to the
 }
 let respawning = false;
 async function respawn(kind) {                    // fade out, wake up on foot at City Hall (wasted) or outside the police station (busted), fade in
-  if (respawning) return; respawning = true; $('fade').classList.add('on'); banner(kind === 'busted' ? 'BUSTED' : 'WASTED'); await wait(1.2);
+  if (respawning) return; respawning = true; DENV.lastDeath = kind; $('fade').classList.add('on'); banner(kind === 'busted' ? 'BUSTED' : 'WASTED'); await wait(1.2);
   if (cops) cops.clear(); if (drive) { const v = drive; if (v.mode === 'driving') parkVehicle(v); delete v.car.occupants.FL; } drive = null;
   const [x, z] = sidewalkNear(...PX2M(RESPAWN[kind] || RESPAWN.wasted)); foot.x = x; foot.z = z; foot.vx = foot.vz = foot.lx = foot.lz = 0; foot.face = 0;
   pilot.root.position.set(x, 0, z); pilot.root.rotation.set(0, 0, 0); pilot.root.visible = true; play(pilot, 'idle', { fade: .05 });
@@ -913,7 +923,8 @@ function roamStep(dt) {
 }
 /* Switch (GTA 5 style): the camera rises into the sky over you, slides across the city, and drops onto the other character; you take over at the bottom. */
 const SW = { on: false, t: 0, ci: 0, fog: null };
-function switchTo(ci) {
+function switchTo(ci, scripted) {
+  if (!scripted && missions && missions.active && missions.stage !== 'intro') { banner('NOT NOW'); return; }
   if (SW.on || ci === cur || busy || hmode === 'busy' || track.active || respawning || !CHARS[ci].person) return;
   const C = CHARS[cur]; SW.on = true; SW.t = 0; SW.ci = ci; SW.d0 = rig.dist; SW.p0 = rig.pitch;
   if (hmode === 'driving' && drive === vehs[C.ride]) { const d = drive, sp = Math.max(0, d.vx * -Math.sin(d.th) + d.vz * -Math.cos(d.th)); drive = null; unseatRider(); startRoam(C, d.x, d.z, d.th, sp); if (!C.roam) parkVehicle(vehs[C.ride]); }
@@ -1078,7 +1089,7 @@ for (const [btn, panel, other] of [['t-view', 'p-view', 'p-tune'], ['t-tune', 'p
 let paused = false;
 /* title screen (also unlocks sound on iPhone: it needs a tap), full map, first-run controls hint */
 const titleOn = !/[?&](notitle|hud|bench)/.test(location.search);
-function startPlay() { $('title').hidden = true; paused = false; ensureAudio(); let seen = false; try { seen = localStorage.getItem('gtcc-hint') === '1'; } catch (e) { /* ok */ } if (!seen) { $('hint').hidden = false; setTimeout(() => { $('hint').hidden = true; }, 7000); try { localStorage.setItem('gtcc-hint', '1'); } catch (e) { /* ok */ } } }
+function startPlay() { $('title').hidden = true; paused = false; ensureAudio(); if (missions && missions.start && !/[?&]nomission/.test(location.search)) setTimeout(() => missions.start(), 1200); let seen = false; try { seen = localStorage.getItem('gtcc-hint') === '1'; } catch (e) { /* ok */ } if (!seen) { $('hint').hidden = false; setTimeout(() => { $('hint').hidden = true; }, 7000); try { localStorage.setItem('gtcc-hint', '1'); } catch (e) { /* ok */ } } }
 $('t-play').addEventListener('click', startPlay);
 const MAPLAB = [['Publix', [868, 372]], ['Seminole Casino', [1180, 470]], ['City Hall', [930, 620]], ['Police', [1030, 640]], ['Promenade', [1120, 990]], ['Trash Mountain', [997, 183]], ['Windmill Park', [265, 1100]], ['Lakeside Park', [300, 690]], ['Golf', [1240, 380]], ['School', [810, 750]], ['Industrial', [400, 905]]];
 function drawBigMap() {
@@ -1130,6 +1141,8 @@ function rideTo(name) {                           // test switch: the chosen her
   if (old !== vehs[name]) { Object.assign(old, { x: STORE[0] + { player: 0, hero_tesla: 10, hero_moto: 20 }[old.name] | 0, z: STORE[1], th: 0, vx: 0, vz: 0, w: 0 }); if (old === drive) drive = null; old.mode = 'parked'; placeOnGround(old.car.group, old.x, old.z, old.th); setCarCollider(old); old.car.occupants = {}; }
   ride = name; resetCar(pose[0], pose[1], pose[2]);
 }
+if (!DEV) for (const id of ['m-ctrl', 'm-cam', 'm-tune', 'm-view', 'm-fps', 'm-track']) $(id).style.display = 'none';
+$('m-mission').addEventListener('click', () => { setPaused(false); if (missions && missions.restart) missions.restart(); });
 $('m-new').addEventListener('click', () => { if (!confirm('Start a new game? Your cash and finished missions are cleared.')) return; noSave = true; try { localStorage.removeItem('gtcc-save'); } catch (e) { /* ok */ } location.reload(); });
 let noSave = false;
 const outs = {};
@@ -1291,7 +1304,7 @@ function update(dt, draw = true) {
     if (drive && hmode === 'driving') CPX.p = AIX.p; else { const F = AIX.f; F.x = foot.x; F.z = foot.z; F.vx = foot.vx; F.vz = foot.vz; F.L = .6; F.W = .6; CPX.p = F; }
     cops.step(dta, CPX.p);
   }
-  if (missions) { const dr = drive && hmode === 'driving'; MPX.x = dr ? drive.x : foot.x; MPX.z = dr ? drive.z : foot.z; MPX.speed = dr ? Math.hypot(drive.vx, drive.vz) : 0; MPX.driving = dr; missions.step(dta, MPX); }
+  if (missions) { const dr = drive && hmode === 'driving'; MPX.x = dr ? drive.x : foot.x; MPX.z = dr ? drive.z : foot.z; MPX.speed = dr ? Math.hypot(drive.vx, drive.vz) : 0; MPX.vx = dr ? drive.vx : foot.vx; MPX.vz = dr ? drive.vz : foot.vz; MPX.th = dr ? drive.th : foot.face; MPX.driving = dr; missions.step(dta, MPX); }
   PF.mark('traffic');
   footStep(dta); combatStep(dta);
   if (ppl) { if (!(drive && hmode === 'driving')) AIX.player = null; ppl.step(dta, AIX); }
@@ -1373,6 +1386,6 @@ function update(dt, draw = true) {
 let frameHook = null;                                          // hud.js hooks frame timing here
 function frame(t) { const t0 = performance.now(); const dt_ = Math.min(clock.getDelta(), .05); if (!manual && !paused) { update(dt_); if (!titleShown) showTitle(); } else if (paused) renderer.render(scene, camera); if (frameHook) frameHook(t, performance.now() - t0); requestAnimationFrame(frame); }
 syncSliders(); setView('drive'); requestAnimationFrame(frame);
-window.__city = { dstickIn, track, vehs, get ride() { return ride; }, CHARS, switchTo, SW, get cur() { return cur; }, get pilotP() { return pilot; }, world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, ppl, cops, missions, sun, setFrameHook: f => { frameHook = f; }, upd };
+window.__city = { missions, DENV, dstickIn, track, vehs, get ride() { return ride; }, CHARS, switchTo, SW, get cur() { return cur; }, get pilotP() { return pilot; }, world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, ppl, cops, missions, sun, setFrameHook: f => { frameHook = f; }, upd };
 if (/[?&](hud|bench)=/.test(location.search)) import('./hud.js?v=' + (MAN['hud.js'] || '1')).then(m => m.start(window.__city, THREE)).catch(e => console.error('hud', e));
 </script>

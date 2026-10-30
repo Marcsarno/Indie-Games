@@ -32,15 +32,15 @@ export function createPolice(G, deps) {
     cops.push(c);
   }
   // ---------- wanted state ----------
-  const W = { stars: 0, heat: 0, wrecked: 0, probation: 0, unseen: 0, bust: 0, flash: 0 };
+  const W = { stars: 0, heat: 0, wrecked: 0, probation: 0, unseen: 0, bust: 0, flash: 0, lock: false, force: 0 };     // lock/force: a scripted chase (the Dave mission) sets the cop count and stars, nothing the player does changes them
   function setStars(s) { s = Math.max(0, Math.min(4, s)); if (s !== W.stars) { W.stars = s; W.wrecked = 0; if (onStars) onStars(W); } }
   function crime(kind, amt = 1) {                   // called by the game: 'assault', 'knockdown', 'runover', 'carcrash'
-    if (W.probation > 0) W.probation = 0;
+    if (W.lock) return; if (W.probation > 0) W.probation = 0;
     W.heat += amt; let s = 0; for (let k = 1; k <= 4; k++) if (W.heat >= POL.heatFor[k]) s = k; if (s > W.stars) setStars(s); W.unseen = 0; if (onStars) onStars(W);
   }
   function wreck(c) {
     c.state = 'WRECKED'; c.v = 0; c.car.setDamage(1); c.bar[0].visible = c.bar[1].visible = false; if (onWreck) onWreck(c);
-    if (W.stars > 0) { W.wrecked++; if (W.wrecked >= POL.wreckNeed[W.stars]) { setStars(W.stars - 1); W.heat = POL.heatFor[W.stars]; W.probation = POL.probation; } if (onStars) onStars(W); }
+    if (W.stars > 0 && !W.lock) { W.wrecked++; if (W.wrecked >= POL.wreckNeed[W.stars]) { setStars(W.stars - 1); W.heat = POL.heatFor[W.stars]; W.probation = POL.probation; } if (onStars) onStars(W); }
   }
   function clear() { setStars(0); W.heat = 0; W.probation = 0; W.unseen = 0; W.bust = 0; for (const c of cops) if (c.on) despawn(c); if (onStars) onStars(W); }
   // ---------- spawn ----------
@@ -72,7 +72,7 @@ export function createPolice(G, deps) {
     flashT += dt; const ph = Math.floor(flashT * 6) % 2;
     // spawn / despawn
     spawnT -= dt; blockT -= dt;
-    const want = W.probation > 0 ? 0 : POL.maxCops[W.stars];
+    const want = W.force > 0 ? W.force : W.probation > 0 ? 0 : POL.maxCops[W.stars];
     let active = 0; for (const c of cops) if (c.on && c.state !== 'WRECKED' && c.state !== 'LEAVE') active++;
     if (spawnT <= 0) {
       spawnT = 1.2;
@@ -117,10 +117,12 @@ export function createPolice(G, deps) {
     }
     // losing them / getting busted
     if (W.stars > 0) {
-      W.unseen = seen ? 0 : W.unseen + dt; if (W.unseen > POL.loseAfter) { setStars(W.stars - 1); W.heat = POL.heatFor[W.stars]; W.unseen = 0; if (onStars) onStars(W); }
+      W.unseen = seen || W.lock ? 0 : W.unseen + dt; if (W.unseen > POL.loseAfter) { setStars(W.stars - 1); W.heat = POL.heatFor[W.stars]; W.unseen = 0; if (onStars) onStars(W); }
       W.bust = pinning ? W.bust + dt : Math.max(0, W.bust - dt * 2); if (W.bust > POL.bustTime) { W.bust = 0; if (onBusted) onBusted(); clear(); }
     }
     sirenOn(W.stars > 0 && nearest < 120, Math.max(.15, 1 - nearest / 120));
   }
-  return { cops, step, crime, clear, W, POL };
+  function force(n) { W.force = n; if (n > 0) setStars(Math.min(4, Math.max(2, n))); spawnT = Math.min(spawnT, .2); if (onStars) onStars(W); }
+  function lock(on) { W.lock = on; }
+  return { cops, step, crime, clear, force, lock, W, POL };
 }
