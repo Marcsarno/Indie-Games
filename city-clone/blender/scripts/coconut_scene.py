@@ -489,7 +489,7 @@ def lot_object(name, cx, cy, rz, W, lot_d, D, prob=.4, apron_len=4.0, rows2=None
     for (sx, sy) in stl:
         wx, wy = _rot(cx, cy, rz, sx, sy); LOTS.append((wx, wy, rz + (0 if sy < aisle else 180), prob))
     p0 = _rot(cx, cy, rz, 0, (y0 + y1) / 2); MAP.append([round(p0[0] - W / 2, 1), round(p0[1] - lot_d / 2, 1), round(p0[0] + W / 2, 1), round(p0[1] + lot_d / 2, 1), "#5a5c60"])
-def frontage_lot(poly, name, parts, lot_d=17.0, count=1, roads=None, max_rank=8.6, clear=1.0, prob=.4, step=4.0, gap=1.0, rows2=None):
+def frontage_lot(poly, name, parts, lot_d=17.0, count=1, roads=None, max_rank=8.6, clear=1.0, prob=.4, step=4.0, gap=1.0, rows2=None, allow=()):
     """parts = [(maker, w, d, front_extra)]: placed side by side, fronts on the lot's back edge. Walks every street crossing the polygon (or only `roads`)."""
     W = sum(p[1] for p in parts) + gap * (len(parts) - 1); Dm = max(p[2] + p[3] for p in parts); D = lot_d + Dm; bb = bbox(poly); made = 0
     for nm, r in ROAD.items():
@@ -502,10 +502,11 @@ def frontage_lot(poly, name, parts, lot_d=17.0, count=1, roads=None, max_rank=8.
             while s_ < r.L - W / 2 - 2 and made < count:
                 x, y, tx, ty = r.at(s_); cx, cy = r.off(s_, side * (edge + D / 2)); rz = math.degrees(math.atan2(ty, tx)) if side > 0 else math.degrees(math.atan2(-ty, -tx))
                 corners = [_rot(cx, cy, rz, sx * W / 2, sy * D / 2) for sx in (-1, 1) for sy in (-1, 1)]
-                f_ = (name, round(cx, 2), round(cy, 2), W, D, rz, ())
+                f_ = (name, round(cx, 2), round(cy, 2), W, D, rz, tuple(allow))
                 if not inside(poly, cx, cy): s_ += step; continue
                 pr_ = fp_problems(f_, footprints(), clear)
                 if pr_:
+                    if name in os.environ.get('DEBUGKIND', '').split(','): print('SKIPF', name, round(cx), round(cy), round(rz), pr_[:2])
                     WHY[name] = WHY.get(name, {}); k__ = "road" if "corridor" in pr_[0] else "land" if "land" in pr_[0] else "lake" if "lake" in pr_[0] else pr_[0].split(" overlaps ")[-1][:14]; WHY[name][k__] = WHY[name].get(k__, 0) + 1; s_ += step; continue
                 lot_object(f"{name}{made}_lot", cx, cy, rz, W, lot_d, D, prob, edge - r.hw - rd.CURB + .2, rows2)
                 lx = -W / 2
@@ -538,8 +539,8 @@ frontage_lot(D("Elementary School"), "school", [(lambda nm: make_house(nm, 24, 1
 # -- casino + parking garage (east of Creekview Dr)
 CAS = D("Seminole Casino Coconut Creek")
 casino_maker = lm(LMC, "casino", plaza_maker(56, 36, 11.0, 0))
-if not frontage_lot(CAS, "casino", [(casino_maker, 56, 36, 0.0)], lot_d=17, prob=.55, roads=("Creekview Dr", "Club Dr")):
-    frontage_lot(CAS, "casino", [(lambda nm: _scaled(casino_maker(nm), .8), 45, 29, 0.0)], lot_d=17, prob=.55)
+if not frontage_lot(CAS, "casino", [(casino_maker, 56, 36, 0.0)], lot_d=17, prob=.55, roads=("Creekview Dr",), allow=("Retail Dr",)):
+    frontage_lot(CAS, "casino", [(lambda nm: _scaled(casino_maker(nm), .8), 45, 29, 0.0)], lot_d=17, prob=.55, roads=("Creekview Dr",), allow=("Retail Dr",))
 for (x, y) in spots(D("Casino garage"), 3, 53):
     if try_place("garage", lambda nm: dk.garage(nm, 40, 22, 3), x, y, road_facing_rz, 40, 22, 1.0, near=14): break
 # -- gas stations (Wiles x Blvd corner, Palm Blvd west) + Lyons Mart
@@ -550,7 +551,11 @@ def gas_at(poly, seed):
             a_ = math.radians(rz); cbox(x - 6 * math.sin(a_), y + 6 * math.cos(a_), 9.4, 6.4, rz); return True
     print("GAS MISS"); return False
 gas_at(D("Gas station + Lyons Mart"), 21); gas_at(D("Gas station west"), 22)
-frontage_lot(D("Gas station + Lyons Mart"), "lmart", [(strip(20, 10, (("coffee", 6, "#21453a"), ("pizza", 5, "#b8321f")), 15, 6.0), 20, 10, 0.0)], lot_d=12)
+frontage_lot(D("Gas station + Lyons Mart"), "lmart", [(strip(20, 10, (("coffee", 6, "#21453a"), ("pizza", 5, "#b8321f")), 15, 6.0), 20, 10, 0.0)], lot_d=10, max_rank=13, clear=.6)
+# -- small shop pads fill what is left of the thin commercial strips (they may face any road, Lyons Rd included)
+PAD_SHOPS = (("coffee", 6, "#21453a"), ("pizza", 5, "#b8321f"), ("nails", 5, "#7a2f6a"), ("cleaners", 6, "#a63c2a"), ("restaurant_fl", 7, "#8c1c1c"))
+for k_d, dn_ in enumerate(("Retail Commons (west shops)", "Retail Commons (east)", "Retail outparcels", "Gas station + Lyons Mart", "Gas station west")):
+    frontage_lot(D(dn_), "pad", [(strip(14, 10, (PAD_SHOPS[k_d % 5], PAD_SHOPS[(k_d + 2) % 5]), 700 + k_d, 6.2), 14, 10, 0.0)], lot_d=8, count=4, max_rank=13, clear=.6, prob=.5)
 tick_('core')
 # -- sports: stadium, tennis, playground (east of the school)
 def place_stadium(cx, cy, k=.9):
