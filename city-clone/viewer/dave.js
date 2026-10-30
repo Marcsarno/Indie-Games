@@ -44,21 +44,29 @@ export function createDave(D) {
 #mfail b{font:700 30px/1 var(--display,system-ui);letter-spacing:.08em;color:#ff5a4a;text-transform:uppercase}
 #mfail button{all:unset;cursor:pointer;padding:12px 26px;border-radius:10px;background:#ffd23f;color:#111;font:700 16px system-ui}
 #hurt{position:fixed;inset:0;z-index:2;pointer-events:none;box-shadow:inset 0 0 120px 40px rgba(220,0,0,.0);transition:box-shadow .15s}
-#hurt.on{box-shadow:inset 0 0 120px 40px rgba(220,0,0,.55)}`;
+#hurt.on{box-shadow:inset 0 0 120px 40px rgba(220,0,0,.55)}
+#phone .skip{all:unset;cursor:pointer;margin-left:auto;padding:5px 10px;border-radius:12px;background:#dcdce2;color:#333;font:600 12px system-ui}
+#phone .skip[hidden]{display:none}
+#mfail small{color:#cfd3da;font:500 13px system-ui;letter-spacing:.04em}
+.warn{position:fixed;left:0;top:0;z-index:4;width:0;height:0;pointer-events:none;display:none}
+.warn i{position:absolute;left:-22px;top:-20px;width:0;height:0;border-left:22px solid transparent;border-right:22px solid transparent;border-bottom:40px solid #ff2b2b;filter:drop-shadow(0 0 8px #ff2b2b) drop-shadow(0 0 2px #fff);animation:wblink .18s steps(2) infinite}
+@keyframes wblink{50%{opacity:.45}}`;
   document.head.appendChild(css);
-  const phone = document.createElement('div'); phone.id = 'phone'; phone.hidden = true; phone.innerHTML = `<div class="ph"><div class="hd"><img src="img/dave.jpg" alt=""><div><b>Dave</b><small>Marc, Aaron, Chris</small></div></div><div class="msgs"></div><div class="pick" hidden>Who's going?<div></div></div></div>`;
+  const phone = document.createElement('div'); phone.id = 'phone'; phone.hidden = true; phone.innerHTML = `<div class="ph"><div class="hd"><img src="img/dave.jpg" alt=""><div><b>Dave</b><small>Marc, Aaron, Chris</small></div><button class="skip" hidden>Skip ›</button></div><div class="msgs"></div><div class="pick" hidden>Who's going?<div></div></div></div>`;
   document.body.appendChild(phone);
-  const fail = document.createElement('div'); fail.id = 'mfail'; fail.hidden = true; fail.innerHTML = `<div class="c"><b>Mission failed</b><span id="mf-why"></span><button id="mf-retry">Retry</button></div>`; document.body.appendChild(fail);
+  const fail = document.createElement('div'); fail.id = 'mfail'; fail.hidden = true; fail.innerHTML = `<div class="c"><b>Mission failed</b><span id="mf-why"></span><small id="mf-try"></small><button id="mf-retry">Retry</button></div>`; document.body.appendChild(fail);
   const hurt = document.createElement('div'); hurt.id = 'hurt'; document.body.appendChild(hurt);
   const chip = document.getElementById('mission'); const msgs = phone.querySelector('.msgs'), pick = phone.querySelector('.pick');
   const wait = s => new Promise(r => setTimeout(r, s * 1000));
   const say = (who, text, me) => { const m = document.createElement('div'); m.className = 'm' + (me ? ' me' : ''); m.innerHTML = `<i>${who}</i>${text}`; msgs.appendChild(m); };
-  const typing = async (who, s) => { const t = document.createElement('div'); t.className = 'typing'; t.textContent = who + ' is typing…'; msgs.appendChild(t); await wait(s); t.remove(); };
+  const typing = async (who, s) => { const tok = S.run; const t = document.createElement('div'); t.className = 'typing'; t.textContent = who + ' is typing…'; msgs.appendChild(t); await wait(s); t.remove(); if (tok !== S.run) for (const x of msgs.querySelectorAll('.typing')) x.remove(); };
   const REPLIES = { marc: 'On it Dave. Jeep\'s warmed up 👍', aaron: 'Say less. Tesla\'s already backing out.', chris: 'Bike\'s faster. Be there in 10 🏍️' };
   const hurtFlash = () => { hurt.classList.add('on'); setTimeout(() => hurt.classList.remove('on'), 160); };
 
+  let tries = 0; try { tries = +localStorage.getItem('gtcc-dave-tries') || 0; } catch (e) { /* ok */ }          // failed attempts so far (kept until you deliver)
+  const saveTries = () => { try { localStorage.setItem('gtcc-dave-tries', String(tries)); } catch (e) { /* ok */ } };
   // ---------- state ----------
-  const S = { stage: 'off', t: 0, cops: 0, copT: 0, missT: 0, heat: 0, d0: 1, thugs: [], missiles: [], checkpoint: null, failed: false };
+  const S = { run: 0, cpNear: null, stopSaid: false, stage: 'off', t: 0, cops: 0, copT: 0, missT: 0, heat: 0, d0: 1, thugs: [], missiles: [], checkpoint: null, failed: false };
   const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
   function objective(text, sub = '') { chip.hidden = !text; if (text) chip.innerHTML = `<b>Groceries for Dave</b><span>${text}</span>${sub ? `<em>${sub}</em>` : ''}`; }
   const target = () => ({ toPublix: [DAVE.lot[0], -DAVE.lot[1]], park: [DAVE.lot[0], -DAVE.lot[1]], walkIn: [DAVE.door[0], -DAVE.door[1]], fight: null, grab: [DAVE.door[0], -DAVE.door[1]], back: null, chase: [DAVE.house[0], -DAVE.house[1]] })[S.stage] || null;   // minimap wants Blender x, y
@@ -70,14 +78,24 @@ export function createDave(D) {
     publix: { a: [DAVE.door[0] - 16, DAVE.door[1] - 7], b: [DAVE.door[0] + 12, DAVE.door[1] - 8], y0: -.45, y1: .35, pitch: 24, d0: 42, d1: 34, dur: 7 },
     house: { a: [DAVE.house[0] + 5, DAVE.house[1] + 3], b: [DAVE.house[0] + 2, DAVE.house[1] + 3], y0: DAVE.houseYaw - .3, y1: DAVE.houseYaw + .1, pitch: 34, d0: 27, d1: 23, dur: 6 },
   };
-  async function start() {
-    if (S.stage !== 'off' && S.stage !== 'done') return; S.stage = 'intro'; msgs.innerHTML = ''; pick.hidden = true;
-    env.cine([SHOTS.city]); await wait(.8); phone.hidden = false; await wait(.05); phone.classList.add('show');
-    await wait(.4); await typing('Dave', 1.0); say('Dave', 'Hey guys.. still having some issues and can\'t make it to the store.'); await wait(.6);
-    env.cine([SHOTS.publix]); await typing('Dave', 1.2); say('Dave', 'Can you pick me up some groceries from Publix? 🙏'); await wait(3.6);
-    env.cine([SHOTS.house]); await typing('Dave', .8); say('Dave', 'I\'m home on Banks Rd. Pull right into the driveway 🏠'); await wait(1.6);
-    const row = pick.querySelector('div'); row.innerHTML = ''; pick.hidden = false;
+  const INTRO = [['Dave', 'Hey guys.. still having some issues and can\'t make it to the store.'], ['Dave', 'Can you pick me up some groceries from Publix? 🙏'], ['Dave', 'I\'m home on Banks Rd. Pull right into the driveway 🏠']];
+  const skipBtn = phone.querySelector('.skip');
+  function showPick() {
+    skipBtn.hidden = true; const row = pick.querySelector('div'); row.innerHTML = ''; pick.hidden = false;
     env.CHARS.forEach((C, i) => { const b = document.createElement('button'); b.innerHTML = `<img src="img/${C.id}.jpg" alt="">${C.name}`; b.onclick = () => choose(i); row.appendChild(b); });
+  }
+  function skipIntro() {                                   // tap the screen (or Skip) during the texts: all of them at once, straight to "Who's going?"
+    if (S.stage !== 'intro' || !pick.hidden) return; S.run++; msgs.innerHTML = ''; for (const [w, t] of INTRO) say(w, t);
+    phone.hidden = false; phone.classList.add('show'); env.cine([{ ...SHOTS.house, dur: .01 }]); showPick();
+  }
+  skipBtn.onclick = skipIntro; document.getElementById('view').addEventListener('pointerdown', () => { if (S.stage === 'intro') skipIntro(); });
+  async function start() {
+    if (S.stage !== 'off' && S.stage !== 'done') return; S.stage = 'intro'; msgs.innerHTML = ''; pick.hidden = true; const tok = ++S.run, gone = () => tok !== S.run;
+    env.cine([SHOTS.city]); await wait(.8); if (gone()) return; phone.hidden = false; skipBtn.hidden = false; await wait(.05); phone.classList.add('show');
+    await wait(.4); await typing('Dave', 1.0); if (gone()) return; say(...INTRO[0]); await wait(.6); if (gone()) return;
+    env.cine([SHOTS.publix]); await typing('Dave', 1.2); if (gone()) return; say(...INTRO[1]); await wait(3.6); if (gone()) return;
+    env.cine([SHOTS.house]); await typing('Dave', .8); if (gone()) return; say(...INTRO[2]); await wait(1.6); if (gone()) return;
+    showPick();
   }
   async function choose(i) {
     const C = env.CHARS[i]; pick.hidden = true; phone.classList.remove('show'); env.cineStop(); await wait(.3); phone.hidden = true;
@@ -213,7 +231,24 @@ export function createDave(D) {
       r.col.poly = carPoly(r.x, r.z, r.th, r.car.dims); r.col.cx = r.x; r.col.cz = r.z; r.col.r = 3; r.col.vx = r.vx; r.col.vz = r.vz;
     }
   }
-  function clearMissiles() { for (const r of RK) park(r); }
+  const WARN = RK.map(() => { const d = document.createElement('div'); d.className = 'warn'; d.innerHTML = '<i></i>'; document.body.appendChild(d); return d; }), pv = new THREE.Vector3();
+  function warnStep(P) {                                   // a red arrow at the screen edge (and a whoosh) about a second before a rocket cop reaches you
+    RK.forEach((r, i) => {
+      const el = WARN[i]; let show = false;
+      if (r.on && !r.hit && !r.crash && env.hmode === 'driving') {
+        const dx = P.x - r.x, dz = P.z - r.z, d = Math.hypot(dx, dz), vc = ((r.vx - P.vx) * dx + (r.vz - P.vz) * dz) / (d || 1);
+        if (d < 70 && vc > 4 && d / vc < 1.3) {
+          show = true; pv.set(r.x, 1, r.z).project(D.camera); let sx = pv.x, sy = -pv.y; if (pv.z > 1) { sx = -sx; sy = -sy; }
+          const W = env.W, H = env.H, a = Math.atan2(sy * H, sx * W), m = Math.min(1, .9 / Math.max(Math.abs(sx), Math.abs(sy), .001));
+          const x = W / 2 + sx * m * (W / 2 - 34), y = H / 2 + sy * m * (H / 2 - 34);
+          el.style.transform = `translate(${Math.max(30, Math.min(W - 30, x))}px, ${Math.max(90, Math.min(H - 30, y))}px) rotate(${a + Math.PI / 2}rad)`;
+          if (!r.warned) { r.warned = true; env.sound('whoosh', sx); }
+        }
+      }
+      if (!r.on) r.warned = false; const disp = show ? 'block' : 'none'; if (el.style.display !== disp) el.style.display = disp;
+    });
+  }
+  function clearMissiles() { for (const r of RK) { park(r); r.warned = false; } for (const el of WARN) el.style.display = 'none'; }
   const frustum = new THREE.Frustum(), pm = new THREE.Matrix4(), sph = new THREE.Sphere(new THREE.Vector3(), 5);
   const onScreen = (x, z) => { sph.center.set(x, 1, z); return frustum.intersectsSphere(sph); };
 
@@ -272,7 +307,7 @@ export function createDave(D) {
         const bar = [0, 1].map(j => { const b_ = new THREE.Mesh(new THREE.BoxGeometry(.5, .18, .3), new THREE.MeshBasicMaterial({ color: j ? 0x2b6bff : 0xff2b2b, toneMapped: false })); b_.position.set(j ? .35 : -.35, car.dims[3] || 1.75, 0); car.group.add(b_); return b_; });
         RB.bars.push(bar); RB.parts.push({ obj: car.group, cx: x, cz: z });
       }
-      RB.blockers.push({ x: at[0], z: at[1], vx: 0, vz: 0, L: 1.5, W: 2 * span });
+      RB.blockers.push({ x: at[0], z: at[1], vx: 0, vz: 0, L: 1.5, W: 2 * span, nx, nz, gap: !!B.gap });
     }
     for (const k in I) { if (!I[k].length) continue; const im = new THREE.InstancedMesh(GEO[k], k === 'lamp' ? MAT.lamp.clone() : MAT[k], I[k].length); I[k].forEach((m, i) => im.setMatrixAt(i, m)); im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere();
       im.castShadow = k !== 'lamp' && k !== 'refl' && k !== 'base'; im.receiveShadow = true; scene.add(im); RB.parts.push({ obj: im, cx: DAVE.house[0], cz: DAVE.house[1], r: 200 }); if (k === 'lamp') RB.lampMesh = im; }
@@ -293,23 +328,27 @@ export function createDave(D) {
   // ---------- step ----------
   function step(dt, P) {                                   // P: { x, z (three), vx, vz, th, speed, driving }
     if (S.stage === 'off' || S.stage === 'intro' || S.stage === 'done' || S.failed) return;
-    if (env.respawning) { failMission(env.lastDeath === 'busted' ? 'Busted.' : 'Wasted.'); return; }
+    if (env.respawning && performance.now() > (S.grace || 0)) { failMission(env.lastDeath === 'busted' ? 'Busted.' : 'Wasted.'); return; }
     const me = [P.x, P.z];
     if (S.stage === 'toPublix' && P.driving && dist(me, DAVE.lot) < 14) { S.stage = 'park'; objective('Park in the lot and get out', 'tap Exit'); }
     else if (S.stage === 'park' && env.hmode === 'foot') { S.stage = 'walkIn'; objective('Walk into Publix'); S.checkpoint = 'publix'; }
     else if (S.stage === 'walkIn' && env.hmode === 'foot' && dist(me, DAVE.door) < 12) { S.stage = 'fight'; spawnThugs(); }
     else if (S.stage === 'fight') { const left = thugStep(dt); objective('Some guys want a fight', `${left} left`); if (!left) { S.stage = 'grab'; objective('Grab the groceries', 'go in the door'); banner('GO IN'); } }
     else if (S.stage === 'grab' && env.hmode === 'foot' && dist(me, DAVE.door) < 2.6) { S.stage = 'back'; objective('Get back in your ride'); banner('GOT THE GROCERIES'); env.addMoney(0); thugStep(dt); }
-    else if (S.stage === 'back' && P.driving) startChase();
+    else if (S.stage === 'back' && P.driving) { S.cpNear = null; startChase(); }
     else if (S.stage === 'chase') {
       S.copT += dt; if (S.cops < DAVE.copMax && S.copT >= DAVE.copEvery) { S.copT = 0; S.cops++; cops.force(S.cops); banner(`${S.cops} COPS`); }
-      const dh = dist(me, DAVE.house); objective('Get the groceries to Dave', `${Math.round(dh)} m`);
+      const dh = dist(me, DAVE.house);
+      if (dh < 35) { objective('STOP IN THE DRIVEWAY', `${Math.round(dh)} m`); if (!S.stopSaid) { S.stopSaid = true; banner('STOP IN THE DRIVEWAY!'); } }
+      else objective('Get the groceries to Dave', `${Math.round(dh)} m${S.t < 12 ? ' · roads closed' : ''}`);
+      if (!S.cpNear && dh < 70 && P.driving) { S.cpNear = { x: P.x, z: P.z, th: P.th, cops: S.cops, t: S.t }; banner('CHECKPOINT'); }
       S.t += dt; const pk = clamp(1 - (dh - 20) / Math.max(1, S.d0 - 20), 0, 1); S.heat = Math.min(1, pk * .7 + S.t / DAVE.rampTime * .4);
       if (S.heat > DAVE.rocketFrom && P.driving) {
         const k = (S.heat - DAVE.rocketFrom) / (1 - DAVE.rocketFrom); let on = 0; for (const r of RK) if (r.on) on++;
         S.missT -= dt; if (S.missT <= 0 && on < Math.round(lerp(DAVE.rocketMax, k))) { pm.multiplyMatrices(D.camera.projectionMatrix, D.camera.matrixWorldInverse); frustum.setFromProjectionMatrix(pm); launch(P, k, onScreen); S.missT = lerp(DAVE.rocketEvery, k) * (.8 + Math.random() * .4); }
       }
       if (dh < 6 && P.speed < 3) win();
+      beacon.material.opacity = dh < 35 ? .5 + Math.sin(performance.now() / 120) * .15 : .38;
     }
     if (RB.on) {
       for (const p of RB.parts) if (p.obj) { const v = Math.hypot((p.cx ?? p.obj.position.x) - P.x, (p.cz ?? p.obj.position.z) - P.z) < (p.r || 120); if (p.obj.visible !== v) p.obj.visible = v; }
@@ -318,19 +357,21 @@ export function createDave(D) {
       if (RB.lampMesh) RB.lampMesh.material.color.setHex(amber ? 0xffb020 : 0x4a3008);
     }
     if (S.stage === 'grab' || S.stage === 'back') thugStep(dt);
-    rocketStep(dt, P, S.heat > DAVE.rocketFrom ? (S.heat - DAVE.rocketFrom) / (1 - DAVE.rocketFrom) : 0);
+    rocketStep(dt, P, S.heat > DAVE.rocketFrom ? (S.heat - DAVE.rocketFrom) / (1 - DAVE.rocketFrom) : 0); warnStep(P);
     const tg = target(); beacon.visible = !!tg && S.stage !== 'fight'; if (tg) { const k = 1 + Math.sin(performance.now() / 300) * .06; beacon.position.set(tg[0], 0, -tg[1]); beacon.scale.set(S.stage === 'grab' || S.stage === 'walkIn' ? .5 : k, 1, S.stage === 'grab' || S.stage === 'walkIn' ? .5 : k); }
   }
-  function restart() { clearRoadblocks(); clearThugs(); clearMissiles(); cops.force(0); cops.lock(false); cops.clear(); fail.hidden = true; phone.hidden = true; S.failed = false; S.stage = 'off'; S.checkpoint = null; objective(''); env.heal(); env.resetCar(); start(); }
-  function startChase() { roadblocks(); S.stage = 'chase'; S.cops = 1; S.copT = 0; S.missT = 2; S.t = 0; S.heat = 0; S.d0 = Math.max(60, dist([DAVE.lot[0], DAVE.lot[1]], DAVE.house)); S.checkpoint = 'chase'; cops.lock(true); cops.force(1); objective('Get the groceries to Dave'); banner('COPS!'); }
-  function win() { clearRoadblocks(); S.stage = 'done'; cops.force(0); cops.lock(false); cops.clear(); clearMissiles(); clearThugs(); objective(''); env.addMoney(DAVE.reward); banner(`MISSION PASSED  +$${DAVE.reward}`);
-    (async () => { await wait(1.5); msgs.innerHTML = ''; pick.hidden = true; phone.hidden = false; await wait(.05); phone.classList.add('show'); await typing('Dave', 1.0); say('Dave', 'YOU MADE IT?!? 😭 THANK YOU'); await wait(1.0); say(env.CHARS[env.cur].name, 'never again.', true); await wait(2.6); phone.classList.remove('show'); await wait(.3); phone.hidden = true; })(); }
+  function restart() { S.cpNear = null; clearRoadblocks(); clearThugs(); clearMissiles(); cops.force(0); cops.lock(false); cops.clear(); fail.hidden = true; phone.hidden = true; S.failed = false; S.stage = 'off'; S.checkpoint = null; objective(''); env.heal(); env.resetCar(); start(); }
+  function startChase() { roadblocks(); S.stage = 'chase'; S.cops = 1; S.copT = 0; S.missT = 2; S.t = 0; S.heat = 0; S.d0 = Math.max(60, dist([DAVE.lot[0], DAVE.lot[1]], DAVE.house)); S.checkpoint = 'chase'; cops.lock(true); cops.force(1); S.stopSaid = false; objective('Get the groceries to Dave', 'roads closed'); banner('COPS!'); setTimeout(() => { if (S.stage === 'chase' && S.t < 6) banner('ROADS CLOSED'); }, 2000); }
+  function win() { clearRoadblocks(); S.stage = 'done'; cops.force(0); cops.lock(false); cops.clear(); clearMissiles(); clearThugs(); objective(''); env.addMoney(DAVE.reward); const n = tries + 1; tries = 0; saveTries(); banner(`MISSION PASSED  +$${DAVE.reward}`); setTimeout(() => banner(`DELIVERED ON ATTEMPT ${n}`), 2000);
+    (async () => { await wait(1.5); msgs.innerHTML = ''; pick.hidden = true; phone.hidden = false; await wait(.05); phone.classList.add('show'); await typing('Dave', 1.0); say('Dave', 'YOU MADE IT?!? 😭 THANK YOU'); await wait(1.0); if (n > 3) { say('Dave', `${n} tries tho 😂`); await wait(1.0); } say(env.CHARS[env.cur].name, 'never again.', true); await wait(2.6); phone.classList.remove('show'); await wait(.3); phone.hidden = true; })(); }
   function failMission(why) {
-    S.failed = true; cops.force(0); cops.lock(false); clearMissiles(); objective(''); fail.querySelector('#mf-why').textContent = why; setTimeout(() => { fail.hidden = false; }, 1600);
+    S.failed = true; tries++; saveTries(); cops.force(0); cops.lock(false); clearMissiles(); objective(''); fail.querySelector('#mf-why').textContent = why; fail.querySelector('#mf-try').textContent = `Attempt ${tries}`;
+    fail.querySelector('#mf-retry').textContent = S.checkpoint === 'chase' && S.cpNear ? 'Retry from checkpoint' : 'Retry'; setTimeout(() => { fail.hidden = false; }, 1600);
   }
   fail.querySelector('#mf-retry').onclick = () => {                 // retry from the last checkpoint
-    fail.hidden = true; S.failed = false; clearMissiles(); cops.clear(); env.heal();
-    if (S.checkpoint === 'chase') { clearThugs(); env.resetCar(DAVE.lot[0], DAVE.lot[1], DAVE.lot[2]); startChase(); }
+    fail.hidden = true; S.failed = false; S.grace = performance.now() + 3000; clearMissiles(); cops.clear(); env.heal();
+    if (S.checkpoint === 'chase' && S.cpNear) { const c = S.cpNear; clearThugs(); env.resetCar(c.x, c.z, c.th); startChase(); S.cops = c.cops; S.t = c.t; cops.force(S.cops); banner('CHECKPOINT'); }
+    else if (S.checkpoint === 'chase') { clearThugs(); env.resetCar(DAVE.lot[0], DAVE.lot[1], DAVE.lot[2]); startChase(); }
     else if (S.checkpoint === 'publix') { clearThugs(); env.resetCar(DAVE.lot[0], DAVE.lot[1], DAVE.lot[2]); S.stage = 'park'; objective('Park in the lot and get out', 'tap Exit'); }
     else { env.resetCar(); S.stage = 'toPublix'; objective('Drive to Publix'); }
   };
