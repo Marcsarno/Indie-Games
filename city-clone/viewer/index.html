@@ -57,6 +57,10 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 .pb.on { color: var(--night); background: var(--lamp); border-color: var(--lamp); }
 .pb.dim { opacity: .35; pointer-events: none; }
 .corner { top: calc(104px + env(safe-area-inset-top, 0px)); display: grid; justify-items: end; gap: 4px; z-index: 2; }
+#stars { display: flex; gap: 2px; font: 700 22px/1 var(--display); } #stars i { font-style: normal; color: rgba(255, 255, 255, .22); text-shadow: 0 1px 3px rgba(0, 0, 0, .7); }
+#stars i.on { color: #ffd23f; } #stars.flash i.on { animation: starflash .5s steps(2) infinite; } @keyframes starflash { 50% { color: rgba(255, 255, 255, .25); } }
+#banner { position: fixed; left: 0; right: 0; top: 38%; text-align: center; font: 700 52px/1 var(--display); letter-spacing: .08em; color: #fff; text-shadow: 0 3px 10px rgba(0, 0, 0, .8); pointer-events: none; opacity: 0; transition: opacity .3s; z-index: 30; }
+#banner.show { opacity: 1; }
 #cash { font: 600 22px/1 var(--display); letter-spacing: .05em; color: var(--paper); text-shadow: 0 1px 3px rgba(0, 0, 0, .7); font-variant-numeric: tabular-nums; }
 .hpbar { width: 92px; height: 8px; background: rgba(0, 0, 0, .45); border: 1px solid var(--line); border-radius: 2px; overflow: hidden; }
 .hpbar i { display: block; height: 100%; width: 100%; background: var(--warn); transform-origin: left; }
@@ -88,7 +92,7 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
   <button class="btn" id="tunereset">Reset to defaults</button>
 </div>
 
-<div class="hud corner" id="corner"><div id="cash">$0</div><div class="hpbar"><i id="hp"></i></div><div class="mini" id="minibox"><canvas id="mini" width="200" height="200"></canvas><b>N</b></div></div>
+<div class="hud corner" id="corner"><div id="stars" aria-label="Wanted level"><i>★</i><i>★</i><i>★</i><i>★</i></div><div id="cash">$0</div><div class="hpbar"><i id="hp"></i></div><div class="mini" id="minibox"><canvas id="mini" width="200" height="200"></canvas><b>N</b></div></div>
 <div class="hud pad" id="pad">
   <div class="cl"><button class="pb" id="b-left" aria-label="Steer left"><i class="l"></i></button><button class="pb" id="b-right" aria-label="Steer right"><i class="r"></i></button></div>
   <div class="cr">
@@ -103,6 +107,7 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
     <div class="r2"><button class="pb big" id="b-punch">Punch</button></div>
   </div>
 </div>
+<div id="banner"></div>
 <div id="loading">Loading block<div class="bar"><i id="bar"></i></div><small id="loadtxt">4 MB of models and textures</small></div>
 <div id="err" hidden><div><b style="font:600 22px var(--display);letter-spacing:.08em;text-transform:uppercase">This view needs WebGL</b><p style="color:var(--dim)">Your browser blocked it. Try Chrome or Safari with hardware acceleration on.</p></div></div>
 
@@ -115,6 +120,7 @@ import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { createTraffic, TT } from './traffic.js';
 import { createPeople, PT } from './people.js';
+import { createPolice, POL } from './police.js';
 
 const $ = id => document.getElementById(id);
 const WN = location.hash === '#chinatown' ? 'chinatown' : 'coconut', WD = 'worlds/' + WN + '/';      // which world to load (hash #chinatown or default)
@@ -349,7 +355,7 @@ async function exitCar(a, car, tag) {
 /* ---------- life: walkers, a fight, scripted traffic ---------- */
 const walkers = [];
 if (graph && new URLSearchParams(location.search).get('peds')) PT.count = Math.max(0, Math.min(80, +new URLSearchParams(location.search).get('peds')));
-const ppl = graph ? createPeople(graph, { THREE, makePerson, play, scene, camera, pushCircle: (x, z, r) => pushCircle(x, z, r), onKnock: (w, sp) => { crashSound(Math.min(9, 3 + sp * .3)); rig.shake = Math.min(1, rig.shake + .15); } }) : null;     // sidewalk AI (worlds with a lane graph)
+const ppl = graph ? createPeople(graph, { THREE, makePerson, play, scene, camera, pushCircle: (x, z, r) => pushCircle(x, z, r), onKnock: (w, sp) => { crashSound(Math.min(9, 3 + sp * .3)); rig.shake = Math.min(1, rig.shake + .15); if (cops) cops.crime('runover', 1.5); } }) : null;     // sidewalk AI (worlds with a lane graph)
 if (ppl) walkers.push(...ppl.people);
 for (let i = 0; i < (ppl ? 0 : world.walkers); i++) {
   const p = makePerson(), seg = world.walk[i % world.walk.length], dir = (i >> 1) % 2 ? 1 : -1;
@@ -409,6 +415,9 @@ const cen = P => { let x = 0, z = 0; for (const p of P) { x += p[0]; z += p[1]; 
 const colliders = colList.filter(c => !c.car).map(c => { const soft = c.soft || null, poly = c.t === 'box' ? polyBox(c.x, c.y, c.w, c.d, c.rz) : c.t === 'poly' ? c.pts.map(p => [p[0], -p[1]]) : polyCircle(c.x, c.y, c.r); const [cx, cz] = cen(poly); let r = 0; for (const p of poly) r = Math.max(r, Math.hypot(p[0] - cx, p[1] - cz)); return { poly, cx, cz, r, vx: 0, vz: 0, soft }; });
 const qsT = new URLSearchParams(location.search); if (qsT.get('cars')) TT.count = Math.max(0, Math.min(60, +qsT.get('cars')));
 const ai = graph ? createTraffic(graph, { THREE, makeCar, carPoly: (x, z, th, d) => carPoly(x, z, th, d), colliders, placeOnGround, scene, camera }) : null;
+if (ai) for (const c of ai.cars) c.col.ai = true;
+const cops = graph ? createPolice(graph, { THREE, makeCar, carPoly: (x, z, th, d) => carPoly(x, z, th, d), colliders, placeOnGround, scene, camera, pushCircle: (x, z, r, sk) => pushCircle(x, z, r, sk), audio: () => (muted ? null : audio),
+  onStars: W => showStars(W), onBusted: () => busted(), onWreck: c => { crashSound(12); burst(c.x, .8, c.z, 0, 0, 14); game.money += 50; } }) : null;
 const moveCols = traffic.map(t => { const c = { poly: [], cx: 0, cz: 0, r: 2.6, vx: t.vx, vz: t.vz }; colliders.push(c); return c; });     // scripted traffic: moving obstacles
 const carPoly = (x, z, th, d) => { const fx = -Math.sin(th), fz = -Math.cos(th), rx = Math.cos(th), rz = -Math.sin(th), hl = (d ? d[0] : CAR.L) / 2, hw = (d ? d[1] : CAR.W) / 2; return [[x + fx * hl + rx * hw, z + fz * hl + rz * hw], [x + fx * hl - rx * hw, z + fz * hl - rz * hw], [x - fx * hl - rx * hw, z - fz * hl - rz * hw], [x - fx * hl + rx * hw, z - fz * hl + rz * hw]]; };
 
@@ -527,7 +536,7 @@ function physicsStep(dt) {
   for (let pass = 0; pass < 2; pass++) for (const B of colliders) {
     if (Math.hypot(B.cx - c.x, B.cz - c.z) > B.r + 3.2) continue;
     if (B.soft) { if (pass === 0) brush(c, B, dt); continue; }
-    const v = contact(c, B, TUNE.bounce); if (v > 1.2) onImpact(c, v);
+    const v = contact(c, B, TUNE.bounce); if (v > 1.2) { onImpact(c, v); if (c === drive && B.onHit) B.onHit(v); if (c === drive && B.ai && v > 7 && cops) cops.crime('carcrash', .5); }
   }
   c.inSoft = c.nowSoft;
   // skid marks where the rear wheels slide
@@ -544,6 +553,10 @@ function setCarCollider(v) {                      // a parked car is a static po
 function removeCarCollider(v) { const col = carCols.get(v.name); if (col) { const i = colliders.indexOf(col); if (i >= 0) colliders.splice(i, 1); carCols.delete(v.name); } }
 function parkVehicle(v) { v.vx = v.vz = v.w = 0; v.mode = 'parked'; setCarCollider(v); }
 for (const v of Object.values(vehs)) if (!trafficNames.has(v.name) && v !== drive) setCarCollider(v);
+let bannerT = 0;
+function banner(txt) { const b = $('banner'); b.textContent = txt; b.classList.add('show'); clearTimeout(bannerT); bannerT = setTimeout(() => b.classList.remove('show'), 1800); }
+function showStars(W) { const st = $('stars'); st.querySelectorAll('i').forEach((el, k) => el.classList.toggle('on', k < W.stars)); st.classList.toggle('flash', W.probation > 0); }
+function busted() { banner('BUSTED'); game.money = Math.max(0, Math.round(game.money * .9)); resetCar(); }
 function resetCar(x = world.start.x, z = -world.start.y, th = rad(world.start.rz)) {      // put the player's own car back and the hero in it
   if (drive && drive !== vehs.player) parkVehicle(drive);
   const v = vehs.player; removeCarCollider(v); drive = v; hmode = 'driving';
@@ -577,8 +590,8 @@ const stickIn = { x: 0, y: 0 };                                               //
 const combat = { state: 'idle', t: 0, dur: 0, struck: false, n: 0, queued: false, hits: 0, lastEnd: -9, clip: 'punch' };
 let hitstop = 0, simT = 0; const flashes = [];
 const heroPoly = (x, z, r) => Array.from({ length: 8 }, (_, k) => [x + r * Math.cos((k + .5) * Math.PI / 4), z + r * Math.sin((k + .5) * Math.PI / 4)]);
-function pushCircle(x, z, r) {                       // push a circle out of the static colliders (fleeing pedestrians)
-  for (const B of colliders) { if (!B.poly.length || B.soft || Math.abs(B.cx - x) > B.r + r + .6 || Math.abs(B.cz - z) > B.r + r + .6) continue; const h = sat(heroPoly(x, z, r), B.poly); if (h) { x += h.nx * h.depth; z += h.nz * h.depth; } }
+function pushCircle(x, z, r, skip) {                 // push a circle out of the colliders (fleeing pedestrians, police cars; skip = own collider)
+  for (const B of colliders) { if (B === skip || !B.poly.length || B.soft || Math.abs(B.cx - x) > B.r + r + .6 || Math.abs(B.cz - z) > B.r + r + .6) continue; const h = sat(heroPoly(x, z, r), B.poly); if (h) { x += h.nx * h.depth; z += h.nz * h.depth; } }
   return [x, z];
 }
 function pushOut(x, z, r) {
@@ -632,6 +645,7 @@ function applyHit(w, dx, dz, finisher) {
   const sp = down ? 8.5 : 5.2; w.kb.x = dx * sp; w.kb.z = dz * sp; w.root.rotation.y = Math.atan2(dx, dz);          // victim turns to face the attacker, then is thrown away from them
   w.state = down ? 'down' : 'hit'; w.st = 0; play(w, down ? 'fall' : 'hit', { once: true, fade: .03 });
   if (ppl) ppl.panic(w.root.position.x, w.root.position.z);
+  if (cops) cops.crime('assault', down ? 1 : .5);
 }
 function nearestDoor() {
   let best = null, bd = 4.2;
@@ -724,6 +738,7 @@ function drawMini(px, py, face) {                 // north-up map around the pla
 /* ---------- loop ---------- */
 $('loading').hidden = true;
 const q = { ratio: Math.min(devicePixelRatio || 1, 2), slow: 0, lock: false };
+const CPX = { p: null };
 const AIX = { cx: 0, cz: 0, player: null, foot: null, p: { x: 0, z: 0, vx: 0, vz: 0, L: 4.5, W: 1.8, th: 0 }, peds: null, f: { x: 0, z: 0, vx: 0, vz: 0, L: .6, W: .6 } };
 const PF = { on: false, last: 0, ms: { phys: 0, traffic: 0, anim: 0, misc: 0, render: 0 }, mark(k) { if (!this.on) return; const t = performance.now(); this.ms[k] = t - this.last; this.last = t; } };   // per-system ms for the ?hud=1 panel (hud.js)
 const clock = new THREE.Clock(); let fpsN = 0, fpsT = 0, manual = false, lastStat = '';
@@ -760,9 +775,13 @@ function update(dt, draw = true) {
     if (hmode === 'foot') { AIX.f.x = foot.x; AIX.f.z = foot.z; AIX.foot = AIX.f; } else AIX.foot = null;
     AIX.peds = ppl ? ppl.people : null; ai.step(dta, AIX);
   }
+  if (cops) {
+    if (drive && hmode === 'driving') CPX.p = AIX.p; else { const F = AIX.f; F.x = foot.x; F.z = foot.z; F.vx = foot.vx; F.vz = foot.vz; F.L = .6; F.W = .6; CPX.p = F; }
+    cops.step(dta, CPX.p);
+  }
   PF.mark('traffic');
   footStep(dta); combatStep(dta);
-  if (ppl) ppl.step(dta, AIX);
+  if (ppl) { if (!(drive && hmode === 'driving')) AIX.player = null; ppl.step(dta, AIX); }
   else for (const w of walkers) {                                               // pedestrians: walk a sidewalk loop, or react to being hit
     if (w.state === 'walk') { w.pos += w.dir * w.speed * dta; if (w.path) { if (!w.path.closed) { if (w.pos > w.path.L) { w.pos = w.path.L; w.dir = -1; } else if (w.pos < 0) { w.pos = 0; w.dir = 1; } } } else { if (w.pos > w.seg.hi) w.pos = w.seg.lo; if (w.pos < w.seg.lo) w.pos = w.seg.hi; } const f = Math.exp(-.8 * dta); w.off.x *= f; w.off.z *= f; }
     else {
@@ -813,7 +832,7 @@ function update(dt, draw = true) {
   upd.gy = (upd.gy || 0) + (groundH(rig.tx, rig.tz) - (upd.gy || 0)) * Math.min(1, dt * 4);
   camera.position.set(rig.tx + (Math.random() - .5) * sh, upd.gy + Math.sin(p) * dist + (Math.random() - .5) * sh * .5, rig.tz + Math.cos(p) * dist + (Math.random() - .5) * sh); camera.lookAt(rig.tx, upd.gy, rig.tz);
   placeSun(rig.tx, 0, rig.tz);
-  game.hp = Math.min(100, game.hp + dt * 1.2); if (game.hp <= 0) { game.hp = 100; game.money = Math.max(0, game.money - 100); resetCar(); }     // HUD
+  game.hp = Math.min(100, game.hp + dt * 1.2); if (game.hp <= 0) { game.hp = 100; game.money = Math.max(0, game.money - 100); banner('WASTED'); if (cops) cops.clear(); resetCar(); }     // HUD
   const cash = Math.round(game.money), hpv = Math.round(game.hp); if (cash !== lastCash) { $('cash').textContent = '$' + cash.toLocaleString('en-US'); lastCash = cash; }
   if (hpv !== lastHp) { $('hp').style.transform = `scaleX(${hpv / 100})`; lastHp = hpv; }
   miniT += dt; if (world.map && miniT > .1 && draw) { miniT = 0; drawMini(fx, -fz, hmode === 'foot' ? foot.face : (drive ? drive.th : 0)); }
@@ -826,6 +845,6 @@ function update(dt, draw = true) {
 let frameHook = null;                                          // hud.js hooks frame timing here
 function frame(t) { const t0 = performance.now(); if (!manual) update(Math.min(clock.getDelta(), .05)); if (frameHook) frameHook(t, performance.now() - t0); requestAnimationFrame(frame); }
 syncSliders(); setView('drive'); requestAnimationFrame(frame);
-window.__city = { world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, ppl, sun, setFrameHook: f => { frameHook = f; }, upd };
+window.__city = { world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, ppl, cops, sun, setFrameHook: f => { frameHook = f; }, upd };
 if (/[?&](hud|bench)=/.test(location.search)) import('./hud.js?v=' + (MAN['hud.js'] || '1')).then(m => m.start(window.__city, THREE)).catch(e => console.error('hud', e));
 </script>
