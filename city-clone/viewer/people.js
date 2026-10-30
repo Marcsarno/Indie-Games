@@ -103,7 +103,7 @@ export function createPeople(G, deps) {
       else if (w.state === 'freeze') { if (w.st > w.freezeT) flee(w, w.fleeAt[0], w.fleeAt[1], 5); }
       else if (w.state === 'flee') {
         w.fleeT -= dt; let nx = w.x + w.fx * PT.run * dt, nz = w.z + w.fz * PT.run * dt;
-        if ((frame + w.ph) % 3 === 0) { const q = pushCircle(nx, nz, .35); if (Math.abs(q[0] - nx) + Math.abs(q[1] - nz) > .02) { const a = Math.atan2(w.fz, w.fx) + (Math.random() < .5 ? 1 : -1) * 1.2; w.fx = Math.cos(a); w.fz = Math.sin(a); } nx = q[0]; nz = q[1]; }
+        { const q = pushCircle(nx, nz, .35); if (Math.abs(q[0] - nx) + Math.abs(q[1] - nz) > .02) { const a = Math.atan2(w.fz, w.fx) + (Math.random() < .5 ? 1 : -1) * 1.2; w.fx = Math.cos(a); w.fz = Math.sin(a); } nx = q[0]; nz = q[1]; }
         w.x = nx; w.z = nz; w.root.rotation.y = Math.atan2(-w.fx, -w.fz);
         for (const o of people) if (o.on && o.state === 'walk' && Math.abs(o.x - w.x) < 6 && Math.abs(o.z - w.z) < 6 && Math.random() < PT.spread * dt) flee(o, w.x - w.fx * 4, w.z - w.fz * 4, 4 + Math.random() * 3);   // panic spreads
         if (w.fleeT <= 0) { w.state = 'walk'; play(w, 'walk', { timeScale: w.speed / 1.4 }); rejoin(w); }

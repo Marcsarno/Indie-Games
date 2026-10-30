@@ -79,11 +79,33 @@ def inset_poly(ring, d):                                                        
     for i in range(n):
         a, b = ring[i - 1], ring[(i + 1) % n]; tx, ty = b[0] - a[0], b[1] - a[1]; l = math.hypot(tx, ty) or 1; out.append((ring[i][0] - ty / l * d, ring[i][1] + tx / l * d))
     return out
+def road_gap(x, y, pad=0.0):
+    """Distance from (x, y) to the nearest drivable road edge (negative = on the asphalt)."""
+    best = 1e9
+    for r in net:
+        if r.surf != "asphalt" or not (r.bb[0] - 12 < x < r.bb[2] + 12 and r.bb[1] - 12 < y < r.bb[3] + 12): continue
+        best = min(best, r.nearest(x, y)[0] - r.hw - rd.CURB)
+    return best
+def off_roads(tris, depth=0):
+    """Lake collision triangles, split (up to 5 times) where they reach over a road; pieces under a road are dropped."""
+    out = []
+    for (a, b, c) in tris:
+        pts = [a, b, c, ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), ((b[0] + c[0]) / 2, (b[1] + c[1]) / 2), ((a[0] + c[0]) / 2, (a[1] + c[1]) / 2), ((a[0] + b[0] + c[0]) / 3, (a[1] + b[1] + c[1]) / 3)]
+        size = max(math.dist(a, b), math.dist(b, c), math.dist(a, c)); nn = max(2, min(10, int(size / 2.5)))
+        smp = [(a[0] * (1 - u - v) + b[0] * u + c[0] * v, a[1] * (1 - u - v) + b[1] * u + c[1] * v) for i in range(nn + 1) for j in range(nn + 1 - i) for u, v in ((i / nn, j / nn),)]
+        g = min(road_gap(*p) for p in smp)
+        if g > .4: out.append((a, b, c)); continue                                                       # does not reach over any road
+        if size < 3.0 or depth >= 5:
+            if g > .4: out.append((a, b, c))
+            continue
+        ab, bc, ca = pts[3], pts[4], pts[5]
+        out += off_roads([(a, ab, ca), (ab, b, bc), (ca, bc, c), (ab, bc, ca)], depth + 1)
+    return out
 LAKES = {}; LAKE_BB = {}
 for i, hole in enumerate(MP.holes_m()):
     ring0 = inset_poly(rd.blob(hole, 2.5), 2.0); ring, tris = rd.lake_poly(RB, m, ring0); cen_ = (sum(p[0] for p in ring) / len(ring), sum(p[1] for p in ring) / len(ring)); LAKES[f"lake{i}"] = (ring, cen_)
     LAKE_BB[f"lake{i}"] = (min(p[0] for p in ring), min(p[1] for p in ring), max(p[0] for p in ring), max(p[1] for p in ring))
-    for q in rd.tri_colliders(tris): COL.append(q)
+    for q in rd.tri_colliders(off_roads(tris)): COL.append(q)
     MAP.append([round(cen_[0], 1), round(cen_[1], 1), 0, 0, "#2d78b8", "poly", [[round(p[0], 1), round(p[1], 1)] for p in ring]])
 def in_lake(x, y, pad=0.0):
     for k, (ring, _) in LAKES.items():
@@ -102,7 +124,9 @@ for r in net:
     for s_ in wet[1:]:
         if s_ - runs[-1][1] <= 6: runs[-1][1] = s_
         else: runs.append([s_, s_])
-    for a_, b_ in runs: BRIDGES.append((r, max(0.0, a_ - 3.0), min(r.L, b_ + 3.0)))
+    for a_, b_ in runs:
+        if b_ - a_ < 2.5 and (a_ < 4 or b_ > r.L - 4): continue                                              # a road end grazing the shore is not a bridge
+        BRIDGES.append((r, max(0.0, a_ - 3.0), min(r.L, b_ + 3.0)))
 LAKE_COL0 = 0
 print("BRIDGES", [(r.name, round(a), round(b)) for r, a, b in BRIDGES])
 def near_bridge(x, y, d=9.0):
@@ -130,7 +154,8 @@ for (r, a_, b_) in BRIDGES:                                                     
         s_ = a_ + 2.0
         while s_ < b_ - 1:
             x_, y_, tx_, ty_ = r.at(s_); px_, py_ = r.off(s_, side * (w_ + .17)); cbox(px_, py_, 4.4, .5, round(math.degrees(math.atan2(ty_, tx_)), 1)); s_ += 4.0
-WORLD_EDGE_ENDS = [(r, r.L if b_ >= r.L - .5 else 0.0) for (r, a_, b_) in BRIDGES if b_ >= r.L - .5 or a_ <= .5]
+GATE_M = [MP.to_m(p) for _, p in MP.EDGE_GATES]
+WORLD_EDGE_ENDS = [(r, r.L if b_ >= r.L - .5 else 0.0) for (r, a_, b_) in BRIDGES if (b_ >= r.L - .5 or a_ <= .5) and any(math.dist(r.at(r.L if b_ >= r.L - .5 else 0.0)[:2], g) < 30 for g in GATE_M)]
 for (r, s_) in WORLD_EDGE_ENDS:                                                                                           # "bridge closed" barrier across the road at the map edge
     x_, y_, tx_, ty_ = r.at(s_); w_ = r.hw + rd.CURB + rd.SWK; ang_ = round(math.degrees(math.atan2(ty_, tx_)), 1); bx_, by_ = x_ - tx_ * .6, y_ - ty_ * .6
     cbox(bx_, by_, 1.0, 2 * w_ + 1.0, ang_)
@@ -150,11 +175,18 @@ rd.strip(GB, m["bank"], coast, 0.0, coast.L - .5, -0.6, 0.0, 0.0, solid=-0.35)
 s_ = 0.0
 while s_ < coast.L:                                                                                                       # invisible hard edge just inside the shore (cars cannot leave the land), except where a bridge crosses
     x_, y_, tx_, ty_ = coast.at(s_ + 2.5); px_, py_ = coast.off(s_ + 2.5, 1.8)
-    if not near_bridge(px_, py_, 16.0): cbox(px_, py_, 5.4, 1.2, round(math.degrees(math.atan2(ty_, tx_)), 1))
+    if not near_bridge(px_, py_, 16.0):
+        if road_gap(px_, py_) < 3.4:                                                                                    # a road runs along the shore here: use short pieces right at the shore, clear of the asphalt
+            for k_ in range(5):
+                x_, y_, tx_, ty_ = coast.at(s_ + .5 + k_)
+                for o_ in (1.8, .6, -.4):
+                    px_, py_ = coast.off(s_ + .5 + k_, o_)
+                    if road_gap(px_, py_) > .9: cbox(px_, py_, 1.2, 1.2, round(math.degrees(math.atan2(ty_, tx_)), 1)); break
+        else: cbox(px_, py_, 5.4, 1.2, round(math.degrees(math.atan2(ty_, tx_)), 1))
     else:                                                                                                             # next to a bridge: short pieces right up to the bridge deck edge, so nothing slips between rail and shore
         for k_ in range(5):
             x_, y_, tx_, ty_ = coast.at(s_ + .5 + k_); px_, py_ = coast.off(s_ + .5 + k_, 1.8)
-            if bridge_margin(px_, py_) > .7: cbox(px_, py_, 1.2, 1.2, round(math.degrees(math.atan2(ty_, tx_)), 1))
+            if bridge_margin(px_, py_) > .7 and road_gap(px_, py_) > .9: cbox(px_, py_, 1.2, 1.2, round(math.degrees(math.atan2(ty_, tx_)), 1))
     s_ += 5.0
 STATIC.append(GB.build(vc=False, recalc=False))
 NOGO = []                                                                                                                # axis-aligned rectangles x0,y0,x1,y1
@@ -544,8 +576,8 @@ frontage_lot(D("Elementary School"), "school", [(lambda nm: make_house(nm, 24, 1
 # -- casino + parking garage (east of Creekview Dr)
 CAS = D("Seminole Casino Coconut Creek")
 casino_maker = lm(LMC, "casino", plaza_maker(56, 36, 11.0, 0))
-if not frontage_lot(CAS, "casino", [(casino_maker, 56, 36, 0.0)], lot_d=17, prob=.55, roads=("Coconut Creek Pkwy",), max_rank=9.5, face=0.0, allow=("Retail Dr", "Creekview Dr"), step=2.0) and \
-   not frontage_lot(CAS, "casino", [(lambda nm: _scaled(casino_maker(nm), .8), 45, 29, 0.0)], lot_d=15, prob=.55, roads=("Coconut Creek Pkwy",), max_rank=9.5, face=0.0, allow=("Retail Dr", "Creekview Dr"), step=2.0):
+if not frontage_lot(CAS, "casino", [(casino_maker, 56, 36, 0.0)], lot_d=17, prob=.55, roads=("Coconut Creek Pkwy",), max_rank=9.5, face=0.0, allow=("Retail Dr",), step=2.0) and \
+   not frontage_lot(CAS, "casino", [(lambda nm: _scaled(casino_maker(nm), .8), 45, 29, 0.0)], lot_d=15, prob=.55, roads=("Coconut Creek Pkwy",), max_rank=9.5, face=0.0, allow=("Retail Dr",), step=2.0):
     frontage_lot(CAS, "casino", [(lambda nm: _scaled(casino_maker(nm), .8), 45, 29, 0.0)], lot_d=17, prob=.55, roads=("Creekview Dr",), allow=("Retail Dr",))
 for (x, y) in spots(D("Casino garage"), 3, 53):
     if try_place("garage", lambda nm: dk.garage(nm, 40, 22, 3), x, y, road_facing_rz, 40, 22, 1.0, near=14): break
@@ -609,7 +641,7 @@ for side in (1, -1):
         else:
             if try_place("shop", (lambda nm, kk=k_: LMP.shop_row(nm, 2, 9.0, 10.0, 650 + kk)) if LMP is not None else (lambda nm, kk=k_: make_plaza(nm, 18, 10, 7.0, shops=SHOPS_A, tower_x=None, seed=650 + kk)), px, py, rz, 18, 10, .3): s_ += 20.0; k_ += 1
             else: s_ += 4.0
-sx_, sy_, stx_, sty_ = PROM.at(3.0)
+sx_, sy_, stx_, sty_ = PROM.at(9.0)
 try_place("prom_arch", lm(LMP, "entry_arch", lambda nm: dk.gate(nm, 12)), sx_, sy_, face_back(stx_, sty_), 14, 2.0, .2, collide=False)
 for sd_ in (-1, 1): ccir(sx_ - sty_ * sd_ * 6.5, sy_ + stx_ * sd_ * 6.5, .8)
 fx_p, fy_p = PROM.at(PROM.L * .5)[:2]

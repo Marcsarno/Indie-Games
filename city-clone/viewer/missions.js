@@ -49,5 +49,6 @@ export function createMissions(G, deps) {
     if (t <= 0) end(false);
   }
   const target = () => cur ? (cur.b ? cur.b : null) : null;
-  return { list, step, target, get active() { return cur; } };
+  const refresh = () => list.forEach((m, i) => { beacons[i].visible = !m.done && !cur; });
+  return { list, step, target, refresh, get active() { return cur; } };
 }

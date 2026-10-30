@@ -131,7 +131,7 @@ export function createTraffic(G, deps) {
       const s = t0 + Math.random() * (t1 - t0); lanePos(e, dir, s, tmp); const d = Math.hypot(tmp.x - cx, tmp.z - cz);
       if (d < minD || d > maxD || onScreen(tmp.x, tmp.z)) continue;
       let clash = false; for (const o of cars) if (o.on && Math.hypot(o.x - tmp.x, o.z - tmp.z) < 14) { clash = true; break; } if (clash) continue;
-      c.on = true; c.e = e; c.dir = dir; c.s = s; c.v0 = e.v * (.85 + Math.random() * .25); c.v = c.v0 * .7; c.turn = false; c.granted = false; c.wait = 0; c.still = 0; c.off = 0; c.shock = 0; c.node = null; c.lat = c.latT = 0; c.kx = c.kz = c.ky = c.kvx = c.kvz = c.kw = 0;
+      c.on = true; c.e = e; c.dir = dir; c.s = s; c.v0 = e.v * (.85 + Math.random() * .25) * ({ bus: .78, boxtruck: .82, garbage: .75, van: .92, coupe: 1.1 }[c.car.kind] || 1); c.v = c.v0 * .7; c.turn = false; c.granted = false; c.wait = 0; c.still = 0; c.off = 0; c.shock = 0; c.node = null; c.lat = c.latT = 0; c.kx = c.kz = c.ky = c.kvx = c.kvz = c.kw = 0;
       pickNext(c); place(c); c.g.visible = true; return true;
     }
     return false;

@@ -1,7 +1,7 @@
 // Police + wanted level (hand-off 2 design, Chinatown Wars rule): crimes raise the stars, police cars drive the road graph to you and chase/ram,
 // and WRECKING police cars is how you lose stars (K wrecks per star). Out of sight long enough also drops a star. Busted when a cop pins you.
 // States per cop: CHASE (graph route, then direct pursuit), RAM (2+ stars, full speed into you), BLOCK (parked roadblock, 3+ stars), WRECKED, LEAVE.
-export const POL = { maxCops: [0, 1, 2, 4, 5], speed: [0, 17, 20, 23, 25], wreckNeed: [0, 1, 2, 4, 6], heatFor: [0, 1, 4, 8, 13], loseAfter: 28, bustTime: 2.6, probation: 6, pool: 7 };
+export const POL = { maxCops: [0, 1, 2, 4, 5], speed: [0, 17, 20, 23, 25], wreckNeed: [0, 1, 2, 4, 6], heatFor: [0, 1, 4, 8, 13], loseAfter: 28, bustTime: 3.5, probation: 6, pool: 7 };
 
 export function createPolice(G, deps) {
   const { THREE, makeCar, carPoly, colliders, placeOnGround, scene, camera, pushCircle, audio, onStars, onBusted, onWreck } = deps;
@@ -94,7 +94,7 @@ export function createPolice(G, deps) {
         // target: the player directly when close, else the next point on a road route
         let tx = P.x + P.vx * Math.min(1.2, d / 25), tz = P.z + P.vz * Math.min(1.2, d / 25);
         if (c.state === 'LEAVE') { tx = c.x - dx; tz = c.z - dz; }
-        else if (d > 32) {
+        else if (d > 22) {
           c.repath -= dt;
           if (!c.path || c.repath <= 0) { c.path = route(nearestNode(c.x, c.z), nearestNode(P.x, P.z)); c.pi = 0; c.repath = 1.5; }
           while (c.path && c.pi < c.path.length && Math.hypot(c.path[c.pi][0] - c.x, c.path[c.pi][1] - c.z) < 9) c.pi++;
@@ -109,7 +109,7 @@ export function createPolice(G, deps) {
         const q = pushCircle(nx, nz, 1.5, c.col); if (Math.abs(q[0] - nx) + Math.abs(q[1] - nz) > .03) { c.v *= .85; c.stuck += dt; } else c.stuck = Math.max(0, c.stuck - dt);
         if (c.stuck > 1.5) { c.th += Math.PI * .6; c.stuck = 0; c.path = null; }                     // wedged on a wall: back off at an angle
         c.x = q[0]; c.z = q[1];
-        if (d < (c.dims[0] + P.L) / 2 + .6) { c.v = Math.min(c.v, 2); if (Math.hypot(P.vx, P.vz) < 1.2) pinning = true; }
+        if (d < (c.dims[0] + P.L) / 2 + .6) { c.v = Math.min(c.v, 2); if (Math.hypot(P.vx, P.vz) < 1 && d < (c.dims[0] + P.L) / 2 + .3) pinning = true; }
       }
       placeOnGround(c.g, c.x, c.z, c.th);
       const Q = carPoly(c.x, c.z, c.th, c.dims); for (let k = 0; k < 4; k++) { c.col.poly[k][0] = Q[k][0]; c.col.poly[k][1] = Q[k][1]; }
