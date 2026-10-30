@@ -60,10 +60,11 @@ class Road:
 
 def build_network(roads):
     """Find where lower-rank roads cross higher-rank ones, cut them at the parent's curb, register gaps on the parent and compute each road's drawable pieces."""
-    for r in roads: r.cuts = []
+    for r in roads: r.cuts = []; xs_ = [p[0] for p in r.d]; ys_ = [p[1] for p in r.d]; r.bb = (min(xs_), min(ys_), max(xs_), max(ys_))
     for A in roads:
         for B in roads:
             if B is A or B.rank >= A.rank or B.closed: continue
+            if A.bb[0] - 20 > B.bb[2] or B.bb[0] > A.bb[2] + 20 or A.bb[1] - 20 > B.bb[3] or B.bb[1] > A.bb[3] + 20: continue          # bounding boxes far apart: cannot cross
             prev = None
             def sd(p):                                                      # signed distance to A's centre-line (positive = left of A's travel) and A's s there
                 d_, s_ = A.nearest(*p); t_ = A.at(s_); sg = (p[0] - t_[0]) * -t_[3] + (p[1] - t_[1]) * t_[2]; return (d_ if sg >= 0 else -d_), s_
@@ -237,3 +238,47 @@ def flat_blob(R, mat, ctrl, z, step=3.0):
     ring = blob(ctrl, step); cx = sum(p[0] for p in ring) / len(ring); cy = sum(p[1] for p in ring) / len(ring)
     for i in range(len(ring)): R.poly(mat, [(cx, cy, z), (*ring[i], z), (*ring[(i + 1) % len(ring)], z)])
     return ring
+
+
+def triangulate(ring):
+    """Ear-clipping triangulation of a simple polygon (any winding); returns a list of CCW triangles (point triples). Used for lakes that are not star-shaped."""
+    pts = list(ring); area = sum(pts[i][0] * pts[(i + 1) % len(pts)][1] - pts[(i + 1) % len(pts)][0] * pts[i][1] for i in range(len(pts)))
+    if area < 0: pts = pts[::-1]
+    idx = list(range(len(pts))); tris = []
+    def cross(a, b, c): return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+    def inside_t(p, a, b, c): return cross(a, b, p) >= -1e-9 and cross(b, c, p) >= -1e-9 and cross(c, a, p) >= -1e-9
+    guard = 0
+    while len(idx) > 3 and guard < 20000:
+        guard += 1; ear = False
+        for k in range(len(idx)):
+            i0, i1, i2 = idx[k - 1], idx[k], idx[(k + 1) % len(idx)]; a, b, c = pts[i0], pts[i1], pts[i2]
+            if cross(a, b, c) <= 1e-9: continue
+            if any(inside_t(pts[j], a, b, c) for j in idx if j not in (i0, i1, i2) and pts[j] not in (a, b, c)): continue
+            tris.append((a, b, c)); idx.pop(k); ear = True; break
+        if not ear: idx.pop(0)                                       # degenerate sliver: drop a vertex and carry on
+    if len(idx) == 3: tris.append((pts[idx[0]], pts[idx[1]], pts[idx[2]]))
+    return tris
+
+def lake_poly(R, m, ring, bank=1.3, z=.07):
+    """Lake from an explicit outline (traced water body): water via ear clipping (works for U / L shapes), bank ring drawn outside. Returns (ring CCW, triangles)."""
+    pts = list(ring); area = sum(pts[i][0] * pts[(i + 1) % len(pts)][1] - pts[(i + 1) % len(pts)][0] * pts[i][1] for i in range(len(pts)))
+    if area < 0: pts = pts[::-1]
+    n = len(pts)
+    for i in range(n):
+        a, c = pts[i], pts[(i + 1) % n]; pa, pc = pts[i - 1], pts[(i + 2) % n]
+        def out(p, q, r_):
+            tx, ty = r_[0] - q[0], r_[1] - q[1]; l = math.hypot(tx, ty) or 1; return (p[0] + ty / l * bank, p[1] - tx / l * bank)
+        oa, oc = out(a, pa, c), out(c, a, pc)
+        R.poly(m["bank"], [(*oa, .035), (*a, .035), (*c, .035), (*oc, .035)])
+    tris = triangulate(pts)
+    for (a, b, c) in tris: R.poly(m["water"], [(*a, z), (*b, z), (*c, z)])
+    return pts, tris
+
+def tri_colliders(tris, shrink=.4):
+    out = []
+    for (a, b, c) in tris:
+        cx, cy = (a[0] + b[0] + c[0]) / 3, (a[1] + b[1] + c[1]) / 3; pts = []
+        for p in (a, b, c):
+            d = math.hypot(cx - p[0], cy - p[1]) or 1; pts.append((p[0] + (cx - p[0]) * min(shrink, d * .4) / d, p[1] + (cy - p[1]) * min(shrink, d * .4) / d))
+        out.append({"t": "poly", "pts": [[round(p[0], 2), round(p[1], 2)] for p in pts]})
+    return out

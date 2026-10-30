@@ -8,15 +8,16 @@ def to_m(p): return ((p[0] - OX) * SCALE, -(p[1] - OY) * SCALE)
 # name: (rank, half-width m, points px).  rank 10 boulevard, 9 arterial, 8 main, 6 collector, 5 local, 3 pedestrian lane.
 # Every road end is snapped onto another road within SNAP px (so nothing nearly meets); loose ends are listed by check_roads() unless named in OK_ENDS.
 RAW_ROADS = {
- "Coconut Creek Pkwy": (10, 8.4, [(668, 290), (675, 340), (682, 420), (688, 540), (690, 700), (692, 820), (693, 900), (693, 985), (688, 1040), (715, 1088), (770, 1110), (850, 1116), (920, 1105), (965, 1080), (995, 1040), (1015, 995), (1033, 955), (1050, 905), (1062, 858)]),
+ "Coconut Creek Pkwy": (10, 8.4, [(668, 290), (675, 340), (682, 420), (688, 540), (690, 700), (692, 820), (693, 900), (693, 985), (690, 1030)]),
+ "South Loop Rd": (8, 6.2, [(690, 1030), (700, 1062), (722, 1092), (770, 1110), (850, 1116), (920, 1105), (960, 1078), (988, 1038), (1010, 995), (1030, 955), (1050, 905), (1062, 858)]),
  "Wiles Rd": (9, 5.0, [(-20, 766), (60, 778), (130, 796), (210, 812), (300, 818), (400, 822), (520, 830), (620, 832), (692, 824), (780, 822), (880, 822), (960, 828), (1030, 842), (1062, 860), (1130, 880), (1200, 896), (1250, 920), (1300, 937), (1340, 955), (1378, 964)]),
- "Palm Blvd": (8, 4.2, [(100, 558), (130, 557), (190, 556), (212, 550), (240, 546), (300, 543), (390, 543), (470, 548), (560, 553), (640, 553), (692, 550), (740, 548), (850, 546), (960, 540), (1040, 538), (1090, 540), (1150, 568), (1230, 625), (1295, 690), (1335, 760), (1330, 830), (1312, 890), (1302, 934)]),
+ "Palm Blvd": (8, 4.2, [(96, 558), (130, 557), (190, 556), (212, 550), (240, 546), (300, 543), (390, 543), (470, 548), (560, 553), (640, 553), (692, 550), (740, 548), (850, 546), (960, 540), (1040, 538), (1090, 540), (1150, 568), (1230, 625), (1295, 690), (1335, 760), (1330, 830), (1312, 890), (1302, 934)]),
  "Northridge Rd": (8, 4.2, [(395, 278), (470, 282), (560, 284), (668, 290), (740, 292), (840, 292), (940, 292), (1030, 291), (1098, 292)]),
- "Creekview Dr": (8, 4.2, [(1050, 100), (1090, 150), (1108, 215), (1100, 292), (1094, 400), (1090, 540), (1088, 640), (1086, 720), (1078, 800), (1062, 858)]),
+ "Creekview Dr": (8, 4.2, [(1040, 98), (1070, 130), (1086, 185), (1094, 240), (1098, 292), (1094, 400), (1090, 540), (1088, 640), (1086, 720), (1078, 800), (1062, 858)]),
  "West Creek Rd": (8, 4.2, [(352, 75), (356, 110), (358, 170), (360, 230), (372, 260), (395, 278), (405, 300), (405, 400), (398, 470), (392, 545), (392, 640), (410, 720), (405, 790), (396, 822)]),
  "Creekside Loop": (8, 4.2, [(186, 822), (176, 870), (168, 910), (170, 950), (185, 985), (230, 997), (300, 1005), (400, 1016), (480, 1028), (530, 1032), (543, 1010), (543, 975)]),
  # north-west lobe
- "Lakeview Loop": (6, 3.5, [(352, 75), (380, 64), (415, 64), (438, 82), (440, 110), (437, 150), (437, 200), (433, 250), (425, 279)]),
+ "Lakeview Loop": (6, 3.5, [(352, 75), (380, 64), (415, 64), (438, 82), (440, 110), (448, 150), (448, 200), (443, 250), (432, 279)]),
  "Lakeview Island Rd": (6, 3.5, [(738, 126), (700, 127), (668, 123), (650, 115), (620, 128), (580, 142), (545, 155), (560, 178), (588, 205), (600, 240), (598, 278)]),
  "West Creek Ln": (5, 3.2, [(357, 110), (300, 112), (268, 118), (266, 200), (270, 255), (300, 262), (358, 262)]),
  "West Creek Ln 2": (5, 3.2, [(268, 182), (312, 182), (358, 182)]),
@@ -47,7 +48,7 @@ RAW_ROADS = {
  "Palm View Loop": (5, 3.2, [(446, 708), (443, 668), (495, 667), (510, 663)]),
  # west
  "Riverside Dr": (6, 3.5, [(180, 558), (180, 600), (190, 628), (213, 655), (217, 690), (212, 730), (200, 765), (193, 808)]),
- "Marina Dr": (5, 3.2, [(120, 558), (108, 578), (103, 640), (105, 710), (112, 760), (125, 795)]),
+ "Marina Dr": (5, 3.2, [(134, 557), (118, 574), (106, 596), (103, 640), (105, 710), (112, 760), (125, 795)]),
  "Heron Point Dr": (5, 3.2, [(125, 557), (120, 530), (118, 510)]),
  # industrial
  "Industrial Row": (6, 3.5, [(172, 948), (250, 952), (330, 958), (397, 960), (497, 962), (542, 966), (620, 964), (692, 960)]),
@@ -64,9 +65,10 @@ RAW_ROADS = {
  "Lyons Ln": (6, 3.5, [(1024, 965), (1060, 982), (1100, 990), (1140, 1005), (1180, 1030), (1192, 1050), (1240, 1068), (1286, 1078)]),
  "Bay Dr": (6, 3.5, [(1296, 936), (1253, 953), (1230, 968), (1217, 990), (1213, 1023), (1192, 1042)]),
  "Lyons Promenade": (3, 4.0, [(1048, 925), (1110, 945), (1170, 962), (1216, 985)]),
+ "Club Dr": (5, 3.2, [(1094, 452), (1128, 455), (1160, 468)]),
  "Canal Ridge Dr": (6, 3.5, [(1128, 874), (1128, 840), (1135, 818), (1170, 812), (1215, 818), (1280, 835), (1318, 846)]),
 }
-OK_ENDS = {("Palm Blvd", 0), ("Heron Point Dr", -1), ("Hospital Dr", -1), ("Lyons Ln", -1), ("Wiles Rd", 0), ("Wiles Rd", -1)}   # coast / bridge-gate / lot / cul-de-sac ends allowed
+OK_ENDS = {("Club Dr", -1), ("Palm Blvd", 0), ("Heron Point Dr", -1), ("Hospital Dr", -1), ("Lyons Ln", -1), ("Wiles Rd", 0), ("Wiles Rd", -1)}   # coast / bridge-gate / lot / cul-de-sac ends allowed
 SNAP = 17.0
 def _cr(pts, step=4.0):
     import math
@@ -142,3 +144,74 @@ DISTRICTS = {
 }
 LANDMARKS = [("PALM MARKET", (790, 490)), ("Civic Centre", (960, 620)), ("Retail Commons", (850, 375)), ("Gas station", (960, 895)), ("Lyons Promenade", (1120, 960)),
              ("Windmill Park", (1020, 190)), ("Lakeside Park", (300, 690)), ("Stadium", (1015, 735)), ("Elementary", (830, 745)), ("Hospital", (326, 322))]
+
+
+# ---------------- metre-space data for the 3D build ----------------
+def _length(pts): return sum(math.dist(a, b) for a, b in zip(pts, pts[1:]))
+import math, json, os
+def end_relations(roads):
+    """(road, end index 0/-1, parent road) for every road end that sits on another road's interior (a T-junction); end-on-end corners are not listed."""
+    smooth = {k: _cr(v[2]) for k, v in roads.items()}; out = []
+    for k, (rk, hw, pts) in roads.items():
+        for idx in (0, -1):
+            e = pts[idx]; best = (1e9, None, None)
+            for k2, sm in smooth.items():
+                if k2 == k: continue
+                d, q = _seg_near(e, sm)
+                if d < best[0]: best = (d, k2, q)
+            if best[0] < 1.0 and min(math.dist(best[2], smooth[best[1]][0]), math.dist(best[2], smooth[best[1]][-1])) > 5: out.append((k, idx, best[1]))
+    return out
+def resolve_ranks(roads):
+    """A road that ends on another road is ranked below it (so the T-junction is cut from the through road); ties between crossing roads are broken by length. Returns {name: float rank}."""
+    smooth = {k: _cr(v[2]) for k, v in roads.items()}; rank = {k: float(v[0]) for k, v in roads.items()}; rel = []
+    for k, (rk, hw, pts) in roads.items():
+        for idx in (0, -1):
+            e = pts[idx]; best = (1e9, None, None)
+            for k2, sm in smooth.items():
+                if k2 == k: continue
+                d, q = _seg_near(e, sm)
+                if d < best[0]: best = (d, k2, q)
+            if best[0] < 1.0 and min(math.dist(best[2], smooth[best[1]][0]), math.dist(best[2], smooth[best[1]][-1])) > 5: rel.append((k, best[1]))     # an L-corner (end on end) is not a T-junction
+    Lg = {k: _length(smooth[k]) for k in roads}
+    def find_cycle():
+        adj = {}
+        for c, p in rel: adj.setdefault(c, []).append(p)
+        color = {}; stack = []
+        def dfs(u):
+            color[u] = 1; stack.append(u)
+            for v in adj.get(u, []):
+                if color.get(v) == 1: return stack[stack.index(v):] + [v]
+                if v not in color:
+                    r = dfs(v)
+                    if r: return r
+            color[u] = 2; stack.pop(); return None
+        for u in list(adj):
+            if u not in color:
+                r = dfs(u)
+                if r: return r
+        return None
+    while True:                                                    # mutual T-junctions (A ends on B, B ends on A) cannot both be ranked: drop the relation of the longest road in the cycle
+        cyc = find_cycle()
+        if not cyc: break
+        pairs = list(zip(cyc, cyc[1:])); drop = max(pairs, key=lambda e: (Lg[e[0]], rank[e[0]])); rel = [r for r in rel if r != drop]
+    for _ in range(60):
+        ch = False
+        for c, p in rel:
+            if rank[c] >= rank[p]: rank[c] = rank[p] - .1; ch = True
+        if not ch: break
+    L = {k: _length(smooth[k]) for k in roads}
+    for k in rank: rank[k] += min(.05, L[k] / 40000.0)          # tiny length tie-break (longer road = parent)
+    return rank
+def roads_m():
+    rk = resolve_ranks(ROADS); er = end_relations(ROADS); out = []
+    for k, (rank, hw, pts) in ROADS.items():
+        out.append(dict(name=k, rank=rk[k], base=rank, hw=hw, pts=[to_m(p) for p in pts], push=[i for (c, i, p) in er if c == k], parents={i: p for (c, i, p) in er if c == k}))
+    return out
+def _ccw(poly):
+    a = sum(poly[i][0] * poly[(i + 1) % len(poly)][1] - poly[(i + 1) % len(poly)][0] * poly[i][1] for i in range(len(poly)))
+    return poly if a > 0 else poly[::-1]
+def coast_m(): return _ccw([to_m(p) for p in json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "trace_v5.json")))["coast"]])
+def holes_m(): return [[to_m(p) for p in h] for h in json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "trace_v5.json")))["holes"]]
+def bridges_m(): return [(n, to_m(a), to_m(b)) for n, a, b in BRIDGES]
+def districts_m(): return {k: (cat, col, [to_m(p) for p in poly]) for k, (cat, col, poly) in DISTRICTS.items()}
+def landmarks_m(): return {k: to_m(p) for k, p in LANDMARKS}
