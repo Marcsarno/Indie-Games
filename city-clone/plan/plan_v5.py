@@ -4,7 +4,7 @@ import os, sys, json, math
 from PIL import Image, ImageDraw, ImageFont, ImageChops
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import map_px as M
-HERE = os.path.dirname(os.path.abspath(__file__)); REF = os.path.join(HERE, "..", "art", "coconut-11-map-reference.png"); OUT = os.path.join(HERE, "..", "art-review", "plan"); os.makedirs(OUT, exist_ok=True)
+HERE = os.path.dirname(os.path.abspath(__file__)); REF = os.environ.get("PLANREF", os.path.join(HERE, "..", "art", "coconut-11-map-reference.png")); OUT = os.path.join(HERE, "..", "art-review", "plan"); os.makedirs(OUT, exist_ok=True)
 TR = json.load(open(os.path.join(HERE, "trace_v5.json")))
 def catmull(pts, closed=False, step=6.0):
     n = len(pts); out = []
@@ -60,10 +60,10 @@ def clean(path):
             d.text((tx, y_), ln, fill="#1a1a1a", font=F2, anchor="mm")
     for nm, p in M.LANDMARKS:
         x, y = PX(p); d.ellipse([x - 5, y - 5, x + 5, y + 5], fill="#e22", outline="#fff")
-    d.text((20, 14), "Grand Theft Coconut Creek: plan v5 (traced from the reference map, our districts)", fill="#fff", font=F3)
+    d.text((20, 14), "Grand Theft Coconut Creek: plan v6 (schematic roads, landmarks: PALM MARKET center, City Hall + Police, Casino, Promenade)", fill="#fff", font=F3)
     y_ = 52
     for cat, a in sorted(cats.items(), key=lambda t: -t[1]): d.text((20, y_), f"{cat}: {100 * a / tot:.0f}%", fill="#fff", font=F); y_ += 20
     d.text((20, y_ + 4), f"land {tot / 1000:.0f}k m2, about {(max(p[0] for p in TR['coast']) - min(p[0] for p in TR['coast'])) * M.SCALE:.0f} x {(max(p[1] for p in TR['coast']) - min(p[1] for p in TR['coast'])) * M.SCALE:.0f} m", fill="#fff", font=F)
     img.save(path); return cats, tot
 if __name__ == "__main__":
-    overlay(os.path.join(OUT, "plan_v5_overlay.png")); c, t = clean(os.path.join(OUT, "plan_v5.png")); print({k: f"{100 * v / t:.0f}%" for k, v in c.items()}, int(t))
+    V = os.environ.get("PLANV", "v6"); overlay(os.path.join(OUT, f"plan_{V}_overlay.png")); c, t = clean(os.path.join(OUT, f"plan_{V}.png")); print({k: f"{100 * v / t:.0f}%" for k, v in c.items()}, int(t))
