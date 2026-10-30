@@ -217,43 +217,63 @@ export function createDave(D) {
   const frustum = new THREE.Frustum(), pm = new THREE.Matrix4(), sph = new THREE.Sphere(new THREE.Vector3(), 5);
   const onScreen = (x, z) => { sph.center.set(x, 1, z); return frustum.intersectsSphere(sph); };
 
-  // ---------- roadblocks: parked police cars across the road (and the sidewalks and verges), sawhorses either side of the gap ----------
-  const RB = { on: false, parts: [], blockers: [], shut: [], closed: [] }; const concMat = new THREE.MeshLambertMaterial({ color: 0xc9c5bb }), sawMat = new THREE.MeshLambertMaterial({ color: 0xff7a1a }), sawWhite = new THREE.MeshLambertMaterial({ color: 0xf2f2f2 });
+  // ---------- roadblocks: real ones. Striped "ROAD CLOSED" barricades (Type III, flashing amber lamps) across the road and sidewalks, cones in front,
+  // concrete jersey barriers over the verges, and one cruiser parked at an angle behind with its lights going. The gap block keeps a car-wide gap lined with cones.
+  // Everything but the cruisers is instanced (a handful of draw calls for all three blocks).
+  const RB = { on: false, parts: [], blockers: [], shut: [], closed: [], lamps: [], bars: [] };
+  const texOf = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
+  const stripeTex = texOf(256, 32, (g, w, h) => { g.fillStyle = '#f6f6f2'; g.fillRect(0, 0, w, h); g.fillStyle = '#ff6a10'; for (let x = -h; x < w + h; x += 40) { g.beginPath(); g.moveTo(x, h); g.lineTo(x + 20, h); g.lineTo(x + 20 + h, 0); g.lineTo(x + h, 0); g.fill(); } });
+  const signTex = texOf(256, 96, (g, w, h) => { g.fillStyle = '#ff6a10'; g.fillRect(0, 0, w, h); g.fillStyle = '#fafafa'; g.fillRect(8, 8, w - 16, h - 16); g.fillStyle = '#111'; g.font = '700 46px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('ROAD CLOSED', w / 2, h / 2 + 2); });
+  const MAT = { board: new THREE.MeshLambertMaterial({ map: stripeTex }), leg: new THREE.MeshLambertMaterial({ color: 0xe9e9e4 }), foot: new THREE.MeshLambertMaterial({ color: 0x2a2a2a }),
+    sign: new THREE.MeshLambertMaterial({ map: signTex }), lamp: new THREE.MeshBasicMaterial({ color: 0xffb020, toneMapped: false }), cone: new THREE.MeshLambertMaterial({ color: 0xff5a10 }),
+    band: new THREE.MeshLambertMaterial({ color: 0xf4f4f4 }), conc: new THREE.MeshLambertMaterial({ color: 0xc8c4ba }), refl: new THREE.MeshBasicMaterial({ color: 0xffc23a, toneMapped: false }) };
+  const jersey = (() => { const sh = new THREE.Shape(); sh.moveTo(-.3, 0); sh.lineTo(.3, 0); sh.lineTo(.3, .08); sh.lineTo(.14, .3); sh.lineTo(.09, .81); sh.lineTo(-.09, .81); sh.lineTo(-.14, .3); sh.lineTo(-.3, .08); sh.closePath();
+    const g = new THREE.ExtrudeGeometry(sh, { depth: 2.9, bevelEnabled: false }); g.translate(0, 0, -1.45); g.rotateY(Math.PI / 2); return g; })();       // length along local x
+  const GEO = { board: new THREE.BoxGeometry(2.4, .2, .04), leg: new THREE.BoxGeometry(.07, 1.35, .07), foot: new THREE.BoxGeometry(.12, .1, .75), sign: new THREE.BoxGeometry(1.3, .48, .03),
+    lamp: new THREE.SphereGeometry(.09, 8, 6), cone: new THREE.ConeGeometry(.2, .72, 10).translate(0, .36, 0), band: new THREE.CylinderGeometry(.115, .145, .12, 10).translate(0, .42, 0),
+    base: new THREE.BoxGeometry(.44, .04, .44).translate(0, .02, 0), conc: jersey, refl: new THREE.BoxGeometry(.18, .07, .02) };
   function roadblocks() {
     if (RB.on || !graph) return; RB.on = true;
     if (RB.parts.length) { for (const p of RB.parts) { if (p.obj) p.obj.visible = true; if (p.col) colliders.push(p.col); } for (const k of RB.shut) SHUT.add(k); for (const [k, n] of RB.closed) CLOSED.set(k, n); if (env.setBlocks) env.setBlocks(RB.blockers, [...SHUT]); return; }   // built once, shown again on a retry
+    const I = {}; for (const k in GEO) I[k] = [];                                   // instance matrices per part
+    const m4 = new THREE.Matrix4(), q4 = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), one = new THREE.Vector3(1, 1, 1), v3 = new THREE.Vector3();
+    const put = (k, x, y, z, th) => { q4.setFromAxisAngle(up, th); I[k].push(m4.compose(v3.set(x, y, z), q4, one).clone()); };
+    const solid = (x, z, th, dims) => { const c = { poly: carPoly(x, z, th, dims), cx: x, cz: z, r: Math.hypot(dims[0], dims[1]) / 2 + .2, vx: 0, vz: 0 }; colliders.push(c); RB.parts.push({ col: c }); };
+    const free = (x, z) => { const q = pushCircle(x, z, 1.2, null); return Math.abs(q[0] - x) + Math.abs(q[1] - z) < .05; };
     for (const B of DAVE.blocks) {
       let best = null, bd = 1e18;
       graph.edges.forEach((e, k) => { if (e.road !== B.road) return; for (const end of ['a', 'b']) { const n = GN[e[end]], d = Math.hypot(n.x - B.end[0], n.z - B.end[1]); const o = GN[e[end === 'a' ? 'b' : 'a']], od = B.other ? Math.hypot(o.x - B.other[0], o.z - B.other[1]) : 0; if (d + od < bd) { bd = d + od; best = { e, k, from: end }; } } });
       if (!best) continue; const e = best.e; let P = e.pts.map(q => [q[0], -q[1]]); if (best.from === 'b') P = P.reverse();
       let acc = 0, at = P[P.length - 1], dir = [1, 0];
       for (let j = 1; j < P.length; j++) { const L = Math.hypot(P[j][0] - P[j - 1][0], P[j][1] - P[j - 1][1]); if (acc + L >= B.at) { const f = (B.at - acc) / L; at = [P[j - 1][0] + (P[j][0] - P[j - 1][0]) * f, P[j - 1][1] + (P[j][1] - P[j - 1][1]) * f]; dir = [(P[j][0] - P[j - 1][0]) / L, (P[j][1] - P[j - 1][1]) / L]; break; } acc += L; }
-      const nx = -dir[1], nz = dir[0], span = e.hw + 3.2, wing = e.hw + 22, g0 = B.gap ? e.hw * .45 : 1e9, thCar = Math.atan2(-nx, -nz);       // cars lie across the road + sidewalks (nose along n); concrete barriers carry on over the verges
       if (!B.gap) { SHUT.add(best.k); RB.shut.push(best.k); CLOSED.set(best.k, e[best.from]); RB.closed.push([best.k, e[best.from]]); }
-      const solid = (x, z, th, dims) => { const c = { poly: carPoly(x, z, th, dims), cx: x, cz: z, r: Math.hypot(dims[0], dims[1]) / 2 + .2, vx: 0, vz: 0 }; colliders.push(c); RB.parts.push({ col: c }); };
-      const free = (x, z) => { const q = pushCircle(x, z, 1.2, null); return Math.abs(q[0] - x) + Math.abs(q[1] - z) < .05; };          // not inside a building / tree / car
-      const cars = []; for (let u = -span; u < span - 1; u += 4.9) { const c0 = u, c1 = u + 4.7; if (!(c1 > g0 - B.gap / 2 && c0 < g0 + B.gap / 2)) cars.push([c0, c1]); }
-      for (const [c0, c1] of cars) {
-        const m = (c0 + c1) / 2, x = at[0] + nx * m, z = at[1] + nz * m, car = makeCar('police', '#f4f4f4'); placeOnGround(car.group, x, z, thCar);
-        RB.parts.push({ obj: car.group, car: true }); solid(x, z, thCar, car.dims);
+      const nx = -dir[1], nz = dir[0], span = e.hw + 3.0, wing = e.hw + 22, g0 = B.gap ? e.hw * .45 : 1e9, thN = Math.atan2(-nz, nx);    // local x of each part runs across the road (along n)
+      const W = (u, f) => [at[0] + nx * u + dir[0] * f, at[1] + nz * u + dir[1] * f];         // u across the road, f along it (+ = away from the end the block sits at)
+      const inGap = (a, b) => B.gap && b > g0 - B.gap / 2 && a < g0 + B.gap / 2;
+      const bars = []; for (let u = -span; u < span - .5; u += 2.55) if (!inGap(u, u + 2.4)) bars.push(u + 1.2);
+      for (const c of bars) {                                                        // Type III barricade: two legs with feet, three striped boards, an amber lamp on top
+        const [x, z] = W(c, 0);
+        for (const s_ of [-1.05, 1.05]) { const [lx, lz] = W(c + s_, 0); put('leg', lx, .68, lz, thN); put('foot', lx, .05, lz, thN); }
+        for (const h of [.5, .85, 1.2]) put('board', x, h, z, thN);
+        const [lx, lz] = W(c + (bars.indexOf(c) % 2 ? -1.05 : 1.05), 0); put('lamp', lx, 1.44, lz, thN); RB.lamps.push(I.lamp.length - 1);
+        solid(x, z, thN + Math.PI / 2, [2.45, .7]);
       }
-      const piece = (a, b, saw) => {                       // a barrier (concrete, or an orange-white sawhorse at the gap) from offset a to b along n
-        const len = Math.abs(b - a); if (len < .3) return; const m = (a + b) / 2, x = at[0] + nx * m, z = at[1] + nz * m, g = new THREE.Group(), th = Math.atan2(-dir[0], -dir[1]) + Math.PI / 2;
-        if (saw) { for (let j = 0; j < 3; j++) { const bb = new THREE.Mesh(new THREE.BoxGeometry(len / 3 - .05, .25, .12), j % 2 ? sawWhite : sawMat); bb.position.set(-len / 2 + len / 6 + j * len / 3, .85, 0); g.add(bb); }
-          for (const sx of [-len / 2 + .1, len / 2 - .1]) { const l = new THREE.Mesh(new THREE.BoxGeometry(.08, .9, .5), sawMat); l.position.set(sx, .45, 0); g.add(l); } }
-        else { const bb = new THREE.Mesh(new THREE.BoxGeometry(len, .85, .6), concMat); bb.position.y = .42; const st = new THREE.Mesh(new THREE.BoxGeometry(len, .14, .62), sawMat); st.position.y = .62; g.add(bb, st); }
-        g.position.set(x, 0, z); g.rotation.y = th; scene.add(g); RB.parts.push({ obj: g }); solid(x, z, th + Math.PI / 2, [len, .6]);
-      };
-      if (B.gap) for (const side of [-1, 1]) {            // sawhorses from each gap edge to the next car
-        const e0 = g0 + side * B.gap / 2; let e1 = e0 + side * 5; for (const [c0, c1] of cars) { if (side > 0 && c0 >= e0) e1 = Math.min(e1, c0); if (side < 0 && c1 <= e0) e1 = Math.max(e1, c1); }
-        piece(e0, e1, true);
+      const mid = bars.length ? bars[Math.floor(bars.length / 2)] : 0, signs = B.gap ? [bars.find(c => c < g0) ?? mid, bars.find(c => c > g0) ?? mid] : [mid];
+      for (const c of signs) for (const f of [-.04, .04]) { const [x, z] = W(c, f); put('sign', x, 1.62, z, thN); }   // ROAD CLOSED, readable from both sides
+      for (let u = -e.hw + .6; u < e.hw; u += 1.5) for (const f of [-2.2, 2.2]) { if (inGap(u - .3, u + .3)) continue; const [x, z] = W(u, f); put('cone', x, 0, z, 0); put('band', x, 0, z, 0); put('base', x, 0, z, 0); }
+      if (B.gap) for (let f = -9; f <= 9; f += 1.8) for (const sd of [-1, 1]) { const [x, z] = W(g0 + sd * (B.gap / 2 + .25 + Math.max(0, Math.abs(f) - 2) * .25), f); put('cone', x, 0, z, 0); put('band', x, 0, z, 0); put('base', x, 0, z, 0); }   // a funnel of cones into the gap
+      const lo = Math.min(-span, ...bars.map(c => c - 1.2)), hi = Math.max(span, ...bars.map(c => c + 1.2));
+      for (const [from, sgn] of [[hi, 1], [lo, -1]]) for (let u = from; Math.abs(u) < wing; u += sgn * 3) {    // jersey barriers over the verges (skipping any inside a building or tree)
+        const c = u + sgn * 1.5, [x, z] = W(c, 0); if (!free(x, z)) continue; put('conc', x, 0, z, thN); for (const f of [-.12, .12]) { const [rx, rz] = W(c, f); put('refl', rx, .62, rz, thN); } solid(x, z, thN + Math.PI / 2, [3, .62]);
       }
-      const lo = cars.length ? Math.min(...cars.map(c => c[0])) : -span, hi = cars.length ? Math.max(...cars.map(c => c[1])) : span;
-      for (const [from, sgn] of [[hi, 1], [lo, -1]]) {      // verges: 3 m concrete pieces out to the wing length, skipping any that would sit inside a building or tree
-        for (let u = from; Math.abs(u) < wing; u += sgn * 3) { const mid = u + sgn * 1.5; if (!free(at[0] + nx * mid, at[1] + nz * mid)) continue; piece(u, u + sgn * 3, false); }
-      }
+      { const u = B.gap ? -g0 * .8 - 1.5 : e.hw * .35, [x, z] = W(u, 7.5), car = makeCar('police', '#f4f4f4'), th = Math.atan2(-dir[0], -dir[1]) + (B.gap ? -.6 : .7);   // the cruiser behind, angled across its lane
+        placeOnGround(car.group, x, z, th); solid(x, z, th, car.dims);
+        const bar = [0, 1].map(j => { const b_ = new THREE.Mesh(new THREE.BoxGeometry(.5, .18, .3), new THREE.MeshBasicMaterial({ color: j ? 0x2b6bff : 0xff2b2b, toneMapped: false })); b_.position.set(j ? .35 : -.35, car.dims[3] || 1.75, 0); car.group.add(b_); return b_; });
+        RB.bars.push(bar); RB.parts.push({ obj: car.group, cx: x, cz: z }); }
       RB.blockers.push({ x: at[0], z: at[1], vx: 0, vz: 0, L: 1.5, W: 2 * span });
     }
+    for (const k in I) { if (!I[k].length) continue; const im = new THREE.InstancedMesh(GEO[k], k === 'lamp' ? MAT.lamp.clone() : MAT[k], I[k].length); I[k].forEach((m, i) => im.setMatrixAt(i, m)); im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere();
+      im.castShadow = k !== 'lamp' && k !== 'refl' && k !== 'base'; im.receiveShadow = true; scene.add(im); RB.parts.push({ obj: im, cx: DAVE.house[0], cz: DAVE.house[1], r: 200 }); if (k === 'lamp') RB.lampMesh = im; }
     if (env.setBlocks) env.setBlocks(RB.blockers, [...SHUT]);
   }
   function clearRoadblocks() {
@@ -289,7 +309,12 @@ export function createDave(D) {
       }
       if (dh < 6 && P.speed < 3) win();
     }
-    if (RB.on) for (const p of RB.parts) if (p.obj) { const v = Math.hypot(p.obj.position.x - P.x, p.obj.position.z - P.z) < 120; if (p.obj.visible !== v) p.obj.visible = v; }
+    if (RB.on) {
+      for (const p of RB.parts) if (p.obj) { const v = Math.hypot((p.cx ?? p.obj.position.x) - P.x, (p.cz ?? p.obj.position.z) - P.z) < (p.r || 120); if (p.obj.visible !== v) p.obj.visible = v; }
+      const ph = Math.floor(performance.now() / 160) % 2, amber = Math.floor(performance.now() / 420) % 2;
+      for (const bar of RB.bars) { bar[0].material.color.setHex(ph ? 0xff2b2b : 0x551010); bar[1].material.color.setHex(ph ? 0x10204f : 0x2b6bff); }
+      if (RB.lampMesh) RB.lampMesh.material.color.setHex(amber ? 0xffb020 : 0x4a3008);
+    }
     if (S.stage === 'grab' || S.stage === 'back') thugStep(dt);
     rocketStep(dt, P, S.heat > DAVE.rocketFrom ? (S.heat - DAVE.rocketFrom) / (1 - DAVE.rocketFrom) : 0);
     const tg = target(); beacon.visible = !!tg && S.stage !== 'fight'; if (tg) { const k = 1 + Math.sin(performance.now() / 300) * .06; beacon.position.set(tg[0], 0, -tg[1]); beacon.scale.set(S.stage === 'grab' || S.stage === 'walkIn' ? .5 : k, 1, S.stage === 'grab' || S.stage === 'walkIn' ? .5 : k); }
@@ -307,5 +332,5 @@ export function createDave(D) {
     else if (S.checkpoint === 'publix') { clearThugs(); env.resetCar(DAVE.lot[0], DAVE.lot[1], DAVE.lot[2]); S.stage = 'park'; objective('Park in the lot and get out', 'tap Exit'); }
     else { env.resetCar(); S.stage = 'toPublix'; objective('Drive to Publix'); }
   };
-  return { list: [], step, start, restart, refresh() {}, target, get active() { return S.stage !== 'off' && S.stage !== 'done' && !S.failed; }, get stage() { return S.stage; }, S, RK };
+  return { list: [], step, start, restart, refresh() {}, target, get active() { return S.stage !== 'off' && S.stage !== 'done' && !S.failed; }, get stage() { return S.stage; }, S, RK, RB };
 }
