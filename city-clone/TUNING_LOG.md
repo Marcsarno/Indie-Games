@@ -35,3 +35,12 @@ User's words: "the turning ... can definitely be tuned down a little bit"; "The 
 | assist | 0.5 | 0.5 | unchanged ("tuned just right") |
 
 Also: Tune saves now hold only the dials the player moved (old saves held every value, so new defaults never reached the phone).
+
+### Round 31 (30 Oct 2026), Tesla only (per-vehicle multipliers, not a Tune dial)
+User's words: "the Tesla doesn't feel like it controls well".
+
+| VSTAT tesla | Old | New | Effect (full lock, arrows) |
+|---|---|---|---|
+| steer | 1.12 | 1.0 | turn rate at 22 m/s 85 -> 76 deg/s (Jeep 72) |
+| grip | 1.15 | 1.35 | slide angle in a full-lock turn 9 -> 7 deg |
+| acc | 1.6 | 1.45 | still the quickest car off the line after the bike; top speed unchanged (30.7 m/s) |
