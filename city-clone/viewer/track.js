@@ -1,6 +1,7 @@
 // Test track (round 24): an empty lot far off the map (700 m east of the city) with the driving drills from the research brief.
 // Painted drills: 1 straight + brake box, 3 easy slalom, 4 hard slalom, 5 figure eight, 6 drift circle. Walled drills: 7 hairpin, 8 city corner, 9 narrow alley, 10 wall scrape.
 // Each timed drill has a start and a finish line: crossing the start resets it, crossing the finish prints time, wall hits, top speed, max slide and cones hit.
+// Pause menu "Test track" enters; Unstick returns to the start pad; "Leave test track" puts you back where you were. Results go to the Tune panel copy button.
 // Coordinates: three.js metres (x east, z south), local to the lot centre O.
 const O = { x: 700, z: 0 };
 export const PAD = { x: O.x - 200, z: O.z + 15, th: -Math.PI / 2 };      // start pad, facing east
