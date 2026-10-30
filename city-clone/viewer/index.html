@@ -860,7 +860,7 @@ addEventListener('keyup', e => { if (e.key === 'Shift') input.run = false; if (K
 const CHARS = [                                   // round 28: three playable characters (the same body, their own jacket and ride); the two you are not playing drive themselves around the city
   { id: 'marc', name: 'Marc', ride: 'player', jacket: '#2f5fb8', dot: '#4f8cff' },
   { id: 'aaron', name: 'Aaron', ride: 'hero_tesla', jacket: '#26262b', dot: '#f2f2f2' },
-  { id: 'chris', name: 'Chris', ride: 'hero_moto', jacket: '#4a4f5a', dot: '#5cff7a' }];
+  { id: 'chris', name: 'Chris', ride: 'hero_moto', jacket: '#f2c418', dot: '#ffd23f' }];
 let cur = 0, pilot = makePerson({ jacket: CHARS[0].jacket }); CHARS[0].person = pilot; pilot.root.visible = false; playerCar_occupy();
 for (const C of CHARS.slice(1)) { C.person = makePerson({ jacket: C.jacket }); C.person.root.visible = false; }
 function playerCar_occupy() { heroVeh().car.occupants.FL = pilot; }
