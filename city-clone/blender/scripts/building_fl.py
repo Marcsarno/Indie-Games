@@ -71,6 +71,7 @@ def make_row(name, units=4, uw=6.4, d=10, floors=2, seed=3):
             xx1 = min(x1 + uw, W / 2); hip_roof(b, tile, x0, xx1, -hy, hy, H, 2.7, .55, "x", trim)
     return b.build(vc=True)
 
+from backs import dress_wall
 def make_plaza(name, w=40, d=16, H=7.0, shops=(("restaurant_fl", 7, "#8c1c1c"), ("nails", 5, "#7a2f6a"), ("coffee", 6, "#21453a"), ("pizza", 5, "#b8321f")), tower_x=None, tower_sign="shops", seed=2, wall="cream"):
     """Shopping plaza. `shops` = (sign texture, width m, awning colour) packed left-to-right from -w/2 + 2; the rest is a big-box anchor with a sign tower at tower_x."""
     r = random.Random(seed); b = Builder(name); hx, hy = w / 2, d / 2; wm = _mats(wall); trim = M("fl_trim", TRIM); tile = M("terracotta", TILE, tex="tiles", tile=2.5)
@@ -102,6 +103,8 @@ def make_plaza(name, w=40, d=16, H=7.0, shops=(("restaurant_fl", 7, "#8c1c1c"), 
     b.box(glass, tx - 2.4, tx + 2.4, -hy - 1.26, -hy - 1.2, .3, 3.8); b.box(trim, tx - 2.6, tx + 2.6, -hy - 1.32, -hy - 1.2, 3.8, 4.1)
     tsm = M("towersign", "#ffffff", tex="sign_" + tower_sign, fit=True, rough=.6); b.box(tsm, tx - 3.3, tx + 3.3, -hy - 1.32, -hy - 1.2, 5.2, 6.9)
     hip_roof(b, tile, tx - 4.2, tx + 4.2, -hy - 1.2, -hy + 7, H + 3.3, 3.2, .7, "x", trim)
+    dress_wall(b, "y", hy, 1, -hx + .3, hx - .3, H, bay=6.0, doors=max(2, len(shops)), sign=tsm, sign_w=6.6, sign_h=1.7, sign_z=H - 2.6, seed=seed)     # round 27: back doors + the plaza sign on the back
+    for sx_ in (-1, 1): dress_wall(b, "x", sx_ * hx, sx_, -hy + .3, hy - .3, H, bay=6.0, doors=0, seed=seed + sx_, lights=False)
     return b.build(vc=True)
 
 KIT = {}

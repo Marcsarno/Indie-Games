@@ -522,6 +522,28 @@ def lot_object(name, cx, cy, rz, W, lot_d, D, prob=.4, apron_len=4.0, rows2=None
     for (sx, sy) in stl:
         wx, wy = _rot(cx, cy, rz, sx, sy); LOTS.append((wx, wy, rz + (0 if sy < aisle else 180), prob))
     p0 = _rot(cx, cy, rz, 0, (y0 + y1) / 2); MAP.append([round(p0[0] - W / 2, 1), round(p0[1] - lot_d / 2, 1), round(p0[0] + W / 2, 1), round(p0[1] + lot_d / 2, 1), "#5a5c60"])
+CUTS = []
+def cut_through(name, cx, cy, rz, W, D, front):
+    """Round 27: a paved service drive beside a big lot, running from the lot past the building to the street behind, so the lot links two streets (a shortcut).
+    Tried on each side of the composite; kept only where the strip stays on land, off lakes and clear of every other footprint, and reaches a street within 70 m."""
+    for sx in (1, -1):
+        u = sx * (W / 2 + 3.6); v0 = -D / 2 + 1.0; v = v0; hit = None
+        while v < D / 2 + 70:
+            v += 1.5; x, y = _rot(cx, cy, rz, u, v)
+            if not on_land(x, y, 2.0): break
+            if v > D / 2 and road_gap(x, y) < -.5: hit = v; break
+        if hit is None: continue
+        L = hit - v0; mx, my = _rot(cx, cy, rz, u, (v0 + hit) / 2); ends = set()
+        for vv in (v0, hit + 1):
+            px, py = _rot(cx, cy, rz, u, vv); best = min((r for r in net if r.surf == "asphalt"), key=lambda r: r.nearest(px, py)[0]); ends.add(best.name)
+        f_ = (name + "_cut", round(mx, 2), round(my, 2), 6.4, L - 2.0, rz, tuple(ends | {front}))
+        if fp_problems(f_, footprints(), .3): continue
+        b_ = Builder(name + "_cut"); q = [_rot(0, 0, rz, u + du, vv) for du, vv in ((-3.2, v0), (3.2, v0), (3.2, hit + 1.5), (-3.2, hit + 1.5))]
+        b_.poly(m["asphalt"], [(cx + p[0], cy + p[1], .035) for p in q]); put(b_.build(vc=True), 0, 0, 0, 0, None, None, col=False)
+        for vv in (v0 + 4, hit - 3): px, py = _rot(cx, cy, rz, u, vv); CUTS.append((round(px, 1), round(py, 1)))
+        FOOTREG.append(f_); cs_ = [_rot(cx, cy, rz, u + du, vv) for du in (-3.2, 3.2) for vv in (v0, hit)]
+        NOGO.append((min(p[0] for p in cs_) - .5, min(p[1] for p in cs_) - .5, max(p[0] for p in cs_) + .5, max(p[1] for p in cs_) + .5)); return True
+    return False
 def frontage_lot(poly, name, parts, lot_d=17.0, count=1, roads=None, max_rank=8.6, clear=1.0, prob=.4, step=4.0, gap=1.0, rows2=None, allow=(), face=None):
     """parts = [(maker, w, d, front_extra)]: placed side by side, fronts on the lot's back edge. Walks every street crossing the polygon (or only `roads`)."""
     W = sum(p[1] for p in parts) + gap * (len(parts) - 1); Dm = max(p[2] + p[3] for p in parts); D = lot_d + Dm; bb = bbox(poly); made = 0
@@ -546,6 +568,7 @@ def frontage_lot(poly, name, parts, lot_d=17.0, count=1, roads=None, max_rank=8.
                     if name in os.environ.get('DEBUGKIND', '').split(','): print('SKIPF', name, round(cx), round(cy), round(rz), pr_[:2])
                     WHY[name] = WHY.get(name, {}); k__ = "road" if "corridor" in pr_[0] else "land" if "land" in pr_[0] else "lake" if "lake" in pr_[0] else pr_[0].split(" overlaps ")[-1][:14]; WHY[name][k__] = WHY[name].get(k__, 0) + 1; s_ += step; continue
                 lot_object(f"{name}{made}_lot", cx, cy, rz, W, lot_d, D, prob, edge - r.hw - rd.CURB + .2, rows2)
+                if lot_d >= 11 and W >= 14 and cut_through(f"{name}{made}", cx, cy, rz, W, D, r.name): print("CUT", name, made)
                 lx = -W / 2
                 for k_, (mk, w, d, fe) in enumerate(parts):
                     by = -D / 2 + lot_d + fe + d / 2; bx = lx + w / 2; wx, wy = _rot(cx, cy, rz, bx, by); put(mk(f"{name}{made}_{k_}"), wx, wy, 0, rz, w + .3, d + .3); MAP.append([round(wx - w / 2, 1), round(wy - d / 2, 1), round(wx + w / 2, 1), round(wy + d / 2, 1), "#c9b48a"]); lx += w + gap

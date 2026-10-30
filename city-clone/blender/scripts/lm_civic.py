@@ -149,6 +149,7 @@ def butterfly(name="butterfly"):
 
 
 # ---- casino -----------------------------------------------------------------------------------------------------------------
+from backs import dress_wall
 def casino(name="casino"):
     """SEMINOLE CASINO COCONUT CREEK. Footprint 56 x 36 m (x -28..28, y -18..18): main hall 50 x 24 (9.6 m + parapet) from y = -6 to 18, an arched
     porte-cochere 18 m wide on four pillars reaching y = -18, a curved sign parapet (top 15 m), two square towers with terracotta pyramid
@@ -161,6 +162,8 @@ def casino(name="casino"):
 
     # main hall + right annex
     b.box(st, -26, 23, -6, 18, 0, H); b.box(roofm, -26, 23, -6, 18, H, H + .06)
+    dress_wall(b, "y", 18, 1, 7.8, 22.6, H, wall_hex="#efe2c4", base_hex="#a8987a", bay=15.0, doors=0, sign=sign, sign_w=11.5, sign_h=4.3, sign_z=3.9, sign_u=15.2, seed=7)     # round 27: back + west side dressed, sign on the back
+    dress_wall(b, "x", -26, -1, -5.5, 17.5, H, wall_hex="#efe2c4", base_hex="#a8987a", bay=30.0, doors=1, seed=8)
     b.box(trim, -26.25, 23.25, -6.25, 18.25, H - .45, H)
     _parapet(b, st, trim, -26.25, 23.25, -6.25, 18.25, H, .8, .4)
     b.box(st, 23, 28, -4, 16, 0, 8.0); b.box(roofm, 23, 28, -4, 16, 8.0, 8.06); b.box(trim, 23, 28.2, -4.2, 16.2, 7.6, 8.0); _parapet(b, st, trim, 23, 28.2, -4.2, 16.2, 8.0, .6, .35)

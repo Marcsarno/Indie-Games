@@ -31,6 +31,7 @@ def _ac(b, grey, dark, x, y, z, w=2.2, d=1.6, h=1.1):
     b.box(dark, x - w / 2 - .02, x + w / 2 + .02, y - d / 2 + .3, y - d / 2 + .5, z + .25, z + h - .25)
 
 
+from backs import dress_wall
 def supermarket(name="palm_market"):
     """Publix grocery anchor (concept art/coconut-14). Footprint 46 x 28 m (w x d): the main box spans x -23..23, y -14..14.
     Walls 7.4 m (+ parapet to ~8.2), the raised entrance bay with the arched sign parapet reaches 11.4 m; pilasters and awnings stick out up to ~3.6 m in front (to y = -17.6)."""
@@ -96,6 +97,10 @@ def supermarket(name="palm_market"):
     seam = M("lr_roof_seam", "#b7b4ad")                                                                     # faint membrane seams + hatch
     for k in range(1, 7): x = -hx + k * W / 7; b.box(seam, x - .06, x + .06, -hy + .45, hy - .45, H + .05, H + .07)
     b.box(grey, -18.5, -17.5, -6.5, -5.5, H + .05, H + .45)
+    # round 27: the camera turns with the car, so the back and sides are seen too: base band, pilasters, a Publix sign on the back and on the east side
+    dress_wall(b, "y", hy, 1, -hx + 2.2, hx - 2.2, H, wall_hex="#c9b48f", base_hex="#a49883", doors=0, sign=sign, sign_w=10.0, sign_h=2.7, sign_z=4.15, seed=3)
+    dress_wall(b, "x", hx, 1, -6.0, hy - 2.2, H, wall_hex="#c9b48f", base_hex="#a49883", doors=1, sign=sign, sign_w=8.0, sign_h=2.2, sign_z=4.6, seed=4)
+    dress_wall(b, "x", -hx, -1, -6.0, hy - 2.2, H, wall_hex="#c9b48f", base_hex="#a49883", doors=1, seed=5)
     # rooftop AC units
     for (x, y) in ((-14, 5), (6, 7), (15, -2), (-3, -4)): _ac(b, grey, dark, x, y, H + .05)
     _ac(b, grey, dark, 9.5, 7, H + .05, 3.0, 2.0, 1.4)
