@@ -467,7 +467,7 @@ if (world.demo) {
    Arcade top-down model in the XZ plane (three axes: +x east, -z north). Heading th: forward f = (-sin th, -cos th), right r = (cos th, -sin th).
    Positive yaw rate turns left. Collisions: SAT polygon test, impulse with spin, from the colliders exported by Blender. */
 const TUNE_DEF = {          // round 24: every driving-feel number lives here (units and safe ranges in TUNE_UI below). These defaults are exactly what the game used before round 24.
-  top: 28, accel: 15, brake: 28, hand: 9, coast: .5, coastK: .06, revTop: .3,                  // pace: m/s, m/s2, m/s2, handbrake m/s2, coasting drag m/s2 + per m/s, reverse top as a share of top
+  top: 28, accel: 15, brake: 28, hand: 9, coast: .5, coastK: .06, revTop: .35, revAcc: .8, camRev: .6,                  // pace: m/s, m/s2, m/s2, handbrake m/s2, coasting drag m/s2 + per m/s, reverse top as a share of top
   lockLow: 28.6, lockHigh: 6.9, lockCurve: .6, steer: 1.0, steerIn: 5, steerOut: 8, yawEase: 10,               // steering: wheel angle (deg) at standstill and at top speed, overall x, wheel in/return rate per s, turn-rate ease per s (the car's weight)
   grip: 8, drift: 2.4, slideIn: 5.5, slideOut: 1.5,                                             // grip: sideways bleed per s (normal, sliding); sideways m/s where a slide starts / ends
   dead: .15, stickGain: 1.6, revAngle: 137.5, revSpeed: 3, backup: 1,                            // joystick: dead zone (share of travel), steering per radian of error, reverse when the stick is more than revAngle deg behind and slower than revSpeed m/s; backup: joystick modes back off a wall by themselves
@@ -482,12 +482,12 @@ try { const st = JSON.parse(localStorage.getItem('gtcc-tune') || '{}'); if (st.v
 function saveTune() { const ch = { v: 4 }; for (const k in TUNE_DEF) if (TUNE[k] !== TUNE_DEF[k]) ch[k] = TUNE[k]; try { localStorage.setItem('gtcc-tune', JSON.stringify(ch)); } catch (e) { /* ok */ } }      // v2: older saves do not turn the joystick off
 if (/[?&]drive=stick/.test(location.search)) TUNE.stickDrive = 1; if (/[?&]drive=steer/.test(location.search)) TUNE.stickDrive = 2; if (/[?&]drive=buttons/.test(location.search)) TUNE.stickDrive = 0; if (/[?&]cam=north/.test(location.search)) TUNE.camYaw = 0;
 const TUNE_UI = [         // [key, label, min, max, step, unit]; ['#', heading] starts a group
-  ['#', 'Speed and brakes'], ['top', 'Top speed', 12, 45, 1, 'm/s'], ['accel', 'Acceleration', 6, 30, .5, 'm/s²'], ['brake', 'Brakes', 10, 50, 1, 'm/s²'], ['hand', 'Handbrake', 3, 20, .5, 'm/s²'], ['coast', 'Coasting drag', 0, 2, .05, 'm/s²'], ['coastK', 'Drag per m/s', 0, .2, .01, ''], ['revTop', 'Reverse top speed', .1, .6, .05, '× top'],
+  ['#', 'Speed and brakes'], ['top', 'Top speed', 12, 45, 1, 'm/s'], ['accel', 'Acceleration', 6, 30, .5, 'm/s²'], ['brake', 'Brakes', 10, 50, 1, 'm/s²'], ['hand', 'Handbrake', 3, 20, .5, 'm/s²'], ['coast', 'Coasting drag', 0, 2, .05, 'm/s²'], ['coastK', 'Drag per m/s', 0, .2, .01, ''], ['revTop', 'Reverse top speed', .1, .6, .05, '× top'], ['revAcc', 'Reverse pull', .3, 1.2, .05, '× accel'],
   ['#', 'Steering'], ['lockLow', 'Steering when slow', 15, 45, .5, '°'], ['lockHigh', 'Steering at top speed', 2, 15, .5, '°'], ['lockCurve', 'How soon steering calms with speed', .3, 1, .05, ''], ['steer', 'Steering overall', .5, 1.6, .05, '×'], ['steerIn', 'Wheel turn-in rate', 1, 15, .5, '/s'], ['steerOut', 'Wheel return rate', 1, 20, .5, '/s'], ['yawEase', 'Turn response (weight)', 2, 25, .5, '/s'], ['handYaw', 'Handbrake turn', 0, 5, .1, 'rad/s'], ['assist', 'Road assist', 0, 1, .05, ''],
   ['#', 'Grip'], ['grip', 'Grip', 2, 14, .5, '/s'], ['drift', 'Grip while sliding', .3, 5, .1, '/s'], ['slideIn', 'Slide starts at', 2, 10, .5, 'm/s'], ['slideOut', 'Slide ends at', .5, 4, .25, 'm/s'],
   ['#', 'Joystick'], ['dead', 'Dead zone', 0, .4, .01, ''], ['stickGain', 'Stick steering strength', .5, 4, .1, ''], ['revAngle', 'Reverse if stick behind by', 90, 180, 2.5, '°'], ['revSpeed', '…and slower than', 0, 10, .5, 'm/s'], ['backup', 'Back off walls by itself', 0, 1, 1, ''],
   ['#', 'Crashes'], ['bounce', 'Bounce', 0, .8, .05, ''], ['forgive', 'Forgiving walls', 0, 1, .05, ''], ['heroMass', 'Car weight in crashes', 1, 4, .1, '×'], ['shoveFull', 'Full shove from', 3, 25, 1, 'm/s'], ['shoveMin', 'Shove at a slow bump', 0, 1, .05, '×'], ['shoveSide', 'Shove sideways', 0, 1.5, .05, ''], ['damage', 'Car damage', 0, 1, 1, ''],
-  ['#', 'Camera'], ['camFollow', 'Camera follow rate', 1, 15, .5, '/s'], ['camLook', 'Camera look-ahead', 0, 1.5, .05, 's'], ['camZoom', 'Zoom out at speed', 0, .6, .02, ''], ['camYaw', 'Camera turns (0 off, 1 follow, 2 streets)', 0, 2, 1, ''], ['yawRate', 'Camera turn ease', .5, 10, .25, '/s'], ['yawCap', 'Camera max turn', 30, 360, 10, '°/s'],
+  ['#', 'Camera'], ['camFollow', 'Camera follow rate', 1, 15, .5, '/s'], ['camLook', 'Camera look-ahead', 0, 1.5, .05, 's'], ['camZoom', 'Zoom out at speed', 0, .6, .02, ''], ['camYaw', 'Camera turns (0 off, 1 follow, 2 streets)', 0, 2, 1, ''], ['yawRate', 'Camera turn ease', .5, 10, .25, '/s'], ['yawCap', 'Camera max turn', 30, 360, 10, '°/s'], ['camRev', 'Camera follows when reversing', 0, 1, .1, '×'],
   ['#', 'Motorcycle'], ['riderY', 'Rider height on the seat', .6, 1.2, .01, 'm'], ['motoLean', 'Lean into turns', 0, .1, .005, ''],
   ['#', 'Other'], ['footEven', 'Even on-foot speed', 0, 1, .1, ''], ['blood', 'Blood', 0, 1, 1, ''], ['readout', 'Driving readout', 0, 1, 1, ''], ['stickDrive', 'Controls (0 arrows, 1 stick direction, 2 stick steer)', 0, 2, 1, '']];
 const CAR = { L: 4.5, W: 1.8, mass: 1400, wb: 2.7 }; CAR.I = CAR.mass * (CAR.L * CAR.L + CAR.W * CAR.W) / 12;
@@ -791,7 +791,7 @@ function physicsStep(dt) {
   let a = 0;
   if (gasK > 0) a += TUNE.accel * pf * st.acc * gasK * Math.max(0, 1 - Math.max(0, vf) / TOP);
   a -= Math.sign(vf) * Math.min(Math.abs(vf) / dt, slow);
-  if (driving && (brk || rev)) a -= vf > .8 ? TUNE.brake : TUNE.accel * .55 * Math.max(0, 1 - Math.max(0, -vf) / (TUNE.top * TUNE.revTop));
+  if (driving && (brk || rev)) a -= vf > .8 ? TUNE.brake : TUNE.accel * TUNE.revAcc * Math.min(st.acc, 1.2) * Math.max(0, 1 - Math.max(0, -vf) / (TUNE.top * TUNE.revTop));
   vf += a * dt;
   const hand = !driving || input.hand;
   if (hand) { const hb = Math.min(Math.abs(vf), TUNE.hand * dt); vf -= Math.sign(vf) * hb; }
@@ -1414,8 +1414,9 @@ function update(dt, draw = true) {
       const th = drive.th, vfw = drive.vx * -Math.sin(th) + drive.vz * -Math.cos(th); ty = rig.yaw;
       if (TUNE.camYaw === 2) { if (Math.abs(wrapA(th - rig.ySnap)) > rad(55)) { rig.snapT += dt; if (rig.snapT > .25) { rig.ySnap = Math.round(th / (Math.PI / 2)) * Math.PI / 2; rig.snapT = 0; } } else rig.snapT = 0; ty = rig.ySnap; }
       else if (speed > 1.5 && vfw > -.5 && !input.hand) ty = th;
+      else if (speed > 1.5 && TUNE.camRev > 0 && !input.hand) { ty = th; upd.yawK = TUNE.camRev; }      // backing up: the camera stays behind the car too (slower), so the view never ends up sideways
     } else rig.ySnap = 0;
-    const cap = rad(TUNE.yawCap) * dt; rig.yaw = wrapA(rig.yaw + clamp(wrapA(ty - rig.yaw) * (1 - Math.exp(-TUNE.yawRate * dt)), -cap, cap)); }
+    const yk = upd.yawK || 1; upd.yawK = 1; const cap = rad(TUNE.yawCap) * yk * dt; rig.yaw = wrapA(rig.yaw + clamp(wrapA(ty - rig.yaw) * (1 - Math.exp(-TUNE.yawRate * yk * dt)), -cap, cap)); }
   const p = rig.pitch * Math.PI / 180, dist = rig.dist * (1 + upd.speedZoom);
   rig.shake = Math.max(0, rig.shake - dt * 2.2); const sh = rig.shake * rig.shake * 1.1;
   upd.gy = (upd.gy || 0) + (groundH(rig.tx, rig.tz) - (upd.gy || 0)) * Math.min(1, dt * 4);

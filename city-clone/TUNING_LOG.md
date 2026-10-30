@@ -44,3 +44,12 @@ User's words: "the Tesla doesn't feel like it controls well".
 | steer | 1.12 | 1.0 | turn rate at 22 m/s 85 -> 76 deg/s (Jeep 72) |
 | grip | 1.15 | 1.35 | slide angle in a full-lock turn 9 -> 7 deg |
 | acc | 1.6 | 1.45 | still the quickest car off the line after the bike; top speed unchanged (30.7 m/s) |
+
+### Round 31b (30 Oct 2026), reverse
+User's words: "the reverse feels bad too".
+
+| Dial | Old | New | Effect |
+|---|---|---|---|
+| revAcc (new; was fixed .55) | .55 x accel | .8 x accel (x the car's acc, capped 1.2) | 0 -> 6 m/s backwards: 1.56 s -> 0.85 s |
+| revTop | .3 | .35 | reverse top 7.4 -> 8.9 m/s |
+| camRev (new) | 0 (camera held still while reversing) | .6 (follows at 60 % rate) | after backing round a 57 deg turn the view was 67 deg off the car (it swung back only when you drove forward); now 16 deg |
