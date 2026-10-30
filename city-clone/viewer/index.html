@@ -868,7 +868,8 @@ const _hip = new THREE.Vector3();
 function seatRider(v, pp = pilot) {                           // cars hide the driver; on the motorcycle the rider stays visible, sat on the seat in the last (seated) frame of the get-in clip
   if (!v || v.car.kind !== 'moto') { if (pp.root.parent !== scene) scene.attach(pp.root); pp.root.visible = false; return; }
   const car = v.car; car.group.add(pp.root); pp.root.visible = true; pp.root.position.set(0, 0, 0); pp.root.rotation.set(0, -Math.PI / 2, 0);
-  const act = play(pp, 'enter_L', { once: true, fade: 0 }); act.time = act.getClip().duration - 1e-3; act.paused = true; pp.mixer.update(0);
+  pp.mixer.stopAllAction(); const act = pp.act.enter_L; act.reset(); act.setLoop(THREE.LoopOnce, 1); act.clampWhenFinished = true; act.setEffectiveWeight(1); act.play();     // no fades: the seated pose must be fully on before the hip is measured
+  act.time = act.getClip().duration - 1e-3; act.paused = true; pp.cur = act; pp.mixer.update(0);
   pp.root.updateWorldMatrix(true, true); const hip = pp.root.getObjectByName('pelvis'); hip.getWorldPosition(_hip); car.group.worldToLocal(_hip);
   const seat = car.seat.FL.position; pp.root.position.set(seat.x - _hip.x, TUNE.riderY - _hip.y, seat.z - _hip.z);
 }
