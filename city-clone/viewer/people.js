@@ -42,7 +42,7 @@ export function createPeople(G, deps) {
       let r = Math.random() * totalL, e = E[0]; for (const ee of E) { r -= ee.L; if (r <= 0) { e = ee; break; } }
       const [u0, u1] = range(e); if (u1 - u0 < 3) continue; const u = u0 + Math.random() * (u1 - u0), sd = Math.random() < .5 ? 1 : -1; side(e, u, sd, tmp);
       const d = Math.hypot(tmp.x - cx, tmp.z - cz); if (d < minD || d > maxD || (!allowVisible && onScreen(tmp.x, tmp.z))) continue;
-      Object.assign(w, { on: true, state: 'walk', st: 0, hp: 3, e, sd, dir: Math.random() < .5 ? 1 : -1, u, cross: false, x: tmp.x, z: tmp.z, speed: PT.walk[0] + Math.random() * (PT.walk[1] - PT.walk[0]), fleeT: 0, offT: 0, inRoad: false });
+      Object.assign(w, { y: 0, air: false, on: true, state: 'walk', st: 0, hp: 3, e, sd, dir: Math.random() < .5 ? 1 : -1, u, cross: false, x: tmp.x, z: tmp.z, speed: PT.walk[0] + Math.random() * (PT.walk[1] - PT.walk[0]), fleeT: 0, offT: 0, inRoad: false });
       w.kb.x = w.kb.z = 0; w.root.visible = true; play(w, 'walk', { timeScale: w.speed / 1.4 }); w.cur.time = Math.random(); return true;
     }
     return false;
@@ -62,7 +62,10 @@ export function createPeople(G, deps) {
   }
   function knock(w, vx, vz, sp) {                   // hit by a car
     w.state = 'down'; w.st = 0; w.hp = 0; const k = Math.min(9, sp * .55); const l = sp || 1; w.kb.x = vx / l * k + (Math.random() - .5) * 2; w.kb.z = vz / l * k + (Math.random() - .5) * 2;
-    w.root.rotation.y = Math.atan2(-vx, -vz) + Math.PI; play(w, 'fall', { once: true, fade: .03 }); if (onKnock) onKnock(w, sp); panic(w.x, w.z, 12);
+    w.root.rotation.y = Math.atan2(-vx, -vz) + Math.PI; play(w, 'fall', { once: true, fade: .03 }); if (onKnock) onKnock(w, sp, vx, vz); panic(w.x, w.z, 12);
+    if (sp > 10 && Math.random() < .45) {           // fake ragdoll: thrown up and tumbling, one bounce, then a slide
+      w.air = true; w.vy = 2.6 + sp * .22; w.kb.x = vx / l * sp * .75; w.kb.z = vz / l * sp * .75; w.spx = (Math.random() < .5 ? -1 : 1) * (5 + Math.random() * 6); w.spz = (Math.random() - .5) * 8; w.bounced = false;
+    }
   }
   // ---------- step ----------
   let spawnT = 0, first = true, frame = 0;
@@ -90,7 +93,12 @@ export function createPeople(G, deps) {
         else if (w.state === 'walk' && psp > 6) { const ux = P.vx / psp, uz = P.vz / psp, ahead = dx * ux + dz * uz, lat = Math.abs(dx * uz - dz * ux); if (ahead > 0 && ahead < 9 && lat < 2.6) { const sgn = (dx * uz - dz * ux) > 0 ? 1 : -1; flee(w, w.x - uz * sgn * 3, w.z + ux * sgn * 3, 1.6); } }
       }
       if (w.state === 'hit') { if (w.st > .5) { flee(w, ctx.cx, ctx.cz, 6); } }
-      else if (w.state === 'down') { if (w.st > 2.4) { w.state = 'getup'; w.st = 0; play(w, 'getup', { once: true, fade: .05 }); } }
+      else if (w.state === 'down') {
+        if (w.air) {                                  // tumbling through the air
+          w.y += w.vy * dt; w.vy -= 9.8 * dt; w.root.rotation.x += w.spx * dt; w.root.rotation.z += w.spz * dt; w.st = 0;
+          if (w.y <= 0 && w.vy < 0) { w.y = 0; if (!w.bounced && w.vy < -3) { w.vy = -w.vy * .32; w.bounced = true; w.spx *= .4; w.spz *= .4; } else { w.air = false; w.vy = 0; w.root.rotation.x = 0; w.root.rotation.z = 0; w.kb.x *= .6; w.kb.z *= .6; } }
+        }
+        if (!w.air && w.st > 2.4) { w.state = 'getup'; w.st = 0; play(w, 'getup', { once: true, fade: .05 }); } }
       else if (w.state === 'getup') { if (w.st > 1.1) { w.hp = 3; w.state = 'walk'; flee(w, w.x - w.kb.x, w.z - w.kb.z, 6); } }
       else if (w.state === 'freeze') { if (w.st > w.freezeT) flee(w, w.fleeAt[0], w.fleeAt[1], 5); }
       else if (w.state === 'flee') {
@@ -111,7 +119,7 @@ export function createPeople(G, deps) {
         }
       }
       if (w.kb.x || w.kb.z) { w.x += w.kb.x * dt; w.z += w.kb.z * dt; const kd = Math.exp(-6 * dt); w.kb.x *= kd; w.kb.z *= kd; if (Math.abs(w.kb.x) + Math.abs(w.kb.z) < .02) w.kb.x = w.kb.z = 0; }
-      w.root.position.set(w.x, 0, w.z);
+      w.root.position.set(w.x, w.y || 0, w.z);
     }
   }
   return { people, step, panic, knock, PT };

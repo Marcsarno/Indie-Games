@@ -239,7 +239,7 @@ const instances = []; { const byKind = {};
     const node = vegG.scene.getObjectByName(kind); if (!node) continue; node.updateWorldMatrix(true, true); const dummy = new THREE.Object3D();
     const tiles = {}; for (const p of all) (tiles[Math.floor(p.x / 160) + ',' + Math.floor(p.y / 160)] = tiles[Math.floor(p.x / 160) + ',' + Math.floor(p.y / 160)] || []).push(p);   // 160 m tiles so frustum culling can drop far vegetation
     for (const list of Object.values(tiles)) node.traverse(o => { if (!o.isMesh) return; const im = new THREE.InstancedMesh(o.geometry, o.material, list.length); im.castShadow = true; im.receiveShadow = true;
-      list.forEach((p, i) => { dummy.position.copy(b2t(p.x, p.y, 0)); dummy.rotation.set(0, rad(p.rz), 0); dummy.scale.setScalar(kind === 'hedge' ? 1 : p.s); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); });
+      list.forEach((p, i) => { dummy.position.copy(b2t(p.x, p.y, 0)); dummy.rotation.set(0, rad(p.rz), 0); dummy.scale.setScalar(kind === 'hedge' ? 1 : p.s); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); (p.inst = p.inst || []).push([im, i]); });
       im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); im.boundingSphere.radius += 6; scene.add(im); instances.push(im); });
   } }
 
@@ -359,7 +359,10 @@ async function exitCar(a, car, tag) {
 /* ---------- life: walkers, a fight, scripted traffic ---------- */
 const walkers = [];
 if (graph && new URLSearchParams(location.search).get('peds')) PT.count = Math.max(0, Math.min(80, +new URLSearchParams(location.search).get('peds')));
-const ppl = graph ? createPeople(graph, { THREE, makePerson, play, scene, camera, pushCircle: (x, z, r) => pushCircle(x, z, r), onKnock: (w, sp) => { crashSound(Math.min(9, 3 + sp * .3)); rig.shake = Math.min(1, rig.shake + .15); if (cops) cops.crime('runover', 1.5); } }) : null;     // sidewalk AI (worlds with a lane graph)
+const ppl = graph ? createPeople(graph, { THREE, makePerson, play, scene, camera, pushCircle: (x, z, r) => pushCircle(x, z, r), onKnock: (w, sp, vx, vz) => {                                // hit by your car: squish, a few drops, a splat (Tune: Blood 0 turns the blood off)
+  squishSound(Math.min(12, 3 + sp * .4)); rig.shake = Math.min(1, rig.shake + .15); if (cops) cops.crime('runover', 1.5);
+  if (TUNE.blood > 0) { const l = sp || 1; debris(w.x, .7, w.z, vx / l * sp * .3, vz / l * sp * .3, 10 + Math.min(14, sp | 0), '#8a0f0f', 2.4, 2.6, 1.1); addSplat(w.x + vx / l * 1.2, w.z + vz / l * 1.2, .7 + Math.random() * .5); if (sp > 9) addSplat(w.x + vx / l * 3.2, w.z + vz / l * 3.2, .45 + Math.random() * .3); }
+} }) : null;     // sidewalk AI (worlds with a lane graph)
 if (ppl) walkers.push(...ppl.people);
 for (let i = 0; i < (ppl ? 0 : world.walkers); i++) {
   const p = makePerson(), seg = world.walk[i % world.walk.length], dir = (i >> 1) % 2 ? 1 : -1;
@@ -397,10 +400,10 @@ if (world.demo) {
 /* =====================  DRIVING  =====================
    Arcade top-down model in the XZ plane (three axes: +x east, -z north). Heading th: forward f = (-sin th, -cos th), right r = (cos th, -sin th).
    Positive yaw rate turns left. Collisions: SAT polygon test, impulse with spin, from the colliders exported by Blender. */
-const TUNE_DEF = { top: 28, accel: 15, brake: 34, grip: 8, drift: 2.4, steer: 1.0, bounce: .35, forgive: .7 };
+const TUNE_DEF = { top: 28, accel: 15, brake: 34, grip: 8, drift: 2.4, steer: 1.0, bounce: .35, forgive: .7, heroMass: 2.2, blood: 1 };      // heroMass: your car counts this much heavier in car-vs-car hits
 const TUNE = { ...TUNE_DEF };
 try { Object.assign(TUNE, JSON.parse(localStorage.getItem('gtcc-tune') || '{}')); } catch (e) { /* storage may be blocked */ }
-const TUNE_UI = [['top', 'Top speed', 12, 45, 1, 'm/s'], ['accel', 'Accel', 6, 30, .5, ''], ['brake', 'Braking', 10, 50, 1, ''], ['grip', 'Grip', 2, 14, .5, ''], ['drift', 'Slide grip', .3, 5, .1, ''], ['steer', 'Steering', .5, 1.6, .05, ''], ['bounce', 'Bounce', 0, .8, .05, ''], ['forgive', 'Forgiving', 0, 1, .05, '']];
+const TUNE_UI = [['top', 'Top speed', 12, 45, 1, 'm/s'], ['accel', 'Accel', 6, 30, .5, ''], ['brake', 'Braking', 10, 50, 1, ''], ['grip', 'Grip', 2, 14, .5, ''], ['drift', 'Slide grip', .3, 5, .1, ''], ['steer', 'Steering', .5, 1.6, .05, ''], ['bounce', 'Bounce', 0, .8, .05, ''], ['forgive', 'Forgiving', 0, 1, .05, ''], ['heroMass', 'Car weight', 1, 4, .1, 'x'], ['blood', 'Blood', 0, 1, 1, '']];
 const CAR = { L: 4.5, W: 1.8, mass: 1400, wb: 2.7 }; CAR.I = CAR.mass * (CAR.L * CAR.L + CAR.W * CAR.W) / 12;
 const vehs = {};                                  // one state per car; only the ACTIVE one is simulated, the rest are static colliders
 for (const [name, car] of Object.entries(allCars)) { const g = car.group; const D_ = car.dims, M_ = 320 * D_[0] * D_[1]; vehs[name] = { car, name, mass: M_, perf: ({ coupe: 1.15, police: 1.1, hatchback: .95, suv: .95, minivan: .9, pickup: .95, van: .85, tow: .8, ambulance: .85, boxtruck: .72, flatbed: .75, garbage: .65, bus: .62 })[car.kind] || 1, I: M_ * (D_[0] * D_[0] + D_[1] * D_[1]) / 12, x: g.position.x, z: g.position.z, th: g.rotation.y, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, mode: 'parked', hardest: 0, hits: 0 }; }
@@ -424,6 +427,35 @@ const cops = graph ? createPolice(graph, { THREE, makeCar, carPoly: (x, z, th, d
   onStars: W => showStars(W), onBusted: () => busted(), onWreck: c => { crashSound(12); burst(c.x, .8, c.z, 0, 0, 14); game.money += 50; } }) : null;
 const missions = graph ? createMissions(graph, { THREE, scene, groundH, banner: t => banner(t), addMoney: v => { game.money += v; }, cops, heights: world.heights }) : null;
 const MPX = { x: 0, z: 0, speed: 0, driving: false };
+/* Breakable trees: a hit above walking pace knocks the tree over (you lose a little speed), it sinks away, and grows back once you are far off.
+   Each tree's collider is the circle exported at the same spot as its prop. */
+const TREES = []; {
+  const byKey = new Map(); colList.filter(c => !c.car).forEach((c, i) => { if (c.t !== 'box' && c.t !== 'poly' && !c.soft) byKey.set(c.x.toFixed(1) + ',' + c.y.toFixed(1), colliders[i]); });
+  for (const p of propList) { if (!/^(palm|oak)/.test(p.k) || !p.inst) continue; const col = byKey.get(p.x.toFixed(1) + ',' + p.y.toFixed(1)); if (!col) continue;
+    const t = { p, col, state: 'up', t: 0, ax: 0, az: 0, cut: p.k === 'oak' ? .8 : p.k === 'palm_tall' ? .86 : .9 }; col.tree = t; TREES.push(t); }
+}
+const fallen = [];
+function hitTree(c, B) {                          // true = the car went through (tree knocked down); false = treat as solid (too slow)
+  const t = B.tree; if (t.state !== 'up') return true; if (!sat(carPoly(c.x, c.z, c.th, c.car.dims), B.poly)) return true;
+  const sp = Math.hypot(c.vx, c.vz); if (sp < 3.5) return false;
+  t.state = 'fall'; t.t = 0; const ux = c.vx / sp, uz = c.vz / sp; t.ax = uz; t.az = -ux;      // topple axis: perpendicular to the hit
+  const k = 1 - (1 - t.cut) * Math.min(1, sp / 14); c.vx *= k; c.vz *= k; c.w += (Math.random() - .5) * .6;
+  rig.shake = Math.min(1, rig.shake + .18); crashSound(4 + sp * .25); debris(B.cx, 2.5, B.cz, ux * sp * .4, uz * sp * .4, 18, t.p.k === 'oak' ? '#3f7a2c' : '#5f9a34', 4, 3, 1.6);
+  fallen.push(t); return true;
+}
+const _tq = new THREE.Quaternion(), _tq2 = new THREE.Quaternion(), _tm = new THREE.Matrix4(), _tp = new THREE.Vector3(), _ts = new THREE.Vector3(), _tax = new THREE.Vector3(), _ty = new THREE.Vector3(0, 1, 0);
+function treePose(t, ang, sink, sc) {
+  const p = t.p; _tq.setFromAxisAngle(_ty, rad(p.rz)); _tax.set(t.ax, 0, t.az).normalize(); _tq2.setFromAxisAngle(_tax, ang); _tq2.multiply(_tq);
+  _tp.copy(b2t(p.x, p.y, 0)); _tp.y -= sink; _ts.setScalar(p.s * sc); _tm.compose(_tp, _tq2, _ts);
+  for (const [im, i] of p.inst) { im.setMatrixAt(i, _tm); im.instanceMatrix.needsUpdate = true; }
+}
+function treeStep(dt) {
+  for (let i = fallen.length - 1; i >= 0; i--) {
+    const t = fallen[i]; t.t += dt;
+    if (t.state === 'fall') { const a = Math.min(1, (t.t / .75) ** 2) * Math.PI * .47; treePose(t, a, t.t > 2.4 ? (t.t - 2.4) * 1.6 : 0, t.t > 3.6 ? Math.max(0, 1 - (t.t - 3.6) * 2) : 1); if (t.t > 4.2) { t.state = 'gone'; treePose(t, 0, 0, 0); } }
+    else if (t.state === 'gone') { const px = t.p.x, pz = -t.p.y; if (Math.hypot(px - rig.tx, pz - rig.tz) > 120) { t.state = 'up'; treePose(t, 0, 0, 1); fallen.splice(i, 1); } }
+  }
+}
 const moveCols = traffic.map(t => { const c = { poly: [], cx: 0, cz: 0, r: 2.6, vx: t.vx, vz: t.vz }; colliders.push(c); return c; });     // scripted traffic: moving obstacles
 const carPoly = (x, z, th, d) => { const fx = -Math.sin(th), fz = -Math.cos(th), rx = Math.cos(th), rz = -Math.sin(th), hl = (d ? d[0] : CAR.L) / 2, hw = (d ? d[1] : CAR.W) / 2; return [[x + fx * hl + rx * hw, z + fz * hl + rz * hw], [x + fx * hl - rx * hw, z + fz * hl - rz * hw], [x - fx * hl - rx * hw, z - fz * hl - rz * hw], [x - fx * hl + rx * hw, z - fz * hl + rz * hw]]; };
 
@@ -445,6 +477,33 @@ function sat(A, B) {                              // minimum translation to push
 const SP = 160, spPos = new Float32Array(SP * 3).fill(-100), spVel = new Float32Array(SP * 3), spLife = new Float32Array(SP); let spHead = 0;
 const spGeo = new THREE.BufferGeometry(); spGeo.setAttribute('position', new THREE.BufferAttribute(spPos, 3));
 const sparks = new THREE.Points(spGeo, new THREE.PointsMaterial({ color: 0xffc060, size: .3, transparent: true, opacity: .95, depthWrite: false, blending: THREE.AdditiveBlending })); sparks.frustumCulled = false; scene.add(sparks);
+const DB = 220, dbPos = new Float32Array(DB * 3).fill(-100), dbVel = new Float32Array(DB * 3), dbCol = new Float32Array(DB * 3), dbLife = new Float32Array(DB); let dbHead = 0;     // debris: leaves, blood drops (coloured points with gravity)
+const dbGeo = new THREE.BufferGeometry(); dbGeo.setAttribute('position', new THREE.BufferAttribute(dbPos, 3)); dbGeo.setAttribute('color', new THREE.BufferAttribute(dbCol, 3));
+const debrisPts = new THREE.Points(dbGeo, new THREE.PointsMaterial({ vertexColors: true, size: .26, depthWrite: true })); debrisPts.frustumCulled = false; scene.add(debrisPts);
+const _dc = new THREE.Color();
+function debris(x, y, z, vx, vz, n, hex, spread = 3, up = 3, life = 1.4) {
+  _dc.set(hex); for (let k = 0; k < n; k++) { const i = (dbHead++) % DB; dbPos[i * 3] = x + (Math.random() - .5) * .6; dbPos[i * 3 + 1] = y + Math.random() * .5; dbPos[i * 3 + 2] = z + (Math.random() - .5) * .6;
+    dbVel[i * 3] = vx + (Math.random() - .5) * spread; dbVel[i * 3 + 1] = up * (.4 + Math.random()); dbVel[i * 3 + 2] = vz + (Math.random() - .5) * spread; const sh = .75 + Math.random() * .35; dbCol[i * 3] = _dc.r * sh; dbCol[i * 3 + 1] = _dc.g * sh; dbCol[i * 3 + 2] = _dc.b * sh; dbLife[i] = life * (.6 + Math.random() * .6); }
+  dbGeo.attributes.color.needsUpdate = true;
+}
+function debrisStep(dt) {
+  let any = false;
+  for (let i = 0; i < DB; i++) { if (dbLife[i] <= 0) continue; any = true; dbLife[i] -= dt; if (dbLife[i] <= 0) { dbPos[i * 3 + 1] = -100; continue; }
+    if (dbPos[i * 3 + 1] > .04) { dbVel[i * 3 + 1] -= 9.8 * dt; dbPos[i * 3] += dbVel[i * 3] * dt; dbPos[i * 3 + 1] = Math.max(.04, dbPos[i * 3 + 1] + dbVel[i * 3 + 1] * dt); dbPos[i * 3 + 2] += dbVel[i * 3 + 2] * dt; } }
+  if (any) dbGeo.attributes.position.needsUpdate = true;
+}
+const SPL = 24, splat = new THREE.InstancedMesh(new THREE.CircleGeometry(.5, 9).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x6e0b0b, transparent: true, opacity: .82, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }), SPL);   // blood splats on the ground, fade after ~20 s
+splat.frustumCulled = false; scene.add(splat); const splT = new Float32Array(SPL), splS = new Float32Array(SPL), splR = new Float32Array(SPL), splX = new Float32Array(SPL), splZ = new Float32Array(SPL); let splHead = 0;
+const _m4 = new THREE.Matrix4(), _q4 = new THREE.Quaternion(), _v3 = new THREE.Vector3(), _s3 = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
+function splatSet(i, k) { _q4.setFromAxisAngle(_up, splR[i]); _v3.set(splX[i], .04 + i * .0004, splZ[i]); _s3.set(splS[i] * k, 1, splS[i] * k * .7); _m4.compose(_v3, _q4, _s3); splat.setMatrixAt(i, _m4); }
+for (let i = 0; i < SPL; i++) { splS[i] = 0; splatSet(i, 0); } splat.instanceMatrix.needsUpdate = true;
+function addSplat(x, z, size) { const i = (splHead++) % SPL; splX[i] = x; splZ[i] = z; splS[i] = size; splR[i] = Math.random() * 6.28; splT[i] = 22; splatSet(i, 1); splat.instanceMatrix.needsUpdate = true; }
+function splatStep(dt) { let ch = false; for (let i = 0; i < SPL; i++) { if (splT[i] <= 0) continue; splT[i] -= dt; if (splT[i] < 2) { splatSet(i, Math.max(0, splT[i] / 2)); ch = true; } } if (ch) splat.instanceMatrix.needsUpdate = true; }
+function squishSound(power) {
+  if (!audio || muted) return; const { ctx, master, nb } = audio, t = ctx.currentTime, g = clamp(power / 14, .15, .6);
+  const s_ = ctx.createBufferSource(); s_.buffer = nb; const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(1400, t); f.frequency.exponentialRampToValueAtTime(220, t + .18); const e = ctx.createGain(); e.gain.setValueAtTime(g, t); e.gain.exponentialRampToValueAtTime(.001, t + .22); s_.connect(f); f.connect(e); e.connect(master); s_.start(t, Math.random()); s_.stop(t + .25);
+  const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(95, t); o.frequency.exponentialRampToValueAtTime(38, t + .16); const oe = ctx.createGain(); oe.gain.setValueAtTime(g, t); oe.gain.exponentialRampToValueAtTime(.001, t + .2); o.connect(oe); oe.connect(master); o.start(t); o.stop(t + .22);
+}
 function burst(x, y, z, nx, nz, power) {
   const n = Math.min(36, Math.floor(power * 2.5)); for (let k = 0; k < n; k++) {
     const i = (spHead++) % SP, sp = 3 + Math.random() * power * .5; spPos.set([x, y, z], i * 3);
@@ -486,8 +545,11 @@ function contact(c, B, e) {              // resolve one polygon overlap between 
   const rx = px - c.x, rz = pz - c.z, vcx = c.vx + c.w * rz - B.vx, vcz = c.vz - c.w * rx - B.vz, vn = vcx * h.nx + vcz * h.nz; if (vn >= 0) return 0;
   const f = TUNE.forgive, tx = -h.nz, tz = h.nx, vt0 = vcx * tx + vcz * tz;
   e *= 1 - f + f * clamp((-vn - 2) / 8, 0, 1);                                     // forgiving: slow bumps do not bounce at all, hard ones still do
-  const MS = c.mass || CAR.mass, IN = c.I || CAR.I, rxn = rz * h.nx - rx * h.nz, j = -(1 + e) * vn / (1 / MS + rxn * rxn / IN);
+  const heavy = B.mass && c === drive, MS = (c.mass || CAR.mass) * (heavy ? TUNE.heroMass : 1), IN = (c.I || CAR.I) * (heavy ? TUNE.heroMass : 1), rxn = rz * h.nx - rx * h.nz;
+  if (B.mass) e = Math.min(e, .12);                                                // car vs car: a crunch, not a bounce
+  const j = -(1 + e) * vn / (1 / MS + (B.mass ? 1 / B.mass : 0) + rxn * rxn / IN);  // the other car takes its share when it has a mass (parked, traffic, police)
   c.vx += j * h.nx / MS; c.vz += j * h.nz / MS; c.w += j * rxn / IN;
+  if (B.mass && B.push) B.push(-j * h.nx / B.mass, -j * h.nz / B.mass, (rx * h.nz - rz * h.nx) * j / (B.mass * 2.2));
   const vt = (c.vx + c.w * rz - B.vx) * tx + (c.vz - c.w * rx - B.vz) * tz, rxt = rz * tx - rx * tz, mu = .35 * (1 - .65 * f);
   const jt = clamp(-vt / (1 / MS + rxt * rxt / IN), -mu * j, mu * j); c.vx += jt * tx / MS; c.vz += jt * tz / MS; c.w += jt * rxt / IN;
   const glance = clamp(1 - (-vn) / (.45 * Math.abs(vt0) + 1e-3), 0, 1) * f;      // a shallow angle against a wall: ease the nose around so the car slides along it
@@ -542,7 +604,8 @@ function physicsStep(dt) {
   for (let pass = 0; pass < 2; pass++) for (const B of colliders) {
     if (Math.hypot(B.cx - c.x, B.cz - c.z) > B.r + 3.2) continue;
     if (B.soft) { if (pass === 0) brush(c, B, dt); continue; }
-    const v = contact(c, B, TUNE.bounce); if (v > 1.2) { onImpact(c, v); if (c === drive && B.onHit) B.onHit(v); if (c === drive && B.ai && v > 7 && cops) cops.crime('carcrash', .5); }
+    if (B.tree && c === drive && hitTree(c, B)) continue;
+    const v = contact(c, B, TUNE.bounce); if (v > 1.2) { onImpact(c, B.mass ? v * .7 : v); if (c === drive && B.onHit) B.onHit(v); if (c === drive && B.ai && v > 7 && cops) cops.crime('carcrash', .5); }
   }
   c.inSoft = c.nowSoft;
   // skid marks where the rear wheels slide
@@ -553,8 +616,20 @@ function physicsStep(dt) {
 }
 let acc = 0; const FIXED = 1 / 120;
 const carCols = new Map();
+const loose = new Set();                         // parked cars knocked loose by a hit: slide, spin and settle, then park again
+function looseStep(dt) {
+  for (const v of loose) {
+    if (v === drive) { loose.delete(v); continue; }
+    const sp = Math.hypot(v.vx, v.vz), dec = Math.min(sp, (6 + sp * .35) * dt); if (sp > 0) { v.vx -= v.vx / sp * dec; v.vz -= v.vz / sp * dec; } v.w *= Math.exp(-2.6 * dt);
+    v.x += v.vx * dt; v.z += v.vz * dt; v.th += v.w * dt; const col = carCols.get(v.name);
+    const q = pushCircle(v.x, v.z, v.car.dims[1] / 2, col); if (Math.abs(q[0] - v.x) + Math.abs(q[1] - v.z) > .01) { v.vx *= .5; v.vz *= .5; } v.x = q[0]; v.z = q[1];
+    placeOnGround(v.car.group, v.x, v.z, v.th);
+    if (col) { const P = carPoly(v.x, v.z, v.th, v.car.dims); for (let k = 0; k < 4; k++) { col.poly[k][0] = P[k][0]; col.poly[k][1] = P[k][1]; } col.cx = v.x; col.cz = v.z; col.vx = v.vx; col.vz = v.vz; }
+    if (sp < .15 && Math.abs(v.w) < .08) { v.vx = v.vz = v.w = 0; v.mode = 'parked'; loose.delete(v); if (col) { col.vx = col.vz = 0; } }
+  }
+}
 function setCarCollider(v) {                      // a parked car is a static polygon at its current pose
-  removeCarCollider(v); const poly = carPoly(v.x, v.z, v.th, v.car.dims), [cx, cz] = cen(poly), col = { poly, cx, cz, r: Math.hypot(v.car.dims[0], v.car.dims[1]) / 2 + .2, vx: 0, vz: 0 }; colliders.push(col); carCols.set(v.name, col);
+  removeCarCollider(v); const poly = carPoly(v.x, v.z, v.th, v.car.dims), [cx, cz] = cen(poly), col = { poly, cx, cz, r: Math.hypot(v.car.dims[0], v.car.dims[1]) / 2 + .2, vx: 0, vz: 0, mass: v.mass, push: (dx, dz, dw) => { v.vx += dx; v.vz += dz; v.w += dw; if (v.mode === 'parked') { v.mode = 'loose'; loose.add(v); } } }; colliders.push(col); carCols.set(v.name, col);
 }
 function removeCarCollider(v) { const col = carCols.get(v.name); if (col) { const i = colliders.indexOf(col); if (i >= 0) colliders.splice(i, 1); carCols.delete(v.name); } }
 function parkVehicle(v) { v.vx = v.vz = v.w = 0; v.mode = 'parked'; setCarCollider(v); }
@@ -597,12 +672,12 @@ const combat = { state: 'idle', t: 0, dur: 0, struck: false, n: 0, queued: false
 let hitstop = 0, simT = 0; const flashes = [];
 const heroPoly = (x, z, r) => Array.from({ length: 8 }, (_, k) => [x + r * Math.cos((k + .5) * Math.PI / 4), z + r * Math.sin((k + .5) * Math.PI / 4)]);
 function pushCircle(x, z, r, skip) {                 // push a circle out of the colliders (fleeing pedestrians, police cars; skip = own collider)
-  for (const B of colliders) { if (B === skip || !B.poly.length || B.soft || Math.abs(B.cx - x) > B.r + r + .6 || Math.abs(B.cz - z) > B.r + r + .6) continue; const h = sat(heroPoly(x, z, r), B.poly); if (h) { x += h.nx * h.depth; z += h.nz * h.depth; } }
+  for (const B of colliders) { if (B === skip || !B.poly.length || B.soft || (B.tree && B.tree.state !== 'up') || Math.abs(B.cx - x) > B.r + r + .6 || Math.abs(B.cz - z) > B.r + r + .6) continue; const h = sat(heroPoly(x, z, r), B.poly); if (h) { x += h.nx * h.depth; z += h.nz * h.depth; } }
   return [x, z];
 }
 function pushOut(x, z, r) {
   for (const B of colliders) {
-    if (!B.poly.length || Math.hypot(B.cx - x, B.cz - z) > B.r + r + .6) continue;
+    if (!B.poly.length || (B.tree && B.tree.state !== 'up') || Math.hypot(B.cx - x, B.cz - z) > B.r + r + .6) continue;
     const h = sat(heroPoly(x, z, r), B.poly); if (!h) continue;
     x += h.nx * h.depth; z += h.nz * h.depth; const vn = foot.vx * h.nx + foot.vz * h.nz; if (vn < 0) { foot.vx -= vn * h.nx; foot.vz -= vn * h.nz; }
   } return [x, z];
@@ -771,6 +846,8 @@ function update(dt, draw = true) {
   hitstop = Math.max(0, hitstop - dt); const dta = hitstop > 0 ? 0 : dt;          // hitstop freezes the action, never the camera or the effects
   acc += dt; let n = 0; while (acc >= FIXED && n++ < 12) { physicsStep(FIXED); acc -= FIXED; } if (acc > FIXED) acc = 0; PF.mark('phys');
   if (drive) placeOnGround(drive.car.group, drive.x, drive.z, drive.th);
+  if (loose.size) looseStep(dta);
+  debrisStep(dta); splatStep(dta); treeStep(dta);
   traffic.forEach((t, i) => {                                                   // scripted traffic loops along its lane
     if (t.path) { t.pos += t.speed * dt; if (!t.path.closed && t.pos > t.path.L) t.pos = 0; const a = t.path.at(t.pos); t.g.position.set(a.x, groundH(a.x, a.z), a.z); t.g.rotation.y = t.rz = a.yaw; moveCols[i].vx = a.fx * t.speed; moveCols[i].vz = a.fz * t.speed; }
     else {

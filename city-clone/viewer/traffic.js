@@ -61,11 +61,13 @@ export function createTraffic(G, deps) {
   }
   // ---------- cars (pool, made once) ----------
   const cars = [];
+  const knock = c => (dx, dz, dw) => { c.kvx += dx; c.kvz += dz; c.kw += dw; c.v *= .3; c.shock = Math.max(c.shock, 1.6); };
   for (let i = 0; i < TT.count; i++) {
     const kind = KINDS[i % KINDS.length], car = makeCar(kind, COLS[(i * 7) % COLS.length]); car.group.visible = false;
-    const col = { poly: [[1e5, 1e5], [1e5 + 1, 1e5], [1e5, 1e5 + 1]], cx: 1e5, cz: 1e5, r: 3, vx: 0, vz: 0 }; colliders.push(col);
+    const col = { poly: [[1e5, 1e5], [1e5 + 1, 1e5], [1e5, 1e5 + 1], [1e5, 1e5 + 2]], cx: 1e5, cz: 1e5, r: 3, vx: 0, vz: 0, mass: 320 * car.dims[0] * car.dims[1] }; colliders.push(col);
     cars.push({ id: i, car, g: car.group, dims: car.dims, col, on: false, e: null, dir: 1, s: 0, v: 0, v0: 10, next: null, nextDir: 1, granted: false, wait: 0, still: 0, off: 0,
-      ghost: 0, lat: 0, latT: 0, passS: 0, turn: false, tp: [0, 0, 0, 0, 0, 0], tL: 0, tS: 0, x: 0, z: 0, fx: 0, fz: -1, yaw: 0, shock: 0, node: null, name: 'ai' + i });
+      kx: 0, kz: 0, kvx: 0, kvz: 0, ky: 0, kw: 0, ghost: 0, lat: 0, latT: 0, passS: 0, turn: false, tp: [0, 0, 0, 0, 0, 0], tL: 0, tS: 0, x: 0, z: 0, fx: 0, fz: -1, yaw: 0, shock: 0, node: null, name: 'ai' + i });
+    col.push = knock(cars[cars.length - 1]);
   }
   function pickNext(c) {                            // random exit at the end node, no U-turn unless it is a dead end; bigger roads a bit more likely
     const n = endNode(c.e, c.dir), opts = n.out.filter(o => o.e !== c.e);
@@ -80,7 +82,7 @@ export function createTraffic(G, deps) {
       c.x = a * a * p[0] + 2 * a * t * p[2] + t * t * p[4]; c.z = a * a * p[1] + 2 * a * t * p[3] + t * t * p[5];
       let dx = 2 * a * (p[2] - p[0]) + 2 * t * (p[4] - p[2]), dz = 2 * a * (p[3] - p[1]) + 2 * t * (p[5] - p[3]); const l = Math.hypot(dx, dz) || 1; c.fx = dx / l; c.fz = dz / l;
     } else { lanePos(c.e, c.dir, c.s, tmp); c.x = tmp.x; c.z = tmp.z; c.fx = tmp.fx; c.fz = tmp.fz; }
-    c.x += -c.fz * c.lat; c.z += c.fx * c.lat; c.yaw = Math.atan2(-c.fx, -c.fz);
+    c.x += -c.fz * c.lat + c.kx; c.z += c.fx * c.lat + c.kz; c.yaw = Math.atan2(-c.fx, -c.fz) + c.ky;
   }
   function startTurn(c) {
     const [, s1] = trims(c.e, c.dir); lanePos(c.e, c.dir, s1, tmp); const p = c.tp; p[0] = tmp.x; p[1] = tmp.z; const f0x = tmp.fx, f0z = tmp.fz;
@@ -124,7 +126,7 @@ export function createTraffic(G, deps) {
       const s = t0 + Math.random() * (t1 - t0); lanePos(e, dir, s, tmp); const d = Math.hypot(tmp.x - cx, tmp.z - cz);
       if (d < minD || d > maxD || onScreen(tmp.x, tmp.z)) continue;
       let clash = false; for (const o of cars) if (o.on && Math.hypot(o.x - tmp.x, o.z - tmp.z) < 14) { clash = true; break; } if (clash) continue;
-      c.on = true; c.e = e; c.dir = dir; c.s = s; c.v0 = e.v * (.85 + Math.random() * .25); c.v = c.v0 * .7; c.turn = false; c.granted = false; c.wait = 0; c.still = 0; c.off = 0; c.shock = 0; c.node = null; c.lat = c.latT = 0;
+      c.on = true; c.e = e; c.dir = dir; c.s = s; c.v0 = e.v * (.85 + Math.random() * .25); c.v = c.v0 * .7; c.turn = false; c.granted = false; c.wait = 0; c.still = 0; c.off = 0; c.shock = 0; c.node = null; c.lat = c.latT = 0; c.kx = c.kz = c.ky = c.kvx = c.kvz = c.kw = 0;
       pickNext(c); place(c); c.g.visible = true; return true;
     }
     return false;
@@ -194,6 +196,11 @@ export function createTraffic(G, deps) {
       }
       if (c.latT !== 0 && (c.turn || c.s - c.passS > 16)) c.latT = 0;
       if (c.lat !== c.latT) { const st = 2.2 * dt; c.lat = Math.abs(c.latT - c.lat) < st ? c.latT : c.lat + Math.sign(c.latT - c.lat) * st; }
+      // knocked by the player: shoved sideways and spun, then eases back into its lane
+      if (c.kvx || c.kvz || c.kw || c.kx || c.kz || c.ky) {
+        c.kx += c.kvx * dt; c.kz += c.kvz * dt; c.ky += c.kw * dt; const d = Math.exp(-3.2 * dt); c.kvx *= d; c.kvz *= d; c.kw *= d;
+        if (Math.abs(c.kvx) + Math.abs(c.kvz) < .4) { const r = Math.exp(-.9 * dt); c.kx *= r; c.kz *= r; c.ky *= r; if (Math.abs(c.kx) + Math.abs(c.kz) + Math.abs(c.ky) < .02) c.kx = c.kz = c.ky = c.kvx = c.kvz = c.kw = 0; }
+      }
       // move
       const ds = c.v * dt;
       if (c.turn) {

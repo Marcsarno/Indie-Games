@@ -27,6 +27,7 @@ export function createPolice(G, deps) {
     const bar = [new THREE.Mesh(lightGeo, lightMat[0].clone()), new THREE.Mesh(lightGeo, lightMat[1].clone())]; bar[0].position.set(-.35, (car.dims[3] || 1.75), 0); bar[1].position.set(.35, (car.dims[3] || 1.75), 0); car.group.add(bar[0], bar[1]);
     const col = { poly: [[1e5, 1e5], [1e5 + 1, 1e5], [1e5, 1e5 + 1], [1e5, 1e5 + 2]], cx: 1e5, cz: 1e5, r: 3, vx: 0, vz: 0 }; colliders.push(col);
     const c = { id: i, car, g: car.group, dims: car.dims, col, bar, on: false, state: 'CHASE', x: 0, z: 0, th: 0, v: 0, dmg: 0, path: null, pi: 0, repath: 0, off: 0, stuck: 0 };
+    col.mass = 320 * car.dims[0] * car.dims[1] * 1.1; col.push = (dx, dz, dw) => { c.x += dx * .12; c.z += dz * .12; c.th += dw * .25; c.v *= .5; };
     col.onHit = v => { if (!c.on || c.state === 'WRECKED') return; c.dmg += v * .075; c.v *= .4; if (c.dmg >= 1) wreck(c); };
     cops.push(c);
   }
