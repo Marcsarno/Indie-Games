@@ -102,7 +102,7 @@ export function createPolice(G, deps) {
         }
         const want_ = Math.atan2(-(tx - c.x), -(tz - c.z)); let da = want_ - c.th; da = Math.atan2(Math.sin(da), Math.cos(da));
         const turn = 2.4 * Math.min(1, .35 + c.v / 12); c.th += Math.max(-turn * dt, Math.min(turn * dt, da));
-        const ram = W.stars >= 2 && d < 30, vmax = POL.speed[Math.max(1, W.stars)];
+        const ram = W.stars >= 2 && d < 30, vmax = POL.speed[Math.max(1, W.stars)] * (W.force ? 1.25 : 1);      // the scripted Dave chase: faster than your car (25 -> 31 m/s)
         let vt = vmax * Math.max(.35, Math.cos(da)); if (!ram && d < 9 && c.state !== 'LEAVE') vt = Math.min(vt, Math.hypot(P.vx, P.vz) + 1);     // 1 star: tail you; 2+: ram
         c.v += Math.max(-14 * dt, Math.min(9 * dt, vt - c.v));
         const fx = -Math.sin(c.th), fz = -Math.cos(c.th); let nx = c.x + fx * c.v * dt, nz = c.z + fz * c.v * dt;

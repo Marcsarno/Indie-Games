@@ -11,6 +11,9 @@ export const DAVE = {
   rocketSpeed: [20, 54], rocketEvery: [4.0, .4], rocketMax: [1, 7],                   // top speed m/s, seconds between launches, how many at once: from low heat to full heat
   rocketGrip: [14, 12], cutIn: .55,                                                    // sideways grip m/s2 (less = wider turns and drifts); above cutIn heat they leave the road route and come straight at you when nothing is in the way
   rocketHurt: [12, 22], missileMass: 3.0,                                             // health per hit (low to full heat); weight against your car
+  // roadblocks set up when the chase starts: Dave's street is shut at the east end and Coconut Creek Pkwy is shut, so the way in is the long loop round the north
+  // and the only gap is one car wide at the west end of Banks Rd. road + the edge end nearest `end` (three x, z), `at` m in from that end, gap width m (0 = solid)
+  blocks: [{ road: 'Banks Rd', end: [-125.0, -29.7], at: 14, gap: 0 }, { road: 'Coconut Creek Pkwy', end: [-125.9, -0.8], at: 14, gap: 0, other: [-193.5, 0.4] }, { road: 'Banks Rd', end: [-193.5, 0.4], at: 18, gap: 3.4 }],
   reward: 1000,
 };
 
@@ -116,20 +119,21 @@ export function createDave(D) {
   // Low heat: they follow the road route and slow for corners. High heat: top speed, little grip (they turn badly and drift), no braking for corners,
   // and they cut straight at you across lots when nothing solid is in the way. They never pass through buildings: walls stop them, hard hits spin them out.
   const GN = graph ? graph.nodes.map(n => ({ x: n.x, z: -n.y, adj: [] })) : [];
-  if (graph) graph.edges.forEach(e => { const P = e.pts.map(q => [q[0], -q[1]]); GN[e.a].adj.push({ n: e.b, P, L: e.L }); GN[e.b].adj.push({ n: e.a, P: P.slice().reverse(), L: e.L }); });
+  if (graph) graph.edges.forEach((e, k) => { const P = e.pts.map(q => [q[0], -q[1]]), A = { n: e.b, P, L: e.L, k }, B = { n: e.a, P: P.slice().reverse(), L: e.L, k }; GN[e.a].adj.push(A); GN[e.b].adj.push(B); });
+  const SHUT = new Set();                                // edges with a solid roadblock (while the chase runs): routes avoid them
   const nearestNode = (x, z) => { let b = 0, bd = 1e18; for (let i = 0; i < GN.length; i++) { const d = (GN[i].x - x) ** 2 + (GN[i].z - z) ** 2; if (d < bd) { bd = d; b = i; } } return b; };
   const gd = new Float64Array(GN.length), gprev = new Int32Array(GN.length), gpe = new Array(GN.length), gdone = new Uint8Array(GN.length);
   function route(a, b) {
     gd.fill(1e18); gprev.fill(-1); gdone.fill(0); gd[a] = 0;
     for (;;) { let u = -1, ud = 1e18; for (let i = 0; i < GN.length; i++) if (!gdone[i] && gd[i] < ud) { ud = gd[i]; u = i; } if (u < 0 || u === b) break; gdone[u] = 1;
-      for (const ed of GN[u].adj) if (ud + ed.L < gd[ed.n]) { gd[ed.n] = ud + ed.L; gprev[ed.n] = u; gpe[ed.n] = ed; } }
+      for (const ed of GN[u].adj) { const L = ed.L + (SHUT.has(ed.k) ? 1e4 : 0); if (ud + L < gd[ed.n]) { gd[ed.n] = ud + L; gprev[ed.n] = u; gpe[ed.n] = ed; } } }
     const ch = []; let v = b; while (v !== a && gprev[v] >= 0) { ch.push(gpe[v]); v = gprev[v]; } const pts = []; for (let k = ch.length - 1; k >= 0; k--) for (const q of ch[k].P) pts.push(q); return pts;
   }
-  const GE = graph ? graph.edges.map(e => ({ a: e.a, b: e.b, P: e.pts.map(q => [q[0], -q[1]]) })) : [];
+  const GE = graph ? graph.edges.map((e, k) => ({ a: e.a, b: e.b, k, P: e.pts.map(q => [q[0], -q[1]]) })) : [], CLOSED = new Map();     // CLOSED: edge -> the end node a solid roadblock sits at
   function routeTo(x, z, px, pz) {                       // road route from (x, z) to the road point nearest (px, pz): node route + the last stretch of that street
     let be = null, bj = 0, bd = 1e18; for (const e of GE) for (let j = 0; j < e.P.length; j++) { const d = (e.P[j][0] - px) ** 2 + (e.P[j][1] - pz) ** 2; if (d < bd) { bd = d; be = e; bj = j; } }
     const s = nearestNode(x, z); if (!be) return route(s, nearestNode(px, pz));
-    const ra = route(s, be.a), la = gd[be.a] + bj, rb = route(s, be.b), lb = gd[be.b] + (be.P.length - bj);
+    const ra = route(s, be.a), la = gd[be.a] + bj + (CLOSED.get(be.k) === be.a ? 1e4 : 0), rb = route(s, be.b), lb = gd[be.b] + (be.P.length - bj) + (CLOSED.get(be.k) === be.b ? 1e4 : 0);
     return la <= lb ? ra.concat(be.P.slice(0, bj + 1)) : rb.concat(be.P.slice(bj).reverse());
   }
   const lerp = (a, k) => a[0] + (a[1] - a[0]) * k, clamp = (v, a, b) => Math.max(a, Math.min(b, v)), wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
@@ -148,10 +152,11 @@ export function createDave(D) {
   function launch(P, k, onScreen) {
     const r = RK.find(q => !q.on); if (!r || !GN.length) return;
     const sp = Math.hypot(P.vx, P.vz), ux = sp > 2 ? P.vx / sp : -Math.sin(P.th), uz = sp > 2 ? P.vz / sp : -Math.cos(P.th), late = k >= DAVE.cutIn;
+    const way = late ? null : routeTo(P.x, P.z, DAVE.house[0], DAVE.house[1]), onWay = (x, z) => { if (!way) return 0; for (let j = 0; j < way.length; j += 2) if (Math.abs(way[j][0] - x) + Math.abs(way[j][1] - z) < 14) return 1; return 0; };
     const cand = [];
     for (let i = 0; i < GN.length; i++) {                // a road node off-screen: ahead of you early (they come down the road at you), from the sides late, where the line to you is clear
       const dx = GN[i].x - P.x, dz = GN[i].z - P.z, d = Math.hypot(dx, dz); if (d < (late ? 40 : 65) || d > (late ? 85 : 125) || onScreen(GN[i].x, GN[i].z)) continue;
-      const fwd = (dx * ux + dz * uz) / d; cand.push([(late ? 1 - Math.abs(fwd) * .6 : fwd) + Math.random() * (late ? 1.2 : .5), i]);
+      const fwd = (dx * ux + dz * uz) / d; cand.push([(late ? 1 - Math.abs(fwd) * .6 : fwd + onWay(GN[i].x, GN[i].z) * 1.5) + Math.random() * (late ? 1.2 : .5), i]);
     }
     cand.sort((a, b) => b[0] - a[0]); let best = cand.length ? cand[0][1] : -1;
     if (late) for (const [, i] of cand.slice(0, 8)) if (!blocked(GN[i].x, GN[i].z, P.x, P.z, null)) { best = i; break; }
@@ -159,7 +164,7 @@ export function createDave(D) {
     const path = routeTo(n.x, n.z, P.x, P.z); let aim = [P.x, P.z];                  // start pointed along the road (or at you, when the line is clear)
     if (!(late && !blocked(n.x, n.z, P.x, P.z, null))) for (const q of path) if (Math.hypot(q[0] - n.x, q[1] - n.z) > 8) { aim = q; break; }
     const th = Math.atan2(-(aim[0] - n.x), -(aim[1] - n.z)), v0 = lerp(DAVE.rocketSpeed, k) * .5;
-    Object.assign(r, { on: true, x: n.x, z: n.z, th, vx: -Math.sin(th) * v0, vz: -Math.cos(th) * v0, spin: 0, roll: 0, t: 0, hit: false, crash: 0, path, pi: 0, repath: 1.2, los: false, losT: 0, k });
+    Object.assign(r, { on: true, x: n.x, z: n.z, th, vx: -Math.sin(th) * v0, vz: -Math.cos(th) * v0, spin: 0, roll: 0, t: 0, hit: false, crash: 0, near: 1e9, path, pi: 0, repath: 1.2, los: false, losT: 0, k });
     r.col.mass = env.carMass * DAVE.missileMass; r.car.group.visible = true; r.car.setDamage && r.car.setDamage(0);
   }
   function park(r) { r.on = false; r.car.group.visible = false; r.col.cx = r.col.cz = 1e5; for (const q of r.col.poly) { q[0] = 1e5; q[1] = 1e5; } r.col.vx = r.col.vz = 0; }
@@ -168,7 +173,7 @@ export function createDave(D) {
     for (const r of RK) {
       if (!r.on) continue; r.t += dt; r.k = Math.max(r.k, k);
       const dx = P.x - r.x, dz = P.z - r.z, d = Math.hypot(dx, dz), v = Math.hypot(r.vx, r.vz);
-      const vmax = lerp(DAVE.rocketSpeed, r.k), grip = lerp(DAVE.rocketGrip, r.k), care = 1 - .45 * r.k, late = r.k >= DAVE.cutIn;
+      const vmax = lerp(DAVE.rocketSpeed, r.k), late = r.k >= DAVE.cutIn; let grip = lerp(DAVE.rocketGrip, r.k), care = 1 - .45 * r.k;
       // where to go: the player (with lead) when close or, late, when the line is clear; else the next point on the road route
       r.losT -= dt; if (late && r.losT <= 0) { r.losT = .3; r.los = d < 95 && !blocked(r.x, r.z, P.x, P.z, r.col); }
       const lead = clamp(d / Math.max(v, 8), 0, 1.4) * (.5 + .5 * r.k); let tx = P.x + P.vx * lead, tz = P.z + P.vz * lead, onRoute = false;
@@ -177,6 +182,9 @@ export function createDave(D) {
         while (r.pi < r.path.length && Math.hypot(r.path[r.pi][0] - r.x, r.path[r.pi][1] - r.z) < 7 + v * .25) r.pi++;
         if (r.pi < r.path.length) { tx = r.path[r.pi][0]; tz = r.path[r.pi][1]; onRoute = true; }
       }
+      if (onRoute) { grip *= 2.2; care = Math.max(care, .6); }              // on the road they hold the road (they must reach you); off it, they drift
+      else if (!r.crash) { care = .25 * (1 - r.k); grip *= 1.3; }           // coming straight at you: (almost) no braking, a bit more bite to line up
+      r.near = Math.min(r.near, d);
       // steering: the nose turns at what the grip allows at this speed (fast = barely turns); velocity follows the nose only as fast as the grip allows (late = drifts)
       const want = Math.atan2(-(tx - r.x), -(tz - r.z)); let da = wrap(want - r.th);
       if (r.crash) { r.th += r.spin * dt; r.spin *= Math.exp(-1.2 * dt); r.crash += dt; }
@@ -187,12 +195,18 @@ export function createDave(D) {
       const fx = -Math.sin(r.th), fz = -Math.cos(r.th); let vf = r.vx * fx + r.vz * fz, vl = r.vx * fz - r.vz * fx;
       vf += clamp(vt - vf, -22 * dt, (14 + 10 * r.k) * dt); const gl = (r.crash ? 6 : grip) * dt; vl = Math.abs(vl) <= gl ? 0 : vl - Math.sign(vl) * gl;
       r.vx = fx * vf + fz * vl; r.vz = fz * vf - fx * vl;
+      // slamming into you (checked before the move: the car-vs-world push below would otherwise stop them at your bumper and count it as a wall)
+      const reach = 1.7 + (P.L || 4.5) / 2 + .9;
+      if (!r.hit && d < reach && env.hmode === 'driving') {
+        r.hit = true; const rv = Math.hypot(r.vx - P.vx, r.vz - P.vz), f = clamp(rv / 30, .35, 1.2); env.hurt(lerp(DAVE.rocketHurt, r.k) * f, dx / (d || 1), dz / (d || 1)); hurtFlash(); env.sound('crash');
+        if (env.kick) env.kick(r.vx * .45 * f, r.vz * .45 * f, (Math.random() < .5 ? -1 : 1) * (1.5 + 2.5 * f)); if (burst) burst(P.x - dx / 2, .8, P.z - dz / 2, -dx / (d || 1), -dz / (d || 1), rv);
+        r.vx *= .3; r.vz *= .3; r.spin += (Math.random() - .5) * 8; r.crash = .01;
+      }
       // move and hit the world: walls stop them; a hard hit spins them out
       const nx = r.x + r.vx * dt, nz = r.z + r.vz * dt, q = pushCircle(nx, nz, 1.7, r.col), ox = q[0] - nx, oz = q[1] - nz, od = Math.hypot(ox, oz);
       if (od > .02) { const ux = ox / od, uz = oz / od, vn = r.vx * ux + r.vz * uz;
-        if (vn < 0) { if (-vn > 15 && !r.crash) { r.crash = .01; r.spin = (Math.random() < .5 ? -1 : 1) * (3 + Math.min(6, -vn / 6)); if (burst) burst(q[0], .6, q[1], ux, uz, -vn); if (d < 60) env.sound('crash'); } r.vx -= vn * ux * (r.crash ? 1.3 : 1); r.vz -= vn * uz * (r.crash ? 1.3 : 1); } }
+        if (vn < 0) { if (-vn > (onRoute ? 22 : 15) && !r.crash) { r.crash = .01; r.spin = (Math.random() < .5 ? -1 : 1) * (3 + Math.min(6, -vn / 6)); if (burst) burst(q[0], .6, q[1], ux, uz, -vn); if (d < 60) env.sound('crash'); } r.vx -= vn * ux * (r.crash ? 1.3 : 1); r.vz -= vn * uz * (r.crash ? 1.3 : 1); } }
       r.x = q[0]; r.z = q[1]; r.roll += (clamp(-vl / 25, -.12, .12) - r.roll) * Math.min(1, dt * 6);
-      if (!r.hit && d < 3.4 && env.hmode === 'driving') { r.hit = true; env.hurt(lerp(DAVE.rocketHurt, r.k), dx / (d || 1), dz / (d || 1)); hurtFlash(); env.sound('crash'); r.vx *= .35; r.vz *= .35; r.spin += (Math.random() - .5) * 8; }
       const gone = r.t > 16 || d > 150 || (r.crash > 2 && d > 15) || r.crash > 4 || (r.hit && r.t > 6 && d > 30);
       if (gone) { park(r); continue; }
       placeOnGround(r.car.group, r.x, r.z, r.th); r.car.group.rotation.z = r.roll; r.bar[0].material.color.setHex(flash ? 0xff2b2b : 0x551010); r.bar[1].material.color.setHex(flash ? 0x10204f : 0x2b6bff);
@@ -202,6 +216,50 @@ export function createDave(D) {
   function clearMissiles() { for (const r of RK) park(r); }
   const frustum = new THREE.Frustum(), pm = new THREE.Matrix4(), sph = new THREE.Sphere(new THREE.Vector3(), 5);
   const onScreen = (x, z) => { sph.center.set(x, 1, z); return frustum.intersectsSphere(sph); };
+
+  // ---------- roadblocks: parked police cars across the road (and the sidewalks and verges), sawhorses either side of the gap ----------
+  const RB = { on: false, parts: [], blockers: [], shut: [], closed: [] }; const concMat = new THREE.MeshLambertMaterial({ color: 0xc9c5bb }), sawMat = new THREE.MeshLambertMaterial({ color: 0xff7a1a }), sawWhite = new THREE.MeshLambertMaterial({ color: 0xf2f2f2 });
+  function roadblocks() {
+    if (RB.on || !graph) return; RB.on = true;
+    if (RB.parts.length) { for (const p of RB.parts) { if (p.obj) p.obj.visible = true; if (p.col) colliders.push(p.col); } for (const k of RB.shut) SHUT.add(k); for (const [k, n] of RB.closed) CLOSED.set(k, n); if (env.setBlocks) env.setBlocks(RB.blockers, [...SHUT]); return; }   // built once, shown again on a retry
+    for (const B of DAVE.blocks) {
+      let best = null, bd = 1e18;
+      graph.edges.forEach((e, k) => { if (e.road !== B.road) return; for (const end of ['a', 'b']) { const n = GN[e[end]], d = Math.hypot(n.x - B.end[0], n.z - B.end[1]); const o = GN[e[end === 'a' ? 'b' : 'a']], od = B.other ? Math.hypot(o.x - B.other[0], o.z - B.other[1]) : 0; if (d + od < bd) { bd = d + od; best = { e, k, from: end }; } } });
+      if (!best) continue; const e = best.e; let P = e.pts.map(q => [q[0], -q[1]]); if (best.from === 'b') P = P.reverse();
+      let acc = 0, at = P[P.length - 1], dir = [1, 0];
+      for (let j = 1; j < P.length; j++) { const L = Math.hypot(P[j][0] - P[j - 1][0], P[j][1] - P[j - 1][1]); if (acc + L >= B.at) { const f = (B.at - acc) / L; at = [P[j - 1][0] + (P[j][0] - P[j - 1][0]) * f, P[j - 1][1] + (P[j][1] - P[j - 1][1]) * f]; dir = [(P[j][0] - P[j - 1][0]) / L, (P[j][1] - P[j - 1][1]) / L]; break; } acc += L; }
+      const nx = -dir[1], nz = dir[0], span = e.hw + 3.2, wing = e.hw + 22, g0 = B.gap ? e.hw * .45 : 1e9, thCar = Math.atan2(-nx, -nz);       // cars lie across the road + sidewalks (nose along n); concrete barriers carry on over the verges
+      if (!B.gap) { SHUT.add(best.k); RB.shut.push(best.k); CLOSED.set(best.k, e[best.from]); RB.closed.push([best.k, e[best.from]]); }
+      const solid = (x, z, th, dims) => { const c = { poly: carPoly(x, z, th, dims), cx: x, cz: z, r: Math.hypot(dims[0], dims[1]) / 2 + .2, vx: 0, vz: 0 }; colliders.push(c); RB.parts.push({ col: c }); };
+      const free = (x, z) => { const q = pushCircle(x, z, 1.2, null); return Math.abs(q[0] - x) + Math.abs(q[1] - z) < .05; };          // not inside a building / tree / car
+      const cars = []; for (let u = -span; u < span - 1; u += 4.9) { const c0 = u, c1 = u + 4.7; if (!(c1 > g0 - B.gap / 2 && c0 < g0 + B.gap / 2)) cars.push([c0, c1]); }
+      for (const [c0, c1] of cars) {
+        const m = (c0 + c1) / 2, x = at[0] + nx * m, z = at[1] + nz * m, car = makeCar('police', '#f4f4f4'); placeOnGround(car.group, x, z, thCar);
+        RB.parts.push({ obj: car.group, car: true }); solid(x, z, thCar, car.dims);
+      }
+      const piece = (a, b, saw) => {                       // a barrier (concrete, or an orange-white sawhorse at the gap) from offset a to b along n
+        const len = Math.abs(b - a); if (len < .3) return; const m = (a + b) / 2, x = at[0] + nx * m, z = at[1] + nz * m, g = new THREE.Group(), th = Math.atan2(-dir[0], -dir[1]) + Math.PI / 2;
+        if (saw) { for (let j = 0; j < 3; j++) { const bb = new THREE.Mesh(new THREE.BoxGeometry(len / 3 - .05, .25, .12), j % 2 ? sawWhite : sawMat); bb.position.set(-len / 2 + len / 6 + j * len / 3, .85, 0); g.add(bb); }
+          for (const sx of [-len / 2 + .1, len / 2 - .1]) { const l = new THREE.Mesh(new THREE.BoxGeometry(.08, .9, .5), sawMat); l.position.set(sx, .45, 0); g.add(l); } }
+        else { const bb = new THREE.Mesh(new THREE.BoxGeometry(len, .85, .6), concMat); bb.position.y = .42; const st = new THREE.Mesh(new THREE.BoxGeometry(len, .14, .62), sawMat); st.position.y = .62; g.add(bb, st); }
+        g.position.set(x, 0, z); g.rotation.y = th; scene.add(g); RB.parts.push({ obj: g }); solid(x, z, th + Math.PI / 2, [len, .6]);
+      };
+      if (B.gap) for (const side of [-1, 1]) {            // sawhorses from each gap edge to the next car
+        const e0 = g0 + side * B.gap / 2; let e1 = e0 + side * 5; for (const [c0, c1] of cars) { if (side > 0 && c0 >= e0) e1 = Math.min(e1, c0); if (side < 0 && c1 <= e0) e1 = Math.max(e1, c1); }
+        piece(e0, e1, true);
+      }
+      const lo = cars.length ? Math.min(...cars.map(c => c[0])) : -span, hi = cars.length ? Math.max(...cars.map(c => c[1])) : span;
+      for (const [from, sgn] of [[hi, 1], [lo, -1]]) {      // verges: 3 m concrete pieces out to the wing length, skipping any that would sit inside a building or tree
+        for (let u = from; Math.abs(u) < wing; u += sgn * 3) { const mid = u + sgn * 1.5; if (!free(at[0] + nx * mid, at[1] + nz * mid)) continue; piece(u, u + sgn * 3, false); }
+      }
+      RB.blockers.push({ x: at[0], z: at[1], vx: 0, vz: 0, L: 1.5, W: 2 * span });
+    }
+    if (env.setBlocks) env.setBlocks(RB.blockers, [...SHUT]);
+  }
+  function clearRoadblocks() {
+    for (const p of RB.parts) { if (p.obj) p.obj.visible = false; if (p.col) { const i = colliders.indexOf(p.col); if (i >= 0) colliders.splice(i, 1); } }
+    RB.on = false; SHUT.clear(); CLOSED.clear(); if (env.setBlocks) env.setBlocks([], []);
+  }
 
   // ---------- goal marker: a soft green column at the current goal, and a DAVE sign at the house ----------
   const geo = new THREE.CylinderGeometry(2.6, 2.6, 7, 24, 1, true).translate(0, 3.5, 0);
@@ -231,13 +289,14 @@ export function createDave(D) {
       }
       if (dh < 6 && P.speed < 3) win();
     }
+    if (RB.on) for (const p of RB.parts) if (p.obj) { const v = Math.hypot(p.obj.position.x - P.x, p.obj.position.z - P.z) < 120; if (p.obj.visible !== v) p.obj.visible = v; }
     if (S.stage === 'grab' || S.stage === 'back') thugStep(dt);
     rocketStep(dt, P, S.heat > DAVE.rocketFrom ? (S.heat - DAVE.rocketFrom) / (1 - DAVE.rocketFrom) : 0);
     const tg = target(); beacon.visible = !!tg && S.stage !== 'fight'; if (tg) { const k = 1 + Math.sin(performance.now() / 300) * .06; beacon.position.set(tg[0], 0, -tg[1]); beacon.scale.set(S.stage === 'grab' || S.stage === 'walkIn' ? .5 : k, 1, S.stage === 'grab' || S.stage === 'walkIn' ? .5 : k); }
   }
-  function restart() { clearThugs(); clearMissiles(); cops.force(0); cops.lock(false); cops.clear(); fail.hidden = true; phone.hidden = true; S.failed = false; S.stage = 'off'; S.checkpoint = null; objective(''); env.heal(); env.resetCar(); start(); }
-  function startChase() { S.stage = 'chase'; S.cops = 1; S.copT = 0; S.missT = 2; S.t = 0; S.heat = 0; S.d0 = Math.max(60, dist([DAVE.lot[0], DAVE.lot[1]], DAVE.house)); S.checkpoint = 'chase'; cops.lock(true); cops.force(1); objective('Get the groceries to Dave'); banner('COPS!'); }
-  function win() { S.stage = 'done'; cops.force(0); cops.lock(false); cops.clear(); clearMissiles(); clearThugs(); objective(''); env.addMoney(DAVE.reward); banner(`MISSION PASSED  +$${DAVE.reward}`);
+  function restart() { clearRoadblocks(); clearThugs(); clearMissiles(); cops.force(0); cops.lock(false); cops.clear(); fail.hidden = true; phone.hidden = true; S.failed = false; S.stage = 'off'; S.checkpoint = null; objective(''); env.heal(); env.resetCar(); start(); }
+  function startChase() { roadblocks(); S.stage = 'chase'; S.cops = 1; S.copT = 0; S.missT = 2; S.t = 0; S.heat = 0; S.d0 = Math.max(60, dist([DAVE.lot[0], DAVE.lot[1]], DAVE.house)); S.checkpoint = 'chase'; cops.lock(true); cops.force(1); objective('Get the groceries to Dave'); banner('COPS!'); }
+  function win() { clearRoadblocks(); S.stage = 'done'; cops.force(0); cops.lock(false); cops.clear(); clearMissiles(); clearThugs(); objective(''); env.addMoney(DAVE.reward); banner(`MISSION PASSED  +$${DAVE.reward}`);
     (async () => { await wait(1.5); msgs.innerHTML = ''; pick.hidden = true; phone.hidden = false; await wait(.05); phone.classList.add('show'); await typing('Dave', 1.0); say('Dave', 'YOU MADE IT?!? 😭 THANK YOU'); await wait(1.0); say(env.CHARS[env.cur].name, 'never again.', true); await wait(2.6); phone.classList.remove('show'); await wait(.3); phone.hidden = true; })(); }
   function failMission(why) {
     S.failed = true; cops.force(0); cops.lock(false); clearMissiles(); objective(''); fail.querySelector('#mf-why').textContent = why; setTimeout(() => { fail.hidden = false; }, 1600);

@@ -533,9 +533,10 @@ const DEV = /[?&]dev=1/.test(location.search);       // round 29: the showcase i
 const DENV = {                                     // what the Dave mission reads from the game (getters, so it always sees the current values)
   get foot() { return foot; }, get hmode() { return hmode; }, get cur() { return cur; }, get CHARS() { return CHARS; }, get respawning() { return respawning; }, lastDeath: '',
   get carMass() { return drive ? drive.mass * TUNE.heroMass * (drive.st ? drive.st.ram : 1) : 2000; },
-  switchTo: i => switchTo(i, true), cine: (sh, loop) => cine(sh, loop), cineStop: () => cineStop(), get cineOn() { return !!CINE.shots; }, addMoney: v => { game.money += v; }, heal: () => { game.hp = 100; }, resetCar: (x, z, th) => resetCar(x, z, th),
+  setBlocks: (cars, shut) => { BLK.cars = cars; BLK.shut = new Set(shut); ROUTE.t = 0; }, switchTo: i => switchTo(i, true), cine: (sh, loop) => cine(sh, loop), cineStop: () => cineStop(), get cineOn() { return !!CINE.shots; }, addMoney: v => { game.money += v; }, heal: () => { game.hp = 100; }, resetCar: (x, z, th) => resetCar(x, z, th),
   hurt: (amt, dx, dz) => { game.hp = Math.max(0, game.hp - amt); rig.shake = Math.min(1, rig.shake + .35); if (hmode === 'foot') { foot.lx += dx * 6; foot.lz += dz * 6; } },
   sound: k => { if (k === 'crash') crashSound(12); },
+  kick: (vx, vz, spin) => { if (drive && hmode === 'driving') { drive.vx += vx; drive.vz += vz; drive.w += spin; rig.shake = Math.min(1, rig.shake + .5); } },      // a rocket cop slams into you
 };
 const missions = !graph ? null : DEV ? createMissions(graph, { THREE, scene, groundH, banner: t => banner(t), addMoney: v => { game.money += v; }, cops, heights: world.heights })
   : createDave({ THREE, scene, makePerson: o => makePerson(o), makeCar: (k, c) => makeCar(k, c), play: (a, n, o) => play(a, n, o), walkers, colliders, carPoly: (x, z, th, d) => carPoly(x, z, th, d), placeOnGround, banner: t => banner(t), cops, graph, camera, env: DENV, pushCircle: (x, z, r, skip) => pushCircle(x, z, r, skip), burst: (x, y, z, nx, nz, p) => burst(x, y, z, nx, nz, p) });
@@ -930,10 +931,11 @@ function roamStep(dt) {
     const c = Rm.col; c.poly = carPoly(v.x, v.z, v.th, v.car.dims); c.cx = v.x; c.cz = v.z; c.vx = Math.sin(-v.th) * Rm.sp; c.vz = -Math.cos(v.th) * Rm.sp;
     Object.assign(Rm.o, { x: v.x, z: v.z, vx: c.vx, vz: c.vz }); others.push(Rm.o);
   }
-  AIX.others = others;
+  AIX.others = BLK.cars.length ? others.concat(BLK.cars) : others;
 }
 /* Switch (GTA 5 style): the camera rises into the sky over you, slides across the city, and drops onto the other character; you take over at the bottom. */
 const SW = { on: false, t: 0, ci: 0, fog: null };
+const BLK = { cars: [], shut: new Set() };          // mission roadblocks: traffic stops at them (as 'others'), the minimap route avoids shut roads
 function switchTo(ci, scripted) {
   if (!scripted && missions && missions.active && missions.stage !== 'intro') { banner('NOT NOW'); return; }
   if (SW.on || ci === cur || busy || hmode === 'busy' || track.active || respawning || !CHARS[ci].person) return;
@@ -1218,7 +1220,7 @@ function routeTo(px, py, tx, ty) {                // shortest drive along the la
   if (!graph) return null; const N = graph.nodes, E = graph.edges, near = (x, y) => { let b = 0, bd = 1e18; N.forEach((n, i) => { const d = (n.x - x) ** 2 + (n.y - y) ** 2; if (d < bd) { bd = d; b = i; } }); return b; };
   const s0 = near(px, py), s1 = near(tx, ty), dist = new Float64Array(N.length).fill(1e18), prev = new Int32Array(N.length).fill(-1), done = new Uint8Array(N.length); dist[s0] = 0;
   for (;;) { let u = -1, bd = 1e18; for (let i = 0; i < N.length; i++) if (!done[i] && dist[i] < bd) { bd = dist[i]; u = i; } if (u < 0 || u === s1) break; done[u] = 1;
-    E.forEach((e, k) => { const v = e.a === u ? e.b : e.b === u ? e.a : -1; if (v >= 0 && dist[u] + e.L < dist[v]) { dist[v] = dist[u] + e.L; prev[v] = k; } }); }
+    E.forEach((e, k) => { const v = e.a === u ? e.b : e.b === u ? e.a : -1; const L = e.L + (BLK.shut.has(k) ? 1e4 : 0); if (v >= 0 && dist[u] + L < dist[v]) { dist[v] = dist[u] + L; prev[v] = k; } }); }
   if (dist[s1] >= 1e18) return null; const out = []; let v = s1;
   while (v !== s0) { const e = E[prev[v]], pts = e.b === v ? e.pts.slice().reverse() : e.pts.slice(); for (const p of pts) out.push(p); v = e.a === v ? e.b : e.a; }
   out.reverse(); out.unshift([px, py]); out.push([tx, ty]); return out;
