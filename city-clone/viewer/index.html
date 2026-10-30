@@ -402,10 +402,10 @@ if (world.demo) {
 /* =====================  DRIVING  =====================
    Arcade top-down model in the XZ plane (three axes: +x east, -z north). Heading th: forward f = (-sin th, -cos th), right r = (cos th, -sin th).
    Positive yaw rate turns left. Collisions: SAT polygon test, impulse with spin, from the colliders exported by Blender. */
-const TUNE_DEF = { top: 28, accel: 15, brake: 34, grip: 8, drift: 2.4, steer: 1.0, bounce: .35, forgive: .7, heroMass: 2.2, blood: 1, stickDrive: 0 };      // heroMass: your car counts this much heavier in car-vs-car hits
+const TUNE_DEF = { top: 28, accel: 15, brake: 34, grip: 8, drift: 2.4, steer: 1.0, bounce: .35, forgive: .7, heroMass: 2.2, blood: 1, stickDrive: 1 };      // joystick drive is the default (round 22); Tune switches back to buttons      // heroMass: your car counts this much heavier in car-vs-car hits
 const TUNE = { ...TUNE_DEF };
-try { Object.assign(TUNE, JSON.parse(localStorage.getItem('gtcc-tune') || '{}')); } catch (e) { /* storage may be blocked */ }
-if (/[?&]drive=stick/.test(location.search)) TUNE.stickDrive = 1;
+try { const st = JSON.parse(localStorage.getItem('gtcc-tune') || '{}'); if (st.v !== 2) delete st.stickDrive; Object.assign(TUNE, st); TUNE.v = 2; } catch (e) { /* storage may be blocked */ }      // v2: older saves do not turn the joystick off
+if (/[?&]drive=stick/.test(location.search)) TUNE.stickDrive = 1; if (/[?&]drive=buttons/.test(location.search)) TUNE.stickDrive = 0;
 const TUNE_UI = [['top', 'Top speed', 12, 45, 1, 'm/s'], ['accel', 'Accel', 6, 30, .5, ''], ['brake', 'Braking', 10, 50, 1, ''], ['grip', 'Grip', 2, 14, .5, ''], ['drift', 'Slide grip', .3, 5, .1, ''], ['steer', 'Steering', .5, 1.6, .05, ''], ['bounce', 'Bounce', 0, .8, .05, ''], ['forgive', 'Forgiving', 0, 1, .05, ''], ['heroMass', 'Car weight', 1, 4, .1, 'x'], ['blood', 'Blood', 0, 1, 1, ''], ['stickDrive', 'Joystick drive', 0, 1, 1, '']];
 const CAR = { L: 4.5, W: 1.8, mass: 1400, wb: 2.7 }; CAR.I = CAR.mass * (CAR.L * CAR.L + CAR.W * CAR.W) / 12;
 const vehs = {};                                  // one state per car; only the ACTIVE one is simulated, the rest are static colliders
