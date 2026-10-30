@@ -76,6 +76,10 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 .hint-stick { left: 16px; bottom: calc(176px + env(safe-area-inset-bottom, 0px)); } .hint-r { right: 16px; bottom: calc(196px + env(safe-area-inset-bottom, 0px)); } .hint-map { right: 16px; top: calc(196px + env(safe-area-inset-top, 0px)); max-width: 190px; text-align: right; }
 #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .6s; z-index: 25; } #fade.on { opacity: 1; }
 #mission { position: fixed; left: 50%; transform: translateX(-50%); top: calc(64px + env(safe-area-inset-top, 0px)); z-index: 3; display: flex; gap: 10px; align-items: baseline; padding: 7px 12px; border-radius: 8px; background: rgba(12, 16, 22, .78); color: #fff; font: 500 14px var(--display); letter-spacing: .04em; white-space: nowrap; pointer-events: none; }
+#chars { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); top: calc(10px + env(safe-area-inset-top, 0px)); display: flex; gap: 8px; }
+#chars button { all: unset; cursor: pointer; width: 42px; height: 42px; border-radius: 50%; overflow: hidden; border: 2px solid rgba(255, 255, 255, .55); box-shadow: 0 2px 6px rgba(0, 0, 0, .5); background: #222; pointer-events: auto; opacity: .8; }
+#chars button.on { border: 3px solid #ffd23f; opacity: 1; } #chars img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#mission { margin-top: 44px; }
 #place { position: fixed; z-index: 3; left: max(16px, env(safe-area-inset-left, 0px)); top: calc(118px + env(safe-area-inset-top, 0px)); max-width: calc(100% - 170px); pointer-events: none; opacity: 0; transition: opacity .5s; text-shadow: 0 2px 6px rgba(0, 0, 0, .85); color: #fff; }
 #place.show { opacity: 1; } #place b { display: block; font: 700 22px/1.05 var(--display); letter-spacing: .06em; text-transform: uppercase; } #place span { display: block; margin-top: 3px; font: 600 15px/1.2 var(--display); letter-spacing: .05em; color: #ffd27f; }
 #mission b { color: #ffd23f; font-weight: 700; text-transform: uppercase; } #mission em { font-style: normal; font-variant-numeric: tabular-nums; } #mission em.hot { color: #ff5a4a; }
@@ -114,7 +118,7 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 <div id="menu" hidden><div class="mcard" role="dialog" aria-label="Paused">
   <h1>Grand Theft<br>Coconut Creek</h1><p class="msub">Paused</p>
   <button class="btn mbig" id="m-resume">Resume</button>
-  <div class="mgrid"><button class="btn" id="snd" aria-pressed="true">Sound: on</button><button class="btn" id="m-ctrl">Controls: arrows</button><button class="btn" id="m-cam">Camera: follows car</button><button class="btn" id="m-tune">Tune the car</button><button class="btn" id="m-view">Camera</button><button class="btn" id="m-fps">Show FPS: off</button><button class="btn" id="m-ride">Ride: Jeep</button><button class="btn" id="m-track">Test track</button><button class="btn" id="m-new">New game</button></div>
+  <div class="mgrid"><button class="btn" id="snd" aria-pressed="true">Sound: on</button><button class="btn" id="m-ctrl">Controls: arrows</button><button class="btn" id="m-cam">Camera: follows car</button><button class="btn" id="m-tune">Tune the car</button><button class="btn" id="m-view">Camera</button><button class="btn" id="m-fps">Show FPS: off</button><button class="btn" id="m-track">Test track</button><button class="btn" id="m-new">New game</button></div>
   <p class="msub">Test build</p>
 </div></div>
 
@@ -145,6 +149,7 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
     <div class="r2"><button class="pb big" id="b-punch">Punch</button></div>
   </div>
 </div>
+<div id="chars" aria-label="Switch character"></div>
 <div id="banner"></div>
 <div id="title" hidden><div class="mcard"><h1>Grand Theft<br>Coconut Creek</h1><p class="msub">Coconut Creek, Florida</p><button class="btn mbig" id="t-play">Tap to play</button><p class="msub" id="t-cont"></p></div></div>
 <div id="bigmap" hidden><canvas id="bigc"></canvas><button class="btn" id="bm-close">Close map</button></div>
@@ -852,17 +857,92 @@ addEventListener('keydown', e => {
   else if (!e.repeat && (e.key === 'j' || e.key === 'J')) startPunch();
 });
 addEventListener('keyup', e => { if (e.key === 'Shift') input.run = false; if (KEYS[e.key]) input[KEYS[e.key]] = false; });
-const pilot = makePerson({ jacket: '#2f6b3a' }); pilot.root.visible = false; playerCar_occupy();
+const CHARS = [                                   // round 28: three playable characters (the same body, their own jacket and ride); the two you are not playing drive themselves around the city
+  { id: 'marc', name: 'Marc', ride: 'player', jacket: '#2f5fb8', dot: '#4f8cff' },
+  { id: 'aaron', name: 'Aaron', ride: 'hero_tesla', jacket: '#26262b', dot: '#f2f2f2' },
+  { id: 'chris', name: 'Chris', ride: 'hero_moto', jacket: '#4a4f5a', dot: '#5cff7a' }];
+let cur = 0, pilot = makePerson({ jacket: CHARS[0].jacket }); CHARS[0].person = pilot; pilot.root.visible = false; playerCar_occupy();
+for (const C of CHARS.slice(1)) { C.person = makePerson({ jacket: C.jacket }); C.person.root.visible = false; }
 function playerCar_occupy() { heroVeh().car.occupants.FL = pilot; }
 const _hip = new THREE.Vector3();
-function seatRider(v) {                           // cars hide the driver; on the motorcycle the rider stays visible, sat on the seat in the last (seated) frame of the get-in clip
-  if (!v || v.car.kind !== 'moto') { if (pilot.root.parent !== scene) scene.attach(pilot.root); pilot.root.visible = false; return; }
-  const car = v.car; car.group.add(pilot.root); pilot.root.visible = true; pilot.root.position.set(0, 0, 0); pilot.root.rotation.set(0, -Math.PI / 2, 0);
-  const act = play(pilot, 'enter_L', { once: true, fade: 0 }); act.time = act.getClip().duration - 1e-3; act.paused = true; pilot.mixer.update(0);
-  pilot.root.updateWorldMatrix(true, true); const hip = pilot.root.getObjectByName('pelvis'); hip.getWorldPosition(_hip); car.group.worldToLocal(_hip);
-  const seat = car.seat.FL.position; pilot.root.position.set(seat.x - _hip.x, TUNE.riderY - _hip.y, seat.z - _hip.z);
+function seatRider(v, pp = pilot) {                           // cars hide the driver; on the motorcycle the rider stays visible, sat on the seat in the last (seated) frame of the get-in clip
+  if (!v || v.car.kind !== 'moto') { if (pp.root.parent !== scene) scene.attach(pp.root); pp.root.visible = false; return; }
+  const car = v.car; car.group.add(pp.root); pp.root.visible = true; pp.root.position.set(0, 0, 0); pp.root.rotation.set(0, -Math.PI / 2, 0);
+  const act = play(pp, 'enter_L', { once: true, fade: 0 }); act.time = act.getClip().duration - 1e-3; act.paused = true; pp.mixer.update(0);
+  pp.root.updateWorldMatrix(true, true); const hip = pp.root.getObjectByName('pelvis'); hip.getWorldPosition(_hip); car.group.worldToLocal(_hip);
+  const seat = car.seat.FL.position; pp.root.position.set(seat.x - _hip.x, TUNE.riderY - _hip.y, seat.z - _hip.z);
 }
 function unseatRider() { if (pilot.root.parent !== scene) { scene.attach(pilot.root); pilot.root.rotation.x = pilot.root.rotation.z = 0; } }
+/* Roaming heroes: the characters you are not playing drive their rides along the lane graph (right-hand lanes, random turns, stop for anything ahead). */
+const RADJ = graph ? graph.nodes.map(() => []) : []; if (graph) graph.edges.forEach((e, i) => { RADJ[e.a].push([i, 1]); RADJ[e.b].push([i, -1]); });
+function roamPath(i, dir) {                       // lane polyline of edge i driven a->b (dir 1) or b->a (-1), three coords, offset to the right by the lane
+  const e = graph.edges[i], P = e.pts.map(p => [p[0], -p[1]]); if (dir < 0) P.reverse(); const out = [], cum = [0];
+  for (let k = 0; k < P.length; k++) { const a = P[Math.max(0, k - 1)], b = P[Math.min(P.length - 1, k + 1)]; let fx = b[0] - a[0], fz = b[1] - a[1]; const l = Math.hypot(fx, fz) || 1; fx /= l; fz /= l; out.push([P[k][0] - fz * e.lane, P[k][1] + fx * e.lane]); }
+  for (let k = 1; k < out.length; k++) cum.push(cum[k - 1] + Math.hypot(out[k][0] - out[k - 1][0], out[k][1] - out[k - 1][1]));
+  return { P: out, cum, L: cum[cum.length - 1], end: dir > 0 ? e.b : e.a, i };
+}
+function roamAt(path, s) { s = clamp(s, 0, path.L); let k = 1; while (k < path.cum.length - 1 && path.cum[k] < s) k++; const a = path.P[k - 1], b = path.P[k], l = path.cum[k] - path.cum[k - 1] || 1, t = (s - path.cum[k - 1]) / l; return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, (b[0] - a[0]) / l, (b[1] - a[1]) / l]; }
+function roamNext(Rm) { const opts = RADJ[Rm.path.end].filter(([i]) => i !== Rm.path.i); const [i, d] = opts.length ? opts[Math.floor(Math.random() * opts.length)] : [Rm.path.i, -1]; Rm.path = roamPath(i, d); Rm.s = 0; }
+function startRoam(C, x, z, th, sp = 0) {         // hand a character's ride to the roaming driver, on the lane nearest (x, z) going roughly the way the car points
+  const v = vehs[C.ride]; if (!v || !graph) return; let best = null, bd = 1e18;
+  graph.edges.forEach((e, i) => { for (const dir of [1, -1]) { const p = roamPath(i, dir); for (let k = 0; k < p.P.length; k++) { const q = p.P[k], d = (q[0] - x) ** 2 + (q[1] - z) ** 2; if (d >= bd) continue; const nx = p.P[Math.min(k + 1, p.P.length - 1)], pv = p.P[Math.max(k - 1, 0)], hx = nx[0] - pv[0], hz = nx[1] - pv[1], al = (hx * -Math.sin(th) + hz * -Math.cos(th)) / (Math.hypot(hx, hz) || 1); if (al < -.2) continue; bd = d; best = { path: p, s: p.cum[k] }; } } });
+  if (!best) return; removeCarCollider(v); v.mode = 'roam'; v.vx = v.vz = v.w = 0;
+  const col = { poly: [], cx: 1e5, cz: 1e5, r: Math.hypot(v.car.dims[0], v.car.dims[1]) / 2 + .2, vx: 0, vz: 0, mass: v.mass, push: (dx, dz) => { C.roam.kx += dx * .25; C.roam.kz += dz * .25; C.roam.sp *= .4; } };
+  colliders.push(col); C.roam = { v, col, path: best.path, s: best.s, sp, kx: 0, kz: 0, th, o: { x: x, z: z, vx: 0, vz: 0, L: v.car.dims[0], W: v.car.dims[1] } };
+  v.car.occupants.FL = C.person; seatRider(v, C.person);
+}
+function stopRoam(C) { const Rm = C.roam; if (!Rm) return; const i = colliders.indexOf(Rm.col); if (i >= 0) colliders.splice(i, 1); C.roam = null; return Rm; }
+const ROAMV = { jeep: 10, tesla: 12, moto: 12.5 };
+function roamStep(dt) {
+  const others = [];
+  for (const C of CHARS) { const Rm = C.roam; if (!Rm) continue; const v = Rm.v;
+    let want = ROAMV[v.car.kind] || 10; const [, , fx0, fz0] = roamAt(Rm.path, Rm.s), [, , fx1, fz1] = roamAt(Rm.path, Math.min(Rm.path.L, Rm.s + 10)); if (fx0 * fx1 + fz0 * fz1 < .7 || Rm.path.L - Rm.s < 8) want = Math.min(want, 6);     // slow for bends and junctions
+    const fx = -Math.sin(v.th), fz = -Math.cos(v.th), pts = [];                                    // anything close ahead: stop
+    if (drive && hmode === 'driving') pts.push([drive.x, drive.z]); if (hmode === 'foot') pts.push([foot.x, foot.z]);
+    if (ai) for (const c of ai.cars) if (c.on) pts.push([c.x, c.z]); for (const O of CHARS) if (O.roam && O !== C) pts.push([O.roam.v.x, O.roam.v.z]); if (ppl) for (const w of ppl.people) if (w.on && w.inRoad) pts.push([w.x, w.z]);
+    for (const [px, pz] of pts) { const dx = px - v.x, dz = pz - v.z, f = dx * fx + dz * fz, l = Math.abs(dx * fz - dz * fx); if (f > 0 && f < 13 && l < 2.4) want = Math.min(want, Math.max(0, (f - 5) * 1.2)); }
+    Rm.sp += clamp(want - Rm.sp, -9 * dt, 4 * dt); Rm.s += Rm.sp * dt; if (Rm.s >= Rm.path.L) { const over = Rm.s - Rm.path.L; roamNext(Rm); Rm.s = over; }
+    const kd = Math.exp(-3 * dt); Rm.kx *= kd; Rm.kz *= kd; const [x, z, tx, tz] = roamAt(Rm.path, Rm.s), th = Math.atan2(-tx, -tz);
+    Rm.th += wrapA(th - Rm.th) * (1 - Math.exp(-6 * dt)); const nx = x + Rm.kx, nz = z + Rm.kz;
+    v.vx = (nx - v.x) / Math.max(dt, 1e-3); v.vz = (nz - v.z) / Math.max(dt, 1e-3); v.x = nx; v.z = nz; v.th = Rm.th; placeOnGround(v.car.group, v.x, v.z, v.th);
+    const c = Rm.col; c.poly = carPoly(v.x, v.z, v.th, v.car.dims); c.cx = v.x; c.cz = v.z; c.vx = Math.sin(-v.th) * Rm.sp; c.vz = -Math.cos(v.th) * Rm.sp;
+    Object.assign(Rm.o, { x: v.x, z: v.z, vx: c.vx, vz: c.vz }); others.push(Rm.o);
+  }
+  AIX.others = others;
+}
+/* Switch (GTA 5 style): the camera rises into the sky over you, slides across the city, and drops onto the other character; you take over at the bottom. */
+const SW = { on: false, t: 0, ci: 0, fog: null };
+function switchTo(ci) {
+  if (SW.on || ci === cur || busy || hmode === 'busy' || track.active || respawning || !CHARS[ci].person) return;
+  const C = CHARS[cur]; SW.on = true; SW.t = 0; SW.ci = ci; SW.d0 = rig.dist; SW.p0 = rig.pitch;
+  if (hmode === 'driving' && drive === vehs[C.ride]) { const d = drive, sp = Math.max(0, d.vx * -Math.sin(d.th) + d.vz * -Math.cos(d.th)); drive = null; unseatRider(); startRoam(C, d.x, d.z, d.th, sp); if (!C.roam) parkVehicle(vehs[C.ride]); }
+  else if (hmode === 'driving' && drive) { parkVehicle(drive); drive = null; }
+  else if (hmode === 'foot') play(C.person, 'idle');
+  hmode = 'switch'; SW.fog = scene.fog ? scene.fog.far : null; camera.far = 900; camera.updateProjectionMatrix();
+  for (const b of document.querySelectorAll('#chars button')) b.classList.toggle('on', +b.dataset.ci === ci);
+}
+function switchTarget(ci) { const C = CHARS[ci]; if (C.roam) return [C.roam.v.x, C.roam.v.z]; if (ci === cur && hmode === 'driving' && drive) return [drive.x, drive.z]; const p = C.person.root.getWorldPosition(new THREE.Vector3()); return [p.x, p.z]; }
+function switchStep(dt) {
+  if (!SW.on) return; SW.t += dt; const e = t => t * t * (3 - 2 * t), UP = .8, PAN = 1.7, DOWN = 2.5, H = 260;
+  const from = switchTarget(cur === SW.ci ? SW.ci : cur), to = switchTarget(SW.ci);
+  if (SW.t < UP) { const k = e(SW.t / UP); rig.dist = SW.d0 + (H - SW.d0) * k; rig.pitch = SW.p0 + (78 - SW.p0) * k; rig.tx = from[0]; rig.tz = from[1]; }
+  else if (SW.t < PAN) { const k = e((SW.t - UP) / (PAN - UP)); rig.tx = from[0] + (to[0] - from[0]) * k; rig.tz = from[1] + (to[1] - from[1]) * k; rig.dist = H; rig.pitch = 78; }
+  else {
+    if (cur !== SW.ci) {                          // take over at the bottom of the drop
+      const C = CHARS[SW.ci]; cur = SW.ci; pilot = C.person; ride = C.ride; const Rm = stopRoam(C);
+      if (Rm) { const v = Rm.v; drive = v; v.mode = 'driving'; v.vx = -Math.sin(v.th) * Rm.sp; v.vz = -Math.cos(v.th) * Rm.sp; v.w = 0; v.px = undefined; hmode = 'driving'; seatRider(v); }
+      else { foot.x = pilot.root.position.x; foot.z = pilot.root.position.z; foot.face = pilot.root.rotation.y; foot.vx = foot.vz = 0; hmode = 'foot'; }
+    }
+    const k = e(Math.min(1, (SW.t - PAN) / (DOWN - PAN))); rig.dist = H + (44 - H) * k; rig.pitch = 78 + (45 - 78) * k; rig.tx = to[0]; rig.tz = to[1];
+    if (SW.t >= DOWN) { SW.on = false; rig.dist = 44; rig.pitch = 45; camera.far = 300; camera.updateProjectionMatrix(); }
+  }
+  if (scene.fog && SW.fog) scene.fog.far = SW.on ? SW.fog + rig.dist * 2 : SW.fog;
+}
+if (graph) for (const C of CHARS.slice(1)) {        // Aaron and Chris start out driving somewhere across town
+  let e = null; for (let t = 0; t < 60; t++) { e = graph.edges[Math.floor(Math.random() * graph.edges.length)]; if (e.pts.length > 3 && Math.hypot(e.pts[0][0] - world.start.x, e.pts[0][1] - world.start.y) > 130) break; }
+  const k = Math.floor(e.pts.length / 2), p = e.pts[k], q = e.pts[k + 1]; startRoam(C, p[0], -p[1], Math.atan2(-(q[0] - p[0]), q[1] - p[1]), 6);
+}
+{ const box = $('chars'); CHARS.forEach((C, i) => { const b = document.createElement('button'); b.dataset.ci = i; b.setAttribute('aria-label', 'Play as ' + C.name); b.innerHTML = `<img src="img/${C.id}.jpg" alt="">`; if (i === 0) b.classList.add('on'); b.addEventListener('pointerdown', e => { e.preventDefault(); switchTo(i); }); box.appendChild(b); }); }
 let busy = false;
 const setHidden = (el, v) => { if (el.hidden !== v) el.hidden = v; };
 
@@ -933,7 +1013,7 @@ function applyHit(w, dx, dz, finisher) {
 }
 function nearestDoor() {
   let best = null, bd = 4.2;
-  for (const [name, car] of Object.entries(allCars)) { if (trafficNames.has(name)) continue; car.group.updateWorldMatrix(true, true);
+  for (const [name, car] of Object.entries(allCars)) { if (trafficNames.has(name) || (vehs[name] && vehs[name].mode === 'roam')) continue; car.group.updateWorldMatrix(true, true);
     for (const tag of Object.keys(car.stand)) { const p = car.stand[tag].getWorldPosition(new THREE.Vector3()), d = Math.hypot(p.x - foot.x, p.z - foot.z); if (d < bd) { bd = d; best = { name, car, tag }; } } }
   if (ai) for (const c of ai.cars) {                // traffic: you can pull the driver out of a slow or stopped car
     if (!c.on || c.v > 4 || Math.hypot(c.x - foot.x, c.z - foot.z) > 7) continue; c.g.updateWorldMatrix(true, true);
@@ -1047,9 +1127,8 @@ const RIDE_NAMES = { player: 'Jeep', hero_tesla: 'Tesla', hero_moto: 'Motorcycle
 function rideTo(name) {                           // test switch: the chosen hero vehicle appears where you are and you are in it; the old one goes back to storage
   if (!vehs[name] || busy || track.active) return; const old = heroVeh(), d = hmode === 'driving' && drive ? drive : null, pose = d ? [d.x, d.z, d.th] : [foot.x, foot.z, foot.face];
   if (old !== vehs[name]) { Object.assign(old, { x: STORE[0] + { player: 0, hero_tesla: 10, hero_moto: 20 }[old.name] | 0, z: STORE[1], th: 0, vx: 0, vz: 0, w: 0 }); if (old === drive) drive = null; old.mode = 'parked'; placeOnGround(old.car.group, old.x, old.z, old.th); setCarCollider(old); old.car.occupants = {}; }
-  ride = name; resetCar(pose[0], pose[1], pose[2]); $('m-ride').textContent = 'Ride: ' + RIDE_NAMES[name];
+  ride = name; resetCar(pose[0], pose[1], pose[2]);
 }
-$('m-ride').addEventListener('click', () => { const order = ['player', 'hero_tesla', 'hero_moto'].filter(n => vehs[n]); rideTo(order[(order.indexOf(ride) + 1) % order.length]); setPaused(false); });
 $('m-new').addEventListener('click', () => { if (!confirm('Start a new game? Your cash and finished missions are cleared.')) return; noSave = true; try { localStorage.removeItem('gtcc-save'); } catch (e) { /* ok */ } location.reload(); });
 let noSave = false;
 const outs = {};
@@ -1122,6 +1201,7 @@ function drawMini(px, py, face) {                 // map around the player (px, 
   }
   const dot = (x, y, col, r) => { const [qx, qy] = R(x, y); let X_ = qx - c, Y_ = qy - c; const l = Math.hypot(X_, Y_), lim = c - 9; if (l > lim) { X_ *= lim / l; Y_ *= lim / l; } mx.beginPath(); mx.arc(c + X_, c + Y_, r, 0, 7); mx.fillStyle = col; mx.fill(); mx.lineWidth = 2; mx.strokeStyle = '#0b1a10'; mx.stroke(); };
   if (missions && !track.active) { const tg = missions.target(); if (tg) dot(tg[0], tg[1], '#3fe07b', 8); else if (!missions.active) for (const m of missions.list) if (!m.done) dot(m.a[0], m.a[1], '#ffd23f', 6); }
+  if (!track.active) for (const C of CHARS) if (C.roam) dot(C.roam.v.x, -C.roam.v.z, C.dot, 6);
   if (cops && !track.active) { const fl = (performance.now() / 250 | 0) % 2; for (const p of cops.cops) if (p.on) { const [qx, qy] = R(p.x, -p.z); if (Math.hypot(qx - c, qy - c) < c - 6) dot(p.x, -p.z, fl ? '#ff3b3b' : '#3b7bff', 6); } }
   mx.save(); mx.translate(c, c); mx.rotate(a - face); mx.beginPath(); mx.moveTo(0, -16); mx.lineTo(11, 12); mx.lineTo(0, 6); mx.lineTo(-11, 12); mx.closePath();
   mx.fillStyle = '#5cff7a'; mx.fill(); mx.lineWidth = 3; mx.strokeStyle = '#0b1a10'; mx.stroke(); mx.restore();
@@ -1261,12 +1341,13 @@ function update(dt, draw = true) {
   let fx, fz, fvx = 0, fvz = 0, la = TUNE.camLook;
   if (hmode === 'foot') { fx = foot.x; fz = foot.z; fvx = foot.vx; fvz = foot.vz; la = .3; } else if (drive) { fx = drive.rx ?? drive.x; fz = drive.rz ?? drive.z; fvx = drive.vx; fvz = drive.vz; } else { fx = pilot.root.position.x; fz = pilot.root.position.z; }
   placeStep(dt, fx, -fz);
-  if (playView) { const ck = 1 - Math.exp(-TUNE.camFollow * dt); rig.tx += (fx + fvx * la - rig.tx) * ck; rig.tz += (fz + fvz * la - rig.tz) * ck; }
+  roamStep(dta); switchStep(dt);
+  if (playView && !SW.on) { const ck = 1 - Math.exp(-TUNE.camFollow * dt); rig.tx += (fx + fvx * la - rig.tx) * ck; rig.tz += (fz + fvz * la - rig.tz) * ck; }
   if (upd.bench) { rig.tx = upd.bench.x; rig.tz = upd.bench.z; }                 // ?bench=1 drives the camera on a fixed path
   upd.speedZoom += ((playView && hmode === 'driving' ? Math.min(speed, 28) / 28 * TUNE.camZoom : 0) - upd.speedZoom) * (1 - Math.exp(-2 * dt));
   { const ext = track.active ? 1e5 : world.extent; rig.tx = clamp(rig.tx, -ext, ext); rig.tz = clamp(rig.tz, -ext, ext); }
   if (rig.mode === 'drive') cullStep(dt); else for (const c of cullables) c.o.visible = true;
-  { let ty = 0; const dv = hmode === 'driving' && drive;           // camera yaw: turns with the car while driving (eases, holds when nearly stopped, reversing or handbraking), back to north-up on foot
+  if (!SW.on) { let ty = 0; const dv = hmode === 'driving' && drive;           // camera yaw: turns with the car while driving (eases, holds when nearly stopped, reversing or handbraking), back to north-up on foot
     if (playView && rig.mode === 'drive' && dv && TUNE.camYaw) {
       const th = drive.th, vfw = drive.vx * -Math.sin(th) + drive.vz * -Math.cos(th); ty = rig.yaw;
       if (TUNE.camYaw === 2) { if (Math.abs(wrapA(th - rig.ySnap)) > rad(55)) { rig.snapT += dt; if (rig.snapT > .25) { rig.ySnap = Math.round(th / (Math.PI / 2)) * Math.PI / 2; rig.snapT = 0; } } else rig.snapT = 0; ty = rig.ySnap; }
@@ -1291,6 +1372,6 @@ function update(dt, draw = true) {
 let frameHook = null;                                          // hud.js hooks frame timing here
 function frame(t) { const t0 = performance.now(); const dt_ = Math.min(clock.getDelta(), .05); if (!manual && !paused) { update(dt_); if (!titleShown) showTitle(); } else if (paused) renderer.render(scene, camera); if (frameHook) frameHook(t, performance.now() - t0); requestAnimationFrame(frame); }
 syncSliders(); setView('drive'); requestAnimationFrame(frame);
-window.__city = { dstickIn, track, vehs, get ride() { return ride; }, world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, ppl, cops, missions, sun, setFrameHook: f => { frameHook = f; }, upd };
+window.__city = { dstickIn, track, vehs, get ride() { return ride; }, CHARS, switchTo, SW, get cur() { return cur; }, get pilotP() { return pilot; }, world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, ppl, cops, missions, sun, setFrameHook: f => { frameHook = f; }, upd };
 if (/[?&](hud|bench)=/.test(location.search)) import('./hud.js?v=' + (MAN['hud.js'] || '1')).then(m => m.start(window.__city, THREE)).catch(e => console.error('hud', e));
 </script>

@@ -166,10 +166,11 @@ export function createTraffic(G, deps) {
         if (c.granted && o.wait > 0 && !o.turn && sameWay < .5) continue;                         // a car queued on a side road is not in my path once I'm through the gate
         const g = f - (len + o.dims[0]) / 2; if (g < gap) { gap = g; vl = Math.max(0, o.v * sameWay); c.blk = o; }
       }
-      for (let pi = 0; pi < 2; pi++) {
-        const p = pi ? ctx.foot : ctx.player; if (!p) continue; const dx = p.x - c.x, dz = p.z - c.z, f = dx * c.fx + dz * c.fz; if (f <= 0 || f > TT.lookAhead) continue;
+      const PL = ctx.others && ctx.others.length ? [ctx.player, ctx.foot, ...ctx.others] : [ctx.player, ctx.foot];     // others: the heroes driving themselves around (round 28)
+      for (let pi = 0; pi < PL.length; pi++) {
+        const p = PL[pi]; if (!p) continue; const dx = p.x - c.x, dz = p.z - c.z, f = dx * c.fx + dz * c.fz; if (f <= 0 || f > TT.lookAhead) continue;
         const l = Math.abs(dx * c.fz - dz * c.fx); if (l > hw + (p.W || .6) / 2 + .6) continue;
-        const g = f - (len + (p.L || .6)) / 2; if (g < gap) { c.blk = pi ? 'foot' : 'player'; gap = g; vl = Math.max(0, (p.vx || 0) * c.fx + (p.vz || 0) * c.fz); }
+        const g = f - (len + (p.L || .6)) / 2; if (g < gap) { c.blk = pi === 1 ? 'foot' : 'player'; gap = g; vl = Math.max(0, (p.vx || 0) * c.fx + (p.vz || 0) * c.fz); }
       }
       if (ctx.peds) for (const w of ctx.peds) {                                                 // people crossing (or lying) in the road
         if (!w.on || !(w.inRoad || w.state === 'down' || w.state === 'getup' || w.state === 'flee')) continue;
