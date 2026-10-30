@@ -112,11 +112,15 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
 const $ = id => document.getElementById(id);
 const WN = location.hash === '#chinatown' ? 'chinatown' : 'coconut', WD = 'worlds/' + WN + '/';      // which world to load (hash #chinatown or default)
 addEventListener('hashchange', () => location.reload());
-const world = await fetch(WD + 'world.json').then(r => r.json());
+const MAN = JSON.parse('__MANIFEST__'.startsWith('__') ? '{}' : '__MANIFEST__');            // content hash per asset, written by build.sh on Vercel: unchanged files stay in the browser cache across deploys
+const A = u => MAN[u] ? u + '?v=' + MAN[u] : u;
+const PLAIN_GLB = !/claude|anthropic/.test(location.host);                                     // the Artifact host serves no .glb (base64 text copies there)
+const world = await fetch(A(WD + 'world.json')).then(r => r.json());
 $('wtitle').textContent = world.title;
 const b2t = (x, y, z = 0) => new THREE.Vector3(x, z, -y);   // Blender (x east, y north, z up) -> three (x, y up, -z north)
 let HFS = (world.heights || []);                                                // terrain height fields (world.heights): Trash Mountain etc. Everywhere else the ground is flat (0)
@@ -149,9 +153,15 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(world.sky); scene.fog = new THREE.Fog(world.fog[0], world.fog[1], world.fog[2]);
 scene.add(new THREE.HemisphereLight(world.hemi[0], world.hemi[1], world.hemi[2]));
 const sun = new THREE.DirectionalLight(world.sun.color, world.sun.intensity); sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -34, right: 34, top: 34, bottom: -34, near: 1, far: 160 });
+const PHONE = matchMedia('(pointer: coarse)').matches; const SMAP = PHONE ? 1024 : 2048; sun.shadow.mapSize.set(SMAP, SMAP);     // phones: 1024 (6.6 cm texels over the 68 m box) Object.assign(sun.shadow.camera, { left: -34, right: 34, top: 34, bottom: -34, near: 1, far: 160 });
 sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.05; scene.add(sun, sun.target);
 const SUNDIR = new THREE.Vector3(...world.sun.dir).normalize();
+const SUN_R = new THREE.Vector3().crossVectors(SUNDIR, new THREE.Vector3(0, 1, 0)).normalize(), SUN_U = new THREE.Vector3().crossVectors(SUN_R, SUNDIR), SUN_P = new THREE.Vector3(), TEXEL = 68 / SMAP;
+function placeSun(x, y, z) {                                   // shadow box follows the player in whole shadow-map texels, so shadow edges do not crawl as the camera moves
+  SUN_P.set(x, y, z); const r = Math.round(SUN_P.dot(SUN_R) / TEXEL) * TEXEL, u = Math.round(SUN_P.dot(SUN_U) / TEXEL) * TEXEL, d = SUN_P.dot(SUNDIR);
+  SUN_P.copy(SUN_R).multiplyScalar(r).addScaledVector(SUN_U, u).addScaledVector(SUNDIR, d);
+  sun.target.position.copy(SUN_P); sun.position.copy(SUN_P).addScaledVector(SUNDIR, -60);
+}
 for (const [lx, ly, lz] of world.lamps) { const l = new THREE.PointLight(0xffc27a, 60, 16, 2); l.position.copy(b2t(lx, ly, lz)); scene.add(l); }
 
 const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 300);
@@ -164,23 +174,33 @@ function resize() {
 addEventListener('resize', resize); resize();
 
 /* ---------- load ---------- */
-const loader = new GLTFLoader();
+const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
 async function loadGlb(url, bar) {            // *.glb is fetched as binary (Vercel); anything else is base64 text -> bytes (hosts that serve no .glb)
   let buf;
-  if (url.endsWith('.glb')) buf = await (await fetch(url)).arrayBuffer();
-  else { const txt = await (await fetch(url)).text(); const bin = atob(txt.trim()); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); buf = u8.buffer; }
+  if (PLAIN_GLB && url.endsWith('.glb.b64.txt')) url = url.slice(0, -8);
+  if (url.endsWith('.glb')) buf = await (await fetch(A(url))).arrayBuffer();
+  else { const txt = await (await fetch(A(url))).text(); const bin = atob(txt.trim()); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); buf = u8.buffer; }
   return new Promise((ok, fail) => loader.parse(buf, '', g => { if (bar) $('bar').style.width = bar; ok(g); }, fail));
 }
 let city, charGltf, carList, colList, propList, vegG; const KG = {};      // KG: vehicle glTF per kind (car_<kind>.glb)
 try {
-  carList = await fetch(WD + 'cars.json').then(r => r.json()); const kinds = [...new Set(['sedan', 'taxi', ...carList.map(c => c.kind), ...(world.traffic || []).map(t => t.kind)])];
+  carList = await fetch(A(WD + 'cars.json')).then(r => r.json()); const kinds = [...new Set(['sedan', 'taxi', ...carList.map(c => c.kind), ...(world.traffic || []).map(t => t.kind)])];
   const kg = await Promise.all(kinds.map(k => loadGlb(`car_${k}.glb`).catch(() => null))); kinds.forEach((k, i) => { if (kg[i]) KG[k] = kg[i]; });
-  [city, charGltf, carList, colList, propList, vegG] = await Promise.all([loadGlb(WD + (world.glb || 'scene.glb.b64.txt'), '70%'), loadGlb('character.glb.b64.txt'), fetch(WD + 'cars.json').then(r => r.json()), fetch(WD + 'colliders.json').then(r => r.json()), fetch(WD + 'props.json').then(r => r.json()), loadGlb('veg.glb.b64.txt')]);
+  [city, charGltf, carList, colList, propList, vegG] = await Promise.all([loadGlb(WD + (world.glb || 'scene.glb.b64.txt'), '70%'), loadGlb('character.glb.b64.txt'), fetch(A(WD + 'cars.json')).then(r => r.json()), fetch(A(WD + 'colliders.json')).then(r => r.json()), fetch(A(WD + 'props.json')).then(r => r.json()), loadGlb('veg.glb.b64.txt')]);
   $('bar').style.width = '100%';
 } catch (e) { $('loadtxt').textContent = 'Could not load the models: ' + (e.message || e); throw e; }
 scene.add(city.scene);
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(700, 700), new THREE.MeshLambertMaterial({ color: new THREE.Color(world.ground) })); ground.rotation.x = -Math.PI / 2; ground.position.y = -.3; ground.receiveShadow = true; scene.add(ground);
 city.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+function deq(g) {                               // compressed (quantized int) attributes -> float, so world-space merging does not clamp them
+  for (const [k, at] of Object.entries(g.attributes)) {
+    if (at.array instanceof Float32Array && !at.isInterleavedBufferAttribute) continue;
+    const n = at.count, sz = at.itemSize, out = new Float32Array(n * sz);
+    for (let i = 0; i < n; i++) for (let c = 0; c < sz; c++) out[i * sz + c] = at.getComponent ? at.getComponent(i, c) : [at.getX, at.getY, at.getZ, at.getW][c].call(at, i);
+    g.setAttribute(k, new THREE.BufferAttribute(out, sz, false));
+  }
+  return g;
+}
 (function mergeStatic() {                      // fewer draw calls: static scenery is merged per 64 m tile and material (thousands of house parts become a few hundred meshes)
   city.scene.updateMatrixWorld(true); const groups = new Map(), victims = [];
   city.scene.traverse(o => {
@@ -192,7 +212,7 @@ city.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow 
   });
   for (const list of groups.values()) {
     if (list.length < 2) continue;
-    const geos = list.map(o => { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); if (o.matrixWorld.determinant() < 0 && g.index) { const ix = g.index; for (let i = 0; i < ix.count; i += 3) { const t = ix.getX(i + 1); ix.setX(i + 1, ix.getX(i + 2)); ix.setX(i + 2, t); } } return g; });
+    const geos = list.map(o => { const g = deq(o.geometry.clone()); g.applyMatrix4(o.matrixWorld); if (o.matrixWorld.determinant() < 0 && g.index) { const ix = g.index; for (let i = 0; i < ix.count; i += 3) { const t = ix.getX(i + 1); ix.setX(i + 1, ix.getX(i + 2)); ix.setX(i + 2, t); } } return g; });
     let merged = null; try { merged = mergeGeometries(geos, false); } catch (e) { merged = null; } if (!merged) continue;
     const m = new THREE.Mesh(merged, list[0].material); m.castShadow = m.receiveShadow = true; m.name = 'merged'; city.scene.add(m); victims.push(...list);
   }
@@ -209,6 +229,28 @@ const instances = []; { const byKind = {};
       list.forEach((p, i) => { dummy.position.copy(b2t(p.x, p.y, 0)); dummy.rotation.set(0, rad(p.rz), 0); dummy.scale.setScalar(kind === 'hedge' ? 1 : p.s); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); });
       im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); im.boundingSphere.radius += 6; scene.add(im); instances.push(im); });
   } }
+
+/* Phone-cost pass on the static city: Lambert instead of Standard (cheaper per pixel; the scenery is matte anyway), flat pieces (roads, ground, paint)
+   cast no shadow, and static matrices are frozen. Cars keep their Standard materials. */
+const LAMB = new Map();
+function lambertOf(m) {
+  if (!m || !m.isMeshStandardMaterial) return m; if (LAMB.has(m)) return LAMB.get(m);
+  const l = new THREE.MeshLambertMaterial({ name: m.name, color: m.color, map: m.map, vertexColors: m.vertexColors, emissive: m.emissive, emissiveMap: m.emissiveMap, emissiveIntensity: m.emissiveIntensity,
+    transparent: m.transparent, opacity: m.opacity, alphaTest: m.alphaTest, side: m.side, depthWrite: m.depthWrite, polygonOffset: m.polygonOffset, polygonOffsetFactor: m.polygonOffsetFactor, polygonOffsetUnits: m.polygonOffsetUnits });
+  LAMB.set(m, l); return l;
+}
+const STATS = { flatNoShadow: 0, lambert: 0 };
+const _bb = new THREE.Box3();
+city.scene.traverse(o => {
+  if (!o.isMesh) return;
+  o.material = Array.isArray(o.material) ? o.material.map(lambertOf) : lambertOf(o.material); STATS.lambert++;
+  if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); _bb.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld);
+  if (_bb.max.y - _bb.min.y < .35) { o.castShadow = false; STATS.flatNoShadow++; }
+});
+for (const im of instances) im.material = Array.isArray(im.material) ? im.material.map(lambertOf) : lambertOf(im.material);
+city.scene.updateMatrixWorld(true); city.scene.traverse(o => { o.matrixAutoUpdate = false; o.matrixWorldAutoUpdate = false; });
+for (const im of instances) { im.updateMatrix(); im.updateMatrixWorld(true); im.matrixAutoUpdate = false; im.matrixWorldAutoUpdate = false; }
+window.__perf = STATS;
 
 /* ---------- async helpers: scripted sequences await frames, so they pause and resume with the loop ---------- */
 let frameWaiters = [];
@@ -666,7 +708,8 @@ function drawMini(px, py, face) {                 // north-up map around the pla
 
 /* ---------- loop ---------- */
 $('loading').hidden = true;
-const q = { ratio: Math.min(devicePixelRatio || 1, 2), slow: 0 };
+const q = { ratio: Math.min(devicePixelRatio || 1, 2), slow: 0, lock: false };
+const PF = { on: false, last: 0, ms: { phys: 0, anim: 0, misc: 0, render: 0 }, mark(k) { if (!this.on) return; const t = performance.now(); this.ms[k] = t - this.last; this.last = t; } };   // per-system ms for the ?hud=1 panel (hud.js)
 const clock = new THREE.Clock(); let fpsN = 0, fpsT = 0, manual = false, lastStat = '';
 const SPAN = 42, upd = { speedZoom: 0 };
 /* distance culling of static scenery: the play camera never sees farther than ~90 m, so far tiles of roads, buildings and vegetation are switched off (frustum culling alone keeps the whole far trapezoid) */
@@ -682,9 +725,10 @@ function cullStep(dt) {
 }
 
 function update(dt, draw = true) {
+  if (PF.on) PF.last = performance.now();
   const ws = frameWaiters; frameWaiters = []; for (const r of ws) r(dt);
   hitstop = Math.max(0, hitstop - dt); const dta = hitstop > 0 ? 0 : dt;          // hitstop freezes the action, never the camera or the effects
-  acc += dt; let n = 0; while (acc >= FIXED && n++ < 12) { physicsStep(FIXED); acc -= FIXED; } if (acc > FIXED) acc = 0;
+  acc += dt; let n = 0; while (acc >= FIXED && n++ < 12) { physicsStep(FIXED); acc -= FIXED; } if (acc > FIXED) acc = 0; PF.mark('phys');
   if (drive) placeOnGround(drive.car.group, drive.x, drive.z, drive.th);
   traffic.forEach((t, i) => {                                                   // scripted traffic loops along its lane
     if (t.path) { t.pos += t.speed * dt; if (!t.path.closed && t.pos > t.path.L) t.pos = 0; const a = t.path.at(t.pos); t.g.position.set(a.x, groundH(a.x, a.z), a.z); t.g.rotation.y = t.rz = a.yaw; moveCols[i].vx = a.fx * t.speed; moveCols[i].vz = a.fz * t.speed; }
@@ -715,11 +759,10 @@ function update(dt, draw = true) {
   for (let i = flashes.length - 1; i >= 0; i--) { flashes[i].t -= dt; if (flashes[i].t <= 0) { for (const m of flashes[i].w.mats) m.emissive.setScalar(0); flashes.splice(i, 1); } }
   if (hero) { punchT += dta; if (punchT > 2.2) { punchT = 0; hero.act.punch.reset().play(); hit = 1; }
     hit = Math.max(0, hit - dta * 2); victim.root.position.x = fightAt.x - .55 - .25 * Math.sin(Math.min(1, (1 - hit) * 2) * Math.PI) * (hit > 0 ? 1 : 0); }
-  for (const m of mixers) m.update(dta);
+  for (const m of mixers) m.update(dta); PF.mark('anim');
   for (const c of [...Object.values(allCars), ...(demo ? [demo.sedan, demo.taxi] : [])]) {                  // draw only nearby cars, and only those close by cast shadows
     const dd = Math.hypot(c.group.position.x - rig.tx, c.group.position.z - rig.tz); c.group.visible = dd < 90 || c === (drive && drive.car);
     const sh = dd < 32 || c === (drive && drive.car); if (c.shadowOn !== sh) { c.shadowOn = sh; c.group.traverse(o => { if (o.isMesh) o.castShadow = sh; }); }      // only nearby cars cast shadows (halves the far-car draw calls)
-    const near = dd < 40; if (near !== c.shadowOn) { c.shadowOn = near; c.group.traverse(o => { if (o.isMesh) o.castShadow = near; }); }
     if (c.group.visible) updateDoors(c, dt);
   }
   for (const w of walkers) { const dd = Math.hypot(w.root.position.x - rig.tx, w.root.position.z - rig.tz); const vis = dd < 80; if (vis !== w.root.visible) w.root.visible = vis; const near = dd < 38; if (near !== w.shadowOn) { w.shadowOn = near; w.root.traverse(o => { if (o.isMesh) o.castShadow = near; }); } }
@@ -737,6 +780,7 @@ function update(dt, draw = true) {
   let fx, fz, fvx = 0, fvz = 0, la = .55;
   if (hmode === 'foot') { fx = foot.x; fz = foot.z; fvx = foot.vx; fvz = foot.vz; la = .3; } else if (drive) { fx = drive.x; fz = drive.z; fvx = drive.vx; fvz = drive.vz; } else { fx = pilot.root.position.x; fz = pilot.root.position.z; }
   if (playView) { rig.tx += (fx + fvx * la - rig.tx) * Math.min(1, dt * 5); rig.tz += (fz + fvz * la - rig.tz) * Math.min(1, dt * 5); }
+  if (upd.bench) { rig.tx = upd.bench.x; rig.tz = upd.bench.z; }                 // ?bench=1 drives the camera on a fixed path
   upd.speedZoom += ((playView && hmode === 'driving' ? Math.min(speed, 28) / 28 * .22 : 0) - upd.speedZoom) * Math.min(1, dt * 2);
   rig.tx = clamp(rig.tx, -world.extent, world.extent); rig.tz = clamp(rig.tz, -world.extent, world.extent);
   if (rig.mode === 'drive') cullStep(dt); else for (const c of cullables) c.o.visible = true;
@@ -744,18 +788,20 @@ function update(dt, draw = true) {
   rig.shake = Math.max(0, rig.shake - dt * 2.2); const sh = rig.shake * rig.shake * 1.1;
   upd.gy = (upd.gy || 0) + (groundH(rig.tx, rig.tz) - (upd.gy || 0)) * Math.min(1, dt * 4);
   camera.position.set(rig.tx + (Math.random() - .5) * sh, upd.gy + Math.sin(p) * dist + (Math.random() - .5) * sh * .5, rig.tz + Math.cos(p) * dist + (Math.random() - .5) * sh); camera.lookAt(rig.tx, upd.gy, rig.tz);
-  sun.target.position.set(rig.tx, 0, rig.tz); sun.position.set(rig.tx - SUNDIR.x * 60, -SUNDIR.y * 60, rig.tz - SUNDIR.z * 60);
+  placeSun(rig.tx, 0, rig.tz);
   game.hp = Math.min(100, game.hp + dt * 1.2); if (game.hp <= 0) { game.hp = 100; game.money = Math.max(0, game.money - 100); resetCar(); }     // HUD
   const cash = Math.round(game.money), hpv = Math.round(game.hp); if (cash !== lastCash) { $('cash').textContent = '$' + cash.toLocaleString('en-US'); lastCash = cash; }
   if (hpv !== lastHp) { $('hp').style.transform = `scaleX(${hpv / 100})`; lastHp = hpv; }
   miniT += dt; if (world.map && miniT > .1 && draw) { miniT = 0; drawMini(fx, -fz, hmode === 'foot' ? foot.face : (drive ? drive.th : 0)); }
-  if (draw) renderer.render(scene, camera);
+  PF.mark('misc'); if (draw) renderer.render(scene, camera); PF.mark('render');
   fpsN++; fpsT += dt; if (fpsT > .5) {
     const f = fpsN / fpsT; $('fps').textContent = Math.round(f) + ' fps'; fpsN = 0; fpsT = 0;
-    if (!manual && draw) { q.slow = f < 27 ? q.slow + 1 : 0; if (q.slow >= 4 && q.ratio > .7) { q.ratio = Math.max(.7, q.ratio - .15); renderer.setPixelRatio(q.ratio); resize(); q.slow = 0; } }       // adaptive resolution: shed pixels when the frame rate is low
+    if (!manual && !q.lock && draw) { q.slow = f < 27 ? q.slow + 1 : 0; if (q.slow >= 4 && q.ratio > .7) { q.ratio = Math.max(.7, q.ratio - .15); renderer.setPixelRatio(q.ratio); resize(); q.slow = 0; } }       // adaptive resolution: shed pixels when the frame rate is low
   }
 }
-function frame() { if (!manual) update(Math.min(clock.getDelta(), .05)); requestAnimationFrame(frame); }
-syncSliders(); setView('drive'); frame();
-window.__city = { world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }) };
+let frameHook = null;                                          // hud.js hooks frame timing here
+function frame(t) { const t0 = performance.now(); if (!manual) update(Math.min(clock.getDelta(), .05)); if (frameHook) frameHook(t, performance.now() - t0); requestAnimationFrame(frame); }
+syncSliders(); setView('drive'); requestAnimationFrame(frame);
+window.__city = { world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, sun, setFrameHook: f => { frameHook = f; }, upd };
+if (/[?&](hud|bench)=/.test(location.search)) import('./hud.js?v=' + (MAN['hud.js'] || '1')).then(m => m.start(window.__city, THREE)).catch(e => console.error('hud', e));
 </script>

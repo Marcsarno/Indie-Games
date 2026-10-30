@@ -50,13 +50,14 @@ def mk_road(d):
     if nm == "Lyons Promenade": kw.update(sw=(0, 0), mark=False, surf="walk", curbs=False, flare=0)
     return rd.Road(nm, d["pts"], **kw)
 def extend_ends(pts, push, ends):
-    out = list(pts)
-    if -1 in ends: a, b = out[-2], out[-1]; l = math.dist(a, b) or 1; out.append((b[0] + (b[0] - a[0]) / l * push, b[1] + (b[1] - a[1]) / l * push))
-    if 0 in ends: a, b = out[1], out[0]; l = math.dist(a, b) or 1; out.insert(0, (b[0] + (b[0] - a[0]) / l * push, b[1] + (b[1] - a[1]) / l * push))
+    out = list(pts); push = push if isinstance(push, dict) else {e: push for e in ends}
+    if -1 in ends: a, b = out[-2], out[-1]; l = math.dist(a, b) or 1; out.append((b[0] + (b[0] - a[0]) / l * push[-1], b[1] + (b[1] - a[1]) / l * push[-1]))
+    if 0 in ends: a, b = out[1], out[0]; l = math.dist(a, b) or 1; out.insert(0, (b[0] + (b[0] - a[0]) / l * push[0], b[1] + (b[1] - a[1]) / l * push[0]))
     return out
+HW_OF = {d["name"]: d["hw"] for d in ROADS_M}
 ROAD = {}
 for d in ROADS_M:
-    ROAD[d["name"]] = mk_road(dict(d, pts=extend_ends(d["pts"], 5.5, d["push"])))                                              # T-junction ends are pushed 5.5 m through the parent so the cutter sees a crossing
+    ROAD[d["name"]] = mk_road(dict(d, pts=extend_ends(d["pts"], {i: max(1.5, min(5.5, HW_OF[d["parents"][i]] - .8)) for i in d["push"]}, d["push"])))   # T-junction ends are pushed through the parent (but stay inside its far kerb, no stub) so the cutter sees a crossing
 PKWY, WILES = ROAD["Lyons Rd"], ROAD["Wiles Rd"]
 coast = rd.Road("coast", MP.coast_m(), hw=1.0, closed=True, rank=0, sw=(0, 0), mark=False, flare=0); land_poly = coast.d[::4]
 net = rd.build_network(list(ROAD.values()))
@@ -109,6 +110,14 @@ def near_bridge(x, y, d=9.0):
             px_, py_ = r.at(s_)[:2]
             if abs(px_ - x) < d and abs(py_ - y) < d and math.hypot(px_ - x, py_ - y) < d: return True
     return False
+def bridge_margin(x, y):
+    """Distance from (x, y) to the outer edge of the nearest bridge deck (incl. sidewalks), metres; negative = on the deck."""
+    best = 1e9
+    for r, a, b in BRIDGES:
+        w_ = r.hw + rd.CURB + rd.SWK
+        for s_ in [a - 6 + k * .75 for k in range(int((b - a + 12) / .75) + 1)]:
+            px_, py_ = r.at(min(r.L, max(0.0, s_)))[:2]; best = min(best, math.hypot(px_ - x, py_ - y) - w_)
+    return best
 for r in net: rd.draw_road(RB, r, m)
 tick_('roads drawn')
 RAIL_M = M("bridge_rail", "#cfc8b8", rough=.9)
@@ -140,7 +149,11 @@ rd.strip(GB, m["bank"], coast, 0.0, coast.L - .5, -0.6, 0.0, 0.0, solid=-0.35)
 s_ = 0.0
 while s_ < coast.L:                                                                                                       # invisible hard edge just inside the shore (cars cannot leave the land), except where a bridge crosses
     x_, y_, tx_, ty_ = coast.at(s_ + 2.5); px_, py_ = coast.off(s_ + 2.5, 1.8)
-    if not near_bridge(px_, py_, 7.5): cbox(px_, py_, 5.4, 1.2, round(math.degrees(math.atan2(ty_, tx_)), 1))
+    if not near_bridge(px_, py_, 16.0): cbox(px_, py_, 5.4, 1.2, round(math.degrees(math.atan2(ty_, tx_)), 1))
+    else:                                                                                                             # next to a bridge: short pieces right up to the bridge deck edge, so nothing slips between rail and shore
+        for k_ in range(5):
+            x_, y_, tx_, ty_ = coast.at(s_ + .5 + k_); px_, py_ = coast.off(s_ + .5 + k_, 1.8)
+            if bridge_margin(px_, py_) > .7: cbox(px_, py_, 1.2, 1.2, round(math.degrees(math.atan2(ty_, tx_)), 1))
     s_ += 5.0
 STATIC.append(GB.build(vc=False, recalc=False))
 NOGO = []                                                                                                                # axis-aligned rectangles x0,y0,x1,y1

@@ -3,6 +3,7 @@
   "outputDirectory": ".",
   "framework": null,
   "headers": [
-    { "source": "/(.*)\\.(txt|json|glb)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=300, must-revalidate" }] }
+    { "source": "/(.*)\\.(txt|json|glb)", "has": [{ "type": "query", "key": "v" }], "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] },
+    { "source": "/(.*)\\.(txt|json|glb)", "missing": [{ "type": "query", "key": "v" }], "headers": [{ "key": "Cache-Control", "value": "public, max-age=300, must-revalidate" }] }
   ]
 }

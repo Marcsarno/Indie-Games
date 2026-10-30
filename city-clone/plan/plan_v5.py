@@ -16,7 +16,7 @@ def catmull(pts, closed=False, step=6.0):
             out.append(tuple(.5 * ((2 * p1[d]) + (-p0[d] + p2[d]) * t + (2 * p0[d] - 5 * p1[d] + 4 * p2[d] - p3[d]) * t2 + (-p0[d] + 3 * p1[d] - 3 * p2[d] + p3[d]) * t3) for d in (0, 1)))
     if not closed: out.append(pts[-1])
     return out
-RANK_COL = {3: "#e84a7a", 10: "#222", 9: "#333", 8: "#444", 6: "#777", 5: "#999"}
+RANK_COL = {3: "#e84a7a", 12: "#111", 10: "#222", 9: "#333", 8: "#444", 6: "#777", 5: "#999"}
 def draw_px(d, W, S, F, with_roads=True, label=True, alpha_fill=None):
     pass
 def font(sz, bold=False):
@@ -60,7 +60,7 @@ def clean(path):
             d.text((tx, y_), ln, fill="#1a1a1a", font=F2, anchor="mm")
     for nm, p in M.LANDMARKS:
         x, y = PX(p); d.ellipse([x - 5, y - 5, x + 5, y + 5], fill="#e22", outline="#fff")
-    d.text((20, 14), "Grand Theft Coconut Creek: plan v6 (schematic roads, Publix, City Hall + Police, Seminole Casino, Promenade, Trash Mountain)", fill="#fff", font=F3)
+    d.text((20, 14), "Grand Theft Coconut Creek: plan (Publix, City Hall + Police, Seminole Casino, Promenade, Trash Mountain)", fill="#fff", font=F3)
     y_ = 52
     for cat, a in sorted(cats.items(), key=lambda t: -t[1]): d.text((20, y_), f"{cat}: {100 * a / tot:.0f}%", fill="#fff", font=F); y_ += 20
     d.text((20, y_ + 4), f"land {tot / 1000:.0f}k m2, about {(max(p[0] for p in TR['coast']) - min(p[0] for p in TR['coast'])) * M.SCALE:.0f} x {(max(p[1] for p in TR['coast']) - min(p[1] for p in TR['coast'])) * M.SCALE:.0f} m", fill="#fff", font=F)
