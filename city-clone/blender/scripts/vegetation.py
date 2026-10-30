@@ -84,7 +84,7 @@ def make_poinciana(name="poinciana", seed=9):
 
 KIT = {"palm_tall": lambda: make_palm("palm_tall", 7.5, 15, 2.9, .02, 1), "palm_medium": lambda: make_palm("palm_medium", 5.2, 14, 2.5, .02, 2),
        "palm_small": lambda: make_palm("palm_small", 2.6, 12, 2.0, .02, 3, droop=.7), "shrub_a": lambda: make_shrub("shrub_a", 1), "shrub_b": lambda: make_shrub("shrub_b", 4, ("#e8e8f0", "#f08cb0")),
-       "hedge": make_hedge, "oak": lambda: make_oak("oak", 5)}
+       "hedge": make_hedge, "oak": lambda: make_liveoak("oak", 7)}     # round 27: the user picked the rounded live oak over the boxy oak (kind name stays "oak")
 def make_sabal(name="sabal", h=4.6, seed=11):
     """Sabal (cabbage) palm, Florida's state tree: straight rough trunk, a ROUND head of fan fronds in every direction (reads as a ball, not a star)."""
     r = random.Random(seed); b = Builder(name); bark = M("sb_bark", "#8a7656"); bark2 = M("sb_boot", "#6f5d42"); la = _leafmat("sb_leaf_a", "#4f8f3c"); lb = _leafmat("sb_leaf_b", "#3c7a36")
