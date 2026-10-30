@@ -196,6 +196,7 @@ renderer.toneMapping = THREE.AgXToneMapping; renderer.toneMappingExposure = worl
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(world.sky); scene.fog = new THREE.Fog(world.fog[0], world.fog[1], world.fog[2]);
+if (WN === 'coconut') { scene.fog.near = 72; scene.fog.far = 172; }      // things are fully hazed out before the 140 m draw distance drops them (no visible pop-in at the top of the screen)
 scene.add(new THREE.HemisphereLight(world.hemi[0], world.hemi[1], world.hemi[2]));
 const sun = new THREE.DirectionalLight(world.sun.color, world.sun.intensity); sun.castShadow = true;
 const PHONE = matchMedia('(pointer: coarse)').matches; const SMAP = PHONE ? 1024 : 2048; sun.shadow.mapSize.set(SMAP, SMAP);     // phones: 1024 (6.6 cm texels over the 68 m box) Object.assign(sun.shadow.camera, { left: -34, right: 34, top: 34, bottom: -34, near: 1, far: 160 });
@@ -564,11 +565,28 @@ function ensureAudio() {
   if (audio || muted) return; const A = window.AudioContext || window.webkitAudioContext; if (!A) return;
   try {
     const ctx = new A(), master = ctx.createGain(); master.gain.value = .5; master.connect(ctx.destination);
-    const eng = ctx.createOscillator(); eng.type = 'sawtooth'; const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420; const eg = ctx.createGain(); eg.gain.value = 0; eng.connect(lp); lp.connect(eg); eg.connect(master); eng.start();
-    const nb = ctx.createBuffer(1, ctx.sampleRate * 1.5, ctx.sampleRate), ch = nb.getChannelData(0); for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
-    const sk = ctx.createBufferSource(); sk.buffer = nb; sk.loop = true; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1700; bp.Q.value = .8; const sg = ctx.createGain(); sg.gain.value = 0; sk.connect(bp); bp.connect(sg); sg.connect(master); sk.start();
-    audio = { ctx, master, eng, eg, lp, sg, nb };
+    // engine: a saw + a detuned square an octave down through a low-pass, with a firing-rate tremolo (rumble); pitch follows a simple gearbox
+    const eng = ctx.createOscillator(); eng.type = 'sawtooth'; const eng2 = ctx.createOscillator(); eng2.type = 'square'; const e2g = ctx.createGain(); e2g.gain.value = .45;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420; lp.Q.value = 2.2; const trem = ctx.createGain(); const lfo = ctx.createOscillator(); lfo.type = 'sine'; const lfoG = ctx.createGain(); lfoG.gain.value = .35; lfo.connect(lfoG); lfoG.connect(trem.gain); trem.gain.value = .65;
+    const eg = ctx.createGain(); eg.gain.value = 0; eng.connect(lp); eng2.connect(e2g); e2g.connect(lp); lp.connect(trem); trem.connect(eg); eg.connect(master); eng.start(); eng2.start(); lfo.start();
+    const nb = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), ch = nb.getChannelData(0); let b0 = 0; for (let i = 0; i < ch.length; i++) { const w = Math.random() * 2 - 1; b0 = .97 * b0 + .03 * w; ch[i] = w * .6 + b0 * 2.2; }   // white + a little brown
+    const noise = () => { const n = ctx.createBufferSource(); n.buffer = nb; n.loop = true; n.loopStart = Math.random(); n.start(0, Math.random() * 1.5); return n; };
+    // tyres: a narrow band of noise (squeal)
+    const sk = noise(), bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1900; bp.Q.value = 3.5; const sg = ctx.createGain(); sg.gain.value = 0; sk.connect(bp); bp.connect(sg); sg.connect(master);
+    // wind at speed
+    const wn = noise(), wf = ctx.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.value = 700; wf.Q.value = .5; const wg = ctx.createGain(); wg.gain.value = 0; wn.connect(wf); wf.connect(wg); wg.connect(master);
+    // city bed: distant traffic rumble, always on, quiet
+    const cn = noise(), cf = ctx.createBiquadFilter(); cf.type = 'lowpass'; cf.frequency.value = 320; const cg = ctx.createGain(); cg.gain.value = .05; cn.connect(cf); cf.connect(cg); cg.connect(master);
+    audio = { ctx, master, eng, eng2, eg, lp, lfo, sg, bp, wg, nb, gear: 1, shiftT: 0, birdT: 3, hornT: 8 };
   } catch (e) { audio = null; }
+}
+function chirp() {                                // a Florida bird somewhere: a couple of quick falling whistles
+  const { ctx, master } = audio, t = ctx.currentTime, f0 = 2400 + Math.random() * 1600, n = 2 + (Math.random() * 3 | 0);
+  for (let k = 0; k < n; k++) { const o = ctx.createOscillator(); o.type = 'sine'; const g = ctx.createGain(), t0 = t + k * .13; o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(f0 * .62, t0 + .09); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.018, t0 + .01); g.gain.exponentialRampToValueAtTime(.0005, t0 + .1); o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + .12); }
+}
+function farHorn() {                              // somebody honking a few streets away
+  const { ctx, master } = audio, t = ctx.currentTime, lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(master);
+  for (const f of [370, 466]) { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = f * (.94 + Math.random() * .1); const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.008, t + .02); g.gain.setValueAtTime(.008, t + .25); g.gain.linearRampToValueAtTime(0, t + .3); o.connect(g); g.connect(lp); o.start(t); o.stop(t + .32); }
 }
 function crashSound(power) {
   if (!audio || muted) return; const { ctx, master, nb } = audio, t = ctx.currentTime, g = clamp(power / 18, .12, .8);
@@ -576,9 +594,16 @@ function crashSound(power) {
   const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(40, t + .25); const oe = ctx.createGain(); oe.gain.setValueAtTime(g * .9, t); oe.gain.exponentialRampToValueAtTime(.001, t + .3); o.connect(oe); oe.connect(master); o.start(t); o.stop(t + .32);
 }
 function updateAudio(dt, speed, slip) {
-  if (!audio) return; const t = audio.ctx.currentTime, k = .08;
-  audio.eng.frequency.setTargetAtTime(46 + speed * 4.4 + (input.gas ? 12 : 0), t, k); audio.lp.frequency.setTargetAtTime(330 + speed * 22, t, k);
-  audio.eg.gain.setTargetAtTime(hmode === 'driving' ? (muted ? 0 : .045 + (input.gas ? .045 : 0)) : 0, t, k); audio.sg.gain.setTargetAtTime(muted ? 0 : clamp(slip, 0, 1) * .16, t, .05);
+  if (!audio) return; const A = audio, t = A.ctx.currentTime, k = .08, driving = hmode === 'driving';
+  const G = [0, 7, 13, 19, 25, 99]; let g = 1; while (g < 5 && speed > G[g]) g++;                            // 5-speed box by road speed
+  if (g !== A.gear) { A.shiftT = g > A.gear ? .18 : .1; A.gear = g; } A.shiftT = Math.max(0, A.shiftT - dt);
+  const frac = clamp((speed - G[g - 1]) / Math.max(1, G[g] - G[g - 1]), 0, 1), rpm = .22 + frac * .78 * (A.shiftT > 0 ? .55 : 1) + (input.gas ? .06 : 0);
+  const f = 38 + rpm * 78; A.eng.frequency.setTargetAtTime(f, t, k); A.eng2.frequency.setTargetAtTime(f * .5 * 1.01, t, k); A.lfo.frequency.setTargetAtTime(f * .25, t, k);
+  A.lp.frequency.setTargetAtTime(260 + rpm * 900 + (input.gas ? 300 : 0), t, k);
+  A.eg.gain.setTargetAtTime(driving && !muted ? .05 + rpm * .03 + (input.gas ? .03 : 0) : 0, t, k);
+  A.sg.gain.setTargetAtTime(muted ? 0 : clamp(slip, 0, 1) * .14, t, .05); A.bp.frequency.setTargetAtTime(1700 + clamp(slip, 0, 1) * 600, t, .05);
+  A.wg.gain.setTargetAtTime(muted || !driving ? 0 : clamp((speed - 8) / 25, 0, 1) * .05, t, .2);
+  if (!muted && !paused) { A.birdT -= dt; A.hornT -= dt; if (A.birdT <= 0) { A.birdT = 4 + Math.random() * 9; chirp(); } if (A.hornT <= 0) { A.hornT = 12 + Math.random() * 20; farHorn(); } }
 }
 
 const wrapA = a => Math.atan2(Math.sin(a), Math.cos(a));
@@ -1054,7 +1079,7 @@ function update(dt, draw = true) {
     hit = Math.max(0, hit - dta * 2); victim.root.position.x = fightAt.x - .55 - .25 * Math.sin(Math.min(1, (1 - hit) * 2) * Math.PI) * (hit > 0 ? 1 : 0); }
   for (const m of mixers) if (m.getRoot().visible) m.update(dta); PF.mark('anim');
   for (const c of [...Object.values(allCars), ...(demo ? [demo.sedan, demo.taxi] : [])]) {                  // draw only nearby cars, and only those close by cast shadows
-    const dd = Math.hypot(c.group.position.x - rig.tx, c.group.position.z - rig.tz); c.group.visible = dd < 90 || c === (drive && drive.car);
+    const dd = Math.hypot(c.group.position.x - rig.tx, c.group.position.z - rig.tz); c.group.visible = dd < 125 || c === (drive && drive.car);
     const sh = dd < 32 || c === (drive && drive.car); if (c.shadowOn !== sh) { c.shadowOn = sh; c.group.traverse(o => { if (o.isMesh) o.castShadow = sh; }); }      // only nearby cars cast shadows (halves the far-car draw calls)
     if (c.group.visible) updateDoors(c, dt);
   }

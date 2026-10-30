@@ -590,6 +590,9 @@ def gas_at(poly, seed):
     print("GAS MISS"); return False
 gas_at(D("Gas station + Lyons Mart"), 21); gas_at(D("Gas station west"), 22)
 frontage_lot(D("Gas station + Lyons Mart"), "lmart", [(strip(20, 10, (("coffee", 6, "#21453a"), ("pizza", 5, "#b8321f")), 15, 6.0), 20, 10, 0.0)], lot_d=10, max_rank=13, clear=.6)
+# -- Retail Commons west is a thin strip between Lyons Rd and Retail Row: a row of small kiosks facing the street
+KIOSKS = (("coffee", 6, "#21453a"), ("pizza", 5, "#b8321f"), ("nails", 5, "#7a2f6a"))
+frontage_lot(D("Retail Commons (west shops)"), "kiosk", [(strip(9, 6.5, (KIOSKS[0],), 811, 5.2), 9, 6.5, 0.0), (strip(9, 6.5, (KIOSKS[1],), 812, 5.2), 9, 6.5, 0.0)], lot_d=1.5, count=3, max_rank=13, clear=.5, prob=0.0, gap=2.0)
 # -- small shop pads fill what is left of the thin commercial strips (they may face any road, Lyons Rd included)
 PAD_SHOPS = (("coffee", 6, "#21453a"), ("pizza", 5, "#b8321f"), ("nails", 5, "#7a2f6a"), ("cleaners", 6, "#a63c2a"), ("restaurant_fl", 7, "#8c1c1c"))
 for k_d, dn_ in enumerate(("Retail Commons (west shops)", "Retail Commons (east)", "Retail outparcels", "Gas station + Lyons Mart", "Gas station west")):

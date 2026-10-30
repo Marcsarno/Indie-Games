@@ -184,7 +184,7 @@ def draw_road(R, road, m):
         elif road.hw >= 3.0: line(.12, .09, mat=m["yel"]); line(-.12, .09, mat=m["yel"])
     # crosswalks
     for j in road.junctions:
-        if not road.xwalk: continue
+        if not road.xwalk or j['child'].name in getattr(road, 'keep_median', ()): continue          # no crosswalk where the median runs on (right-in/right-out)
         for sgn in (-1, 1):
             sc = j["sA"] + sgn * (j["w"] + 2.4); v = -road.hw + .5
             while v < road.hw - .4:
