@@ -447,23 +447,26 @@ if (world.demo) {
    Arcade top-down model in the XZ plane (three axes: +x east, -z north). Heading th: forward f = (-sin th, -cos th), right r = (cos th, -sin th).
    Positive yaw rate turns left. Collisions: SAT polygon test, impulse with spin, from the colliders exported by Blender. */
 const TUNE_DEF = {          // round 24: every driving-feel number lives here (units and safe ranges in TUNE_UI below). These defaults are exactly what the game used before round 24.
-  top: 28, accel: 15, brake: 34, hand: 9, coast: .5, coastK: .06, revTop: .3,                  // pace: m/s, m/s2, m/s2, handbrake m/s2, coasting drag m/s2 + per m/s, reverse top as a share of top
-  lockLow: 28.6, lockHigh: 6.9, steer: 1.0, steerIn: 5, steerOut: 8, yawEase: 10,               // steering: wheel angle (deg) at standstill and at top speed, overall x, wheel in/return rate per s, turn-rate ease per s (the car's weight)
+  top: 28, accel: 15, brake: 28, hand: 9, coast: .5, coastK: .06, revTop: .3,                  // pace: m/s, m/s2, m/s2, handbrake m/s2, coasting drag m/s2 + per m/s, reverse top as a share of top
+  lockLow: 28.6, lockHigh: 6.9, lockCurve: .6, steer: 1.0, steerIn: 5, steerOut: 8, yawEase: 10,               // steering: wheel angle (deg) at standstill and at top speed, overall x, wheel in/return rate per s, turn-rate ease per s (the car's weight)
   grip: 8, drift: 2.4, slideIn: 5.5, slideOut: 1.5,                                             // grip: sideways bleed per s (normal, sliding); sideways m/s where a slide starts / ends
   dead: .15, stickGain: 1.6, revAngle: 137.5, revSpeed: 3, backup: 1,                            // joystick: dead zone (share of travel), steering per radian of error, reverse when the stick is more than revAngle deg behind and slower than revSpeed m/s; backup: joystick modes back off a wall by themselves
   handYaw: 3.5, assist: .5,                                                                     // handbrake turn: extra turn rate rad/s at full steer; road assist: lines the car up with the road when you are not steering (0 off .. 1 strong)
-  bounce: .35, forgive: .7, heroMass: 2.2, damage: 0,                                           // crashes; damage 0 = off while testing (no dents, no damage bar, no health lost in crashes)
+  bounce: .35, forgive: .7, heroMass: 2.2, damage: 0, shoveFull: 12, shoveMin: .2, shoveSide: .5,                                           // crashes; damage 0 = off while testing (no dents, no damage bar, no health lost in crashes)
   camFollow: 5, camLook: .55, camZoom: .22, camYaw: 1, yawRate: 3, yawCap: 120,                 // camera: follow rate per s, look-ahead s of velocity, extra zoom-out at top speed (share); camYaw 0 north-up, 1 turns with the car, 2 turns in street steps; turn ease per s, max deg/s
   footEven: 1, blood: 1, readout: 0, stickDrive: 0 };      // stickDrive: 0 arrow buttons (Chinatown Wars style, round 26 default), 1 stick = direction to go, 2 stick steers like a wheel      // footEven: on-foot speed looks the same in every screen direction (1) or raw (0); readout: driving numbers on screen      // joystick drive is the default (round 22); Tune switches back to buttons      // heroMass: your car counts this much heavier in car-vs-car hits
 const TUNE = { ...TUNE_DEF };
-try { const st = JSON.parse(localStorage.getItem('gtcc-tune') || '{}'); if (st.v !== 3) { delete st.stickDrive; delete st.camYaw; } Object.assign(TUNE, st); TUNE.v = 3; } catch (e) { /* storage may be blocked */ }      // v2: older saves do not turn the joystick off
+try { const st = JSON.parse(localStorage.getItem('gtcc-tune') || '{}'); if (st.v !== 3 && st.v !== 4) { delete st.stickDrive; delete st.camYaw; }
+  if (st.v !== 4) { const OLD = { brake: 34 }; for (const k in st) if (st[k] === TUNE_DEF[k] || st[k] === OLD[k]) delete st[k]; }      // v4: saves only hold dials the player moved (older saves held every value, so new defaults never arrived)
+  Object.assign(TUNE, st); TUNE.v = 4; } catch (e) { /* storage may be blocked */ }
+function saveTune() { const ch = { v: 4 }; for (const k in TUNE_DEF) if (TUNE[k] !== TUNE_DEF[k]) ch[k] = TUNE[k]; try { localStorage.setItem('gtcc-tune', JSON.stringify(ch)); } catch (e) { /* ok */ } }      // v2: older saves do not turn the joystick off
 if (/[?&]drive=stick/.test(location.search)) TUNE.stickDrive = 1; if (/[?&]drive=steer/.test(location.search)) TUNE.stickDrive = 2; if (/[?&]drive=buttons/.test(location.search)) TUNE.stickDrive = 0; if (/[?&]cam=north/.test(location.search)) TUNE.camYaw = 0;
 const TUNE_UI = [         // [key, label, min, max, step, unit]; ['#', heading] starts a group
   ['#', 'Speed and brakes'], ['top', 'Top speed', 12, 45, 1, 'm/s'], ['accel', 'Acceleration', 6, 30, .5, 'm/s²'], ['brake', 'Brakes', 10, 50, 1, 'm/s²'], ['hand', 'Handbrake', 3, 20, .5, 'm/s²'], ['coast', 'Coasting drag', 0, 2, .05, 'm/s²'], ['coastK', 'Drag per m/s', 0, .2, .01, ''], ['revTop', 'Reverse top speed', .1, .6, .05, '× top'],
-  ['#', 'Steering'], ['lockLow', 'Steering when slow', 15, 45, .5, '°'], ['lockHigh', 'Steering at top speed', 2, 15, .5, '°'], ['steer', 'Steering overall', .5, 1.6, .05, '×'], ['steerIn', 'Wheel turn-in rate', 1, 15, .5, '/s'], ['steerOut', 'Wheel return rate', 1, 20, .5, '/s'], ['yawEase', 'Turn response (weight)', 2, 25, .5, '/s'], ['handYaw', 'Handbrake turn', 0, 5, .1, 'rad/s'], ['assist', 'Road assist', 0, 1, .05, ''],
+  ['#', 'Steering'], ['lockLow', 'Steering when slow', 15, 45, .5, '°'], ['lockHigh', 'Steering at top speed', 2, 15, .5, '°'], ['lockCurve', 'How soon steering calms with speed', .3, 1, .05, ''], ['steer', 'Steering overall', .5, 1.6, .05, '×'], ['steerIn', 'Wheel turn-in rate', 1, 15, .5, '/s'], ['steerOut', 'Wheel return rate', 1, 20, .5, '/s'], ['yawEase', 'Turn response (weight)', 2, 25, .5, '/s'], ['handYaw', 'Handbrake turn', 0, 5, .1, 'rad/s'], ['assist', 'Road assist', 0, 1, .05, ''],
   ['#', 'Grip'], ['grip', 'Grip', 2, 14, .5, '/s'], ['drift', 'Grip while sliding', .3, 5, .1, '/s'], ['slideIn', 'Slide starts at', 2, 10, .5, 'm/s'], ['slideOut', 'Slide ends at', .5, 4, .25, 'm/s'],
   ['#', 'Joystick'], ['dead', 'Dead zone', 0, .4, .01, ''], ['stickGain', 'Stick steering strength', .5, 4, .1, ''], ['revAngle', 'Reverse if stick behind by', 90, 180, 2.5, '°'], ['revSpeed', '…and slower than', 0, 10, .5, 'm/s'], ['backup', 'Back off walls by itself', 0, 1, 1, ''],
-  ['#', 'Crashes'], ['bounce', 'Bounce', 0, .8, .05, ''], ['forgive', 'Forgiving walls', 0, 1, .05, ''], ['heroMass', 'Car weight in crashes', 1, 4, .1, '×'], ['damage', 'Car damage', 0, 1, 1, ''],
+  ['#', 'Crashes'], ['bounce', 'Bounce', 0, .8, .05, ''], ['forgive', 'Forgiving walls', 0, 1, .05, ''], ['heroMass', 'Car weight in crashes', 1, 4, .1, '×'], ['shoveFull', 'Full shove from', 3, 25, 1, 'm/s'], ['shoveMin', 'Shove at a slow bump', 0, 1, .05, '×'], ['shoveSide', 'Shove sideways', 0, 1.5, .05, ''], ['damage', 'Car damage', 0, 1, 1, ''],
   ['#', 'Camera'], ['camFollow', 'Camera follow rate', 1, 15, .5, '/s'], ['camLook', 'Camera look-ahead', 0, 1.5, .05, 's'], ['camZoom', 'Zoom out at speed', 0, .6, .02, ''], ['camYaw', 'Camera turns (0 off, 1 follow, 2 streets)', 0, 2, 1, ''], ['yawRate', 'Camera turn ease', .5, 10, .25, '/s'], ['yawCap', 'Camera max turn', 30, 360, 10, '°/s'],
   ['#', 'Other'], ['footEven', 'Even on-foot speed', 0, 1, .1, ''], ['blood', 'Blood', 0, 1, 1, ''], ['readout', 'Driving readout', 0, 1, 1, ''], ['stickDrive', 'Controls (0 arrows, 1 stick direction, 2 stick steer)', 0, 2, 1, '']];
 const CAR = { L: 4.5, W: 1.8, mass: 1400, wb: 2.7 }; CAR.I = CAR.mass * (CAR.L * CAR.L + CAR.W * CAR.W) / 12;
@@ -654,7 +657,12 @@ function contact(c, B, e) {              // resolve one polygon overlap between 
   if (B.mass) e = Math.min(e, .12);                                                // car vs car: a crunch, not a bounce
   const j = -(1 + e) * vn / (1 / MS + (B.mass ? 1 / B.mass : 0) + rxn * rxn / IN);  // the other car takes its share when it has a mass (parked, traffic, police)
   c.vx += j * h.nx / MS; c.vz += j * h.nz / MS; c.w += j * rxn / IN;
-  if (B.mass && B.push) B.push(-j * h.nx / B.mass, -j * h.nz / B.mass, (rx * h.nz - rz * h.nx) * j / (B.mass * 2.2));
+  if (B.mass && B.push) {                                                         // the other car takes a shove: gentle when you bump it slowly, full from shoveFull m/s; part of it goes sideways (away from your nose) so it leaves your path
+    let dx = -j * h.nx / B.mass, dz = -j * h.nz / B.mass, dw = (rx * h.nz - rz * h.nx) * j / (B.mass * 2.2);
+    if (c === drive) { const f = clamp(-vn / TUNE.shoveFull, TUNE.shoveMin, 1), m = Math.hypot(dx, dz), hx = Math.cos(c.th), hz = -Math.sin(c.th), sd = Math.sign((B.cx - c.x) * hx + (B.cz - c.z) * hz) || 1;
+      dx = (dx + hx * sd * m * TUNE.shoveSide) * f; dz = (dz + hz * sd * m * TUNE.shoveSide) * f; dw = (dw + sd * m * .08) * f; }
+    B.push(dx, dz, dw);
+  }
   const vt = (c.vx + c.w * rz - B.vx) * tx + (c.vz - c.w * rx - B.vz) * tz, rxt = rz * tx - rx * tz, mu = .35 * (1 - .65 * f);
   const jt = clamp(-vt / (1 / MS + rxt * rxt / IN), -mu * j, mu * j); c.vx += jt * tx / MS; c.vz += jt * tz / MS; c.w += jt * rxt / IN;
   const glance = clamp(1 - (-vn) / (.45 * Math.abs(vt0) + 1e-3), 0, 1) * f;      // a shallow angle against a wall: ease the nose around so the car slides along it
@@ -745,7 +753,7 @@ function physicsStep(dt) {
   const roll = Math.min(Math.abs(vf), (TUNE.coast + TUNE.coastK * Math.abs(vf)) * dt); if (!(gasK > 0)) vf -= Math.sign(vf) * roll;
   c.slide = c.slide ? (Math.abs(vl) > TUNE.slideOut || (hand && driving)) : ((hand && driving && Math.abs(vf) > 4) || Math.abs(vl) > TUNE.slideIn);
   vl *= Math.exp(-(c.slide ? TUNE.drift : TUNE.grip) * dt); c.slip = Math.atan2(Math.abs(vl), Math.max(1, Math.abs(vf))) * 180 / Math.PI;
-  const sp = Math.abs(vf), maxSteer = (rad(TUNE.lockLow) + (rad(TUNE.lockHigh) - rad(TUNE.lockLow)) * Math.min(1, sp / TUNE.top)) * TUNE.steer;
+  const sp = Math.abs(vf), maxSteer = (rad(TUNE.lockLow) + (rad(TUNE.lockHigh) - rad(TUNE.lockLow)) * Math.min(1, sp / TUNE.top) ** TUNE.lockCurve) * TUNE.steer;     // lockCurve < 1: the wheel angle falls off sooner, so mid-speed steering is calmer while parking stays sharp
   let wT = -Math.tan(c.steer * maxSteer) * vf / (c.car.dims[2] || CAR.wb); if (c.slide) wT *= 1.2; if (driving && input.hand) wT += -c.steer * TUNE.handYaw * Math.min(1, Math.hypot(vf, vl) / 5);     // handbrake + steer swings the car round (the GTA U-turn); total speed, so it keeps turning once the car is sliding sideways
   c.w += (wT - c.w) * (1 - Math.exp(-TUNE.yawEase * dt));
   c.vx = fx * vf + rx * vl; c.vz = fz * vf + rz * vl;
@@ -998,7 +1006,6 @@ function setPaused(p) { paused = p; $('menu').hidden = !p; if (p) { saveGame(); 
 $('b-menu').addEventListener('click', () => setPaused(!paused));
 $('m-resume').addEventListener('click', () => setPaused(false));
 const CTRL_NAMES = ['arrows', 'stick direction', 'stick steer'], CAM_NAMES = ['north up', 'follows car', 'street steps'], HINTS = ['◀ ▶ steer · Gas', 'Drag: where to go + speed', 'Drag: ◀ ▶ steer, up = gas'];
-const saveTune = () => { try { localStorage.setItem('gtcc-tune', JSON.stringify(TUNE)); } catch (e) { /* ok */ } };
 const ctrlLabel = () => { $('m-ctrl').textContent = 'Controls: ' + CTRL_NAMES[TUNE.stickDrive | 0]; $('m-cam').textContent = 'Camera: ' + CAM_NAMES[TUNE.camYaw | 0]; $('hint').querySelector('.hint-stick').textContent = HINTS[TUNE.stickDrive | 0]; };
 $('m-cam').addEventListener('click', () => { TUNE.camYaw = ((TUNE.camYaw | 0) + 1) % 3; saveTune(); ctrlLabel(); if (outs.camYaw) outs.camYaw(); });
 $('m-ctrl').addEventListener('click', () => { TUNE.stickDrive = [2, 0, 1][TUNE.stickDrive | 0]; saveTune(); ctrlLabel(); if (outs.stickDrive) outs.stickDrive(); });
@@ -1024,7 +1031,7 @@ for (const [k, label, min, max, step, unit] of TUNE_UI) {
   if (k === '#') { const h = document.createElement('h3'); h.className = 'tg'; h.textContent = label; $('tunegrid').appendChild(h); continue; }
   const l = document.createElement('label'); l.htmlFor = 'tn-' + k; l.innerHTML = `${label} <output id="to-${k}"></output><input id="tn-${k}" type="range" min="${min}" max="${max}" step="${step}">`; $('tunegrid').appendChild(l);
   const inp = l.querySelector('input'), out = l.querySelector('output'); outs[k] = () => { inp.value = TUNE[k]; out.textContent = (+TUNE[k]).toFixed(step < 1 ? (step < .1 ? 2 : 1) : 0) + (unit ? ' ' + unit : ''); };
-  inp.addEventListener('input', () => { TUNE[k] = +inp.value; outs[k](); try { localStorage.setItem('gtcc-tune', JSON.stringify(TUNE)); } catch (e) { /* ok */ } }); outs[k]();
+  inp.addEventListener('input', () => { TUNE[k] = +inp.value; outs[k](); saveTune(); }); outs[k]();
 }
 $('tunecopybtn').addEventListener('click', () => {      // settings (only the ones changed from default) + the last test-track results, as plain text to paste back to Claude
   const ch = {}; for (const k in TUNE_DEF) if (TUNE[k] !== TUNE_DEF[k]) ch[k] = TUNE[k];

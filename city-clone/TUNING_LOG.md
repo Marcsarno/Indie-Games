@@ -23,4 +23,15 @@ All dials live in `TUNE_DEF` in `viewer/index.html` (the Tune panel shows them g
 
 ## Rounds
 
-(none yet: waiting for the first phone test on the test track)
+### Round 27 (30 Oct 2026), after the user's first drive with the follow camera
+User's words: "the turning ... can definitely be tuned down a little bit"; "The assist, I didn't notice it, and I seem to stay on the road pretty good. So maybe it's tuned just right"; "I'm okay with you tuning the braking a little bit"; "if you're going very slow ... it shouldn't be able to hit and move the car so hard"; "the impact sends the cars usually straight forward ... I end up just hitting the same car 3 or 4 times in a row ... move them out of the way ... not so far to the side where it looks weird".
+
+| Dial | Old | New | Effect |
+|---|---|---|---|
+| brake | 34 | 28 (-18 %) | stopping from 61 mph: 11.7 m -> ~14 m |
+| lockCurve (new) | 1 (linear) | 0.6 | wheel angle at 10 m/s 20.9 -> 16.9 deg, at 15 m/s 16.7 -> 13.7 deg (-18/-19 %); standstill and top speed unchanged |
+| shoveFull / shoveMin (new) | full shove at any speed | full from 12 m/s, 0.2x at a slow bump | 4 m/s bump into a parked car: it moved 0.99 m -> 0.14 m |
+| shoveSide (new) | 0 | 0.5 | 15 m/s hit: parked car moved 13.4 m mostly straight ahead (1.6 m sideways) -> 9.8 m with 4.6 m sideways (out of the lane) |
+| assist | 0.5 | 0.5 | unchanged ("tuned just right") |
+
+Also: Tune saves now hold only the dials the player moved (old saves held every value, so new defaults never reached the phone).
