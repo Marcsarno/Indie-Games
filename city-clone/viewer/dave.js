@@ -3,33 +3,37 @@
 // back in your ride: one cop, then one more every 5 s up to 5 -> near Dave's house police cars come at you like missiles -> stop in Dave's driveway.
 // Wasted or busted = mission failed, Retry restarts from the last checkpoint (the Publix lot). Built to be near impossible.
 export const DAVE = {
-  lot: [62.9, -49.0, Math.PI], door: [73.7, -64.6], house: [-171.7, -25.0],          // Publix lot (park here, facing out = south), Publix entrance, Dave's driveway on Banks Rd
+  lot: [62.9, -49.0, Math.PI], door: [73.7, -64.6], house: [-168.2, -20.5], houseYaw: Math.PI,          // Publix lot (park here, facing out = south), Publix entrance, Dave's driveway on Banks Rd (the house is built by dave_house() in coconut_scene.py)
   thugs: 3, thugSpeed: 3.4, thugHit: 7, thugEvery: 1.1,                               // fight: how many, run speed m/s, health lost per punch, seconds between punches
-  copEvery: 5, copMax: 5,                                                             // getaway: one more cop every copEvery s up to copMax
-  missileFrom: 160, missileSpeed: [34, 50], missileEvery: [1.7, .45], missileHurt: 18, missileMass: 3.0,   // final stretch: starts this far from the house; speed and gap from far to near; health per hit; mass vs your car
+  copEvery: 8, copMax: 5,                                                             // getaway: one more ordinary cop every copEvery s up to copMax
+  // "rocket" police cars. Heat goes 0 -> 1 with how close you are to Dave's (70 %) and how long the chase has run (rampTime s gives the other 40 %).
+  rampTime: 60, rocketFrom: .12,                                                      // they start once heat passes rocketFrom
+  rocketSpeed: [20, 54], rocketEvery: [4.0, .4], rocketMax: [1, 7],                   // top speed m/s, seconds between launches, how many at once: from low heat to full heat
+  rocketGrip: [14, 12], cutIn: .55,                                                    // sideways grip m/s2 (less = wider turns and drifts); above cutIn heat they leave the road route and come straight at you when nothing is in the way
+  rocketHurt: [12, 22], missileMass: 3.0,                                             // health per hit (low to full heat); weight against your car
   reward: 1000,
 };
 
 export function createDave(D) {
-  const { THREE, scene, makePerson, makeCar, play, walkers, colliders, carPoly, placeOnGround, banner, cops, graph, env } = D;
+  const { THREE, scene, makePerson, makeCar, play, walkers, colliders, carPoly, placeOnGround, banner, cops, graph, env, pushCircle, burst } = D;
   // ---------- UI: phone chat, objective chip, retry card ----------
   const css = document.createElement('style'); css.textContent = `
-#phone{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(5,8,12,.45);pointer-events:auto}
+#phone{position:fixed;left:10px;top:calc(96px + env(safe-area-inset-top,0px));z-index:30;pointer-events:none}
 #phone[hidden]{display:none}
-#phone .ph{width:min(330px,calc(100% - 32px));background:#f2f2f7;border-radius:28px;padding:14px 12px 16px;box-shadow:0 12px 40px rgba(0,0,0,.55);font:15px/1.3 system-ui,-apple-system,sans-serif;color:#111;transform:translateY(20px);opacity:0;transition:.35s}
+#phone .ph{pointer-events:auto;width:min(250px,62vw);background:rgba(242,242,247,.96);border-radius:24px;padding:10px 10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.5);font:14px/1.28 system-ui,-apple-system,sans-serif;color:#111;transform:translateX(-30px);opacity:0;transition:.35s}
 #phone.show .ph{transform:none;opacity:1}
 #phone .hd{display:flex;align-items:center;gap:10px;padding:2px 6px 10px;border-bottom:1px solid #d8d8de;margin-bottom:10px}
-#phone .hd img{width:44px;height:44px;border-radius:50%;object-fit:cover}
+#phone .hd img{width:38px;height:38px;border-radius:50%;object-fit:cover}
 #phone .hd b{display:block;font-size:16px} #phone .hd small{color:#777}
-#phone .msgs{display:grid;gap:8px;min-height:120px}
-#phone .m{max-width:82%;padding:8px 12px;border-radius:18px;background:#e5e5ea;justify-self:start;animation:pop .3s}
+#phone .msgs{display:grid;gap:6px;min-height:60px}
+#phone .m{max-width:88%;padding:7px 11px;border-radius:18px;background:#e5e5ea;justify-self:start;animation:pop .3s}
 #phone .m i{display:block;font-style:normal;font-size:11px;color:#666;margin-bottom:2px}
 #phone .m.me{background:#0b84ff;color:#fff;justify-self:end} #phone .m.me i{color:#d6e9ff}
 #phone .typing{justify-self:start;color:#888;font-size:13px;padding:2px 8px}
 #phone .pick{margin-top:12px;text-align:center;font-size:13px;color:#555}
-#phone .pick div{display:flex;justify-content:center;gap:14px;margin-top:8px}
+#phone .pick div{display:flex;justify-content:center;gap:10px;margin-top:8px}
 #phone .pick button{all:unset;cursor:pointer;display:grid;justify-items:center;gap:4px;font-size:12px;color:#222}
-#phone .pick img{width:56px;height:56px;border-radius:50%;object-fit:cover;border:3px solid #0b84ff}
+#phone .pick img{width:50px;height:50px;border-radius:50%;object-fit:cover;border:3px solid #0b84ff}
 @keyframes pop{from{transform:scale(.8);opacity:0}to{transform:none;opacity:1}}
 #mfail{position:fixed;inset:0;z-index:30;display:grid;place-items:center;pointer-events:none}
 #mfail[hidden]{display:none}
@@ -39,7 +43,7 @@ export function createDave(D) {
 #hurt{position:fixed;inset:0;z-index:2;pointer-events:none;box-shadow:inset 0 0 120px 40px rgba(220,0,0,.0);transition:box-shadow .15s}
 #hurt.on{box-shadow:inset 0 0 120px 40px rgba(220,0,0,.55)}`;
   document.head.appendChild(css);
-  const phone = document.createElement('div'); phone.id = 'phone'; phone.hidden = true; phone.innerHTML = `<div class="ph"><div class="hd"><img src="img/dave.jpg" alt=""><div><b>Dave</b><small>Group: Dave, Marc, Aaron, Chris</small></div></div><div class="msgs"></div><div class="pick" hidden>Who's going?<div></div></div></div>`;
+  const phone = document.createElement('div'); phone.id = 'phone'; phone.hidden = true; phone.innerHTML = `<div class="ph"><div class="hd"><img src="img/dave.jpg" alt=""><div><b>Dave</b><small>Marc, Aaron, Chris</small></div></div><div class="msgs"></div><div class="pick" hidden>Who's going?<div></div></div></div>`;
   document.body.appendChild(phone);
   const fail = document.createElement('div'); fail.id = 'mfail'; fail.hidden = true; fail.innerHTML = `<div class="c"><b>Mission failed</b><span id="mf-why"></span><button id="mf-retry">Retry</button></div>`; document.body.appendChild(fail);
   const hurt = document.createElement('div'); hurt.id = 'hurt'; document.body.appendChild(hurt);
@@ -51,23 +55,31 @@ export function createDave(D) {
   const hurtFlash = () => { hurt.classList.add('on'); setTimeout(() => hurt.classList.remove('on'), 160); };
 
   // ---------- state ----------
-  const S = { stage: 'off', t: 0, cops: 0, copT: 0, missT: 0, thugs: [], missiles: [], checkpoint: null, failed: false };
+  const S = { stage: 'off', t: 0, cops: 0, copT: 0, missT: 0, heat: 0, d0: 1, thugs: [], missiles: [], checkpoint: null, failed: false };
   const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
   function objective(text, sub = '') { chip.hidden = !text; if (text) chip.innerHTML = `<b>Groceries for Dave</b><span>${text}</span>${sub ? `<em>${sub}</em>` : ''}`; }
   const target = () => ({ toPublix: [DAVE.lot[0], -DAVE.lot[1]], park: [DAVE.lot[0], -DAVE.lot[1]], walkIn: [DAVE.door[0], -DAVE.door[1]], fight: null, grab: [DAVE.door[0], -DAVE.door[1]], back: null, chase: [DAVE.house[0], -DAVE.house[1]] })[S.stage] || null;   // minimap wants Blender x, y
 
   // ---------- intro: the group text ----------
+  // the camera while Dave texts: over the city, a slow pan across the front of Publix, then his house and driveway (index.html's cine(): look point a -> b, yaw y0 -> y1)
+  const SHOTS = {
+    city: { a: [10, -30], b: [45, -52], y0: .3, y1: .1, pitch: 38, d0: 110, d1: 95, dur: 4 },
+    publix: { a: [DAVE.door[0] - 16, DAVE.door[1] - 7], b: [DAVE.door[0] + 12, DAVE.door[1] - 8], y0: -.45, y1: .35, pitch: 24, d0: 42, d1: 34, dur: 7 },
+    house: { a: [DAVE.house[0] + 5, DAVE.house[1] + 3], b: [DAVE.house[0] + 2, DAVE.house[1] + 3], y0: DAVE.houseYaw - .3, y1: DAVE.houseYaw + .1, pitch: 34, d0: 27, d1: 23, dur: 6 },
+  };
   async function start() {
-    if (S.stage !== 'off' && S.stage !== 'done') return; S.stage = 'intro'; msgs.innerHTML = ''; pick.hidden = true; phone.hidden = false; await wait(.05); phone.classList.add('show');
-    await wait(.6); await typing('Dave', 1.2); say('Dave', 'Hey guys.. still having some issues and can\'t make it to the store.'); await wait(1.1);
-    await typing('Dave', 1.0); say('Dave', 'Can you pick me up some groceries from Publix? 🙏'); await wait(.7);
+    if (S.stage !== 'off' && S.stage !== 'done') return; S.stage = 'intro'; msgs.innerHTML = ''; pick.hidden = true;
+    env.cine([SHOTS.city]); await wait(.8); phone.hidden = false; await wait(.05); phone.classList.add('show');
+    await wait(.4); await typing('Dave', 1.0); say('Dave', 'Hey guys.. still having some issues and can\'t make it to the store.'); await wait(.6);
+    env.cine([SHOTS.publix]); await typing('Dave', 1.2); say('Dave', 'Can you pick me up some groceries from Publix? 🙏'); await wait(3.6);
+    env.cine([SHOTS.house]); await typing('Dave', .8); say('Dave', 'I\'m home on Banks Rd. Pull right into the driveway 🏠'); await wait(1.6);
     const row = pick.querySelector('div'); row.innerHTML = ''; pick.hidden = false;
     env.CHARS.forEach((C, i) => { const b = document.createElement('button'); b.innerHTML = `<img src="img/${C.id}.jpg" alt="">${C.name}`; b.onclick = () => choose(i); row.appendChild(b); });
   }
   async function choose(i) {
-    const C = env.CHARS[i]; pick.hidden = true; phone.classList.remove('show'); await wait(.3); phone.hidden = true;
+    const C = env.CHARS[i]; pick.hidden = true; phone.classList.remove('show'); env.cineStop(); await wait(.3); phone.hidden = true;
     if (env.cur !== i) { env.switchTo(i); await wait(2.7); }
-    phone.hidden = false; await wait(.05); phone.classList.add('show'); await typing(C.name, 1.0); say(C.name, REPLIES[C.id] || 'On my way.', true); await wait(1.6);
+    phone.hidden = false; await wait(.05); phone.classList.add('show'); await typing(C.name, .8); say(C.name, REPLIES[C.id] || 'On my way.', true); await wait(1.6);
     phone.classList.remove('show'); await wait(.3); phone.hidden = true; S.stage = 'toPublix'; objective('Drive to Publix'); banner('GROCERIES FOR DAVE');
   }
 
@@ -100,38 +112,96 @@ export function createDave(D) {
   }
   function clearThugs() { for (const w of S.thugs) { scene.remove(w.root); w.on = false; const i = walkers.indexOf(w); if (i >= 0) walkers.splice(i, 1); } S.thugs = []; }
 
-  // ---------- missiles: police cars fired at you ----------
-  const MP = []; for (let i = 0; i < 6; i++) { const car = makeCar('police', '#f4f4f4'); car.group.visible = false; const col = { poly: [[1e5, 1e5], [1e5 + 1, 1e5], [1e5, 1e5 + 1]], cx: 1e5, cz: 1e5, r: 3, vx: 0, vz: 0, mass: 1, missile: true }; colliders.push(col); MP.push({ car, col, on: false }); }
-  for (const m of MP) m.col.push = (dx, dz, dw) => { m.vx += dx * .2; m.vz += dz * .2; m.spin += dw * 4 + (Math.random() - .5) * 6; };
-  function routeAhead(px, pz, tx, tz, ahead) {             // a point about `ahead` m along the road route from you toward the house
-    if (!graph) return null; const N = graph.nodes; let a = 0, b = 0, ad = 1e18, bd = 1e18;
-    N.forEach((n, i) => { const d1 = (n.x - px) ** 2 + (-n.y - pz) ** 2, d2 = (n.x - tx) ** 2 + (-n.y - tz) ** 2; if (d1 < ad) { ad = d1; a = i; } if (d2 < bd) { bd = d2; b = i; } });
-    const dist_ = new Float64Array(N.length).fill(1e18), prev = new Int32Array(N.length).fill(-1), done = new Uint8Array(N.length); dist_[a] = 0;
-    for (;;) { let u = -1, ud = 1e18; for (let i = 0; i < N.length; i++) if (!done[i] && dist_[i] < ud) { ud = dist_[i]; u = i; } if (u < 0 || u === b) break; done[u] = 1;
-      graph.edges.forEach((e, k) => { const v = e.a === u ? e.b : e.b === u ? e.a : -1; if (v >= 0 && ud + e.L < dist_[v]) { dist_[v] = ud + e.L; prev[v] = k; } }); }
-    const pts = []; let v = b; while (v !== a && prev[v] >= 0) { const e = graph.edges[prev[v]], P = (e.b === v ? e.pts.slice().reverse() : e.pts.slice()).map(q => [q[0], -q[1]]); pts.unshift(...P); v = e.a === v ? e.b : e.a; }
-    let acc = 0, last = [px, pz]; for (const q of pts) { acc += Math.hypot(q[0] - last[0], q[1] - last[1]); last = q; if (acc >= ahead) return q; } return pts.length ? pts[pts.length - 1] : null;
+  // ---------- rocket cops: police cars that drive the roads at you, faster and wilder as the heat rises ----------
+  // Low heat: they follow the road route and slow for corners. High heat: top speed, little grip (they turn badly and drift), no braking for corners,
+  // and they cut straight at you across lots when nothing solid is in the way. They never pass through buildings: walls stop them, hard hits spin them out.
+  const GN = graph ? graph.nodes.map(n => ({ x: n.x, z: -n.y, adj: [] })) : [];
+  if (graph) graph.edges.forEach(e => { const P = e.pts.map(q => [q[0], -q[1]]); GN[e.a].adj.push({ n: e.b, P, L: e.L }); GN[e.b].adj.push({ n: e.a, P: P.slice().reverse(), L: e.L }); });
+  const nearestNode = (x, z) => { let b = 0, bd = 1e18; for (let i = 0; i < GN.length; i++) { const d = (GN[i].x - x) ** 2 + (GN[i].z - z) ** 2; if (d < bd) { bd = d; b = i; } } return b; };
+  const gd = new Float64Array(GN.length), gprev = new Int32Array(GN.length), gpe = new Array(GN.length), gdone = new Uint8Array(GN.length);
+  function route(a, b) {
+    gd.fill(1e18); gprev.fill(-1); gdone.fill(0); gd[a] = 0;
+    for (;;) { let u = -1, ud = 1e18; for (let i = 0; i < GN.length; i++) if (!gdone[i] && gd[i] < ud) { ud = gd[i]; u = i; } if (u < 0 || u === b) break; gdone[u] = 1;
+      for (const ed of GN[u].adj) if (ud + ed.L < gd[ed.n]) { gd[ed.n] = ud + ed.L; gprev[ed.n] = u; gpe[ed.n] = ed; } }
+    const ch = []; let v = b; while (v !== a && gprev[v] >= 0) { ch.push(gpe[v]); v = gprev[v]; } const pts = []; for (let k = ch.length - 1; k >= 0; k--) for (const q of ch[k].P) pts.push(q); return pts;
   }
-  function fire(P, k) {                                     // k: 0 far .. 1 at the house
-    const m = MP.find(q => !q.on); if (!m) return; const sp = DAVE.missileSpeed[0] + (DAVE.missileSpeed[1] - DAVE.missileSpeed[0]) * k;
-    let s = routeAhead(P.x, P.z, DAVE.house[0], DAVE.house[1], 55 + Math.random() * 20);
-    if (!s || Math.hypot(s[0] - P.x, s[1] - P.z) < 30) { const a = P.th + (Math.random() - .5) * 2.2; s = [P.x - Math.sin(a) * 55, P.z - Math.cos(a) * 55]; }
-    const d0 = Math.hypot(P.x - s[0], P.z - s[1]), lead = d0 / sp * .8, tx = P.x + P.vx * lead, tz = P.z + P.vz * lead, l = Math.hypot(tx - s[0], tz - s[1]) || 1;
-    Object.assign(m, { on: true, x: s[0], z: s[1], vx: (tx - s[0]) / l * sp, vz: (tz - s[1]) / l * sp, t: 0, spin: 0, hit: false, th: Math.atan2(-(tx - s[0]), -(tz - s[1])), roll: 0 });
-    m.col.mass = env.carMass * DAVE.missileMass; m.car.group.visible = true; env.sound('siren');
+  const GE = graph ? graph.edges.map(e => ({ a: e.a, b: e.b, P: e.pts.map(q => [q[0], -q[1]]) })) : [];
+  function routeTo(x, z, px, pz) {                       // road route from (x, z) to the road point nearest (px, pz): node route + the last stretch of that street
+    let be = null, bj = 0, bd = 1e18; for (const e of GE) for (let j = 0; j < e.P.length; j++) { const d = (e.P[j][0] - px) ** 2 + (e.P[j][1] - pz) ** 2; if (d < bd) { bd = d; be = e; bj = j; } }
+    const s = nearestNode(x, z); if (!be) return route(s, nearestNode(px, pz));
+    const ra = route(s, be.a), la = gd[be.a] + bj, rb = route(s, be.b), lb = gd[be.b] + (be.P.length - bj);
+    return la <= lb ? ra.concat(be.P.slice(0, bj + 1)) : rb.concat(be.P.slice(bj).reverse());
   }
-  function missileStep(dt, P) {
-    for (const m of MP) {
-      if (!m.on) continue; m.t += dt; m.x += m.vx * dt; m.z += m.vz * dt; m.th += m.spin * dt; m.roll += m.spin * .3 * dt; m.spin *= Math.exp(-1.5 * dt);
-      if (m.hit) { const k = Math.exp(-2.2 * dt); m.vx *= k; m.vz *= k; }
-      const d = Math.hypot(m.x - P.x, m.z - P.z);
-      if (!m.hit && d < 3.6 && env.hmode === 'driving') { m.hit = true; env.hurt(DAVE.missileHurt, (P.x - m.x) / (d || 1), (P.z - m.z) / (d || 1)); hurtFlash(); env.sound('crash'); }
-      if (m.t > 4.5 || (m.hit && m.t > 2.5)) { m.on = false; m.car.group.visible = false; m.col.cx = m.col.cz = 1e5; for (const q of m.col.poly) { q[0] = 1e5; q[1] = 1e5; } m.col.vx = m.col.vz = 0; continue; }
-      placeOnGround(m.car.group, m.x, m.z, m.th); m.car.group.rotation.z = m.roll;
-      m.col.poly = carPoly(m.x, m.z, m.th, m.car.dims); m.col.cx = m.x; m.col.cz = m.z; m.col.r = 3; m.col.vx = m.vx; m.col.vz = m.vz;
+  const lerp = (a, k) => a[0] + (a[1] - a[0]) * k, clamp = (v, a, b) => Math.max(a, Math.min(b, v)), wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
+  const barGeo = new THREE.BoxGeometry(.5, .18, .3), RK = [];
+  for (let i = 0; i < 8; i++) {
+    const car = makeCar('police', '#f4f4f4'); car.group.visible = false;
+    const bar = [0, 1].map(j => { const b = new THREE.Mesh(barGeo, new THREE.MeshBasicMaterial({ color: j ? 0x2b6bff : 0xff2b2b, toneMapped: false })); b.position.set(j ? .35 : -.35, car.dims[3] || 1.75, 0); car.group.add(b); return b; });
+    const col = { poly: [[1e5, 1e5], [1e5 + 1, 1e5], [1e5, 1e5 + 1], [1e5, 1e5 + 2]], cx: 1e5, cz: 1e5, r: 3, vx: 0, vz: 0, mass: 1, missile: true }; colliders.push(col);
+    const r = { car, bar, col, on: false }; col.push = (dx, dz, dw) => { r.vx += dx * .2; r.vz += dz * .2; r.spin += dw * 4 + (Math.random() - .5) * 6; }; RK.push(r);
+  }
+  function blocked(ax, az, bx, bz, skip) {               // anything solid on the straight line from a to b? (samples every 3.5 m)
+    const L = Math.hypot(bx - ax, bz - az), n = Math.floor(L / 3.5), stop = Math.max(0, (L - 5) / L);       // stops 5 m short of b (your own car is there)
+    for (let i = 1; i < n; i++) { const f = i / n; if (f > stop) break; const x = ax + (bx - ax) * f, z = az + (bz - az) * f, q = pushCircle(x, z, .9, skip); if (Math.abs(q[0] - x) + Math.abs(q[1] - z) > .05) return true; }
+    return false;
+  }
+  function launch(P, k, onScreen) {
+    const r = RK.find(q => !q.on); if (!r || !GN.length) return;
+    const sp = Math.hypot(P.vx, P.vz), ux = sp > 2 ? P.vx / sp : -Math.sin(P.th), uz = sp > 2 ? P.vz / sp : -Math.cos(P.th), late = k >= DAVE.cutIn;
+    const cand = [];
+    for (let i = 0; i < GN.length; i++) {                // a road node off-screen: ahead of you early (they come down the road at you), from the sides late, where the line to you is clear
+      const dx = GN[i].x - P.x, dz = GN[i].z - P.z, d = Math.hypot(dx, dz); if (d < (late ? 40 : 65) || d > (late ? 85 : 125) || onScreen(GN[i].x, GN[i].z)) continue;
+      const fwd = (dx * ux + dz * uz) / d; cand.push([(late ? 1 - Math.abs(fwd) * .6 : fwd) + Math.random() * (late ? 1.2 : .5), i]);
+    }
+    cand.sort((a, b) => b[0] - a[0]); let best = cand.length ? cand[0][1] : -1;
+    if (late) for (const [, i] of cand.slice(0, 8)) if (!blocked(GN[i].x, GN[i].z, P.x, P.z, null)) { best = i; break; }
+    if (best < 0) return; const n = GN[best];
+    const path = routeTo(n.x, n.z, P.x, P.z); let aim = [P.x, P.z];                  // start pointed along the road (or at you, when the line is clear)
+    if (!(late && !blocked(n.x, n.z, P.x, P.z, null))) for (const q of path) if (Math.hypot(q[0] - n.x, q[1] - n.z) > 8) { aim = q; break; }
+    const th = Math.atan2(-(aim[0] - n.x), -(aim[1] - n.z)), v0 = lerp(DAVE.rocketSpeed, k) * .5;
+    Object.assign(r, { on: true, x: n.x, z: n.z, th, vx: -Math.sin(th) * v0, vz: -Math.cos(th) * v0, spin: 0, roll: 0, t: 0, hit: false, crash: 0, path, pi: 0, repath: 1.2, los: false, losT: 0, k });
+    r.col.mass = env.carMass * DAVE.missileMass; r.car.group.visible = true; r.car.setDamage && r.car.setDamage(0);
+  }
+  function park(r) { r.on = false; r.car.group.visible = false; r.col.cx = r.col.cz = 1e5; for (const q of r.col.poly) { q[0] = 1e5; q[1] = 1e5; } r.col.vx = r.col.vz = 0; }
+  function rocketStep(dt, P, k) {
+    const flash = Math.floor(performance.now() / 160) % 2;
+    for (const r of RK) {
+      if (!r.on) continue; r.t += dt; r.k = Math.max(r.k, k);
+      const dx = P.x - r.x, dz = P.z - r.z, d = Math.hypot(dx, dz), v = Math.hypot(r.vx, r.vz);
+      const vmax = lerp(DAVE.rocketSpeed, r.k), grip = lerp(DAVE.rocketGrip, r.k), care = 1 - .45 * r.k, late = r.k >= DAVE.cutIn;
+      // where to go: the player (with lead) when close or, late, when the line is clear; else the next point on the road route
+      r.losT -= dt; if (late && r.losT <= 0) { r.losT = .3; r.los = d < 95 && !blocked(r.x, r.z, P.x, P.z, r.col); }
+      const lead = clamp(d / Math.max(v, 8), 0, 1.4) * (.5 + .5 * r.k); let tx = P.x + P.vx * lead, tz = P.z + P.vz * lead, onRoute = false;
+      if (!r.crash && !(d < 16 || r.los)) {
+        r.repath -= dt; if (!r.path || r.repath <= 0) { r.path = routeTo(r.x, r.z, P.x, P.z); r.pi = 0; r.repath = 1.2; }
+        while (r.pi < r.path.length && Math.hypot(r.path[r.pi][0] - r.x, r.path[r.pi][1] - r.z) < 7 + v * .25) r.pi++;
+        if (r.pi < r.path.length) { tx = r.path[r.pi][0]; tz = r.path[r.pi][1]; onRoute = true; }
+      }
+      // steering: the nose turns at what the grip allows at this speed (fast = barely turns); velocity follows the nose only as fast as the grip allows (late = drifts)
+      const want = Math.atan2(-(tx - r.x), -(tz - r.z)); let da = wrap(want - r.th);
+      if (r.crash) { r.th += r.spin * dt; r.spin *= Math.exp(-1.2 * dt); r.crash += dt; }
+      else { const rate = Math.min(3, grip * (1 + 1.6 * r.k) / Math.max(v, 4)); r.th += clamp(da, -rate * dt, rate * dt) + r.spin * dt; r.spin *= Math.exp(-2 * dt); }
+      // speed: early they brake for corners on the route (rules of the road); late they never lift
+      let corner = 0; if (onRoute && r.pi + 3 < r.path.length) { const a = r.path[r.pi], b = r.path[Math.min(r.path.length - 1, r.pi + 4 + Math.round(v / 8))]; corner = Math.abs(wrap(Math.atan2(-(b[0] - a[0]), -(b[1] - a[1])) - r.th)); }
+      const vt = r.crash ? 0 : vmax * (1 - care * .75 * clamp(Math.max(corner, Math.abs(da)) / 1.3, 0, 1));
+      const fx = -Math.sin(r.th), fz = -Math.cos(r.th); let vf = r.vx * fx + r.vz * fz, vl = r.vx * fz - r.vz * fx;
+      vf += clamp(vt - vf, -22 * dt, (14 + 10 * r.k) * dt); const gl = (r.crash ? 6 : grip) * dt; vl = Math.abs(vl) <= gl ? 0 : vl - Math.sign(vl) * gl;
+      r.vx = fx * vf + fz * vl; r.vz = fz * vf - fx * vl;
+      // move and hit the world: walls stop them; a hard hit spins them out
+      const nx = r.x + r.vx * dt, nz = r.z + r.vz * dt, q = pushCircle(nx, nz, 1.7, r.col), ox = q[0] - nx, oz = q[1] - nz, od = Math.hypot(ox, oz);
+      if (od > .02) { const ux = ox / od, uz = oz / od, vn = r.vx * ux + r.vz * uz;
+        if (vn < 0) { if (-vn > 15 && !r.crash) { r.crash = .01; r.spin = (Math.random() < .5 ? -1 : 1) * (3 + Math.min(6, -vn / 6)); if (burst) burst(q[0], .6, q[1], ux, uz, -vn); if (d < 60) env.sound('crash'); } r.vx -= vn * ux * (r.crash ? 1.3 : 1); r.vz -= vn * uz * (r.crash ? 1.3 : 1); } }
+      r.x = q[0]; r.z = q[1]; r.roll += (clamp(-vl / 25, -.12, .12) - r.roll) * Math.min(1, dt * 6);
+      if (!r.hit && d < 3.4 && env.hmode === 'driving') { r.hit = true; env.hurt(lerp(DAVE.rocketHurt, r.k), dx / (d || 1), dz / (d || 1)); hurtFlash(); env.sound('crash'); r.vx *= .35; r.vz *= .35; r.spin += (Math.random() - .5) * 8; }
+      const gone = r.t > 16 || d > 150 || (r.crash > 2 && d > 15) || r.crash > 4 || (r.hit && r.t > 6 && d > 30);
+      if (gone) { park(r); continue; }
+      placeOnGround(r.car.group, r.x, r.z, r.th); r.car.group.rotation.z = r.roll; r.bar[0].material.color.setHex(flash ? 0xff2b2b : 0x551010); r.bar[1].material.color.setHex(flash ? 0x10204f : 0x2b6bff);
+      r.col.poly = carPoly(r.x, r.z, r.th, r.car.dims); r.col.cx = r.x; r.col.cz = r.z; r.col.r = 3; r.col.vx = r.vx; r.col.vz = r.vz;
     }
   }
-  function clearMissiles() { for (const m of MP) { m.on = false; m.car.group.visible = false; m.col.cx = m.col.cz = 1e5; for (const q of m.col.poly) { q[0] = 1e5; q[1] = 1e5; } m.col.vx = m.col.vz = 0; } }
+  function clearMissiles() { for (const r of RK) park(r); }
+  const frustum = new THREE.Frustum(), pm = new THREE.Matrix4(), sph = new THREE.Sphere(new THREE.Vector3(), 5);
+  const onScreen = (x, z) => { sph.center.set(x, 1, z); return frustum.intersectsSphere(sph); };
 
   // ---------- goal marker: a soft green column at the current goal, and a DAVE sign at the house ----------
   const geo = new THREE.CylinderGeometry(2.6, 2.6, 7, 24, 1, true).translate(0, 3.5, 0);
@@ -139,7 +209,7 @@ export function createDave(D) {
   { const c = document.createElement('canvas'); c.width = 256; c.height = 96; const g = c.getContext('2d'); g.fillStyle = '#1f6b3a'; g.fillRect(0, 0, 256, 96); g.strokeStyle = '#fff'; g.lineWidth = 6; g.strokeRect(6, 6, 244, 84); g.fillStyle = '#fff'; g.font = '700 54px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText("DAVE'S", 128, 50);
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const sign = new THREE.Group(), post = new THREE.Mesh(new THREE.BoxGeometry(.12, 1.6, .12), new THREE.MeshLambertMaterial({ color: 0x3a3a3a }));
     const board = new THREE.Mesh(new THREE.PlaneGeometry(1.6, .6), new THREE.MeshBasicMaterial({ map: t, side: THREE.DoubleSide, toneMapped: false })); post.position.y = .8; board.position.y = 1.75; sign.add(post, board);
-    sign.position.set(DAVE.house[0] + 3.2, 0, DAVE.house[1] + 1.5); scene.add(sign); }
+    sign.position.set(DAVE.house[0] + 3.1, 0, DAVE.house[1] - 1.2); sign.rotation.y = DAVE.houseYaw; scene.add(sign); }
   // ---------- step ----------
   function step(dt, P) {                                   // P: { x, z (three), vx, vz, th, speed, driving }
     if (S.stage === 'off' || S.stage === 'intro' || S.stage === 'done' || S.failed) return;
@@ -154,15 +224,19 @@ export function createDave(D) {
     else if (S.stage === 'chase') {
       S.copT += dt; if (S.cops < DAVE.copMax && S.copT >= DAVE.copEvery) { S.copT = 0; S.cops++; cops.force(S.cops); banner(`${S.cops} COPS`); }
       const dh = dist(me, DAVE.house); objective('Get the groceries to Dave', `${Math.round(dh)} m`);
-      if (dh < DAVE.missileFrom && P.driving) { const k = 1 - Math.max(0, dh - 25) / (DAVE.missileFrom - 25); S.missT -= dt; if (S.missT <= 0) { fire(P, k); S.missT = DAVE.missileEvery[0] + (DAVE.missileEvery[1] - DAVE.missileEvery[0]) * k; } }
+      S.t += dt; const pk = clamp(1 - (dh - 20) / Math.max(1, S.d0 - 20), 0, 1); S.heat = Math.min(1, pk * .7 + S.t / DAVE.rampTime * .4);
+      if (S.heat > DAVE.rocketFrom && P.driving) {
+        const k = (S.heat - DAVE.rocketFrom) / (1 - DAVE.rocketFrom); let on = 0; for (const r of RK) if (r.on) on++;
+        S.missT -= dt; if (S.missT <= 0 && on < Math.round(lerp(DAVE.rocketMax, k))) { pm.multiplyMatrices(D.camera.projectionMatrix, D.camera.matrixWorldInverse); frustum.setFromProjectionMatrix(pm); launch(P, k, onScreen); S.missT = lerp(DAVE.rocketEvery, k) * (.8 + Math.random() * .4); }
+      }
       if (dh < 6 && P.speed < 3) win();
     }
     if (S.stage === 'grab' || S.stage === 'back') thugStep(dt);
-    missileStep(dt, P);
+    rocketStep(dt, P, S.heat > DAVE.rocketFrom ? (S.heat - DAVE.rocketFrom) / (1 - DAVE.rocketFrom) : 0);
     const tg = target(); beacon.visible = !!tg && S.stage !== 'fight'; if (tg) { const k = 1 + Math.sin(performance.now() / 300) * .06; beacon.position.set(tg[0], 0, -tg[1]); beacon.scale.set(S.stage === 'grab' || S.stage === 'walkIn' ? .5 : k, 1, S.stage === 'grab' || S.stage === 'walkIn' ? .5 : k); }
   }
   function restart() { clearThugs(); clearMissiles(); cops.force(0); cops.lock(false); cops.clear(); fail.hidden = true; phone.hidden = true; S.failed = false; S.stage = 'off'; S.checkpoint = null; objective(''); env.heal(); env.resetCar(); start(); }
-  function startChase() { S.stage = 'chase'; S.cops = 1; S.copT = 0; S.missT = 0; S.checkpoint = 'chase'; cops.lock(true); cops.force(1); objective('Get the groceries to Dave'); banner('COPS!'); }
+  function startChase() { S.stage = 'chase'; S.cops = 1; S.copT = 0; S.missT = 2; S.t = 0; S.heat = 0; S.d0 = Math.max(60, dist([DAVE.lot[0], DAVE.lot[1]], DAVE.house)); S.checkpoint = 'chase'; cops.lock(true); cops.force(1); objective('Get the groceries to Dave'); banner('COPS!'); }
   function win() { S.stage = 'done'; cops.force(0); cops.lock(false); cops.clear(); clearMissiles(); clearThugs(); objective(''); env.addMoney(DAVE.reward); banner(`MISSION PASSED  +$${DAVE.reward}`);
     (async () => { await wait(1.5); msgs.innerHTML = ''; pick.hidden = true; phone.hidden = false; await wait(.05); phone.classList.add('show'); await typing('Dave', 1.0); say('Dave', 'YOU MADE IT?!? 😭 THANK YOU'); await wait(1.0); say(env.CHARS[env.cur].name, 'never again.', true); await wait(2.6); phone.classList.remove('show'); await wait(.3); phone.hidden = true; })(); }
   function failMission(why) {
@@ -174,5 +248,5 @@ export function createDave(D) {
     else if (S.checkpoint === 'publix') { clearThugs(); env.resetCar(DAVE.lot[0], DAVE.lot[1], DAVE.lot[2]); S.stage = 'park'; objective('Park in the lot and get out', 'tap Exit'); }
     else { env.resetCar(); S.stage = 'toPublix'; objective('Drive to Publix'); }
   };
-  return { list: [], step, start, restart, refresh() {}, target, get active() { return S.stage !== 'off' && S.stage !== 'done' && !S.failed; }, get stage() { return S.stage; }, S };
+  return { list: [], step, start, restart, refresh() {}, target, get active() { return S.stage !== 'off' && S.stage !== 'done' && !S.failed; }, get stage() { return S.stage; }, S, RK };
 }

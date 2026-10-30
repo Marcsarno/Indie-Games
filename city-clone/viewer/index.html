@@ -66,7 +66,18 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 #stars i.on { color: #ffd23f; } #stars.flash i.on { animation: starflash .5s steps(2) infinite; } @keyframes starflash { 50% { color: rgba(255, 255, 255, .25); } }
 #banner { position: fixed; left: 0; right: 0; top: 38%; text-align: center; font: 700 52px/1 var(--display); letter-spacing: .08em; color: #fff; text-shadow: 0 3px 10px rgba(0, 0, 0, .8); pointer-events: none; opacity: 0; transition: opacity .3s; z-index: 30; }
 #banner.show { opacity: 1; }
-#title { position: fixed; inset: 0; z-index: 22; display: grid; place-items: center; padding: 16px; background: linear-gradient(rgba(6, 9, 14, .35), rgba(6, 9, 14, .8)); }
+@font-face { font-family: "Anton"; src: url(fonts/anton.woff2) format("woff2"); font-display: swap; }
+@font-face { font-family: "Mr Dafoe"; src: url(fonts/mrdafoe.woff2) format("woff2"); font-display: swap; }
+#title { position: fixed; inset: 0; z-index: 22; display: grid; grid-template-rows: 1fr auto; justify-items: center; padding: calc(10vh + env(safe-area-inset-top, 0px)) 16px calc(9vh + env(safe-area-inset-bottom, 0px)); background: linear-gradient(rgba(20, 6, 30, .55), rgba(20, 6, 30, 0) 42%, rgba(20, 6, 30, 0) 70%, rgba(10, 4, 16, .6)); }
+.logo { text-align: center; transform: rotate(-4deg); animation: logoIn 1.1s cubic-bezier(.2, .8, .2, 1) both; }
+.logo .gt { font: 400 clamp(46px, 15vw, 92px)/.9 "Anton", Impact, sans-serif; letter-spacing: .02em; text-transform: uppercase; color: #fff; -webkit-text-stroke: 3px #111; paint-order: stroke fill; text-shadow: 4px 5px 0 #111, 0 0 18px rgba(0, 0, 0, .5); }
+.logo .cc { margin-top: -.08em; font: 400 clamp(58px, 19vw, 120px)/1 "Mr Dafoe", "Brush Script MT", cursive; color: #ff4fb8; text-shadow: 0 0 6px #fff, 0 0 14px #ff4fb8, 0 0 30px #ff2fa0, 0 0 54px #c3008a, 3px 4px 0 rgba(40, 0, 30, .6); white-space: nowrap; }
+.logo .fl { margin-top: .4em; font: 600 14px/1 var(--display); letter-spacing: .5em; text-transform: uppercase; color: #5fe3ff; text-shadow: 0 0 8px #18b7e0; }
+@keyframes logoIn { from { opacity: 0; transform: rotate(-4deg) scale(1.25); } to { opacity: 1; transform: rotate(-4deg); } }
+#t-play { all: unset; cursor: pointer; padding: 14px 54px 12px; border-radius: 4px; font: 400 30px/1 "Anton", Impact, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: #fff; border: 3px solid #5fe3ff; background: rgba(10, 4, 20, .55); box-shadow: 0 0 14px #18b7e0, inset 0 0 12px rgba(24, 183, 224, .5); text-shadow: 0 0 10px #5fe3ff; animation: startGlow 1.6s ease-in-out infinite; }
+@keyframes startGlow { 50% { box-shadow: 0 0 28px #18b7e0, inset 0 0 18px rgba(24, 183, 224, .7); } }
+body.cine .hud, body.cine #chars, body.cine #mission, body.cine #place, body.cine #drv, body.cine #hint { visibility: hidden; }
+#t-cont { margin: 10px 0 0; text-align: center; color: #e8dff0; font: 500 13px var(--display); letter-spacing: .08em; }
 #title[hidden], #bigmap[hidden], #hint[hidden] { display: none; }
 #bigmap { position: fixed; inset: 0; z-index: 21; background: #12324f; display: grid; grid-template-rows: 1fr auto; gap: 10px; padding: calc(12px + env(safe-area-inset-top, 0px)) 12px calc(16px + env(safe-area-inset-bottom, 0px)); }
 #bigc { width: 100%; height: 100%; touch-action: none; }
@@ -151,7 +162,7 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 </div>
 <div id="chars" aria-label="Switch character"></div>
 <div id="banner"></div>
-<div id="title" hidden><div class="mcard"><h1>Grand Theft<br>Coconut Creek</h1><p class="msub">Coconut Creek, Florida</p><button class="btn mbig" id="t-play">Tap to play</button><p class="msub" id="t-cont"></p></div></div>
+<div id="title" hidden><div class="logo"><div class="gt">Grand Theft</div><div class="cc">Coconut Creek</div><div class="fl">Florida</div></div><div><button id="t-play">Start</button><p id="t-cont"></p></div></div>
 <div id="bigmap" hidden><canvas id="bigc"></canvas><button class="btn" id="bm-close">Close map</button></div>
 <div id="hint" hidden><div class="hint-stick">Drag: steer + speed</div><div class="hint-r">Brake &middot; Horn &middot; Exit</div><div class="hint-map">Tap the map for the full map &middot; &#9776; pauses</div></div>
 <div id="fade"></div>
@@ -522,12 +533,12 @@ const DEV = /[?&]dev=1/.test(location.search);       // round 29: the showcase i
 const DENV = {                                     // what the Dave mission reads from the game (getters, so it always sees the current values)
   get foot() { return foot; }, get hmode() { return hmode; }, get cur() { return cur; }, get CHARS() { return CHARS; }, get respawning() { return respawning; }, lastDeath: '',
   get carMass() { return drive ? drive.mass * TUNE.heroMass * (drive.st ? drive.st.ram : 1) : 2000; },
-  switchTo: i => switchTo(i, true), addMoney: v => { game.money += v; }, heal: () => { game.hp = 100; }, resetCar: (x, z, th) => resetCar(x, z, th),
+  switchTo: i => switchTo(i, true), cine: (sh, loop) => cine(sh, loop), cineStop: () => cineStop(), get cineOn() { return !!CINE.shots; }, addMoney: v => { game.money += v; }, heal: () => { game.hp = 100; }, resetCar: (x, z, th) => resetCar(x, z, th),
   hurt: (amt, dx, dz) => { game.hp = Math.max(0, game.hp - amt); rig.shake = Math.min(1, rig.shake + .35); if (hmode === 'foot') { foot.lx += dx * 6; foot.lz += dz * 6; } },
   sound: k => { if (k === 'crash') crashSound(12); },
 };
 const missions = !graph ? null : DEV ? createMissions(graph, { THREE, scene, groundH, banner: t => banner(t), addMoney: v => { game.money += v; }, cops, heights: world.heights })
-  : createDave({ THREE, scene, makePerson: o => makePerson(o), makeCar: (k, c) => makeCar(k, c), play: (a, n, o) => play(a, n, o), walkers, colliders, carPoly: (x, z, th, d) => carPoly(x, z, th, d), placeOnGround, banner: t => banner(t), cops, graph, env: DENV });
+  : createDave({ THREE, scene, makePerson: o => makePerson(o), makeCar: (k, c) => makeCar(k, c), play: (a, n, o) => play(a, n, o), walkers, colliders, carPoly: (x, z, th, d) => carPoly(x, z, th, d), placeOnGround, banner: t => banner(t), cops, graph, camera, env: DENV, pushCircle: (x, z, r, skip) => pushCircle(x, z, r, skip), burst: (x, y, z, nx, nz, p) => burst(x, y, z, nx, nz, p) });
 const MPX = { x: 0, z: 0, vx: 0, vz: 0, th: 0, speed: 0, driving: false };
 function addStatic(poly) {                        // a solid collider added after load (test track walls): straight into the static grid
   const [cx, cz] = cen(poly); let r = 0; for (const p of poly) r = Math.max(r, Math.hypot(p[0] - cx, p[1] - cz)); const c = { poly, cx, cz, r, vx: 0, vz: 0, soft: null };
@@ -950,6 +961,30 @@ function switchStep(dt) {
   }
   if (scene.fog && SW.fog) scene.fog.far = SW.on ? SW.fog + rig.dist * 2 : SW.fog;
 }
+/* Cinematic camera (round 30): the title fly-over and the mission intro. A shot eases the look point from a to b while the camera swings from yaw y0 to y1
+   at tilt `pitch` and distance d0 -> d1; the world (culling, traffic, haze) centres on the look point. Shots fade through black when `fade` is set. */
+const CINE = { shots: null, i: 0, t: 0, loop: false, res: null, fog: null };
+function cine(shots, loop = false) {
+  return new Promise(res => { if (CINE.res) CINE.res(); if (!CINE.shots && scene.fog) CINE.fog = [scene.fog.near, scene.fog.far]; Object.assign(CINE, { shots, i: 0, t: 0, loop, res }); document.body.classList.add('cine'); for (const k in input) input[k] = false; camera.far = 700; camera.updateProjectionMatrix(); });
+}
+function cineStop() {
+  if (!CINE.shots) return; CINE.shots = null; const r = CINE.res; CINE.res = null; $('fade').classList.remove('on'); document.body.classList.remove('cine');
+  if (scene.fog && CINE.fog) [scene.fog.near, scene.fog.far] = CINE.fog; camera.far = 300; camera.updateProjectionMatrix(); rig.dist = 44; rig.pitch = 45; rig.yaw = hmode === 'driving' && drive ? drive.th : 0;
+  const tx = hmode === 'foot' ? foot.x : drive ? drive.x : rig.tx, tz = hmode === 'foot' ? foot.z : drive ? drive.z : rig.tz; rig.tx = tx; rig.tz = tz; if (r) r();
+}
+function cineStep(dt) {
+  let S = CINE.shots[CINE.i]; CINE.t += dt;
+  if (CINE.t >= S.dur) { CINE.t = 0; CINE.i++; if (CINE.i >= CINE.shots.length) { if (!CINE.loop) { const r = CINE.res; CINE.res = null; CINE.i = CINE.shots.length - 1; CINE.t = S.dur; if (r) r(); return; } CINE.i = 0; } S = CINE.shots[CINE.i]; }
+  const k = CINE.t / S.dur, e = .4 * k + .6 * k * k * (3 - 2 * k), L = (a, b) => a + (b - a) * e;
+  rig.tx = L(S.a[0], S.b[0]); rig.tz = L(S.a[1], S.b[1]); rig.yaw = L(S.y0, S.y1); rig.pitch = S.pitch; rig.dist = L(S.d0, S.d1);
+  if (S.fade) $('fade').classList.toggle('on', CINE.t < .25 || CINE.t > S.dur - .65);
+  if (scene.fog && CINE.fog) { const x = Math.max(0, rig.dist - 44); scene.fog.near = CINE.fog[0] + x; scene.fog.far = CINE.fog[1] + x * 1.4; }
+}
+const LMK3 = n => { const L = LMK.find(q => q.n === n); return [L.x, -L.y]; };
+function titleShots() {                             // drift over the best landmarks, a slow swing round each one
+  const sh = (n, dx, dz, y0, y1, d = 62, pitch = 30) => { const [x, z] = LMK3(n); return { a: [x + dx, z + dz], b: [x - dx, z - dz], y0, y1, pitch, d0: d, d1: d - 8, dur: 8, fade: true }; };
+  return [sh('Publix', 6, 0, -.45, .25), sh('Casino', 0, 6, -.4, .4, 70), sh('City Hall', -6, 0, 3.6, 4.3, 58), sh('Promenade', 0, -6, 2.9, 3.6, 64), sh('Trash Mountain', 6, 4, .9, 1.6, 90, 34), sh('Police', 0, 6, 5.6, 6.3, 56)];
+}
 if (graph) for (const C of CHARS.slice(1)) {        // Aaron and Chris start out driving somewhere across town
   let e = null; for (let t = 0; t < 60; t++) { e = graph.edges[Math.floor(Math.random() * graph.edges.length)]; if (e.pts.length > 3 && Math.hypot(e.pts[0][0] - world.start.x, e.pts[0][1] - world.start.y) > 130) break; }
   const k = Math.floor(e.pts.length / 2), p = e.pts[k], q = e.pts[k + 1]; startRoam(C, p[0], -p[1], Math.atan2(-(q[0] - p[0]), q[1] - p[1]), 6);
@@ -1089,7 +1124,7 @@ for (const [btn, panel, other] of [['t-view', 'p-view', 'p-tune'], ['t-tune', 'p
 let paused = false;
 /* title screen (also unlocks sound on iPhone: it needs a tap), full map, first-run controls hint */
 const titleOn = !/[?&](notitle|hud|bench)/.test(location.search);
-function startPlay() { $('title').hidden = true; paused = false; ensureAudio(); if (missions && missions.start && !/[?&]nomission/.test(location.search)) setTimeout(() => missions.start(), 1200); let seen = false; try { seen = localStorage.getItem('gtcc-hint') === '1'; } catch (e) { /* ok */ } if (!seen) { $('hint').hidden = false; setTimeout(() => { $('hint').hidden = true; }, 7000); try { localStorage.setItem('gtcc-hint', '1'); } catch (e) { /* ok */ } } }
+function startPlay() { $('title').hidden = true; paused = false; cineStop(); ensureAudio(); if (missions && missions.start && !/[?&]nomission/.test(location.search)) setTimeout(() => missions.start(), 150); let seen = false; try { seen = localStorage.getItem('gtcc-hint') === '1'; } catch (e) { /* ok */ } if (!seen) { $('hint').hidden = false; setTimeout(() => { $('hint').hidden = true; }, 7000); try { localStorage.setItem('gtcc-hint', '1'); } catch (e) { /* ok */ } } }
 $('t-play').addEventListener('click', startPlay);
 const MAPLAB = [['Publix', [868, 372]], ['Seminole Casino', [1180, 470]], ['City Hall', [930, 620]], ['Police', [1030, 640]], ['Promenade', [1120, 990]], ['Trash Mountain', [997, 183]], ['Windmill Park', [265, 1100]], ['Lakeside Park', [300, 690]], ['Golf', [1240, 380]], ['School', [810, 750]], ['Industrial', [400, 905]]];
 function drawBigMap() {
@@ -1253,7 +1288,7 @@ renderer.domElement.addEventListener('webglcontextlost', e => { e.preventDefault
 renderer.domElement.addEventListener('webglcontextrestored', () => { $('loading').hidden = true; resize(); });
 $('loading').hidden = true;
 let titleShown = !titleOn;                     // the title appears after the first frame has drawn the city (so the world shows behind it)
-function showTitle() { titleShown = true; paused = true; $('title').hidden = false; $('t-cont').textContent = game.money !== world.money ? 'Saved game: $' + Math.round(game.money).toLocaleString('en-US') : ''; }
+function showTitle() { titleShown = true; cine(titleShots(), true); $('title').hidden = false; $('t-cont').textContent = game.money !== world.money ? 'Saved game: $' + Math.round(game.money).toLocaleString('en-US') : ''; }
 let lastStickMode = -1;
 const q = { ratio: Math.min(devicePixelRatio || 1, 2), slow: 0, lock: false };
 const CPX = { p: null };
@@ -1270,7 +1305,7 @@ function collectCullables() {
 }
 function cullStep(dt) {
   cullT += dt; if (cullT < .2) return; cullT = 0; if (!cullables.length) collectCullables();
-  const R = 140; for (const c of cullables) c.o.visible = Math.hypot(c.x - rig.tx, c.z - rig.tz) - c.r < R;
+  const R = 140 + (CINE.shots ? Math.max(0, rig.dist - 30) : 0); for (const c of cullables) c.o.visible = Math.hypot(c.x - rig.tx, c.z - rig.tz) - c.r < R;
 }
 
 function update(dt, draw = true) {
@@ -1355,13 +1390,13 @@ function update(dt, draw = true) {
   let fx, fz, fvx = 0, fvz = 0, la = TUNE.camLook;
   if (hmode === 'foot') { fx = foot.x; fz = foot.z; fvx = foot.vx; fvz = foot.vz; la = .3; } else if (drive) { fx = drive.rx ?? drive.x; fz = drive.rz ?? drive.z; fvx = drive.vx; fvz = drive.vz; } else { fx = pilot.root.position.x; fz = pilot.root.position.z; }
   placeStep(dt, fx, -fz);
-  roamStep(dta); switchStep(dt);
-  if (playView && !SW.on) { const ck = 1 - Math.exp(-TUNE.camFollow * dt); rig.tx += (fx + fvx * la - rig.tx) * ck; rig.tz += (fz + fvz * la - rig.tz) * ck; }
+  roamStep(dta); switchStep(dt); if (CINE.shots) cineStep(dt);
+  if (playView && !SW.on && !CINE.shots) { const ck = 1 - Math.exp(-TUNE.camFollow * dt); rig.tx += (fx + fvx * la - rig.tx) * ck; rig.tz += (fz + fvz * la - rig.tz) * ck; }
   if (upd.bench) { rig.tx = upd.bench.x; rig.tz = upd.bench.z; }                 // ?bench=1 drives the camera on a fixed path
   upd.speedZoom += ((playView && hmode === 'driving' ? Math.min(speed, 28) / 28 * TUNE.camZoom : 0) - upd.speedZoom) * (1 - Math.exp(-2 * dt));
   { const ext = track.active ? 1e5 : world.extent; rig.tx = clamp(rig.tx, -ext, ext); rig.tz = clamp(rig.tz, -ext, ext); }
   if (rig.mode === 'drive') cullStep(dt); else for (const c of cullables) c.o.visible = true;
-  if (!SW.on) { let ty = 0; const dv = hmode === 'driving' && drive;           // camera yaw: turns with the car while driving (eases, holds when nearly stopped, reversing or handbraking), back to north-up on foot
+  if (!SW.on && !CINE.shots) { let ty = 0; const dv = hmode === 'driving' && drive;           // camera yaw: turns with the car while driving (eases, holds when nearly stopped, reversing or handbraking), back to north-up on foot
     if (playView && rig.mode === 'drive' && dv && TUNE.camYaw) {
       const th = drive.th, vfw = drive.vx * -Math.sin(th) + drive.vz * -Math.cos(th); ty = rig.yaw;
       if (TUNE.camYaw === 2) { if (Math.abs(wrapA(th - rig.ySnap)) > rad(55)) { rig.snapT += dt; if (rig.snapT > .25) { rig.ySnap = Math.round(th / (Math.PI / 2)) * Math.PI / 2; rig.snapT = 0; } } else rig.snapT = 0; ty = rig.ySnap; }
@@ -1386,6 +1421,6 @@ function update(dt, draw = true) {
 let frameHook = null;                                          // hud.js hooks frame timing here
 function frame(t) { const t0 = performance.now(); const dt_ = Math.min(clock.getDelta(), .05); if (!manual && !paused) { update(dt_); if (!titleShown) showTitle(); } else if (paused) renderer.render(scene, camera); if (frameHook) frameHook(t, performance.now() - t0); requestAnimationFrame(frame); }
 syncSliders(); setView('drive'); requestAnimationFrame(frame);
-window.__city = { missions, DENV, dstickIn, track, vehs, get ride() { return ride; }, CHARS, switchTo, SW, get cur() { return cur; }, get pilotP() { return pilot; }, world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, ppl, cops, missions, sun, setFrameHook: f => { frameHook = f; }, upd };
+window.__city = { missions, DENV, CINE, cine, cineStop, titleShots, dstickIn, track, vehs, get ride() { return ride; }, CHARS, switchTo, SW, get cur() { return cur; }, get pilotP() { return pilot; }, world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, ppl, cops, missions, sun, setFrameHook: f => { frameHook = f; }, upd };
 if (/[?&](hud|bench)=/.test(location.search)) import('./hud.js?v=' + (MAN['hud.js'] || '1')).then(m => m.start(window.__city, THREE)).catch(e => console.error('hud', e));
 </script>

@@ -724,6 +724,30 @@ for (x, y) in spots(IND, 5, 33):
 for (x, y) in spots(IND, 4, 34):
     if try_place("tower", lambda nm: dk.water_tower(nm), x, y, 0, 10, 10, 2.0): break
 tick_('industrial')
+# -- Dave's house (round 30, the mission's goal): one single-family house with a garage and a concrete driveway on Banks Rd, placed before the townhome rows fill the street
+def dave_house(gx=-171.7, gy=25.0, w=12.0, d=9.0, drive_len=6.0):
+    r = ROAD["Banks Rd"]; _, s0 = r.nearest(gx, gy); x0, y0, tx, ty = r.at(s0); side = 1
+    if r.off(s0, 5.0)[1] > y0: side = -1                                                                              # the side south of the road (Dave's side)
+    edge = r.hw + rd.CURB + (rd.SWK if any(r.sw) else 0.0); px, py = r.off(s0, side * (edge + drive_len + d / 2))
+    rz = math.degrees(math.atan2(ty, tx)) if side > 0 else math.degrees(math.atan2(-ty, -tx))
+    f = ("dave0", round(px, 2), round(py, 2), w, d, rz, ()); print("DAVE TRY", round(px, 1), round(py, 1), fp_problems(f, footprints(), .4)[:3])
+    if not try_place("dave", lambda nm: make_house(nm, w, d, 1, "butter", 77, garage=True, balcony=False, roof_h=2.2, tile_hex=ROOF["terracotta"]), px, py, rz, w, d, .4):
+        print("DAVE HOUSE MISS"); return None
+    def quad(mat, u0, u1, v0, v1, z):
+        pts = [(*_rot(px, py, rz, u, v), z) for (u, v) in ((u0, v0), (u1, v0), (u1, v1), (u0, v1))]
+        cr = (pts[1][0] - pts[0][0]) * (pts[2][1] - pts[0][1]) - (pts[1][1] - pts[0][1]) * (pts[2][0] - pts[0][0]); T.poly(mat, pts if cr > 0 else pts[::-1])
+    ug = -w / 2 + (w / max(1, int(w // 3.0))) / 2; ud = -w / 2 + (w / max(1, int(w // 3.0))) * (int(w // 3.0) // 2 + .5)   # garage bay and front door (make_house's south face)
+    vk = -(d / 2 + drive_len + edge - r.hw - .05)                                                                     # to the kerb line
+    quad(m["conc"], ug - 1.9, ug + 1.9, vk, -d / 2, .175)                                                             # the driveway, over the sidewalk to the street
+    quad(m["walk"], ud - .6, ud + .6, -(d / 2 + drive_len), -d / 2, .17)                                              # front path to the sidewalk
+    mb = M("mailbox", "#2a4f9a"); mx, my = _rot(px, py, rz, ug + 2.6, -(d / 2 + drive_len - .5))
+    T.box(M("bk_pipe", "#8d9095"), mx - .05, mx + .05, my - .05, my + .05, 0, 1.0); T.box(mb, mx - .25, mx + .25, my - .18, my + .18, 1.0, 1.35); cbox(mx, my, .4, .4)
+    dx, dy = _rot(px, py, rz, ug, -(d / 2 + drive_len / 2))
+    print("DAVE HOUSE", round(px, 1), round(py, 1), round(rz), "driveway", round(dx, 1), round(dy, 1)); return (px, py, rz, dx, dy)
+DAVE_AT = None
+for (dl_, w_, d_) in ((6.0, 12.0, 9.0), (5.0, 11.0, 8.5), (4.0, 10.0, 8.0)):
+    DAVE_AT = dave_house(w=w_, d=d_, drive_len=dl_)
+    if DAVE_AT: break
 print("HOMES", frontage_all()); print("REJECTS", sorted(REJ.items(), key=lambda t: -t[1])[:30])
 for nm_, kind_, mk_, w_, d_, cnt_ in (("Lakeview Estates (canal homes)", "lv", estate_maker, 13, 10, 20), ("The Lakes (lake homes)", "lk", lake_maker, 11, 8.5, 30), ("Northridge Homes", "nr", two_storey_maker, 11, 9, 24), ("Southgate Homes", "sg", ranch_maker, 12.5, 8, 24),
                                       ("Centre homes", "ch", centre_maker, 11, 8.5, 12), ("Bayview homes (SE tip)", "bv", bay_maker, 12, 9, 10), ("Palm View (small homes)", "pv", bungalow_maker, 9.5, 8, 50), ("West Creek Townhomes (middle)", "twn", row_maker, 25.6, 10.2, 6), ("West Creek Townhomes (south)", "twn", row_maker, 25.6, 10.2, 8)):
