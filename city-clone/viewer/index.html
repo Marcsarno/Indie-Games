@@ -53,6 +53,7 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 .note { margin: 0; color: var(--dim); font-size: 12px; }
 .pad { bottom: 0; padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: space-between; align-items: flex-end; }
 .cl, .cr { display: flex; gap: 10px; align-items: flex-end; }
+.cl { position: relative; } #b-unstick { position: absolute; left: 0; bottom: calc(100% + 12px); }      /* above the arrows or the stick, so the right-hand buttons never overflow */
 .cr { flex-direction: column; align-items: flex-end; }
 .cr .r2 { display: flex; gap: 10px; align-items: flex-end; }
 .pb { all: unset; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; box-sizing: border-box; width: 72px; height: 72px; border-radius: 50%; display: grid; place-content: center; text-align: center; font: 600 13px/1.05 var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--paper); background: var(--panel); border: 2px dashed rgba(255, 236, 200, .5); pointer-events: auto; touch-action: none; cursor: pointer; }
@@ -111,7 +112,7 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 <div id="menu" hidden><div class="mcard" role="dialog" aria-label="Paused">
   <h1>Grand Theft<br>Coconut Creek</h1><p class="msub">Paused</p>
   <button class="btn mbig" id="m-resume">Resume</button>
-  <div class="mgrid"><button class="btn" id="snd" aria-pressed="true">Sound: on</button><button class="btn" id="m-ctrl">Controls: joystick</button><button class="btn" id="m-tune">Tune the car</button><button class="btn" id="m-view">Camera</button><button class="btn" id="m-fps">Show FPS: off</button><button class="btn" id="m-track">Test track</button><button class="btn" id="m-new">New game</button></div>
+  <div class="mgrid"><button class="btn" id="snd" aria-pressed="true">Sound: on</button><button class="btn" id="m-ctrl">Controls: arrows</button><button class="btn" id="m-cam">Camera: follows car</button><button class="btn" id="m-tune">Tune the car</button><button class="btn" id="m-view">Camera</button><button class="btn" id="m-fps">Show FPS: off</button><button class="btn" id="m-track">Test track</button><button class="btn" id="m-new">New game</button></div>
   <p class="msub">Test build</p>
 </div></div>
 
@@ -129,10 +130,10 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 
 <div class="hud corner" id="corner"><div id="stars" aria-label="Wanted level"><i>★</i><i>★</i><i>★</i><i>★</i></div><div id="cash">$0</div><div class="hpbar"><i id="hp"></i></div><div class="hpbar dmgbar" id="dmgbox" hidden><i id="dmg"></i></div><div class="mini" id="minibox"><canvas id="mini" width="200" height="200"></canvas><b>N</b></div><div id="spd"></div></div>
 <div class="hud pad" id="pad">
-  <div class="cl"><button class="pb" id="b-left" aria-label="Steer left"><i class="l"></i></button><button class="pb" id="b-right" aria-label="Steer right"><i class="r"></i></button><div class="stick" id="dstick" aria-label="Drive: direction and speed" hidden><div class="knob" id="dknob"></div></div></div>
+  <div class="cl"><button class="pb sm" id="b-unstick" style="display:none">Un-<br>stick</button><button class="pb" id="b-left" aria-label="Steer left"><i class="l"></i></button><button class="pb" id="b-right" aria-label="Steer right"><i class="r"></i></button><div class="stick" id="dstick" aria-label="Drive: direction and speed" hidden><div class="knob" id="dknob"></div></div></div>
   <div class="cr">
-    <div class="r2"><button class="pb sm" id="b-unstick" style="display:none">Un-<br>stick</button><button class="pb sm" id="b-door">Exit</button><button class="pb sm" id="b-hand">Hand<br>brake</button></div>
-    <div class="r2"><button class="pb sm" id="b-horn">Horn</button><button class="pb" id="b-brake">Brake</button><button class="pb big" id="b-gas">Gas</button></div>
+    <div class="r2"><button class="pb sm" id="b-horn">Horn</button><button class="pb sm" id="b-door">Exit</button><button class="pb sm" id="b-hand">Hand<br>brake</button></div>
+    <div class="r2"><button class="pb" id="b-brake">Brake</button><button class="pb big" id="b-gas">Gas</button></div>
   </div>
 </div>
 <div class="hud pad" id="padf" hidden>
@@ -219,7 +220,7 @@ function placeSun(x, y, z) {                                   // shadow box fol
 for (const [lx, ly, lz] of world.lamps) { const l = new THREE.PointLight(0xffc27a, 60, 16, 2); l.position.copy(b2t(lx, ly, lz)); scene.add(l); }
 
 const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 300);
-const rig = { tx: world.start.x, tz: -world.start.y, pitch: 45, dist: 44, mode: 'drive', shake: 0 };      // user's chosen game camera: 45 deg tilt, 44 m
+const rig = { tx: world.start.x, tz: -world.start.y, pitch: 45, dist: 44, mode: 'drive', shake: 0, yaw: 0, ySnap: 0, snapT: 0 };      // yaw: camera turned with the car (0 = north up)      // user's chosen game camera: 45 deg tilt, 44 m
 const HFOV = 54.4 * Math.PI / 180;
 function resize() {
   const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h;
@@ -446,21 +447,22 @@ const TUNE_DEF = {          // round 24: every driving-feel number lives here (u
   top: 28, accel: 15, brake: 34, hand: 9, coast: .5, coastK: .06, revTop: .3,                  // pace: m/s, m/s2, m/s2, handbrake m/s2, coasting drag m/s2 + per m/s, reverse top as a share of top
   lockLow: 28.6, lockHigh: 6.9, steer: 1.0, steerIn: 5, steerOut: 8, yawEase: 10,               // steering: wheel angle (deg) at standstill and at top speed, overall x, wheel in/return rate per s, turn-rate ease per s (the car's weight)
   grip: 8, drift: 2.4, slideIn: 5.5, slideOut: 1.5,                                             // grip: sideways bleed per s (normal, sliding); sideways m/s where a slide starts / ends
-  dead: .15, stickGain: 1.6, revAngle: 137.5, revSpeed: 3,                                      // joystick: dead zone (share of travel), steering per radian of error, reverse when the stick is more than revAngle deg behind and slower than revSpeed m/s
+  dead: .15, stickGain: 1.6, revAngle: 137.5, revSpeed: 3, backup: 1,                            // joystick: dead zone (share of travel), steering per radian of error, reverse when the stick is more than revAngle deg behind and slower than revSpeed m/s; backup: joystick modes back off a wall by themselves
+  handYaw: 3.5, assist: .5,                                                                     // handbrake turn: extra turn rate rad/s at full steer; road assist: lines the car up with the road when you are not steering (0 off .. 1 strong)
   bounce: .35, forgive: .7, heroMass: 2.2, damage: 0,                                           // crashes; damage 0 = off while testing (no dents, no damage bar, no health lost in crashes)
-  camFollow: 5, camLook: .55, camZoom: .22,                                                     // camera: follow rate per s, look-ahead s of velocity, extra zoom-out at top speed (share)
-  footEven: 1, blood: 1, readout: 0, stickDrive: 1 };      // footEven: on-foot speed looks the same in every screen direction (1) or raw (0); readout: driving numbers on screen      // joystick drive is the default (round 22); Tune switches back to buttons      // heroMass: your car counts this much heavier in car-vs-car hits
+  camFollow: 5, camLook: .55, camZoom: .22, camYaw: 1, yawRate: 3, yawCap: 120,                 // camera: follow rate per s, look-ahead s of velocity, extra zoom-out at top speed (share); camYaw 0 north-up, 1 turns with the car, 2 turns in street steps; turn ease per s, max deg/s
+  footEven: 1, blood: 1, readout: 0, stickDrive: 0 };      // stickDrive: 0 arrow buttons (Chinatown Wars style, round 26 default), 1 stick = direction to go, 2 stick steers like a wheel      // footEven: on-foot speed looks the same in every screen direction (1) or raw (0); readout: driving numbers on screen      // joystick drive is the default (round 22); Tune switches back to buttons      // heroMass: your car counts this much heavier in car-vs-car hits
 const TUNE = { ...TUNE_DEF };
-try { const st = JSON.parse(localStorage.getItem('gtcc-tune') || '{}'); if (st.v !== 2) delete st.stickDrive; Object.assign(TUNE, st); TUNE.v = 2; } catch (e) { /* storage may be blocked */ }      // v2: older saves do not turn the joystick off
-if (/[?&]drive=stick/.test(location.search)) TUNE.stickDrive = 1; if (/[?&]drive=buttons/.test(location.search)) TUNE.stickDrive = 0;
+try { const st = JSON.parse(localStorage.getItem('gtcc-tune') || '{}'); if (st.v !== 3) { delete st.stickDrive; delete st.camYaw; } Object.assign(TUNE, st); TUNE.v = 3; } catch (e) { /* storage may be blocked */ }      // v2: older saves do not turn the joystick off
+if (/[?&]drive=stick/.test(location.search)) TUNE.stickDrive = 1; if (/[?&]drive=steer/.test(location.search)) TUNE.stickDrive = 2; if (/[?&]drive=buttons/.test(location.search)) TUNE.stickDrive = 0; if (/[?&]cam=north/.test(location.search)) TUNE.camYaw = 0;
 const TUNE_UI = [         // [key, label, min, max, step, unit]; ['#', heading] starts a group
   ['#', 'Speed and brakes'], ['top', 'Top speed', 12, 45, 1, 'm/s'], ['accel', 'Acceleration', 6, 30, .5, 'm/s²'], ['brake', 'Brakes', 10, 50, 1, 'm/s²'], ['hand', 'Handbrake', 3, 20, .5, 'm/s²'], ['coast', 'Coasting drag', 0, 2, .05, 'm/s²'], ['coastK', 'Drag per m/s', 0, .2, .01, ''], ['revTop', 'Reverse top speed', .1, .6, .05, '× top'],
-  ['#', 'Steering'], ['lockLow', 'Steering when slow', 15, 45, .5, '°'], ['lockHigh', 'Steering at top speed', 2, 15, .5, '°'], ['steer', 'Steering overall', .5, 1.6, .05, '×'], ['steerIn', 'Wheel turn-in rate', 1, 15, .5, '/s'], ['steerOut', 'Wheel return rate', 1, 20, .5, '/s'], ['yawEase', 'Turn response (weight)', 2, 25, .5, '/s'],
+  ['#', 'Steering'], ['lockLow', 'Steering when slow', 15, 45, .5, '°'], ['lockHigh', 'Steering at top speed', 2, 15, .5, '°'], ['steer', 'Steering overall', .5, 1.6, .05, '×'], ['steerIn', 'Wheel turn-in rate', 1, 15, .5, '/s'], ['steerOut', 'Wheel return rate', 1, 20, .5, '/s'], ['yawEase', 'Turn response (weight)', 2, 25, .5, '/s'], ['handYaw', 'Handbrake turn', 0, 5, .1, 'rad/s'], ['assist', 'Road assist', 0, 1, .05, ''],
   ['#', 'Grip'], ['grip', 'Grip', 2, 14, .5, '/s'], ['drift', 'Grip while sliding', .3, 5, .1, '/s'], ['slideIn', 'Slide starts at', 2, 10, .5, 'm/s'], ['slideOut', 'Slide ends at', .5, 4, .25, 'm/s'],
-  ['#', 'Joystick'], ['dead', 'Dead zone', 0, .4, .01, ''], ['stickGain', 'Stick steering strength', .5, 4, .1, ''], ['revAngle', 'Reverse if stick behind by', 90, 180, 2.5, '°'], ['revSpeed', '…and slower than', 0, 10, .5, 'm/s'],
+  ['#', 'Joystick'], ['dead', 'Dead zone', 0, .4, .01, ''], ['stickGain', 'Stick steering strength', .5, 4, .1, ''], ['revAngle', 'Reverse if stick behind by', 90, 180, 2.5, '°'], ['revSpeed', '…and slower than', 0, 10, .5, 'm/s'], ['backup', 'Back off walls by itself', 0, 1, 1, ''],
   ['#', 'Crashes'], ['bounce', 'Bounce', 0, .8, .05, ''], ['forgive', 'Forgiving walls', 0, 1, .05, ''], ['heroMass', 'Car weight in crashes', 1, 4, .1, '×'], ['damage', 'Car damage', 0, 1, 1, ''],
-  ['#', 'Camera'], ['camFollow', 'Camera follow rate', 1, 15, .5, '/s'], ['camLook', 'Camera look-ahead', 0, 1.5, .05, 's'], ['camZoom', 'Zoom out at speed', 0, .6, .02, ''],
-  ['#', 'Other'], ['footEven', 'Even on-foot speed', 0, 1, .1, ''], ['blood', 'Blood', 0, 1, 1, ''], ['readout', 'Driving readout', 0, 1, 1, ''], ['stickDrive', 'Joystick drive', 0, 1, 1, '']];
+  ['#', 'Camera'], ['camFollow', 'Camera follow rate', 1, 15, .5, '/s'], ['camLook', 'Camera look-ahead', 0, 1.5, .05, 's'], ['camZoom', 'Zoom out at speed', 0, .6, .02, ''], ['camYaw', 'Camera turns (0 off, 1 follow, 2 streets)', 0, 2, 1, ''], ['yawRate', 'Camera turn ease', .5, 10, .25, '/s'], ['yawCap', 'Camera max turn', 30, 360, 10, '°/s'],
+  ['#', 'Other'], ['footEven', 'Even on-foot speed', 0, 1, .1, ''], ['blood', 'Blood', 0, 1, 1, ''], ['readout', 'Driving readout', 0, 1, 1, ''], ['stickDrive', 'Controls (0 arrows, 1 stick direction, 2 stick steer)', 0, 2, 1, '']];
 const CAR = { L: 4.5, W: 1.8, mass: 1400, wb: 2.7 }; CAR.I = CAR.mass * (CAR.L * CAR.L + CAR.W * CAR.W) / 12;
 const vehs = {};                                  // one state per car; only the ACTIVE one is simulated, the rest are static colliders
 function makeVeh(name, car) { const g = car.group; const D_ = car.dims, M_ = 320 * D_[0] * D_[1]; return vehs[name] = { car, name, mass: M_, perf: ({ coupe: 1.15, police: 1.1, hatchback: .95, suv: .95, minivan: .9, pickup: .95, van: .85, tow: .8, ambulance: .85, boxtruck: .72, flatbed: .75, garbage: .65, bus: .62 })[car.kind] || 1, I: M_ * (D_[0] * D_[0] + D_[1] * D_[1]) / 12, x: g.position.x, z: g.position.z, th: g.rotation.y, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, mode: 'parked', hardest: 0, hits: 0 }; }
@@ -677,6 +679,16 @@ function onImpact(c, v) {
   }
   c.car.setDamage(c.damage);
 }
+let RSEG = null;
+function roadDir(x, z, th) {                      // road assist: turn (rad) from the car's heading to the nearest road running roughly the same way; null when none within 9 m and 35 deg
+  if (!ai) return null;
+  if (!RSEG) { RSEG = new Map(); for (const e of ai.E) for (let i = 1; i < e.P.length; i++) { const a = e.P[i - 1], b = e.P[i], k = Math.floor((a[0] + b[0]) / 32) * 4096 + Math.floor((a[1] + b[1]) / 32); if (!RSEG.has(k)) RSEG.set(k, []); RSEG.get(k).push([a[0], a[1], b[0], b[1]]); } }
+  const gx = Math.floor(x / 16), gz = Math.floor(z / 16), lim = rad(35); let best = null, bs = 1e9;
+  for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) { const L = RSEG.get((gx + i) * 4096 + gz + j); if (!L) continue;
+    for (const s of L) { const hx = s[2] - s[0], hz = s[3] - s[1], l2 = hx * hx + hz * hz || 1, t = clamp(((x - s[0]) * hx + (z - s[1]) * hz) / l2, 0, 1), d = Math.hypot(s[0] + hx * t - x, s[1] + hz * t - z); if (d > 9) continue;
+      let df = wrapA(Math.atan2(-hx, -hz) - th); if (Math.abs(df) > Math.PI / 2) df = wrapA(df + Math.PI); if (Math.abs(df) > lim) continue; const sc = d + Math.abs(df) * 10; if (sc < bs) { bs = sc; best = df; } } }
+  return best;
+}
 function physicsStep(dt) {
   if (!drive) { gasOn = false; return; }
   const c = drive, driving = c.mode === 'driving'; c.px = c.x; c.pz = c.z; c.pth = c.th;     // last pose, for drawing between steps
@@ -684,11 +696,16 @@ function physicsStep(dt) {
   let vf = c.vx * fx + c.vz * fz, vl = c.vx * rx + c.vz * rz;
   let tgt = driving ? (input.right ? 1 : 0) - (input.left ? 1 : 0) : 0, gasK = driving && input.gas ? 1 : 0, slow = 0, rev = false;
   const pf = c.perf || 1, TOP = TUNE.top * pf, G = TUNE.stickGain, DZ = TUNE.dead;
-  if (driving && TUNE.stickDrive) {                                   // joystick drive: the stick points where you want to go (north-up screen), how far = how fast
-    const sx = dstickIn.x, sz = dstickIn.y, m = Math.min(1, Math.hypot(sx, sz));
+  let brk = driving && input.brake;
+  if (driving && TUNE.stickDrive === 2) {                             // stick steers like a wheel: left/right = steering (soft centre), up = gas, pull down = brake, then reverse
+    const sx = dstickIn.x, sy = dstickIn.y, ax = Math.abs(sx);
+    if (ax > DZ) tgt = Math.sign(sx) * Math.min(1, ((ax - DZ) / (1 - DZ)) ** 1.4);
+    if (-sy > DZ) gasK = Math.min(1, (-sy - DZ) / (1 - DZ)); else if (sy > .35) brk = true;
+  } else if (driving && TUNE.stickDrive) {                           // joystick drive: the stick points where you want to go on screen (turned with the camera), how far = how fast
+    const cy = Math.cos(rig.yaw), sy_ = Math.sin(rig.yaw), sx = dstickIn.x * cy + dstickIn.y * sy_, sz = -dstickIn.x * sy_ + dstickIn.y * cy, m = Math.min(1, Math.hypot(sx, sz));
     if (m > DZ) {
       const ang = Math.atan2(fx * sz - fz * sx, fx * sx + fz * sz), back = clamp(Math.atan2(-fx * sz + fz * sx, -fx * sx - fz * sz) * -G, -1, 1);     // back: steering that swings the tail toward the stick while reversing
-      if (input.brake) tgt = vf > .8 ? clamp(ang * G, -1, 1) : back;                                            // Brake held: the stick still steers (it used to be ignored, so you could not steer while backing up)
+      if (brk) tgt = vf > .8 ? clamp(ang * G, -1, 1) : back;                                            // Brake held: the stick still steers (it used to be ignored, so you could not steer while backing up)
       else if (Math.abs(ang) > rad(TUNE.revAngle) && vf < TUNE.revSpeed) { rev = true; tgt = back; }            // pointing behind you while slow: back up, tail toward the stick
       else {
         tgt = clamp(ang * G, -1, 1); const want = (m - DZ) / (1 - DZ) * TOP * (.5 + .5 * Math.cos(Math.min(Math.abs(ang), Math.PI / 2)));     // ease off for sharp turns
@@ -696,12 +713,17 @@ function physicsStep(dt) {
       }
     }
   }
+  if (driving && TUNE.assist > 0 && Math.abs(tgt) < .05 && vf > 4 && !input.hand && !brk) { const d = roadDir(c.x, c.z, c.th); if (d !== null) tgt = clamp(-d * 2.5 * TUNE.assist, -.6, .6); }     // road assist: hands off the steering, the car lines up with the road
+  if (driving && TUNE.stickDrive && TUNE.backup) {                    // joystick modes: pushing into something without moving for 0.6 s backs the car off by itself for 0.9 s
+    if (!(c.bkT > 0)) { c.pushT = gasK > .4 && Math.hypot(c.vx, c.vz) < 1 && c.inContact ? (c.pushT || 0) + dt : 0; if (c.pushT > .6) { c.pushT = 0; c.bkT = .9; c.bkS = tgt > .05 ? -.8 : tgt < -.05 ? .8 : .8; } }
+    if (c.bkT > 0) { c.bkT -= dt; rev = true; gasK = 0; slow = 0; tgt = c.bkS; }
+  }
   gasOn = gasK > .1; c.tgt = tgt;      // input.gas stays the real Gas key (the joystick used to overwrite it, and it leaked into walking as auto-run)
   c.steer += (tgt - c.steer) * (1 - Math.exp(-(tgt === 0 ? TUNE.steerOut : TUNE.steerIn) * dt));
   let a = 0;
   if (gasK > 0) a += TUNE.accel * pf * gasK * Math.max(0, 1 - Math.max(0, vf) / TOP);
   a -= Math.sign(vf) * Math.min(Math.abs(vf) / dt, slow);
-  if (driving && (input.brake || rev)) a -= vf > .8 ? TUNE.brake : TUNE.accel * .55 * Math.max(0, 1 - Math.max(0, -vf) / (TUNE.top * TUNE.revTop));
+  if (driving && (brk || rev)) a -= vf > .8 ? TUNE.brake : TUNE.accel * .55 * Math.max(0, 1 - Math.max(0, -vf) / (TUNE.top * TUNE.revTop));
   vf += a * dt;
   const hand = !driving || input.hand;
   if (hand) { const hb = Math.min(Math.abs(vf), TUNE.hand * dt); vf -= Math.sign(vf) * hb; }
@@ -709,7 +731,7 @@ function physicsStep(dt) {
   c.slide = c.slide ? (Math.abs(vl) > TUNE.slideOut || (hand && driving)) : ((hand && driving && Math.abs(vf) > 4) || Math.abs(vl) > TUNE.slideIn);
   vl *= Math.exp(-(c.slide ? TUNE.drift : TUNE.grip) * dt); c.slip = Math.atan2(Math.abs(vl), Math.max(1, Math.abs(vf))) * 180 / Math.PI;
   const sp = Math.abs(vf), maxSteer = (rad(TUNE.lockLow) + (rad(TUNE.lockHigh) - rad(TUNE.lockLow)) * Math.min(1, sp / TUNE.top)) * TUNE.steer;
-  let wT = -Math.tan(c.steer * maxSteer) * vf / (c.car.dims[2] || CAR.wb); if (c.slide) wT *= 1.2; if (driving && input.hand) wT += -c.steer * sp * .12;
+  let wT = -Math.tan(c.steer * maxSteer) * vf / (c.car.dims[2] || CAR.wb); if (c.slide) wT *= 1.2; if (driving && input.hand) wT += -c.steer * TUNE.handYaw * Math.min(1, Math.hypot(vf, vl) / 5);     // handbrake + steer swings the car round (the GTA U-turn); total speed, so it keeps turning once the car is sliding sideways
   c.w += (wT - c.w) * (1 - Math.exp(-TUNE.yawEase * dt));
   c.vx = fx * vf + rx * vl; c.vz = fz * vf + rz * vl;
   { const [gx, gz] = groundGrad(c.x, c.z); if (gx || gz) { c.vx -= 9.8 * gx * dt * .85; c.vz -= 9.8 * gz * dt * .85; } }     // hills: gravity pulls the car down the slope
@@ -821,6 +843,7 @@ function pushOut(x, z, r) {
 function footStep(dt) {
   if (hmode !== 'foot' || dt <= 0) return;
   let sx = stickIn.x, sy = stickIn.y; if (!sx && !sy) { sx = (input.right ? 1 : 0) - (input.left ? 1 : 0); sy = (input.brake ? 1 : 0) - (input.gas ? 1 : 0); }
+  if (rig.yaw) { const cy = Math.cos(rig.yaw), sy_ = Math.sin(rig.yaw); [sx, sy] = [sx * cy + sy * sy_, -sx * sy_ + sy * cy]; }     // screen directions follow the camera while it turns back to north
   const m0 = Math.hypot(sx, sy), mag = m0 < .12 ? 0 : Math.min(1, m0), ux = mag ? sx / m0 : 0, uz = mag ? sy / m0 : 0;
   const maxS = input.run ? 4.8 : (mag < .85 ? mag / .85 * 2.6 : 2.6 + (mag - .85) / .15 * 2.2), punching = combat.state === 'punch';
   const tgt = mag ? maxS * (punching ? .2 : 1) : 0, k = 1 - Math.exp(-11 * dt);
@@ -959,8 +982,11 @@ $('bm-close').addEventListener('click', () => { $('bigmap').hidden = true; setPa
 function setPaused(p) { paused = p; $('menu').hidden = !p; if (p) { saveGame(); for (const k in input) input[k] = false; dstickIn.x = dstickIn.y = 0; stickIn.x = stickIn.y = 0; } }
 $('b-menu').addEventListener('click', () => setPaused(!paused));
 $('m-resume').addEventListener('click', () => setPaused(false));
-const ctrlLabel = () => { $('m-ctrl').textContent = 'Controls: ' + (TUNE.stickDrive ? 'joystick' : 'buttons'); };
-$('m-ctrl').addEventListener('click', () => { TUNE.stickDrive = TUNE.stickDrive ? 0 : 1; try { localStorage.setItem('gtcc-tune', JSON.stringify(TUNE)); } catch (e) { /* ok */ } ctrlLabel(); if (outs.stickDrive) outs.stickDrive(); });
+const CTRL_NAMES = ['arrows', 'stick direction', 'stick steer'], CAM_NAMES = ['north up', 'follows car', 'street steps'], HINTS = ['◀ ▶ steer · Gas', 'Drag: where to go + speed', 'Drag: ◀ ▶ steer, up = gas'];
+const saveTune = () => { try { localStorage.setItem('gtcc-tune', JSON.stringify(TUNE)); } catch (e) { /* ok */ } };
+const ctrlLabel = () => { $('m-ctrl').textContent = 'Controls: ' + CTRL_NAMES[TUNE.stickDrive | 0]; $('m-cam').textContent = 'Camera: ' + CAM_NAMES[TUNE.camYaw | 0]; $('hint').querySelector('.hint-stick').textContent = HINTS[TUNE.stickDrive | 0]; };
+$('m-cam').addEventListener('click', () => { TUNE.camYaw = ((TUNE.camYaw | 0) + 1) % 3; saveTune(); ctrlLabel(); if (outs.camYaw) outs.camYaw(); });
+$('m-ctrl').addEventListener('click', () => { TUNE.stickDrive = [2, 0, 1][TUNE.stickDrive | 0]; saveTune(); ctrlLabel(); if (outs.stickDrive) outs.stickDrive(); });
 const openPanel = id => { setPaused(false); $('p-view').hidden = id !== 'p-view'; $('p-tune').hidden = id !== 'p-tune'; };
 $('m-tune').addEventListener('click', () => openPanel('p-tune')); $('m-view').addEventListener('click', () => openPanel('p-view'));
 for (const id of ['p-view', 'p-tune']) { const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'Done'; b.addEventListener('click', () => { $(id).hidden = true; }); $(id).appendChild(b); }
@@ -1009,26 +1035,48 @@ cv.addEventListener('wheel', e => { e.preventDefault(); if (rig.mode === 'drive'
 const game = { money: world.money, hp: 100 };
 const mini = $('mini'), mx = mini.getContext('2d'); let miniT = 0, lastCash = -1, lastHp = -1;
 if (!world.map) $('minibox').hidden = true;
-function drawMini(px, py, face) {                 // north-up map around the player (px, py in Blender metres); arrow shows heading
-  const W = mini.width, c = W / 2, k = c / 55; mx.fillStyle = world.mapbg || '#4d8a38'; mx.fillRect(0, 0, W, W);
-  const X = x => c + (x - px) * k, Y = y => c - (y - py) * k;
-  const rects = (pass) => { (world.map || []).forEach((r, i) => {
-    const base = i === 0 || r[5] === 'poly'; if (base !== pass) return;
-    mx.fillStyle = r[4];
-    if (r[5] === 'poly') { mx.beginPath(); r[6].forEach((p, j) => j ? mx.lineTo(X(p[0]), Y(p[1])) : mx.moveTo(X(p[0]), Y(p[1]))); mx.closePath(); mx.fill(); return; }
-    const x0 = X(r[0]), x1 = X(r[2]), y0 = Y(r[3]), y1 = Y(r[1]);
-    if (r[5] === 'o') { mx.beginPath(); mx.ellipse((x0 + x1) / 2, (y0 + y1) / 2, Math.abs(x1 - x0) / 2, Math.abs(y1 - y0) / 2, 0, 0, 7); mx.fill(); } else mx.fillRect(x0, y0, x1 - x0, y1 - y0);
-  }); };
-  rects(true);
-  mx.strokeStyle = '#6a6c70'; mx.lineJoin = 'round'; mx.lineCap = 'butt';
-  for (const rd of world.roads || []) { mx.lineWidth = Math.max(2, rd.w * k); mx.beginPath(); rd.pts.forEach((p, j) => j ? mx.lineTo(X(p[0]), Y(p[1])) : mx.moveTo(X(p[0]), Y(p[1]))); if (rd.closed) mx.closePath(); mx.stroke(); }
-  rects(false);
-  if (missions) {                                   // mission beacons (yellow) and the active target (green, pinned to the rim when off the map)
-    const tg = missions.target(), dot = (x, y, col, r) => { let X_ = X(x) - c, Y_ = Y(y) - c; const l = Math.hypot(X_, Y_), lim = c - 9; if (l > lim) { X_ *= lim / l; Y_ *= lim / l; } mx.beginPath(); mx.arc(c + X_, c + Y_, r, 0, 7); mx.fillStyle = col; mx.fill(); mx.lineWidth = 2; mx.strokeStyle = '#111'; mx.stroke(); };
-    if (tg) dot(tg[0], tg[1], '#3fe07b', 8); else if (!missions.active) for (const m of missions.list) if (!m.done) dot(m.a[0], m.a[1], '#ffd23f', 6);
+const LMK = [['Publix', 868, 372, '#2e8b3e', 'P'], ['Casino', 1180, 495, '#c8901e', '$'], ['City Hall', 930, 620, '#2f6fb3', 'H'], ['Police', 1030, 640, '#1d3f8a', '★'], ['Promenade', 1120, 960, '#c2457a', 'M'], ['Stadium', 1015, 735, '#5a7d2a', 'S'], ['Trash Mountain', 997, 183, '#7a5a2a', '▲']].map(([n, x, y, col, ch]) => ({ n, x: (x - 690) * .43, y: -(y - 545) * .43, col, ch }));     // reference-map px -> Blender metres
+const ROUTE = { t: 0, key: '', pts: null };
+function routeTo(px, py, tx, ty) {                // shortest drive along the lane graph (Blender metres in and out): node nearest you -> node nearest the target
+  if (!graph) return null; const N = graph.nodes, E = graph.edges, near = (x, y) => { let b = 0, bd = 1e18; N.forEach((n, i) => { const d = (n.x - x) ** 2 + (n.y - y) ** 2; if (d < bd) { bd = d; b = i; } }); return b; };
+  const s0 = near(px, py), s1 = near(tx, ty), dist = new Float64Array(N.length).fill(1e18), prev = new Int32Array(N.length).fill(-1), done = new Uint8Array(N.length); dist[s0] = 0;
+  for (;;) { let u = -1, bd = 1e18; for (let i = 0; i < N.length; i++) if (!done[i] && dist[i] < bd) { bd = dist[i]; u = i; } if (u < 0 || u === s1) break; done[u] = 1;
+    E.forEach((e, k) => { const v = e.a === u ? e.b : e.b === u ? e.a : -1; if (v >= 0 && dist[u] + e.L < dist[v]) { dist[v] = dist[u] + e.L; prev[v] = k; } }); }
+  if (dist[s1] >= 1e18) return null; const out = []; let v = s1;
+  while (v !== s0) { const e = E[prev[v]], pts = e.b === v ? e.pts.slice().reverse() : e.pts.slice(); for (const p of pts) out.push(p); v = e.a === v ? e.b : e.a; }
+  out.reverse(); out.unshift([px, py]); out.push([tx, ty]); return out;
+}
+function drawMini(px, py, face) {                 // map around the player (px, py in Blender metres), turned with the camera (rig.yaw); arrow = heading, yellow/green = missions, flashing red/blue = police, letters = landmarks
+  const W = mini.width, c = W / 2, k = c / 55, a = rig.yaw, ca = Math.cos(a), sa = Math.sin(a);
+  const X = x => c + (x - px) * k, Y = y => c - (y - py) * k, R = (x, y) => { const u = X(x) - c, v = Y(y) - c; return [c + u * ca - v * sa, c + u * sa + v * ca]; };
+  if (track.active) { mx.fillStyle = '#55585c'; mx.fillRect(0, 0, W, W); mx.fillStyle = '#f2efe6'; mx.font = '600 26px system-ui'; mx.textAlign = 'center'; mx.textBaseline = 'middle'; mx.fillText('TEST', c, c - 30); mx.fillText('TRACK', c, c + 30); }
+  else {
+    mx.fillStyle = world.mapbg || '#4d8a38'; mx.fillRect(0, 0, W, W); mx.save(); mx.translate(c, c); mx.rotate(a); mx.translate(-c, -c);
+    const rects = (pass) => { (world.map || []).forEach((r, i) => {
+      const base = i === 0 || r[5] === 'poly'; if (base !== pass) return;
+      mx.fillStyle = r[4];
+      if (r[5] === 'poly') { mx.beginPath(); r[6].forEach((p, j) => j ? mx.lineTo(X(p[0]), Y(p[1])) : mx.moveTo(X(p[0]), Y(p[1]))); mx.closePath(); mx.fill(); return; }
+      const x0 = X(r[0]), x1 = X(r[2]), y0 = Y(r[3]), y1 = Y(r[1]);
+      if (r[5] === 'o') { mx.beginPath(); mx.ellipse((x0 + x1) / 2, (y0 + y1) / 2, Math.abs(x1 - x0) / 2, Math.abs(y1 - y0) / 2, 0, 0, 7); mx.fill(); } else mx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    }); };
+    rects(true);
+    mx.strokeStyle = '#6a6c70'; mx.lineJoin = 'round'; mx.lineCap = 'butt';
+    for (const rd of world.roads || []) { mx.lineWidth = Math.max(2, rd.w * k); mx.beginPath(); rd.pts.forEach((p, j) => j ? mx.lineTo(X(p[0]), Y(p[1])) : mx.moveTo(X(p[0]), Y(p[1]))); if (rd.closed) mx.closePath(); mx.stroke(); }
+    rects(false);
+    const tg = missions && missions.target();          // route line to the mission goal, recomputed once a second
+    if (tg) { ROUTE.t -= .1; const key = tg.join(); if (ROUTE.t <= 0 || ROUTE.key !== key) { ROUTE.t = 1; ROUTE.key = key; ROUTE.pts = routeTo(px, py, tg[0], tg[1]); }
+      if (ROUTE.pts) { mx.strokeStyle = '#b06cff'; mx.lineWidth = 7; mx.lineCap = 'round'; mx.beginPath(); ROUTE.pts.forEach((p, j) => j ? mx.lineTo(X(p[0]), Y(p[1])) : mx.moveTo(X(p[0]), Y(p[1]))); mx.stroke(); } }
+    else ROUTE.pts = null;
+    mx.restore();
+    mx.font = '700 15px system-ui'; mx.textAlign = 'center'; mx.textBaseline = 'middle';
+    for (const L of LMK) { const [x, y] = R(L.x, L.y); if (Math.hypot(x - c, y - c) > c - 8) continue; mx.fillStyle = L.col; mx.strokeStyle = '#fff'; mx.lineWidth = 2; mx.beginPath(); mx.roundRect(x - 10, y - 10, 20, 20, 5); mx.fill(); mx.stroke(); mx.fillStyle = '#fff'; mx.fillText(L.ch, x, y + 1); }
   }
-  mx.save(); mx.translate(c, c); mx.rotate(Math.atan2(-Math.sin(face), Math.cos(face))); mx.beginPath(); mx.moveTo(0, -16); mx.lineTo(11, 12); mx.lineTo(0, 6); mx.lineTo(-11, 12); mx.closePath();
+  const dot = (x, y, col, r) => { const [qx, qy] = R(x, y); let X_ = qx - c, Y_ = qy - c; const l = Math.hypot(X_, Y_), lim = c - 9; if (l > lim) { X_ *= lim / l; Y_ *= lim / l; } mx.beginPath(); mx.arc(c + X_, c + Y_, r, 0, 7); mx.fillStyle = col; mx.fill(); mx.lineWidth = 2; mx.strokeStyle = '#0b1a10'; mx.stroke(); };
+  if (missions && !track.active) { const tg = missions.target(); if (tg) dot(tg[0], tg[1], '#3fe07b', 8); else if (!missions.active) for (const m of missions.list) if (!m.done) dot(m.a[0], m.a[1], '#ffd23f', 6); }
+  if (cops && !track.active) { const fl = (performance.now() / 250 | 0) % 2; for (const p of cops.cops) if (p.on) { const [qx, qy] = R(p.x, -p.z); if (Math.hypot(qx - c, qy - c) < c - 6) dot(p.x, -p.z, fl ? '#ff3b3b' : '#3b7bff', 6); } }
+  mx.save(); mx.translate(c, c); mx.rotate(a - face); mx.beginPath(); mx.moveTo(0, -16); mx.lineTo(11, 12); mx.lineTo(0, 6); mx.lineTo(-11, 12); mx.closePath();
   mx.fillStyle = '#5cff7a'; mx.fill(); mx.lineWidth = 3; mx.strokeStyle = '#0b1a10'; mx.stroke(); mx.restore();
+  const nb = $('minibox').querySelector('b'); if (nb) { nb.style.left = (50 + 40 * sa) + '%'; nb.style.top = (50 - 40 * ca) + '%'; nb.style.transform = 'translate(-50%, -50%)'; }
 }
 
 /* ---------- loop ---------- */
@@ -1167,10 +1215,17 @@ function update(dt, draw = true) {
   upd.speedZoom += ((playView && hmode === 'driving' ? Math.min(speed, 28) / 28 * TUNE.camZoom : 0) - upd.speedZoom) * (1 - Math.exp(-2 * dt));
   { const ext = track.active ? 1e5 : world.extent; rig.tx = clamp(rig.tx, -ext, ext); rig.tz = clamp(rig.tz, -ext, ext); }
   if (rig.mode === 'drive') cullStep(dt); else for (const c of cullables) c.o.visible = true;
+  { let ty = 0; const dv = hmode === 'driving' && drive;           // camera yaw: turns with the car while driving (eases, holds when nearly stopped, reversing or handbraking), back to north-up on foot
+    if (playView && rig.mode === 'drive' && dv && TUNE.camYaw) {
+      const th = drive.th, vfw = drive.vx * -Math.sin(th) + drive.vz * -Math.cos(th); ty = rig.yaw;
+      if (TUNE.camYaw === 2) { if (Math.abs(wrapA(th - rig.ySnap)) > rad(55)) { rig.snapT += dt; if (rig.snapT > .25) { rig.ySnap = Math.round(th / (Math.PI / 2)) * Math.PI / 2; rig.snapT = 0; } } else rig.snapT = 0; ty = rig.ySnap; }
+      else if (speed > 1.5 && vfw > -.5 && !input.hand) ty = th;
+    } else rig.ySnap = 0;
+    const cap = rad(TUNE.yawCap) * dt; rig.yaw = wrapA(rig.yaw + clamp(wrapA(ty - rig.yaw) * (1 - Math.exp(-TUNE.yawRate * dt)), -cap, cap)); }
   const p = rig.pitch * Math.PI / 180, dist = rig.dist * (1 + upd.speedZoom);
   rig.shake = Math.max(0, rig.shake - dt * 2.2); const sh = rig.shake * rig.shake * 1.1;
   upd.gy = (upd.gy || 0) + (groundH(rig.tx, rig.tz) - (upd.gy || 0)) * Math.min(1, dt * 4);
-  camera.position.set(rig.tx + (Math.random() - .5) * sh, upd.gy + Math.sin(p) * dist + (Math.random() - .5) * sh * .5, rig.tz + Math.cos(p) * dist + (Math.random() - .5) * sh); camera.lookAt(rig.tx, upd.gy, rig.tz);
+  camera.position.set(rig.tx + Math.sin(rig.yaw) * Math.cos(p) * dist + (Math.random() - .5) * sh, upd.gy + Math.sin(p) * dist + (Math.random() - .5) * sh * .5, rig.tz + Math.cos(rig.yaw) * Math.cos(p) * dist + (Math.random() - .5) * sh); camera.lookAt(rig.tx, upd.gy, rig.tz);
   placeSun(rig.tx, 0, rig.tz);
   if (game.hp <= .01 && !respawning) { game.money = Math.max(0, game.money - 100); respawn('wasted'); } else if (!respawning) game.hp = Math.min(100, game.hp + dt * 1.2);      // check before regen (regen used to lift 0 and Wasted never fired)     // HUD
   const cash = Math.round(game.money), hpv = Math.round(game.hp); if (cash !== lastCash) { $('cash').textContent = '$' + cash.toLocaleString('en-US'); lastCash = cash; }
