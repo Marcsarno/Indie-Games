@@ -62,13 +62,14 @@ export function createTraffic(G, deps) {
   // ---------- cars (pool, made once) ----------
   const cars = [];
   const knock = c => (dx, dz, dw) => { c.kvx += dx; c.kvz += dz; c.kw += dw; c.v *= .3; c.shock = Math.max(c.shock, 1.6); };
-  for (let i = 0; i < TT.count; i++) {
+  function addCar(i) {
     const kind = KINDS[i % KINDS.length], car = makeCar(kind, COLS[(i * 7) % COLS.length]); car.group.visible = false;
     const col = { poly: [[1e5, 1e5], [1e5 + 1, 1e5], [1e5, 1e5 + 1], [1e5, 1e5 + 2]], cx: 1e5, cz: 1e5, r: 3, vx: 0, vz: 0, mass: 320 * car.dims[0] * car.dims[1] }; colliders.push(col);
     cars.push({ id: i, car, g: car.group, dims: car.dims, col, on: false, e: null, dir: 1, s: 0, v: 0, v0: 10, next: null, nextDir: 1, granted: false, wait: 0, still: 0, off: 0,
       kx: 0, kz: 0, kvx: 0, kvz: 0, ky: 0, kw: 0, ghost: 0, lat: 0, latT: 0, passS: 0, turn: false, tp: [0, 0, 0, 0, 0, 0], tL: 0, tS: 0, x: 0, z: 0, fx: 0, fz: -1, yaw: 0, shock: 0, node: null, name: 'ai' + i });
     col.push = knock(cars[cars.length - 1]);
   }
+  for (let i = 0; i < TT.count; i++) addCar(i);
   function pickNext(c) {                            // random exit at the end node, no U-turn unless it is a dead end; bigger roads a bit more likely
     const n = endNode(c.e, c.dir); let opts = n.out.filter(o => o.e !== c.e);
     if (n.riro.size) {                              // right-in/right-out: side streets may only turn right; the main road may not turn left into them
@@ -225,5 +226,9 @@ export function createTraffic(G, deps) {
       c.col.cx = c.x; c.col.cz = c.z; c.col.r = Math.hypot(c.dims[0], c.dims[1]) / 2 + .2; c.col.vx = c.fx * c.v; c.col.vz = c.fz * c.v;
     }
   }
-  return { cars, step, E, N, light, TT };
+  function take(c) {                               // carjacked: the car leaves the AI pool for good (the page makes it a player vehicle); a fresh car refills the pool
+    if (c.node) { c.node.occ.delete(c); c.node = null; } const i = colliders.indexOf(c.col); if (i >= 0) colliders.splice(i, 1);
+    cars.splice(cars.indexOf(c), 1); addCar(100 + Math.floor(Math.random() * 1000)); return { car: c.car, x: c.x, z: c.z, yaw: c.yaw };
+  }
+  return { cars, step, take, E, N, light, TT };
 }

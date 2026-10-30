@@ -122,5 +122,11 @@ export function createPeople(G, deps) {
       w.root.position.set(w.x, w.y || 0, w.z);
     }
   }
-  return { people, step, panic, knock, PT };
+  function eject(x, z, fromX, fromZ) {              // the driver you pulled out of a car runs off
+    let w = people.find(o => !o.on); if (!w) { let fd = -1; for (const o of people) { const d = Math.hypot(o.x - x, o.z - z); if (o.state === 'walk' && d > fd) { fd = d; w = o; } } } if (!w) return null;
+    Object.assign(w, { on: true, state: 'walk', st: 0, hp: 3, x, z, y: 0, air: false, cross: false, offT: 0, inRoad: false, speed: 1.4 }); w.kb.x = w.kb.z = 0; w.root.visible = true;
+    rejoin(w); flee(w, fromX, fromZ, 7); return w;
+  }
+  function horn(x, z, r = 14) { for (const w of people) if (w.on && w.state === 'walk' && Math.hypot(w.x - x, w.z - z) < r && Math.random() < .7) flee(w, x, z, 1.4 + Math.random()); }
+  return { people, step, panic, knock, eject, horn, PT };
 }

@@ -61,6 +61,15 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 #stars i.on { color: #ffd23f; } #stars.flash i.on { animation: starflash .5s steps(2) infinite; } @keyframes starflash { 50% { color: rgba(255, 255, 255, .25); } }
 #banner { position: fixed; left: 0; right: 0; top: 38%; text-align: center; font: 700 52px/1 var(--display); letter-spacing: .08em; color: #fff; text-shadow: 0 3px 10px rgba(0, 0, 0, .8); pointer-events: none; opacity: 0; transition: opacity .3s; z-index: 30; }
 #banner.show { opacity: 1; }
+#title { position: fixed; inset: 0; z-index: 22; display: grid; place-items: center; padding: 16px; background: linear-gradient(rgba(6, 9, 14, .35), rgba(6, 9, 14, .8)); }
+#title[hidden], #bigmap[hidden], #hint[hidden] { display: none; }
+#bigmap { position: fixed; inset: 0; z-index: 21; background: #12324f; display: grid; grid-template-rows: 1fr auto; gap: 10px; padding: calc(12px + env(safe-area-inset-top, 0px)) 12px calc(16px + env(safe-area-inset-bottom, 0px)); }
+#bigc { width: 100%; height: 100%; touch-action: none; }
+#bigmap .btn { justify-self: center; padding: 12px 22px; font-size: 15px; }
+#hint { position: fixed; inset: 0; z-index: 6; pointer-events: none; font: 600 13px/1.2 var(--display); letter-spacing: .06em; text-transform: uppercase; color: #fff; }
+#hint div { position: absolute; padding: 7px 10px; border-radius: 8px; background: rgba(12, 16, 22, .82); border: 1px solid var(--lamp); }
+.hint-stick { left: 16px; bottom: calc(176px + env(safe-area-inset-bottom, 0px)); } .hint-r { right: 16px; bottom: calc(196px + env(safe-area-inset-bottom, 0px)); } .hint-map { right: 16px; top: calc(196px + env(safe-area-inset-top, 0px)); max-width: 190px; text-align: right; }
+#fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .6s; z-index: 25; } #fade.on { opacity: 1; }
 #mission { position: fixed; left: 50%; transform: translateX(-50%); top: calc(64px + env(safe-area-inset-top, 0px)); z-index: 3; display: flex; gap: 10px; align-items: baseline; padding: 7px 12px; border-radius: 8px; background: rgba(12, 16, 22, .78); color: #fff; font: 500 14px var(--display); letter-spacing: .04em; white-space: nowrap; pointer-events: none; }
 #mission b { color: #ffd23f; font-weight: 700; text-transform: uppercase; } #mission em { font-style: normal; font-variant-numeric: tabular-nums; } #mission em.hot { color: #ff5a4a; }
 .mbtn { all: unset; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; pointer-events: auto; cursor: pointer; width: 46px; height: 46px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); display: grid; align-content: center; justify-items: center; gap: 5px; }
@@ -78,7 +87,7 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 #cash { font: 600 22px/1 var(--display); letter-spacing: .05em; color: var(--paper); text-shadow: 0 1px 3px rgba(0, 0, 0, .7); font-variant-numeric: tabular-nums; }
 .hpbar { width: 92px; height: 8px; background: rgba(0, 0, 0, .45); border: 1px solid var(--line); border-radius: 2px; overflow: hidden; }
 .hpbar i { display: block; height: 100%; width: 100%; background: var(--warn); transform-origin: left; }
-.mini { position: relative; width: 100px; height: 100px; border-radius: 50%; border: 3px solid #101418; background: #2a3a2a; overflow: hidden; box-shadow: 0 0 0 1px rgba(255, 255, 255, .5), 0 2px 8px rgba(0, 0, 0, .5); }
+.mini { cursor: pointer; pointer-events: auto; position: relative; width: 100px; height: 100px; border-radius: 50%; border: 3px solid #101418; background: #2a3a2a; overflow: hidden; box-shadow: 0 0 0 1px rgba(255, 255, 255, .5), 0 2px 8px rgba(0, 0, 0, .5); }
 .mini canvas { width: 100%; height: 100%; display: block; }
 .mini b { position: absolute; left: 50%; top: 1px; transform: translateX(-50%); font: 600 11px/1 var(--display); color: #fff; text-shadow: 0 0 3px #000; }
 .stick { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; position: relative; width: 132px; height: 132px; border-radius: 50%; border: 2px dashed rgba(255, 236, 200, .5); background: var(--panel); pointer-events: auto; touch-action: none; }
@@ -117,7 +126,7 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
   <div class="cl"><button class="pb" id="b-left" aria-label="Steer left"><i class="l"></i></button><button class="pb" id="b-right" aria-label="Steer right"><i class="r"></i></button><div class="stick" id="dstick" aria-label="Drive: direction and speed" hidden><div class="knob" id="dknob"></div></div></div>
   <div class="cr">
     <div class="r2"><button class="pb sm" id="b-unstick" style="display:none">Un-<br>stick</button><button class="pb sm" id="b-door">Exit</button><button class="pb sm" id="b-hand">Hand<br>brake</button></div>
-    <div class="r2"><button class="pb" id="b-brake">Brake</button><button class="pb big" id="b-gas">Gas</button></div>
+    <div class="r2"><button class="pb sm" id="b-horn">Horn</button><button class="pb" id="b-brake">Brake</button><button class="pb big" id="b-gas">Gas</button></div>
   </div>
 </div>
 <div class="hud pad" id="padf" hidden>
@@ -128,6 +137,10 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
   </div>
 </div>
 <div id="banner"></div>
+<div id="title" hidden><div class="mcard"><h1>Grand Theft<br>Coconut Creek</h1><p class="msub">Coconut Creek, Florida</p><button class="btn mbig" id="t-play">Tap to play</button><p class="msub" id="t-cont"></p></div></div>
+<div id="bigmap" hidden><canvas id="bigc"></canvas><button class="btn" id="bm-close">Close map</button></div>
+<div id="hint" hidden><div class="hint-stick">Drag: steer + speed</div><div class="hint-r">Brake &middot; Horn &middot; Exit</div><div class="hint-map">Tap the map for the full map &middot; &#9776; pauses</div></div>
+<div id="fade"></div>
 <div id="mission" hidden></div>
 <div id="loading">Loading block<div class="bar"><i id="bar"></i></div><small id="loadtxt">4 MB of models and textures</small></div>
 <div id="err" hidden><div><b style="font:600 22px var(--display);letter-spacing:.08em;text-transform:uppercase">This view needs WebGL</b><p style="color:var(--dim)">Your browser blocked it. Try Chrome or Safari with hardware acceleration on.</p></div></div>
@@ -427,7 +440,8 @@ if (/[?&]drive=stick/.test(location.search)) TUNE.stickDrive = 1; if (/[?&]drive
 const TUNE_UI = [['top', 'Top speed', 12, 45, 1, 'm/s'], ['accel', 'Accel', 6, 30, .5, ''], ['brake', 'Braking', 10, 50, 1, ''], ['grip', 'Grip', 2, 14, .5, ''], ['drift', 'Slide grip', .3, 5, .1, ''], ['steer', 'Steering', .5, 1.6, .05, ''], ['bounce', 'Bounce', 0, .8, .05, ''], ['forgive', 'Forgiving', 0, 1, .05, ''], ['heroMass', 'Car weight', 1, 4, .1, 'x'], ['blood', 'Blood', 0, 1, 1, ''], ['stickDrive', 'Joystick drive', 0, 1, 1, '']];
 const CAR = { L: 4.5, W: 1.8, mass: 1400, wb: 2.7 }; CAR.I = CAR.mass * (CAR.L * CAR.L + CAR.W * CAR.W) / 12;
 const vehs = {};                                  // one state per car; only the ACTIVE one is simulated, the rest are static colliders
-for (const [name, car] of Object.entries(allCars)) { const g = car.group; const D_ = car.dims, M_ = 320 * D_[0] * D_[1]; vehs[name] = { car, name, mass: M_, perf: ({ coupe: 1.15, police: 1.1, hatchback: .95, suv: .95, minivan: .9, pickup: .95, van: .85, tow: .8, ambulance: .85, boxtruck: .72, flatbed: .75, garbage: .65, bus: .62 })[car.kind] || 1, I: M_ * (D_[0] * D_[0] + D_[1] * D_[1]) / 12, x: g.position.x, z: g.position.z, th: g.rotation.y, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, mode: 'parked', hardest: 0, hits: 0 }; }
+function makeVeh(name, car) { const g = car.group; const D_ = car.dims, M_ = 320 * D_[0] * D_[1]; return vehs[name] = { car, name, mass: M_, perf: ({ coupe: 1.15, police: 1.1, hatchback: .95, suv: .95, minivan: .9, pickup: .95, van: .85, tow: .8, ambulance: .85, boxtruck: .72, flatbed: .75, garbage: .65, bus: .62 })[car.kind] || 1, I: M_ * (D_[0] * D_[0] + D_[1] * D_[1]) / 12, x: g.position.x, z: g.position.z, th: g.rotation.y, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, mode: 'parked', hardest: 0, hits: 0 }; }
+for (const [name, car] of Object.entries(allCars)) makeVeh(name, car);
 let drive = vehs.player; drive.mode = 'driving';
 let hmode = 'driving';                            // 'driving' | 'foot' | 'busy' (door animation playing)
 const input = { left: false, right: false, gas: false, brake: false, hand: false, run: false };
@@ -681,7 +695,27 @@ for (const v of Object.values(vehs)) if (!trafficNames.has(v.name) && v !== driv
 let bannerT = 0;
 function banner(txt) { const b = $('banner'); b.textContent = txt; b.classList.add('show'); clearTimeout(bannerT); bannerT = setTimeout(() => b.classList.remove('show'), 1800); }
 function showStars(W) { const st = $('stars'); st.querySelectorAll('i').forEach((el, k) => el.classList.toggle('on', k < W.stars)); st.classList.toggle('flash', W.probation > 0); }
-function busted() { banner('BUSTED'); game.money = Math.max(0, Math.round(game.money * .9)); resetCar(); }
+function busted() { game.money = Math.max(0, Math.round(game.money * .9)); respawn('busted'); }
+const PX2M = p => [(p[0] - 690) * .43, (p[1] - 545) * .43];     // reference-map pixel -> three (x, z)
+const RESPAWN = { wasted: [930, 600], busted: [1030, 600] };      // City Hall plaza / outside the police station
+function sidewalkNear(x, z) {                     // a sidewalk spot next to the nearest road
+  let best = [x, z], bd = 1e18; if (!ai) return best;
+  for (const e of ai.E) for (let u = 4; u < e.L - 4; u += 3) { let k = 1; while (k < e.cum.length - 1 && e.cum[k] < u) k++; const a = e.P[k - 1], b = e.P[k], l = e.cum[k] - e.cum[k - 1] || 1, t = (u - e.cum[k - 1]) / l, fx = (b[0] - a[0]) / l, fz = (b[1] - a[1]) / l;
+    for (const sd of [1, -1]) { const o = (e.hw || 4) + 1.6, px = a[0] + (b[0] - a[0]) * t - fz * o * sd, pz = a[1] + (b[1] - a[1]) * t + fx * o * sd, d = (px - x) ** 2 + (pz - z) ** 2; if (d < bd) { bd = d; best = [px, pz]; } } }
+  return best;
+}
+let respawning = false;
+async function respawn(kind) {                    // fade out, wake up on foot at City Hall (wasted) or outside the police station (busted), fade in
+  if (respawning) return; respawning = true; $('fade').classList.add('on'); banner(kind === 'busted' ? 'BUSTED' : 'WASTED'); await wait(1.2);
+  if (cops) cops.clear(); if (drive) { const v = drive; if (v.mode === 'driving') parkVehicle(v); delete v.car.occupants.FL; } drive = null;
+  const [x, z] = sidewalkNear(...PX2M(RESPAWN[kind] || RESPAWN.wasted)); foot.x = x; foot.z = z; foot.vx = foot.vz = foot.lx = foot.lz = 0; foot.face = 0;
+  pilot.root.position.set(x, 0, z); pilot.root.rotation.set(0, 0, 0); pilot.root.visible = true; play(pilot, 'idle', { fade: .05 });
+  hmode = 'foot'; busy = false; game.hp = 100; rig.tx = x; rig.tz = z; await wait(.3); $('fade').classList.remove('on'); respawning = false;
+}
+function hornSound() {
+  if (!audio || muted) return; const { ctx, master } = audio, t = ctx.currentTime;
+  for (const f of [392, 494]) { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = f; const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1800; const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.05, t + .02); g.gain.setValueAtTime(.05, t + .38); g.gain.linearRampToValueAtTime(0, t + .45); o.connect(lp); lp.connect(g); g.connect(master); o.start(t); o.stop(t + .5); }
+}
 function resetCar(x = world.start.x, z = -world.start.y, th = rad(world.start.rz)) {      // put the player's own car back and the hero in it
   if (drive && drive !== vehs.player) parkVehicle(drive);
   const v = vehs.player; removeCarCollider(v); drive = v; hmode = 'driving';
@@ -776,8 +810,13 @@ function nearestDoor() {
   let best = null, bd = 4.2;
   for (const [name, car] of Object.entries(allCars)) { if (trafficNames.has(name)) continue; car.group.updateWorldMatrix(true, true);
     for (const tag of Object.keys(car.stand)) { const p = car.stand[tag].getWorldPosition(new THREE.Vector3()), d = Math.hypot(p.x - foot.x, p.z - foot.z); if (d < bd) { bd = d; best = { name, car, tag }; } } }
+  if (ai) for (const c of ai.cars) {                // traffic: you can pull the driver out of a slow or stopped car
+    if (!c.on || c.v > 4 || Math.hypot(c.x - foot.x, c.z - foot.z) > 7) continue; c.g.updateWorldMatrix(true, true);
+    for (const tag of ['FL']) { if (!c.car.stand[tag]) continue; const p = c.car.stand[tag].getWorldPosition(new THREE.Vector3()), d = Math.hypot(p.x - foot.x, p.z - foot.z); if (d < bd + 1) { bd = d; best = { name: null, car: c.car, tag, ai: c }; } }
+  }
   return best;
 }
+let jacked = 0;
 async function interact() {
   if (busy) return; ensureAudio();
   if (hmode === 'driving' && drive && Math.hypot(drive.vx, drive.vz) < 1.6) {
@@ -787,11 +826,18 @@ async function interact() {
     parkVehicle(v); drive = null; hmode = 'foot'; busy = false;
   } else if (hmode === 'foot' && combat.state === 'idle') {
     const pick = nearestDoor(); if (!pick) return;
-    busy = true; hmode = 'busy'; await enterCar(pilot, pick.car, pick.tag);
+    busy = true; hmode = 'busy';
+    if (pick.ai) {                                  // carjack: the car stops, you yank the driver out, it becomes yours
+      pick.ai.shock = 99; const t = ai.take(pick.ai), name = 'jack' + (++jacked); allCars[name] = t.car; const v = makeVeh(name, t.car); Object.assign(v, { x: t.x, z: t.z, th: t.yaw }); t.car.group.visible = true; setCarCollider(v);
+      if (ppl) { const d = t.car.stand.FL.getWorldPosition(new THREE.Vector3()); ppl.eject(d.x, d.z, foot.x, foot.z); }
+      if (cops) cops.crime('carjack', .6); pick.name = name;
+    }
+    await enterCar(pilot, pick.car, pick.tag);
     const v = vehs[pick.name]; removeCarCollider(v); v.vx = v.vz = v.w = 0; v.mode = 'driving'; drive = v; hmode = 'driving'; busy = false;
   }
 }
 $('b-door').addEventListener('pointerdown', e => { e.preventDefault(); interact(); });
+$('b-horn').addEventListener('pointerdown', e => { e.preventDefault(); ensureAudio(); hornSound(); if (drive && ppl) ppl.horn(drive.x - Math.sin(drive.th) * 6, drive.z - Math.cos(drive.th) * 6); });
 $('b-enter').addEventListener('pointerdown', e => { e.preventDefault(); interact(); });
 $('b-punch').addEventListener('pointerdown', e => { e.preventDefault(); startPunch(); });
 for (const [stick, knob, out] of [[$('stick'), $('knob'), stickIn], [$('dstick'), $('dknob'), dstickIn]]) { let sid = null;                 // on-screen sticks (walking, and the joystick drive mode)
@@ -819,6 +865,33 @@ for (const [btn, panel, other] of [['t-view', 'p-view', 'p-tune'], ['t-tune', 'p
   const open = $(panel).hidden; $(panel).hidden = !open; $(other).hidden = true; $('t-view').setAttribute('aria-expanded', String(!$('p-view').hidden)); $('t-tune').setAttribute('aria-expanded', String(!$('p-tune').hidden));
 });
 let paused = false;
+/* title screen (also unlocks sound on iPhone: it needs a tap), full map, first-run controls hint */
+const titleOn = !/[?&](notitle|hud|bench)/.test(location.search);
+function startPlay() { $('title').hidden = true; paused = false; ensureAudio(); let seen = false; try { seen = localStorage.getItem('gtcc-hint') === '1'; } catch (e) { /* ok */ } if (!seen) { $('hint').hidden = false; setTimeout(() => { $('hint').hidden = true; }, 7000); try { localStorage.setItem('gtcc-hint', '1'); } catch (e) { /* ok */ } } }
+$('t-play').addEventListener('click', startPlay);
+const MAPLAB = [['Publix', [868, 372]], ['Seminole Casino', [1180, 470]], ['City Hall', [930, 620]], ['Police', [1030, 640]], ['Promenade', [1120, 990]], ['Trash Mountain', [997, 183]], ['Windmill Park', [265, 1100]], ['Lakeside Park', [300, 690]], ['Golf', [1240, 380]], ['School', [810, 750]], ['Industrial', [400, 905]]];
+function drawBigMap() {
+  const cv = $('bigc'), r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1); cv.width = r.width * dpr; cv.height = r.height * dpr; const g = cv.getContext('2d'); g.scale(dpr, dpr);
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (const rd of world.roads || []) for (const p of rd.pts) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
+  const pad = 14, k = Math.min((r.width - pad * 2) / (x1 - x0), (r.height - pad * 2) / (y1 - y0)), ox = (r.width - (x1 - x0) * k) / 2, oy = (r.height - (y1 - y0) * k) / 2, X = x => ox + (x - x0) * k, Y = y => oy + (y1 - y) * k;
+  g.fillStyle = world.mapbg || '#2d78b8'; g.fillRect(0, 0, r.width, r.height);
+  (world.map || []).forEach((m, i) => { g.fillStyle = m[4]; if (m[5] === 'poly') { g.beginPath(); m[6].forEach((p, j) => j ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1]))); g.closePath(); g.fill(); } else if (m[5] === 'o') { g.beginPath(); g.ellipse((X(m[0]) + X(m[2])) / 2, (Y(m[1]) + Y(m[3])) / 2, Math.abs(X(m[2]) - X(m[0])) / 2, Math.abs(Y(m[3]) - Y(m[1])) / 2, 0, 0, 7); g.fill(); } else g.fillRect(X(m[0]), Y(m[3]), (m[2] - m[0]) * k, (m[3] - m[1]) * k); });
+  g.strokeStyle = '#d8d4c8'; g.lineJoin = 'round'; g.lineCap = 'round';
+  for (const rd of world.roads || []) { g.lineWidth = Math.max(1.5, rd.w * k); g.beginPath(); rd.pts.forEach((p, j) => j ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1]))); if (rd.closed) g.closePath(); g.stroke(); }
+  if (graph) {                                    // street names on each road's longest piece, kept upright
+    const best = {}; for (const e of graph.edges) { let L = 0; for (let i = 1; i < e.pts.length; i++) L += Math.hypot(e.pts[i][0] - e.pts[i - 1][0], e.pts[i][1] - e.pts[i - 1][1]); if (!best[e.road] || L > best[e.road].L) best[e.road] = { e, L }; }
+    g.font = `600 ${Math.max(8, Math.min(11, k * 9))}px Barlow Condensed, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (const [name, { e, L }] of Object.entries(best)) { if (L * k < 50) continue; const m = Math.floor(e.pts.length / 2), a = e.pts[Math.max(0, m - 1)], b = e.pts[Math.min(e.pts.length - 1, m)]; let ang = Math.atan2(-(b[1] - a[1]), b[0] - a[0]); if (ang > Math.PI / 2) ang -= Math.PI; if (ang < -Math.PI / 2) ang += Math.PI;
+      g.save(); g.translate(X((a[0] + b[0]) / 2), Y((a[1] + b[1]) / 2)); g.rotate(ang); g.lineWidth = 3; g.strokeStyle = 'rgba(20,24,30,.85)'; g.strokeText(name, 0, 0); g.fillStyle = '#fff'; g.fillText(name, 0, 0); g.restore(); }
+  }
+  g.font = '700 12px Barlow Condensed, sans-serif'; g.textAlign = 'center';
+  for (const [n, p] of MAPLAB) { const x = X((p[0] - 690) * .43), y = Y(-(p[1] - 545) * .43); g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(n.toUpperCase(), x, y); g.fillStyle = '#ffd23f'; g.fillText(n.toUpperCase(), x, y); }
+  if (missions) for (const m of missions.list) if (!m.done) { g.beginPath(); g.arc(X(m.a[0]), Y(m.a[1]), 6, 0, 7); g.fillStyle = '#ffd23f'; g.fill(); g.lineWidth = 2; g.strokeStyle = '#111'; g.stroke(); }
+  const px = hmode === 'foot' ? foot.x : drive ? drive.x : rig.tx, pz = hmode === 'foot' ? foot.z : drive ? drive.z : rig.tz, face = hmode === 'foot' ? foot.face : drive ? drive.th : 0;
+  g.save(); g.translate(X(px), Y(-pz)); g.rotate(-face); g.beginPath(); g.moveTo(0, -11); g.lineTo(8, 8); g.lineTo(0, 4); g.lineTo(-8, 8); g.closePath(); g.fillStyle = '#5cff7a'; g.fill(); g.lineWidth = 2.5; g.strokeStyle = '#0b1a10'; g.stroke(); g.restore();
+}
+$('minibox').addEventListener('click', () => { setPaused(true); $('menu').hidden = true; $('bigmap').hidden = false; drawBigMap(); });
+$('bm-close').addEventListener('click', () => { $('bigmap').hidden = true; setPaused(false); });
 function setPaused(p) { paused = p; $('menu').hidden = !p; if (p) { saveGame(); for (const k in input) input[k] = false; dstickIn.x = dstickIn.y = 0; stickIn.x = stickIn.y = 0; } }
 $('b-menu').addEventListener('click', () => setPaused(!paused));
 $('m-resume').addEventListener('click', () => setPaused(false));
@@ -908,6 +981,8 @@ addEventListener('pagehide', saveGame); document.addEventListener('visibilitycha
 renderer.domElement.addEventListener('webglcontextlost', e => { e.preventDefault(); $('loadtxt').textContent = 'Restoring the display…'; $('loading').hidden = false; saveGame(); setTimeout(() => { if (!$('loading').hidden) location.reload(); }, 5000); });
 renderer.domElement.addEventListener('webglcontextrestored', () => { $('loading').hidden = true; resize(); });
 $('loading').hidden = true;
+let titleShown = !titleOn;                     // the title appears after the first frame has drawn the city (so the world shows behind it)
+function showTitle() { titleShown = true; paused = true; $('title').hidden = false; $('t-cont').textContent = game.money !== world.money ? 'Saved game: $' + Math.round(game.money).toLocaleString('en-US') : ''; }
 let lastStickMode = -1;
 const q = { ratio: Math.min(devicePixelRatio || 1, 2), slow: 0, lock: false };
 const CPX = { p: null };
@@ -1009,7 +1084,7 @@ function update(dt, draw = true) {
   upd.gy = (upd.gy || 0) + (groundH(rig.tx, rig.tz) - (upd.gy || 0)) * Math.min(1, dt * 4);
   camera.position.set(rig.tx + (Math.random() - .5) * sh, upd.gy + Math.sin(p) * dist + (Math.random() - .5) * sh * .5, rig.tz + Math.cos(p) * dist + (Math.random() - .5) * sh); camera.lookAt(rig.tx, upd.gy, rig.tz);
   placeSun(rig.tx, 0, rig.tz);
-  game.hp = Math.min(100, game.hp + dt * 1.2); if (game.hp <= 0) { game.hp = 100; game.money = Math.max(0, game.money - 100); banner('WASTED'); if (cops) cops.clear(); resetCar(); }     // HUD
+  if (game.hp <= .01 && !respawning) { game.money = Math.max(0, game.money - 100); respawn('wasted'); } else if (!respawning) game.hp = Math.min(100, game.hp + dt * 1.2);      // check before regen (regen used to lift 0 and Wasted never fired)     // HUD
   const cash = Math.round(game.money), hpv = Math.round(game.hp); if (cash !== lastCash) { $('cash').textContent = '$' + cash.toLocaleString('en-US'); lastCash = cash; }
   if (hpv !== lastHp) { $('hp').style.transform = `scaleX(${hpv / 100})`; lastHp = hpv; }
   miniT += dt; if (world.map && miniT > .1 && draw) { miniT = 0; drawMini(fx, -fz, hmode === 'foot' ? foot.face : (drive ? drive.th : 0)); }
@@ -1020,7 +1095,7 @@ function update(dt, draw = true) {
   }
 }
 let frameHook = null;                                          // hud.js hooks frame timing here
-function frame(t) { const t0 = performance.now(); const dt_ = Math.min(clock.getDelta(), .05); if (!manual && !paused) update(dt_); if (frameHook) frameHook(t, performance.now() - t0); requestAnimationFrame(frame); }
+function frame(t) { const t0 = performance.now(); const dt_ = Math.min(clock.getDelta(), .05); if (!manual && !paused) { update(dt_); if (!titleShown) showTitle(); } else if (paused) renderer.render(scene, camera); if (frameHook) frameHook(t, performance.now() - t0); requestAnimationFrame(frame); }
 syncSliders(); setView('drive'); requestAnimationFrame(frame);
 window.__city = { world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, ppl, cops, missions, sun, setFrameHook: f => { frameHook = f; }, upd };
 if (/[?&](hud|bench)=/.test(location.search)) import('./hud.js?v=' + (MAN['hud.js'] || '1')).then(m => m.start(window.__city, THREE)).catch(e => console.error('hud', e));
