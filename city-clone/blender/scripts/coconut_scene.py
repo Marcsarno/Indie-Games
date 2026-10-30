@@ -468,7 +468,7 @@ def spec_at(x, y):
     for sp in HSPEC:
         if inside(sp[0], x, y): return sp
     return None
-INDUSTRIAL_ROADS = ("Industrial Row", "Creekside Rd", "Dock Ln", "Harbor Lot Rd", "Creekside Loop")
+INDUSTRIAL_ROADS = ("Industrial Row", "Creekside Rd", "Dock Ln", "Creekside Loop")
 def frontage_all(industrial=False, max_rank=6.5, skip=("Lyons Promenade",)):
     n = 0
     for nm, r in ROAD.items():
@@ -832,7 +832,7 @@ def park_curb(road_name, s_list, kinds, side=1):                                
 park_curb("Industrial Row", (40, 90, 140, 175), ("boxtruck", "flatbed", "van", "boxtruck"))
 park_curb("Creekside Rd", (30, 70), ("flatbed", "van"), -1)
 park_curb("Landfill Rd", (8,), ("garbage",))
-park_curb("Gas Station Rd", (20,), ("tow",))
+park_curb("Southgate Ln", (60,), ("tow",))
 TRAFFIC = []
 def add_traffic(name, road, off, rev, speed, s0, kind="sedan", color=None, a=0.0, b=None):
     p = route(road, off, rev, a, b); color = color or kc(kind); TRAFFIC.append({"name": name, "path": p, "speed": speed, "s0": s0, "kind": kind, "color": color}); addcar(kind, color, name, p[0][0], p[0][1], 0)
