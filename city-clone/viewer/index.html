@@ -113,6 +113,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { createTraffic, TT } from './traffic.js';
 
 const $ = id => document.getElementById(id);
 const WN = location.hash === '#chinatown' ? 'chinatown' : 'coconut', WD = 'worlds/' + WN + '/';      // which world to load (hash #chinatown or default)
@@ -182,11 +183,12 @@ async function loadGlb(url, bar) {            // *.glb is fetched as binary (Ver
   else { const txt = await (await fetch(A(url))).text(); const bin = atob(txt.trim()); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); buf = u8.buffer; }
   return new Promise((ok, fail) => loader.parse(buf, '', g => { if (bar) $('bar').style.width = bar; ok(g); }, fail));
 }
-let city, charGltf, carList, colList, propList, vegG; const KG = {};      // KG: vehicle glTF per kind (car_<kind>.glb)
+let city, charGltf, carList, colList, propList, vegG, graph = null; const KG = {};      // KG: vehicle glTF per kind (car_<kind>.glb)
 try {
   carList = await fetch(A(WD + 'cars.json')).then(r => r.json()); const kinds = [...new Set(['sedan', 'taxi', ...carList.map(c => c.kind), ...(world.traffic || []).map(t => t.kind)])];
   const kg = await Promise.all(kinds.map(k => loadGlb(`car_${k}.glb`).catch(() => null))); kinds.forEach((k, i) => { if (kg[i]) KG[k] = kg[i]; });
   [city, charGltf, carList, colList, propList, vegG] = await Promise.all([loadGlb(WD + (world.glb || 'scene.glb.b64.txt'), '70%'), loadGlb('character.glb.b64.txt'), fetch(A(WD + 'cars.json')).then(r => r.json()), fetch(A(WD + 'colliders.json')).then(r => r.json()), fetch(A(WD + 'props.json')).then(r => r.json()), loadGlb('veg.glb.b64.txt')]);
+  graph = await fetch(A(WD + 'graph.json')).then(r => r.ok ? r.json() : null).catch(() => null);      // lane graph for the traffic AI (worlds without one keep scripted traffic)
   $('bar').style.width = '100%';
 } catch (e) { $('loadtxt').textContent = 'Could not load the models: ' + (e.message || e); throw e; }
 scene.add(city.scene);
@@ -290,7 +292,8 @@ function makePath(pts, closed) {                 // polyline in Blender metres -
     out.x = a[0] + (b[0] - a[0]) * t; out.z = a[1] + (b[1] - a[1]) * t; out.fx = fx; out.fz = fz; out.yaw = Math.atan2(-fx, -fz); return out;
   } };
 }
-const traffic = world.traffic.map(t => {
+if (graph) for (const t of world.traffic) { const c = allCars[t.name]; if (c) { scene.remove(c.group); delete allCars[t.name]; } }     // the AI replaces the scripted loops
+const traffic = (graph ? [] : world.traffic).map(t => {
   const g = allCars[t.name].group;
   if (t.path) { const path = makePath(t.path, t.closed); return { ...t, g, path, pos: t.s0 || 0, rz: 0, vx: 0, vz: 0 }; }
   const along = t.axis === 'x' ? g.position.x : -g.position.z; return { ...t, g, pos: along, rz: g.rotation.y, vx: t.axis === 'x' ? t.dir * t.speed : 0, vz: t.axis === 'y' ? -t.dir * t.speed : 0 };
@@ -400,6 +403,8 @@ function polyBox(cx, cy, w, d, rzDeg) {          // Blender box (centre x,y; siz
 const polyCircle = (cx, cy, r) => Array.from({ length: 8 }, (_, k) => [cx + r * Math.cos((k + .5) * Math.PI / 4), -cy + r * Math.sin((k + .5) * Math.PI / 4)]);
 const cen = P => { let x = 0, z = 0; for (const p of P) { x += p[0]; z += p[1]; } return [x / P.length, z / P.length]; };
 const colliders = colList.filter(c => !c.car).map(c => { const soft = c.soft || null, poly = c.t === 'box' ? polyBox(c.x, c.y, c.w, c.d, c.rz) : c.t === 'poly' ? c.pts.map(p => [p[0], -p[1]]) : polyCircle(c.x, c.y, c.r); const [cx, cz] = cen(poly); let r = 0; for (const p of poly) r = Math.max(r, Math.hypot(p[0] - cx, p[1] - cz)); return { poly, cx, cz, r, vx: 0, vz: 0, soft }; });
+const qsT = new URLSearchParams(location.search); if (qsT.get('cars')) TT.count = Math.max(0, Math.min(60, +qsT.get('cars')));
+const ai = graph ? createTraffic(graph, { THREE, makeCar, carPoly: (x, z, th, d) => carPoly(x, z, th, d), colliders, placeOnGround, scene, camera }) : null;
 const moveCols = traffic.map(t => { const c = { poly: [], cx: 0, cz: 0, r: 2.6, vx: t.vx, vz: t.vz }; colliders.push(c); return c; });     // scripted traffic: moving obstacles
 const carPoly = (x, z, th, d) => { const fx = -Math.sin(th), fz = -Math.cos(th), rx = Math.cos(th), rz = -Math.sin(th), hl = (d ? d[0] : CAR.L) / 2, hw = (d ? d[1] : CAR.W) / 2; return [[x + fx * hl + rx * hw, z + fz * hl + rz * hw], [x + fx * hl - rx * hw, z + fz * hl - rz * hw], [x - fx * hl - rx * hw, z - fz * hl - rz * hw], [x - fx * hl + rx * hw, z - fz * hl + rz * hw]]; };
 
@@ -709,7 +714,8 @@ function drawMini(px, py, face) {                 // north-up map around the pla
 /* ---------- loop ---------- */
 $('loading').hidden = true;
 const q = { ratio: Math.min(devicePixelRatio || 1, 2), slow: 0, lock: false };
-const PF = { on: false, last: 0, ms: { phys: 0, anim: 0, misc: 0, render: 0 }, mark(k) { if (!this.on) return; const t = performance.now(); this.ms[k] = t - this.last; this.last = t; } };   // per-system ms for the ?hud=1 panel (hud.js)
+const AIX = { cx: 0, cz: 0, player: null, foot: null, p: { x: 0, z: 0, vx: 0, vz: 0, L: 4.5, W: 1.8 }, f: { x: 0, z: 0, vx: 0, vz: 0, L: .6, W: .6 } };
+const PF = { on: false, last: 0, ms: { phys: 0, traffic: 0, anim: 0, misc: 0, render: 0 }, mark(k) { if (!this.on) return; const t = performance.now(); this.ms[k] = t - this.last; this.last = t; } };   // per-system ms for the ?hud=1 panel (hud.js)
 const clock = new THREE.Clock(); let fpsN = 0, fpsT = 0, manual = false, lastStat = '';
 const SPAN = 42, upd = { speedZoom: 0 };
 /* distance culling of static scenery: the play camera never sees farther than ~90 m, so far tiles of roads, buildings and vegetation are switched off (frustum culling alone keeps the whole far trapezoid) */
@@ -738,6 +744,13 @@ function update(dt, draw = true) {
     }
     const c = moveCols[i]; c.poly = carPoly(t.g.position.x, t.g.position.z, t.rz, allCars[t.name].dims); c.r = Math.hypot(allCars[t.name].dims[0], allCars[t.name].dims[1]) / 2 + .2; const cc = cen(c.poly); c.cx = cc[0]; c.cz = cc[1];
   });
+  if (ai) {
+    AIX.cx = rig.tx; AIX.cz = rig.tz;
+    if (drive && hmode === 'driving') { const P = AIX.p; P.x = drive.x; P.z = drive.z; P.vx = drive.vx; P.vz = drive.vz; P.L = drive.car.dims[0]; P.W = drive.car.dims[1]; AIX.player = P; } else AIX.player = null;
+    if (hmode === 'foot') { AIX.f.x = foot.x; AIX.f.z = foot.z; AIX.foot = AIX.f; } else AIX.foot = null;
+    ai.step(dta, AIX);
+  }
+  PF.mark('traffic');
   footStep(dta); combatStep(dta);
   for (const w of walkers) {                                                    // pedestrians: walk a sidewalk loop, or react to being hit
     if (w.state === 'walk') { w.pos += w.dir * w.speed * dta; if (w.path) { if (!w.path.closed) { if (w.pos > w.path.L) { w.pos = w.path.L; w.dir = -1; } else if (w.pos < 0) { w.pos = 0; w.dir = 1; } } } else { if (w.pos > w.seg.hi) w.pos = w.seg.lo; if (w.pos < w.seg.lo) w.pos = w.seg.hi; } const f = Math.exp(-.8 * dta); w.off.x *= f; w.off.z *= f; }
@@ -802,6 +815,6 @@ function update(dt, draw = true) {
 let frameHook = null;                                          // hud.js hooks frame timing here
 function frame(t) { const t0 = performance.now(); if (!manual) update(Math.min(clock.getDelta(), .05)); if (frameHook) frameHook(t, performance.now() - t0); requestAnimationFrame(frame); }
 syncSliders(); setView('drive'); requestAnimationFrame(frame);
-window.__city = { world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, sun, setFrameHook: f => { frameHook = f; }, upd };
+window.__city = { world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, sun, setFrameHook: f => { frameHook = f; }, upd };
 if (/[?&](hud|bench)=/.test(location.search)) import('./hud.js?v=' + (MAN['hud.js'] || '1')).then(m => m.start(window.__city, THREE)).catch(e => console.error('hud', e));
 </script>

@@ -5,7 +5,7 @@ export function start(C, THREE) {
   const qs = new URLSearchParams(location.search), BENCH = qs.get('bench'); const N = 600;            // ~5 s at 120 Hz
   const gaps = new Float32Array(N), jsms = new Float32Array(N), tmp = new Float32Array(N); let gi = 0, gn = 0, lastT = 0, over20 = 0, over36 = 0, frames = 0;
   const first = new Float32Array(120); let fi = 0, hz = 0;
-  const sys = { phys: 0, anim: 0, misc: 0, render: 0 }, worst = { phys: 0, anim: 0, misc: 0, render: 0 }; let sysN = 0;
+  const sys = { phys: 0, traffic: 0, anim: 0, misc: 0, render: 0 }, worst = { phys: 0, traffic: 0, anim: 0, misc: 0, render: 0 }; let sysN = 0;
   const t0 = performance.now(); let invalid = '', segs = [], soak = [];
 
   // ---------- panel ----------
@@ -32,7 +32,7 @@ export function start(C, THREE) {
   const tog = {
     shadows: v => { R.shadowMap.enabled = v; C.scene.traverse(o => { if (o.material) for (const m of [].concat(o.material)) m.needsUpdate = true; }); },
     buildings: v => { C.cityRoot.visible = v; }, trees: v => { for (const im of C.instances) im.visible = v; },
-    traffic: v => { for (const t of C.traffic) if (t.g) t.g.visible = v; }, people: v => { for (const w of C.walkers) w.root.visible = v; },
+    traffic: v => { for (const t of C.traffic) if (t.g) t.g.visible = v; if (C.ai) { C.ai.TT.paused = !v; for (const c of C.ai.cars) c.g.visible = v && c.on; } }, people: v => { for (const w of C.walkers) w.root.visible = v; },
     fog: (() => { const f = C.scene.fog; return v => { C.scene.fog = v ? f : null; C.scene.traverse(o => { if (o.material) for (const m of [].concat(o.material)) m.needsUpdate = true; }); }; })(),
   };
   for (const b of el.querySelectorAll('[data-tog]')) b.onclick = () => { const on = !b.classList.contains('on'); b.classList.toggle('on', on); b.classList.toggle('off', !on); tog[b.dataset.tog](on); reset(); };
@@ -63,7 +63,7 @@ export function start(C, THREE) {
     const s = snap(); if (!s) return;
     txt.innerHTML = `<b>frame</b> ${s.med} ms med · ${s.p95} p95 · ${s.p99} p99 <small>(${hz || '?'} Hz screen)</small><br>` +
       `<b>JS</b> ${s.js} ms med · ${s.jsP95} p95 · &gt;20ms ${s.over20} · &gt;36ms ${s.over36}<br>` +
-      `<b>sys ms</b> phys ${s.sys.phys} · anim ${s.sys.anim} · misc ${s.sys.misc} · render ${s.sys.render}<br><small>worst: phys ${s.worst.phys} anim ${s.worst.anim} misc ${s.worst.misc} render ${s.worst.render}</small><br>` +
+      `<b>sys ms</b> phys ${s.sys.phys} · traffic ${s.sys.traffic} · anim ${s.sys.anim} · misc ${s.sys.misc} · render ${s.sys.render}<br><small>worst: phys ${s.worst.phys} anim ${s.worst.anim} misc ${s.worst.misc} render ${s.worst.render}</small><br>` +
       `<b>gpu work</b> ${s.calls} calls · ${(s.tris / 1000).toFixed(0)}k tris · ${s.geos} geo · ${s.tex} tex · ${s.progs} programs<br>` +
       `<b>pixels</b> ${R.getDrawingBufferSize(new THREE.Vector2()).toArray().join('×')} (ratio ${R.getPixelRatio().toFixed(2)})` + (invalid ? `<br><b style="color:#f66">INVALID: ${invalid}</b>` : '');
   }, 500);
