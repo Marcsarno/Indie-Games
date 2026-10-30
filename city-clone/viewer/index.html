@@ -1,3 +1,6 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Grand Theft Coconut Creek</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500&display=swap">
@@ -107,6 +110,7 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
 
 const $ = id => document.getElementById(id);
@@ -175,12 +179,30 @@ try {
 scene.add(city.scene);
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(700, 700), new THREE.MeshLambertMaterial({ color: new THREE.Color(world.ground) })); ground.rotation.x = -Math.PI / 2; ground.position.y = -.3; ground.receiveShadow = true; scene.add(ground);
 city.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+(function mergeStatic() {                      // fewer draw calls: static scenery is merged per 64 m tile and material (thousands of house parts become a few hundred meshes)
+  city.scene.updateMatrixWorld(true); const groups = new Map(), victims = [];
+  city.scene.traverse(o => {
+    if (!o.isMesh || o.isSkinnedMesh || Array.isArray(o.material)) return;
+    const g = o.geometry; if (!g.boundingSphere) g.computeBoundingSphere(); const r = g.boundingSphere.radius * o.matrixWorld.getMaxScaleOnAxis(); if (r > 60) return;   // big pieces (ground, road tiles) stay as they are
+    const c = g.boundingSphere.center.clone().applyMatrix4(o.matrixWorld), sig = Object.keys(g.attributes).sort().join(',') + (g.index ? 'i' : 'n');
+    const key = Math.floor(c.x / 64) + ',' + Math.floor(c.z / 64) + '|' + o.material.uuid + '|' + sig;
+    if (!groups.has(key)) groups.set(key, []); groups.get(key).push(o);
+  });
+  for (const list of groups.values()) {
+    if (list.length < 2) continue;
+    const geos = list.map(o => { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); if (o.matrixWorld.determinant() < 0 && g.index) { const ix = g.index; for (let i = 0; i < ix.count; i += 3) { const t = ix.getX(i + 1); ix.setX(i + 1, ix.getX(i + 2)); ix.setX(i + 2, t); } } return g; });
+    let merged = null; try { merged = mergeGeometries(geos, false); } catch (e) { merged = null; } if (!merged) continue;
+    const m = new THREE.Mesh(merged, list[0].material); m.castShadow = m.receiveShadow = true; m.name = 'merged'; city.scene.add(m); victims.push(...list);
+  }
+  for (const o of victims) o.parent.remove(o);
+  window.__merge = { groups: groups.size, merged: victims.length };
+})();
 /* Vegetation is instanced: one InstancedMesh per sub-mesh of each kit piece (palms, shrubs, hedges, oaks), placed from props.json. */
 const instances = []; { const byKind = {};
   for (const p of propList) (byKind[p.k] = byKind[p.k] || []).push(p);
   for (const [kind, all] of Object.entries(byKind)) {
     const node = vegG.scene.getObjectByName(kind); if (!node) continue; node.updateWorldMatrix(true, true); const dummy = new THREE.Object3D();
-    const tiles = {}; for (const p of all) (tiles[Math.floor(p.x / 80) + ',' + Math.floor(p.y / 80)] = tiles[Math.floor(p.x / 80) + ',' + Math.floor(p.y / 80)] || []).push(p);   // 80 m tiles so frustum culling can drop far vegetation
+    const tiles = {}; for (const p of all) (tiles[Math.floor(p.x / 160) + ',' + Math.floor(p.y / 160)] = tiles[Math.floor(p.x / 160) + ',' + Math.floor(p.y / 160)] || []).push(p);   // 160 m tiles so frustum culling can drop far vegetation
     for (const list of Object.values(tiles)) node.traverse(o => { if (!o.isMesh) return; const im = new THREE.InstancedMesh(o.geometry, o.material, list.length); im.castShadow = true; im.receiveShadow = true;
       list.forEach((p, i) => { dummy.position.copy(b2t(p.x, p.y, 0)); dummy.rotation.set(0, rad(p.rz), 0); dummy.scale.setScalar(kind === 'hedge' ? 1 : p.s); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); });
       im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); im.boundingSphere.radius += 6; scene.add(im); instances.push(im); });
@@ -653,7 +675,7 @@ function collectCullables() {
 }
 function cullStep(dt) {
   cullT += dt; if (cullT < .2) return; cullT = 0; if (!cullables.length) collectCullables();
-  const R = 82; for (const c of cullables) c.o.visible = Math.hypot(c.x - rig.tx, c.z - rig.tz) - c.r < R;
+  const R = 140; for (const c of cullables) c.o.visible = Math.hypot(c.x - rig.tx, c.z - rig.tz) - c.r < R;
 }
 
 function update(dt, draw = true) {
@@ -692,11 +714,12 @@ function update(dt, draw = true) {
     hit = Math.max(0, hit - dta * 2); victim.root.position.x = fightAt.x - .55 - .25 * Math.sin(Math.min(1, (1 - hit) * 2) * Math.PI) * (hit > 0 ? 1 : 0); }
   for (const m of mixers) m.update(dta);
   for (const c of [...Object.values(allCars), ...(demo ? [demo.sedan, demo.taxi] : [])]) {                  // draw only nearby cars, and only those close by cast shadows
-    const dd = Math.hypot(c.group.position.x - rig.tx, c.group.position.z - rig.tz); c.group.visible = dd < 62 || c === (drive && drive.car);
+    const dd = Math.hypot(c.group.position.x - rig.tx, c.group.position.z - rig.tz); c.group.visible = dd < 90 || c === (drive && drive.car);
+    const sh = dd < 32 || c === (drive && drive.car); if (c.shadowOn !== sh) { c.shadowOn = sh; c.group.traverse(o => { if (o.isMesh) o.castShadow = sh; }); }      // only nearby cars cast shadows (halves the far-car draw calls)
     const near = dd < 40; if (near !== c.shadowOn) { c.shadowOn = near; c.group.traverse(o => { if (o.isMesh) o.castShadow = near; }); }
     if (c.group.visible) updateDoors(c, dt);
   }
-  for (const w of walkers) { const dd = Math.hypot(w.root.position.x - rig.tx, w.root.position.z - rig.tz); const vis = dd < 55; if (vis !== w.root.visible) w.root.visible = vis; const near = dd < 38; if (near !== w.shadowOn) { w.shadowOn = near; w.root.traverse(o => { if (o.isMesh) o.castShadow = near; }); } }
+  for (const w of walkers) { const dd = Math.hypot(w.root.position.x - rig.tx, w.root.position.z - rig.tz); const vis = dd < 80; if (vis !== w.root.visible) w.root.visible = vis; const near = dd < 38; if (near !== w.shadowOn) { w.shadowOn = near; w.root.traverse(o => { if (o.isMesh) o.castShadow = near; }); } }
   for (let i = 0; i < SP; i++) if (spLife[i] > 0) { spLife[i] -= dt; spPos[i * 3] += spVel[i * 3] * dt; spPos[i * 3 + 1] += spVel[i * 3 + 1] * dt; spPos[i * 3 + 2] += spVel[i * 3 + 2] * dt; spVel[i * 3 + 1] -= 14 * dt; if (spLife[i] <= 0) spPos[i * 3 + 1] = -100; }
   spGeo.attributes.position.needsUpdate = true;
   const speed = drive ? Math.hypot(drive.vx, drive.vz) : 0;
