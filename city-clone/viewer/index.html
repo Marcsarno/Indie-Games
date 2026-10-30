@@ -766,9 +766,9 @@ async function interact() {
 $('b-door').addEventListener('pointerdown', e => { e.preventDefault(); interact(); });
 $('b-enter').addEventListener('pointerdown', e => { e.preventDefault(); interact(); });
 $('b-punch').addEventListener('pointerdown', e => { e.preventDefault(); startPunch(); });
-for (const [stick, knob, stickIn] of [[$('stick'), $('knob'), stickIn], [$('dstick'), $('dknob'), dstickIn]]) { let sid = null;                 // on-screen sticks (walking, and the joystick drive mode)
-  const move = e => { const r = stick.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, max = r.width / 2; let dx = e.clientX - cx, dy = e.clientY - cy; const m = Math.hypot(dx, dy), k = m > max ? max / m : 1; dx *= k; dy *= k; stickIn.x = dx / max; stickIn.y = dy / max; knob.style.transform = `translate(${dx}px, ${dy}px)`; };
-  const end = e => { if (e.pointerId !== sid) return; sid = null; stickIn.x = stickIn.y = 0; knob.style.transform = 'translate(0, 0)'; };
+for (const [stick, knob, out] of [[$('stick'), $('knob'), stickIn], [$('dstick'), $('dknob'), dstickIn]]) { let sid = null;                 // on-screen sticks (walking, and the joystick drive mode)
+  const move = e => { const r = stick.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, max = r.width / 2; let dx = e.clientX - cx, dy = e.clientY - cy; const m = Math.hypot(dx, dy), k = m > max ? max / m : 1; dx *= k; dy *= k; out.x = dx / max; out.y = dy / max; knob.style.transform = `translate(${dx}px, ${dy}px)`; };
+  const end = e => { if (e.pointerId !== sid) return; sid = null; out.x = out.y = 0; knob.style.transform = 'translate(0, 0)'; };
   stick.addEventListener('pointerdown', e => { e.preventDefault(); sid = e.pointerId; try { stick.setPointerCapture(sid); } catch (x) { /* ok */ } ensureAudio(); move(e); });
   stick.addEventListener('pointermove', e => { if (e.pointerId === sid) move(e); });
   for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) stick.addEventListener(t, end); }
