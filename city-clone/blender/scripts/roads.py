@@ -259,7 +259,7 @@ def triangulate(ring):
     if len(idx) == 3: tris.append((pts[idx[0]], pts[idx[1]], pts[idx[2]]))
     return tris
 
-def lake_poly(R, m, ring, bank=1.3, z=.07):
+def lake_poly(R, m, ring, bank=1.3, z=.02):
     """Lake from an explicit outline (traced water body): water via ear clipping (works for U / L shapes), bank ring drawn outside. Returns (ring CCW, triangles)."""
     pts = list(ring); area = sum(pts[i][0] * pts[(i + 1) % len(pts)][1] - pts[(i + 1) % len(pts)][0] * pts[i][1] for i in range(len(pts)))
     if area < 0: pts = pts[::-1]
@@ -269,7 +269,7 @@ def lake_poly(R, m, ring, bank=1.3, z=.07):
         def out(p, q, r_):
             tx, ty = r_[0] - q[0], r_[1] - q[1]; l = math.hypot(tx, ty) or 1; return (p[0] + ty / l * bank, p[1] - tx / l * bank)
         oa, oc = out(a, pa, c), out(c, a, pc)
-        R.poly(m["bank"], [(*oa, .035), (*a, .035), (*c, .035), (*oc, .035)])
+        R.poly(m["bank"], [(*oa, .012), (*a, .012), (*c, .012), (*oc, .012)])
     tris = triangulate(pts)
     for (a, b, c) in tris: R.poly(m["water"], [(*a, z), (*b, z), (*c, z)])
     return pts, tris

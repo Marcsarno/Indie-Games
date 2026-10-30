@@ -97,3 +97,19 @@ def dome(name):
     b.box(fr, -8, 8, -6, 6, 0, .6); b.prism(gl, (-8, 8, -6, 6), (-6, 6, -1, 1), .6, 6.0)
     for sx in (-8, 8): b.box(fr, sx - .1, sx + .1, -6, 6, .6, 3.0)
     return b.build(vc=True)
+
+
+def windmill(name):
+    """Dutch-style windmill landmark for Windmill Park: tapered white tower, red cap, four lattice blades (front toward -y)."""
+    b = Builder(name); wall = _m("wm", "#f0ebe0"); cap = _m("wmcap", "#a9382c"); wood = _m("wmwood", "#8a5a34"); sail = _m("wmsail", "#e9e2d0")
+    b.prism(wall, (-3.2, 3.2, -3.2, 3.2), (-2.0, 2.0, -2.0, 2.0), 0, 9.0); b.prism(cap, (-2.4, 2.4, -2.4, 2.4), (-.3, .3, -.3, .3), 9.0, 11.2); b.box(_m("wmdoor", "#4a3a2a"), -.7, .7, -3.25, -3.15, 0, 2.0)
+    b.box(wood, -.25, .25, -3.4, -2.0, 8.0, 8.5)
+    for k, ang in enumerate((0, 90, 180, 270)):
+        a = math.radians(ang + 20); ca, sa = math.cos(a), math.sin(a)
+        for r0, r1, wd in ((.6, 7.4, .18),):
+            x0, z0, x1, z1 = ca * r0, 8.25 + sa * r0, ca * r1, 8.25 + sa * r1; n = 8
+            for q in range(n): t0, t1 = q / n, (q + 1) / n; b.box(wood, min(x0 + (x1 - x0) * t0, x0 + (x1 - x0) * t1) - .09, max(x0 + (x1 - x0) * t0, x0 + (x1 - x0) * t1) + .09, -3.75, -3.55, min(z0 + (z1 - z0) * t0, z0 + (z1 - z0) * t1) - .09, max(z0 + (z1 - z0) * t0, z0 + (z1 - z0) * t1) + .09)
+        px, pz = -sa, ca
+        for q in range(1, 6): 
+            c0 = (.9 + q * 1.0); x, z = ca * c0, 8.25 + sa * c0; b.box(sail, x - .55 + px * .7 * 0 - .0, x + .55, -3.72, -3.58, z - .55, z + .55)
+    return b.build(vc=True)
