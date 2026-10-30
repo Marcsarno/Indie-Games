@@ -384,7 +384,7 @@ def make_lot(x0, x1, y0, y1, allow=(), prob=.3, single=None):                   
     rows = [(y0, y0 + 5.2), (y1 - 5.2, y1)] if single is None else ([(y1 - 5.2, y1)] if single == "N" else [(y0, y0 + 5.2)]); isl, stl = parking_lot(T, m, x0, x1, y0, y1, rows, x0 + 1.0)
     mapr(x0, y0, x1, y1, "#5a5c60"); FOOTREG.append(("lot", (x0 + x1) / 2, (y0 + y1) / 2, x1 - x0, y1 - y0, 0.0, allow)); NOGO.append((x0 - 2, y0 - 2, x1 + 2, y1 + 2))
     for (ix, iy, iw, idp) in isl:
-        cbox(ix, iy, iw, idp, soft="bush"); prop("shrub_a" if R_.random() < .5 else "palm_small", ix, iy, 1.0, col=False)
+        prop("shrub_a" if R_.random() < .5 else "palm_small", ix, iy, 1.0, col=False)
     aisle_ = (y0 + y1) / 2 if single is None else (y0 if single == "N" else y1)
     for (sx_, sy_) in stl: LOTS.append((sx_, sy_, 0 if sy_ < aisle_ else 180, prob))
     return stl
@@ -517,7 +517,7 @@ def lot_object(name, cx, cy, rz, W, lot_d, D, prob=.4, apron_len=4.0, rows2=None
     bL.poly(m["asphalt"], [(-3.3, y0 - apron_len, .03), (3.3, y0 - apron_len, .03), (3.3, y0 + .05, .03), (-3.3, y0 + .05, .03)])
     put(bL.build(vc=True), cx, cy, 0, rz, None, None, col=False)
     for (ix, iy, iw, idp) in isl:
-        wx, wy = _rot(cx, cy, rz, ix, iy); cbox(wx, wy, iw, idp, rz, soft="bush"); prop("shrub_a" if R_.random() < .5 else "palm_small", wx, wy, 1.0, col=False)
+        wx, wy = _rot(cx, cy, rz, ix, iy); prop("shrub_a" if R_.random() < .5 else "palm_small", wx, wy, 1.0, col=False)
     aisle = (y0 + y1) / 2 if len(rows) == 2 else y0
     for (sx, sy) in stl:
         wx, wy = _rot(cx, cy, rz, sx, sy); LOTS.append((wx, wy, rz + (0 if sy < aisle else 180), prob))
@@ -863,7 +863,9 @@ FIXED = {"police": "#1c1c20", "taxi": "#f2c21c", "ambulance": "#f4f4f2", "tow": 
 def kc(kind): return FIXED.get(kind) or R_.choice(PAL)
 pol = [f for f in FOOTREG if f[0] == "police"]; npol = 0
 k = 0
+DAVE_PARK = (62.9, 49.0)                                                                                        # the mission's parking spot in the Publix lot: no parked cars around it (user: room to park)
 for (sx_s, sy_s, rz, prob) in LOTS:
+    if math.hypot(sx_s - DAVE_PARK[0], sy_s - DAVE_PARK[1]) < 12 or math.hypot(sx_s - 73.7, sy_s - 58.0) < 10: continue        # and a clear walk to the door
     near_pol = pol and math.hypot(sx_s - pol[0][1], sy_s - pol[0][2]) < 30
     if near_pol and npol < 4: kind = "police" if npol < 3 else "ambulance"; npol += 1
     elif R_.random() < prob: kind = R_.choice(PASSENGER)
