@@ -12,7 +12,7 @@ const COLS = ['#d64545', '#3d6fd6', '#f2f2f2', '#2b2b2b', '#e0b43a', '#4e9a5a', 
 export function createTraffic(G, deps) {
   const { THREE, makeCar, carPoly, colliders, placeOnGround, scene, camera } = deps;
   // ---------- graph ----------
-  const N = G.nodes.map(n => ({ x: n.x, z: -n.y, r: n.r, sig: n.sig, dead: n.dead, roads: n.roads, occ: new Set(), inc: [], out: [] }));
+  const N = G.nodes.map(n => ({ x: n.x, z: -n.y, r: n.r, sig: n.sig, dead: n.dead, roads: n.roads, riro: new Set(n.riro || []), occ: new Set(), inc: [], out: [] }));
   const E = G.edges.map((e, i) => {
     const P = e.pts.map(p => [p[0], -p[1]]), cum = [0];
     for (let k = 1; k < P.length; k++) cum.push(cum[k - 1] + Math.hypot(P[k][0] - P[k - 1][0], P[k][1] - P[k - 1][1]));
@@ -70,7 +70,12 @@ export function createTraffic(G, deps) {
     col.push = knock(cars[cars.length - 1]);
   }
   function pickNext(c) {                            // random exit at the end node, no U-turn unless it is a dead end; bigger roads a bit more likely
-    const n = endNode(c.e, c.dir), opts = n.out.filter(o => o.e !== c.e);
+    const n = endNode(c.e, c.dir); let opts = n.out.filter(o => o.e !== c.e);
+    if (n.riro.size) {                              // right-in/right-out: side streets may only turn right; the main road may not turn left into them
+      const kind = o => { const [, s1] = trims(c.e, c.dir); lanePos(c.e, c.dir, s1, tmp); const ax = tmp.fx, az = tmp.fz; lanePos(o.e, o.dir, trims(o.e, o.dir)[0], tmp); const cr = ax * tmp.fz - az * tmp.fx, dt = ax * tmp.fx + az * tmp.fz; return dt > .8 ? 'S' : cr > 0 ? 'R' : 'L'; };
+      const ok = opts.filter(o => n.riro.has(c.e.road) ? kind(o) === 'R' : !(n.riro.has(o.e.road) && kind(o) === 'L'));
+      if (ok.length) opts = ok;
+    }
     if (!opts.length) { c.next = c.e; c.nextDir = -c.dir; return; }
     let tot = 0; for (const o of opts) tot += 1 + o.e.rank / 6; let r = Math.random() * tot;
     for (const o of opts) { r -= 1 + o.e.rank / 6; if (r <= 0) { c.next = o.e; c.nextDir = o.dir; return; } }

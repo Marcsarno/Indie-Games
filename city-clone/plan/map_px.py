@@ -69,6 +69,10 @@ RAW_ROADS = {
 }
 OK_ENDS = {("Landfill Rd", -1), ("Windmill Park Rd", -1), ("Club Dr", -1), ("Casino Dr", -1), ("Hospital Dr", -1), ("Coconut Creek Pkwy", 0), ("Heron Point Dr", -1), ("Hospital Dr", -1), ("Lyons Ln", -1), ("Wiles Rd", 0), ("Wiles Rd", -1)}   # coast / bridge-gate / lot / cul-de-sac ends allowed
 SNAP = 17.0
+# Junction rules (round 21: fewer full junctions on the main roads, same map): traffic lights only where Lyons Rd meets these roads;
+# RIRO = right-in/right-out: the main road's median runs straight past these side streets (no left turns, no crossing over)
+LIGHTS = {"Lyons Rd": ("Wiles Rd", "Coconut Creek Pkwy", "Northridge Rd", "Southgate Rd", "Industrial Row")}
+RIRO = {"Lyons Rd": ("Retail Dr", "School Dr", "Palm Ct Rd", "Palm View Rd", "Lakeview Island Rd", "Northridge Ln")}
 def _cr(pts, step=4.0):
     import math
     n = len(pts); out = []

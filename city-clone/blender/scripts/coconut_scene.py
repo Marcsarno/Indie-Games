@@ -43,7 +43,7 @@ import map_px as MP
 EXT = 290
 ROADS_M = MP.roads_m(); BRIDGE_ZONES = []
 def mk_road(d):
-    nm, hw = d["name"], d["hw"]; kw = dict(hw=hw, rank=d["rank"], flare=5.5 if hw > 4 else 4.5)
+    nm, hw = d["name"], d["hw"]; kw = dict(hw=hw, rank=d["rank"], flare=5.5 if hw > 4 else 4.5 if hw > 3.3 else 3.4)
     if nm == "Lyons Rd": kw.update(mh=2.0, xwalk=True, flare=7.0)                                                          # the big main road: 3 lanes each way + palm median
     if nm == "South Loop Rd": kw.update(mh=1.2, xwalk=True)
     if nm in ("Wiles Rd", "Coconut Creek Pkwy", "Northridge Rd", "Creekview Dr", "West Creek Rd", "Creekside Loop"): kw.update(xwalk=True)
@@ -59,6 +59,7 @@ ROAD = {}
 for d in ROADS_M:
     ROAD[d["name"]] = mk_road(dict(d, pts=extend_ends(d["pts"], {i: max(1.5, min(5.5, HW_OF[d["parents"][i]] - .8)) for i in d["push"]}, d["push"])))   # T-junction ends are pushed through the parent (but stay inside its far kerb, no stub) so the cutter sees a crossing
 PKWY, WILES = ROAD["Lyons Rd"], ROAD["Wiles Rd"]
+PKWY.keep_median = set(MP.RIRO.get("Lyons Rd", ()))
 coast = rd.Road("coast", MP.coast_m(), hw=1.0, closed=True, rank=0, sw=(0, 0), mark=False, flare=0); land_poly = coast.d[::4]
 net = rd.build_network(list(ROAD.values()))
 tick_('network')
@@ -770,7 +771,7 @@ def signals_at(parent, child_name):
                 if nm_ not in SIGN: continue
                 x = px + ta[2] * a * (j["w"] + 3.0) + nx_ * b * (parent.hw + 3.2); y = py + ta[3] * a * (j["w"] + 3.0) + ny_ * b * (parent.hw + 3.2)
                 sign_pole(T, x, y, SIGN[nm_], 3.0 if len(nm_) > 9 else 2.2); ccir(x, y, .1, "pole")
-for ch in ("Wiles Rd", "Coconut Creek Pkwy", "Northridge Rd", "Southgate Rd", "Retail Dr", "School Dr", "Industrial Row"): signals_at(PKWY, ch)
+for ch in MP.LIGHTS["Lyons Rd"]: signals_at(PKWY, ch)
 tick_('furniture')
 # ================================================================  CARS + WORLD DATA  ===========================================================
 def route(road, off, rev=False, s0=0.0, s1=None): return [[round(a, 2), round(b, 2)] for a, b in rd.lane_path(road, off, rev, s0=s0, s1=s1)]

@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import map_px as M
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "viewer", "worlds", "coconut", "graph.json")
 SKIP = {"Lyons Promenade"}                                              # pedestrian lane
-SIGNALS = ("Wiles Rd", "Coconut Creek Pkwy", "Northridge Rd", "Southgate Rd", "Retail Dr", "School Dr", "Industrial Row")   # signalled crossings on Lyons Rd (match coconut_scene signals_at)
+SIGNALS = M.LIGHTS["Lyons Rd"]   # signalled crossings on Lyons Rd (coconut_scene uses the same table)
 def lane_of(name, hw):
     if name == "Lyons Rd": return 5.6                                   # middle of the 3 lanes each side of the 2 m median
     if hw >= 6: return 3.6
@@ -88,7 +88,7 @@ def build():
         n["sig"] = -1
         if "Lyons Rd" in n["roads"] and any(r in n["roads"] for r in SIGNALS): n["sig"] = sig; sig += 1
     used = set(e["a"] for e in edges) | set(e["b"] for e in edges)
-    out = dict(nodes=[dict(x=round(n["p"][0], 2), y=round(n["p"][1], 2), r=round(n["r"], 1), sig=n["sig"], dead=bool(n.get("dead")), roads=sorted(n["roads"])) for n in nodes], edges=edges)
+    out = dict(nodes=[dict(x=round(n["p"][0], 2), y=round(n["p"][1], 2), r=round(n["r"], 1), sig=n["sig"], dead=bool(n.get("dead")), roads=sorted(n["roads"]), riro=sorted(r for r in n["roads"] if "Lyons Rd" in n["roads"] and r in M.RIRO["Lyons Rd"])) for n in nodes], edges=edges)
     return out, used
 if __name__ == "__main__":
     g, used = build(); json.dump(g, open(OUT, "w"), separators=(",", ":"))

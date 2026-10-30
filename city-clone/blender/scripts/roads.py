@@ -108,7 +108,8 @@ def build_network(roads):
                 if not ok: continue
                 x_, y_, _, _ = B.at(max(0, min(B.L, side_s))); left = (x_ - ta[0]) * -ta[3] + (y_ - ta[1]) * ta[2] > 0
                 A.gaps["L" if left else "R"].append((sA - w, sA + w))
-            A.gaps["M"].append((sA - w, sA + w)); A.gaps["K"].append((sA - w - 1.5, sA + w + 1.5)); A.junctions.append({"child": B, "p": P, "sA": sA, "R": R, "w": w, "lo": lo, "hi": hi})
+            if B.name not in getattr(A, "keep_median", ()): A.gaps["M"].append((sA - w, sA + w)); A.gaps["K"].append((sA - w - 1.5, sA + w + 1.5))      # right-in/right-out: the median runs on
+            A.junctions.append({"child": B, "p": P, "sA": sA, "R": R, "w": w, "lo": lo, "hi": hi})
     return roads
 
 def _in(gaps, s0, s1):
