@@ -53,6 +53,7 @@ RAW_ROADS = {
  # industrial
  "Industrial Row": (6, 3.5, [(172, 948), (250, 952), (330, 958), (397, 960), (497, 962), (542, 966), (620, 964), (692, 960)]),
  "Creekside Rd": (5, 3.2, [(397, 826), (397, 960), (398, 1016)]),
+ "Landfill Rd": (5, 3.6, [(300, 1006), (300, 1030), (296, 1048)]),
  "Dock Ln": (5, 3.2, [(487, 962), (487, 1024)]),
  "Harbor Lot Rd": (5, 3.2, [(176, 858), (140, 872), (118, 900), (135, 930), (170, 947)]),
  # south-east
@@ -69,7 +70,7 @@ RAW_ROADS = {
  "Casino Dr": (5, 3.2, [(1088, 640), (1150, 640), (1215, 652)]),
  "Canal Ridge Dr": (6, 3.5, [(1128, 874), (1128, 840), (1135, 818), (1170, 812), (1215, 818), (1280, 835), (1318, 846)]),
 }
-OK_ENDS = {("Club Dr", -1), ("Casino Dr", -1), ("Hospital Dr", -1), ("Palm Blvd", 0), ("Heron Point Dr", -1), ("Hospital Dr", -1), ("Lyons Ln", -1), ("Wiles Rd", 0), ("Wiles Rd", -1)}   # coast / bridge-gate / lot / cul-de-sac ends allowed
+OK_ENDS = {("Landfill Rd", -1), ("Club Dr", -1), ("Casino Dr", -1), ("Hospital Dr", -1), ("Palm Blvd", 0), ("Heron Point Dr", -1), ("Hospital Dr", -1), ("Lyons Ln", -1), ("Wiles Rd", 0), ("Wiles Rd", -1)}   # coast / bridge-gate / lot / cul-de-sac ends allowed
 SNAP = 17.0
 def _cr(pts, step=4.0):
     import math
@@ -142,10 +143,11 @@ DISTRICTS = {
  "Southgate Homes": (RES, "#f4b183", [(700, 835), (885, 835), (885, 1095), (730, 1105), (700, 1050)]),
  "Heron Preserve (pond + boardwalk)": (GRN, "#b8e0a0", [(900, 960), (1005, 962), (1012, 1090), (908, 1092)]),
  "Bayview homes (SE tip)": (RES, "#f4b183", [(1010, 1012), (1190, 1044), (1300, 1056), (1300, 1105), (1060, 1112), (1010, 1090)]),
+ "Trash Mountain (landfill)": ("landfill", "#9a8a5a", [(140, 1030), (395, 1048), (400, 1100), (380, 1140), (320, 1165), (240, 1168), (175, 1142), (142, 1095)]),
  "Harbor lots": (IND, "#b9b4d6", [(60, 832), (190, 832), (190, 960), (110, 960), (60, 900)]),
 }
 LANDMARKS = [("PALM MARKET", (868, 372)), ("City Hall", (930, 620)), ("Police", (1030, 640)), ("Casino", (1170, 650)), ("Retail Commons", (1030, 400)), ("Gas station", (960, 895)), ("Lyons Promenade", (1120, 960)),
-             ("Windmill Park", (1020, 190)), ("Lakeside Park", (300, 690)), ("Stadium", (1015, 735)), ("Elementary", (830, 745)), ("Gas station west", (345, 515))]
+             ("Trash Mountain", (265, 1100)), ("Windmill Park", (1020, 190)), ("Lakeside Park", (300, 690)), ("Stadium", (1015, 735)), ("Elementary", (830, 745)), ("Gas station west", (345, 515))]
 
 
 # ---------------- metre-space data for the 3D build ----------------
