@@ -16,7 +16,7 @@ def catmull(pts, closed=False, step=6.0):
             out.append(tuple(.5 * ((2 * p1[d]) + (-p0[d] + p2[d]) * t + (2 * p0[d] - 5 * p1[d] + 4 * p2[d] - p3[d]) * t2 + (-p0[d] + 3 * p1[d] - 3 * p2[d] + p3[d]) * t3) for d in (0, 1)))
     if not closed: out.append(pts[-1])
     return out
-RANK_COL = {10: "#222", 9: "#333", 8: "#444", 6: "#777", 5: "#999"}
+RANK_COL = {3: "#e84a7a", 10: "#222", 9: "#333", 8: "#444", 6: "#777", 5: "#999"}
 def draw_px(d, W, S, F, with_roads=True, label=True, alpha_fill=None):
     pass
 def font(sz, bold=False):
