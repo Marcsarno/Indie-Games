@@ -76,6 +76,8 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 .hint-stick { left: 16px; bottom: calc(176px + env(safe-area-inset-bottom, 0px)); } .hint-r { right: 16px; bottom: calc(196px + env(safe-area-inset-bottom, 0px)); } .hint-map { right: 16px; top: calc(196px + env(safe-area-inset-top, 0px)); max-width: 190px; text-align: right; }
 #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .6s; z-index: 25; } #fade.on { opacity: 1; }
 #mission { position: fixed; left: 50%; transform: translateX(-50%); top: calc(64px + env(safe-area-inset-top, 0px)); z-index: 3; display: flex; gap: 10px; align-items: baseline; padding: 7px 12px; border-radius: 8px; background: rgba(12, 16, 22, .78); color: #fff; font: 500 14px var(--display); letter-spacing: .04em; white-space: nowrap; pointer-events: none; }
+#place { position: fixed; z-index: 3; left: max(16px, env(safe-area-inset-left, 0px)); top: calc(118px + env(safe-area-inset-top, 0px)); max-width: calc(100% - 170px); pointer-events: none; opacity: 0; transition: opacity .5s; text-shadow: 0 2px 6px rgba(0, 0, 0, .85); color: #fff; }
+#place.show { opacity: 1; } #place b { display: block; font: 700 22px/1.05 var(--display); letter-spacing: .06em; text-transform: uppercase; } #place span { display: block; margin-top: 3px; font: 600 15px/1.2 var(--display); letter-spacing: .05em; color: #ffd27f; }
 #mission b { color: #ffd23f; font-weight: 700; text-transform: uppercase; } #mission em { font-style: normal; font-variant-numeric: tabular-nums; } #mission em.hot { color: #ff5a4a; }
 .mbtn { all: unset; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; pointer-events: auto; cursor: pointer; width: 46px; height: 46px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); display: grid; align-content: center; justify-items: center; gap: 5px; }
 .mbtn i { display: block; width: 20px; height: 2px; background: var(--paper); border-radius: 1px; }
@@ -149,6 +151,7 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 <div id="hint" hidden><div class="hint-stick">Drag: steer + speed</div><div class="hint-r">Brake &middot; Horn &middot; Exit</div><div class="hint-map">Tap the map for the full map &middot; &#9776; pauses</div></div>
 <div id="fade"></div>
 <div id="mission" hidden></div>
+<div id="place" aria-live="polite"><b id="pl-area"></b><span id="pl-street"></span></div>
 <div id="loading">Loading block<div class="bar"><i id="bar"></i></div><small id="loadtxt">4 MB of models and textures</small></div>
 <div id="err" hidden><div><b style="font:600 22px var(--display);letter-spacing:.08em;text-transform:uppercase">This view needs WebGL</b><p style="color:var(--dim)">Your browser blocked it. Try Chrome or Safari with hardware acceleration on.</p></div></div>
 
@@ -678,6 +681,18 @@ function onImpact(c, v) {
     clearTimeout(c.doorT); c.doorT = setTimeout(() => { if (c.mode === 'driving') c.car.setAll(false); }, 2200);
   }
   c.car.setDamage(c.damage);
+}
+const PLACE = { t: 0, area: '', street: '', candA: '', candS: '', ta: 0, ts: 0, show: 0 };
+function inPoly(P, x, y) { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const a = P[i], b = P[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; }
+function placeStep(dt, x, y) {                    // "you are entering" banner: district name when you cross into one, street name when you turn onto a new road (each must hold 0.6 s, so junctions do not flicker)
+  PLACE.show = Math.max(0, PLACE.show - dt); $('place').classList.toggle('show', PLACE.show > 0 && !track.active && !paused);
+  PLACE.t += dt; if (PLACE.t < .25 || !graph || track.active) return; const st = PLACE.t; PLACE.t = 0;
+  let area = ''; for (const A of graph.areas || []) if (inPoly(A.poly, x, y)) { area = A.name; break; }
+  let street = PLACE.candS;
+  if (hmode === 'driving') { let bd = 144; street = ''; for (const e of graph.edges) for (const p of e.pts) { const d = (p[0] - x) ** 2 + (p[1] - y) ** 2; if (d < bd) { bd = d; street = e.road; } } }
+  PLACE.ta = area === PLACE.candA ? PLACE.ta + st : 0; PLACE.candA = area; PLACE.ts = street === PLACE.candS ? PLACE.ts + st : 0; PLACE.candS = street;
+  if (area && area !== PLACE.area && PLACE.ta >= .6) { PLACE.area = area; $('pl-area').textContent = area; $('pl-street').textContent = PLACE.street = street || ''; PLACE.show = 3.5; }
+  else if (street && street !== PLACE.street && PLACE.ts >= .6) { PLACE.street = street; $('pl-street').textContent = street; if (PLACE.show <= 0) $('pl-area').textContent = ''; PLACE.show = Math.max(PLACE.show, 2.5); }
 }
 let RSEG = null;
 function roadDir(x, z, th) {                      // road assist: turn (rad) from the car's heading to the nearest road running roughly the same way; null when none within 9 m and 35 deg
@@ -1210,6 +1225,7 @@ function update(dt, draw = true) {
   // camera: follow whoever the player is (car or hero), a little look-ahead, ease out a little at speed
   let fx, fz, fvx = 0, fvz = 0, la = TUNE.camLook;
   if (hmode === 'foot') { fx = foot.x; fz = foot.z; fvx = foot.vx; fvz = foot.vz; la = .3; } else if (drive) { fx = drive.rx ?? drive.x; fz = drive.rz ?? drive.z; fvx = drive.vx; fvz = drive.vz; } else { fx = pilot.root.position.x; fz = pilot.root.position.z; }
+  placeStep(dt, fx, -fz);
   if (playView) { const ck = 1 - Math.exp(-TUNE.camFollow * dt); rig.tx += (fx + fvx * la - rig.tx) * ck; rig.tz += (fz + fvz * la - rig.tz) * ck; }
   if (upd.bench) { rig.tx = upd.bench.x; rig.tz = upd.bench.z; }                 // ?bench=1 drives the camera on a fixed path
   upd.speedZoom += ((playView && hmode === 'driving' ? Math.min(speed, 28) / 28 * TUNE.camZoom : 0) - upd.speedZoom) * (1 - Math.exp(-2 * dt));

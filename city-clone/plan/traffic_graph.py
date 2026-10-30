@@ -1,6 +1,6 @@
 """Traffic graph for the page: road centre-lines split at junctions into edges between nodes, in metres (Blender x east, y north).
 Run: python3 plan/traffic_graph.py  -> viewer/worlds/coconut/graph.json
-nodes: [{x, y, r (junction box radius m), sig (signal group id or -1), roads}]; edges: [{a, b, pts [[x,y]...], L, hw, lane (offset of the lane centre from the centre-line, m), v (cruise m/s), rank, road}].
+areas: [{name, poly}] district outlines; nodes: [{x, y, r (junction box radius m), sig (signal group id or -1), roads}]; edges: [{a, b, pts [[x,y]...], L, hw, lane (offset of the lane centre from the centre-line, m), v (cruise m/s), rank, road}].
 Cars drive on the right: direction a->b uses the right side of a->b."""
 import os, sys, json, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -88,7 +88,11 @@ def build():
         n["sig"] = -1
         if "Lyons Rd" in n["roads"] and any(r in n["roads"] for r in SIGNALS): n["sig"] = sig; sig += 1
     used = set(e["a"] for e in edges) | set(e["b"] for e in edges)
-    out = dict(nodes=[dict(x=round(n["p"][0], 2), y=round(n["p"][1], 2), r=round(n["r"], 1), sig=n["sig"], dead=bool(n.get("dead")), roads=sorted(n["roads"]), riro=sorted(r for r in n["roads"] if "Lyons Rd" in n["roads"] and r in M.RIRO["Lyons Rd"])) for n in nodes], edges=edges)
+    NICE = {"Gas station west": None, "Retail outparcels": "Retail Commons", "Casino garage": "Seminole Casino Coconut Creek", "Harbor lots": "Creekside Industrial Park", "Centre homes": "Centre Homes",
+            "Sports fields + stadium": "Coconut Creek Stadium", "Gas station + Lyons Mart": "Lyons Mart", "Publix shopping center": "Publix Shopping Center", "Elementary School": "Coconut Creek Elementary",
+            "Riverside Condos + Marina": "Riverside Marina", "Civic Center": "Civic Center"}       # banner names; None = no banner
+    areas = [dict(name=NICE.get(k.split(" (")[0], k.split(" (")[0]), poly=[[round(x, 1), round(y, 1)] for x, y in poly]) for k, (cat, col, poly) in M.districts_m().items() if NICE.get(k.split(" (")[0], 1) is not None]     # district outlines (Blender metres) for the "you are entering" banners
+    out = dict(areas=areas, nodes=[dict(x=round(n["p"][0], 2), y=round(n["p"][1], 2), r=round(n["r"], 1), sig=n["sig"], dead=bool(n.get("dead")), roads=sorted(n["roads"]), riro=sorted(r for r in n["roads"] if "Lyons Rd" in n["roads"] and r in M.RIRO["Lyons Rd"])) for n in nodes], edges=edges)
     return out, used
 if __name__ == "__main__":
     g, used = build(); json.dump(g, open(OUT, "w"), separators=(",", ":"))

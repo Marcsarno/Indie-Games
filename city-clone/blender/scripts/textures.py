@@ -114,7 +114,7 @@ def florida():
     label("palmmarket", "Publix", 512, 128, "#f3ecd8", "#1f6b3a", border="#1f6b3a"); label("shops", "SHOPS", 384, 128, "#f3ecd8", "#7a3a2a", border="#7a3a2a")
     label("restaurant_fl", "RESTAURANT", 384, 96, "#8c1c1c", "#ffffff"); label("nails", "NAILS", 256, 96, "#f0e6d0", "#8a2f6a", border="#8a2f6a")
     label("coffee", "COFFEE", 256, 96, "#21453a", "#f3ecd8"); label("pizza", "PIZZA", 256, 96, "#b8321f", "#ffe9a0"); label("cleaners", "CLEANERS", 320, 96, "#a63c2a", "#ffffff")
-    label("pkwy", "Coconut Creek Pkwy", 512, 96, "#14683f", "#ffffff", border="#ffffff"); label("wiles", "Wiles Rd", 320, 96, "#14683f", "#ffffff", border="#ffffff"); label("lyons", "Lyons Rd", 320, 96, "#14683f", "#ffffff", border="#ffffff"); label("northridge", "Northridge Rd", 448, 96, "#14683f", "#ffffff", border="#ffffff")
+    label("pkwy", "Coconut Creek Pkwy", 512, 96, "#14683f", "#ffffff", border="#ffffff"); label("wiles", "Wiles Rd", 320, 96, "#14683f", "#ffffff", border="#ffffff"); label("lyons", "Lyons Rd", 320, 96, "#14683f", "#ffffff", border="#ffffff"); label("northridge", "Sample Rd", 320, 96, "#14683f", "#ffffff", border="#ffffff")
     label("taxi_roof", "TAXI", 256, 96, "#f2c21c", "#18181a"); label("police_door", "POLICE", 320, 96, "#ffffff", "#18181a")
     label("cityhall", "COCONUT CREEK  CITY HALL", 640, 96, "#e6dcc4", "#3a3a40")
 

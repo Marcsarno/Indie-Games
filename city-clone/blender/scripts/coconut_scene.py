@@ -45,8 +45,8 @@ ROADS_M = MP.roads_m(); BRIDGE_ZONES = []
 def mk_road(d):
     nm, hw = d["name"], d["hw"]; kw = dict(hw=hw, rank=d["rank"], flare=5.5 if hw > 4 else 4.5 if hw > 3.3 else 3.4)
     if nm == "Lyons Rd": kw.update(mh=2.0, xwalk=True, flare=7.0)                                                          # the big main road: 3 lanes each way + palm median
-    if nm == "South Loop Rd": kw.update(mh=1.2, xwalk=True)
-    if nm in ("Wiles Rd", "Coconut Creek Pkwy", "Northridge Rd", "Creekview Dr", "West Creek Rd", "Creekside Loop"): kw.update(xwalk=True)
+    if nm == "Copans Rd": kw.update(mh=1.2, xwalk=True)
+    if nm in ("Wiles Rd", "Coconut Creek Pkwy", "Sample Rd", "Winston Park Blvd", "Hammock Blvd", "Creekside Loop"): kw.update(xwalk=True)
     if nm == "Lyons Promenade": kw.update(sw=(0, 0), mark=False, surf="walk", curbs=False, flare=0)
     return rd.Road(nm, d["pts"], **kw)
 def extend_ends(pts, push, ends):
@@ -573,12 +573,12 @@ if frontage_lot(CIV, "cityhall", [(hall_maker, 34, 18, 3.0)], lot_d=14, prob=.35
 police_maker = lm(LMR, "police_station", lambda nm: make_house(nm, 30, 20, 2, "white", 77, garage=False, balcony=False, roof_h=1.2, tile_hex=ROOF["slate"]))
 frontage_lot(CIV, "police", [(police_maker, 30, 20, 7.0)], lot_d=12, prob=.0)
 frontage_lot(D("Elementary School"), "school", [(lambda nm: make_house(nm, 24, 10, 2, "butter", 21, garage=False, balcony=False, roof_h=3.0, windows=True), 24, 10, 0.0)], lot_d=12, prob=.4)
-# -- casino + parking garage (east of Creekview Dr)
+# -- casino + parking garage (east of Winston Park Blvd)
 CAS = D("Seminole Casino Coconut Creek")
 casino_maker = lm(LMC, "casino", plaza_maker(56, 36, 11.0, 0))
 if not frontage_lot(CAS, "casino", [(casino_maker, 56, 36, 0.0)], lot_d=17, prob=.55, roads=("Coconut Creek Pkwy",), max_rank=9.5, face=0.0, allow=("Retail Dr",), step=2.0) and \
    not frontage_lot(CAS, "casino", [(lambda nm: _scaled(casino_maker(nm), .8), 45, 29, 0.0)], lot_d=15, prob=.55, roads=("Coconut Creek Pkwy",), max_rank=9.5, face=0.0, allow=("Retail Dr",), step=2.0):
-    frontage_lot(CAS, "casino", [(lambda nm: _scaled(casino_maker(nm), .8), 45, 29, 0.0)], lot_d=17, prob=.55, roads=("Creekview Dr",), allow=("Retail Dr",))
+    frontage_lot(CAS, "casino", [(lambda nm: _scaled(casino_maker(nm), .8), 45, 29, 0.0)], lot_d=17, prob=.55, roads=("Winston Park Blvd",), allow=("Retail Dr",))
 for (x, y) in spots(D("Casino garage"), 3, 53):
     if try_place("garage", lambda nm: dk.garage(nm, 40, 22, 3), x, y, road_facing_rz, 40, 22, 1.0, near=14): break
 # -- gas stations (Wiles x Blvd corner, Palm Blvd west) + Lyons Mart
@@ -801,7 +801,7 @@ def signals_at(parent, child_name):
                     x = px + ta[2] * a * (j["w"] + .5) + nx_ * b * (parent.hw + .9); y = py + ta[3] * a * (j["w"] + .5) + ny_ * b * (parent.hw + .9); dx, dy = -nx_ * b, -ny_ * b
                     ad = (1 if dx > 0 else -1, 0) if abs(dx) >= abs(dy) else (0, 1 if dy > 0 else -1)
                     signal(T, x, y, ad); ccir(x, y, .14, "pole")
-            SIGN = {"Lyons Rd": "lyons", "Wiles Rd": "wiles", "Coconut Creek Pkwy": "pkwy", "Northridge Rd": "northridge"}
+            SIGN = {"Lyons Rd": "lyons", "Wiles Rd": "wiles", "Coconut Creek Pkwy": "pkwy", "Sample Rd": "northridge"}
             for k_, (nm_, a, b) in enumerate(((parent.name, 1, 1), (child_name, -1, -1))):
                 if nm_ not in SIGN: continue
                 x = px + ta[2] * a * (j["w"] + 3.0) + nx_ * b * (parent.hw + 3.2); y = py + ta[3] * a * (j["w"] + 3.0) + ny_ * b * (parent.hw + 3.2)
@@ -840,11 +840,11 @@ L3 = PKWY.mh + (PKWY.hw - PKWY.mh) * .5                                         
 add_traffic("traffic0", PKWY, -LANE, False, 7, 40, "bus"); add_traffic("traffic1", PKWY, LANE, True, 9, 60, "sedan", "#e6e6e2"); add_traffic("traffic8", PKWY, -L3, False, 10, 200, "coupe", "#d42a24"); add_traffic("traffic9", PKWY, L3, True, 8.5, 300, "suv")
 add_traffic("traffic2", WILES, -2.5, False, 8, 30, "taxi"); add_traffic("traffic3", WILES, 2.5, True, 7, 80, "boxtruck")
 add_traffic("traffic4", ROAD["Coconut Creek Pkwy"], -2.5, False, 7.5, 50, "hatchback"); add_traffic("traffic5", ROAD["Coconut Creek Pkwy"], 2.5, True, 7, 20, "taxi")
-add_traffic("traffic6", ROAD["Northridge Rd"], -2.2, False, 7, 10, "minivan"); add_traffic("traffic7", ROAD["South Loop Rd"], -LANE * .8, False, 7, 30, "garbage")
-add_traffic("traffic10", ROAD["Creekview Dr"], -2.2, False, 7.5, 40, "pickup"); add_traffic("traffic11", ROAD["West Creek Rd"], 2.2, True, 7, 60, "van")
+add_traffic("traffic6", ROAD["Sample Rd"], -2.2, False, 7, 10, "minivan"); add_traffic("traffic7", ROAD["Copans Rd"], -LANE * .8, False, 7, 30, "garbage")
+add_traffic("traffic10", ROAD["Winston Park Blvd"], -2.2, False, 7.5, 40, "pickup"); add_traffic("traffic11", ROAD["Hammock Blvd"], 2.2, True, 7, 60, "van")
 def sidewalk_path(road, side): return [[round(a, 2), round(b, 2)] for a, b in rd.lane_path(road, side * (road.hw + rd.CURB + 1.2))]
 WALK = [{"path": sidewalk_path(PKWY, 1)}, {"path": sidewalk_path(PKWY, -1)}, {"path": sidewalk_path(WILES, 1)}, {"path": sidewalk_path(WILES, -1)}, {"path": sidewalk_path(ROAD["Coconut Creek Pkwy"], 1)}, {"path": sidewalk_path(ROAD["Coconut Creek Pkwy"], -1)},
-        {"path": [[round(a, 2), round(b, 2)] for a, b in rd.lane_path(PROM, 0)]}, {"path": sidewalk_path(ROAD["Northridge Rd"], 1)}]
+        {"path": [[round(a, 2), round(b, 2)] for a, b in rd.lane_path(PROM, 0)]}, {"path": sidewalk_path(ROAD["Sample Rd"], 1)}]
 
 # ================================================================  WORLD EDGE + DATA  =======================================================
 T.cyl(M("shadow_dummy", "#000000"), (0, 0, -5), .01, .01, "z", 3); STATIC.append(T.build(vc=True)); STATIC.extend(RB.build(vc=True, recalc=False))
