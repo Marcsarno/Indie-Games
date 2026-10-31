@@ -1009,8 +1009,8 @@ const stickIn = { x: 0, y: 0 }, dstickIn = { x: 0, y: 0 };    // dstickIn: the d
 const combat = { state: 'idle', t: 0, dur: 0, struck: false, n: 0, queued: false, hits: 0, lastEnd: -9, clip: 'punch' };
 let hitstop = 0, simT = 0; const flashes = [];
 const heroPoly = (x, z, r) => Array.from({ length: 8 }, (_, k) => [x + r * Math.cos((k + .5) * Math.PI / 4), z + r * Math.sin((k + .5) * Math.PI / 4)]);
-function pushCircle(x, z, r, skip) {                 // push a circle out of the colliders (fleeing pedestrians, police cars; skip = own collider)
-  for (const B of nearCols(x, z, r + 2)) { if (B === skip || !B.poly.length || B.soft || (B.tree && B.tree.state !== 'up') || Math.abs(B.cx - x) > B.r + r + .6 || Math.abs(B.cz - z) > B.r + r + .6) continue; const h = sat(heroPoly(x, z, r), B.poly); if (h) { x += h.nx * h.depth; z += h.nz * h.depth; } }
+function pushCircle(x, z, r, skip) {                 // push a circle out of the colliders (fleeing pedestrians, police cars; skip = own collider, or a test function)
+  for (const B of nearCols(x, z, r + 2)) { if (B === skip || (typeof skip === 'function' && skip(B)) || !B.poly.length || B.soft || (B.tree && B.tree.state !== 'up') || Math.abs(B.cx - x) > B.r + r + .6 || Math.abs(B.cz - z) > B.r + r + .6) continue; const h = sat(heroPoly(x, z, r), B.poly); if (h) { x += h.nx * h.depth; z += h.nz * h.depth; } }
   return [x, z];
 }
 function pushOut(x, z, r) {
