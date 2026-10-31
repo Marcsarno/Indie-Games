@@ -4,7 +4,7 @@ export function createInput() {
   // 'finger': she runs toward the x of your finger (analog, eases in the last 0.8 u). 'sides': hold left/right half.
   dirFor(px) {
     if (inp.keys) return inp.keys;
-    if (inp.mode === 'finger' && inp.fingerX !== null && !inp.tiltOn) { const d = (inp.fingerX * 9 - px) / 0.8; return Math.max(-1, Math.min(1, d)); }
+    if (inp.mode === 'finger' && inp.fingerX !== null && !inp.tiltOn) { const d = (inp.fingerX * 9 - px) / 0.45; return Math.max(-1, Math.min(1, d)); }
     return inp.dir;
   },
   get dir() {

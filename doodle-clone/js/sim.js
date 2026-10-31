@@ -47,7 +47,8 @@ export function createSim(seed = 1) {
       if (u >= 1) { sim.landY = platTop(r.p, r.p.x); pl.mode = 'squash'; pl.squashT = 0; pl.launchV = v0(); pl.kind = 'flat'; pl.on = r.p; pl.offX = pl.x - r.p.x; pl.vy = 0; }
     } else {                                              // air or rocket
       const target = dir * C.maxVx;
-      const rate = target === 0 || Math.sign(target) !== Math.sign(pl.vx) ? C.decel : C.accel;
+      const rev = target !== 0 && pl.vx !== 0 && Math.sign(target) !== Math.sign(pl.vx);   // changing direction: near-instant
+      const rate = rev ? C.turn : target === 0 ? C.decel : C.accel;
       pl.vx += clamp(target - pl.vx, -rate * dt, rate * dt); pl.airT += dt;
       if (Math.abs(pl.vx) > C.faceFlip) pl.face = Math.sign(pl.vx);
       pl.x += pl.vx * dt;

@@ -9,14 +9,14 @@ const qs = new URLSearchParams(location.search);
 const SAVE_KEY = 'spooky-save-v1';
 let stored = {}; try { stored = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}'); } catch (e) {}
 const save = Object.assign({ best: 0, candy: 0, outfit: 'witch', tilt: false, sound: true, tune: {} }, stored);
-if (save.tuneV !== 7) { save.tune = {}; save.tuneV = 7; }   // new defaults in round 7: drop old slider values saved on the phone
+if (save.tuneV !== 8) { save.tune = {}; save.tuneV = 8; }   // new defaults in round 8: drop old slider values saved on the phone
 // live tuning (gear button): values saved per device, applied over config defaults
 const TUNE = [
   ['g', 'Gravity (lower = more hang time)', 12, 60, 1], ['H', 'Jump height', 3.5, 7, 0.1], ['maxVx', 'Steer speed', 3, 12, 0.5], ['accel', 'Turn quickness', 6, 90, 1],
   ['camGlide', 'Camera glide speed', 1, 12, 0.5], ['camLandFrac', 'Landing spot (from bottom)', 0.12, 0.45, 0.01],
 ];
-const DEF = Object.fromEntries(TUNE.map(([k]) => [k, C[k]])); DEF.control = C.control;
-const applyTune = () => { for (const [k] of TUNE) C[k] = save.tune[k] ?? DEF[k]; C.control = save.tune.control ?? DEF.control; };
+const DEF = Object.fromEntries(TUNE.map(([k]) => [k, C[k]])); DEF.control = C.control; DEF.decel = C.decel; DEF.turn = C.turn;
+const applyTune = () => { for (const [k] of TUNE) C[k] = save.tune[k] ?? DEF[k]; for (const k of ['decel', 'turn']) C[k] = save.tune[k] ?? DEF[k]; C.control = save.tune.control ?? DEF.control; };
 applyTune();
 if (qs.has('unlockall')) save.candy = 99999;
 const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} };
@@ -107,6 +107,12 @@ function tunePanel() {
     row.querySelector('input').oninput = (e) => { save.tune[k] = +e.target.value; applyTune(); row.querySelector('b').textContent = (+e.target.value).toFixed(st < 1 ? 2 : 1); persist(); };
     el.appendChild(row);
   }
+  const pre = document.createElement('div'); pre.className = 'row';
+  for (const [name, v] of Object.entries(C.presets)) {
+    const b = document.createElement('button'); b.textContent = name; b.className = Object.entries(v).every(([k, x]) => C[k] === x) ? 'sel' : '';
+    b.onclick = () => { Object.assign(save.tune, v); applyTune(); persist(); tunePanel(); }; pre.appendChild(b);
+  }
+  el.prepend(pre);
   const ctl = document.createElement('div'); ctl.className = 'row';
   for (const [m, txt] of [['finger', 'Follow finger'], ['sides', 'Hold sides']]) {
     const b = document.createElement('button'); b.textContent = txt; b.className = C.control === m ? 'sel' : '';

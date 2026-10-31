@@ -3,7 +3,9 @@ export const C = {
   viewW: 9,
   g: 24,                 // gravity u/s^2. Round 7 (user: 'jumps too fast, needs a little more hang time, like Doodle Jump'): 40 -> 24; up-time = sqrt(2H/g) = 0.66 s, bounce ~1.3 s
   H: 5.2,                // normal jump apex height u
-  maxVx: 5.5, accel: 18, decel: 22,  // round 7 ('turns too fast, like a 7-year-old is playing'): gentle drift, ~0.3 s to full speed and to stop, like Doodle Jump's momentum (was 9/90/120)
+  maxVx: 7, accel: 55, decel: 45, turn: 140,  // round 8 (user: 'not responsive enough to the turns'): ~0.13 s to full speed, short glide when you let go, and
+                         // reversing direction is near-instant (turn), like Doodle Jump. History: r2 9/90/120 'too fast', r7 5.5/18/22 'not responsive'.
+  presets: { Gentle: { maxVx: 5.5, accel: 30, decel: 30, turn: 90 }, Doodle: { maxVx: 7, accel: 55, decel: 45, turn: 140 }, Snappy: { maxVx: 9, accel: 100, decel: 110, turn: 220 } },
   faceFlip: 1.2,         // only turn the sprite around once she is really moving the other way (u/s), so she doesn't flicker left/right
   charH: 1.6,            // character height u (user: concept art was too big)
   footTol: 0.4,          // landing forgiveness each side of a platform u
