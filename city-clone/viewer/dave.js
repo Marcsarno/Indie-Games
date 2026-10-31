@@ -50,6 +50,11 @@ export function createDave(D) {
 #phone .skip[hidden]{display:none}
 #cold{position:fixed;inset:0;z-index:24;display:grid;align-content:end;justify-items:start;padding:0 22px calc(28vh + env(safe-area-inset-bottom,0px));pointer-events:none;font:400 clamp(30px,9vw,44px)/1.05 "Anton",Impact,sans-serif;color:#fff;text-transform:uppercase;text-shadow:3px 4px 0 #111}
 #cold[hidden]{display:none} #cold span{display:block;opacity:0;transform:translateY(10px);transition:.35s} #cold span.on{opacity:1;transform:none} #cold small{font:500 clamp(16px,4.6vw,22px)/1.2 system-ui;text-transform:none;text-shadow:0 2px 6px #000;max-width:300px}
+#mres{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:31;width:min(320px,calc(100% - 32px));padding:16px 18px;border-radius:16px;background:rgba(12,16,22,.9);color:#fff;font:500 15px system-ui;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+#mres[hidden]{display:none} #mres h2{margin:0 0 10px;font:400 34px/1 "Anton",Impact,sans-serif;letter-spacing:.06em;color:#3fe07b;text-transform:uppercase;text-align:center}
+#mres dl{display:grid;grid-template-columns:1fr auto;gap:6px 12px;margin:0 0 14px} #mres dt{color:#aab2bf} #mres dd{margin:0;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+#mres .b{display:flex;gap:10px} #mres button{all:unset;flex:1;cursor:pointer;text-align:center;padding:11px 0;border-radius:10px;font:700 15px system-ui;background:#ffd23f;color:#111} #mres button.k{background:#2a3140;color:#fff}
+#mfail .dist{color:#ffd23f;font:600 14px system-ui}
 #mfail small{color:#cfd3da;font:500 13px system-ui;letter-spacing:.04em}
 .warn{position:fixed;left:0;top:0;z-index:4;width:0;height:0;pointer-events:none;display:none}
 .warn i{position:absolute;left:-22px;top:-20px;width:0;height:0;border-left:22px solid transparent;border-right:22px solid transparent;border-bottom:40px solid #ff2b2b;filter:drop-shadow(0 0 8px #ff2b2b) drop-shadow(0 0 2px #fff);animation:wblink .18s steps(2) infinite}
@@ -57,8 +62,10 @@ export function createDave(D) {
   document.head.appendChild(css);
   const phone = document.createElement('div'); phone.id = 'phone'; phone.hidden = true; phone.innerHTML = `<div class="ph"><div class="hd"><img src="img/dave.jpg" alt=""><div><b>Dave</b><small>Marc, Aaron, Chris</small></div><button class="skip" hidden>Skip ›</button></div><div class="msgs"></div><div class="pick" hidden>Who's going?<div></div></div></div>`;
   document.body.appendChild(phone);
-  const fail = document.createElement('div'); fail.id = 'mfail'; fail.hidden = true; fail.innerHTML = `<div class="c"><b>Mission failed</b><span id="mf-why"></span><small id="mf-try"></small><button id="mf-retry">Retry</button></div>`; document.body.appendChild(fail);
+  const fail = document.createElement('div'); fail.id = 'mfail'; fail.hidden = true; fail.innerHTML = `<div class="c"><b>Mission failed</b><span id="mf-why"></span><span class="dist" id="mf-dist"></span><small id="mf-try"></small><button id="mf-retry">Retry</button></div>`; document.body.appendChild(fail);
   const hurt = document.createElement('div'); hurt.id = 'hurt'; document.body.appendChild(hurt);
+  const res = document.createElement('div'); res.id = 'mres'; res.hidden = true; res.innerHTML = '<h2>Delivered</h2><dl></dl><div class="b"><button id="mr-again">Play again</button><button class="k" id="mr-free">Keep driving</button></div>'; document.body.appendChild(res);
+  let best = 1e9; try { best = +localStorage.getItem('gtcc-dave-best') || 1e9; } catch (e) { /* ok */ }       // closest you got to Dave's in a failed run (m, by road)
   const coldEl = document.createElement('div'); coldEl.id = 'cold'; coldEl.hidden = true; coldEl.innerHTML = '<span>Yep. That\'s me.</span><span><small>You\'re probably wondering how I got here.</small></span>'; document.body.appendChild(coldEl);
   const chip = document.getElementById('mission'); const msgs = phone.querySelector('.msgs'), pick = phone.querySelector('.pick');
   const wait = s => new Promise(r => setTimeout(r, s * 1000));
@@ -97,16 +104,16 @@ export function createDave(D) {
   async function coldOpen() {
     S.stage = 'cold'; S.coldDone = true; S.ct = 0; S.cs = 0; const tok = ++S.run, gone = () => tok !== S.run;
     S.cpath = routeTo(DAVE.lot[0], DAVE.lot[1] + 12, DAVE.house[0], DAVE.house[1]); env.resetCar(S.cpath[0][0], S.cpath[0][1], 0);
-    document.body.classList.add('cine'); cops.lock(true); cops.force(3); if (cops.goal) cops.goal(DAVE.house[0], DAVE.house[1]); env.sound('crash');
+    document.body.classList.add('cine'); if (env.music) env.music.level(3); cops.lock(true); cops.force(3); if (cops.goal) cops.goal(DAVE.house[0], DAVE.house[1]); env.sound('crash');
     await wait(5.6); if (gone()) return;
-    env.freeze(true); D.camera && (document.getElementById('view').style.filter = 'grayscale(1) contrast(1.2) brightness(.95)'); env.sound('scratch');
+    env.freeze(true); if (env.music) env.music.level(0); document.getElementById('view').style.filter = 'grayscale(1) contrast(1.2) brightness(.95)'; env.sound('scratch');
     coldEl.hidden = false; const sp = coldEl.querySelectorAll('span'); await wait(.05); sp[0].classList.add('on'); await wait(1.4); if (gone()) return; sp[1].classList.add('on'); await wait(2.4); if (gone()) return;
     endCold();
   }
   async function endCold() {
     if (S.stage !== 'cold') return; S.run++; const fd = document.getElementById('fade'); fd.classList.add('on'); await wait(.6);
     env.freeze(false); document.getElementById('view').style.filter = ''; coldEl.hidden = true; coldEl.querySelectorAll('span').forEach(x => x.classList.remove('on'));
-    clearMissiles(); cops.force(0); cops.lock(false); cops.clear(); if (cops.goal) cops.goal(null); env.heal(); env.resetCar(); S.stage = 'off'; start(); await wait(.3); fd.classList.remove('on');
+    clearMissiles(); cops.force(0); cops.lock(false); cops.clear(); if (cops.goal) cops.goal(null); if (env.music) env.music.level(0); env.heal(); env.resetCar(); S.stage = 'off'; start(); await wait(.3); fd.classList.remove('on');
   }
   function coldStep(dt, P) {                               // your car on a rail along the road at chase speed; cops (3 stars), a rocket and a SWAT van join in
     S.ct += dt; S.cs += 24 * dt; const R = S.cpath; let acc = 0, x = R[0][0], z = R[0][1], th = 0;
@@ -131,7 +138,7 @@ export function createDave(D) {
     const C = env.CHARS[i]; pick.hidden = true; phone.classList.remove('show'); env.cineStop(); await wait(.3); phone.hidden = true;
     if (env.cur !== i) { env.switchTo(i); await wait(2.7); }
     phone.hidden = false; await wait(.05); phone.classList.add('show'); await typing(C.name, .8); say(C.name, REPLIES[C.id] || 'On my way.', true); await wait(1.6);
-    phone.classList.remove('show'); await wait(.3); phone.hidden = true; S.stage = 'toPublix'; objective('Drive to Publix'); banner('GROCERIES FOR DAVE');
+    phone.classList.remove('show'); await wait(.3); phone.hidden = true; S.stage = 'toPublix'; objective('Drive to Publix'); banner('GROCERIES FOR DAVE'); S.mt = 0; S.w0 = env.wrecks;
   }
 
   // ---------- curbside pickup: pull into the box, a clerk brings the bags out to your car ----------
@@ -159,9 +166,10 @@ export function createDave(D) {
   }
   async function twist() {                                 // Dave reads the receipt
     msgs.innerHTML = ''; pick.hidden = true; skipBtn.hidden = true; phone.hidden = false; await wait(.05); phone.classList.add('show');
-    await typing('Dave', .6); say('Dave', 'wait… why does the receipt say "COCONUT CREEK PD"'); await wait(.9);
-    await typing('Dave', .6); say('Dave', 'bro you got the POLICE STATION\'S lunch order 😳'); await wait(2.4);
-    phone.classList.remove('show'); await wait(.3); phone.hidden = true;
+    const live = () => S.stage === 'chase' && !S.failed;     // a win or a fail in the meantime owns the phone
+    await typing('Dave', .6); if (!live()) return; say('Dave', 'wait… why does the receipt say "COCONUT CREEK PD"'); await wait(.9); if (!live()) return;
+    await typing('Dave', .6); if (!live()) return; say('Dave', 'bro you got the POLICE STATION\'S lunch order 😳'); await wait(2.4); if (!live()) return;
+    phone.classList.remove('show'); await wait(.3); if (live()) phone.hidden = true;
   }
   function clearThugs() { if (CB.clerk) CB.clerk.root.visible = false; CB.t = 0; }
 
@@ -382,10 +390,11 @@ export function createDave(D) {
     sign.position.set(DAVE.house[0] + 3.1, 0, DAVE.house[1] - 1.2); sign.rotation.y = DAVE.houseYaw; scene.add(sign); }
   // ---------- step ----------
   function step(dt, P) {                                   // P: { x, z (three), vx, vz, th, speed, driving }
+    if (S.dave) daveStep(dt);
     if (S.stage === 'cold') { coldStep(dt, P); return; }
     if (S.stage === 'off' || S.stage === 'intro' || S.stage === 'done' || S.failed) return;
     if (env.respawning && performance.now() > (S.grace || 0)) { failMission(env.lastDeath === 'busted' ? 'Busted.' : 'Wasted.'); return; }
-    const me = [P.x, P.z];
+    const me = [P.x, P.z]; S.mt = (S.mt || 0) + dt; S.lastP = [P.x, P.z];
     if (S.stage === 'toPublix' && P.driving && dist(me, DAVE.curb) < 30) { S.stage = 'curbside'; S.checkpoint = 'publix'; objective('Pull into Curbside Pickup', 'stop in the green box'); }
     else if (S.stage === 'curbside') curbStep(dt, P);
     else if (S.stage === 'chase') {
@@ -403,6 +412,7 @@ export function createDave(D) {
         const k2 = (S.heat - DAVE.swatFrom) / (1 - DAVE.swatFrom); let sw = 0; for (const r of RK) if (r.on && r.swat) sw++;
         S.swatT = (S.swatT ?? 1) - dt; if (S.swatT <= 0 && sw < DAVE.swatMax) { pm.multiplyMatrices(D.camera.projectionMatrix, D.camera.matrixWorldInverse); frustum.setFromProjectionMatrix(pm); if (launchSwat(P, onScreen)) { if (!S.swatSaid) { S.swatSaid = true; banner('SWAT!'); } } S.swatT = lerp(DAVE.swatEvery, k2); }
       }
+      if (env.music) { let sw = false; for (const r of RK) if (r.on && r.swat) sw = true; env.music.level(sw || S.heat > .6 ? 3 : S.cops >= 3 ? 2 : 1); }
       if (dh < 6 && P.speed < 3) win();
       beacon.material.opacity = dh < 35 ? .5 + Math.sin(performance.now() / 120) * .15 : .38;
     }
@@ -415,13 +425,43 @@ export function createDave(D) {
     rocketStep(dt, P, S.heat > DAVE.rocketFrom ? (S.heat - DAVE.rocketFrom) / (1 - DAVE.rocketFrom) : 0); warnStep(P);
     const tg = target(); beacon.visible = !!tg; if (tg) { const k = 1 + Math.sin(performance.now() / 300) * .06; beacon.position.set(tg[0], 0, -tg[1]); beacon.scale.set(S.stage === 'curbside' ? .75 : k, 1, S.stage === 'curbside' ? .75 : k); }
   }
-  function restart() { S.cpNear = null; clearRoadblocks(); if (cops.goal) cops.goal(null); clearThugs(); clearMissiles(); cops.force(0); cops.lock(false); cops.clear(); fail.hidden = true; phone.hidden = true; S.failed = false; S.stage = 'off'; S.checkpoint = null; objective(''); env.heal(); env.resetCar(); start(); }
+  function restart() { if (env.music) env.music.level(0); endFinish(false); S.cpNear = null; clearRoadblocks(); if (cops.goal) cops.goal(null); clearThugs(); clearMissiles(); cops.force(0); cops.lock(false); cops.clear(); fail.hidden = true; phone.hidden = true; S.failed = false; S.stage = 'off'; S.checkpoint = null; objective(''); env.heal(); env.resetCar(); start(); }
   function startChase() { roadblocks(); S.stage = 'chase'; S.cops = 1; S.copT = 0; S.missT = 2; S.t = 0; S.heat = 0; S.d0 = Math.max(60, dist([DAVE.lot[0], DAVE.lot[1]], DAVE.house)); S.checkpoint = 'chase'; cops.lock(true); cops.force(1); if (cops.goal) { cops.goal(DAVE.house[0], DAVE.house[1]); cops.shut(SHUT, CLOSED); } S.stopSaid = false; S.swatSaid = false; S.swatT = 1; objective('Get the groceries to Dave', 'roads closed'); banner('COPS!'); setTimeout(() => { if (S.stage === 'chase' && S.t < 6) banner('ROADS CLOSED'); }, 2000); }
-  function win() { clearRoadblocks(); if (cops.goal) cops.goal(null); S.stage = 'done'; cops.force(0); cops.lock(false); cops.clear(); clearMissiles(); clearThugs(); objective(''); env.addMoney(DAVE.reward); const n = tries + 1; tries = 0; saveTries(); banner(`MISSION PASSED  +$${DAVE.reward}`); setTimeout(() => banner(`DELIVERED ON ATTEMPT ${n}`), 2000);
-    (async () => { await wait(1.5); msgs.innerHTML = ''; pick.hidden = true; phone.hidden = false; await wait(.05); phone.classList.add('show'); await typing('Dave', 1.0); say('Dave', 'YOU MADE IT?!? 😭 THANK YOU'); await wait(1.0); if (n > 3) { say('Dave', `${n} tries tho 😂`); await wait(1.0); } say(env.CHARS[env.cur].name, 'never again.', true); await wait(2.6); phone.classList.remove('show'); await wait(.3); phone.hidden = true; })(); }
+  function win() {
+    clearRoadblocks(); if (cops.goal) cops.goal(null); S.stage = 'done'; cops.force(0); cops.lock(false); cops.clear(); clearMissiles(); clearThugs(); objective(''); env.addMoney(DAVE.reward);
+    const n = tries + 1; tries = 0; saveTries(); try { localStorage.removeItem('gtcc-dave-best'); } catch (e) { /* ok */ } best = 1e9;
+    const stats = { time: S.mt || 0, n, wrecks: Math.max(0, env.wrecks - (S.w0 || 0)), hp: Math.round(env.hp) };
+    if (env.music) env.music.sting('win'); env.slowmo(.3); banner(`MISSION PASSED  +$${DAVE.reward}`);
+    (async () => {
+      await wait(1.3); env.slowmo(1);
+      // Dave comes out of his front door to the car (the hero model, tinted), the camera swings round from the street
+      const dv = S.daveP || (S.daveP = makePerson({ jacket: '#8a3b3b' })); const door = [DAVE.house[0] - 3.8, DAVE.house[1] + 2.3];
+      dv.root.position.set(door[0], 0, door[1]); dv.root.visible = true; dv.on = true; play(dv, 'walk'); S.dave = { t: 0, from: door, to: [DAVE.house[0] - 1.6, DAVE.house[1] - .4] };
+      env.cine([{ a: [DAVE.house[0] - 1, DAVE.house[1] + .5], b: [DAVE.house[0] - 2, DAVE.house[1] + .5], y0: DAVE.houseYaw - .55, y1: DAVE.houseYaw + .25, pitch: 24, d0: 17, d1: 12, dur: 6 }]);
+      msgs.innerHTML = ''; pick.hidden = true; skipBtn.hidden = true; phone.hidden = false; await wait(.05); phone.classList.add('show'); await typing('Dave', .8); say('Dave', 'YOU MADE IT?!? 😭 THANK YOU'); await wait(.8);
+      if (n > 3) { say('Dave', `${n} tries tho 😂`); await wait(.8); }
+      say(env.CHARS[env.cur].name, 'never again.', true); await wait(1.2);
+      const mm = Math.floor(stats.time / 60), ss = String(Math.floor(stats.time % 60)).padStart(2, '0');
+      res.querySelector('dl').innerHTML = `<dt>Time</dt><dd>${mm}:${ss}</dd><dt>Attempt</dt><dd>${stats.n}</dd><dt>Cops wrecked</dt><dd>${stats.wrecks}</dd><dt>Health left</dt><dd>${stats.hp}</dd><dt>Reward</dt><dd>$${DAVE.reward}</dd>`;
+      res.hidden = false;
+    })();
+  }
+  function daveStep(dt) {                                  // Dave walks from his door to your car and waits there
+    const D_ = S.dave, w = S.daveP; if (!w) return; D_.t += dt; const k = Math.min(1, D_.t / 2.2), x = D_.from[0] + (D_.to[0] - D_.from[0]) * k, z = D_.from[1] + (D_.to[1] - D_.from[1]) * k;
+    w.root.position.set(x, 0, z); w.root.rotation.y = Math.atan2(-(D_.to[0] - D_.from[0]), -(D_.to[1] - D_.from[1])); if (k >= 1 && w.cur !== w.act.idle) play(w, 'idle');
+  }
+  function endFinish(keepCam) { res.hidden = true; if (S.daveP) S.daveP.root.visible = false; S.dave = null; if (!keepCam) env.cineStop(); env.slowmo(1); phone.classList.remove('show'); phone.hidden = true; }
+  res.querySelector('#mr-again').onclick = () => { endFinish(true); restart(); };
+  res.querySelector('#mr-free').onclick = () => endFinish(false);
   function failMission(why) {
     S.failed = true; if (cops.goal) cops.goal(null); tries++; saveTries(); cops.force(0); cops.lock(false); clearMissiles(); objective(''); fail.querySelector('#mf-why').textContent = why; fail.querySelector('#mf-try').textContent = `Attempt ${tries}`;
     fail.querySelector('#mf-retry').textContent = S.checkpoint === 'chase' && S.cpNear ? 'Retry from checkpoint' : 'Retry'; setTimeout(() => { fail.hidden = false; }, 1600);
+    if (env.music) env.music.sting('fail'); const dEl = fail.querySelector('#mf-dist'); dEl.textContent = '';
+    if (S.stage === 'chase' && S.lastP) {                  // how far you still had to go, by road, and your closest so far
+      const R = routeTo(S.lastP[0], S.lastP[1], DAVE.house[0], DAVE.house[1]); let L = 0, px = S.lastP[0], pz = S.lastP[1]; for (const q of R) { L += Math.hypot(q[0] - px, q[1] - pz); px = q[0]; pz = q[1]; } L += Math.hypot(DAVE.house[0] - px, DAVE.house[1] - pz);
+      L = Math.max(1, Math.round(L)); const nb = L < best; if (nb) { best = L; try { localStorage.setItem('gtcc-dave-best', String(L)); } catch (e) { /* ok */ } }
+      dEl.textContent = `You were ${L} m from Dave's` + (nb ? ' · closest yet!' : ` · best ${best} m`);
+    }
   }
   fail.querySelector('#mf-retry').onclick = () => {                 // retry from the last checkpoint
     fail.hidden = true; S.failed = false; S.grace = performance.now() + 3000; clearMissiles(); cops.clear(); env.heal();

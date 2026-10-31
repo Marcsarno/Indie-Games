@@ -186,6 +186,7 @@ import { createPeople, PT } from './people.js';
 import { createPolice, POL } from './police.js';
 import { createMissions } from './missions.js';
 import { createDave } from './dave.js';
+import { createMusic } from './music.js';
 import { createTrack, PAD } from './track.js';
 
 const $ = id => document.getElementById(id);
@@ -534,7 +535,7 @@ const ai = graph ? createTraffic(graph, { THREE, makeCar, carPoly: (x, z, th, d)
 if (ai) for (const c of ai.cars) c.col.ai = true;
 const cops = graph ? createPolice(graph, { THREE, makeCar, carPoly: (x, z, th, d) => carPoly(x, z, th, d), colliders, placeOnGround, scene, camera, pushCircle: (x, z, r, sk) => pushCircle(x, z, r, sk), audio: () => (muted ? null : audio),
   ram: (vx, vz, w, hurt) => { DENV.kick(vx, vz, w); if (hurt > 0 && missions && missions.active) DENV.hurt(hurt, vx, vz); crashSound(4 + Math.hypot(vx, vz) * 1.5); }, playerMass: () => DENV.carMass,
-  onStars: W => showStars(W), onBusted: () => busted(), onWreck: c => { crashSound(12); burst(c.x, .8, c.z, 0, 0, 14); game.money += 50; } }) : null;
+  onStars: W => showStars(W), onBusted: () => busted(), onWreck: c => { DENV.wrecks++; crashSound(12); burst(c.x, .8, c.z, 0, 0, 14); game.money += 50; } }) : null;
 const DEV = /[?&]dev=1/.test(location.search);       // round 29: the showcase is the Dave mission; the old test missions and the tuning extras only with ?dev=1
 const DENV = {                                     // what the Dave mission reads from the game (getters, so it always sees the current values)
   get foot() { return foot; }, get hmode() { return hmode; }, get cur() { return cur; }, get CHARS() { return CHARS; }, get respawning() { return respawning; }, lastDeath: '',
@@ -543,7 +544,8 @@ const DENV = {                                     // what the Dave mission read
   hurt: (amt, dx, dz) => { game.hp = Math.max(0, game.hp - amt); rig.shake = Math.min(1, rig.shake + .35); if (hmode === 'foot') { foot.lx += dx * 6; foot.lz += dz * 6; } },
   sound: (k, pan) => { if (k === 'crash') crashSound(12); else if (k === 'whoosh') whooshSound(pan || 0); else if (k === 'scratch') scratchSound(); },
   get W() { return innerWidth; }, get H() { return innerHeight; },
-  get coldOpen() { return coldOpen; },
+  get coldOpen() { return coldOpen; }, wrecks: 0, get hp() { return game.hp; }, slowmo: k => { timeK = k; },
+  music: createMusic(() => audio, () => muted),
   pose: (x, z, th, vx, vz) => { if (drive) Object.assign(drive, { x, z, th, vx, vz, w: 0, px: x, pz: z, pth: th }); },      // the cold open drives your car on a rail
   freeze: on => { paused = on; },
   kick: (vx, vz, spin) => { if (drive && hmode === 'driving') { drive.vx += vx; drive.vz += vz; drive.w += spin; rig.shake = Math.min(1, rig.shake + .5); } },      // a rocket cop slams into you
@@ -1452,7 +1454,8 @@ function update(dt, draw = true) {
   }
 }
 let frameHook = null;                                          // hud.js hooks frame timing here
-function frame(t) { const t0 = performance.now(); const dt_ = Math.min(clock.getDelta(), .05); if (!manual && !paused) { update(dt_); if (!titleShown) showTitle(); } else if (paused) renderer.render(scene, camera); if (frameHook) frameHook(t, performance.now() - t0); requestAnimationFrame(frame); }
+let timeK = 1;                                                 // slow motion (the mission's finish): game time runs at timeK x real time
+function frame(t) { const t0 = performance.now(); const dt_ = Math.min(clock.getDelta(), .05); if (!manual && !paused) { update(dt_ * timeK); if (!titleShown) showTitle(); } else if (paused) renderer.render(scene, camera); if (frameHook) frameHook(t, performance.now() - t0); requestAnimationFrame(frame); }
 syncSliders(); setView('drive'); requestAnimationFrame(frame);
 window.__city = { missions, DENV, CINE, cine, cineStop, titleShots, dstickIn, track, vehs, get ride() { return ride; }, CHARS, switchTo, SW, get cur() { return cur; }, get pilotP() { return pilot; }, world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, ppl, cops, missions, sun, setFrameHook: f => { frameHook = f; }, upd };
 if (/[?&](hud|bench)=/.test(location.search)) import('./hud.js?v=' + (MAN['hud.js'] || '1')).then(m => m.start(window.__city, THREE)).catch(e => console.error('hud', e));
