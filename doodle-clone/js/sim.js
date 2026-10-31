@@ -91,9 +91,9 @@ export function createSim(seed = 1) {
     for (const p of gen.platforms) if (p.trampT !== undefined) p.trampT += dt;
     // pickups
     const cy = pl.y + 0.8;
-    for (const c of gen.candies) if (!c.taken && Math.abs(c.x - pl.x) < 0.8 && Math.abs(c.y - cy) < 1.0) { c.taken = true; sim.candy++; sim.events.push({ t: 'candy', x: c.x, y: c.y }); }
+    for (const c of gen.candies) if (!c.taken && Math.abs(c.x - pl.x) < 0.8 && Math.abs(c.y - cy) < 1.0) { c.taken = true; sim.candy += c.gold ? 5 : 1; sim.events.push({ t: 'candy', x: c.x, y: c.y, gold: c.gold }); }
     for (const it of gen.items) if (!it.taken && pl.mode !== 'rescue' && Math.abs(it.x - pl.x) < 0.9 && Math.abs(it.y - cy) < 1.1) {
-      it.taken = true; pl.mode = 'rocket'; pl.rt = 0; pl.on = null; sim.events.push({ t: 'rocket' });
+      it.taken = true; pl.mode = 'rocket'; pl.rt = 0; pl.on = null; sim.events.push({ t: 'rocket', x: it.x, y: it.y });
     }
     sim.height = Math.max(sim.height, pl.y);
     // camera: up only; player sits low

@@ -80,8 +80,8 @@ if (save.tilt && typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceO
 function handleEvents() {
   for (const e of sim.events) {
     if (e.t === 'bounce') { (e.kind === 'tramp' ? audio.tramp : audio.bounce).call(audio); if (e.kind === 'tramp') R.fx('ring', e.x, e.y + C.trampTop + 0.1); else R.fx('puff', e.x, e.y + 0.15); }
-    else if (e.t === 'candy') { audio.candy(); R.pop(e.x, e.y); }
-    else if (e.t === 'rocket') audio.rocket();
+    else if (e.t === 'candy') { audio.candy(); if (e.gold) { R.fx('burst', e.x, e.y); audio.unlock2(); } else R.pop(e.x, e.y); }
+    else if (e.t === 'rocket') { audio.rocket(); R.fx('burst', e.x, e.y); }
     else if (e.t === 'rescue') audio.rescue();
     else if (e.t === 'over') gameOver();
   }

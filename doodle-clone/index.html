@@ -15,6 +15,7 @@
   #hud.on{display:flex}
   #hud img{height:26px;vertical-align:-4px;margin-right:6px}
   h1{margin:calc(env(safe-area-inset-top) + 7vh) 0 0;font-size:48px;letter-spacing:1px;color:#ffd27a;text-shadow:0 3px 0 #5a2ab0,0 0 18px #ff9d2e88;text-align:center;line-height:1}
+  .logo{width:min(300px,78vw);margin-top:calc(env(safe-area-inset-top) + 4vh);filter:drop-shadow(0 6px 12px #0008)}
   h2{margin:0;font-size:22px;opacity:.9;text-shadow:0 2px 0 #2a1060}
   .big{font-size:56px;font-weight:900;color:#ffd27a;text-shadow:0 3px 0 #5a2ab0}
   button{font:inherit;color:#fff;border:0;border-radius:18px;padding:12px 22px;background:linear-gradient(#8a52e8,#5e2fb8);box-shadow:0 4px 0 #3a1c78,0 6px 14px #0006;font-weight:800;font-size:20px}
@@ -51,7 +52,7 @@
 <body>
 <canvas id="c"></canvas>
 <div id="hud"><div class="pill score"><span id="h">0 m</span></div><button id="pauseBtn" class="ibtn" aria-label="Pause" style="background-image:url(assets/ui/pause.webp)"></button><div class="pill candy"><span id="cd">0</span></div></div>
-<div id="title" class="ui"><h1>Spooky<br>Hop</h1><button id="play" class="ibtn" aria-label="Play" style="background-image:url(assets/ui/play.webp)"></button>
+<div id="title" class="ui"><img class="logo" src="assets/b3/logo.webp" alt="Spooky Hop"><button id="play" class="ibtn" aria-label="Play" style="background-image:url(assets/ui/play.webp)"></button>
   <div class="row"><button id="tiltBtn">Tilt: OFF</button><button id="sndBtn" class="ibtn sm" aria-label="Sound"></button><button id="gear2">⚙️</button></div>
   <div id="closet"></div><div class="hint">Touch and slide your finger: she runs to it. You jump by yourself!</div></div>
 <div id="over" class="ui"><h2>You climbed</h2><div class="big" id="score">0 m</div><h2 id="best"></h2>

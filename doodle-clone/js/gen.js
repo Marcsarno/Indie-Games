@@ -20,7 +20,7 @@ export function makeGen(seed) {
   function add(p) { p.id = st.id++; p.alive = true; p.hit = false; gen.platforms.push(p); return p; }
   gen.addFlat = (x, y, w = 3) => { const p = add({ type: 'flat', x, x0: x, y, w, amp: 0, ang: 0, phase: 0, tramp: false }); st.lastFlatY = Math.max(st.lastFlatY, y); return p; };
   gen.addFlat(0, 0, 3.4);                    // starter platform
-  function candy(x, y) { gen.candies.push({ id: st.cid++, x, y, taken: false }); }
+  function candy(x, y) { gen.candies.push({ id: st.cid++, x, y, taken: false, gold: st.y > 40 && rnd() < 0.03 }); }   // rare golden candy = 5
   function next() {
     const p = paramsAt(st.y), prevX = st.x, prevY = st.y;
     const y = st.y + (p.gap[0] + rnd() * (p.gap[1] - p.gap[0])) * C.H;
