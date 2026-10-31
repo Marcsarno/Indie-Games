@@ -25,13 +25,13 @@ export const C = {
   control: 'finger',     // 'finger' = she follows your finger left/right (default), 'sides' = hold left/right half
   platTopFrac: 0.30,     // landing line is this fraction down from the top of the slab sprite
   step: 1 / 120,
-  // difficulty ladder: heights in u. Flat start, long easy stretch, late ramp. Blended over 30 u at each zone start.
+  // difficulty ladder: heights in u. Round 9 (user: 'platforms a bit more spread out, slightly too easy'): every gap range +~25%. Flat start, long easy stretch, late ramp. Blended over 30 u at each zone start.
   zones: [
-    { h: 0,   slider: 0,    crumbly: 0,    gap: [0.22, 0.34], w: [2.9, 3.0], sspeed: 1.0 },
-    { h: 100, slider: 0.20, crumbly: 0,    gap: [0.26, 0.42], w: [2.7, 2.9], sspeed: 1.1 },
-    { h: 250, slider: 0.20, crumbly: 0.20, gap: [0.28, 0.48], w: [2.5, 2.8], sspeed: 1.3 },
-    { h: 500, slider: 0.25, crumbly: 0.25, gap: [0.30, 0.54], w: [2.3, 2.6], sspeed: 1.6 },
-    { h: 900, slider: 0.30, crumbly: 0.30, gap: [0.34, 0.60], w: [2.0, 2.4], sspeed: 2.0 },
+    { h: 0,   slider: 0,    crumbly: 0,    gap: [0.28, 0.42], w: [2.9, 3.0], sspeed: 1.0 },
+    { h: 100, slider: 0.20, crumbly: 0,    gap: [0.32, 0.50], w: [2.7, 2.9], sspeed: 1.1 },
+    { h: 250, slider: 0.20, crumbly: 0.20, gap: [0.35, 0.56], w: [2.5, 2.8], sspeed: 1.3 },
+    { h: 500, slider: 0.25, crumbly: 0.25, gap: [0.38, 0.62], w: [2.3, 2.6], sspeed: 1.6 },
+    { h: 900, slider: 0.30, crumbly: 0.30, gap: [0.42, 0.68], w: [2.0, 2.4], sspeed: 2.0 },
   ],
   // outfits: lifetime candy needed
   outfits: [
