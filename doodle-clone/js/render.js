@@ -62,9 +62,16 @@ export async function createRenderer(canvas, sim) {
   L.fogs = [0, 1, 2].map(() => { const m = sprite(T.fog, 7, { opacity: 0.35 }); m.userData = { yl: 0, x: 0, w: 7, vx: 0.2 }; return m; });
   L.roofs = [0, 1, 2].map(() => sprite(T.roofs, 8, { opacity: 0.9 }));
   const GEO_TOP = new THREE.PlaneGeometry(1, 1); GEO_TOP.translate(0, -0.5, 0);   // pivot at the top edge (lanterns swing)
-  L.walls = Array.from({ length: 10 }, () => sprite(T.wallL, 40)); L.caps = Array.from({ length: 6 }, () => sprite(T.roofL, 41));
-  L.lans = Array.from({ length: 6 }, () => { const m = sprite(T.lanP, 42); m.geometry = GEO_TOP; return m; });
-  for (const m of [...L.fogs, ...L.roofs, ...L.walls, ...L.caps, ...L.lans]) { m.visible = false; scene.add(m); }
+  T.glowO = canvasTex(64, 64, (g, w) => { const gr = g.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); gr.addColorStop(0, 'rgba(255,240,190,1)'); gr.addColorStop(0.25, 'rgba(255,170,60,0.8)'); gr.addColorStop(1, 'rgba(255,120,40,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, w); });
+  T.glowP = canvasTex(64, 64, (g, w) => { const gr = g.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); gr.addColorStop(0, 'rgba(250,230,255,1)'); gr.addColorStop(0.25, 'rgba(190,120,255,0.75)'); gr.addColorStop(1, 'rgba(140,80,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, w); });
+  // fireflies at three depths: far (behind the town), middle (with the fog), near (in front of her, few, bigger, soft)
+  L.flies = [];
+  for (const [n, z, p, s0, o, ro] of [[14, -40, 0.35, 0.42, 1, 9], [12, -12, 0.65, 0.55, 1, 9], [5, 4, 1.4, 1.2, 0.6, 45]]) for (let i = 0; i < n; i++) {
+    const m = sprite(i % 3 ? T.glowO : T.glowP, ro); m.material.blending = THREE.AdditiveBlending;
+    m.userData = { z, p, s: s0 * (0.7 + Math.random() * 0.6), o, yl: (Math.random() * 2 - 0.5) * 20, x: (Math.random() * 2 - 1) * 4.6, tw: 1 + Math.random() * 2.5, ph: Math.random() * 6.3 };
+    L.flies.push(m);
+  }
+  for (const m of [...L.fogs, ...L.roofs, ...L.flies]) { m.visible = m.userData.p !== undefined; scene.add(m); }
   L.clouds = [0, 1, 2, 3].map((i) => { const m = sprite(T.cloud, 6, { opacity: 0.5 }); m.userData = { yl: 0, x: 0, w: 3.5, vx: 0.15 }; return m; });
   L.town = sprite(T.town, 8); L.houses = sprite(T.houses, 40);
   for (const m of [L.skyDusk, L.skyMid, L.skyAur, L.stars, L.moon, L.fly, ...L.clouds, L.town, L.houses]) scene.add(m);
@@ -89,7 +96,7 @@ export async function createRenderer(canvas, sim) {
   };
   R.resize(); addEventListener('resize', R.resize);
 
-  R.anchor = () => { R.cam0 = sim.cam.y; R.flyT = 12; R.pops = 0; for (const m of L.fogs) { m.userData.yl = (Math.random() * 1.6 + 0.3) * R.viewH; m.userData.x = (Math.random() * 2 - 1) * 3; } for (const m of L.clouds) { m.userData.yl = (Math.random() * 1.6 - 0.2) * R.viewH; m.userData.x = (Math.random() * 2 - 1) * 5; m.userData.w = 2.6 + Math.random() * 2; } };
+  R.anchor = () => { R.cam0 = sim.cam.y; for (const f of (L.flies || [])) { const u = f.userData; u.yl = u.p * sim.cam.y + (Math.random() - 0.5) * R.viewH * 1.1; u.x = (Math.random() * 2 - 1) * 4.6; } R.flyT = 12; R.pops = 0; for (const m of L.fogs) { m.userData.yl = (Math.random() * 1.6 + 0.3) * R.viewH; m.userData.x = (Math.random() * 2 - 1) * 3; } for (const m of L.clouds) { m.userData.yl = (Math.random() * 1.6 - 0.2) * R.viewH; m.userData.x = (Math.random() * 2 - 1) * 5; m.userData.w = 2.6 + Math.random() * 2; } };
   R.setSim = (s) => { R.sim = s; sim = s; R.resize(); R.anchor(); };
   R.anchor();
 
@@ -126,28 +133,12 @@ export async function createRenderer(canvas, sim) {
     // repeating rooftop bands (layer 0.3) above the start town, fading out above ~600 m
     const rH = W / aspect(T.roofs), rGap = rH * 1.9, rBase = R.cam0 * p3 - vh / 2 + tH + rGap * 0.4, ro = 1 - smooth(H, 450, 750);
     { const k0 = Math.max(0, Math.floor((p3 * cy - vh / 2 - rBase) / rGap)); L.roofs.forEach((m, i) => { const k = k0 + i, yl = rBase + k * rGap; m.visible = ro > 0.01; m.material.opacity = 0.9 * ro; place(m, 0, yl - p3 * cy, (k % 2 ? -1 : 1) * W, rH, -30); }); }
-    // foreground walls (layer 1.25, in FRONT): spans of tiles at each edge, roof cap on top, swinging lanterns; dim when she is near that edge
-    { const wW = 1.25, wTop = R.cam0 * hp - vh / 2 + tH; let wi = 0, ci = 0, li = 0;
-      const hash = (a, b) => { const s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return s - Math.floor(s); };
-      const has = (j, side) => j >= 2 && hash(Math.floor(j / 3), side) < 0.55 && hash(j, side + 7) < 0.85;
-      const nearEdge = (side) => (side ? sim.player.x > 2.4 : sim.player.x < -2.4) ? 0.45 : 1;
-      for (const side of [0, 1]) {
-        const tx = side ? T.wallR : T.wallL, th = wW / aspect(tx), j0 = Math.floor((hp * cy - vh / 2 - wTop) / th) - 1;
-        for (let j = Math.max(0, j0); j < j0 + Math.ceil(vh / th) + 3; j++) {
-          if (!has(j, side)) continue;
-          const yl = wTop + j * th, x = side ? W / 2 - wW / 2 : -W / 2 + wW / 2, op = nearEdge(side), m = L.walls[wi++ % L.walls.length];
-          if (m.material.map !== tx) { m.material.map = tx; m.material.needsUpdate = true; }
-          m.visible = true; m.material.opacity = op; place(m, x, yl + th / 2 - hp * cy, wW, th, 6);
-          if (!has(j + 1, side)) { const ct = side ? T.roofR : T.roofL, cw = 1.9, ch = cw / aspect(ct), c = L.caps[ci++ % L.caps.length];
-            if (c.material.map !== ct) { c.material.map = ct; c.material.needsUpdate = true; } c.visible = true; c.material.opacity = op;
-            place(c, side ? W / 2 - cw / 2 : -W / 2 + cw / 2, yl + th + ch / 2 - 0.35 - hp * cy, cw, ch, 6); }
-          if (hash(j, side + 3) < 0.6) { const lt = hash(j, side + 5) < 0.5 ? T.lanP : T.lanQ, lw = 0.95, l = L.lans[li++ % L.lans.length];
-            if (l.material.map !== lt) { l.material.map = lt; l.material.needsUpdate = true; } l.visible = true; l.material.opacity = op;
-            place(l, side ? W / 2 - wW - lw * 0.35 : -W / 2 + wW + lw * 0.35, yl + th * (0.3 + 0.4 * hash(j, side + 9)) - hp * cy, (side ? -1 : 1) * lw, lw / aspect(lt), 6.1);
-            l.rotation.z = Math.sin(t * 1.7 + j * 1.3 + side) * 0.12; }
-        }
-      }
-      for (let i = wi; i < L.walls.length; i++) L.walls[i].visible = false; for (let i = ci; i < L.caps.length; i++) L.caps[i].visible = false; for (let i = li; i < L.lans.length; i++) L.lans[i].visible = false; }
+    // side towers REMOVED in round 13 (user didn't like them). Fireflies: glowing dots at 3 depths, each moving at its own parallax.
+    for (const f of L.flies) { const u = f.userData; let y = u.yl - u.p * cy;
+      if (y < -vh / 2 - 1) { u.yl = u.p * cy + vh / 2 + Math.random() * vh; u.x = (Math.random() * 2 - 1) * 4.6; y = u.yl - u.p * cy; }
+      if (y > vh / 2 + vh) { u.yl = u.p * cy - vh / 2 + Math.random() * vh; y = u.yl - u.p * cy; }
+      f.material.opacity = u.o * (0.55 + 0.45 * Math.sin(t * u.tw + u.ph));
+      place(f, u.x + Math.sin(t * 0.5 + u.ph) * 0.5, y + Math.sin(t * 0.8 + u.ph * 2) * 0.3, u.s, u.s, u.z); }
     // ---- gameplay ----
     for (const m of pPool) m.visible = false; for (const m of cPool) m.visible = false; for (const m of tPool) m.visible = false; for (const m of iPool) m.visible = false;
     for (const p of sim.gen.platforms) {
