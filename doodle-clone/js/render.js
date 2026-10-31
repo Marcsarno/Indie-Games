@@ -1,7 +1,7 @@
 // Three.js renderer. Everything is a painted sprite (textured quad) on Z-spaced layers; gameplay sits on z=0.
 // Parallax: a layer at 'p' moves p x the camera's motion; depth scale is compensated so layers look natural size.
 import * as THREE from 'three';
-import { C, V0 } from './config.js';
+import { C } from './config.js';
 import { platTop } from './sim.js';
 import { prepare, frameFor } from './anim.js';
 

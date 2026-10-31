@@ -7,13 +7,22 @@ import { audio } from './audio.js';
 const $ = (id) => document.getElementById(id);
 const qs = new URLSearchParams(location.search);
 const SAVE_KEY = 'spooky-save-v1';
-const save = Object.assign({ best: 0, candy: 0, outfit: 'witch', tilt: false, sound: true }, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}'));
+let stored = {}; try { stored = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}'); } catch (e) {}
+const save = Object.assign({ best: 0, candy: 0, outfit: 'witch', tilt: false, sound: true, tune: {} }, stored);
+// live tuning (gear button): values saved per device, applied over config defaults
+const TUNE = [
+  ['g', 'Gravity (snappy)', 20, 70, 1], ['H', 'Jump height', 3.5, 7, 0.1], ['maxVx', 'Steer speed', 5, 14, 0.5],
+  ['camGlide', 'Camera glide speed', 1, 12, 0.5], ['camLandFrac', 'Landing spot (from bottom)', 0.12, 0.45, 0.01],
+];
+const DEF = Object.fromEntries(TUNE.map(([k]) => [k, C[k]])); DEF.control = C.control;
+const applyTune = () => { for (const [k] of TUNE) C[k] = save.tune[k] ?? DEF[k]; C.control = save.tune.control ?? DEF.control; };
+applyTune();
 if (qs.has('unlockall')) save.candy = 99999;
 const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} };
 const unlocked = (o) => save.candy >= o.need;
 
 let sim = createSim((Math.random() * 1e9) | 0);
-const canvas = $('c'), input = createInput();
+const canvas = $('c'), input = createInput(); input.mode = C.control;
 audio.enabled = save.sound;
 const R = await createRenderer(canvas, sim);
 await R.loadOutfit(unlocked(C.outfits.find((o) => o.id === save.outfit)) ? save.outfit : 'witch');
@@ -76,12 +85,31 @@ function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (mode === 'play') {
     acc += dt; let n = 0;
-    while (acc >= C.step && n++ < 20) { sim.step(C.step, input.dir); acc -= C.step; if (sim.over) break; }
+    while (acc >= C.step && n++ < 20) { sim.step(C.step, input.dirFor(sim.player.x)); acc -= C.step; if (sim.over) break; }
     handleEvents(); if (mode === 'play') hud();
   }
-  R.frame(dt, mode === 'title' ? 'title' : 'play');
+  if (mode !== 'paused') R.frame(dt, mode === 'title' ? 'title' : 'play');
   requestAnimationFrame(loop);
 }
+let wasMode = 'title';
+function tunePanel() {
+  const el = $('tunebox'); el.innerHTML = '';
+  for (const [k, label, lo, hi, st] of TUNE) {
+    const row = document.createElement('label'); const v = C[k];
+    row.innerHTML = `<span>${label}: <b>${(+v).toFixed(st < 1 ? 2 : 1)}</b></span><input type="range" min="${lo}" max="${hi}" step="${st}" value="${v}">`;
+    row.querySelector('input').oninput = (e) => { save.tune[k] = +e.target.value; applyTune(); row.querySelector('b').textContent = (+e.target.value).toFixed(st < 1 ? 2 : 1); persist(); };
+    el.appendChild(row);
+  }
+  const ctl = document.createElement('div'); ctl.className = 'row';
+  for (const [m, txt] of [['finger', 'Follow finger'], ['sides', 'Hold sides']]) {
+    const b = document.createElement('button'); b.textContent = txt; b.className = C.control === m ? 'sel' : '';
+    b.onclick = () => { save.tune.control = m; applyTune(); input.mode = m; persist(); tunePanel(); }; ctl.appendChild(b);
+  }
+  el.appendChild(ctl);
+}
+$('gear').onclick = $('gear2').onclick = () => { wasMode = mode; if (mode === 'play') mode = 'paused'; tunePanel(); $('tune').classList.add('on'); };
+$('tuneClose').onclick = () => { $('tune').classList.remove('on'); if (mode === 'paused') { mode = 'play'; last = performance.now(); } };
+$('tuneReset').onclick = () => { save.tune = {}; applyTune(); input.mode = C.control; persist(); tunePanel(); };
 toTitle(); requestAnimationFrame(loop);
 // test hooks (same idea as city-clone)
 window.__doodle = { get sim() { return sim; }, R, save, input, newRun, get mode() { return mode; }, stepFrames(n, dir = 0) { for (let i = 0; i < n; i++) sim.step(C.step, dir); handleEvents(); R.frame(0, 'play'); } };

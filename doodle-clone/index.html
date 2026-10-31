@@ -27,20 +27,29 @@
   .bar{position:relative;flex-basis:100%;height:20px;border-radius:10px;background:#0006;overflow:hidden;font-size:12px;display:flex;align-items:center;justify-content:center}
   .bar .fill{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(#ffb02e,#f07a12)}.bar span{position:relative;font-weight:700}
   #newout{color:#ffd27a;font-weight:800;margin-top:8px;font-size:18px;text-align:center}
-  .hint{margin-top:12px;font-size:14px;opacity:.8;text-align:center}
+  .hint{margin-top:12px;font-size:14px;opacity:.8;text-align:center;padding:0 16px}
   #over{justify-content:center;background:#120a2acc}
+  #tune{background:#120a2ae6;z-index:5}
+  #tunebox{display:flex;flex-direction:column;gap:14px;width:min(340px,88vw);margin-top:16px}
+  #tunebox label{display:flex;flex-direction:column;gap:6px;font-size:16px}
+  #tunebox input{width:100%;accent-color:#ffb02e;height:28px}
+  #tunebox .row button{font-size:16px;padding:10px 14px}
+  button.sel{outline:3px solid #ffd27a}
+  .gear{pointer-events:auto;font-size:18px;padding:6px 10px;border-radius:12px;align-self:flex-start}
   .cc{height:1.1em;vertical-align:-3px}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="hud"><div id="h">0 m</div><div><img src="assets/kit/pickup_candy_corn.webp" alt=""><span id="cd">0</span></div></div>
+<div id="hud"><div id="h">0 m</div><button id="gear" class="gear">⚙️</button><div><img src="assets/kit/pickup_candy_corn.webp" alt=""><span id="cd">0</span></div></div>
 <div id="title" class="ui"><h1>Spooky<br>Hop</h1><button id="play">PLAY</button>
-  <div class="row"><button id="tiltBtn">Tilt: OFF</button><button id="sndBtn">🔊</button></div>
-  <div id="closet"></div><div class="hint">Hold the left or right side of the screen (or tilt) to steer. You jump by yourself!</div></div>
+  <div class="row"><button id="tiltBtn">Tilt: OFF</button><button id="sndBtn">🔊</button><button id="gear2">⚙️</button></div>
+  <div id="closet"></div><div class="hint">Touch and slide your finger: she runs to it. You jump by yourself!</div></div>
 <div id="over" class="ui"><h2>You climbed</h2><div class="big" id="score">0 m</div><h2 id="best"></h2>
   <h2><img class="cc" src="assets/kit/pickup_candy_corn.webp" alt=""> <span id="gcandy">+0</span> candy</h2><div id="newout"></div><div id="closet2"></div>
   <button id="again">AGAIN</button><div class="row"><button id="menu">Menu</button></div></div>
+<div id="tune" class="ui"><h2 style="margin-top:calc(env(safe-area-inset-top) + 40px)">Tune the feel</h2><div id="tunebox"></div>
+  <div class="row"><button id="tuneReset">Reset</button><button id="tuneClose">Done</button></div></div>
 <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
 <script type="module" src="js/main.js"></script>
 </body>
