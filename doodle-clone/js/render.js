@@ -73,6 +73,36 @@ export async function createRenderer(canvas, sim) {
   }
   for (const m of [...L.fogs, ...L.roofs, ...L.flies]) { m.visible = m.userData.p !== undefined; scene.add(m); }
   L.clouds = [0, 1, 2, 3].map((i) => { const m = sprite(T.cloud, 6, { opacity: 0.5 }); m.userData = { yl: 0, x: 0, w: 3.5, vx: 0.15 }; return m; });
+  // ---- OPENING SET PIECE (round 14): you climb the face of a huge castle (near), its towers stand behind (middle), a far keep
+  // further back (deep); the city is hidden behind the castle and appears as you clear its top. Real art drops in at
+  // assets/b4/castle_front.webp / castle_mid.webp / castle_far.webp; drawn placeholders are used until those exist.
+  const optTex = async (url, fb) => { try { return await tex(url); } catch (e) { return fb(); } };
+  const lit = (g, x, y, w, h) => { const gr = g.createLinearGradient(x, y, x, y + h); gr.addColorStop(0, '#ffd27a'); gr.addColorStop(1, '#f07a12'); g.fillStyle = gr; g.beginPath(); g.moveTo(x, y + h); g.lineTo(x, y + w / 2); g.arc(x + w / 2, y + w / 2, w / 2, Math.PI, 0); g.lineTo(x + w, y + h); g.fill(); };
+  T.castleF = await optTex('assets/b4/castle_front.webp', () => canvasTex(512, 2048, (g, w, h) => {
+    const top = 150, wall = (y0, y1, x0, x1, c0, c1) => { const gr = g.createLinearGradient(0, y0, 0, y1); gr.addColorStop(0, c0); gr.addColorStop(1, c1); g.fillStyle = gr; g.fillRect(x0, y0, x1 - x0, y1 - y0); };
+    wall(top, h, 40, w - 40, '#55408a', '#2a1c4c');
+    for (let x = 40; x < w - 40; x += 40) wall(top - 28, top, x, x + 24, '#5b4594', '#55408a');         // battlements
+    for (const tx of [0, w - 110]) { wall(60, h, tx, tx + 110, '#4a3680', '#22173f'); g.fillStyle = '#3a2468'; g.beginPath(); g.moveTo(tx - 12, 64); g.lineTo(tx + 55, -40 + 40); g.lineTo(tx + 122, 64); g.fill(); g.fillStyle = '#ff9a2e'; g.fillRect(tx + 52, 0, 6, 16); }
+    g.strokeStyle = 'rgba(20,10,40,0.35)'; g.lineWidth = 2;
+    for (let y = top + 20; y < h; y += 34) { g.beginPath(); g.moveTo(40, y); g.lineTo(w - 40, y); g.stroke(); }
+    for (let y = top + 90; y < h - 340; y += 190) for (const x of [150, 236, 322]) lit(g, x, y, 40, 70);
+    for (let y = 220; y < h - 300; y += 230) for (const x of [35, w - 75]) lit(g, x, y, 40, 64);
+    g.fillStyle = '#1a1030'; g.beginPath(); g.moveTo(170, h); g.lineTo(170, h - 220); g.arc(256, h - 220, 86, Math.PI, 0); g.lineTo(342, h); g.fill();   // gate
+    g.fillStyle = 'rgba(255,150,50,0.35)'; g.fillRect(186, h - 200, 140, 200);
+    for (const x of [96, w - 128]) { g.fillStyle = '#7a3fd0'; g.fillRect(x, top + 40, 32, 150); g.fillStyle = '#ff9a2e'; g.fillRect(x, top + 40, 32, 18); }
+  }));
+  T.castleM = await optTex('assets/b4/castle_mid.webp', () => canvasTex(512, 1536, (g, w, h) => {
+    for (const [x, tw, ty] of [[30, 110, 260], [200, 120, 80], [380, 100, 330]]) {
+      g.fillStyle = '#3c2d6c'; g.fillRect(x, ty, tw, h - ty); g.fillStyle = '#30205a'; g.beginPath(); g.moveTo(x - 14, ty + 4); g.lineTo(x + tw / 2, ty - 170); g.lineTo(x + tw + 14, ty + 4); g.fill();
+      for (let y = ty + 70; y < h - 200; y += 200) lit(g, x + tw / 2 - 14, y, 28, 46);
+    }
+  }));
+  T.castleD = await optTex('assets/b4/castle_far.webp', () => canvasTex(384, 1536, (g, w, h) => {
+    g.fillStyle = 'rgba(110,92,170,0.8)'; g.fillRect(140, 420, 104, h - 420); g.beginPath(); g.moveTo(124, 424); g.lineTo(192, 60); g.lineTo(260, 424); g.fill();
+    g.fillStyle = 'rgba(255,190,90,0.8)'; g.beginPath(); g.arc(192, 560, 14, 0, 7); g.fill();
+  }));
+  L.castleD = sprite(T.castleD, 7.5); L.castleM = sprite(T.castleM, 9); L.castleF = sprite(T.castleF, 10);
+  for (const m of [L.castleD, L.castleM, L.castleF]) scene.add(m);
   L.town = sprite(T.town, 8); L.houses = sprite(T.houses, 40);
   for (const m of [L.skyDusk, L.skyMid, L.skyAur, L.stars, L.moon, L.fly, ...L.clouds, L.town, L.houses]) scene.add(m);
   // gameplay
@@ -128,10 +158,14 @@ export async function createRenderer(canvas, sim) {
     for (const m of L.fogs) { const u = m.userData; u.x += u.vx * dt; if (u.x > 6) u.x = -6; let y = u.yl - 0.6 * cy; if (y < -vh / 2 - 3) { u.yl = 0.6 * cy + vh / 2 + 2 + Math.random() * vh * 1.5; u.x = (Math.random() * 2 - 1) * 3; y = u.yl - 0.6 * cy; } m.visible = true; place(m, u.x, y, u.w, u.w / aspect(T.fog), -12); }
     for (const m of L.clouds) { const u = m.userData; u.x += u.vx * dt; if (u.x > 7) u.x = -7; const y = u.yl - 0.45 * cy; if (y < -vh / 2 - 3) { u.yl = 0.45 * cy + vh / 2 + 2 + Math.random() * vh; u.x = (Math.random() * 2 - 1) * 5; u.w = 2.6 + Math.random() * 2; } place(m, u.x, u.yl - 0.45 * cy, u.w, u.w / aspect(T.cloud), -60); }
     const tH = W / aspect(T.town), p3 = 0.3, hp = 1.25;
-    place(L.town, 0, (R.cam0 * p3 - vh / 2 + tH / 2) - p3 * cy, W, tH, -30);        // start-of-run town, scrolls away at 0.3
+    // opening castle: front (near, 0.85), towers (middle, 0.5), keep (deep, 0.2); bottoms anchored to the start view
+    const SB = -vh / 2, OP = [[L.castleF, T.castleF, 0.85, -6, W * 1.04, -0.6], [L.castleM, T.castleM, 0.5, -22, W, 0.3 * vh], [L.castleD, T.castleD, 0.2, -60, W * 0.45, 0.75 * vh]];
+    for (const [m, tx, p, z, w, lift] of OP) { const h = w / aspect(tx), yl = R.cam0 * p + SB + lift + h / 2, y = yl - p * cy; m.visible = y - h / 2 < vh / 2 + 2 && y + h / 2 > -vh / 2 - 2; if (m.visible) place(m, 0, y, w, h, z); }
+    const frontTop = (W * 1.04) / aspect(T.castleF) - 0.6, townLift = p3 * (frontTop / 0.85) - 2.5 + 0.18 * vh;   // city appears just as you clear the castle
+    place(L.town, 0, (R.cam0 * p3 - vh / 2 + tH / 2 + townLift) - p3 * cy, W, tH, -30);
     place(L.houses, 0, (R.cam0 * hp - vh / 2 + tH / 2) - hp * cy, W, tH, 6);       // foreground houses in FRONT, scroll away at 1.25
     // repeating rooftop bands (layer 0.3) above the start town, fading out above ~600 m
-    const rH = W / aspect(T.roofs), rGap = rH * 1.9, rBase = R.cam0 * p3 - vh / 2 + tH + rGap * 0.4, ro = 1 - smooth(H, 450, 750);
+    const rH = W / aspect(T.roofs), rGap = rH * 1.9, rBase = R.cam0 * p3 - vh / 2 + townLift + tH + rGap * 1.3, ro = 1 - smooth(H, 450, 750);
     { const k0 = Math.max(0, Math.floor((p3 * cy - vh / 2 - rBase) / rGap)); L.roofs.forEach((m, i) => { const k = k0 + i, yl = rBase + k * rGap; m.visible = ro > 0.01; m.material.opacity = 0.9 * ro; place(m, 0, yl - p3 * cy, (k % 2 ? -1 : 1) * W, rH, -30); }); }
     // side towers REMOVED in round 13 (user didn't like them). Fireflies: glowing dots at 3 depths, each moving at its own parallax.
     for (const f of L.flies) { const u = f.userData; let y = u.yl - u.p * cy;
