@@ -1,6 +1,6 @@
 # Doodle-clone notes: Halloween "Doodle Jump" in Three.js (working title: **Spooky Hop**)
 
-Last updated 2026-10-31 (round 2: kid tuning, camera framing, similar-games research). **Status: PLAN ONLY. No code yet. Reference image received (LOOK ONLY, see Art direction); our own gameplay design is below; waiting on the green-screen clips.**
+Last updated 2026-10-31 (round 2: kid tuning, camera framing, similar-games research). **Status: PLAN + first art. No game code yet; keying tool done for the 5 clips. Reference image received (LOOK ONLY, see Art direction); our own gameplay design is below; waiting on the green-screen clips.**
 
 ## Pitch
 Gameplay (confirmed with user): the jump is AUTOMATIC on landing (no jump button); the player holds a direction (tilt or left/right touch) to aim the next jump; climb forever; the higher you get the more complex the levels get. The 2.5D is part of that escalation: more background layers, foreground layers in front of the play plane, and layers moving independently of each other as you climb.
@@ -32,6 +32,16 @@ What the sources agree on:
 - **Kids' endless jumpers** found (Hop Hop, Elmo Jumper, Jump Sky Jump) are generic; no standout to learn from. We check age-appropriateness ourselves: no ads, no purchases, no external links, local save only.
 - **Own-knowledge, not verified this round:** Mega Jump (2011) leaned on coin upgrades and a shop; I will not use it as a source until I find one.
 - **Legal/safety note for us:** the mechanics are free to reuse, but "Doodle Jump", "the Doodler", its graph-paper look, and its art are Lima Sky's. Our name, character, art and theme are original. Keep it that way.
+
+## First clips received (2026-10-31): same girl, five outfits
+Files: `art/clips/{witch,fairy,astronaut,ghost,pumpkin}.mp4`. Contact sheet of the keyed result on a purple backdrop: `art/keyed-preview/keyed-contact-sheet.png`. Tool: `tools/key_frames.py <clip> <outdir>` (auto-detects the key colour, soft alpha, un-mixes the edge, despills the rim only).
+- **Format:** H.264, **752 x 416 landscape, 24 fps, 97 frames (4.04 s)**, one fixed camera, character ~200-260 px tall in frame, a single idle -> crouch -> jump -> air -> land -> idle loop per clip.
+- **Screens:** witch, astronaut, ghost on green (~#03F703); **fairy and pumpkin on magenta (~#FB05FB)** (the tool handles both; magenta is riskier for purple/pink costumes, the fairy wings keyed fine).
+- **Keying quality:** good. Clean edges on all five at game size; a slight lime/pink fringe remains on the curly hair strands in a few frames. Some frames are motion-blurred by the video generator (witch frame ~30 is smeared), so the packer must skip blurry frames.
+- **Outfits are consistent** (same face/hair/proportions), so one animation state machine can drive all of them.
+- **Timing differs per clip** (airborne frames: witch 32-60, fairy 28-57, astronaut 29-60, ghost 38-55, pumpkin 34-50; crouch around frames 20-29). The game's bounce is ~1.5 s, a clip's jump is ~1.2-1.7 s, so the sim drives the animation by PHASE (squash on landing, rise frames mapped across the rise, apex, fall frames across the fall) instead of playing the clip in real time.
+- **Resolution:** native ~200-260 px tall vs ~210 px needed on a 3x phone at the 1.6 u character size, so it is just enough; do not make her bigger. Packing at 192-256 px cells.
+- **Still missing from the clip list:** a land/squash that is separate from the crouch, cheer, oops/fall, flying (rocket) pose, and a side-facing variant (all clips are 3/4 view facing slightly left; I mirror for the other direction).
 
 ## Art direction (LOOK ONLY, from the user's concept art `art/reference/ref-01-look.png`, 1024 x 1536)
 The user said: this is concept art for the LOOK. Do not take gameplay from it (what a platform "does", what a pickup is for, what a layout means). I design the mechanics; the user then makes art for them.
