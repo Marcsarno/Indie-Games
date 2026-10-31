@@ -53,3 +53,16 @@ User's words: "the reverse feels bad too".
 | revAcc (new; was fixed .55) | .55 x accel | .8 x accel (x the car's acc, capped 1.2) | 0 -> 6 m/s backwards: 1.56 s -> 0.85 s |
 | revTop | .3 | .35 | reverse top 7.4 -> 8.9 m/s |
 | camRev (new) | 0 (camera held still while reversing) | .6 (follows at 60 % rate) | after backing round a 57 deg turn the view was 67 deg off the car (it swung back only when you drove forward); now 16 deg |
+
+### Round 31h (31 Oct 2026), SWAT vans + get in/out
+User's words: "Now it's just a little too hard"; "what feels very hard is the SWAT cars. How hard they ram you ... tuned down a little bit. And maybe they don't come until a little bit later"; "get in and out of the car twice as fast".
+
+| Dial (dave.js DAVE / index.html) | Old | New |
+|---|---|---|
+| swatFrom (heat) | .5 | .72 |
+| swatEvery (s, low -> full heat) | 9 -> 4 | 14 -> 8 |
+| swatMax | 2 | 1 |
+| swatSpeed | 38 m/s | 34 m/s |
+| swatHurt | 24 | 14 |
+| swatMass (x your car) | 4.5 | 3.0 (and no extra 1.35x shove) |
+| DOORK (get in/out speed) | 1 | 2 |

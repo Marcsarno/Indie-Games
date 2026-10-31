@@ -355,7 +355,7 @@ function makeCar(kind, color) {
   car.setDamage = d => { const burnt = new THREE.Color(0x2b2321); for (const p of car.paint) p.m.color.copy(p.base).lerp(burnt, clamp(d, 0, 1) * .75); };
   scene.add(group); return car;
 }
-const updateDoors = (car, dt) => { const k = 1 - Math.exp(-dt * 9); for (const d of Object.values(car.doors)) { d.cur += (d.target - d.cur) * k; d.node.rotation.y = d.side * d.max * d.cur; } };
+const updateDoors = (car, dt) => { const k = 1 - Math.exp(-dt * 9 * DOORK); for (const d of Object.values(car.doors)) { d.cur += (d.target - d.cur) * k; d.node.rotation.y = d.side * d.max * d.cur; } };
 for (const c of carList) {
   const car = makeCar(c.kind, c.color); car.group.position.copy(b2t(c.x, c.y, 0)); car.group.rotation.y = rad(c.rz); allCars[c.name] = car;
 }
@@ -413,16 +413,17 @@ function standInfo(car, tag) {         // where an actor stands at a door: the s
   const pos = car.stand[tag].getWorldPosition(new THREE.Vector3()), seat = car.seat[tag].getWorldPosition(new THREE.Vector3());
   const d = seat.sub(pos); d.y = 0; d.normalize(); return { pos, dir: d };
 }
+const DOORK = 2;                                  // round 31: getting in and out runs twice as fast (user); clip speed, waits, door swing and the walk to the door
 async function enterCar(a, car, tag) {
-  const { pos, dir } = standInfo(car, tag); await walkTo(a, pos); faceDir(a, dir.x, dir.z); play(a, 'idle', { fade: .1 });
-  const act = play(a, 'enter_' + tag[1], { once: true, fade: .1 }), T = act.getClip().duration;
-  await wait(T * .10); car.setDoor(tag, true); await wait(T * .75); car.setDoor(tag, false); await wait(T * .15 + .2);
+  const { pos, dir } = standInfo(car, tag); await walkTo(a, pos, 1.5 * DOORK); faceDir(a, dir.x, dir.z); play(a, 'idle', { fade: .05 });
+  const act = play(a, 'enter_' + tag[1], { once: true, fade: .05, timeScale: DOORK }), T = act.getClip().duration / DOORK;
+  await wait(T * .10); car.setDoor(tag, true); await wait(T * .75); car.setDoor(tag, false); await wait(T * .15 + .1);
   a.root.visible = false; car.occupants[tag] = a;
 }
 async function exitCar(a, car, tag) {
   const { pos, dir } = standInfo(car, tag); a.root.position.copy(pos); faceDir(a, dir.x, dir.z); a.root.visible = true; delete car.occupants[tag];
-  car.setDoor(tag, true); await wait(.35);
-  const act = play(a, 'exit_' + tag[1], { once: true, fade: .05 }), T = act.getClip().duration;
+  car.setDoor(tag, true); await wait(.35 / DOORK);
+  const act = play(a, 'exit_' + tag[1], { once: true, fade: .05, timeScale: DOORK }), T = act.getClip().duration / DOORK;
   await wait(T * .85); car.setDoor(tag, false); await wait(T * .15); play(a, 'idle', { fade: .15 });
 }
 
