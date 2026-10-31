@@ -57,6 +57,21 @@ All four are strong and match the concept. Three have REAL alpha (the user's gen
 `art/bg/mockup-start-of-run.png` = my layered mock-up at phone proportions (540x1170): sky -> fly-by -> town -> stand-in platforms + the real witch at 1.6 u (28% from the bottom) -> foreground houses. It reads well; the witch is smallish but the user asked for smaller, tune later.
 The full copy/paste art prompt list (platforms, power-ups, zone skies, tiles, foreground, clips, UI) is `ART_PROMPTS.md`.
 
+## Open-Sky kit received (batch 2, 2026-10-31): `Halloween_Open_Sky_ThreeJS_Kit.zip`
+13 PNGs + a manifest + two small Three.js helper modules (read: they only load textures and build textured planes; not used directly, we have our own renderer). The originals are 14 MB and stay with the user; `tools/build_kit_assets.py` trims and downsizes them to phone size in `assets/kit/` (13 WebP files, **359 KB total**).
+| Kit asset | Our use |
+|---|---|
+| `platform_standard` (purple stone slab) | **flat** platform |
+| `platform_moving` (blue slab, cyan chevrons both ways) | **slider**; the chevrons say "I move" |
+| `platform_fragile` (orange, cracked) | **crumbly**; colour + cracks say "fragile" |
+| `platform_ghost` (white cloud with eyes) | NOT used (phasing dropped). Kept in `assets/kit/` in case the user changes their mind. |
+| `pumpkin_trampoline` | trampoline (resting pose only; squash/stretch frames still needed, I can fake with scale meanwhile) |
+| `pickup_candy_corn` | **candy currency is now candy corn** (replaces the wrapped candy in the plan) |
+| `sky_twilight` / `sky_midnight` / `sky_aurora` (720x1279 opaque, not tileable) | zone skies: twilight = zone 1, midnight = zones 2-3, aurora = zones 4-5 (it has green/teal; fine, only the character clips need to avoid the key colour), crossfaded by height |
+| `starfield` (alpha), `full_moon`, `cloud`, `witch_silhouette` | star overlay (twinkle), moon (parallax ~0.95), clouds (0.8-0.85), witch fly-by across the moon |
+Style: the kit is glossier/more rendered than the first painted batch (`art/bg/`), but they mix well (see `art/bg/mockup-kit-vs-first-batch.png`: kit platforms + candy + trampoline on the first-batch sky/town/foreground houses; the kit alone is on the left). Colour-coded platforms are very readable for a 7-year-old.
+Kit placement ideas worth keeping: place art by VISIBLE width with top/bottom anchors; alpha meshes with depthWrite off; keep the colliders separate from the picture; background stars dimmer than the candy. The kit assumes an orthographic 7.2 x 12.8 view; we keep the perspective camera (the foreground houses need real depth), same 9:16 shape. Kit suggested widths in a 7.2-wide view: platform 2.2 (30%), trampoline 1.2, candy 0.32. **Open question: in the mock-up the 1.6 u witch looks small next to a 30%-wide slab; try 2.0 u or ~26% slabs when tuning.**
+
 ## Art direction (LOOK ONLY, from the user's concept art `art/reference/ref-01-look.png`, 1024 x 1536)
 The user said: this is concept art for the LOOK. Do not take gameplay from it (what a platform "does", what a pickup is for, what a layout means). I design the mechanics; the user then makes art for them.
 **Look takeaways:**

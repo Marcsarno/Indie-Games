@@ -1,5 +1,12 @@
 # Art prompt list (copy/paste into the image or video generator)
 
+> **Update after the "Halloween Open-Sky" kit (second batch):** the kit already covers flat / slider (cyan chevrons) / crumbly (orange, cracked, intact) platforms,
+> the pumpkin trampoline (resting), candy corn, three skies, starfield, moon, cloud and a witch fly-by. So skip A1-A2 and the resting trampoline, and make everything
+> NEW in the kit's glossy slab style (`assets/kit/`, or `art/bg/mockup-kit-vs-first-batch.png`) so platforms and pickups match. Still needed from this list:
+> **crumbly break stages 1-3 (A3)**, **trampoline squashed + stretched (A4)**, **golden candy corn + sparkle burst (B6, B10; candy is now candy corn, not wrapped candy)**,
+> **rocket pack + flame (B7-B8)**, rescue bubble/bat (B9), repeating town/fog/cloud strips and zone skies 2-5 only if the kit skies are not enough (C), the repeating
+> foreground wall strips + tops + lanterns (D), and the extra character clips (E). The kit's white "ghost" platform is NOT used (phasing was dropped).
+
 Paste the STYLE block at the start of EVERY prompt. Keep the same generator/settings so everything matches the first batch
 (`art/bg/*.png`, which looks great: soft painted storybook, violet night, orange lantern glow).
 

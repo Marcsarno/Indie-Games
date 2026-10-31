@@ -1,0 +1,111 @@
+{
+ "platform_standard": {
+  "file": "platform_standard.webp",
+  "size": [
+   516,
+   93
+  ],
+  "visiblePx": 512,
+  "suggestedWidthKit": 2.2
+ },
+ "platform_moving": {
+  "file": "platform_moving.webp",
+  "size": [
+   516,
+   95
+  ],
+  "visiblePx": 512,
+  "suggestedWidthKit": 2.2
+ },
+ "platform_fragile": {
+  "file": "platform_fragile.webp",
+  "size": [
+   515,
+   94
+  ],
+  "visiblePx": 512,
+  "suggestedWidthKit": 2.2
+ },
+ "platform_ghost": {
+  "file": "platform_ghost.webp",
+  "size": [
+   515,
+   91
+  ],
+  "visiblePx": 512,
+  "suggestedWidthKit": 2.2
+ },
+ "pumpkin_trampoline": {
+  "file": "pumpkin_trampoline.webp",
+  "size": [
+   387,
+   189
+  ],
+  "visiblePx": 384,
+  "suggestedWidthKit": 1.2
+ },
+ "pickup_candy_corn": {
+  "file": "pickup_candy_corn.webp",
+  "size": [
+   162,
+   181
+  ],
+  "visiblePx": 160,
+  "suggestedWidthKit": 0.32
+ },
+ "full_moon": {
+  "file": "full_moon.webp",
+  "size": [
+   518,
+   513
+  ],
+  "visiblePx": 512,
+  "suggestedWidthKit": 2.1
+ },
+ "witch_silhouette": {
+  "file": "witch_silhouette.webp",
+  "size": [
+   646,
+   439
+  ],
+  "visiblePx": 640,
+  "suggestedWidthKit": 1.7
+ },
+ "sky_twilight": {
+  "file": "sky_twilight.webp",
+  "size": [
+   720,
+   1279
+  ]
+ },
+ "sky_midnight": {
+  "file": "sky_midnight.webp",
+  "size": [
+   720,
+   1279
+  ]
+ },
+ "sky_aurora": {
+  "file": "sky_aurora.webp",
+  "size": [
+   720,
+   1279
+  ]
+ },
+ "starfield": {
+  "file": "starfield.webp",
+  "size": [
+   720,
+   1281
+  ]
+ },
+ "cloud": {
+  "file": "cloud.webp",
+  "size": [
+   515,
+   176
+  ],
+  "visiblePx": 512,
+  "suggestedWidthKit": 2.9
+ }
+}
