@@ -46,6 +46,17 @@ Files: `art/clips/{witch,fairy,astronaut,ghost,pumpkin}.mp4`. Contact sheet of t
 - **Resolution:** native ~200-260 px tall vs ~210 px needed on a 3x phone at the 1.6 u character size, so it is just enough; do not make her bigger. Packing at 192-256 px cells.
 - **Still missing from the clip list:** a land/squash that is separate from the crouch, cheer, oops/fall, flying (rocket) pose, and a side-facing variant (all clips are 3/4 view facing slightly left; I mirror for the other direction).
 
+## Background art received (batch 1, 2026-10-31) - `art/bg/`
+All four are strong and match the concept. Three have REAL alpha (the user's generator makes transparent PNGs), so no keying needed for them.
+| File | What | Notes |
+|---|---|---|
+| `sky-dusk.png` 1024x1536, opaque | deep indigo sky with stars fading to magenta-pink at the bottom | one screen only; its top and bottom differ so it does not tile. Needs zone variants + a seamless `sky_tile`. Stars can twinkle if given as a separate layer. |
+| `mid-town-start.png` 1024x1536, alpha | hazy rooftop town with lit windows, fog; top half transparent | a START-of-run band (skyline at the bottom). Scrolls away as you climb (parallax ~0.3). Needs vertically repeating roof bands for later. |
+| `fg-houses-start.png` 1024x1536, alpha | roofs/walls of two houses at the left and right edges with ivy, big warm glow, centre empty | foreground (parallax ~1.3) and the 2.5D showpiece; a START piece. Needs repeating wall strips + roof tops. |
+| `flyby-witch-silhouette.png` 1536x1024, alpha | soft dark-purple silhouette of a witch on a broom | an ambient fly-by sprite that crosses the sky slowly (very low contrast on purpose). More of these requested. |
+`art/bg/mockup-start-of-run.png` = my layered mock-up at phone proportions (540x1170): sky -> fly-by -> town -> stand-in platforms + the real witch at 1.6 u (28% from the bottom) -> foreground houses. It reads well; the witch is smallish but the user asked for smaller, tune later.
+The full copy/paste art prompt list (platforms, power-ups, zone skies, tiles, foreground, clips, UI) is `ART_PROMPTS.md`.
+
 ## Art direction (LOOK ONLY, from the user's concept art `art/reference/ref-01-look.png`, 1024 x 1536)
 The user said: this is concept art for the LOOK. Do not take gameplay from it (what a platform "does", what a pickup is for, what a layout means). I design the mechanics; the user then makes art for them.
 **Look takeaways:**
