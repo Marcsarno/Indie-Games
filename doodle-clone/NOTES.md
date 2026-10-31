@@ -3,6 +3,7 @@
 Last updated 2026-10-31. **Status: PLAN ONLY. No code yet. Waiting on the user's art (green-screen video clips in Dropbox).**
 
 ## Pitch
+Gameplay (confirmed with user): the jump is AUTOMATIC on landing (no jump button); the player holds a direction (tilt or left/right touch) to aim the next jump; climb forever; the higher you get the more complex the levels get. The 2.5D is part of that escalation: more background layers, foreground layers in front of the play plane, and layers moving independently of each other as you climb.
 Endless vertical jumper for portrait phones. Tilt/touch to steer, auto-jump on every platform, climb as high as you can.
 Halloween theme: haunted graveyard -> forest -> mansion roofs -> storm clouds -> moon. Earn candy and unlock Halloween outfits.
 Real 3D scene (Three.js) with a 2D gameplay plane, so the background gets true depth/parallax ("2.5D").
@@ -103,7 +104,7 @@ Input: clips on a green background in the user's Dropbox (I have the Dropbox con
 
 **Clips I need per outfit (all from one fixed camera, same distance, same framing):** idle/jump-rise, apex/float, fall, land squash, throw/shoot, hit/hurt, death/fall-off, propeller/jet flight (or I do the flight in code with a prop sprite). Facing: shoot one direction; I mirror in code. Left/right asymmetry (a bag on one shoulder) will flip sides; fine unless it matters.
 
-**Heads-up on the green screen:** green-skinned outfits (Frankenstein, zombie, goblin, Slimer-style ghost) will be eaten by the key. Use a **blue screen for those** (I key from any colour; tell me which per clip), and keep green out of costumes otherwise. Also: even, flat lighting on the screen, no wrinkles/shadows on it, a bit of distance from the screen so green does not reflect onto edges, shoot at 1080p+ and 30-60 fps, keep the subject fully in frame including props.
+**Green-screen rules (user decision 2026-10-31):** the green is only the backdrop so frames key out easily. No outfit, prop or effect uses green (keep it out of costumes, candy and held items too), so the key stays simple and no blue-screen variant is needed. For clean edges: flat even lighting on the screen, no wrinkles/shadows on it, some distance from the screen so green does not spill onto the character, 1080p+ at 30-60 fps, subject fully in frame including props.
 
 ## Outfits and progression
 Currency: **candy** (earned per run, 1 per pickup + bonus per 100 height). Unlock mix so there is always something close:
@@ -117,7 +118,7 @@ Currency: **candy** (earned per run, 1 per pickup + bonus per 100 height). Unloc
 | Pumpkin Head | 5 runs in a row over 1,000 |
 | Black Cat | 50 candy in one run |
 | Werewolf | defeat 50 enemies |
-| Frankenstein / Zombie | 2,000 candy (blue-screen shoot) |
+| Mad Scientist | 2,000 candy |
 | Grim Reaper | reach the moon (6,000+) |
 | Secret | daily-streak 7 days |
 Closet screen: preview the animation on a turntable-free flat sprite, locked ones as silhouettes with the unlock hint. Save in `localStorage` (`spooky-save-v1`). Optional later: Supabase leaderboard (connector available) and a daily seeded run (the RNG is already seedable).
@@ -147,7 +148,6 @@ DPR capped at 2; antialias off (or FXAA-style only); platforms/props via `Instan
 - **M7 Ship:** Vercel deploy, README, update this file.
 
 ## Waiting on the user
-- Green-screen clips in Dropbox (tell me the folder path and which clip = which state/outfit).
+- The reference art of how the game should look (not received yet), then the green-screen clips in Dropbox (tell me the folder path and which clip = which state/outfit).
 - Outfit list they actually want (the table above is my guess).
-- Which outfits are green-skinned (blue screen for those).
 - Keep the title **Spooky Hop** or pick another.
