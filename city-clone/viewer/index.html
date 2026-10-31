@@ -657,14 +657,22 @@ const FXTEX = (() => {
 })();
 const DENT_MAT = new THREE.MeshLambertMaterial({ map: FXTEX.dent, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }), DENT_GEO = new THREE.PlaneGeometry(1, 1);
 function markCar(c, wx, wz, power) {                      // a damage mark on the face of the car nearest the hit (car-local), up to 8 per car (oldest reused)
-  const car = c.car, [L, W] = car.dims, H = car.dims[3] || 1.6, dx = wx - c.x, dz = wz - c.z, ct = Math.cos(c.th), st = Math.sin(c.th);
+  const car = c.car, [L, W] = car.dims, H = car.fxH || (car.fxH = carHeight(car)), dx = wx - c.x, dz = wz - c.z, ct = Math.cos(c.th), st = Math.sin(c.th);
   const lx = dx * ct - dz * st, lz = dx * st + dz * ct; car.marks = car.marks || [];
   let m = car.marks.length < 8 ? null : car.marks.shift(); if (!m) { m = new THREE.Mesh(DENT_GEO, DENT_MAT); m.castShadow = false; car.group.add(m); } car.marks.push(m);
-  const size = Math.min(1.5, .55 + power * .045), side = Math.abs(lx) / (W / 2) > Math.abs(lz) / (L / 2), y = H * (car.kind === 'moto' ? .45 : .38) + (Math.random() - .5) * .2;
-  if (side) { m.position.set(Math.sign(lx || 1) * (W / 2 + .03), y, Math.max(-L / 2 + .5, Math.min(L / 2 - .5, lz))); m.rotation.set(0, Math.sign(lx || 1) * Math.PI / 2, Math.random() * Math.PI * 2); }
-  else { m.position.set(Math.max(-W / 2 + .4, Math.min(W / 2 - .4, lx)), y, Math.sign(lz || 1) * (L / 2 + .03)); m.rotation.set(0, lz > 0 ? 0 : Math.PI, Math.random() * Math.PI * 2); }
-  m.scale.set(size * (side ? 1.3 : 1), size * .7, 1); m.visible = true;
+  const k = car.kind === 'moto' ? .55 : 1, side = Math.abs(lx) / (W / 2) > Math.abs(lz) / (L / 2), tilt = (Math.random() - .5) * .5;   // kept inside the face: capped size, pulled in from the corners, only a slight tilt
+  let w = Math.min(side ? 1.3 : W - .6, .5 + power * .035) * k, h = Math.min(.45, w * .5), y = H * (car.kind === 'moto' ? .45 : .47);      // the panel band between the wheel tops and the windows
+  if (side) { const lim = Math.max(0, L / 2 - w / 2 - .3); m.position.set(Math.sign(lx || 1) * (W / 2 + .03), y, Math.max(-lim, Math.min(lim, lz * .8))); m.rotation.set(0, Math.sign(lx || 1) * Math.PI / 2, tilt); }
+  else { w = Math.min(w, W - .6); const lim = Math.max(0, W / 2 - w / 2 - .2); m.position.set(Math.max(-lim, Math.min(lim, lx * .8)), H * .36, Math.sign(lz || 1) * (L / 2 + .03)); m.rotation.set(0, lz > 0 ? 0 : Math.PI, tilt); }
+  m.scale.set(w, h, 1); m.visible = true; m.updateMatrix();
+  // sit it on the real body surface: cast in from outside along the face normal (bodies bulge or taper, so the box size alone floats it or buries it)
+  const nL = side ? new THREE.Vector3(Math.sign(lx || 1), 0, 0) : new THREE.Vector3(0, 0, Math.sign(lz || 1)), o = m.position.clone().addScaledVector(nL, 1.5);
+  car.group.updateMatrixWorld(true); const ow = car.group.localToWorld(o.clone()), dw = car.group.localToWorld(o.clone().sub(nL)).sub(ow).normalize();
+  MARK_RAY.set(ow, dw); MARK_RAY.far = 3; const hit = MARK_RAY.intersectObject(car.group, true).find(q => q.object.material !== DENT_MAT && q.object.visible);
+  if (hit) { const pl = car.group.worldToLocal(hit.point.clone()).addScaledVector(nL, .02); if (side) m.position.x = pl.x; else m.position.z = pl.z; }
 }
+const MARK_RAY = new THREE.Raycaster();
+function carHeight(car) { const g = car.group, r = g.rotation.y; g.rotation.y = 0; g.updateMatrixWorld(true); const b = new THREE.Box3(); g.traverse(o => { if (o.isMesh && o.material !== DENT_MAT) b.expandByObject(o); }); g.rotation.y = r; g.updateMatrixWorld(true); return Math.max(1, b.max.y - g.position.y); }
 function clearMarks(car) { for (const m of car.marks || []) m.visible = false; }
 const PUFFS = Array.from({ length: 18 }, () => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: FXTEX.puff, transparent: true, depthWrite: false, opacity: 0 })); sp.visible = false; scene.add(sp); return { sp, life: 0, max: 1, vy: 0, grow: 0, flash: false }; });
 let puffHead = 0;
