@@ -83,9 +83,12 @@ def main():
                        'dx': round(((bb[0] + bb[2]) / 2 - body_cx) * scale, 2),
                        'dy': round((ground - bb[3]) * scale, 2)})
     rel = lambda a, b: list(range(a - s, b - s + 1))
+    cdeep = s + int(np.argmin(h[s:a0])) if a0 > s else a0          # deepest anticipation crouch
+    ldeep = (a1 + 1) + int(np.argmin(h[a1 + 1:e + 1])) if e > a1 else a1   # deepest landing squash
+    key = {'crouchDeep': cdeep - s, 'launch': a0 - s, 'apex': apex - s, 'touch': a1 - s, 'landDeep': ldeep - s}
     out = {'fps': 24, 'scale': scale, 'atlas': os.path.basename(prefix) + '.webp', 'atlasSize': [size, H],
            'standHeightPx': round(idle_h * scale, 1),
-           'frames': frames, 'held': [i - s for i in held],
+           'key': key, 'frames': frames, 'held': [i - s for i in held],
            'states': {'crouch': rel(s, a0 - 1), 'rise': rel(a0, apex), 'fall': rel(apex + 1, a1), 'land': rel(a1 + 1, e)}}
     json.dump(out, open(prefix + '.json', 'w'))
     print(os.path.basename(prefix), 'frames', len(frames), 'unique', len(uniq), 'held', held, 'atlas', (size, H),
