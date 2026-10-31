@@ -2,16 +2,16 @@
 export const C = {
   viewW: 9,
   g: 24,                 // gravity u/s^2. Round 7 (user: 'jumps too fast, needs a little more hang time, like Doodle Jump'): 40 -> 24; up-time = sqrt(2H/g) = 0.66 s, bounce ~1.3 s
-  H: 5.2,                // normal jump apex height u
-  maxVx: 7, accel: 55, decel: 45, turn: 140,  // round 8 (user: 'not responsive enough to the turns'): ~0.13 s to full speed, short glide when you let go, and
+  H: 4.2,                // normal jump apex height u (round 12: user's tuned value, was 5.2)
+  maxVx: 5.5, accel: 48, decel: 45, turn: 140,   // round 12: user's tuned steer speed 5.5 + turn quickness 48  // round 8 (user: 'not responsive enough to the turns'): ~0.13 s to full speed, short glide when you let go, and
                          // reversing direction is near-instant (turn), like Doodle Jump. History: r2 9/90/120 'too fast', r7 5.5/18/22 'not responsive'.
-  presets: { Gentle: { maxVx: 5.5, accel: 30, decel: 30, turn: 90 }, Doodle: { maxVx: 7, accel: 55, decel: 45, turn: 140 }, Snappy: { maxVx: 9, accel: 100, decel: 110, turn: 220 } },
+  presets: { Gentle: { maxVx: 5.5, accel: 30, decel: 30, turn: 90 }, Doodle: { maxVx: 5.5, accel: 48, decel: 45, turn: 140 }, Snappy: { maxVx: 9, accel: 100, decel: 110, turn: 220 } },
   faceFlip: 1.2,         // only turn the sprite around once she is really moving the other way (u/s), so she doesn't flicker left/right
   charH: 1.6,            // character height u (user: concept art was too big)
   footTol: 0.4,          // landing forgiveness each side of a platform u
   startFrac: 0.25,       // at the start she stands this far up from the bottom (user: keep her low so you see what is next)
   camLandFrac: 0.25,     // round 2: the camera glides so the LAST PLATFORM YOU LANDED ON sits 25% up (smooth climb, no lurch at every apex)
-  camGlide: 3,           // how fast it glides there (1/s)
+  camGlide: 5,           // how fast it glides there (1/s) (round 12: user's tuned value, was 3)
   camLeadT: 0.7,         // while climbing, frame the platform you will probably land on next (s of climb ahead)
   camTopFrac: 0.6,       // also glide so her current height is <= ~60% (keeps the camera moving smoothly while you climb)
   camTopFracRocket: 0.45,
