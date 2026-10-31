@@ -8,7 +8,7 @@ def to_m(p): return ((p[0] - OX) * SCALE, -(p[1] - OY) * SCALE)
 # name: (rank, half-width m, points px).  rank 10 boulevard, 9 arterial, 8 main, 6 collector, 5 local, 3 pedestrian lane.
 # Every road end is snapped onto another road within SNAP px (so nothing nearly meets); loose ends are listed by check_roads() unless named in OK_ENDS.
 RAW_ROADS = {
- "Lyons Rd": (12, 10.4, [(690, 1030), (693, 985), (693, 900), (692, 820), (691, 700), (692, 545), (695, 420), (696, 293), (698, 200), (702, 132), (725, 96)]),
+ "Lyons Rd": (12, 10.4, [(690, 1030), (693, 985), (693, 900), (692, 820), (691, 700), (692, 545), (695, 420), (696, 293)]),     # round 31: ends in a T at Sample Rd (its divided end used to curve into Northridge Loop and the outer side stopped dead at the coast)
  "Copans Rd": (8, 6.6, [(690, 1030), (700, 1062), (722, 1092), (770, 1110), (850, 1116), (920, 1105), (962, 1080), (992, 1040), (1018, 1000), (1046, 972), (1060, 940), (1064, 900), (1064, 858)]),
  "Wiles Rd": (9, 5.0, [(-20, 766), (60, 778), (130, 796), (210, 812), (300, 818), (400, 822), (520, 830), (620, 832), (692, 824), (780, 822), (880, 822), (960, 828), (1030, 842), (1062, 860), (1130, 880), (1200, 896), (1250, 920), (1300, 937), (1340, 955), (1378, 964)]),
  "Coconut Creek Pkwy": (9, 5.0, [(96, 558), (130, 557), (190, 556), (212, 550), (240, 546), (300, 543), (390, 543), (470, 548), (560, 553), (640, 553), (692, 550), (740, 548), (850, 546), (960, 540), (1040, 538), (1092, 540), (1150, 543), (1212, 565), (1268, 615), (1308, 690), (1330, 770), (1324, 850), (1302, 934)]),
@@ -21,7 +21,7 @@ RAW_ROADS = {
  "Hospital Dr": (5, 3.2, [(404, 350), (340, 345), (300, 340), (276, 320), (270, 290)]),
  "Banks Rd": (5, 3.2, [(240, 546), (238, 500), (240, 470), (280, 477), (370, 476), (400, 476)]),
  # north-east lobe
- "Northridge Loop": (6, 3.5, [(725, 96), (790, 88), (870, 86), (960, 82), (1025, 86), (1062, 108), (1082, 150), (1092, 210), (1096, 260), (1098, 292)]),
+ "Northridge Loop": (6, 3.5, [(696, 293), (698, 200), (702, 132), (725, 96), (790, 88), (870, 86), (960, 82), (1025, 86), (1062, 108), (1082, 150), (1092, 210), (1096, 260), (1098, 292)]),
  "Northridge Ln": (5, 3.2, [(700, 206), (800, 206), (900, 207)]),
  # centre
  "Retail Dr": (6, 3.5, [(609, 452), (640, 446), (695, 444), (760, 448), (870, 450), (975, 450), (1092, 450)]),
@@ -58,7 +58,7 @@ OK_ENDS = {("Landfill Rd", -1), ("Windmill Park Rd", -1), ("Club Dr", -1), ("Cas
 SNAP = 17.0
 # Junction rules (round 21: fewer full junctions on the main roads, same map): traffic lights only where Lyons Rd meets these roads;
 # RIRO = right-in/right-out: the main road's median runs straight past these side streets (no left turns, no crossing over)
-LIGHTS = {"Lyons Rd": ("Wiles Rd", "Coconut Creek Pkwy", "Sample Rd", "Southgate Rd", "Industrial Row")}
+LIGHTS = {"Lyons Rd": ("Wiles Rd", "Coconut Creek Pkwy", "Southgate Rd", "Industrial Row")}
 RIRO = {"Lyons Rd": ("Retail Dr", "School Dr", "Palm Ct Rd", "Palm View Rd", "Northridge Ln")}
 def _cr(pts, step=4.0):
     import math
