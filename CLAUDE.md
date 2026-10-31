@@ -5,6 +5,7 @@ works, the review loop, research findings, what's waiting on the user, and next 
 
 - `mario-clone/` is a separate NES-style World 1-1 recreation; read `mario-clone/NOTES.md` for it.
 - `city-clone/` is "Grand Theft Coconut Creek", a top-down open-city game in 3D (Three.js, models made with headless Blender scripts, set in Coconut Creek FL); start with `city-clone/NOTES.md` (HANDOFF.md is only the original brief).
+- `doodle-clone/` is a Halloween Doodle Jump clone in Three.js (2.5D, outfits unlocked with candy, sprites keyed from green-screen video); plan only so far, read `doodle-clone/NOTES.md`.
 - Main game: `diablo-clone/game/` (classic scripts, no build, no image assets; open `index.html`).
   The earlier single-file prototype `diablo-clone/prototype-simple/` is the before/after baseline.
 - After changing the game, republish it to the same artifact (see NOTES.md) so the phone link updates.
