@@ -91,8 +91,6 @@ doodle-clone/
 | Flat | solid, still | always (the only kind at first) |
 | Slider | slides side to side slowly (1.2 u/s early, max 3), travels a fixed short track, bounces back | from zone 2 |
 | Crumbly | you still get your bounce, then it crumbles about 0.4 s after you leave (never a trap you fall through). Never the only way up. | from zone 3 |
-| Phasing | blinks between solid and ghost on a slow, readable rhythm (solid >= 60% of a 2.5 s cycle, flicker warning 0.5 s before it fades; can only be landed on while solid, pass-through when ghost) | from zone 4 |
-| Vanishing (optional) | one bounce, then gone (the original's "disappearing"). Decide with the user whether to include it as well as phasing. | zone 4-5 |
 | Trampoline (on a platform) | big bounce 2.2 x H | zone 1, one early so a kid learns it |
 **Power-ups (the user asked for these):**
 - **Trampoline**: rests on a platform, squash/stretch, whoosh, candy trail up.
@@ -106,9 +104,9 @@ doodle-clone/
 | 1 | 0-150 | lantern rooftops | flat slabs, candy trails, first trampoline | 100% flat | 0.35 H |
 | 2 | 150-400 | misty rooftops, clock tower | sliders, first rocket | 80% flat, 20% slider | 0.45 H |
 | 3 | 400-800 | stormy edge / cemetery hill | crumbly | 60% flat, 20% slider, 20% crumbly | 0.5 H |
-| 4 | 800-1500 | clouds | phasing (and vanishing if kept) | flat >= 40%, rest mixed | 0.55 H |
+| 4 | 800-1500 | clouds | more crumbly and faster sliders, no new type | flat >= 45%, rest mixed | 0.55 H |
 | 5 | 1500+ | moon | everything mixed, narrower slabs, optional soft hazards | flat >= 35% | 0.6 H cap (the old plan's 0.8 is far too hard) |
-Rules that never change: at least one flat platform in every vertical band of one jump height (so crumbly/phasing never decide a run); trampolines about every 25-40 m in zones 1-3; candy trails in every zone.
+Rules that never change: at least one flat platform in every vertical band of one jump height (so crumbly ones never decide a run); trampolines about every 25-40 m in zones 1-3; candy trails in every zone.
 
 **Generator (reachability by construction):** keep a "frontier" y. Next platform gap `dy` in `[gapMin(h), gapMax(h)]` from the table, `dx` within the horizontal reach at that `dy` (use flight time; wrap-around makes x almost free). Generate chunks of ~30 platforms ahead of the camera; recycle from a pool of ~60. Seeded RNG so runs are reproducible and a headless bot can verify there is always a path.
 
@@ -181,12 +179,12 @@ DPR capped at 2; antialias off (or FXAA-style only); platforms/props via `Instan
 
 ## Waiting on the user
 - Green-screen clips in Dropbox (folder path + which clip = which state/outfit) and art for the platform roster, candy, trampoline, rocket/flame, backgrounds (list below).
-- Confirm or change: platform order (flat -> slider -> crumbly -> phasing), whether to also have a one-bounce "vanishing" platform, the friendly rescue, no hazards at first, outfit candy goals.
+- Confirm or change: platform order (flat -> slider -> crumbly; phasing was dropped by the user), whether the breaking one gives a bounce before it crumbles (my kid-friendly default) or is the original's fall-through, the friendly rescue, no hazards at first, outfit candy goals.
 - Outfit list; title (**Spooky Hop** is a placeholder).
 
 ### Art needed (painted, same style as the concept; transparent PNG, or on the green screen for clips; no green in the art)
 1. Character clips (above).
-2. Platforms (~620 px wide at 2x, 3/4 view): flat x3 variants, slider, crumbly (+ break-apart frames or I do it in code), phasing (solid + ghost), trampoline (3 frames: rest, squashed, stretched).
+2. Platforms (~620 px wide at 2x, 3/4 view): flat x3 variants, slider, crumbly (+ break-apart frames or I do it in code), trampoline (3 frames: rest, squashed, stretched).
 3. Pickups/props: candy, golden candy, rocket pack (item, worn version, flame loop), rescue bubble/bat.
 4. Backgrounds per zone: far sky (opaque, tall), far silhouettes (alpha or opaque), mid layer with lit windows (alpha), fog sheet (alpha); each extendable/tileable vertically, ~1024 px wide.
 5. Foreground pieces (alpha), left and right versions, 3-4 variants: house corner with lantern, branch with ivy, rooftop edge, chimney with smoke.
