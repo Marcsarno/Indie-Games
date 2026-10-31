@@ -22,11 +22,41 @@ What the sources agree on:
 - Original game's content (platform types, power-ups, monsters) is documented only by unofficial guides, so treat as inspiration: static / moving / breakable / disappearing platforms, spring + trampoline, propeller hat, jetpack, spring shoes, monsters you shoot or stomp.
 - Nothing useful found for "keyed video frames -> atlas"; the pipeline below is our own design.
 
+## Art direction (from the user's reference, `art/reference/ref-01-look.png`, 1024 x 1536)
+**Style:** painted storybook illustration (soft shading, rim light, glow), NOT pixel art, so the `pixel-sprite` skill and diablo `RUBRIC.md` do not apply here. Palette: deep violet sky and fog, warm orange windows/lanterns/candy, cyan accents on magic things.
+What is in the frame, and what it means for the build:
+| In the reference | Build meaning |
+|---|---|
+| Little witch girl (purple star hat/dress, striped tights, boots), side/3-quarter view, ~350 px tall, feet planted on the slab | Default outfit = **Little Witch**. Other outfits are most likely the same girl in other costumes (same body, same pivot) so the clips stay consistent. Confirm with user. |
+| Cracked purple **stone slab on wooden brackets with autumn ivy** (~310 px wide, top face visible from slightly above) | The normal platform. Painted sprite, not a 3D mesh. Variants: clean, cracked (probably the breakable one: the bigger cracks), and more ivy. |
+| Slab with a **glowing cyan crescent-moon + stars rune** | A special platform. My guess: super-bounce/spring. User to confirm what it does (other options: moving, teleport, one-use boost). |
+| Orange striped **wrapped candy** with glow and sparkles | The candy currency pickup. |
+| Crescent moon, stars, soft clouds | Far sky layer (barely moves). |
+| Hazy **town silhouettes with lit windows**, 3 or more depth bands, fog between them | The mid/far parallax layers; fog sheets between bands. |
+| **Framing houses at the left and right edges** with a hanging jack-o'-lantern and a paper lantern, ivy | Foreground layer (in FRONT of the play plane, hugging the screen edges, moving faster than the world). Must never cover a platform in the middle ~70% of the width. Lanterns sway and glow-flicker. This is the 2.5D showpiece. |
+Scale from the reference at 9 world units across (1 u = 114 px): slab ~2.7 u wide, witch ~3.1 u tall and ~1.5 u wide, spacing between slabs ~1.8-2.6 u (early game). Widen the slab hit-box to the top face only, with feet-width tolerance (~0.6 u overlap needed).
+**Changes to the plan because of this reference:**
+1. Platforms, candy, enemies and foreground houses are **painted sprites (textured quads, alpha), not lit 3D meshes**; 3D lighting would clash with the painted look. The depth comes from Z-spaced layers + perspective parallax + fog sheets + glow/additive sprites (window light, lantern light, candy sparkles) + particles (fireflies, leaves). Optional soft bloom on high-end phones only.
+2. **Aspect ratio:** the reference is 2:3 but phones are about 9:19.5. Fit width, extend height. So every background layer must tile or extend vertically (tall strips), and edge houses must be separate pieces that repeat with variation.
+3. The background must **change with height** (the user's "more complex as you climb"): same style, new bands (rooftops -> clock tower -> storm clouds -> moon), more layers and more foreground clutter higher up.
+4. Candy collected flies to the HUD counter; the rune slab pulses cyan when you land.
+
+### Asset list to generate (user is producing the art; all painted, same style as the reference)
+Keep everything the SAME art style and light direction. Transparent PNG or on the green screen (green only as the backdrop, no green in the art). Sizes are for 2x phone sharpness.
+1. **Witch clips** on green (list in "Art pipeline").
+2. **Platforms** (one sprite each, ~620 px wide at 2x): normal x3 variants, cracked/breakable (plus 2 break-apart frames or I do the break in code), moon-rune, moving (e.g. floating on a broom/with lanterns), disappearing (fades to wisps). Top-down-ish 3/4 view like the reference.
+3. **Pickups/props:** candy (+ golden candy), jack-o'-lantern spring, broom, hat-propeller.
+4. **Enemies:** bat (2-4 wing frames), ghost, spider on thread, cauldron vortex.
+5. **Background bands** (each a tall, vertically tileable or extendable strip, ~1024 px wide): far sky (opaque, with moon and stars, one per biome), far town silhouette strip (alpha or opaque), mid town strip with lit windows (alpha), fog sheet (alpha, soft).
+6. **Foreground pieces** (alpha, left-edge and right-edge versions, 3-4 variants each): house corner with lantern, tree branch with ivy, rooftop edge, chimney with smoke.
+7. UI later: candy icon, buttons, title logo, outfit cards.
+Order that unblocks me fastest: witch clips -> normal slab + candy -> far/mid background -> foreground houses. Until then I use crops of the reference as look-dev stand-ins.
+
 ## Decisions (recommended defaults; user can overrule)
 1. **Engine:** Three.js r170 via importmap from jsDelivr (same as `city-clone`), classic no-build ES modules. No bundler.
 2. **Camera:** `PerspectiveCamera`, narrow FOV (~28-32 deg), looking straight down -Z at the gameplay plane z=0. No tilt: collision stays readable and the sprite never looks skewed. Depth layers behind (and a few in front) give the parallax. Camera x is fixed; y follows the player upward only.
 3. **Gameplay is pure 2D** (x, y on the z=0 plane). Three.js is only the renderer. Game logic never reads the scene graph.
-4. **Player = billboard quad with a sprite-atlas animation**, made from the user's green-screen clips (keyed OFFLINE, not live; see pipeline). Platforms/props = small real 3D meshes, lit, so they catch moonlight and the lit-vs-flat contrast sells the 2.5D.
+4. **Player = billboard quad with a sprite-atlas animation**, made from the user's green-screen clips (keyed OFFLINE, not live; see pipeline). Platforms/props/background are painted sprites on Z-spaced layers (see Art direction); no lit 3D meshes.
 5. **Portrait phone first**; logical view 9 x 16 world units. Fit width; extra height on tall phones just shows more sky.
 6. **Cosmetic-only outfits** (no stat perks) so scores stay fair; each outfit can have its own trail/landing particles/sound.
 7. **Deploy:** Vercel project like `city-clone` (needs HTTPS for tilt anyway), root `doodle-clone/`. Artifact host is a fallback only (no `.glb`, small files).
@@ -81,7 +111,7 @@ doodle-clone/
 - **Biomes by height (blend, don't cut):** 0-1k graveyard (blue-violet) -> 1k-3k dead forest (orange/teal, fireflies) -> 3k-6k haunted mansion roofs (lightning flashes) -> 6k+ storm clouds -> moon + witch silhouettes.
 
 ## 2.5D background plan
-Layers are real meshes at set depths, all behind z=0 unless noted. Fog colour = current biome colour, which hides pop-in and gives atmosphere cheaply.
+Layers are textured quads at set depths, all behind z=0 unless noted. Fog colour = current biome colour, which hides pop-in and gives atmosphere cheaply.
 | Layer | z | Parallax | Notes |
 |---|---|---|---|
 | Sky gradient + stars + huge moon | -120 | ~0 (barely moves) | shader quad, colour lerps by height |
@@ -90,7 +120,7 @@ Layers are real meshes at set depths, all behind z=0 unless noted. Fog colour = 
 | Near scenery + drifting fog sheets | -8 | 0.6 | translucent quads |
 | Gameplay plane | 0 | 1.0 | player, platforms, enemies |
 | Foreground wisps/leaves/cobweb corners | +6 | 1.3 | few, subtle, never block play |
-Because the camera is perspective, parallax is automatic; the factors above are just the result of the z values. Props are instanced; scenery chunks recycle as the camera climbs. Light: one moon directional + a warm point light that follows the player (lantern glow); **no shadow maps** (mobile cost); a blob/contact shadow quad under platforms instead. Optional bloom only on high-end, off by default.
+Because the camera is perspective, parallax is automatic; the factors above are just the result of the z values. Props are instanced; scenery chunks recycle as the camera climbs. Lighting is painted in; glow comes from additive sprites (windows, lanterns, candy) and a soft contact shadow under the witch; **no shadow maps and no 3D lights** (mobile cost). Optional bloom only on high-end, off by default.
 
 ## Art pipeline (green-screen video -> sprites)
 Input: clips on a green background in the user's Dropbox (I have the Dropbox connector; `download_link` + `curl` works from this container; checked: dropbox.com and jsDelivr are reachable). Tools present: `ffmpeg`, Python with numpy + PIL (no OpenCV; will `pip install opencv-python-headless` if needed).
