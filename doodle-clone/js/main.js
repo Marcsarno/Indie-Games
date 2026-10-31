@@ -9,7 +9,7 @@ const qs = new URLSearchParams(location.search);
 const SAVE_KEY = 'spooky-save-v1';
 let stored = {}; try { stored = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}'); } catch (e) {}
 const save = Object.assign({ best: 0, candy: 0, outfit: 'witch', tilt: false, sound: true, tune: {} }, stored);
-if (save.tuneV !== 10) { save.tune = {}; save.tuneV = 10; }  // new defaults in round 10 (drag control): drop old saved values
+save.tuneV = 10;   // round 11: no more automatic resets of the player's saved sliders (rounds 7/8/10 wiped them; user lost changes)
 // live tuning (gear button): values saved per device, applied over config defaults
 const TUNE = [
   ['g', 'Gravity (lower = more hang time)', 12, 60, 1], ['H', 'Jump height', 3.5, 7, 0.1], ['maxVx', 'Steer speed', 3, 12, 0.5], ['accel', 'Turn quickness', 6, 90, 1],
@@ -99,12 +99,13 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 let wasMode = 'title';
+const shareTxt = () => `Gravity ${C.g} | Jump ${C.H} | Steer ${C.maxVx} | Turn ${C.accel} | Glide ${C.camGlide} | Land ${C.camLandFrac} | Control ${C.control}`;
 function tunePanel() {
   const el = $('tunebox'); el.innerHTML = '';
   for (const [k, label, lo, hi, st] of TUNE) {
     const row = document.createElement('label'); const v = C[k];
     row.innerHTML = `<span>${label}: <b>${(+v).toFixed(st < 1 ? 2 : 1)}</b></span><input type="range" min="${lo}" max="${hi}" step="${st}" value="${v}">`;
-    row.querySelector('input').oninput = (e) => { save.tune[k] = +e.target.value; applyTune(); row.querySelector('b').textContent = (+e.target.value).toFixed(st < 1 ? 2 : 1); persist(); };
+    row.querySelector('input').oninput = (e) => { save.tune[k] = +e.target.value; applyTune(); row.querySelector('b').textContent = (+e.target.value).toFixed(st < 1 ? 2 : 1); persist(); const t = document.querySelector('.stxt'); if (t) t.textContent = shareTxt(); };
     el.appendChild(row);
   }
   const pre = document.createElement('div'); pre.className = 'row';
@@ -119,6 +120,13 @@ function tunePanel() {
     b.onclick = () => { save.tune.control = m; applyTune(); input.mode = m; persist(); tunePanel(); }; ctl.appendChild(b);
   }
   el.appendChild(ctl);
+  // settings as text (they live only on this phone): show + copy so the player can send them to Claude
+  const txt = shareTxt();
+  const box = document.createElement('div'); box.className = 'share';
+  box.innerHTML = `<div class="stxt">${txt}</div>`;
+  const cb = document.createElement('button'); cb.textContent = 'Copy settings';
+  cb.onclick = async () => { try { await navigator.clipboard.writeText(shareTxt()); cb.textContent = 'Copied!'; } catch (e) { cb.textContent = 'Copy blocked: screenshot this'; } };
+  box.appendChild(cb); el.appendChild(box);
 }
 $('gear').onclick = $('gear2').onclick = () => { $('pause').classList.remove('on'); wasMode = mode; if (mode === 'play') mode = 'paused'; tunePanel(); $('tune').classList.add('on'); };
 $('tuneClose').onclick = () => { $('tune').classList.remove('on'); if (mode === 'paused') { mode = 'play'; last = performance.now(); } };
