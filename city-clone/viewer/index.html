@@ -548,7 +548,7 @@ const DENV = {                                     // what the Dave mission read
   music: createMusic(() => audio, () => muted),
   pose: (x, z, th, vx, vz) => { if (drive) Object.assign(drive, { x, z, th, vx, vz, w: 0, px: x, pz: z, pth: th }); },      // the cold open drives your car on a rail
   freeze: on => { paused = on; },
-  kick: (vx, vz, spin) => { if (drive && hmode === 'driving') { drive.vx += vx; drive.vz += vz; drive.w += spin; rig.shake = Math.min(1, rig.shake + .5); } },      // a rocket cop slams into you
+  kick: (vx, vz, spin) => { if (drive && hmode === 'driving') { drive.vx += vx; drive.vz += vz; drive.w += spin; rig.shake = Math.min(1, rig.shake + .5); const m = Math.hypot(vx, vz) || 1; crashFx(drive, drive.x - vx / m * 2.2, drive.z - vz / m * 2.2, vx / m, vz / m, m * 3); } },      // a rocket cop slams into you
 };
 const missions = !graph ? null : DEV ? createMissions(graph, { THREE, scene, groundH, banner: t => banner(t), addMoney: v => { game.money += v; }, cops, heights: world.heights })
   : createDave({ THREE, scene, makePerson: o => makePerson(o), makeCar: (k, c) => makeCar(k, c), play: (a, n, o) => play(a, n, o), walkers, colliders, carPoly: (x, z, th, d) => carPoly(x, z, th, d), placeOnGround, banner: t => banner(t), cops, graph, camera, env: DENV, pushCircle: (x, z, r, skip) => pushCircle(x, z, r, skip), burst: (x, y, z, nx, nz, p) => burst(x, y, z, nx, nz, p) });
@@ -642,6 +642,52 @@ function burst(x, y, z, nx, nz, power) {
     const i = (spHead++) % SP, sp = 3 + Math.random() * power * .5; spPos.set([x, y, z], i * 3);
     spVel.set([nx * sp + (Math.random() - .5) * 5, 1.5 + Math.random() * 4, nz * sp + (Math.random() - .5) * 5], i * 3); spLife[i] = .3 + Math.random() * .35;
   }
+}
+/* Crash effects (round 31), all cheap: damage marks stuck to your car where it was hit (a small pool of textured planes per car), a white-hot impact flash,
+   smoke puffs, glass bits on hard hits, a split second of slow motion on big ones, and smoke from the hood when your health is low (mission). */
+const FXTEX = (() => {
+  const mk = (draw) => { const c = document.createElement('canvas'); c.width = c.height = 128; draw(c.getContext('2d')); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
+  const dent = mk(g => {                                  // crumple: dark bruise, scraped bare metal, scratch lines, a couple of cracks in the paint
+    const r = g.createRadialGradient(64, 64, 4, 64, 64, 62); r.addColorStop(0, 'rgba(18,17,19,.95)'); r.addColorStop(.45, 'rgba(38,35,37,.75)'); r.addColorStop(.8, 'rgba(60,56,58,.3)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 26; i++) { const a = (Math.random() - .5) * .7, y = 30 + Math.random() * 68, x = 18 + Math.random() * 30, L = 30 + Math.random() * 60; g.strokeStyle = `rgba(${200 + Math.random() * 40 | 0},${200 + Math.random() * 40 | 0},${205 + Math.random() * 40 | 0},${.35 + Math.random() * .45})`; g.lineWidth = .8 + Math.random() * 1.8; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L); g.stroke(); }
+    g.strokeStyle = 'rgba(10,10,10,.8)'; g.lineWidth = 1.4; for (let k = 0; k < 3; k++) { g.beginPath(); let x = 64, y = 64; g.moveTo(x, y); for (let j = 0; j < 5; j++) { x += (Math.random() - .5) * 30; y += (Math.random() - .5) * 30; g.lineTo(x, y); } g.stroke(); }
+  });
+  const puff = mk(g => { const r = g.createRadialGradient(64, 64, 4, 64, 64, 62); r.addColorStop(0, 'rgba(255,255,255,.9)'); r.addColorStop(.6, 'rgba(255,255,255,.35)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128); });
+  return { dent, puff };
+})();
+const DENT_MAT = new THREE.MeshLambertMaterial({ map: FXTEX.dent, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }), DENT_GEO = new THREE.PlaneGeometry(1, 1);
+function markCar(c, wx, wz, power) {                      // a damage mark on the face of the car nearest the hit (car-local), up to 8 per car (oldest reused)
+  const car = c.car, [L, W] = car.dims, H = car.dims[3] || 1.6, dx = wx - c.x, dz = wz - c.z, ct = Math.cos(c.th), st = Math.sin(c.th);
+  const lx = dx * ct - dz * st, lz = dx * st + dz * ct; car.marks = car.marks || [];
+  let m = car.marks.length < 8 ? null : car.marks.shift(); if (!m) { m = new THREE.Mesh(DENT_GEO, DENT_MAT); m.castShadow = false; car.group.add(m); } car.marks.push(m);
+  const size = Math.min(1.5, .55 + power * .045), side = Math.abs(lx) / (W / 2) > Math.abs(lz) / (L / 2), y = H * (car.kind === 'moto' ? .45 : .38) + (Math.random() - .5) * .2;
+  if (side) { m.position.set(Math.sign(lx || 1) * (W / 2 + .03), y, Math.max(-L / 2 + .5, Math.min(L / 2 - .5, lz))); m.rotation.set(0, Math.sign(lx || 1) * Math.PI / 2, Math.random() * Math.PI * 2); }
+  else { m.position.set(Math.max(-W / 2 + .4, Math.min(W / 2 - .4, lx)), y, Math.sign(lz || 1) * (L / 2 + .03)); m.rotation.set(0, lz > 0 ? 0 : Math.PI, Math.random() * Math.PI * 2); }
+  m.scale.set(size * (side ? 1.3 : 1), size * .7, 1); m.visible = true;
+}
+function clearMarks(car) { for (const m of car.marks || []) m.visible = false; }
+const PUFFS = Array.from({ length: 18 }, () => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: FXTEX.puff, transparent: true, depthWrite: false, opacity: 0 })); sp.visible = false; scene.add(sp); return { sp, life: 0, max: 1, vy: 0, grow: 0, flash: false }; });
+let puffHead = 0;
+function puff(x, y, z, size, color, life, vy, grow, flash = false) {
+  const p = PUFFS[(puffHead++) % PUFFS.length]; p.sp.position.set(x, y, z); p.sp.scale.setScalar(size); p.sp.material.color.set(color); p.sp.material.blending = flash ? THREE.AdditiveBlending : THREE.NormalBlending; p.sp.material.needsUpdate = true;
+  Object.assign(p, { life, max: life, vy, grow, flash }); p.sp.visible = true;
+}
+function puffStep(dt) {
+  for (const p of PUFFS) { if (p.life <= 0) continue; p.life -= dt; const k = Math.max(0, p.life / p.max); p.sp.position.y += p.vy * dt; p.sp.scale.multiplyScalar(1 + p.grow * dt); p.sp.material.opacity = p.flash ? k : k * .55; if (p.life <= 0) p.sp.visible = false; }
+}
+let fxSlowT = 0;
+function crashFx(c, wx, wz, nx, nz, v) {                  // v = impact speed m/s
+  if (v < 4) return; markCar(c, wx, wz, v);
+  if (v > 7) puff(wx, .9, wz, .9 + v * .05, 0xfff2c8, .12, 0, 9, true);                                                     // white-hot flash
+  const n = v > 14 ? 3 : v > 8 ? 2 : 1; for (let k = 0; k < n; k++) puff(wx + (Math.random() - .5), .5 + Math.random() * .4, wz + (Math.random() - .5), .8 + Math.random() * .5, 0xb9b4ac, .9 + Math.random() * .5, .7, .9);
+  if (v > 12) debris(wx, 1.0, wz, nx * 2, nz * 2, 10, '#bfe4f2', 2.5, 2.5, .9);                                             // glass
+  if (v > 16 && timeK === 1 && !fxSlowT) { timeK = .3; fxSlowT = setTimeout(() => { if (timeK === .3) timeK = 1; fxSlowT = 0; }, 110); }   // a beat of slow motion on the big ones
+}
+let hoodT = 0;
+function hoodSmoke(dt) {                                  // low health in the mission: smoke from the hood (grey under 40, black and faster under 20)
+  if (!drive || hmode !== 'driving' || !missions || !missions.active || game.hp > 40) return; hoodT -= dt; if (hoodT > 0) return; hoodT = game.hp < 20 ? .12 : .28;
+  const L = drive.car.dims[0], x = drive.x - Math.sin(drive.th) * L * .35, z = drive.z - Math.cos(drive.th) * L * .35;
+  puff(x + (Math.random() - .5) * .4, 1.2, z + (Math.random() - .5) * .4, .6, game.hp < 20 ? 0x2a2a2a : 0x9a9a9a, 1.1, 1.4, 1.1);
 }
 const SK = 700, skid = new THREE.InstancedMesh(new THREE.PlaneGeometry(.22, .7), new THREE.MeshBasicMaterial({ color: 0x08080b, transparent: true, opacity: .55, depthWrite: false }), SK);
 skid.frustumCulled = false; scene.add(skid); const dummy = new THREE.Object3D(); dummy.rotation.order = 'YXZ'; dummy.position.set(0, -100, 0); dummy.updateMatrix(); for (let i = 0; i < SK; i++) skid.setMatrixAt(i, dummy.matrix);
@@ -746,11 +792,7 @@ function onImpact(c, v) {
   if (ppl && c === drive && v > 6) ppl.panic(c.x, c.z, 18);
   c.hits++; c.hardest = Math.max(c.hardest, v); const dmg = Math.max(0, v - 2.5) * .02 * (1 - .4 * TUNE.forgive); if (TUNE.damage) c.damage = Math.min(1, c.damage + dmg);
   rig.shake = Math.min(1, rig.shake + v / 16); burst(c.cx, .6, c.cz, c.cnx, c.cnz, v); crashSound(v);
-  if (v > 9) {                                    // a hard hit throws the doors on the struck side open for a moment
-    const side = c.crx * Math.cos(c.th) - c.crz * Math.sin(c.th) > 0 ? 'R' : 'L';
-    for (const row of ['F', 'R']) c.car.setDoor(row + side, .55 + Math.random() * .4);
-    clearTimeout(c.doorT); c.doorT = setTimeout(() => { if (c.mode === 'driving') c.car.setAll(false); }, 2200);
-  }
+  if (c === drive) crashFx(c, c.cx, c.cz, c.cnx, c.cnz, v);        // round 31: damage marks + puffs + flash (the doors no longer fly open on a hit: user)
   c.car.setDamage(c.damage);
 }
 const PLACE = { t: 0, area: '', street: '', candA: '', candS: '', ta: 0, ts: 0, show: 0 };
@@ -885,7 +927,7 @@ function hornSound() {
 function resetCar(x = world.start.x, z = -world.start.y, th = rad(world.start.rz)) {      // put the player's own car back and the hero in it
   if (drive && drive !== heroVeh()) parkVehicle(drive);
   const v = heroVeh(); removeCarCollider(v); drive = v; hmode = 'driving';
-  Object.assign(v, { x, z, th, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, hardest: 0, hits: 0, mode: 'driving' }); v.car.setDamage(0); v.car.setAll(false);
+  Object.assign(v, { x, z, th, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, hardest: 0, hits: 0, mode: 'driving' }); v.car.setDamage(0); v.car.setAll(false); clearMarks(v.car);
   v.car.group.position.set(x, 0, z); v.car.group.rotation.y = th; pilot.root.visible = false; v.car.occupants.FL = pilot; seatRider(v);
 }
 
@@ -1354,7 +1396,7 @@ function update(dt, draw = true) {
     if (drive.car.kind === 'moto') { const tl = clamp(drive.w * Math.hypot(drive.vx, drive.vz) * TUNE.motoLean, -.6, .6); drive.lean = (drive.lean || 0) + (tl - (drive.lean || 0)) * (1 - Math.exp(-8 * dt)); drive.car.group.rotation.z += drive.lean; }     // the bike leans into the turn
   }
   if (loose.size) looseStep(dta);
-  debrisStep(dta); splatStep(dta); treeStep(dta);
+  debrisStep(dta); splatStep(dta); treeStep(dta); puffStep(dt); hoodSmoke(dt);
   traffic.forEach((t, i) => {                                                   // scripted traffic loops along its lane
     if (t.path) { t.pos += t.speed * dt; if (!t.path.closed && t.pos > t.path.L) t.pos = 0; const a = t.path.at(t.pos); t.g.position.set(a.x, groundH(a.x, a.z), a.z); t.g.rotation.y = t.rz = a.yaw; moveCols[i].vx = a.fx * t.speed; moveCols[i].vz = a.fz * t.speed; }
     else {
