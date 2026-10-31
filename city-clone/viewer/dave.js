@@ -48,6 +48,8 @@ export function createDave(D) {
 #hurt.on{box-shadow:inset 0 0 120px 40px rgba(220,0,0,.55)}
 #phone .skip{all:unset;cursor:pointer;margin-left:auto;padding:5px 10px;border-radius:12px;background:#dcdce2;color:#333;font:600 12px system-ui}
 #phone .skip[hidden]{display:none}
+#cold{position:fixed;inset:0;z-index:24;display:grid;align-content:end;justify-items:start;padding:0 22px calc(28vh + env(safe-area-inset-bottom,0px));pointer-events:none;font:400 clamp(30px,9vw,44px)/1.05 "Anton",Impact,sans-serif;color:#fff;text-transform:uppercase;text-shadow:3px 4px 0 #111}
+#cold[hidden]{display:none} #cold span{display:block;opacity:0;transform:translateY(10px);transition:.35s} #cold span.on{opacity:1;transform:none} #cold small{font:500 clamp(16px,4.6vw,22px)/1.2 system-ui;text-transform:none;text-shadow:0 2px 6px #000;max-width:300px}
 #mfail small{color:#cfd3da;font:500 13px system-ui;letter-spacing:.04em}
 .warn{position:fixed;left:0;top:0;z-index:4;width:0;height:0;pointer-events:none;display:none}
 .warn i{position:absolute;left:-22px;top:-20px;width:0;height:0;border-left:22px solid transparent;border-right:22px solid transparent;border-bottom:40px solid #ff2b2b;filter:drop-shadow(0 0 8px #ff2b2b) drop-shadow(0 0 2px #fff);animation:wblink .18s steps(2) infinite}
@@ -57,6 +59,7 @@ export function createDave(D) {
   document.body.appendChild(phone);
   const fail = document.createElement('div'); fail.id = 'mfail'; fail.hidden = true; fail.innerHTML = `<div class="c"><b>Mission failed</b><span id="mf-why"></span><small id="mf-try"></small><button id="mf-retry">Retry</button></div>`; document.body.appendChild(fail);
   const hurt = document.createElement('div'); hurt.id = 'hurt'; document.body.appendChild(hurt);
+  const coldEl = document.createElement('div'); coldEl.id = 'cold'; coldEl.hidden = true; coldEl.innerHTML = '<span>Yep. That\'s me.</span><span><small>You\'re probably wondering how I got here.</small></span>'; document.body.appendChild(coldEl);
   const chip = document.getElementById('mission'); const msgs = phone.querySelector('.msgs'), pick = phone.querySelector('.pick');
   const wait = s => new Promise(r => setTimeout(r, s * 1000));
   const say = (who, text, me) => { const m = document.createElement('div'); m.className = 'm' + (me ? ' me' : ''); m.innerHTML = `<i>${who}</i>${text}`; msgs.appendChild(m); };
@@ -82,16 +85,42 @@ export function createDave(D) {
   const INTRO = [['Dave', 'Hey guys.. still having some issues and can\'t make it to the store.'], ['Dave', 'Can you pick me up some groceries from Publix? 🙏'], ['Dave', 'I\'m home on Banks Rd. Pull right into the driveway 🏠']];
   const skipBtn = phone.querySelector('.skip');
   function showPick() {
-    skipBtn.hidden = true; const row = pick.querySelector('div'); row.innerHTML = ''; pick.hidden = false;
-    env.CHARS.forEach((C, i) => { const b = document.createElement('button'); b.innerHTML = `<img src="img/${C.id}.jpg" alt="">${C.name}`; b.onclick = () => choose(i); row.appendChild(b); });
+    skipBtn.hidden = true; const row = pick.querySelector('div'); row.innerHTML = ''; pick.hidden = false; const shownAt = performance.now();
+    env.CHARS.forEach((C, i) => { const b = document.createElement('button'); b.innerHTML = `<img src="img/${C.id}.jpg" alt="">${C.name}`; b.onclick = () => { if (performance.now() - shownAt > 900) choose(i); }; row.appendChild(b); });      // taps in the first 0.9 s are ignored (fast taps to skip the texts used to land on a face and start the game)
   }
   function skipIntro() {                                   // tap the screen (or Skip) during the texts: all of them at once, straight to "Who's going?"
     if (S.stage !== 'intro' || !pick.hidden) return; S.run++; msgs.innerHTML = ''; for (const [w, t] of INTRO) say(w, t);
     phone.hidden = false; phone.classList.add('show'); env.cine([{ ...SHOTS.house, dur: .01 }]); showPick();
   }
-  skipBtn.onclick = skipIntro; document.getElementById('view').addEventListener('pointerdown', () => { if (S.stage === 'intro') skipIntro(); });
+  skipBtn.onclick = skipIntro; document.getElementById('view').addEventListener('pointerdown', () => { if (S.stage === 'intro') skipIntro(); else if (S.stage === 'cold') endCold(); });
+  // ---------- cold open (showcase option): a few seconds of the chase, freeze-frame, then the story starts ----------
+  async function coldOpen() {
+    S.stage = 'cold'; S.coldDone = true; S.ct = 0; S.cs = 0; const tok = ++S.run, gone = () => tok !== S.run;
+    S.cpath = routeTo(DAVE.lot[0], DAVE.lot[1] + 12, DAVE.house[0], DAVE.house[1]); env.resetCar(S.cpath[0][0], S.cpath[0][1], 0);
+    document.body.classList.add('cine'); cops.lock(true); cops.force(3); if (cops.goal) cops.goal(DAVE.house[0], DAVE.house[1]); env.sound('crash');
+    await wait(5.6); if (gone()) return;
+    env.freeze(true); D.camera && (document.getElementById('view').style.filter = 'grayscale(1) contrast(1.2) brightness(.95)'); env.sound('scratch');
+    coldEl.hidden = false; const sp = coldEl.querySelectorAll('span'); await wait(.05); sp[0].classList.add('on'); await wait(1.4); if (gone()) return; sp[1].classList.add('on'); await wait(2.4); if (gone()) return;
+    endCold();
+  }
+  async function endCold() {
+    if (S.stage !== 'cold') return; S.run++; const fd = document.getElementById('fade'); fd.classList.add('on'); await wait(.6);
+    env.freeze(false); document.getElementById('view').style.filter = ''; coldEl.hidden = true; coldEl.querySelectorAll('span').forEach(x => x.classList.remove('on'));
+    clearMissiles(); cops.force(0); cops.lock(false); cops.clear(); if (cops.goal) cops.goal(null); env.heal(); env.resetCar(); S.stage = 'off'; start(); await wait(.3); fd.classList.remove('on');
+  }
+  function coldStep(dt, P) {                               // your car on a rail along the road at chase speed; cops (3 stars), a rocket and a SWAT van join in
+    S.ct += dt; S.cs += 24 * dt; const R = S.cpath; let acc = 0, x = R[0][0], z = R[0][1], th = 0;
+    for (let i = 1; i < R.length; i++) { const L = Math.hypot(R[i][0] - R[i - 1][0], R[i][1] - R[i - 1][1]); if (acc + L >= S.cs) { const f = (S.cs - acc) / L; x = R[i - 1][0] + (R[i][0] - R[i - 1][0]) * f; z = R[i - 1][1] + (R[i][1] - R[i - 1][1]) * f; th = Math.atan2(-(R[i][0] - R[i - 1][0]), -(R[i][1] - R[i - 1][1])); break; } acc += L; }
+    S.cth = S.cth == null ? th : S.cth + wrap(th - S.cth) * Math.min(1, dt * 6); env.pose(x, z, S.cth, -Math.sin(S.cth) * 24, -Math.cos(S.cth) * 24); env.heal();
+    pm.multiplyMatrices(D.camera.projectionMatrix, D.camera.matrixWorldInverse); frustum.setFromProjectionMatrix(pm);
+    const Pv = { x, z, vx: -Math.sin(S.cth) * 24, vz: -Math.cos(S.cth) * 24, th: S.cth, L: P.L };
+    if (S.ct > 1.0 && !S.cswat) { S.cswat = launchSwat(Pv, onScreen); }
+    if (S.ct > 2.2 && !S.crock) { S.crock = true; launch(Pv, .85, onScreen); }
+    rocketStep(dt, Pv, .85);
+  }
   async function start() {
-    if (S.stage !== 'off' && S.stage !== 'done') return; S.stage = 'intro'; msgs.innerHTML = ''; pick.hidden = true; const tok = ++S.run, gone = () => tok !== S.run;
+    if (S.stage !== 'off' && S.stage !== 'done') return;
+    if (env.coldOpen && !S.coldDone) { S.cswat = false; S.crock = false; S.cth = null; coldOpen(); return; } S.stage = 'intro'; msgs.innerHTML = ''; pick.hidden = true; const tok = ++S.run, gone = () => tok !== S.run;
     env.cine([SHOTS.city]); await wait(.8); if (gone()) return; phone.hidden = false; skipBtn.hidden = false; await wait(.05); phone.classList.add('show');
     await wait(.4); await typing('Dave', 1.0); if (gone()) return; say(...INTRO[0]); await wait(.6); if (gone()) return;
     env.cine([SHOTS.publix]); await typing('Dave', 1.2); if (gone()) return; say(...INTRO[1]); await wait(3.6); if (gone()) return;
@@ -351,6 +380,7 @@ export function createDave(D) {
     sign.position.set(DAVE.house[0] + 3.1, 0, DAVE.house[1] - 1.2); sign.rotation.y = DAVE.houseYaw; scene.add(sign); }
   // ---------- step ----------
   function step(dt, P) {                                   // P: { x, z (three), vx, vz, th, speed, driving }
+    if (S.stage === 'cold') { coldStep(dt, P); return; }
     if (S.stage === 'off' || S.stage === 'intro' || S.stage === 'done' || S.failed) return;
     if (env.respawning && performance.now() > (S.grace || 0)) { failMission(env.lastDeath === 'busted' ? 'Busted.' : 'Wasted.'); return; }
     const me = [P.x, P.z];

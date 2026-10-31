@@ -55,10 +55,12 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 .cl, .cr { display: flex; gap: 10px; align-items: flex-end; }
 .cl { position: relative; } #b-unstick { position: absolute; left: 0; bottom: calc(100% + 12px); }      /* above the arrows or the stick, so the right-hand buttons never overflow */
 .cr { flex-direction: column; align-items: flex-end; }
-.cr .r2 { display: flex; gap: 10px; align-items: flex-end; }
+.cr .r2 { display: flex; gap: 8px; align-items: flex-end; }
 .pb { all: unset; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; box-sizing: border-box; width: 72px; height: 72px; border-radius: 50%; display: grid; place-content: center; text-align: center; font: 600 13px/1.05 var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--paper); background: var(--panel); border: 2px dashed rgba(255, 236, 200, .5); pointer-events: auto; touch-action: none; cursor: pointer; }
 .pb.big { width: 98px; height: 98px; font-size: 17px; border-color: var(--lamp); }
-.pb.sm { width: 60px; height: 60px; font-size: 12px; }
+.pb.sm { width: 56px; height: 56px; font-size: 12px; }
+#b-left, #b-right { width: 82px; height: 82px; position: relative; } #b-left::after, #b-right::after { content: ''; position: absolute; inset: -8px; border-radius: 50%; }      /* round 31: bigger turn buttons, with an invisible 8 px of extra tap area all round */
+.cl { gap: 8px; }
 .pb.on { color: var(--night); background: var(--lamp); border-color: var(--lamp); }
 .pb.dim { opacity: .35; pointer-events: none; }
 .corner { top: calc(12px + env(safe-area-inset-top, 0px)); display: grid; justify-items: end; gap: 4px; z-index: 2; }
@@ -77,6 +79,7 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 #t-play { all: unset; cursor: pointer; padding: 14px 54px 12px; border-radius: 4px; font: 400 30px/1 "Anton", Impact, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: #fff; border: 3px solid #5fe3ff; background: rgba(10, 4, 20, .55); box-shadow: 0 0 14px #18b7e0, inset 0 0 12px rgba(24, 183, 224, .5); text-shadow: 0 0 10px #5fe3ff; animation: startGlow 1.6s ease-in-out infinite; }
 @keyframes startGlow { 50% { box-shadow: 0 0 28px #18b7e0, inset 0 0 18px rgba(24, 183, 224, .7); } }
 body.cine .hud, body.cine #chars, body.cine #mission, body.cine #place, body.cine #drv, body.cine #hint { visibility: hidden; }
+#t-cold { all: unset; display: block; margin: 14px auto 0; cursor: pointer; padding: 6px 12px; border-radius: 14px; font: 600 13px var(--display); letter-spacing: .1em; text-transform: uppercase; color: #e8dff0; background: rgba(10, 4, 20, .5); border: 1px solid rgba(95, 227, 255, .5); }
 #t-cont { margin: 10px 0 0; text-align: center; color: #e8dff0; font: 500 13px var(--display); letter-spacing: .08em; }
 #title[hidden], #bigmap[hidden], #hint[hidden] { display: none; }
 #bigmap { position: fixed; inset: 0; z-index: 21; background: #12324f; display: grid; grid-template-rows: 1fr auto; gap: 10px; padding: calc(12px + env(safe-area-inset-top, 0px)) 12px calc(16px + env(safe-area-inset-bottom, 0px)); }
@@ -162,7 +165,7 @@ body.cine .hud, body.cine #chars, body.cine #mission, body.cine #place, body.cin
 </div>
 <div id="chars" aria-label="Switch character"></div>
 <div id="banner"></div>
-<div id="title" hidden><div class="logo"><div class="gt">Grand Theft</div><div class="cc">Coconut Creek</div><div class="fl">Florida</div></div><div><button id="t-play">Start</button><p id="t-cont"></p></div></div>
+<div id="title" hidden><div class="logo"><div class="gt">Grand Theft</div><div class="cc">Coconut Creek</div><div class="fl">Florida</div></div><div><button id="t-play">Start</button><button id="t-cold" aria-pressed="true">Cold open: on</button><p id="t-cont"></p></div></div>
 <div id="bigmap" hidden><canvas id="bigc"></canvas><button class="btn" id="bm-close">Close map</button></div>
 <div id="hint" hidden><div class="hint-stick">Drag: steer + speed</div><div class="hint-r">Brake &middot; Horn &middot; Exit</div><div class="hint-map">Tap the map for the full map &middot; &#9776; pauses</div></div>
 <div id="fade"></div>
@@ -537,8 +540,11 @@ const DENV = {                                     // what the Dave mission read
   get carMass() { return drive ? drive.mass * TUNE.heroMass * (drive.st ? drive.st.ram : 1) : 2000; },
   setBlocks: (cars, shut) => { BLK.cars = cars; BLK.shut = new Set(shut); ROUTE.t = 0; }, switchTo: i => switchTo(i, true), cine: (sh, loop) => cine(sh, loop), cineStop: () => cineStop(), get cineOn() { return !!CINE.shots; }, addMoney: v => { game.money += v; }, heal: () => { game.hp = 100; }, resetCar: (x, z, th) => resetCar(x, z, th),
   hurt: (amt, dx, dz) => { game.hp = Math.max(0, game.hp - amt); rig.shake = Math.min(1, rig.shake + .35); if (hmode === 'foot') { foot.lx += dx * 6; foot.lz += dz * 6; } },
-  sound: (k, pan) => { if (k === 'crash') crashSound(12); else if (k === 'whoosh') whooshSound(pan || 0); },
+  sound: (k, pan) => { if (k === 'crash') crashSound(12); else if (k === 'whoosh') whooshSound(pan || 0); else if (k === 'scratch') scratchSound(); },
   get W() { return innerWidth; }, get H() { return innerHeight; },
+  get coldOpen() { return coldOpen; },
+  pose: (x, z, th, vx, vz) => { if (drive) Object.assign(drive, { x, z, th, vx, vz, w: 0, px: x, pz: z, pth: th }); },      // the cold open drives your car on a rail
+  freeze: on => { paused = on; },
   kick: (vx, vz, spin) => { if (drive && hmode === 'driving') { drive.vx += vx; drive.vz += vz; drive.w += spin; rig.shake = Math.min(1, rig.shake + .5); } },      // a rocket cop slams into you
 };
 const missions = !graph ? null : DEV ? createMissions(graph, { THREE, scene, groundH, banner: t => banner(t), addMoney: v => { game.money += v; }, cops, heights: world.heights })
@@ -667,6 +673,13 @@ function chirp() {                                // a Florida bird somewhere: a
 function farHorn() {                              // somebody honking a few streets away
   const { ctx, master } = audio, t = ctx.currentTime, lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(master);
   for (const f of [370, 466]) { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = f * (.94 + Math.random() * .1); const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.008, t + .02); g.gain.setValueAtTime(.008, t + .25); g.gain.linearRampToValueAtTime(0, t + .3); o.connect(g); g.connect(lp); o.start(t); o.stop(t + .32); }
+}
+function scratchSound() {                          // a record scratch for the cold open freeze-frame
+  if (!audio || muted) return; const { ctx, master, nb } = audio, t = ctx.currentTime;
+  for (const [t0, f0, f1, d] of [[0, 2400, 500, .14], [.15, 600, 2600, .12], [.29, 2200, 300, .22]]) {
+    const s = ctx.createBufferSource(); s.buffer = nb; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 3; bp.frequency.setValueAtTime(f0, t + t0); bp.frequency.exponentialRampToValueAtTime(f1, t + t0 + d);
+    const g = ctx.createGain(); g.gain.setValueAtTime(.0001, t + t0); g.gain.exponentialRampToValueAtTime(.5, t + t0 + .02); g.gain.exponentialRampToValueAtTime(.001, t + t0 + d); s.connect(bp); bp.connect(g); g.connect(master); s.start(t + t0); s.stop(t + t0 + d + .05);
+  }
 }
 function whooshSound(pan) {                       // a rocket cop about to hit: a rising siren yelp + air rush, panned toward it
   if (!audio || muted) return; const { ctx, master, nb } = audio, t = ctx.currentTime, P = ctx.createStereoPanner ? ctx.createStereoPanner() : null; if (P) { P.pan.value = clamp(pan, -1, 1); P.connect(master); }
@@ -1137,6 +1150,9 @@ let paused = false;
 const titleOn = !/[?&](notitle|hud|bench)/.test(location.search);
 function startPlay() { $('title').hidden = true; paused = false; cineStop(); ensureAudio(); if (missions && missions.start && !/[?&]nomission/.test(location.search)) setTimeout(() => missions.start(), 150); let seen = false; try { seen = localStorage.getItem('gtcc-hint') === '1'; } catch (e) { /* ok */ } if (!seen) { $('hint').hidden = false; setTimeout(() => { $('hint').hidden = true; }, 7000); try { localStorage.setItem('gtcc-hint', '1'); } catch (e) { /* ok */ } } }
 $('t-play').addEventListener('click', startPlay);
+let coldOpen = true; try { coldOpen = localStorage.getItem('gtcc-cold') !== '0'; } catch (e) { /* ok */ }      // the showcase cold open (round 31): on by default, a toggle on the title screen
+const coldLabel = () => { $('t-cold').textContent = 'Cold open: ' + (coldOpen ? 'on' : 'off'); $('t-cold').setAttribute('aria-pressed', String(coldOpen)); }; coldLabel();
+$('t-cold').addEventListener('click', () => { coldOpen = !coldOpen; coldLabel(); try { localStorage.setItem('gtcc-cold', coldOpen ? '1' : '0'); } catch (e) { /* ok */ } });
 const MAPLAB = [['Publix', [868, 372]], ['Seminole Casino', [1180, 470]], ['City Hall', [930, 620]], ['Police', [1030, 640]], ['Promenade', [1120, 990]], ['Trash Mountain', [997, 183]], ['Windmill Park', [265, 1100]], ['Lakeside Park', [300, 690]], ['Golf', [1240, 380]], ['School', [810, 750]], ['Industrial', [400, 905]]];
 function drawBigMap() {
   const cv = $('bigc'), r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1); cv.width = r.width * dpr; cv.height = r.height * dpr; const g = cv.getContext('2d'); g.scale(dpr, dpr);
