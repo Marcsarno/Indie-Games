@@ -9,7 +9,7 @@ const qs = new URLSearchParams(location.search);
 const SAVE_KEY = 'spooky-save-v1';
 let stored = {}; try { stored = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}'); } catch (e) {}
 const save = Object.assign({ best: 0, candy: 0, outfit: 'witch', tilt: false, sound: true, tune: {} }, stored);
-if (save.tuneV !== 8) { save.tune = {}; save.tuneV = 8; }   // new defaults in round 8: drop old slider values saved on the phone
+if (save.tuneV !== 10) { save.tune = {}; save.tuneV = 10; }  // new defaults in round 10 (drag control): drop old saved values
 // live tuning (gear button): values saved per device, applied over config defaults
 const TUNE = [
   ['g', 'Gravity (lower = more hang time)', 12, 60, 1], ['H', 'Jump height', 3.5, 7, 0.1], ['maxVx', 'Steer speed', 3, 12, 0.5], ['accel', 'Turn quickness', 6, 90, 1],
@@ -114,7 +114,7 @@ function tunePanel() {
   }
   el.prepend(pre);
   const ctl = document.createElement('div'); ctl.className = 'row';
-  for (const [m, txt] of [['finger', 'Follow finger'], ['sides', 'Hold sides']]) {
+  for (const [m, txt] of [['drag', 'Drag'], ['finger', 'Follow finger'], ['sides', 'Hold sides']]) {
     const b = document.createElement('button'); b.textContent = txt; b.className = C.control === m ? 'sel' : '';
     b.onclick = () => { save.tune.control = m; applyTune(); input.mode = m; persist(); tunePanel(); }; ctl.appendChild(b);
   }
