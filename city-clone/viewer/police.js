@@ -4,7 +4,7 @@
 export const POL = { maxCops: [0, 1, 2, 4, 5], speed: [0, 17, 20, 23, 25], wreckNeed: [0, 1, 2, 4, 6], heatFor: [0, 1, 4, 8, 13], loseAfter: 28, bustTime: 3.5, probation: 6, pool: 7 };
 
 export function createPolice(G, deps) {
-  const { THREE, makeCar, carPoly, colliders, placeOnGround, scene, camera, pushCircle, audio, onStars, onBusted, onWreck } = deps;
+  const { THREE, makeCar, carPoly, colliders, placeOnGround, scene, camera, pushCircle, audio, onStars, onBusted, onWreck, ram, playerMass } = deps;
   // ---------- road graph for routing (node centres + edge polylines) ----------
   const N = G.nodes.map(n => ({ x: n.x, z: -n.y, adj: [] }));
   G.edges.forEach((e, ei) => { const P = e.pts.map(p => [p[0], -p[1]]); let L = 0; for (let k = 1; k < P.length; k++) L += Math.hypot(P[k][0] - P[k - 1][0], P[k][1] - P[k - 1][1]); N[e.a].adj.push({ n: e.b, P, L, ei }); N[e.b].adj.push({ n: e.a, P: P.slice().reverse(), L, ei }); });
@@ -99,6 +99,24 @@ export function createPolice(G, deps) {
     }
     const ux = sp > 3 ? P.vx / sp : 0, uz = sp > 3 ? P.vz / sp : 0; return [P.x + ux * ahead, P.z + uz * ahead];
   }
+  function pack(c, P, d) {                        // close in (< 32 m), by role: 0 rams your rear, 2 rides beside your back corner then PITs you, 3 gets in front and brake-checks
+    const role = c.id % 4, th = P.th || 0, fx = -Math.sin(th), fz = -Math.cos(th), rx = Math.cos(th), rz = -Math.sin(th), sp = Math.hypot(P.vx, P.vz);
+    const ox = c.x - P.x, oz = c.z - P.z, lon = ox * fx + oz * fz, lat = ox * rx + oz * rz;
+    if (role === 0) return [P.x - fx * 1.5 + P.vx * .25, P.z - fz * 1.5 + P.vz * .25, null];
+    if (role === 2) {
+      if (!c.side) c.side = lat >= 0 ? 1 : -1;
+      if (c.pit > 0) return [P.x + P.vx * .12, P.z + P.vz * .12, sp + 6];                               // steer into you
+      const gx = P.x + rx * c.side * 2.9 - fx * 1.4 + P.vx * .3, gz = P.z + rz * c.side * 2.9 - fz * 1.4 + P.vz * .3, gd = Math.hypot(gx - c.x, gz - c.z);
+      if (Math.abs(lat) > 1.6 && Math.abs(lat) < 4.2 && lon > -3.8 && lon < .8 && sp > 6) c.pit = .7;        // alongside your back corner: go
+      return [gx, gz, sp + Math.max(-6, Math.min(9, gd * 1.4))];
+    }
+    if (role === 3) {
+      if (c.brakeT > 0) return [P.x + fx * 30, P.z + fz * 30, Math.max(0, sp - 12)];                     // in front of you: stand on the brakes
+      if (lon > 5 && lon < 16 && Math.abs(lat) < 2.2) { c.brakeT = 1.6; }
+      return [P.x + fx * 11 + P.vx * .4, P.z + fz * 11 + P.vz * .4, sp + 8];
+    }
+    return null;
+  }
   function block(c, P, d, dt) {                   // a cutter that got in front of you: park across your path (the lane you are coming down) until you are past
     const sp = Math.hypot(P.vx, P.vz), ux = sp > 2 ? P.vx / sp : 0, uz = sp > 2 ? P.vz / sp : 0, ahead = (c.x - P.x) * ux + (c.z - P.z) * uz, side = Math.abs((c.x - P.x) * uz - (c.z - P.z) * ux);
     if (c.blocking) { c.holdT = (c.holdT || 0) + dt; if (ahead < -4 || d > 160 || c.holdT > 10) { c.blocking = false; c.inode = null; c.path = null; return false; } return true; }
@@ -110,6 +128,15 @@ export function createPolice(G, deps) {
       return true;
     }
     return false;
+  }
+  function hitYou(c, P, d, fx, fz) {             // a cop running into your car: momentum into you (and spin from where it lands: a hit on your back corner spins you, a PIT)
+    const now = performance.now(); if ((c.ramT || 0) > now || d > (c.dims[0] + P.L) / 2 + .5) return;
+    const nx = (P.x - c.x) / (d || 1), nz = (P.z - c.z) / (d || 1), vc = (fx * c.v - P.vx) * nx + (fz * c.v - P.vz) * nz; if (vc < 2.5) return;
+    const mc = c.col.mass || 2500, mp = playerMass ? playerMass() : 2500, J = vc * 1.25 * mc * mp / (mc + mp), dvp = J / mp;
+    const rx = (c.x - P.x) * .5, rz = (c.z - P.z) * .5, I = mp * ((P.L || 4.5) ** 2 + (P.W || 1.9) ** 2) / 12;
+    let dw = (rz * nx * J - rx * nz * J) / I * (c.pit > 0 ? 2.2 : 1);           // torque about your centre (the PIT turns it up)
+    dw = Math.max(-4.5, Math.min(4.5, dw)); if (ram) ram(nx * dvp, nz * dvp, dw, Math.min(14, dvp * 1.6));
+    c.v = Math.max(0, c.v - J / mc); c.ramT = now + 450; c.pit = 0;
   }
   function shove(c, nx, nz, fx, fz) {             // a cop at speed knocks traffic out of its way: sideways (away from its nose) and a little forward
     const rx = -fz, rz = fx, reach = c.dims[0] / 2 + 2.6, now = performance.now();
@@ -149,9 +176,11 @@ export function createPolice(G, deps) {
       if (c.state === 'WRECKED' || c.state === 'BLOCK') { c.v = 0; }
       else {
         // target: the player directly when close, else the next point on a road route
+        let pk = null, vto = null; c.pit = Math.max(0, (c.pit || 0) - dt); c.brakeT = Math.max(0, (c.brakeT || 0) - dt);
         let corner = 0, tx = P.x + P.vx * Math.min(1.2, d / 25), tz = P.z + P.vz * Math.min(1.2, d / 25);
         if (c.state === 'LEAVE') { tx = c.x - dx; tz = c.z - dz; }
         else if (W.force > 0 && c.id % 2 && c.state === 'CHASE' && block(c, P, d, dt)) { tx = c.bx; tz = c.bz; }
+        else if (W.force > 0 && d < 32 && c.state === 'CHASE' && c.id % 4 !== 1 && P.th !== undefined && (pk = pack(c, P, d))) { tx = pk[0]; tz = pk[1]; vto = pk[2]; }
         else if (d > 22) {
           c.repath -= dt;
           if (!c.path || c.repath <= 0) { const A = W.force > 0 ? aimPoint(c, P, d) : [P.x, P.z]; c.path = W.force > 0 ? routeTo(c.x, c.z, A[0], A[1]) : route(nearestNode(c.x, c.z), nearestNode(A[0], A[1])); c.pi = closestOn(c.path, c.x, c.z); c.repath = 1.2; }
@@ -164,15 +193,16 @@ export function createPolice(G, deps) {
         const turn = W.force > 0 ? Math.min(3.2, 20 / Math.max(c.v, 4)) * Math.min(1, .3 + c.v / 6) : 2.4 * Math.min(1, .35 + c.v / 12); c.th += Math.max(-turn * dt, Math.min(turn * dt, da));    // scripted chase: turns as hard as ~20 m/s2 of grip allows
         if (c.blocking) { c.v += Math.max(-14 * dt, Math.min(9 * dt, (Math.hypot(c.bx - c.x, c.bz - c.z) > 2 ? 8 : 0) - c.v)); }
         const ram = W.stars >= 2 && d < 30, vmax = POL.speed[Math.max(1, W.stars)] * (W.force ? 1.25 : 1);      // the scripted Dave chase: faster than your car (25 -> 31 m/s)
-        let vt = W.force > 0 ? vmax * (1 - .7 * Math.min(1, Math.max(corner, Math.abs(da) * .8) / 1.4)) : vmax * Math.max(.35, Math.cos(da)); if (c.blocking) vt = Math.hypot(c.bx - c.x, c.bz - c.z) > 2 ? 9 : 0; if (!ram && d < 9 && c.state !== 'LEAVE') vt = Math.min(vt, Math.hypot(P.vx, P.vz) + 1);     // 1 star: tail you; 2+: ram
+        let vt = vto != null ? Math.min(vto, POL.speed[4] * 1.25) : W.force > 0 ? vmax * (1 - .7 * Math.min(1, Math.max(corner, Math.abs(da) * .8) / 1.4)) : vmax * Math.max(.35, Math.cos(da)); if (c.blocking) vt = Math.hypot(c.bx - c.x, c.bz - c.z) > 2 ? 9 : 0; if (!ram && d < 9 && c.state !== 'LEAVE') vt = Math.min(vt, Math.hypot(P.vx, P.vz) + 1);     // 1 star: tail you; 2+: ram
         c.v += Math.max(-14 * dt, Math.min(9 * dt, vt - c.v));
         }
         const fx = -Math.sin(c.th), fz = -Math.cos(c.th); let nx = c.x + fx * c.v * dt, nz = c.z + fz * c.v * dt;
+        if ((W.force > 0 || W.stars >= 2) && P.th !== undefined) hitYou(c, P, d, fx, fz);                // ramming: checked before the push-out below, which would stop the cop at your bumper
         const plough = W.force > 0; if (plough && c.v > 2) shove(c, nx, nz, fx, fz);
         const q = pushCircle(nx, nz, 1.5, plough ? (B => B === c.col || B.ai) : c.col);      // scripted chase: traffic does not stop a cop, it gets shoved aside if (Math.abs(q[0] - nx) + Math.abs(q[1] - nz) > .03) { c.v *= .85; c.stuck += dt; } else c.stuck = Math.max(0, c.stuck - dt);
         if (c.stuck > (plough ? .6 : 1.5)) { if (plough) c.rev = 1.1; else c.th += Math.PI * .6; c.stuck = 0; c.path = null; }     // wedged on a wall: back off (scripted chase: reverse out), else turn away
         c.x = q[0]; c.z = q[1];
-        if (d < (c.dims[0] + P.L) / 2 + .6) { c.v = Math.min(c.v, 2); if (Math.hypot(P.vx, P.vz) < 1 && d < (c.dims[0] + P.L) / 2 + .3) pinning = true; }
+        if (d < (c.dims[0] + P.L) / 2 + .6) { if (!W.force && W.stars < 2) c.v = Math.min(c.v, 2); if (Math.hypot(P.vx, P.vz) < 1 && d < (c.dims[0] + P.L) / 2 + .3) pinning = true; }
       }
       placeOnGround(c.g, c.x, c.z, c.th);
       const Q = carPoly(c.x, c.z, c.th, c.dims); for (let k = 0; k < 4; k++) { c.col.poly[k][0] = Q[k][0]; c.col.poly[k][1] = Q[k][1]; }

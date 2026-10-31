@@ -10,7 +10,8 @@ export const DAVE = {
   rampTime: 60, rocketFrom: .12,                                                      // they start once heat passes rocketFrom
   rocketSpeed: [20, 54], rocketEvery: [4.0, .4], rocketMax: [1, 7],                   // top speed m/s, seconds between launches, how many at once: from low heat to full heat
   rocketGrip: [14, 12], cutIn: .55,                                                    // sideways grip m/s2 (less = wider turns and drifts); above cutIn heat they leave the road route and come straight at you when nothing is in the way
-  rocketHurt: [12, 22], missileMass: 3.0,                                             // health per hit (low to full heat); weight against your car
+  rocketHurt: [12, 22], missileMass: 3.0,
+  swatFrom: .5, swatEvery: [9, 4], swatMax: 2, swatSpeed: 38, swatHurt: 24, swatMass: 4.5,      // SWAT vans (late heat): first at heat .5, then every 9 -> 4 s, up to 2 at once; top speed m/s; health per hit; weight vs your car                                             // health per hit (low to full heat); weight against your car
   // roadblocks set up when the chase starts: Dave's street is shut at the east end and Coconut Creek Pkwy is shut, so the way in is the long loop round the north
   // (the car-wide gap block at the west end was removed in round 31). road + the edge end nearest `end` (three x, z), `at` m in from that end, gap width m (0 = solid)
   blocks: [{ road: 'Banks Rd', end: [-125.0, -29.7], at: 14, gap: 0 }, { road: 'Coconut Creek Pkwy', end: [-125.9, -0.8], at: 14, gap: 0, other: [-193.5, 0.4] }],                                     // round 31: the car-wide gap block at the west end of Banks Rd is gone (user: annoying, not fun)
@@ -162,13 +163,21 @@ export function createDave(D) {
     const col = { poly: [[1e5, 1e5], [1e5 + 1, 1e5], [1e5, 1e5 + 1], [1e5, 1e5 + 2]], cx: 1e5, cz: 1e5, r: 3, vx: 0, vz: 0, mass: 1, missile: true }; colliders.push(col);
     const r = { car, bar, col, on: false }; col.push = (dx, dz, dw) => { r.vx += dx * .2; r.vz += dz * .2; r.spin += dw * 4 + (Math.random() - .5) * 6; }; RK.push(r);
   }
+  { const decal = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 64; const g = c.getContext('2d'); g.fillStyle = '#141a24'; g.fillRect(0, 0, 256, 64); g.fillStyle = '#f2f2f2'; g.font = '900 46px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('SWAT', 128, 34); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return new THREE.MeshLambertMaterial({ map: t }); })();
+    for (let i = 0; i < 3; i++) {                        // SWAT vans: same driver as the rockets, heavier, they hold the road and can skid to a stop across it
+      const car = makeCar('van', '#1b2230'); car.group.visible = false; const L = car.dims[0], Wd = car.dims[1], H = car.dims[3] || 2.2;
+      for (const s_ of [-1, 1]) { const pl = new THREE.Mesh(new THREE.PlaneGeometry(L * .55, L * .14), decal); pl.position.set(s_ * (Wd / 2 + .02), H * .55, 0); pl.rotation.y = s_ * Math.PI / 2; car.group.add(pl); }
+      const bar = [0, 1].map(j => { const b = new THREE.Mesh(barGeo, new THREE.MeshBasicMaterial({ color: j ? 0x2b6bff : 0xff2b2b, toneMapped: false })); b.position.set(j ? .4 : -.4, H + .05, -L * .3); car.group.add(b); return b; });
+      const col = { poly: [[1e5, 1e5], [1e5 + 1, 1e5], [1e5, 1e5 + 1], [1e5, 1e5 + 2]], cx: 1e5, cz: 1e5, r: 3.5, vx: 0, vz: 0, mass: 1, missile: true }; colliders.push(col);
+      const r = { car, bar, col, on: false, swat: true }; col.push = (dx, dz, dw) => { r.vx += dx * .08; r.vz += dz * .08; r.spin += dw * 1.5; }; RK.push(r);
+    } }
   function blocked(ax, az, bx, bz, skip) {               // anything solid on the straight line from a to b? (samples every 3.5 m)
     const L = Math.hypot(bx - ax, bz - az), n = Math.floor(L / 3.5), stop = Math.max(0, (L - 5) / L);       // stops 5 m short of b (your own car is there)
     for (let i = 1; i < n; i++) { const f = i / n; if (f > stop) break; const x = ax + (bx - ax) * f, z = az + (bz - az) * f, q = pushCircle(x, z, .9, skip); if (Math.abs(q[0] - x) + Math.abs(q[1] - z) > .05) return true; }
     return false;
   }
   function launch(P, k, onScreen) {
-    const r = RK.find(q => !q.on); if (!r || !GN.length) return;
+    const r = RK.find(q => !q.on && !q.swat); if (!r || !GN.length) return;
     const sp = Math.hypot(P.vx, P.vz), ux = sp > 2 ? P.vx / sp : -Math.sin(P.th), uz = sp > 2 ? P.vz / sp : -Math.cos(P.th), late = k >= DAVE.cutIn;
     const way = late ? null : routeTo(P.x, P.z, DAVE.house[0], DAVE.house[1]), onWay = (x, z) => { if (!way) return 0; for (let j = 0; j < way.length; j += 2) if (Math.abs(way[j][0] - x) + Math.abs(way[j][1] - z) < 14) return 1; return 0; };
     const cand = [];
@@ -185,13 +194,23 @@ export function createDave(D) {
     Object.assign(r, { on: true, x: n.x, z: n.z, th, vx: -Math.sin(th) * v0, vz: -Math.cos(th) * v0, spin: 0, roll: 0, t: 0, hit: false, crash: 0, near: 1e9, path, pi: 0, repath: 1.2, los: false, losT: 0, k });
     r.col.mass = env.carMass * DAVE.missileMass; r.car.group.visible = true; r.car.setDamage && r.car.setDamage(0);
   }
+  function launchSwat(P, onScreen) {                     // from a road node ahead of you, 55-100 m out, off-screen: they come out of side streets on your way to Dave's
+    const r = RK.find(q => !q.on && q.swat); if (!r || !GN.length) return false;
+    const way = routeTo(P.x, P.z, DAVE.house[0], DAVE.house[1]); let best = -1, bs = -1e9;
+    for (let i = 0; i < GN.length; i++) { const n = GN[i], d = Math.hypot(n.x - P.x, n.z - P.z); if (d < 55 || d > 100 || onScreen(n.x, n.z)) continue; let w = 0; for (let j = 0; j < way.length; j += 2) if (Math.abs(way[j][0] - n.x) + Math.abs(way[j][1] - n.z) < 30) { w = 1; break; } const sc = w * 2 + Math.random(); if (sc > bs) { bs = sc; best = i; } }
+    if (best < 0) return false; const n = GN[best], path = routeTo(n.x, n.z, P.x, P.z); let aim = [P.x, P.z]; for (const q of path) if (Math.hypot(q[0] - n.x, q[1] - n.z) > 8) { aim = q; break; }
+    const th = Math.atan2(-(aim[0] - n.x), -(aim[1] - n.z));
+    Object.assign(r, { on: true, x: n.x, z: n.z, th, vx: -Math.sin(th) * 15, vz: -Math.cos(th) * 15, spin: 0, roll: 0, t: 0, hit: false, hitCD: 0, crash: 0, near: 1e9, path, pi: 0, repath: 1.2, los: false, losT: 0, k: 1, blockT: 0, blocked: false });
+    r.col.mass = env.carMass * DAVE.swatMass; r.car.group.visible = true; return true;
+  }
   function park(r) { r.on = false; r.car.group.visible = false; r.col.cx = r.col.cz = 1e5; for (const q of r.col.poly) { q[0] = 1e5; q[1] = 1e5; } r.col.vx = r.col.vz = 0; }
   function rocketStep(dt, P, k) {
     const flash = Math.floor(performance.now() / 160) % 2;
     for (const r of RK) {
       if (!r.on) continue; r.t += dt; r.k = Math.max(r.k, k);
       const dx = P.x - r.x, dz = P.z - r.z, d = Math.hypot(dx, dz), v = Math.hypot(r.vx, r.vz);
-      const vmax = lerp(DAVE.rocketSpeed, r.k), late = r.k >= DAVE.cutIn; let grip = lerp(DAVE.rocketGrip, r.k), care = 1 - .45 * r.k;
+      let vmax = lerp(DAVE.rocketSpeed, r.k), late = r.k >= DAVE.cutIn, grip = lerp(DAVE.rocketGrip, r.k), care = 1 - .45 * r.k;
+      if (r.swat) { vmax = DAVE.swatSpeed; grip = 15; care = .5; late = true; r.hitCD = Math.max(0, r.hitCD - dt); if (r.hitCD <= 0) r.hit = false; }
       // where to go: the player (with lead) when close or, late, when the line is clear; else the next point on the road route
       r.losT -= dt; if (late && r.losT <= 0) { r.losT = .3; r.los = d < 95 && !blocked(r.x, r.z, P.x, P.z, r.col); }
       const lead = clamp(d / Math.max(v, 8), 0, 1.4) * (.5 + .5 * r.k); let tx = P.x + P.vx * lead, tz = P.z + P.vz * lead, onRoute = false;
@@ -200,32 +219,37 @@ export function createDave(D) {
         while (r.pi < r.path.length && Math.hypot(r.path[r.pi][0] - r.x, r.path[r.pi][1] - r.z) < 7 + v * .25) r.pi++;
         if (r.pi < r.path.length) { tx = r.path[r.pi][0]; tz = r.path[r.pi][1]; onRoute = true; }
       }
-      if (onRoute) { grip *= 2.2; care = Math.max(care, .6); }              // on the road they hold the road (they must reach you); off it, they drift
+      if (onRoute) { grip *= r.swat ? 1.6 : 2.2; care = Math.max(care, .6); }              // on the road they hold the road (they must reach you); off it, they drift
       else if (!r.crash) { care = .25 * (1 - r.k); grip *= 1.3; }           // coming straight at you: (almost) no braking, a bit more bite to line up
       r.near = Math.min(r.near, d);
       // steering: the nose turns at what the grip allows at this speed (fast = barely turns); velocity follows the nose only as fast as the grip allows (late = drifts)
-      const want = Math.atan2(-(tx - r.x), -(tz - r.z)); let da = wrap(want - r.th);
+      if (r.swat && !r.blocked && !r.crash) {           // a SWAT van that got in front of you on your line: skids to a stop across the road (3 s), then comes for you
+        const ps = Math.hypot(P.vx, P.vz), ux = ps > 3 ? P.vx / ps : 0, uz = ps > 3 ? P.vz / ps : 0, ah = -dx * ux - dz * uz, sd = Math.abs(-dx * uz + dz * ux);
+        if (ps > 6 && ah > 10 && ah < 38 && sd < 6) { r.blocked = true; r.blockT = 3; r.bth = Math.atan2(-uz, ux); }
+      }
+      if (r.blockT > 0) { r.blockT -= dt; tx = r.x - Math.sin(r.bth) * 10; tz = r.z - Math.cos(r.bth) * 10; }
+      const want = r.blockT > 0 ? r.bth : Math.atan2(-(tx - r.x), -(tz - r.z)); let da = wrap(want - r.th);
       if (r.crash) { r.th += r.spin * dt; r.spin *= Math.exp(-1.2 * dt); r.crash += dt; }
-      else { const rate = Math.min(3, grip * (1 + 1.6 * r.k) / Math.max(v, 4)); r.th += clamp(da, -rate * dt, rate * dt) + r.spin * dt; r.spin *= Math.exp(-2 * dt); }
+      else { const rate = r.blockT > 0 ? 2.4 : Math.min(3, grip * (1 + 1.6 * r.k) / Math.max(v, 4)); r.th += clamp(da, -rate * dt, rate * dt) + r.spin * dt; r.spin *= Math.exp(-2 * dt); }
       // speed: early they brake for corners on the route (rules of the road); late they never lift
       let corner = 0; if (onRoute && r.pi + 3 < r.path.length) { const a = r.path[r.pi], b = r.path[Math.min(r.path.length - 1, r.pi + 4 + Math.round(v / 8))]; corner = Math.abs(wrap(Math.atan2(-(b[0] - a[0]), -(b[1] - a[1])) - r.th)); }
-      const vt = r.crash ? 0 : vmax * (1 - care * .75 * clamp(Math.max(corner, Math.abs(da)) / 1.3, 0, 1));
+      const vt = r.crash || r.blockT > 0 ? 0 : vmax * (1 - care * .75 * clamp(Math.max(corner, Math.abs(da)) / 1.3, 0, 1));
       const fx = -Math.sin(r.th), fz = -Math.cos(r.th); let vf = r.vx * fx + r.vz * fz, vl = r.vx * fz - r.vz * fx;
       vf += clamp(vt - vf, -22 * dt, (14 + 10 * r.k) * dt); const gl = (r.crash ? 6 : grip) * dt; vl = Math.abs(vl) <= gl ? 0 : vl - Math.sign(vl) * gl;
       r.vx = fx * vf + fz * vl; r.vz = fz * vf - fx * vl;
       // slamming into you (checked before the move: the car-vs-world push below would otherwise stop them at your bumper and count it as a wall)
       const reach = 1.7 + (P.L || 4.5) / 2 + .9;
       if (!r.hit && d < reach && env.hmode === 'driving') {
-        r.hit = true; const rv = Math.hypot(r.vx - P.vx, r.vz - P.vz), f = clamp(rv / 30, .35, 1.2); env.hurt(lerp(DAVE.rocketHurt, r.k) * f, dx / (d || 1), dz / (d || 1)); hurtFlash(); env.sound('crash');
+        r.hit = true; const rv = Math.hypot(r.vx - P.vx, r.vz - P.vz), f = clamp(rv / 30, .35, 1.2) * (r.swat ? 1.35 : 1); env.hurt((r.swat ? DAVE.swatHurt : lerp(DAVE.rocketHurt, r.k)) * f, dx / (d || 1), dz / (d || 1)); hurtFlash(); env.sound('crash');
         if (env.kick) env.kick(r.vx * .45 * f, r.vz * .45 * f, (Math.random() < .5 ? -1 : 1) * (1.5 + 2.5 * f)); if (burst) burst(P.x - dx / 2, .8, P.z - dz / 2, -dx / (d || 1), -dz / (d || 1), rv);
-        r.vx *= .3; r.vz *= .3; r.spin += (Math.random() - .5) * 8; r.crash = .01;
+        if (r.swat) { r.hitCD = 1.5; r.vx *= .5; r.vz *= .5; } else { r.vx *= .3; r.vz *= .3; r.spin += (Math.random() - .5) * 8; r.crash = .01; }
       }
       // move and hit the world: walls stop them; a hard hit spins them out
       const nx = r.x + r.vx * dt, nz = r.z + r.vz * dt, q = pushCircle(nx, nz, 1.7, r.col), ox = q[0] - nx, oz = q[1] - nz, od = Math.hypot(ox, oz);
       if (od > .02) { const ux = ox / od, uz = oz / od, vn = r.vx * ux + r.vz * uz;
-        if (vn < 0) { if (-vn > (onRoute ? 22 : 15) && !r.crash) { r.crash = .01; r.spin = (Math.random() < .5 ? -1 : 1) * (3 + Math.min(6, -vn / 6)); if (burst) burst(q[0], .6, q[1], ux, uz, -vn); if (d < 60) env.sound('crash'); } r.vx -= vn * ux * (r.crash ? 1.3 : 1); r.vz -= vn * uz * (r.crash ? 1.3 : 1); } }
+        if (vn < 0) { if (-vn > (r.swat ? 34 : onRoute ? 22 : 15) && !r.crash) { r.crash = .01; r.spin = (Math.random() < .5 ? -1 : 1) * (3 + Math.min(6, -vn / 6)); if (burst) burst(q[0], .6, q[1], ux, uz, -vn); if (d < 60) env.sound('crash'); } r.vx -= vn * ux * (r.crash ? 1.3 : 1); r.vz -= vn * uz * (r.crash ? 1.3 : 1); } }
       r.x = q[0]; r.z = q[1]; r.roll += (clamp(-vl / 25, -.12, .12) - r.roll) * Math.min(1, dt * 6);
-      const gone = r.t > 16 || d > 150 || (r.crash > 2 && d > 15) || r.crash > 4 || (r.hit && r.t > 6 && d > 30);
+      const gone = r.swat ? (r.t > 30 || d > 160 || r.crash > 3) : r.t > 16 || d > 150 || (r.crash > 2 && d > 15) || r.crash > 4 || (r.hit && r.t > 6 && d > 30);
       if (gone) { park(r); continue; }
       placeOnGround(r.car.group, r.x, r.z, r.th); r.car.group.rotation.z = r.roll; r.bar[0].material.color.setHex(flash ? 0xff2b2b : 0x551010); r.bar[1].material.color.setHex(flash ? 0x10204f : 0x2b6bff);
       r.col.poly = carPoly(r.x, r.z, r.th, r.car.dims); r.col.cx = r.x; r.col.cz = r.z; r.col.r = 3; r.col.vx = r.vx; r.col.vz = r.vz;
@@ -347,6 +371,10 @@ export function createDave(D) {
         const k = (S.heat - DAVE.rocketFrom) / (1 - DAVE.rocketFrom); let on = 0; for (const r of RK) if (r.on) on++;
         S.missT -= dt; if (S.missT <= 0 && on < Math.round(lerp(DAVE.rocketMax, k))) { pm.multiplyMatrices(D.camera.projectionMatrix, D.camera.matrixWorldInverse); frustum.setFromProjectionMatrix(pm); launch(P, k, onScreen); S.missT = lerp(DAVE.rocketEvery, k) * (.8 + Math.random() * .4); }
       }
+      if (S.heat > DAVE.swatFrom && P.driving) {
+        const k2 = (S.heat - DAVE.swatFrom) / (1 - DAVE.swatFrom); let sw = 0; for (const r of RK) if (r.on && r.swat) sw++;
+        S.swatT = (S.swatT ?? 1) - dt; if (S.swatT <= 0 && sw < DAVE.swatMax) { pm.multiplyMatrices(D.camera.projectionMatrix, D.camera.matrixWorldInverse); frustum.setFromProjectionMatrix(pm); if (launchSwat(P, onScreen)) { if (!S.swatSaid) { S.swatSaid = true; banner('SWAT!'); } } S.swatT = lerp(DAVE.swatEvery, k2); }
+      }
       if (dh < 6 && P.speed < 3) win();
       beacon.material.opacity = dh < 35 ? .5 + Math.sin(performance.now() / 120) * .15 : .38;
     }
@@ -361,7 +389,7 @@ export function createDave(D) {
     const tg = target(); beacon.visible = !!tg && S.stage !== 'fight'; if (tg) { const k = 1 + Math.sin(performance.now() / 300) * .06; beacon.position.set(tg[0], 0, -tg[1]); beacon.scale.set(S.stage === 'grab' || S.stage === 'walkIn' ? .5 : k, 1, S.stage === 'grab' || S.stage === 'walkIn' ? .5 : k); }
   }
   function restart() { S.cpNear = null; clearRoadblocks(); if (cops.goal) cops.goal(null); clearThugs(); clearMissiles(); cops.force(0); cops.lock(false); cops.clear(); fail.hidden = true; phone.hidden = true; S.failed = false; S.stage = 'off'; S.checkpoint = null; objective(''); env.heal(); env.resetCar(); start(); }
-  function startChase() { roadblocks(); S.stage = 'chase'; S.cops = 1; S.copT = 0; S.missT = 2; S.t = 0; S.heat = 0; S.d0 = Math.max(60, dist([DAVE.lot[0], DAVE.lot[1]], DAVE.house)); S.checkpoint = 'chase'; cops.lock(true); cops.force(1); if (cops.goal) { cops.goal(DAVE.house[0], DAVE.house[1]); cops.shut(SHUT, CLOSED); } S.stopSaid = false; objective('Get the groceries to Dave', 'roads closed'); banner('COPS!'); setTimeout(() => { if (S.stage === 'chase' && S.t < 6) banner('ROADS CLOSED'); }, 2000); }
+  function startChase() { roadblocks(); S.stage = 'chase'; S.cops = 1; S.copT = 0; S.missT = 2; S.t = 0; S.heat = 0; S.d0 = Math.max(60, dist([DAVE.lot[0], DAVE.lot[1]], DAVE.house)); S.checkpoint = 'chase'; cops.lock(true); cops.force(1); if (cops.goal) { cops.goal(DAVE.house[0], DAVE.house[1]); cops.shut(SHUT, CLOSED); } S.stopSaid = false; S.swatSaid = false; S.swatT = 1; objective('Get the groceries to Dave', 'roads closed'); banner('COPS!'); setTimeout(() => { if (S.stage === 'chase' && S.t < 6) banner('ROADS CLOSED'); }, 2000); }
   function win() { clearRoadblocks(); if (cops.goal) cops.goal(null); S.stage = 'done'; cops.force(0); cops.lock(false); cops.clear(); clearMissiles(); clearThugs(); objective(''); env.addMoney(DAVE.reward); const n = tries + 1; tries = 0; saveTries(); banner(`MISSION PASSED  +$${DAVE.reward}`); setTimeout(() => banner(`DELIVERED ON ATTEMPT ${n}`), 2000);
     (async () => { await wait(1.5); msgs.innerHTML = ''; pick.hidden = true; phone.hidden = false; await wait(.05); phone.classList.add('show'); await typing('Dave', 1.0); say('Dave', 'YOU MADE IT?!? 😭 THANK YOU'); await wait(1.0); if (n > 3) { say('Dave', `${n} tries tho 😂`); await wait(1.0); } say(env.CHARS[env.cur].name, 'never again.', true); await wait(2.6); phone.classList.remove('show'); await wait(.3); phone.hidden = true; })(); }
   function failMission(why) {

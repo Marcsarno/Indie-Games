@@ -224,7 +224,7 @@ export function createTraffic(G, deps) {
       placeOnGround(c.g, c.x, c.z, c.yaw);
       const sh = Math.hypot(c.x - ctx.cx, c.z - ctx.cz) < 32; if (sh !== c.sh) { c.sh = sh; c.g.traverse(o => { if (o.isMesh) o.castShadow = sh; }); }
       const P = carPoly(c.x, c.z, c.yaw, c.dims); for (let k = 0; k < 4; k++) { if (!c.col.poly[k]) c.col.poly[k] = [0, 0]; c.col.poly[k][0] = P[k][0]; c.col.poly[k][1] = P[k][1]; }
-      c.col.cx = c.x; c.col.cz = c.z; c.col.r = Math.hypot(c.dims[0], c.dims[1]) / 2 + .2; c.col.vx = c.fx * c.v; c.col.vz = c.fz * c.v;
+      c.col.cx = c.x; c.col.cz = c.z; c.col.r = Math.hypot(c.dims[0], c.dims[1]) / 2 + .2; c.col.vx = c.fx * c.v + c.kvx; c.col.vz = c.fz * c.v + c.kvz;     // a knocked car carries its shove (a car shoved into you hits you)
     }
   }
   function take(c) {                               // carjacked: the car leaves the AI pool for good (the page makes it a player vehicle); a fresh car refills the pool
