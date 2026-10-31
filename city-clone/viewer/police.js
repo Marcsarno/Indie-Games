@@ -219,5 +219,9 @@ export function createPolice(G, deps) {
   function lock(on) { W.lock = on; }
   function goal(x, z) { W.goal = x == null ? null : [x, z]; }
   function shut(set, closed) { SHUT = set; CLOSED = closed || null; }
-  return { cops, step, crime, clear, force, lock, goal, shut, W, POL };
+  function blowUp(x, z, r) {                      // a rocket blast: every cop car inside r is wrecked (and thrown a little)
+    let n = 0; for (const c of cops) { if (!c.on || c.state === 'WRECKED') continue; const d = Math.hypot(c.x - x, c.z - z); if (d > r) continue; const k = (r - d) / r; c.x += (c.x - x) / (d || 1) * k * 2.5; c.z += (c.z - z) / (d || 1) * k * 2.5; c.th += (Math.random() - .5) * 2 * k; wreck(c); n++; }
+    return n;
+  }
+  return { cops, step, crime, clear, force, lock, goal, shut, blowUp, W, POL };
 }

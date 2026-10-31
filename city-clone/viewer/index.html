@@ -80,6 +80,11 @@ canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 @keyframes startGlow { 50% { box-shadow: 0 0 28px #18b7e0, inset 0 0 18px rgba(24, 183, 224, .7); } }
 body.cine .hud, body.cine #chars, body.cine #mission, body.cine #place, body.cine #drv, body.cine #hint { visibility: hidden; }
 #t-cold { all: unset; display: block; margin: 14px auto 0; cursor: pointer; padding: 6px 12px; border-radius: 14px; font: 600 13px var(--display); letter-spacing: .1em; text-transform: uppercase; color: #e8dff0; background: rgba(10, 4, 20, .5); border: 1px solid rgba(95, 227, 255, .5); }
+#b-fire { position: fixed; z-index: 3; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(222px + env(safe-area-inset-bottom, 0px)); width: 76px; height: 76px; border-radius: 50%; border: 0; padding: 0; font: 700 15px/1 var(--display); letter-spacing: .1em; color: #111; background: conic-gradient(#ff5a3a var(--p, 100%), rgba(40, 20, 16, .85) 0); box-shadow: 0 0 0 3px rgba(0, 0, 0, .5), 0 0 14px rgba(255, 90, 58, .6); touch-action: none; -webkit-user-select: none; user-select: none; }
+#b-fire span { display: grid; place-items: center; position: absolute; inset: 6px; border-radius: 50%; background: #ffd23f; } #b-fire.wait span { background: #4a4440; color: #bbb; } #b-fire[hidden] { display: none; }
+#reticle { position: fixed; left: 0; top: 0; z-index: 3; width: 54px; height: 54px; margin: -27px 0 0 -27px; pointer-events: none; border: 3px solid #ff3b2a; border-radius: 50%; box-shadow: 0 0 8px #ff3b2a; display: none; }
+#reticle::before, #reticle::after { content: ''; position: absolute; background: #ff3b2a; } #reticle::before { left: 50%; top: -9px; bottom: -9px; width: 3px; margin-left: -1.5px; } #reticle::after { top: 50%; left: -9px; right: -9px; height: 3px; margin-top: -1.5px; }
+body.cine #b-fire, body.cine #reticle { visibility: hidden; }
 #t-cont { margin: 10px 0 0; text-align: center; color: #e8dff0; font: 500 13px var(--display); letter-spacing: .08em; }
 #title[hidden], #bigmap[hidden], #hint[hidden] { display: none; }
 #bigmap { position: fixed; inset: 0; z-index: 21; background: #12324f; display: grid; grid-template-rows: 1fr auto; gap: 10px; padding: calc(12px + env(safe-area-inset-top, 0px)) 12px calc(16px + env(safe-area-inset-bottom, 0px)); }
@@ -165,6 +170,7 @@ body.cine .hud, body.cine #chars, body.cine #mission, body.cine #place, body.cin
 </div>
 <div id="chars" aria-label="Switch character"></div>
 <div id="banner"></div>
+<button id="b-fire" hidden aria-label="Fire rocket"><span>FIRE</span></button><div id="reticle"></div>
 <div id="title" hidden><div class="logo"><div class="gt">Grand Theft</div><div class="cc">Coconut Creek</div><div class="fl">Florida</div></div><div><button id="t-play">Start</button><button id="t-cold" aria-pressed="true">Cold open: on</button><p id="t-cont"></p></div></div>
 <div id="bigmap" hidden><canvas id="bigc"></canvas><button class="btn" id="bm-close">Close map</button></div>
 <div id="hint" hidden><div class="hint-stick">Drag: steer + speed</div><div class="hint-r">Brake &middot; Horn &middot; Exit</div><div class="hint-map">Tap the map for the full map &middot; &#9776; pauses</div></div>
@@ -187,6 +193,7 @@ import { createPolice, POL } from './police.js';
 import { createMissions } from './missions.js';
 import { createDave } from './dave.js';
 import { createMusic } from './music.js';
+import { createLauncher } from './rocket.js';
 import { createTrack, PAD } from './track.js';
 
 const $ = id => document.getElementById(id);
@@ -262,12 +269,13 @@ async function loadGlb(url, bar) {            // *.glb is fetched as binary (Ver
   else { const txt = await (await fetch(A(url))).text(); const bin = atob(txt.trim()); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); buf = u8.buffer; }
   return new Promise((ok, fail) => loader.parse(buf, '', g => { if (bar) $('bar').style.width = bar; ok(g); }, fail));
 }
-let city, charGltf, carList, colList, propList, vegG, graph = null; const KG = {};      // KG: vehicle glTF per kind (car_<kind>.glb)
+let city, charGltf, carList, colList, propList, vegG, graph = null, launcherG = null; const KG = {};      // KG: vehicle glTF per kind (car_<kind>.glb)
 try {
   carList = await fetch(A(WD + 'cars.json')).then(r => r.json()); const kinds = [...new Set(['sedan', 'taxi', 'jeep', 'tesla', 'moto', ...carList.map(c => c.kind), ...(world.traffic || []).map(t => t.kind)])];      // jeep/tesla/moto: the heroes' rides (round 28)
   const kg = await Promise.all(kinds.map(k => loadGlb(`car_${k}.glb`).catch(() => null))); kinds.forEach((k, i) => { if (kg[i]) KG[k] = kg[i]; });
   [city, charGltf, carList, colList, propList, vegG] = await Promise.all([loadGlb(WD + (world.glb || 'scene.glb.b64.txt'), '70%'), loadGlb('character.glb.b64.txt'), fetch(A(WD + 'cars.json')).then(r => r.json()), fetch(A(WD + 'colliders.json')).then(r => r.json()), fetch(A(WD + 'props.json')).then(r => r.json()), loadGlb('veg.glb.b64.txt')]);
-  graph = await fetch(A(WD + 'graph.json')).then(r => r.ok ? r.json() : null).catch(() => null);      // lane graph for the traffic AI (worlds without one keep scripted traffic)
+  graph = await fetch(A(WD + 'graph.json')).then(r => r.ok ? r.json() : null).catch(() => null);
+  launcherG = await loadGlb('launcher.glb').catch(() => null);                                  // the Dave mission's roof rocket launcher (round 32)      // lane graph for the traffic AI (worlds without one keep scripted traffic)
   $('bar').style.width = '100%';
 } catch (e) { $('loadtxt').textContent = 'Could not load the models: ' + (e.message || e); throw e; }
 scene.add(city.scene);
@@ -553,6 +561,31 @@ const DENV = {                                     // what the Dave mission read
 const missions = !graph ? null : DEV ? createMissions(graph, { THREE, scene, groundH, banner: t => banner(t), addMoney: v => { game.money += v; }, cops, heights: world.heights })
   : createDave({ THREE, scene, makePerson: o => makePerson(o), makeCar: (k, c) => makeCar(k, c), play: (a, n, o) => play(a, n, o), walkers, colliders, carPoly: (x, z, th, d) => carPoly(x, z, th, d), placeOnGround, banner: t => banner(t), cops, graph, camera, env: DENV, pushCircle: (x, z, r, skip) => pushCircle(x, z, r, skip), burst: (x, y, z, nx, nz, p) => burst(x, y, z, nx, nz, p) });
 const MPX = { x: 0, z: 0, vx: 0, vz: 0, th: 0, speed: 0, driving: false };
+const launcher = !launcherG ? null : createLauncher({ THREE, scene, glb: launcherG, camera, pushCircle: (x, z, r, sk) => pushCircle(x, z, r, sk), getCar: () => (hmode === 'driving' && drive ? drive : null), carHeight: car => car.fxH || (car.fxH = carHeight(car)),
+  targets: () => {                                  // what the launcher can aim at: police cars, rocket cops, SWAT vans
+    const T = []; if (cops) for (const c of cops.cops) if (c.on && c.state !== 'WRECKED' && c.state !== 'LEAVE') T.push({ x: c.x, z: c.z, col: c.col, alive: () => c.on && c.state !== 'WRECKED' });
+    if (missions && missions.RK) for (const r of missions.RK) if (r.on && !r.crash) T.push({ x: r.x, z: r.z, col: r.col, alive: () => r.on && !r.crash });
+    return T;
+  },
+  onBlast: (x, z, r) => {                           // cops wrecked, mission cars spun out, traffic and parked cars shoved
+    if (cops) cops.blowUp(x, z, r); if (missions && missions.blast) DENV.wrecks += missions.blast(x, z, r);      // (police wrecks count themselves via onWreck)
+    for (const B of colliders) { if (!B.push || !B.mass || B.missile) continue; const d = Math.hypot(B.cx - x, B.cz - z); if (d > r * 1.3) continue; const k = (r * 1.3 - d) / (r * 1.3); B.push((B.cx - x) / (d || 1) * 9 * k, (B.cz - z) / (d || 1) * 9 * k, (Math.random() - .5) * 3 * k); }
+    if (drive && hmode === 'driving') { const d = Math.hypot(drive.x - x, drive.z - z); if (d < r) DENV.kick((drive.x - x) / (d || 1) * (r - d) * .6, (drive.z - z) / (d || 1) * (r - d) * .6, (Math.random() - .5) * 2); }
+  },
+  fx: { puff: (...a) => puff(...a), debris: (...a) => debris(...a), shake: k => { rig.shake = Math.min(1, rig.shake + k); }, sound: k => { if (k === 'boom') boomSound(); else if (k === 'launch') whooshSound(0); else if (k === 'servo') servoSound(); } } });
+DENV.launcher = launcher;
+if (launcher) {
+  $('b-fire').addEventListener('pointerdown', e => { e.preventDefault(); ensureAudio(); launcher.fire(); });
+  addEventListener('keydown', e => { if (e.code === 'KeyF') launcher.fire(); });
+}
+const RV = new THREE.Vector3();
+function launcherHud() {                             // FIRE button (cooldown ring) while the launcher is up; red reticle on the target
+  if (!launcher) return; const show = launcher.up && hmode === 'driving'; setHidden($('b-fire'), !show);
+  if (show) { const p = Math.round((1 - launcher.cool) * 100); $('b-fire').style.setProperty('--p', p + '%'); $('b-fire').classList.toggle('wait', launcher.cool > 0); }
+  const t = show && launcher.target; if (!t) { if ($('reticle').style.display !== 'none') $('reticle').style.display = 'none'; return; }
+  RV.set(t.x, 1, t.z).project(camera); const on = RV.z < 1 && Math.abs(RV.x) < 1.05 && Math.abs(RV.y) < 1.05; $('reticle').style.display = on ? 'block' : 'none';
+  if (on) $('reticle').style.transform = `translate(${(RV.x + 1) / 2 * innerWidth}px, ${(1 - RV.y) / 2 * innerHeight}px)`;
+}
 function addStatic(poly) {                        // a solid collider added after load (test track walls): straight into the static grid
   const [cx, cz] = cen(poly); let r = 0; for (const p of poly) r = Math.max(r, Math.hypot(p[0] - cx, p[1] - cz)); const c = { poly, cx, cz, r, vx: 0, vz: 0, soft: null };
   for (let gx = Math.floor((cx - r) / CELL); gx <= Math.floor((cx + r) / CELL); gx++) for (let gz = Math.floor((cz - r) / CELL); gz <= Math.floor((cz + r) / CELL); gz++) { const k = gx * 4096 + gz; if (!GRID.has(k)) GRID.set(k, []); GRID.get(k).push(c); }
@@ -730,6 +763,14 @@ function chirp() {                                // a Florida bird somewhere: a
 function farHorn() {                              // somebody honking a few streets away
   const { ctx, master } = audio, t = ctx.currentTime, lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(master);
   for (const f of [370, 466]) { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = f * (.94 + Math.random() * .1); const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.008, t + .02); g.gain.setValueAtTime(.008, t + .25); g.gain.linearRampToValueAtTime(0, t + .3); o.connect(g); g.connect(lp); o.start(t); o.stop(t + .32); }
+}
+function boomSound() {                             // a rocket blast: a deep thump under a noise burst
+  if (!audio || muted) return; const { ctx, master } = audio, t = ctx.currentTime; crashSound(20);
+  const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(28, t + .6); o.connect(g); g.connect(master); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.9, t + .02); g.gain.exponentialRampToValueAtTime(.001, t + .8); o.start(t); o.stop(t + .85);
+}
+function servoSound() {                            // the launcher rising out of the roof
+  if (!audio || muted) return; const { ctx, master } = audio, t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900;
+  o.type = 'sawtooth'; o.frequency.setValueAtTime(110, t); o.frequency.linearRampToValueAtTime(240, t + .8); o.connect(f); f.connect(g); g.connect(master); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.06, t + .05); g.gain.setValueAtTime(.06, t + .75); g.gain.exponentialRampToValueAtTime(.001, t + .95); o.start(t); o.stop(t + 1);
 }
 function scratchSound() {                          // a record scratch for the cold open freeze-frame
   if (!audio || muted) return; const { ctx, master, nb } = audio, t = ctx.currentTime;
@@ -1424,6 +1465,7 @@ function update(dt, draw = true) {
     cops.step(dta, CPX.p);
   }
   if (missions) { const dr = drive && hmode === 'driving'; MPX.x = dr ? drive.x : foot.x; MPX.z = dr ? drive.z : foot.z; MPX.speed = dr ? Math.hypot(drive.vx, drive.vz) : 0; MPX.vx = dr ? drive.vx : foot.vx; MPX.vz = dr ? drive.vz : foot.vz; MPX.th = dr ? drive.th : foot.face; MPX.driving = dr; missions.step(dta, MPX); }
+  if (launcher) { launcher.step(dta); launcherHud(); }
   PF.mark('traffic');
   footStep(dta); combatStep(dta);
   if (ppl) { if (!(drive && hmode === 'driving')) AIX.player = null; ppl.step(dta, AIX); }
