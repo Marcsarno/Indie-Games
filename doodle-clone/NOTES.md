@@ -1,6 +1,6 @@
 # Doodle-clone notes: Halloween "Doodle Jump" in Three.js (working title: **Spooky Hop**)
 
-Last updated 2026-10-31. **Status: PLAN ONLY. No code yet. Reference image received (LOOK ONLY, see Art direction); our own gameplay design is below; waiting on the green-screen clips.**
+Last updated 2026-10-31 (round 2: kid tuning, camera framing, similar-games research). **Status: PLAN ONLY. No code yet. Reference image received (LOOK ONLY, see Art direction); our own gameplay design is below; waiting on the green-screen clips.**
 
 ## Pitch
 Gameplay (confirmed with user): the jump is AUTOMATIC on landing (no jump button); the player holds a direction (tilt or left/right touch) to aim the next jump; climb forever; the higher you get the more complex the levels get. The 2.5D is part of that escalation: more background layers, foreground layers in front of the play plane, and layers moving independently of each other as you climb.
@@ -23,13 +23,23 @@ What the sources agree on:
 - **We copy that ladder's order but make it much gentler** (user decision: tuned for a 7-year-old, see Gameplay design). Gameplay is OURS; the concept art is not a source for it.
 - Nothing useful found for "keyed video frames -> atlas"; the pipeline below is our own design.
 
+### Similar games and what they teach (researched 2026-10-31; popularity claims are from wikis/listicles, not sales data)
+- **Lineage:** Xjump (school-PC game) -> **Icy Tower** (Free Lunch Design, Dec 2001, freeware PC, ~5M downloads by 2009 and 11M by 2008 estimates, tournaments, still ported) -> **PapiJump** (2008; TouchArcade's headline was "Doodle Jump Takes PapiJump to the Next Level") -> **Doodle Jump** (Lima Sky, iOS March 2009; sold about 25,000 copies a day for four months, ~10M by Dec 2011, passed only by Angry Birds). So the genre existed first; Doodle Jump won on polish and tilt. [Doodle Jump (Wikipedia)](https://en.wikipedia.org/wiki/Doodle_Jump), [Icy Tower (Wikipedia)](https://en.wikipedia.org/wiki/Icy_Tower), [Giant Bomb similar games](https://www.giantbomb.com/doodle-jump/3030-29488/similar-games/)
+- **Other names that keep showing up as the "like Doodle Jump" list:** Mega Jump, Sonic Jump (2012), Chomper and Friends Jump, Jelly Jump (Ketchapp), PapiJump, Ninja Climbing, Helix Jump / Flappy Bird / Color Switch (one-input cousins). The clone market was huge; I found no download numbers for any clone, so I will not claim which ones were "just as popular". [Games like Doodle Jump](https://dinogame.gg/blog/games-like-doodle-jump/), [TechRadar](https://www.techradar.com/news/gaming/like-doodle-jump-you-ll-love-these-ios-games-1045745)
+- **Doodle Jump already did a Halloween theme**, and a long list of themes (Christmas, Rainforest, Space, Underwater, Easter, Ninja, Pirate...). A theme changes the character's costume, the enemies and the background; in the Halloween/Ninja/Pirate/Easter themes **coins buy skins and extra lives**. 2010 Halloween: "Frankendoodler" and Halloween monsters. So our "candy unlocks outfits" is proven. What is ours: kid-first tuning, no ads/purchases, painted 2.5D depth. [TouchArcade Halloween update](https://toucharcade.com/2010/10/20/doodle-jump-halloween-update-adds-frankendoodler), [Wikipedia themes](https://en.wikipedia.org/wiki/Doodle_Jump)
+- **Why Doodle Jump lasted (design commentary):** one vertical goal that needs no tutorial; tilt scaled by how far you tilt (analog, not on/off); procedurally generated but almost always reachable; failure is instant and clear (you fall) and you can recover by landing again; no energy timers or feature bloat; the same loop for years with only skins/themes added. We keep all of these. [Design analysis](https://dinogame.gg/blog/why-doodle-jump-aged-well/)
+- **Icy Tower's different hook:** momentum and combo chains (multi-floor jumps, wall bounces), a scoring split between height and combo, and a slowly accelerating scroll. That is a skill game for older players; we do NOT copy it (the screen never pushes the child). Could be borrowed later: separate "height" and "candy" scoreboards.
+- **Kids' endless jumpers** found (Hop Hop, Elmo Jumper, Jump Sky Jump) are generic; no standout to learn from. We check age-appropriateness ourselves: no ads, no purchases, no external links, local save only.
+- **Own-knowledge, not verified this round:** Mega Jump (2011) leaned on coin upgrades and a shop; I will not use it as a source until I find one.
+- **Legal/safety note for us:** the mechanics are free to reuse, but "Doodle Jump", "the Doodler", its graph-paper look, and its art are Lima Sky's. Our name, character, art and theme are original. Keep it that way.
+
 ## Art direction (LOOK ONLY, from the user's concept art `art/reference/ref-01-look.png`, 1024 x 1536)
 The user said: this is concept art for the LOOK. Do not take gameplay from it (what a platform "does", what a pickup is for, what a layout means). I design the mechanics; the user then makes art for them.
 **Look takeaways:**
 - Painted storybook illustration (soft shading, rim light, glow), NOT pixel art: the `pixel-sprite` skill and diablo `RUBRIC.md` do not apply here.
 - Palette: deep violet sky and fog, warm orange lantern/window light, a little cyan magic glow.
 - Setting vibe: a hazy night town of rooftops with lit windows in several depth bands, a crescent moon, soft clouds, autumn ivy, hanging jack-o'-lanterns and paper lanterns; framing houses at the left/right screen edges in front of the play area.
-- Character vibe: a cute girl in a witch costume, side/3-quarter view, ~3 u tall at 9 u screen width (1 u = 114 px in the concept image).
+- Character vibe: a cute girl in a witch costume, side/3-quarter view. **The concept draws her too big (3.1 u tall); user says shrink her.** In game she is about 1.6 u tall (10% of screen height) and ~0.9 u wide at a 9 u wide view; on a 390 pt wide phone at 3x DPR that is ~210 px tall, so a 256 px atlas cell is enough. Platforms scale down with her (below).
 **What this means for the build (technical, not gameplay):**
 1. Platforms, pickups and the foreground/background are **painted sprites (textured quads with alpha), not lit 3D meshes**; 3D lighting would clash with the paint. Depth = Z-spaced layers + perspective parallax + fog sheets + additive glow sprites + particles (fireflies, leaves). Optional soft bloom on high-end phones only.
 2. **Aspect ratio:** the concept is 2:3, phones are about 9:19.5. Fit width, extend height, so background layers must extend or tile vertically; edge pieces are separate sprites that repeat with variation.
@@ -72,16 +82,17 @@ doodle-clone/
 **Core loop:** you auto-bounce on every landing; hold a direction (tilt or left/right touch) to aim; climb; collect candy on the way; the run ends when you fall. Lifetime candy unlocks outfits, so every run makes progress even a short one.
 | Thing | Start value | Why |
 |---|---|---|
-| View | 9 x 16 u, fit width, extend height | portrait phones |
+| View | 9 x 16 u, fit width, extend height | portrait phones; extra height on tall phones adds more upcoming path, not more below |
 | Jump apex H | 5.5 u (~34% of screen) | |
 | Gravity g | 20 u/s^2 (floatier than a normal jump) | up-time = sqrt(2H/g) = 0.74 s, more time to steer |
 | Launch v0 | sqrt(2 g H) = 14.8 u/s | derived, never hand-set |
 | Horizontal speed | up to 7 u/s, eased | slower than a pro would want, easy to be precise |
 | Aim assist (setting, default ON) | gentle pull of x toward the platform you are heading for, small | forgiving, can be turned off |
 | Landing | only while falling, swept test; **foot overlap tolerance +0.4 u** each side | no near-miss heartbreaks |
-| Platform width | 3.0 u early, shrinking to 2.0 u at the top | big targets |
+| Platform width | 2.4 u early (about 1.5 x her height), shrinking to 1.6 u at the top | big targets relative to the smaller character |
+| Character size | 1.6 u tall, 0.9 u wide (user: concept art was too big) | |
 | Wrap | leave one edge, appear on the other | |
-| Camera | up only; smooth | |
+| Camera framing | **the player sits low: the camera keeps her at about 28% up from the bottom** so ~70% of the view shows the platforms still to come (user request). Up only, smoothed; the apex of a jump (+34%) tops out around 62%. During a rocket flight she drifts up to ~40% so the path ahead stays visible and the camera eases back after. At run start she stands on a starter platform at ~20% with the first 5-6 platforms and a candy trail already in view. | |
 | Falling | below view bottom = "Oops!". **Friendly rescue once per run** (setting, default ON): a bubble/bat catches you and lifts you to a platform | a 7-year-old should not lose a long run to one slip |
 | Score | height, shown as meters; candy counted separately | |
 
