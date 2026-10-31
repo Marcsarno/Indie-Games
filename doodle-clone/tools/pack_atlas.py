@@ -29,11 +29,11 @@ def main():
     air = y1 < ground - 10
     a0 = int(np.argmax(air)); a1 = n - 1 - int(np.argmax(air[::-1]))
     apex = a0 + int(np.argmin(y1[a0:a1 + 1]))
-    # crouch = frames before takeoff that are noticeably shorter than idle, working back from a0
-    s = a0
-    while s > 0 and h[s - 1] < idle_h * 0.985 or (s > 0 and s > a0 - 3):
-        s -= 1
-        if s <= 0: break
+    # crouch = the dip before takeoff: deepest frame in the 30% of the clip before launch, back to where it started dipping
+    win = max(0, a0 - int(n * 0.3))
+    cd0 = win + int(np.argmin(h[win:a0])) if a0 > win else a0
+    s = cd0
+    while s > win and h[s - 1] < idle_h * 0.985: s -= 1
     # land = frames after touchdown until height is back to idle
     e = a1 + 1
     while e < n - 1 and (h[e + 1] < idle_h * 0.985 or e < a1 + 3):

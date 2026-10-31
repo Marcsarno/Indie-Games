@@ -11,8 +11,8 @@ Whatever the clip's own length, the frame index is picked from progress, so no o
 import json, sys, math
 from PIL import Image
 
-G, H = 20.0, 5.5                     # gravity u/s^2, apex height u (config.js)
-COMPRESS, RELEASE = 0.05, 0.05       # s each
+G, H = 40.0, 5.0                     # gravity u/s^2, apex height u (config.js, round 2)
+COMPRESS, RELEASE = 0.0, 0.08        # no landing hold; crouch frames play during the first RELEASE s of the rise
 T_UP = math.sqrt(2 * H / G); T_DOWN = T_UP
 names = ['witch', 'fairy', 'astronaut', 'ghost', 'pumpkin']
 
@@ -24,14 +24,9 @@ def pick(lst, p):                    # progress 0..1 -> frame index (nearest)
 
 def frame_at(j, t):
     k = j['key']
-    if t < COMPRESS:
-        return pick(seq(k['touch'], k['landDeep']), t / COMPRESS), 0.0
-    t -= COMPRESS
-    if t < RELEASE:
-        return pick(seq(k['crouchDeep'], k['launch'] - 1), t / RELEASE), 0.0
-    t -= RELEASE
     if t < T_UP:
         p = t / T_UP; y = H * (1 - (1 - p) ** 2)
+        if t < RELEASE: return pick(seq(k['crouchDeep'], k['launch'] - 1), t / RELEASE), y
         return pick(seq(k['launch'], k['apex']), p), y
     t -= T_UP
     p = t / T_DOWN; y = H * (1 - p * p)
@@ -39,13 +34,13 @@ def frame_at(j, t):
 
 if __name__ == '__main__':
     D = {n: (json.load(open(f'assets/outfits/{n}.json')), Image.open(f'assets/outfits/{n}.webp').convert('RGBA')) for n in names}
-    total = COMPRESS + RELEASE + T_UP + T_DOWN
-    print('shared cycle %.2f s (squash %.2f + up %.2f + down %.2f)' % (total, COMPRESS + RELEASE, T_UP, T_DOWN))
+    total = T_UP + T_DOWN
+    print('shared cycle %.2f s (up %.2f + down %.2f)' % (total, T_UP, T_DOWN))
     for n in names:
         k = D[n][0]['key']
         print(f"{n:10s} clip air frames {k['touch']-k['launch']+1:2d} ({(k['touch']-k['launch']+1)/24:.2f}s)  -> played over {T_UP+T_DOWN:.2f}s  (x{(T_UP+T_DOWN)/((k['touch']-k['launch']+1)/24):.2f} speed change)")
     CW, CH, ARC = 230, 360, 120
-    out = []; dt = 0.03; t = 0.0
+    out = []; dt = 0.02; t = 0.0
     while t < total:
         sheet = Image.new('RGBA', (CW * 5, CH), (60, 32, 105, 255))
         for c, n in enumerate(names):
