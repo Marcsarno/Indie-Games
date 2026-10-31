@@ -11,7 +11,7 @@
   .ui{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;pointer-events:none}
   .ui.on{display:flex}
   .ui>*{pointer-events:auto}
-  #hud{position:fixed;left:0;right:0;top:0;display:none;justify-content:space-between;padding:calc(env(safe-area-inset-top) + 10px) 16px 0;font-weight:800;font-size:26px;text-shadow:0 2px 0 #2a1060,0 0 10px #0008;pointer-events:none}
+  #hud{position:fixed;left:0;right:0;top:0;display:none;justify-content:space-between;padding:calc(env(safe-area-inset-top) + 8px) 8px 0;font-weight:800;font-size:26px;text-shadow:0 2px 0 #2a1060,0 0 10px #0008;pointer-events:none}
   #hud.on{display:flex}
   #hud img{height:26px;vertical-align:-4px;margin-right:6px}
   h1{margin:calc(env(safe-area-inset-top) + 7vh) 0 0;font-size:48px;letter-spacing:1px;color:#ffd27a;text-shadow:0 3px 0 #5a2ab0,0 0 18px #ff9d2e88;text-align:center;line-height:1}
@@ -19,7 +19,7 @@
   .big{font-size:56px;font-weight:900;color:#ffd27a;text-shadow:0 3px 0 #5a2ab0}
   button{font:inherit;color:#fff;border:0;border-radius:18px;padding:12px 22px;background:linear-gradient(#8a52e8,#5e2fb8);box-shadow:0 4px 0 #3a1c78,0 6px 14px #0006;font-weight:800;font-size:20px}
   button:active{transform:translateY(2px)}
-  #play,#again{background:linear-gradient(#ffb02e,#f07a12);box-shadow:0 4px 0 #a04a08,0 6px 14px #0006;font-size:30px;padding:14px 44px;margin-top:18px}
+  #play,#again{margin-top:18px}
   .row{display:flex;gap:10px;margin-top:14px}
   #closet,#closet2{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:340px;margin-top:16px;padding:10px;border-radius:18px;background:#1a0d3acc}
   .out{padding:6px 8px;width:58px;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:2px;background:#3a2278;box-shadow:0 3px 0 #22104e}
@@ -35,19 +35,32 @@
   #tunebox input{width:100%;accent-color:#ffb02e;height:28px}
   #tunebox .row button{font-size:16px;padding:10px 14px}
   button.sel{outline:3px solid #ffd27a}
-  .gear{pointer-events:auto;font-size:18px;padding:6px 10px;border-radius:12px;align-self:flex-start}
+  .ibtn{background:none center/contain no-repeat;box-shadow:none;border-radius:0;padding:0;width:200px;height:89px}
+  .ibtn.sm{width:64px;height:64px}
+  #play{width:220px;height:98px}#again{width:110px;height:106px}
+  #pauseBtn{width:48px;height:51px;pointer-events:auto;align-self:flex-start}
+  #hud{align-items:flex-start}
+  .pill{width:150px;height:39px;background:center/contain no-repeat;display:flex;align-items:center;justify-content:flex-end;padding-right:16px;box-sizing:border-box;font-size:20px}
+  .pill.score{background-image:url(assets/ui/score_counter.webp)}.pill.candy{background-image:url(assets/ui/candy_counter.webp)}
+  #pause{justify-content:center;background:#120a2a99;z-index:4}
+  .panel{width:280px;height:350px;background:url(assets/ui/menu_panel.webp) center/100% 100% no-repeat;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding-top:52px;box-sizing:border-box}
+  .panel .row button:not(.ibtn){font-size:16px;padding:10px 14px}
   .cc{height:1.1em;vertical-align:-3px}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="hud"><div id="h">0 m</div><button id="gear" class="gear">⚙️</button><div><img src="assets/kit/pickup_candy_corn.webp" alt=""><span id="cd">0</span></div></div>
-<div id="title" class="ui"><h1>Spooky<br>Hop</h1><button id="play">PLAY</button>
-  <div class="row"><button id="tiltBtn">Tilt: OFF</button><button id="sndBtn">🔊</button><button id="gear2">⚙️</button></div>
+<div id="hud"><div class="pill score"><span id="h">0 m</span></div><button id="pauseBtn" class="ibtn" aria-label="Pause" style="background-image:url(assets/ui/pause.webp)"></button><div class="pill candy"><span id="cd">0</span></div></div>
+<div id="title" class="ui"><h1>Spooky<br>Hop</h1><button id="play" class="ibtn" aria-label="Play" style="background-image:url(assets/ui/play.webp)"></button>
+  <div class="row"><button id="tiltBtn">Tilt: OFF</button><button id="sndBtn" class="ibtn sm" aria-label="Sound"></button><button id="gear2">⚙️</button></div>
   <div id="closet"></div><div class="hint">Touch and slide your finger: she runs to it. You jump by yourself!</div></div>
 <div id="over" class="ui"><h2>You climbed</h2><div class="big" id="score">0 m</div><h2 id="best"></h2>
   <h2><img class="cc" src="assets/kit/pickup_candy_corn.webp" alt=""> <span id="gcandy">+0</span> candy</h2><div id="newout"></div><div id="closet2"></div>
-  <button id="again">AGAIN</button><div class="row"><button id="menu">Menu</button></div></div>
+  <button id="again" class="ibtn" aria-label="Play again" style="background-image:url(assets/ui/retry.webp)"></button><div class="row"><button id="menu">Menu</button></div></div>
+<div id="pause" class="ui"><div class="panel"><h2>Paused</h2>
+  <button id="resume" class="ibtn" aria-label="Resume" style="background-image:url(assets/ui/play.webp)"></button>
+  <div class="row"><button id="pRetry" class="ibtn sm" aria-label="Restart" style="background-image:url(assets/ui/retry.webp)"></button><button id="sndBtn2" class="ibtn sm" aria-label="Sound"></button></div>
+  <div class="row"><button id="gear">⚙️ Tune</button><button id="pMenu">Menu</button></div></div></div>
 <div id="tune" class="ui"><h2 style="margin-top:calc(env(safe-area-inset-top) + 40px)">Tune the feel</h2><div id="tunebox"></div>
   <div class="row"><button id="tuneReset">Reset</button><button id="tuneClose">Done</button></div></div>
 <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>

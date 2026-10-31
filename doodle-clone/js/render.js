@@ -31,7 +31,8 @@ export async function createRenderer(canvas, sim) {
   const K = 'assets/kit/', B = 'assets/bg/';
   const T = {};
   const names = { sky_dusk: B + 'sky-dusk.webp', sky_mid: K + 'sky_midnight.webp', sky_aurora: K + 'sky_aurora.webp', stars: K + 'starfield.webp', moon: K + 'full_moon.webp', cloud: K + 'cloud.webp', witch: K + 'witch_silhouette.webp',
-    town: B + 'mid-town-start.webp', houses: B + 'fg-houses-start.webp', flat: K + 'platform_standard.webp', slider: K + 'platform_moving.webp', crumbly: K + 'platform_fragile.webp', tramp: K + 'pumpkin_trampoline.webp', candy: K + 'pickup_candy_corn.webp' };
+    town: B + 'mid-town-start.webp', houses: B + 'fg-houses-start.webp', flat: K + 'platform_standard.webp', slider: K + 'platform_moving.webp', crumbly: K + 'platform_fragile.webp', tramp: K + 'pumpkin_trampoline.webp', candy: K + 'pickup_candy_corn.webp',
+    fx_sparkle: 'assets/fx/collect_sparkle.webp', fx_puff: 'assets/fx/landing_puff.webp', fx_break: 'assets/fx/platform_break_burst.webp', fx_ring: 'assets/fx/pumpkin_bounce_ring.webp' };
   await Promise.all(Object.entries(names).map(async ([k, u]) => { T[k] = await tex(u, { alpha: !k.startsWith('sky') }); }));
   const aspect = (t) => t.image.width / t.image.height;
   // placeholder rocket pack + flame (drawn, to be replaced by real art)
@@ -63,7 +64,10 @@ export async function createRenderer(canvas, sim) {
   const player = sprite(null, 25); scene.add(player);
   const worn = sprite(T.rocket, 24), flame = sprite(T.flame, 23), bubble = sprite(T.bubble, 26, { opacity: 0.9 });
   for (const m of [worn, flame, bubble]) { m.visible = false; scene.add(m); }
-  const pops = Array.from({ length: 10 }, () => { const m = sprite(T.candy, 30); m.visible = false; m.userData = { t: 9 }; scene.add(m); return m; });
+  // one-shot effects from the HUD/effects pack: sparkle (candy), puff (landing), ring (trampoline), break (crumbly platform)
+  const FX = { sparkle: { tx: 'fx_sparkle', w: 1.3, dur: 0.4, grow: 0.8, rise: 0.8 }, puff: { tx: 'fx_puff', w: 1.9, dur: 0.32, grow: 0.6, rise: 0.15 },
+               ring: { tx: 'fx_ring', w: 2.0, dur: 0.4, grow: 1.0, rise: 0 }, break: { tx: 'fx_break', w: 3.0, dur: 0.6, grow: 0.25, rise: -1.2 } };
+  const pops = Array.from({ length: 16 }, () => { const m = sprite(T.fx_sparkle, 30); m.visible = false; m.userData = { t: 9 }; scene.add(m); return m; });
 
   R.resize = () => {
     const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false);
@@ -86,7 +90,8 @@ export async function createRenderer(canvas, sim) {
   };
   const smooth = (h, a, b) => { const t = Math.max(0, Math.min(1, (h - a) / (b - a))); return t * t * (3 - 2 * t); };
 
-  R.pop = (x, y) => { const m = pops[R.pops++ % pops.length]; m.visible = true; m.userData = { t: 0, x, y }; };
+  R.fx = (kind, x, y, w) => { const m = pops[R.pops++ % pops.length], f = FX[kind]; m.visible = true; m.material.map = T[f.tx]; m.material.needsUpdate = true; m.userData = { t: 0, x, y, f, w: w || f.w }; };
+  R.pop = (x, y) => R.fx('sparkle', x, y);
 
   R.frame = (dt, mode) => {
     R.sim = sim; R.t += dt; const t = R.t, cy = sim.cam.y, vh = R.viewH, H = sim.height, W = C.viewW;
@@ -110,7 +115,7 @@ export async function createRenderer(canvas, sim) {
       if (!p.alive || p.y < cy - vh / 2 - 2 || p.y > cy + vh / 2 + 3 || (mode === 'title' && p.id !== 0)) continue;
       const m = get(pPool, mkPlat), tx = platMat[p.type]; if (m.material.map !== tx) { m.material.map = tx; m.material.needsUpdate = true; }
       const a = aspect(tx), h = p.w / a; let x = p.x, y = p.y + C.platTopFrac * h - h / 2, o = 1;
-      if (p.crumbling) { const u = p.ct; if (u < 0.45) x += Math.sin(u * 70) * 0.05; else { const f = u - 0.45; y -= 6 * f * f; o = Math.max(0, 1 - f / 0.8); } }
+      if (p.crumbling) { const u = p.ct; if (u < 0.45) x += Math.sin(u * 70) * 0.05; else { if (!p.burst) { p.burst = true; R.fx('break', p.x, p.y - 0.1, p.w * 1.15); } const f = u - 0.45; y -= 6 * f * f; o = Math.max(0, 1 - f / 0.12); } }
       m.material.opacity = o; place(m, x, y - cy, p.w * 1.02, h, 0);
       if (p.tramp) {
         const tm = get(tPool, mkTramp), ta2 = aspect(T.tramp), tw = 1.6, th = tw / ta2; let sy = 1;
@@ -129,7 +134,7 @@ export async function createRenderer(canvas, sim) {
       if (it.taken || it.y < cy - vh / 2 - 1 || it.y > cy + vh / 2 + 1) continue;
       const m = get(iPool, mkItem); place(m, it.x, it.y + Math.sin(t * 3) * 0.12 - cy, 0.7, 1.4, 0.02);
     }
-    for (const m of pops) if (m.visible) { const u = m.userData; u.t += dt; if (u.t > 0.35) { m.visible = false; continue; } const s = 0.55 * (1 + u.t * 3); m.material.opacity = 1 - u.t / 0.35; place(m, u.x, u.y + u.t * 2 - cy, s * aspect(T.candy), s, 0.03); }
+    for (const m of pops) if (m.visible) { const u = m.userData, f = u.f; u.t += dt; if (u.t > f.dur) { m.visible = false; continue; } const k = u.t / f.dur, s = u.w * (0.7 + f.grow * k), a = aspect(m.material.map); m.material.opacity = 1 - k * k; place(m, u.x, u.y + f.rise * k - cy, s, s / a, 0.03); }
     // player
     const pl = sim.player, o = R.outfit;
     if (o) {

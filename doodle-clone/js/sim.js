@@ -81,7 +81,7 @@ export function createSim(seed = 1) {
             const rate = (hitTop - sim.landY) / Math.max(0.25, sim.t - sim.landT); sim.climb += (Math.max(0, rate) - sim.climb) * 0.35; sim.landY = hitTop; sim.landT = sim.t;
             if (hit.type === 'crumbly') { hit.crumbling = true; hit.ct = 0; hit.hit = true; }
             if (tramp) hit.trampT = 0;
-            sim.events.push({ t: 'bounce', kind: pl.kind });
+            sim.events.push({ t: 'bounce', kind: pl.kind, x: pl.x, y: hitTop });
             if (C.hold <= 0) { pl.mode = 'air'; pl.vy = pl.launchV; pl.airT = 0; pl.on = null; }
           }
         }

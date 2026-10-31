@@ -67,13 +67,19 @@ $('tiltBtn').onclick = async () => {
   if (input.tiltOn) { input.tiltOn = false; save.tilt = false; } else { const ok = await input.enableTilt(); save.tilt = ok; if (!ok) alert('Tilt is not available here, using touch.'); }
   persist(); $('tiltBtn').textContent = input.tiltOn ? 'Tilt: ON' : 'Tilt: OFF';
 };
-$('sndBtn').onclick = () => { audio.unlock(); save.sound = !save.sound; audio.enabled = save.sound; $('sndBtn').textContent = save.sound ? '🔊' : '🔇'; persist(); };
-$('sndBtn').textContent = save.sound ? '🔊' : '🔇';
+const sndIcon = () => { for (const id of ['sndBtn', 'sndBtn2']) $(id).style.backgroundImage = `url(assets/ui/${save.sound ? 'sound_on' : 'sound_off'}.webp)`; };
+$('sndBtn').onclick = $('sndBtn2').onclick = () => { audio.unlock(); save.sound = !save.sound; audio.enabled = save.sound; sndIcon(); persist(); };
+sndIcon();
+// pause menu (pause button in the HUD)
+$('pauseBtn').onclick = () => { if (mode !== 'play') return; mode = 'paused'; $('pause').classList.add('on'); };
+$('resume').onclick = () => { $('pause').classList.remove('on'); mode = 'play'; last = performance.now(); };
+$('pRetry').onclick = () => { $('pause').classList.remove('on'); audio.unlock(); newRun(); };
+$('pMenu').onclick = () => { $('pause').classList.remove('on'); toTitle(); };
 if (save.tilt && typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission !== 'function') input.enableTilt();
 
 function handleEvents() {
   for (const e of sim.events) {
-    if (e.t === 'bounce') (e.kind === 'tramp' ? audio.tramp : audio.bounce).call(audio);
+    if (e.t === 'bounce') { (e.kind === 'tramp' ? audio.tramp : audio.bounce).call(audio); if (e.kind === 'tramp') R.fx('ring', e.x, e.y + C.trampTop + 0.1); else R.fx('puff', e.x, e.y + 0.15); }
     else if (e.t === 'candy') { audio.candy(); R.pop(e.x, e.y); }
     else if (e.t === 'rocket') audio.rocket();
     else if (e.t === 'rescue') audio.rescue();
@@ -107,7 +113,7 @@ function tunePanel() {
   }
   el.appendChild(ctl);
 }
-$('gear').onclick = $('gear2').onclick = () => { wasMode = mode; if (mode === 'play') mode = 'paused'; tunePanel(); $('tune').classList.add('on'); };
+$('gear').onclick = $('gear2').onclick = () => { $('pause').classList.remove('on'); wasMode = mode; if (mode === 'play') mode = 'paused'; tunePanel(); $('tune').classList.add('on'); };
 $('tuneClose').onclick = () => { $('tune').classList.remove('on'); if (mode === 'paused') { mode = 'play'; last = performance.now(); } };
 $('tuneReset').onclick = () => { save.tune = {}; applyTune(); input.mode = C.control; persist(); tunePanel(); };
 toTitle(); requestAnimationFrame(loop);
