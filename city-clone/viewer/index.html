@@ -228,7 +228,8 @@ scene.background = new THREE.Color(world.sky); scene.fog = new THREE.Fog(world.f
 if (WN === 'coconut') { scene.fog.near = 72; scene.fog.far = 172; }      // things are fully hazed out before the 140 m draw distance drops them (no visible pop-in at the top of the screen)
 scene.add(new THREE.HemisphereLight(world.hemi[0], world.hemi[1], world.hemi[2]));
 const sun = new THREE.DirectionalLight(world.sun.color, world.sun.intensity); sun.castShadow = true;
-const PHONE = matchMedia('(pointer: coarse)').matches; const SMAP = PHONE ? 1024 : 2048; sun.shadow.mapSize.set(SMAP, SMAP);     // phones: 1024 (6.6 cm texels over the 68 m box) Object.assign(sun.shadow.camera, { left: -34, right: 34, top: 34, bottom: -34, near: 1, far: 160 });
+const PHONE = matchMedia('(pointer: coarse)').matches; const SMAP = PHONE ? 1024 : 2048; sun.shadow.mapSize.set(SMAP, SMAP);     // phones: 1024 (6.6 cm texels over the 68 m box)
+Object.assign(sun.shadow.camera, { left: -34, right: 34, top: 34, bottom: -34, near: 1, far: 160 }); sun.shadow.camera.updateProjectionMatrix();     // (round 31: this line had slipped into the comment above, so shadows only covered a 10 m box and big ones were cut into triangles)
 sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.05; scene.add(sun, sun.target);
 const SUNDIR = new THREE.Vector3(...world.sun.dir).normalize();
 const SUN_R = new THREE.Vector3().crossVectors(SUNDIR, new THREE.Vector3(0, 1, 0)).normalize(), SUN_U = new THREE.Vector3().crossVectors(SUN_R, SUNDIR), SUN_P = new THREE.Vector3(), TEXEL = 68 / SMAP;

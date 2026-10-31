@@ -12,8 +12,8 @@ export const DAVE = {
   rocketGrip: [14, 12], cutIn: .55,                                                    // sideways grip m/s2 (less = wider turns and drifts); above cutIn heat they leave the road route and come straight at you when nothing is in the way
   rocketHurt: [12, 22], missileMass: 3.0,                                             // health per hit (low to full heat); weight against your car
   // roadblocks set up when the chase starts: Dave's street is shut at the east end and Coconut Creek Pkwy is shut, so the way in is the long loop round the north
-  // and the only gap is one car wide at the west end of Banks Rd. road + the edge end nearest `end` (three x, z), `at` m in from that end, gap width m (0 = solid)
-  blocks: [{ road: 'Banks Rd', end: [-125.0, -29.7], at: 14, gap: 0 }, { road: 'Coconut Creek Pkwy', end: [-125.9, -0.8], at: 14, gap: 0, other: [-193.5, 0.4] }, { road: 'Banks Rd', end: [-193.5, 0.4], at: 18, gap: 3.4 }],
+  // (the car-wide gap block at the west end was removed in round 31). road + the edge end nearest `end` (three x, z), `at` m in from that end, gap width m (0 = solid)
+  blocks: [{ road: 'Banks Rd', end: [-125.0, -29.7], at: 14, gap: 0 }, { road: 'Coconut Creek Pkwy', end: [-125.9, -0.8], at: 14, gap: 0, other: [-193.5, 0.4] }],                                     // round 31: the car-wide gap block at the west end of Banks Rd is gone (user: annoying, not fun)
   reward: 1000,
 };
 
