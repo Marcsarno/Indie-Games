@@ -35,7 +35,7 @@ export async function createRenderer(canvas, sim) {
     rocketP: 'assets/b3/rocket_pickup.webp', rocketW: 'assets/b3/rocket_worn.webp', bubble: 'assets/b3/rescue_bubble.webp', gold: 'assets/b3/candy_gold.webp', burst: 'assets/b3/burst.webp',
     fog: 'assets/b3/fog_sheet.webp', roofs: 'assets/b3/roofs_tile.webp', wallL: 'assets/b3/wall_left.webp', wallR: 'assets/b3/wall_right.webp', roofL: 'assets/b3/roof_left.webp', roofR: 'assets/b3/roof_right.webp',
     lanP: 'assets/b3/lantern_pumpkin.webp', lanQ: 'assets/b3/lantern_paper.webp', flyBats: 'assets/b3/fly_bats.webp', flyCat: 'assets/b3/fly_cat.webp', flyGhost: 'assets/b3/fly_ghost.webp', flyDragon: 'assets/b3/fly_dragon.webp',
-    cr0: 'assets/b3/crumble_0.webp', cr1: 'assets/b3/crumble_1.webp', cr2: 'assets/b3/crumble_2.webp', cr3: 'assets/b3/crumble_3.webp', tr0: 'assets/b3/tramp_0.webp', tr1: 'assets/b3/tramp_1.webp', tr2: 'assets/b3/tramp_2.webp', bat0: 'assets/b3/bat_0.webp', bat1: 'assets/b3/bat_1.webp', bat2: 'assets/b3/bat_2.webp',
+    cr0: 'assets/b3/crumble_0.webp', cr1: 'assets/b3/crumble_1.webp', cr2: 'assets/b3/crumble_2.webp', cr3: 'assets/b3/crumble_3.webp', tr0: 'assets/b3/tramp_0.webp', tr1: 'assets/b3/tramp_1.webp', tr2: 'assets/b3/tramp_2.webp', bat0: 'assets/b3/bat_0.webp', bat1: 'assets/b3/bat_1.webp', bat2: 'assets/b3/bat_2.webp', fl0: 'assets/b3/flame_0.webp', fl1: 'assets/b3/flame_1.webp', fl2: 'assets/b3/flame_2.webp', fl3: 'assets/b3/flame_3.webp',
     fx_sparkle: 'assets/fx/collect_sparkle.webp', fx_puff: 'assets/fx/landing_puff.webp', fx_break: 'assets/fx/platform_break_burst.webp', fx_ring: 'assets/fx/pumpkin_bounce_ring.webp' };
   await Promise.all(Object.entries(names).map(async ([k, u]) => { T[k] = await tex(u, { alpha: !k.startsWith('sky') }); }));
   const aspect = (t) => t.image.width / t.image.height;
@@ -195,7 +195,9 @@ export async function createRenderer(canvas, sim) {
     worn.visible = flame.visible = rk;
     if (rk) { const fl = pl.face > 0 ? 1 : -1, ww = 0.75, wh = ww / aspect(T.rocketW), bx = pl.x - fl * 0.32, by = pl.y + 0.95;
       place(worn, bx, by - cy, -fl * ww, wh, 0.04);                                     // straps toward her back
-      const fh = 1.1 + Math.sin(t * 40) * 0.25, nx = bx - fl * ww * 0.12; place(flame, nx, by - wh / 2 - fh / 2 + 0.05 - cy, 0.45, fh, 0.045); }
+      const ft = T['fl' + (Math.floor(t * 14) % 4)], S = SH.flame, fwid = 0.7, fhgt = fwid * S.cell[1] / S.cell[0], nx = bx - fl * ww * 0.12;   // flame art, 14 fps loop
+      if (flame.material.map !== ft) { flame.material.map = ft; flame.material.needsUpdate = true; }
+      place(flame, nx, by - wh / 2 - fhgt / 2 + 0.12 - cy, fwid, fhgt * (0.95 + 0.08 * Math.sin(t * 30)), 0.045); }
     bubble.visible = bat.visible = pl.mode === 'rescue';
     if (bubble.visible) { place(bubble, pl.x, pl.y + 0.8 - cy, 2.3, 2.3, 0.06); const bt = T['bat' + (Math.floor(t * 12) % 3)]; if (bat.material.map !== bt) { bat.material.map = bt; bat.material.needsUpdate = true; } place(bat, pl.x, pl.y + 2.35 - cy, 1.3, 1.3 / aspect(bt), 0.07); }
     renderer.render(scene, camera);

@@ -14,8 +14,12 @@ def save(im, name, w):
     im = im.resize((w, max(1, round(im.height * w / im.width))), Image.LANCZOS)
     im.save(f'{O}/{name}.webp', 'WEBP', quality=88, alpha_quality=92, method=6); return im.size
 def single(src, name, w): im = Image.open(f'{S}/{src}.png').convert('RGBA'); print(name, save(im.crop(bbox(im)), name, w))
-def sheet(src, name, n, w):
-    im = Image.open(f'{S}/{src}.png').convert('RGBA'); cw = im.width / n
+def black_to_alpha(path):
+    im = np.asarray(Image.open(path).convert('RGB'), dtype=np.float32)
+    a = np.clip((im.max(2) - 10) / 245, 0, 1); rgb = np.clip(im / np.maximum(a[..., None], 1e-3), 0, 255)
+    return Image.fromarray(np.dstack([rgb, a * 255]).astype(np.uint8), 'RGBA')
+def sheet(src, name, n, w, black=False):
+    im = black_to_alpha(f'{S}/{src}.png') if black else Image.open(f'{S}/{src}.png').convert('RGBA'); cw = im.width / n
     cells = [im.crop((round(i * cw), 0, round((i + 1) * cw), im.height)) for i in range(n)]
     boxes = [bbox(c) for c in cells]
     u = (min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes))
@@ -43,7 +47,7 @@ halves('lanterns', ['lantern_pumpkin', 'lantern_paper'], 200)
 im = Image.open(f'{S}/flyby_set.png').convert('RGBA'); W, H = im.size
 for (i, j), n in zip([(0, 0), (1, 0), (0, 1), (1, 1)], ['fly_bats', 'fly_cat', 'fly_ghost', 'fly_dragon']):
     q = im.crop((i * W // 2, j * H // 2, (i + 1) * W // 2, (j + 1) * H // 2)); print(n, save(q.crop(bbox(q)), n, 400))
-sheet('crumbly_break', 'crumble', 4, 512); sheet('trampoline_bounce', 'tramp', 3, 320); sheet('rescue_bat', 'bat', 3, 256)
+sheet('crumbly_break', 'crumble', 4, 512); sheet('trampoline_bounce', 'tramp', 3, 320); sheet('rescue_bat', 'bat', 3, 256); sheet('rocket_flame', 'flame', 4, 192, black=True)
 # sparkle burst is RGB on black: alpha from brightness, colour un-premultiplied
 im = np.asarray(Image.open(f'{S}/sparkle_burst.png').convert('RGB'), dtype=np.float32)
 a = im.max(2); a = np.clip((a - 10) / 245, 0, 1); rgb = np.clip(im / np.maximum(a[..., None], 1e-3), 0, 255)
