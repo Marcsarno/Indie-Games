@@ -1,11 +1,11 @@
 # Doodle-clone notes: Halloween "Doodle Jump" in Three.js (working title: **Spooky Hop**)
 
-Last updated 2026-10-31. **Status: PLAN ONLY. No code yet. Waiting on the user's art (green-screen video clips in Dropbox).**
+Last updated 2026-10-31. **Status: PLAN ONLY. No code yet. Reference image received (LOOK ONLY, see Art direction); our own gameplay design is below; waiting on the green-screen clips.**
 
 ## Pitch
 Gameplay (confirmed with user): the jump is AUTOMATIC on landing (no jump button); the player holds a direction (tilt or left/right touch) to aim the next jump; climb forever; the higher you get the more complex the levels get. The 2.5D is part of that escalation: more background layers, foreground layers in front of the play plane, and layers moving independently of each other as you climb.
 Endless vertical jumper for portrait phones. Tilt/touch to steer, auto-jump on every platform, climb as high as you can.
-Halloween theme: haunted graveyard -> forest -> mansion roofs -> storm clouds -> moon. Earn candy and unlock Halloween outfits.
+Halloween theme. **Built for a 7-year-old: easy and forgiving, difficulty only ramps late.** Collect candy; lifetime candy unlocks Halloween outfits.
 Real 3D scene (Three.js) with a 2D gameplay plane, so the background gets true depth/parallax ("2.5D").
 
 ## Research findings (what the web gave us, honestly)
@@ -19,38 +19,22 @@ What the sources agree on:
 - **Jump math**: v0 = sqrt(2 g H); derive gravity and launch speed from the apex height and time you want. [Platformer physics cheatsheet](https://medium.com/@brazmogu/physics-for-game-dev-a-platformer-physics-cheatsheet-f34b09064558)
 - **Tilt on iOS** needs HTTPS and `DeviceOrientationEvent.requestPermission()` called from a user gesture. [A-Frame docs](https://aframe.io/docs/1.6.0/components/device-orientation-permission-ui.html), [three.js forum](https://discourse.threejs.org/t/device-orientation-controls-ios-request-permission-or-no/16271)
 - **Parallax**: layers at different depths; with a perspective camera the depth does the parallax for free. [melonJS 2.5D](https://github.com/melonjs/melonJS/wiki/2.5D-Games)
-- Original game's content (platform types, power-ups, monsters) is documented only by unofficial guides, so treat as inspiration: static / moving / breakable / disappearing platforms, spring + trampoline, propeller hat, jetpack, spring shoes, monsters you shoot or stomp.
+- **Original's difficulty ladder** (unofficial guides, no exact thresholds published): static platforms first; then sliding ones; then breakable ones (in the original you fall straight through; some browser clones give one bounce first); then disappearing ones (one bounce, then gone). Monsters/black holes only appear late (about 1,500 points in one browser version); spacing grows and hazards cluster as you climb. Power-ups: trampoline, spring shoes, propeller hat, jetpack. [Strategy guide](https://dinogame.gg/blog/doodle-jump-strategy-tips/), [unofficial wiki-style summary](https://rawg.io/games/doodle-jump-wiki)
+- **We copy that ladder's order but make it much gentler** (user decision: tuned for a 7-year-old, see Gameplay design). Gameplay is OURS; the concept art is not a source for it.
 - Nothing useful found for "keyed video frames -> atlas"; the pipeline below is our own design.
 
-## Art direction (from the user's reference, `art/reference/ref-01-look.png`, 1024 x 1536)
-**Style:** painted storybook illustration (soft shading, rim light, glow), NOT pixel art, so the `pixel-sprite` skill and diablo `RUBRIC.md` do not apply here. Palette: deep violet sky and fog, warm orange windows/lanterns/candy, cyan accents on magic things.
-What is in the frame, and what it means for the build:
-| In the reference | Build meaning |
-|---|---|
-| Little witch girl (purple star hat/dress, striped tights, boots), side/3-quarter view, ~350 px tall, feet planted on the slab | Default outfit = **Little Witch**. Other outfits are most likely the same girl in other costumes (same body, same pivot) so the clips stay consistent. Confirm with user. |
-| Cracked purple **stone slab on wooden brackets with autumn ivy** (~310 px wide, top face visible from slightly above) | The normal platform. Painted sprite, not a 3D mesh. Variants: clean, cracked (probably the breakable one: the bigger cracks), and more ivy. |
-| Slab with a **glowing cyan crescent-moon + stars rune** | A special platform. My guess: super-bounce/spring. User to confirm what it does (other options: moving, teleport, one-use boost). |
-| Orange striped **wrapped candy** with glow and sparkles | The candy currency pickup. |
-| Crescent moon, stars, soft clouds | Far sky layer (barely moves). |
-| Hazy **town silhouettes with lit windows**, 3 or more depth bands, fog between them | The mid/far parallax layers; fog sheets between bands. |
-| **Framing houses at the left and right edges** with a hanging jack-o'-lantern and a paper lantern, ivy | Foreground layer (in FRONT of the play plane, hugging the screen edges, moving faster than the world). Must never cover a platform in the middle ~70% of the width. Lanterns sway and glow-flicker. This is the 2.5D showpiece. |
-Scale from the reference at 9 world units across (1 u = 114 px): slab ~2.7 u wide, witch ~3.1 u tall and ~1.5 u wide, spacing between slabs ~1.8-2.6 u (early game). Widen the slab hit-box to the top face only, with feet-width tolerance (~0.6 u overlap needed).
-**Changes to the plan because of this reference:**
-1. Platforms, candy, enemies and foreground houses are **painted sprites (textured quads, alpha), not lit 3D meshes**; 3D lighting would clash with the painted look. The depth comes from Z-spaced layers + perspective parallax + fog sheets + glow/additive sprites (window light, lantern light, candy sparkles) + particles (fireflies, leaves). Optional soft bloom on high-end phones only.
-2. **Aspect ratio:** the reference is 2:3 but phones are about 9:19.5. Fit width, extend height. So every background layer must tile or extend vertically (tall strips), and edge houses must be separate pieces that repeat with variation.
-3. The background must **change with height** (the user's "more complex as you climb"): same style, new bands (rooftops -> clock tower -> storm clouds -> moon), more layers and more foreground clutter higher up.
-4. Candy collected flies to the HUD counter; the rune slab pulses cyan when you land.
-
-### Asset list to generate (user is producing the art; all painted, same style as the reference)
-Keep everything the SAME art style and light direction. Transparent PNG or on the green screen (green only as the backdrop, no green in the art). Sizes are for 2x phone sharpness.
-1. **Witch clips** on green (list in "Art pipeline").
-2. **Platforms** (one sprite each, ~620 px wide at 2x): normal x3 variants, cracked/breakable (plus 2 break-apart frames or I do the break in code), moon-rune, moving (e.g. floating on a broom/with lanterns), disappearing (fades to wisps). Top-down-ish 3/4 view like the reference.
-3. **Pickups/props:** candy (+ golden candy), jack-o'-lantern spring, broom, hat-propeller.
-4. **Enemies:** bat (2-4 wing frames), ghost, spider on thread, cauldron vortex.
-5. **Background bands** (each a tall, vertically tileable or extendable strip, ~1024 px wide): far sky (opaque, with moon and stars, one per biome), far town silhouette strip (alpha or opaque), mid town strip with lit windows (alpha), fog sheet (alpha, soft).
-6. **Foreground pieces** (alpha, left-edge and right-edge versions, 3-4 variants each): house corner with lantern, tree branch with ivy, rooftop edge, chimney with smoke.
-7. UI later: candy icon, buttons, title logo, outfit cards.
-Order that unblocks me fastest: witch clips -> normal slab + candy -> far/mid background -> foreground houses. Until then I use crops of the reference as look-dev stand-ins.
+## Art direction (LOOK ONLY, from the user's concept art `art/reference/ref-01-look.png`, 1024 x 1536)
+The user said: this is concept art for the LOOK. Do not take gameplay from it (what a platform "does", what a pickup is for, what a layout means). I design the mechanics; the user then makes art for them.
+**Look takeaways:**
+- Painted storybook illustration (soft shading, rim light, glow), NOT pixel art: the `pixel-sprite` skill and diablo `RUBRIC.md` do not apply here.
+- Palette: deep violet sky and fog, warm orange lantern/window light, a little cyan magic glow.
+- Setting vibe: a hazy night town of rooftops with lit windows in several depth bands, a crescent moon, soft clouds, autumn ivy, hanging jack-o'-lanterns and paper lanterns; framing houses at the left/right screen edges in front of the play area.
+- Character vibe: a cute girl in a witch costume, side/3-quarter view, ~3 u tall at 9 u screen width (1 u = 114 px in the concept image).
+**What this means for the build (technical, not gameplay):**
+1. Platforms, pickups and the foreground/background are **painted sprites (textured quads with alpha), not lit 3D meshes**; 3D lighting would clash with the paint. Depth = Z-spaced layers + perspective parallax + fog sheets + additive glow sprites + particles (fireflies, leaves). Optional soft bloom on high-end phones only.
+2. **Aspect ratio:** the concept is 2:3, phones are about 9:19.5. Fit width, extend height, so background layers must extend or tile vertically; edge pieces are separate sprites that repeat with variation.
+3. **Foreground pieces in front of the play plane** (edge houses, branches, lanterns) move faster than the world and hug the screen edges so they never hide a platform; lanterns sway and flicker. This is the 2.5D showpiece.
+4. The background changes with height in the same style (zones below); more layers and foreground clutter as you climb.
 
 ## Decisions (recommended defaults; user can overrule)
 1. **Engine:** Three.js r170 via importmap from jsDelivr (same as `city-clone`), classic no-build ES modules. No bundler.
@@ -58,7 +42,7 @@ Order that unblocks me fastest: witch clips -> normal slab + candy -> far/mid ba
 3. **Gameplay is pure 2D** (x, y on the z=0 plane). Three.js is only the renderer. Game logic never reads the scene graph.
 4. **Player = billboard quad with a sprite-atlas animation**, made from the user's green-screen clips (keyed OFFLINE, not live; see pipeline). Platforms/props/background are painted sprites on Z-spaced layers (see Art direction); no lit 3D meshes.
 5. **Portrait phone first**; logical view 9 x 16 world units. Fit width; extra height on tall phones just shows more sky.
-6. **Cosmetic-only outfits** (no stat perks) so scores stay fair; each outfit can have its own trail/landing particles/sound.
+6. **Kid-first difficulty** (see Gameplay design): forgiving landings, gentle ramp, no punishing deaths. **Cosmetic-only outfits** (no stat perks) so scores stay fair; each outfit can have its own trail/landing particles/sound.
 7. **Deploy:** Vercel project like `city-clone` (needs HTTPS for tilt anyway), root `doodle-clone/`. Artifact host is a fallback only (no `.glb`, small files).
 
 ## Architecture
@@ -84,31 +68,51 @@ doodle-clone/
 ```
 **Sim/render split is the key rule.** `sim.js` owns the truth in world units at a fixed 120 Hz step (accumulator loop); `render.js` interpolates. That makes jump feel identical on 60/120 Hz phones and lets node run the sim headless.
 
-## Core mechanics and starting numbers (all in `config.js`, tune by feel)
+## Gameplay design (ours; numbers are starting points, tuned by feel with a 7-year-old's thumbs)
+**Core loop:** you auto-bounce on every landing; hold a direction (tilt or left/right touch) to aim; climb; collect candy on the way; the run ends when you fall. Lifetime candy unlocks outfits, so every run makes progress even a short one.
 | Thing | Start value | Why |
 |---|---|---|
-| View | 9 x 16 u | portrait 9:16 |
-| Jump apex H | 5.5 u (~34% of screen) | feels like Doodle Jump |
-| Gravity g | 26 u/s^2 | up-time = sqrt(2H/g) = 0.65 s |
-| Launch v0 | sqrt(2 g H) = 16.9 u/s | derived, never hand-set |
-| Spring / trampoline | 2.2 x H (12 u) / 3 x H | |
-| Broom jet / witch-hat propeller | ~3.5 s of lift, ~7 u/s up, invulnerable | |
-| Max horizontal speed | 9 u/s, eased accel | cross the screen in ~1 s |
-| Wrap | at x = +/-4.5 u (+ half sprite width); draw a second copy at the far edge while overlapping | seamless |
-| Landing rule | only while falling (vy < 0) AND feet crossed the platform top between last and this step (swept test) | no tunnelling, no jump-through from below |
-| Camera | tracks up only when player > 40% up the view; smoothed | |
-| Death | player top below the view bottom by a margin, or enemy hit | |
-| Score | max height reached (u x 10) | candy is separate currency |
+| View | 9 x 16 u, fit width, extend height | portrait phones |
+| Jump apex H | 5.5 u (~34% of screen) | |
+| Gravity g | 20 u/s^2 (floatier than a normal jump) | up-time = sqrt(2H/g) = 0.74 s, more time to steer |
+| Launch v0 | sqrt(2 g H) = 14.8 u/s | derived, never hand-set |
+| Horizontal speed | up to 7 u/s, eased | slower than a pro would want, easy to be precise |
+| Aim assist (setting, default ON) | gentle pull of x toward the platform you are heading for, small | forgiving, can be turned off |
+| Landing | only while falling, swept test; **foot overlap tolerance +0.4 u** each side | no near-miss heartbreaks |
+| Platform width | 3.0 u early, shrinking to 2.0 u at the top | big targets |
+| Wrap | leave one edge, appear on the other | |
+| Camera | up only; smooth | |
+| Falling | below view bottom = "Oops!". **Friendly rescue once per run** (setting, default ON): a bubble/bat catches you and lifts you to a platform | a 7-year-old should not lose a long run to one slip |
+| Score | height, shown as meters; candy counted separately | |
 
-**Generator (reachability by construction):** keep a "frontier" y. Next platform gap `dy` is random in `[gapMin(h), gapMax(h)]`, with `gapMax(h)` ramping from 0.35 H at the start to 0.80 H max (never above what a plain jump + steering can reach); `dx` stays within the horizontal reach at that `dy` (use flight time) but wrap-around makes x almost free. Generate in chunks of ~30 platforms ahead of the camera; recycle from a pool of ~60. Difficulty is a pure function of height: platform-width shrink, % moving / breaking / disappearing, enemy rate, fewer springs. Guarantee rule: at least one "safe" platform (normal, static) in every vertical band of 1 jump height, so a breakable/disappearing platform can never be the only path.
+**Platform roster (the user will draw art for each; I pick behaviour):**
+| Platform | Behaviour | Appears |
+|---|---|---|
+| Flat | solid, still | always (the only kind at first) |
+| Slider | slides side to side slowly (1.2 u/s early, max 3), travels a fixed short track, bounces back | from zone 2 |
+| Crumbly | you still get your bounce, then it crumbles about 0.4 s after you leave (never a trap you fall through). Never the only way up. | from zone 3 |
+| Phasing | blinks between solid and ghost on a slow, readable rhythm (solid >= 60% of a 2.5 s cycle, flicker warning 0.5 s before it fades; can only be landed on while solid, pass-through when ghost) | from zone 4 |
+| Vanishing (optional) | one bounce, then gone (the original's "disappearing"). Decide with the user whether to include it as well as phasing. | zone 4-5 |
+| Trampoline (on a platform) | big bounce 2.2 x H | zone 1, one early so a kid learns it |
+**Power-ups (the user asked for these):**
+- **Trampoline**: rests on a platform, squash/stretch, whoosh, candy trail up.
+- **Rocket pack**: picked up, then worn on the character's back (an **overlay sprite with an animated flame**, so no extra character clips are needed). About 3 s of thrust, you can still steer, then a gentle 1 s ease-out into a normal fall. The generator places a safe flat platform where the flight ends. Invulnerable while burning.
+- Later maybe: spring boots (a few super-jumps), propeller hat, candy magnet.
+**Hazards:** none until the late zones; then only gentle, non-lethal ones (a bat that bonks you and drops a few candy, you keep bouncing). Off in the first builds; add after the core feels right. No scary game-over.
 
-## Halloween content (first pass)
-- **Platforms:** tombstone slab (normal), floating coffin (moves sideways), cracked bone/rotten plank (breaks after one landing), will-o-wisp (fades after landing), pumpkin trampoline (spring), cobweb (slows you; late game).
-- **Power-ups:** witch broom (jetpack), pointy-hat propeller, candy-corn boots (3 super-jumps), magnet bag (pulls candy).
-- **Enemies:** bat (sine flight), ghost (drifts through, stomp or shoot), spider on a thread (drops when you pass), zombie hand (pops out of a tombstone), cauldron vortex (black-hole equivalent; sucks you in).
-- **Attack:** tap to throw candy up (aim by tilt), like Doodle's nose shot. Stomp from above also kills small enemies.
-- **Pickups:** candy (currency), occasional "golden candy" (x5).
-- **Biomes by height (blend, don't cut):** 0-1k graveyard (blue-violet) -> 1k-3k dead forest (orange/teal, fireflies) -> 3k-6k haunted mansion roofs (lightning flashes) -> 6k+ storm clouds -> moon + witch silhouettes.
+**Difficulty ladder (pure function of height `h`, in meters; flat start, long easy stretch, late ramp):**
+| Zone | Height | Look (our theme bands) | New | Mix | Max gap |
+|---|---|---|---|---|---|
+| 1 | 0-150 | lantern rooftops | flat slabs, candy trails, first trampoline | 100% flat | 0.35 H |
+| 2 | 150-400 | misty rooftops, clock tower | sliders, first rocket | 80% flat, 20% slider | 0.45 H |
+| 3 | 400-800 | stormy edge / cemetery hill | crumbly | 60% flat, 20% slider, 20% crumbly | 0.5 H |
+| 4 | 800-1500 | clouds | phasing (and vanishing if kept) | flat >= 40%, rest mixed | 0.55 H |
+| 5 | 1500+ | moon | everything mixed, narrower slabs, optional soft hazards | flat >= 35% | 0.6 H cap (the old plan's 0.8 is far too hard) |
+Rules that never change: at least one flat platform in every vertical band of one jump height (so crumbly/phasing never decide a run); trampolines about every 25-40 m in zones 1-3; candy trails in every zone.
+
+**Generator (reachability by construction):** keep a "frontier" y. Next platform gap `dy` in `[gapMin(h), gapMax(h)]` from the table, `dx` within the horizontal reach at that `dy` (use flight time; wrap-around makes x almost free). Generate chunks of ~30 platforms ahead of the camera; recycle from a pool of ~60. Seeded RNG so runs are reproducible and a headless bot can verify there is always a path.
+
+**Bonus collectibles (ours):** candy (1 each), occasional golden candy (5), candy trails that teach the path.
 
 ## 2.5D background plan
 Layers are textured quads at set depths, all behind z=0 unless noted. Fog colour = current biome colour, which hides pop-in and gives atmosphere cheaply.
@@ -132,45 +136,43 @@ Input: clips on a green background in the user's Dropbox (I have the Dropbox con
 6. **Draw:** one quad, UVs swapped per frame (uniform offset in a tiny shader). Nearest/linear per taste; mipmaps off for the player.
 7. **Squash and stretch in code** (scale on launch/landing) on top of the frames; it costs nothing and sells the bounce.
 
-**Clips I need per outfit (all from one fixed camera, same distance, same framing):** idle/jump-rise, apex/float, fall, land squash, throw/shoot, hit/hurt, death/fall-off, propeller/jet flight (or I do the flight in code with a prop sprite). Facing: shoot one direction; I mirror in code. Left/right asymmetry (a bag on one shoulder) will flip sides; fine unless it matters.
+**Clips I need per outfit (all from one fixed camera, same distance, same framing):** jump-rise, apex/float, fall, land squash, cheer (candy/unlock), oops (falling/rescued), and a flying pose for the rocket (arms up; the rocket and flame are separate overlay sprites). Facing: film one direction; I mirror in code. Left/right asymmetry (a bag on one shoulder) will flip sides; fine unless it matters. Squash/stretch is done in code.
 
 **Green-screen rules (user decision 2026-10-31):** the green is only the backdrop so frames key out easily. No outfit, prop or effect uses green (keep it out of costumes, candy and held items too), so the key stays simple and no blue-screen variant is needed. For clean edges: flat even lighting on the screen, no wrinkles/shadows on it, some distance from the screen so green does not spill onto the character, 1080p+ at 30-60 fps, subject fully in frame including props.
 
 ## Outfits and progression
-Currency: **candy** (earned per run, 1 per pickup + bonus per 100 height). Unlock mix so there is always something close:
-| Outfit | Unlock idea |
-|---|---|
-| Ghost (sheet) | starter |
-| Witch | 500 candy |
-| Vampire | reach 3,000 height |
-| Skeleton | collect 300 candy in total |
-| Mummy | survive a lightning storm biome |
-| Pumpkin Head | 5 runs in a row over 1,000 |
-| Black Cat | 50 candy in one run |
-| Werewolf | defeat 50 enemies |
-| Mad Scientist | 2,000 candy |
-| Grim Reaper | reach the moon (6,000+) |
-| Secret | daily-streak 7 days |
-Closet screen: preview the animation on a turntable-free flat sprite, locked ones as silhouettes with the unlock hint. Save in `localStorage` (`spooky-save-v1`). Optional later: Supabase leaderboard (connector available) and a daily seeded run (the RNG is already seedable).
+**Collection unlocks outfits.** Candy collected over all runs (lifetime) fills a progress bar; each outfit has a lifetime-candy goal, so any run helps. Cosmetic only (each can have its own trail/landing sparkle/sound). Tuned so the first unlock arrives in the first session (about 40 candy per early run).
+| # | Outfit (placeholder names; the user picks the real ones) | Lifetime candy |
+|---|---|---|
+| 0 | Starter outfit (the first clip) | 0 |
+| 1 | Outfit 1 | 50 |
+| 2 | Outfit 2 | 150 |
+| 3 | Outfit 3 | 300 |
+| 4 | Outfit 4 | 500 |
+| 5 | Outfit 5 | 800 |
+| 6 | Outfit 6 | 1,200 |
+| 7 | Outfit 7 | 1,800 |
+| 8 | Outfit 8 | 2,600 |
+Ideas for the names (Halloween, no green): ghost in a sheet, black cat, pumpkin, skeleton, vampire, mummy, scarecrow, werewolf pup, fairy-bat. Closet screen: animated preview, locked ones as silhouettes with a "x more candy" bar, a big celebration on unlock. Save in `localStorage` (`spooky-save-v1`). Optional later: Supabase leaderboard (connector available) and a daily seeded run.
 
 ## Input
 - **Tilt** (default on phones): `deviceorientation.gamma`, deadzone ~3 deg, ~25 deg = full speed, low-pass filtered; first tap on the title runs `requestPermission()` (iOS). Calibrate zero on run start.
 - **Touch fallback:** hold left/right half of the screen, or drag-to-steer. A setting toggles which.
-- **Keyboard:** arrows/AD, space or up to throw.
+- **Keyboard:** arrows/AD.
 
 ## Performance budget (phone, 60 fps)
 DPR capped at 2; antialias off (or FXAA-style only); platforms/props via `InstancedMesh` per type (a handful of draw calls); object pools only, zero allocation per frame; no shadow maps; ~100 live meshes max; fog instead of far-plane tricks; texture atlas for all props; atlas size 2048 max. Add an FPS counter behind `?dev=1`, plus a quality toggle.
 
 ## Testing plan (follows the repo's headless-Chromium habit)
 1. `sim.js` runs in node: a **bot** that steers toward the nearest reachable safe platform plays 10,000 platforms on many seeds; assert it never dies from an "impossible" gap (this verifies the generator's reachability claim).
-2. Playwright (software GL) screenshots at fixed seeds/heights for the before/after sheets: each biome, each platform type, each enemy.
+2. Playwright (software GL) screenshots at fixed seeds/heights for the before/after sheets: each biome, each platform type and power-up.
 3. Hooks: `window.__doodle.{setManual, tick(dt), seed, teleport(h)}`, same pattern as city-clone.
 4. Real-phone check by the user via the Vercel link after each milestone.
 
 ## Milestones
 - **M0 Greybox:** scaffold, fixed-step sim, camera, wrap, generator, cubes for everything, keyboard + touch. Playable on a phone link.
 - **M1 Feel:** tune the table above with the user's thumbs; add squash/stretch, tilt, score, death/restart.
-- **M2 Content:** all platform types, power-ups, enemies, shooting, candy.
+- **M2 Content:** platform roster by zone, trampoline, rocket pack, candy, friendly rescue (soft hazards later).
 - **M3 2.5D world:** layered parallax, biome blend, fog, lighting, particles.
 - **M4 Sprites:** run the pipeline on the first clip, swap the cube for the real character (placeholder if art is late).
 - **M5 Meta:** outfit closet, unlocks, save, title/game-over screens.
@@ -178,6 +180,15 @@ DPR capped at 2; antialias off (or FXAA-style only); platforms/props via `Instan
 - **M7 Ship:** Vercel deploy, README, update this file.
 
 ## Waiting on the user
-- The reference art of how the game should look (not received yet), then the green-screen clips in Dropbox (tell me the folder path and which clip = which state/outfit).
-- Outfit list they actually want (the table above is my guess).
-- Keep the title **Spooky Hop** or pick another.
+- Green-screen clips in Dropbox (folder path + which clip = which state/outfit) and art for the platform roster, candy, trampoline, rocket/flame, backgrounds (list below).
+- Confirm or change: platform order (flat -> slider -> crumbly -> phasing), whether to also have a one-bounce "vanishing" platform, the friendly rescue, no hazards at first, outfit candy goals.
+- Outfit list; title (**Spooky Hop** is a placeholder).
+
+### Art needed (painted, same style as the concept; transparent PNG, or on the green screen for clips; no green in the art)
+1. Character clips (above).
+2. Platforms (~620 px wide at 2x, 3/4 view): flat x3 variants, slider, crumbly (+ break-apart frames or I do it in code), phasing (solid + ghost), trampoline (3 frames: rest, squashed, stretched).
+3. Pickups/props: candy, golden candy, rocket pack (item, worn version, flame loop), rescue bubble/bat.
+4. Backgrounds per zone: far sky (opaque, tall), far silhouettes (alpha or opaque), mid layer with lit windows (alpha), fog sheet (alpha); each extendable/tileable vertically, ~1024 px wide.
+5. Foreground pieces (alpha), left and right versions, 3-4 variants: house corner with lantern, branch with ivy, rooftop edge, chimney with smoke.
+6. UI later: candy icon, buttons, logo, outfit cards.
+Order that unblocks me fastest: character clips -> flat platform + candy -> mid/far background -> foreground. Until then I use crops of the concept art as look-dev stand-ins only.
