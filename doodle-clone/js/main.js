@@ -9,9 +9,10 @@ const qs = new URLSearchParams(location.search);
 const SAVE_KEY = 'spooky-save-v1';
 let stored = {}; try { stored = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}'); } catch (e) {}
 const save = Object.assign({ best: 0, candy: 0, outfit: 'witch', tilt: false, sound: true, tune: {} }, stored);
+if (save.tuneV !== 7) { save.tune = {}; save.tuneV = 7; }   // new defaults in round 7: drop old slider values saved on the phone
 // live tuning (gear button): values saved per device, applied over config defaults
 const TUNE = [
-  ['g', 'Gravity (snappy)', 20, 70, 1], ['H', 'Jump height', 3.5, 7, 0.1], ['maxVx', 'Steer speed', 5, 14, 0.5],
+  ['g', 'Gravity (lower = more hang time)', 12, 60, 1], ['H', 'Jump height', 3.5, 7, 0.1], ['maxVx', 'Steer speed', 3, 12, 0.5], ['accel', 'Turn quickness', 6, 90, 1],
   ['camGlide', 'Camera glide speed', 1, 12, 0.5], ['camLandFrac', 'Landing spot (from bottom)', 0.12, 0.45, 0.01],
 ];
 const DEF = Object.fromEntries(TUNE.map(([k]) => [k, C[k]])); DEF.control = C.control;

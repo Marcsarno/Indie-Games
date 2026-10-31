@@ -18,11 +18,12 @@ function botDir(sim) {
     if (top > apex - 0.3 || apex - top > 8) continue;
     const tFall = Math.sqrt(2 * (apex - top) / C.g), t = tUp + tFall;
     const need = Math.abs(wdx(p.x, pl.x)) - (p.w / 2 + C.footTol - 0.25);
-    if (need > C.maxVx * t * 0.7) continue;                 // not reachable in time
+    if (need > C.maxVx * Math.max(0, t - C.maxVx / C.accel) * 0.85) continue;   // not reachable in time (allows for speeding up)
     if (top > bt) { bt = top; best = p; }                    // highest reachable platform = most progress
   }
   if (!best) return 0;
-  return Math.max(-1, Math.min(1, wdx(best.x, pl.x) * 1.5));
+  const stop = pl.vx * Math.abs(pl.vx) / (2 * C.decel);                // distance needed to brake
+  return Math.max(-1, Math.min(1, (wdx(best.x, pl.x) - stop) * 1.5));
 }
 let fails = 0, worst = 1e9;
 for (let s = 1; s <= seeds; s++) {

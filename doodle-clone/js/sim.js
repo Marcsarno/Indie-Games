@@ -49,13 +49,18 @@ export function createSim(seed = 1) {
       const target = dir * C.maxVx;
       const rate = target === 0 || Math.sign(target) !== Math.sign(pl.vx) ? C.decel : C.accel;
       pl.vx += clamp(target - pl.vx, -rate * dt, rate * dt); pl.airT += dt;
-      if (Math.abs(pl.vx) > 0.3) pl.face = Math.sign(pl.vx);
+      if (Math.abs(pl.vx) > C.faceFlip) pl.face = Math.sign(pl.vx);
       pl.x += pl.vx * dt;
       if (pl.mode === 'rocket') {
         pl.rt += dt; const R = C.rocket;
         pl.vy = pl.rt < R.dur ? R.vy : R.vy * Math.max(0, 1 - (pl.rt - R.dur) / R.ease);
         pl.y += pl.vy * dt;
-        if (pl.rt >= R.dur + R.ease) { pl.mode = 'air'; pl.vy = 0; pl.launchV = v0(); pl.airT = 1; }
+        if (pl.rt >= R.dur + R.ease) {
+          pl.mode = 'air'; pl.vy = 0; pl.launchV = v0(); pl.airT = 1;
+          // safe landing pad where the flight ends (unless a solid platform is already just below her)
+          const pad = gen.platforms.some((p) => p.alive && !p.hit && p.type !== 'crumbly' && pl.y - p.y > 0.5 && pl.y - p.y < 3.5 && Math.abs(p.x - pl.x) < p.w / 2);
+          if (!pad) gen.addFlat(clamp(pl.x, -C.viewW / 2 + 1.6, C.viewW / 2 - 1.6), pl.y - 2.2, 3.2);
+        }
       } else {
         pl.vy -= C.g * dt; pl.y += pl.vy * dt;
         if (pl.vy < 0) {                                 // aim assist toward the platform below

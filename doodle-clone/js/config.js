@@ -1,9 +1,10 @@
 // ALL tunables live here. Units: world units (u). View is 9 u wide, height follows the phone's aspect.
 export const C = {
   viewW: 9,
-  g: 40,                 // gravity u/s^2 (round 2: was 20, user: 'too floaty'); up-time = sqrt(2H/g) = 0.5 s
-  H: 5.0,                // normal jump apex height u
-  maxVx: 9, accel: 90, decel: 120,   // horizontal speed cap; snappy start and quick stop when you let go (was 7/45, no decel)
+  g: 24,                 // gravity u/s^2. Round 7 (user: 'jumps too fast, needs a little more hang time, like Doodle Jump'): 40 -> 24; up-time = sqrt(2H/g) = 0.66 s, bounce ~1.3 s
+  H: 5.2,                // normal jump apex height u
+  maxVx: 5.5, accel: 18, decel: 22,  // round 7 ('turns too fast, like a 7-year-old is playing'): gentle drift, ~0.3 s to full speed and to stop, like Doodle Jump's momentum (was 9/90/120)
+  faceFlip: 1.2,         // only turn the sprite around once she is really moving the other way (u/s), so she doesn't flicker left/right
   charH: 1.6,            // character height u (user: concept art was too big)
   footTol: 0.4,          // landing forgiveness each side of a platform u
   startFrac: 0.25,       // at the start she stands this far up from the bottom (user: keep her low so you see what is next)
