@@ -22,7 +22,7 @@ export const C = {
   trampTop: 0.58,        // trampoline surface height above the platform u
   rocket: { dur: 2.5, vy: 16, ease: 0.7 },
   aimAssist: 0, rescue: true,   // aim assist off (round 2: it moved her without input, part of 'controls are bad')
-  control: 'drag',       // round 10 (user: a touch turned her hard; wants touch, then drag to turn): 'drag' = joystick-style drag (default), 'finger' = run to finger, 'sides' = hold halves
+  control: 'aim',        // round 17 experiment: tap/hold where she should go (was 'drag');       // round 10 (user: a touch turned her hard; wants touch, then drag to turn): 'drag' = joystick-style drag (default), 'finger' = run to finger, 'sides' = hold halves
   platTopFrac: 0.30,     // landing line is this fraction down from the top of the slab sprite
   step: 1 / 120,
   // difficulty ladder: heights in u. Round 9 (user: 'platforms a bit more spread out, slightly too easy'): every gap range +~25%. Flat start, long easy stretch, late ramp. Blended over 30 u at each zone start.

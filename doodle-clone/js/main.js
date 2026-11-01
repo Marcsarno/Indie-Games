@@ -92,9 +92,10 @@ function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (mode === 'play') {
     acc += dt; let n = 0;
-    while (acc >= C.step && n++ < 20) { sim.step(C.step, input.dirFor(sim.player.x)); acc -= C.step; if (sim.over) break; }
+    while (acc >= C.step && n++ < 20) { sim.step(C.step, input.dirFor(sim.player.x, sim)); acc -= C.step; if (sim.over) break; }
     handleEvents(); if (mode === 'play') hud();
   }
+  R.aim = mode === 'play' && input.mode === 'aim' && input.aim ? { x: input.aim.x, y: sim.cam.y + (0.5 - (input.aim.sy ?? 0.5)) * sim.viewH, held: input.fingerX !== null } : null;
   if (mode !== 'paused') R.frame(dt, mode === 'title' ? 'title' : 'play');
   requestAnimationFrame(loop);
 }
@@ -115,7 +116,7 @@ function tunePanel() {
   }
   el.prepend(pre);
   const ctl = document.createElement('div'); ctl.className = 'row';
-  for (const [m, txt] of [['drag', 'Drag'], ['finger', 'Follow finger'], ['sides', 'Hold sides']]) {
+  for (const [m, txt] of [['aim', 'Aim'], ['drag', 'Drag'], ['finger', 'Follow finger'], ['sides', 'Hold sides']]) {
     const b = document.createElement('button'); b.textContent = txt; b.className = C.control === m ? 'sel' : '';
     b.onclick = () => { save.tune.control = m; applyTune(); input.mode = m; persist(); tunePanel(); }; ctl.appendChild(b);
   }

@@ -8,7 +8,7 @@ export function platTop(p, x) { return p.y + (p.tramp && Math.abs(x - p.x) < 0.9
 export function createSim(seed = 1) {
   const gen = makeGen(seed);
   const sim = {
-    gen, t: 0, viewH: 16, landY: 0, landT: 0, climb: 0, height: 0, candy: 0, over: false, rescueUsed: false, events: [],
+    gen, cfg: C, t: 0, viewH: 16, landY: 0, landT: 0, climb: 0, height: 0, candy: 0, over: false, rescueUsed: false, events: [],
     player: { x: 0, y: 0, prevY: 0, vx: 0, vy: 0, mode: 'squash', squashT: 0, launchV: v0(), airT: 0, kind: 'flat', face: 1, on: gen.platforms[0], offX: 0, rt: 0, rs: null },
     cam: { y: 0 },
   };

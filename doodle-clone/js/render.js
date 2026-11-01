@@ -129,7 +129,8 @@ export async function createRenderer(canvas, sim) {
   const mkPlat = () => sprite(T.flat, 20), mkTramp = () => sprite(T.tramp, 21), mkCandy = () => sprite(T.candy, 22), mkItem = () => sprite(T.rocketP, 22);
   const player = sprite(null, 25); scene.add(player);
   const worn = sprite(T.rocketW, 24), flame = sprite(T.flame, 23), bubble = sprite(T.bubble, 26, { opacity: 0.85 }), bat = sprite(T.bat0, 27);
-  for (const m of [worn, flame, bubble, bat]) { m.visible = false; scene.add(m); }
+  const aimM = sprite(T.fx_ring, 31);   // aim marker where you touched (glowing ring = target)
+  for (const m of [worn, flame, bubble, bat, aimM]) { m.visible = false; scene.add(m); }
   // one-shot effects from the HUD/effects pack: sparkle (candy), puff (landing), ring (trampoline), break (crumbly platform)
   const FX = { sparkle: { tx: 'fx_sparkle', w: 1.3, dur: 0.4, grow: 0.8, rise: 0.8 }, puff: { tx: 'fx_puff', w: 1.9, dur: 0.32, grow: 0.6, rise: 0.15 },
                ring: { tx: 'fx_ring', w: 2.0, dur: 0.4, grow: 1.0, rise: 0 }, break: { tx: 'fx_break', w: 3.0, dur: 0.6, grow: 0.25, rise: -1.2 }, burst: { tx: 'burst', w: 2.6, dur: 0.55, grow: 0.9, rise: 0.3 } };
@@ -255,6 +256,7 @@ export async function createRenderer(canvas, sim) {
       const ft = T['fl' + (Math.floor(t * 14) % 4)], S = SH.flame, fwid = 0.7, fhgt = fwid * S.cell[1] / S.cell[0], nx = bx - fl * ww * 0.12;   // flame art, 14 fps loop
       if (flame.material.map !== ft) { flame.material.map = ft; flame.material.needsUpdate = true; }
       place(flame, nx, by - wh / 2 - fhgt / 2 + 0.12 - cy, fwid, fhgt * (0.95 + 0.08 * Math.sin(t * 30)), 0.045); }
+    aimM.visible = !!R.aim; if (R.aim) { const s2 = (R.aim.held ? 1.6 : 1.3) * (1 + 0.1 * Math.sin(t * 8)); aimM.material.opacity = R.aim.held ? 1 : 0.75; place(aimM, R.aim.x, R.aim.y - cy, s2, s2 / aspect(T.fx_ring), 0.2); }
     bubble.visible = bat.visible = pl.mode === 'rescue';
     if (bubble.visible) { place(bubble, pl.x, pl.y + 0.8 - cy, 2.3, 2.3, 0.06); const bt = T['bat' + (Math.floor(t * 12) % 3)]; if (bat.material.map !== bt) { bat.material.map = bt; bat.material.needsUpdate = true; } place(bat, pl.x, pl.y + 2.35 - cy, 1.3, 1.3 / aspect(bt), 0.07); }
     renderer.render(scene, camera);
