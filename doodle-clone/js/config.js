@@ -33,6 +33,10 @@ export const C = {
     { h: 500, slider: 0.25, crumbly: 0.25, gap: [0.38, 0.62], w: [2.3, 2.6], sspeed: 1.6 },
     { h: 900, slider: 0.30, crumbly: 0.30, gap: [0.42, 0.68], w: [2.0, 2.4], sspeed: 2.0 },
   ],
+  // round 18: smooth difficulty ramp (gen.js paramsAt). gaps are fractions of H; widths/dx in u; sspeed = slider speed u/s.
+  ramp: { scale: 600, sliderFrom: 40, crumblyFrom: 120,
+    easy: { gapMin: 0.28, gapMax: 0.42, wMin: 2.8, wMax: 3.0, dxMin: 0.3, dxMax: 2.6, sspeed: 1.0 },
+    hard: { gapMin: 0.50, gapMax: 0.74, wMin: 1.8, wMax: 2.2, dxMin: 2.0, dxMax: 4.6, sspeed: 2.4, slider: 0.35, crumbly: 0.30 } },
   // outfits: lifetime candy needed
   outfits: [
     { id: 'witch', name: 'Witch', emoji: '🧙', need: 0 },

@@ -4,12 +4,16 @@ import { C } from './config.js';
 import { mulberry32 } from './rng.js';
 
 const lerp = (a, b, t) => a + (b - a) * t;
+// Round 18: ONE smooth difficulty curve instead of zone steps (user: aim control made it too easy; wants a smooth ramp
+// that stays fun for a 7-year-old). d(h) = 1 - exp(-h / C.ramp.scale): 0 at the start, ~0.5 at 400 m, ~0.8 at 1,000 m.
+// Each parameter lerps from its 'easy' to its 'hard' value along d; sliders and crumblies fade in after their start heights.
+export function difficulty(h) { return 1 - Math.exp(-Math.max(0, h) / C.ramp.scale); }
 export function paramsAt(h) {
-  const Z = C.zones; let i = 0;
-  while (i + 1 < Z.length && h >= Z[i + 1].h) i++;
-  const cur = Z[i], prev = Z[Math.max(0, i - 1)], t = i === 0 ? 1 : Math.min(1, (h - cur.h) / 30);
-  const m = (k) => lerp(prev[k], cur[k], t), m2 = (k) => [lerp(prev[k][0], cur[k][0], t), lerp(prev[k][1], cur[k][1], t)];
-  return { slider: m('slider'), crumbly: m('crumbly'), sspeed: m('sspeed'), gap: m2('gap'), w: m2('w'), zone: i };
+  const R = C.ramp, d = difficulty(h), L = (k) => lerp(R.easy[k], R.hard[k], d);
+  const on = (h0) => Math.min(1, Math.max(0, (h - h0) / 60));          // 60 m fade-in after a type's start height
+  return { d, slider: R.hard.slider * on(R.sliderFrom) * Math.min(1, d * 2.2), crumbly: R.hard.crumbly * on(R.crumblyFrom) * Math.min(1, d * 1.8),
+           sspeed: L('sspeed'), gap: [L('gapMin'), L('gapMax')], w: [L('wMin'), L('wMax')], dx: [L('dxMin'), L('dxMax')],
+           zone: h < 100 ? 0 : h < 250 ? 1 : h < 500 ? 2 : h < 900 ? 3 : 4 };
 }
 
 export function makeGen(seed) {
@@ -31,7 +35,10 @@ export function makeGen(seed) {
       else if (r < p.slider + p.crumbly && st.lastType !== 'crumbly') type = 'crumbly';
     }
     const lim = hw - w / 2;
-    let x = Math.max(-lim, Math.min(lim, prevX + (rnd() * 2 - 1) * 4.2));
+    // sideways step grows with difficulty (later the next platform is often across the screen, so you have to plan the aim)
+    const mag = p.dx[0] + rnd() * (p.dx[1] - p.dx[0]); let sgn = rnd() < 0.5 ? -1 : 1;
+    if (Math.abs(prevX + sgn * mag) > lim) sgn = -sgn;
+    let x = Math.max(-lim, Math.min(lim, prevX + sgn * mag));
     const pl = { type, x, x0: x, y, w, amp: 0, ang: 0, phase: 0, tramp: false };
     if (type === 'slider') {
       const amp = Math.min(1.5, 0.6 + rnd() * 0.9), room = lim - amp;
