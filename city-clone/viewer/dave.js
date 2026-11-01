@@ -15,6 +15,9 @@ export const DAVE = {
   // roadblocks set up when the chase starts: Dave's street is shut at the east end and Coconut Creek Pkwy is shut, so the way in is the long loop round the north
   // (the car-wide gap block at the west end was removed in round 31). road + the edge end nearest `end` (three x, z), `at` m in from that end, gap width m (0 = solid)
   blocks: [{ road: 'Banks Rd', end: [-125.0, -29.7], at: 14, gap: 0 }, { road: 'Coconut Creek Pkwy', end: [-125.9, -0.8], at: 14, gap: 0, other: [-193.5, 0.4] }],                                     // round 31: the car-wide gap block at the west end of Banks Rd is gone (user: annoying, not fun)
+  blocksFar: [{ road: 'Wiles Rd', end: [-126.0, 119.0], at: 14, gap: 0, other: [-231.0, 109.0] }],   // round 33: added after Aaron gets the EMP (the way round gets longer, room for the next hand-off)
+  aaronHurt: 2.0, aaronHurtEmp: 1.6, relayAhead: 45,                                  // Aaron's Tesla is weak (damage x), how far up the road he waits for the hand-off (m)
+  emp: { cool: 12, radius: 24 },                                                      // EMP: seconds between pulses, reach (m)
   reward: 1000,
 };
 
@@ -68,8 +71,8 @@ export function createDave(D) {
   document.body.appendChild(phone);
   const fail = document.createElement('div'); fail.id = 'mfail'; fail.hidden = true; fail.innerHTML = `<div class="c"><b>Mission failed</b><span id="mf-why"></span><span class="dist" id="mf-dist"></span><small id="mf-try"></small><button id="mf-retry">Retry</button></div>`; document.body.appendChild(fail);
   const hurt = document.createElement('div'); hurt.id = 'hurt'; document.body.appendChild(hurt);
-  const up = document.createElement('div'); up.id = 'mup'; up.hidden = true; up.innerHTML = '<div class="c"><small>UPGRADE</small><b>Add rocket launcher?</b><p>Marc\'s Jeep gets a roof launcher. It aims itself. Tap FIRE.</p><button id="mu-ok">OK</button></div>'; document.body.appendChild(up);
-  const UP = { rockets: false };          // upgrades for this visit (round 32): the launcher is offered after the first failure, there is no "no"
+  const up = document.createElement('div'); up.id = 'mup'; up.hidden = true; up.innerHTML = '<div class="c"><small>UPGRADE</small><b id="mu-t">Add rocket launcher?</b><p id="mu-p">Marc\'s Jeep gets a roof launcher. It aims itself. Tap FIRE.</p><button id="mu-ok">OK</button></div>'; document.body.appendChild(up);
+  const UP = { rockets: false, emp: false };          // upgrades for this visit (round 32): the launcher is offered after the first failure, there is no "no"
   const res = document.createElement('div'); res.id = 'mres'; res.hidden = true; res.innerHTML = '<h2>Delivered</h2><dl></dl><div class="b"><button id="mr-again">Play again</button><button class="k" id="mr-free">Keep driving</button></div>'; document.body.appendChild(res);
   let best = 1e9; try { best = +localStorage.getItem('gtcc-dave-best') || 1e9; } catch (e) { /* ok */ }       // closest you got to Dave's in a failed run (m, by road)
   const coldEl = document.createElement('div'); coldEl.id = 'cold'; coldEl.hidden = true; coldEl.innerHTML = '<span>Yep. That\'s me.</span><span><small>You\'re probably wondering how I got here.</small></span>'; document.body.appendChild(coldEl);
@@ -317,13 +320,74 @@ export function createDave(D) {
       if (!r.on) r.warned = false; const disp = show ? 'block' : 'none'; if (el.style.display !== disp) el.style.display = disp;
     });
   }
-  function blast(x, z, rad) {                              // a rocket blast: rocket cops inside it spin out and wreck, a SWAT van takes two
+  function blast(x, z, rad, emp = false) {                              // a rocket blast: rocket cops inside it spin out and wreck, a SWAT van takes two
     let n = 0;
     for (const r of RK) { if (!r.on || r.crash) continue; const d = Math.hypot(r.x - x, r.z - z); if (d > rad) continue; const k = (rad - d) / rad;
       r.vx += (r.x - x) / (d || 1) * 14 * k; r.vz += (r.z - z) / (d || 1) * 14 * k; r.spin = (Math.random() < .5 ? -1 : 1) * (4 + 4 * k);
-      if (r.swat) { r.hp = (r.hp ?? 2) - 1; if (r.hp > 0) { r.vx *= .4; r.vz *= .4; r.blockT = 0; continue; } }
+      if (r.swat && !emp) { r.hp = (r.hp ?? 2) - 1; if (r.hp > 0) { r.vx *= .4; r.vz *= .4; r.blockT = 0; continue; } }
       r.crash = .01; r.car.setDamage && r.car.setDamage(1); n++; }
     return n;
+  }
+  // ---------- the relay: Marc goes down -> the groceries fly to Aaron (slow motion, invulnerable), then Aaron drives ----------
+  const BAG = (() => {
+    const c = document.createElement('canvas'); c.width = 128; c.height = 160; const g = c.getContext('2d');
+    g.fillStyle = '#c8a77a'; g.fillRect(0, 0, 128, 160); g.fillStyle = 'rgba(0,0,0,.08)'; for (let i = 0; i < 9; i++) g.fillRect(i * 15, 0, 2, 160);
+    g.fillStyle = '#2e8b3e'; g.font = '800 26px system-ui'; g.textAlign = 'center'; g.fillText('Publix', 64, 40);
+    g.save(); g.translate(64, 100); g.rotate(-.12); g.fillStyle = '#fff'; g.fillRect(-52, -26, 104, 52); g.strokeStyle = '#d33'; g.lineWidth = 4; g.strokeRect(-50, -24, 100, 48);
+    g.fillStyle = '#111'; g.font = '800 15px system-ui'; g.fillText('FOR', 0, -6); g.fillStyle = '#1d3f8a'; g.font = '900 19px system-ui'; g.fillText('CREEK PD', 0, 15); g.restore();
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const side = new THREE.MeshLambertMaterial({ color: 0xc8a77a }), face = new THREE.MeshLambertMaterial({ map: t });
+    const grp = new THREE.Group(), body = new THREE.Mesh(new THREE.BoxGeometry(.5, .62, .32), [side, side, side, side, face, face]); body.position.y = .31; grp.add(body);
+    const fold = new THREE.Mesh(new THREE.BoxGeometry(.5, .08, .36), new THREE.MeshLambertMaterial({ color: 0xb8956a })); fold.position.y = .64; grp.add(fold);
+    const celery = new THREE.Mesh(new THREE.CylinderGeometry(.04, .05, .5, 6), new THREE.MeshLambertMaterial({ color: 0x7fbf4a })); celery.position.set(-.12, .78, .02); celery.rotation.z = .25; grp.add(celery);
+    const loaf = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .55, 8), new THREE.MeshLambertMaterial({ color: 0xd9a24e })); loaf.position.set(.1, .8, -.04); loaf.rotation.z = -.3; grp.add(loaf);
+    grp.visible = false; scene.add(grp); return grp;
+  })();
+  function intercept(kind) {                               // the game asks before Wasted / Busted: Marc (with the launcher) going down hands the groceries to Aaron
+    if (S.stage !== 'chase' || S.failed || !UP.rockets || S.relay || env.cur !== 0) return false;
+    startRelay(); return true;
+  }
+  function startRelay() {
+    S.stage = 'relay'; S.relay = 1; env.invuln = true; env.slowmo(.04); if (env.launcher) env.launcher.reset(); if (env.music) env.music.level(1);
+    const P = S.lastP, path = routeTo(P[0], P[1], DAVE.house[0], DAVE.house[1]); let acc = 0, px = P[0], pz = P[1], at = null, th = 0;
+    for (let i = 0; i < path.length; i++) { const q = path[i], L = Math.hypot(q[0] - px, q[1] - pz); if (acc + L >= DAVE.relayAhead && L > .01) { at = q; th = Math.atan2(-(q[0] - px), -(q[1] - pz)); break; } acc += L; px = q[0]; pz = q[1]; }
+    if (!at) { at = [P[0] - Math.sin(S.cth || 0) * 30, P[1]]; }
+    env.placeRide(1, at[0], at[1], th); S.rl = { t0: performance.now(), a: [P[0], P[1]], b: [at[0], at[1]], th };
+    BAG.visible = true; BAG.scale.setScalar(1); banner('HAND-OFF!');
+  }
+  function relayStep() {                                   // real time (the world runs at 4 %): up toward the screen, hang at the top, down into the Tesla
+    const R = S.rl, T = (performance.now() - R.t0) / 1000, UPT = 1.1, HOLD = .9, DOWN = .8, mx = (R.a[0] + R.b[0]) / 2, mz = (R.a[1] + R.b[1]) / 2;
+    env.camHold({ x: mx, z: mz, yaw: R.th, pitch: 52, dist: 34 });
+    const cam = D.camera.position, peak = new THREE.Vector3(mx + (cam.x - mx) * .7, cam.y * .7, mz + (cam.z - mz) * .7);       // close to the lens, so it fills a good part of the screen
+    const e = t => t * t * (3 - 2 * t); let p, spin;
+    let sc = 1;
+    if (T < UPT) { const k = e(T / UPT); p = new THREE.Vector3(R.a[0], 1.6, R.a[1]).lerp(peak, k); p.y += Math.sin(k * Math.PI) * 2; spin = 12 * (1 - k); sc = 1 + 2.6 * k; }
+    else if (T < UPT + HOLD) { p = peak.clone(); p.y += Math.sin((T - UPT) * 4) * .08; spin = 0; sc = 3.6; }
+    else { const k = Math.min(1, (T - UPT - HOLD) / DOWN), k2 = k * k; p = peak.clone().lerp(new THREE.Vector3(R.b[0], 1.2, R.b[1]), k2); spin = 14 * k; sc = 3.6 - 2.6 * k2; }
+    BAG.position.copy(p); BAG.scale.setScalar(sc);
+    if (spin > 0) BAG.rotation.y += spin * .016; else { BAG.lookAt(cam.x, BAG.position.y, cam.z); }      // at the top it turns its sticker to you
+    if (T >= UPT + HOLD + DOWN) endRelay();
+  }
+  function endRelay() {
+    BAG.visible = false; env.camHold(null); env.slowmo(1); env.relayTo(1, true); env.hurtK = UP.emp ? DAVE.aaronHurtEmp : DAVE.aaronHurt; env.heal();
+    S.stage = 'chase'; S.checkpoint = 'relay'; S.cpRelay = { x: S.rl.b[0], z: S.rl.b[1], th: S.rl.th, cops: S.cops, t: S.t }; banner(UP.emp ? 'AARON + EMP' : 'AARON\'S GOT IT');
+    setTimeout(() => { env.invuln = false; }, 1200);
+  }
+  // ---------- EMP (Aaron, after his first failure): a pulse that wrecks every police car within reach ----------
+  const empBtn = document.createElement('button'); empBtn.id = 'b-emp'; empBtn.hidden = true; empBtn.innerHTML = '<span>EMP</span>'; document.body.appendChild(empBtn);
+  { const st = document.createElement('style'); st.textContent = '#b-emp{position:fixed;z-index:3;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(222px + env(safe-area-inset-bottom,0px));width:76px;height:76px;border-radius:50%;border:0;padding:0;font:700 15px/1 var(--display,system-ui);letter-spacing:.1em;color:#04131a;background:conic-gradient(#3fd8ff var(--p,100%),rgba(10,24,32,.85) 0);box-shadow:0 0 0 3px rgba(0,0,0,.5),0 0 16px rgba(63,216,255,.7);touch-action:none}#b-emp span{display:grid;place-items:center;position:absolute;inset:6px;border-radius:50%;background:#bff3ff}#b-emp.wait span{background:#2a3c44;color:#9ab}#b-emp[hidden]{display:none}body.cine #b-emp{visibility:hidden}'; document.head.appendChild(st); }
+  const ring = new THREE.Mesh(new THREE.RingGeometry(.86, 1, 64).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x5fe3ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }));
+  ring.visible = false; scene.add(ring); const EMPS = { cool: 0, t: -1, x: 0, z: 0 };
+  function empFire() {
+    if (!UP.emp || env.cur !== 1 || EMPS.cool > 0 || S.stage !== 'chase' || !S.lastP) return;
+    const [x, z] = S.lastP; EMPS.cool = DAVE.emp.cool; EMPS.t = 0; EMPS.x = x; EMPS.z = z; ring.position.set(x, .3, z); ring.visible = true;
+    cops.blowUp(x, z, DAVE.emp.radius); env.wrecks += blast(x, z, DAVE.emp.radius, true); env.sound('zap');
+    if (env.fx) { env.fx.puff(x, 1, z, 7, 0x8fefff, .25, 0, 5, true); for (let i = 0; i < 4; i++) env.fx.debris(x, 1, z, 0, 0, 14, '#9ff4ff', 10, 4, .7); }
+  }
+  empBtn.addEventListener('pointerdown', e => { e.preventDefault(); empFire(); }); addEventListener('keydown', e => { if (e.code === 'KeyE') empFire(); });
+  function empStep(dt) {
+    EMPS.cool = Math.max(0, EMPS.cool - dt); const show = UP.emp && env.cur === 1 && S.stage === 'chase' && env.hmode === 'driving'; if (empBtn.hidden === show) empBtn.hidden = !show;
+    if (show) { empBtn.style.setProperty('--p', Math.round((1 - EMPS.cool / DAVE.emp.cool) * 100) + '%'); empBtn.classList.toggle('wait', EMPS.cool > 0); }
+    if (EMPS.t >= 0) { EMPS.t += dt; const k = Math.min(1, EMPS.t / .5); ring.scale.setScalar(1 + k * DAVE.emp.radius); ring.material.opacity = (1 - k) * .9; if (k >= 1) { EMPS.t = -1; ring.visible = false; } }
   }
   function clearMissiles() { for (const r of RK) { park(r); r.warned = false; } for (const el of WARN) el.style.display = 'none'; }
   const frustum = new THREE.Frustum(), pm = new THREE.Matrix4(), sph = new THREE.Sphere(new THREE.Vector3(), 5);
@@ -345,14 +409,14 @@ export function createDave(D) {
     lamp: new THREE.SphereGeometry(.09, 8, 6), cone: new THREE.ConeGeometry(.2, .72, 10).translate(0, .36, 0), band: new THREE.CylinderGeometry(.115, .145, .12, 10).translate(0, .42, 0),
     base: new THREE.BoxGeometry(.44, .04, .44).translate(0, .02, 0), conc: jersey, refl: new THREE.BoxGeometry(.18, .07, .02) };
   function roadblocks() {
-    if (RB.on || !graph) return; RB.on = true;
+    if (!graph) return; const set = UP.emp ? 'far' : 'near'; if (RB.on && RB.set === set) return; if (RB.set && RB.set !== set) disposeRoadblocks(); RB.set = set; RB.on = true;
     if (RB.parts.length) { for (const p of RB.parts) { if (p.obj) p.obj.visible = true; if (p.col) colliders.push(p.col); } for (const k of RB.shut) SHUT.add(k); for (const [k, n] of RB.closed) CLOSED.set(k, n); if (env.setBlocks) env.setBlocks(RB.blockers, [...SHUT]); return; }   // built once, shown again on a retry
     const I = {}; for (const k in GEO) I[k] = [];                                   // instance matrices per part
     const m4 = new THREE.Matrix4(), q4 = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), one = new THREE.Vector3(1, 1, 1), v3 = new THREE.Vector3();
     const put = (k, x, y, z, th) => { q4.setFromAxisAngle(up, th); I[k].push(m4.compose(v3.set(x, y, z), q4, one).clone()); };
     const solid = (x, z, th, dims) => { const c = { poly: carPoly(x, z, th, dims), cx: x, cz: z, r: Math.hypot(dims[0], dims[1]) / 2 + .2, vx: 0, vz: 0 }; colliders.push(c); RB.parts.push({ col: c }); };
     const free = (x, z) => { const q = pushCircle(x, z, 1.2, null); return Math.abs(q[0] - x) + Math.abs(q[1] - z) < .05; };
-    for (const B of DAVE.blocks) {
+    for (const B of UP.emp ? DAVE.blocks.concat(DAVE.blocksFar) : DAVE.blocks) {
       let best = null, bd = 1e18;
       graph.edges.forEach((e, k) => { if (e.road !== B.road) return; for (const end of ['a', 'b']) { const n = GN[e[end]], d = Math.hypot(n.x - B.end[0], n.z - B.end[1]); const o = GN[e[end === 'a' ? 'b' : 'a']], od = B.other ? Math.hypot(o.x - B.other[0], o.z - B.other[1]) : 0; if (d + od < bd) { bd = d + od; best = { e, k, from: end }; } } });
       if (!best) continue; const e = best.e; let P = e.pts.map(q => [q[0], -q[1]]); if (best.from === 'b') P = P.reverse();
@@ -390,6 +454,10 @@ export function createDave(D) {
       im.castShadow = k !== 'lamp' && k !== 'refl' && k !== 'base'; im.receiveShadow = true; scene.add(im); RB.parts.push({ obj: im, cx: DAVE.house[0], cz: DAVE.house[1], r: 200 }); if (k === 'lamp') RB.lampMesh = im; }
     if (env.setBlocks) env.setBlocks(RB.blockers, [...SHUT]);
   }
+  function disposeRoadblocks() {                           // the block set changed: throw the old parts away, the next roadblocks() builds the new set
+    for (const p of RB.parts) { if (p.obj) scene.remove(p.obj); if (p.col) { const i = colliders.indexOf(p.col); if (i >= 0) colliders.splice(i, 1); } }
+    RB.parts = []; RB.blockers = []; RB.shut = []; RB.closed = []; RB.lamps = []; RB.bars = []; RB.lampMesh = null; RB.on = false; SHUT.clear(); CLOSED.clear();
+  }
   function clearRoadblocks() {
     for (const p of RB.parts) { if (p.obj) p.obj.visible = false; if (p.col) { const i = colliders.indexOf(p.col); if (i >= 0) colliders.splice(i, 1); } }
     RB.on = false; SHUT.clear(); CLOSED.clear(); if (env.setBlocks) env.setBlocks([], []);
@@ -405,6 +473,8 @@ export function createDave(D) {
   // ---------- step ----------
   function step(dt, P) {                                   // P: { x, z (three), vx, vz, th, speed, driving }
     if (S.dave) daveStep(dt);
+    if (S.stage === 'relay') { relayStep(); return; }
+    empStep(dt);
     if (S.stage === 'cold') { coldStep(dt, P); return; }
     if (S.stage === 'off' || S.stage === 'intro' || S.stage === 'done' || S.failed) return;
     if (env.respawning && performance.now() > (S.grace || 0)) { failMission(env.lastDeath === 'busted' ? 'Busted.' : 'Wasted.'); return; }
@@ -439,10 +509,10 @@ export function createDave(D) {
     rocketStep(dt, P, S.heat > DAVE.rocketFrom ? (S.heat - DAVE.rocketFrom) / (1 - DAVE.rocketFrom) : 0); warnStep(P);
     const tg = target(); beacon.visible = !!tg; if (tg) { const k = 1 + Math.sin(performance.now() / 300) * .06; beacon.position.set(tg[0], 0, -tg[1]); beacon.scale.set(S.stage === 'curbside' ? .75 : k, 1, S.stage === 'curbside' ? .75 : k); }
   }
-  function restart() { if (env.launcher) env.launcher.reset(); if (env.music) env.music.level(0); endFinish(false); S.cpNear = null; clearRoadblocks(); if (cops.goal) cops.goal(null); clearThugs(); clearMissiles(); cops.force(0); cops.lock(false); cops.clear(); fail.hidden = true; phone.hidden = true; S.failed = false; S.stage = 'off'; S.checkpoint = null; objective(''); env.heal(); env.resetCar(); start(); }
+  function restart() { if (env.launcher) env.launcher.reset(); S.relay = 0; S.cpRelay = null; env.hurtK = 1; env.invuln = false; BAG.visible = false; env.camHold(null); if (env.cur !== 0) env.relayTo(0, false); if (env.music) env.music.level(0); endFinish(false); S.cpNear = null; clearRoadblocks(); if (cops.goal) cops.goal(null); clearThugs(); clearMissiles(); cops.force(0); cops.lock(false); cops.clear(); fail.hidden = true; phone.hidden = true; S.failed = false; S.stage = 'off'; S.checkpoint = null; objective(''); env.heal(); env.resetCar(); start(); }
   function startChase() { if (env.launcher) { if (UP.rockets && env.cur === 0) env.launcher.deploy(true); else env.launcher.reset(); } roadblocks(); S.stage = 'chase'; S.cops = 1; S.copT = 0; S.missT = 2; S.t = 0; S.heat = 0; S.d0 = Math.max(60, dist([DAVE.lot[0], DAVE.lot[1]], DAVE.house)); S.checkpoint = 'chase'; cops.lock(true); cops.force(1); if (cops.goal) { cops.goal(DAVE.house[0], DAVE.house[1]); cops.shut(SHUT, CLOSED); } S.stopSaid = false; S.swatSaid = false; S.swatT = 1; objective('Get the groceries to Dave', 'roads closed'); banner('COPS!'); setTimeout(() => { if (S.stage === 'chase' && S.t < 6) banner('ROADS CLOSED'); }, 2000); }
   function win() {
-    if (env.launcher) env.launcher.deploy(false); clearRoadblocks(); if (cops.goal) cops.goal(null); S.stage = 'done'; cops.force(0); cops.lock(false); cops.clear(); clearMissiles(); clearThugs(); objective(''); env.addMoney(DAVE.reward);
+    if (env.launcher) env.launcher.deploy(false); env.hurtK = 1; clearRoadblocks(); if (cops.goal) cops.goal(null); S.stage = 'done'; cops.force(0); cops.lock(false); cops.clear(); clearMissiles(); clearThugs(); objective(''); env.addMoney(DAVE.reward);
     const n = tries + 1; tries = 0; saveTries(); try { localStorage.removeItem('gtcc-dave-best'); } catch (e) { /* ok */ } best = 1e9;
     const stats = { time: S.mt || 0, n, wrecks: Math.max(0, env.wrecks - (S.w0 || 0)), hp: Math.round(env.hp) };
     if (env.music) env.music.sting('win'); env.slowmo(.3); banner(`MISSION PASSED  +$${DAVE.reward}`);
@@ -478,20 +548,32 @@ export function createDave(D) {
     }
   }
   fail.querySelector('#mf-retry').onclick = () => {
-    if (!UP.rockets && env.launcher) { fail.hidden = true; up.hidden = false; return; }       // the first failure: the upgrade offer comes before the retry
+    if (!UP.rockets && env.launcher) { offer('rockets'); return; }        // the first failure: the upgrade offer comes before the retry
+    if (S.relay && !UP.emp) { offer('emp'); return; }                      // Aaron down: the EMP
     retry();
   };
+  let offering = '';
+  function offer(k) {
+    offering = k; fail.hidden = true; up.hidden = false;
+    up.querySelector('#mu-t').textContent = k === 'emp' ? 'Give Aaron\'s Tesla EMP?' : 'Add rocket launcher?';
+    up.querySelector('#mu-p').textContent = k === 'emp' ? 'An electric pulse that wipes out every police car around him. Tap EMP.' : 'Marc\'s Jeep gets a roof launcher. It aims itself. Tap FIRE.';
+  }
   up.querySelector('#mu-ok').onclick = async () => {
-    up.hidden = true; UP.rockets = true; banner('ROCKET LAUNCHER');
+    up.hidden = true;
+    if (offering === 'emp') { UP.emp = true; banner('EMP'); retry(); return; }
+    UP.rockets = true; banner('ROCKET LAUNCHER');
     if (env.cur !== 0) { env.switchTo(0); await wait(2.8); }                                 // it is Marc's Jeep that gets it
     retry();
   };
   function retry() {                 // retry from the last checkpoint
     fail.hidden = true; S.failed = false; S.grace = performance.now() + 3000; clearMissiles(); cops.clear(); env.heal();
-    if (S.checkpoint === 'chase' && S.cpNear) { const c = S.cpNear; clearThugs(); env.resetCar(c.x, c.z, c.th); startChase(); S.cops = c.cops; S.t = c.t; cops.force(S.cops); banner('CHECKPOINT'); }
+    if (S.checkpoint === 'relay' && S.cpRelay) {                            // back to the hand-off: Aaron in his Tesla, the groceries on board
+      const c = S.cpRelay; env.resetCar(c.x, c.z, c.th); startChase(); S.checkpoint = 'relay'; S.relay = 1; S.cops = c.cops; S.t = c.t; cops.force(S.cops); env.hurtK = UP.emp ? DAVE.aaronHurtEmp : DAVE.aaronHurt; banner(UP.emp ? 'AARON + EMP' : 'AARON');
+    }
+    else if (S.checkpoint === 'chase' && S.cpNear) { const c = S.cpNear; clearThugs(); env.resetCar(c.x, c.z, c.th); startChase(); S.cops = c.cops; S.t = c.t; cops.force(S.cops); banner('CHECKPOINT'); }
     else if (S.checkpoint === 'chase') { clearThugs(); env.resetCar(DAVE.lot[0], DAVE.lot[1], DAVE.lot[2]); startChase(); }
     else if (S.checkpoint === 'publix') { clearThugs(); env.resetCar(DAVE.lot[0], DAVE.lot[1], DAVE.lot[2]); S.stage = 'curbside'; objective('Pull into Curbside Pickup', 'stop in the green box'); }
     else { env.resetCar(); S.stage = 'toPublix'; objective('Drive to Publix'); }
   };
-  return { list: [], step, start, restart, refresh() {}, target, get active() { return S.stage !== 'off' && S.stage !== 'done' && !S.failed; }, get stage() { return S.stage; }, S, RK, RB, blast, UP };
+  return { list: [], step, start, restart, refresh() {}, target, get active() { return S.stage !== 'off' && S.stage !== 'done' && !S.failed; }, get stage() { return S.stage; }, S, RK, RB, blast, UP, intercept };
 }
