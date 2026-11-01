@@ -66,3 +66,13 @@ User's words: "Now it's just a little too hard"; "what feels very hard is the SW
 | swatHurt | 24 | 14 |
 | swatMass (x your car) | 4.5 | 3.0 (and no extra 1.35x shove) |
 | DOORK (get in/out speed) | 1 | 2 |
+
+### Round 35 (1 Nov 2026), Tesla speed
+User's words: "I think the Tesla needs more acceleration and top speed."
+
+| VSTAT tesla | Old | New | Effect |
+|---|---|---|---|
+| acc | 1.45 | 1.75 | quickest car off the line again (bike 1.7) |
+| top | 1.1 | 1.22 | top speed ~30.7 -> ~34 m/s (fastest vehicle) |
+
+(Same round, not a dial: lake water is no longer a wall. WATER = { top 6 m/s, drag 2.2/s, sink .55 m } in index.html; cops wade at 6.5 m/s.)

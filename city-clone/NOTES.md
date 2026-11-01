@@ -21,6 +21,12 @@ Tune panel for the car handling. Controls are touch (stick/pads) with keyboard f
 5. Test in headless Chromium with Playwright (software GL): load `?`/`#chinatown`, `window.__city.setManual(true)`, `tick(dt, draw=false)` for logic tests (drawing each frame is ~1 s), `step(dt)` = physics only. Scripted tests live only in the session scratchpad; rewrite from the hooks.
 6. Show the user before/after or concept-vs-ours sheets and animated GIFs captured with the stepped sim; commit and push to `main` after each round.
 
+## ROUND 35: WATER YOU CAN DRIVE INTO + FASTER TESLA
+- User: "I hate the water areas, something about them being a wall". The 1231 lake collision triangles (tagged `water` at load: 3-point polys within 3 m of a `world.map` lake ring) are skipped by the car physics; in water the car slows to 6 m/s (drag 2.2/s), settles .55 m, splash on entry + spray. On foot you wade at 45 % speed. Cops (police.js) and rocket cops/SWAT (dave.js) also pass through water capped at 6.5 m/s, so a pond is no hiding spot. Rockets and the launcher's line of sight ignore water. Peds still treat it as a wall. The sea coast edge is still a wall (map edge). The bike jumps over ponds.
+- Not done: the user's "review the small ponds" (12 lakes, 5 tiny: 7-87 m2). With water drivable they no longer dead-stop you; removing or reshaping them needs a world rebuild.
+- Tesla acc 1.45 -> 1.75, top 1.1 -> 1.22 (TUNING_LOG).
+- Police "smarter AND fairer" ideas proposed to the user (attack turns, ram wind-up tell, lose-them-by-hiding, no off-screen spawns in your lane, speed matched to yours): waiting on the user's pick.
+
 ## ROUND 34: THE MISSION IS NOW THREE CHAPTERS (user's design, supersedes steps 2 and 5 below)
 - Pick screen: only Marc can go (Aaron and Chris greyed out, "busy").
 - **Ch 1 Marc (Jeep):** curbside at Publix -> chase. Fail -> "Add rocket launcher?" (OK only). Deliver -> Dave walks out and texts: thank you / "why does the bag smell like rocket fuel" (only with the launcher) / "wait." / "where's the KETCHUP??" / "Aaron can you grab some from Publix?".

@@ -299,7 +299,8 @@ export function createDave(D) {
         if (r.swat) { r.hitCD = 1.5; r.vx *= .5; r.vz *= .5; } else { r.vx *= .3; r.vz *= .3; r.spin += (Math.random() - .5) * 8; r.crash = .01; }
       }
       // move and hit the world: walls stop them; a hard hit spins them out
-      const nx = r.x + r.vx * dt, nz = r.z + r.vz * dt, q = pushCircle(nx, nz, 1.7, r.col), ox = q[0] - nx, oz = q[1] - nz, od = Math.hypot(ox, oz);
+      if (env.inWater(r.x, r.z)) { const sp_ = Math.hypot(r.vx, r.vz); if (sp_ > 6.5) { r.vx *= 6.5 / sp_; r.vz *= 6.5 / sp_; } }      // water: a crawl, like you
+      const nx = r.x + r.vx * dt, nz = r.z + r.vz * dt, q = pushCircle(nx, nz, 1.7, B => B === r.col || B.water), ox = q[0] - nx, oz = q[1] - nz, od = Math.hypot(ox, oz);
       if (od > .02) { const ux = ox / od, uz = oz / od, vn = r.vx * ux + r.vz * uz;
         if (vn < 0) { if (-vn > (r.swat ? 34 : onRoute ? 22 : 15) && !r.crash) { r.crash = .01; r.spin = (Math.random() < .5 ? -1 : 1) * (3 + Math.min(6, -vn / 6)); if (burst) burst(q[0], .6, q[1], ux, uz, -vn); if (d < 60) env.sound('crash'); } r.vx -= vn * ux * (r.crash ? 1.3 : 1); r.vz -= vn * uz * (r.crash ? 1.3 : 1); } }
       r.x = q[0]; r.z = q[1]; r.roll += (clamp(-vl / 25, -.12, .12) - r.roll) * Math.min(1, dt * 6);

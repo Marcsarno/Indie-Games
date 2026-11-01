@@ -4,7 +4,7 @@
 export const POL = { maxCops: [0, 1, 2, 4, 5], speed: [0, 17, 20, 23, 25], wreckNeed: [0, 1, 2, 4, 6], heatFor: [0, 1, 4, 8, 13], loseAfter: 28, bustTime: 3.5, probation: 6, pool: 7 };
 
 export function createPolice(G, deps) {
-  const { THREE, makeCar, carPoly, colliders, placeOnGround, scene, camera, pushCircle, audio, onStars, onBusted, onWreck, ram, playerMass } = deps;
+  const { inWater, THREE, makeCar, carPoly, colliders, placeOnGround, scene, camera, pushCircle, audio, onStars, onBusted, onWreck, ram, playerMass } = deps;
   // ---------- road graph for routing (node centres + edge polylines) ----------
   const N = G.nodes.map(n => ({ x: n.x, z: -n.y, adj: [] }));
   G.edges.forEach((e, ei) => { const P = e.pts.map(p => [p[0], -p[1]]); let L = 0; for (let k = 1; k < P.length; k++) L += Math.hypot(P[k][0] - P[k - 1][0], P[k][1] - P[k - 1][1]); N[e.a].adj.push({ n: e.b, P, L, ei }); N[e.b].adj.push({ n: e.a, P: P.slice().reverse(), L, ei }); });
@@ -199,7 +199,7 @@ export function createPolice(G, deps) {
         const fx = -Math.sin(c.th), fz = -Math.cos(c.th); let nx = c.x + fx * c.v * dt, nz = c.z + fz * c.v * dt;
         if ((W.force > 0 || W.stars >= 2) && P.th !== undefined) hitYou(c, P, d, fx, fz);                // ramming: checked before the push-out below, which would stop the cop at your bumper
         const plough = W.force > 0; if (plough && c.v > 2) shove(c, nx, nz, fx, fz);
-        const q = pushCircle(nx, nz, 1.5, plough ? (B => B === c.col || B.ai) : c.col);      // scripted chase: traffic does not stop a cop, it gets shoved aside if (Math.abs(q[0] - nx) + Math.abs(q[1] - nz) > .03) { c.v *= .85; c.stuck += dt; } else c.stuck = Math.max(0, c.stuck - dt);
+        const q = pushCircle(nx, nz, 1.5, B => B === c.col || B.water || (plough && B.ai)); if (inWater && inWater(nx, nz)) c.v = Math.min(c.v, 6.5);      // water: they wade in after you at a crawl      // scripted chase: traffic does not stop a cop, it gets shoved aside if (Math.abs(q[0] - nx) + Math.abs(q[1] - nz) > .03) { c.v *= .85; c.stuck += dt; } else c.stuck = Math.max(0, c.stuck - dt);
         if (c.stuck > (plough ? .6 : 1.5)) { if (plough) c.rev = 1.1; else c.th += Math.PI * .6; c.stuck = 0; c.path = null; }     // wedged on a wall: back off (scripted chase: reverse out), else turn away
         c.x = q[0]; c.z = q[1];
         if (d < (c.dims[0] + P.L) / 2 + .6) { if (!W.force && W.stars < 2) c.v = Math.min(c.v, 2); if (Math.hypot(P.vx, P.vz) < 1 && d < (c.dims[0] + P.L) / 2 + .3) pinning = true; }

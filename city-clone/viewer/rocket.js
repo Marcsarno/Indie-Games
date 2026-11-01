@@ -22,7 +22,7 @@ export function createLauncher(D) {
     L.root.visible = L.k > .001;
   }
   // ---------- targets: the nearest threat in range with nothing solid in between ----------
-  const v3 = new THREE.Vector3(), solidOnly = skip => B => !!B.mass || !!B.missile || B === skip;
+  const v3 = new THREE.Vector3(), solidOnly = skip => B => !!B.mass || !!B.missile || !!B.water || B === skip;
   function clear(ax, az, bx, bz, skip) {
     const d = Math.hypot(bx - ax, bz - az), n = Math.floor(d / 4); const f = solidOnly(skip);
     for (let i = 1; i < n; i++) { const x = ax + (bx - ax) * i / n, z = az + (bz - az) * i / n, q = pushCircle(x, z, .6, f); if (Math.abs(q[0] - x) + Math.abs(q[1] - z) > .05) return false; }
@@ -66,7 +66,7 @@ export function createLauncher(D) {
       r.trail -= dt; if (r.trail <= 0) { r.trail = .035; fx.puff(r.p.x, r.p.y, r.p.z, .45, 0xd8d4cc, .6, .3, 1.2); }
       let hit = r.t > ROCKET.life || r.p.y < .1;
       if (!hit) for (const q of targets()) if (Math.hypot(q.x - r.p.x, q.z - r.p.z) < 2.4) { hit = true; break; }
-      if (!hit && r.t > .12) { const s = pushCircle(r.p.x, r.p.z, .3, B => B.missile || (c && B === c.col)); if (Math.abs(s[0] - r.p.x) + Math.abs(s[1] - r.p.z) > .05) hit = true; }
+      if (!hit && r.t > .12) { const s = pushCircle(r.p.x, r.p.z, .3, B => B.missile || B.water || (c && B === c.col)); if (Math.abs(s[0] - r.p.x) + Math.abs(s[1] - r.p.z) > .05) hit = true; }
       if (hit) { r.on = false; r.g.visible = false; explode(r.p.x, Math.max(0, r.p.y - .8), r.p.z); }
     }
   }
