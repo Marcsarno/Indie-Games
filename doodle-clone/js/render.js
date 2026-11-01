@@ -179,7 +179,7 @@ export async function createRenderer(canvas, sim) {
     for (const m of L.clouds) { const u = m.userData; u.x += u.vx * dt; if (u.x > 7) u.x = -7; const y = u.yl - 0.45 * cy; if (y < -vh / 2 - 3) { u.yl = 0.45 * cy + vh / 2 + 2 + Math.random() * vh; u.x = (Math.random() * 2 - 1) * 5; u.w = 2.6 + Math.random() * 2; } place(m, u.x, u.yl - 0.45 * cy, u.w, u.w / aspect(m.material.map), -60); }
     const tH = W / aspect(T.town), p3 = 0.3, hp = 1.25;
     // opening castle: front (near, 0.85), towers (middle, 0.5), keep (deep, 0.2); bottoms anchored to the start view
-    const SB = -vh / 2, OP = [[L.castleF, T.castleF, 0.85, -6, W * 1.04, -0.6], [L.castleM, T.castleM, 0.5, -22, W, 0.3 * vh], [L.castleD, T.castleD, 0.2, -60, W * 0.45, 0.75 * vh]];
+    const SB = -vh / 2, OP = [[L.castleF, T.castleF, 0.85, -6, W * 1.04, -0.6], [L.castleM, T.castleM, 0.5, -22, W, 0.3 * vh], [L.castleD, T.castleD, 0.2, -60, W * 0.3, 0.75 * vh]];
     for (const [m, tx, p, z, w, lift] of OP) { const h = w / aspect(tx), yl = R.cam0 * p + SB + lift + h / 2, y = yl - p * cy; m.visible = y - h / 2 < vh / 2 + 2 && y + h / 2 > -vh / 2 - 2; if (m.visible) place(m, 0, y, w, h, z); }
     const frontTop = (W * 1.04) / aspect(T.castleF) - 0.6, townLift = p3 * (frontTop / 0.85) - 2.5 + 0.18 * vh;   // city appears just as you clear the castle
     place(L.town, 0, (R.cam0 * p3 - vh / 2 + tH / 2 + townLift) - p3 * cy, W, tH, -30);
