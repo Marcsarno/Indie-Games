@@ -56,10 +56,13 @@ ROADS = [
     ("", curve([(-80, 575), (-40, 560), (-8, 540)]), 8, "ramp"),
     ("", curve([(8, 618), (40, 630), (90, 618)]), 8, "ramp"),
 ]
+ROADS += [("", [(X441, 285), (-320, 285)], 8, "loc"), ("", [(-230, Y["sample"]), (-230, 310)], 8, "loc"), ("", [(-175, 240), (XBANKS, 240)], 8, "loc")]   # Walmart lot entrances (441, Sample, Banks)
 ROUNDABOUTS = [(XBANKS, Y["copans"], 18)]
 # canal (L8): runs north-south between Banks and Lyons from Pkwy to Sample, crossed by bridges on each arterial; you can wade it or jump it on the bike
 CANAL = [(-85, Y["pkwy"] - 60), (-80, 60), (-95, 130), (-82, 200), (-88, 260), (-80, Y["sample"])]
 ZONES = [  # label, polygon, fill, text colour
+    ("", [(-320, 210), (-175, 210), (-175, 310), (-320, 310)], "#7d8086", "#ffffff"),                      # user: Super Walmart, SW corner of Sample & 441, giant parking lot
+    ("WALMART\nSUPERCENTER", [(-300, 222), (-195, 222), (-195, 256), (-300, 256)], "#2f64ad", "#ffffff"),
     ("WYNMOORE\n(gated, golf)", [(14, 14), (316, 14), (316, 186), (14, 186)], "#e9d8a6", "#5a4310"),
     ("FARM FIELDS", [(-316, 334), (-130, 334), (-130, 416), (-316, 416)], "#c9b27a", "#5a4310"),
     ("TRADEWINDS PARK\n+ BUTTERFLY WORLD", [(150, 214), (316, 214), (316, 306), (150, 306)], "#7cc05a", "#1f4d12"),
@@ -70,12 +73,12 @@ LAKES = [[(-300, 40), (-255, 30), (-215, 60), (-230, 82), (-290, 78)], [(-120, 4
          [(60, 650), (120, 645), (128, 668), (70, 670)], [(200, 40), (250, 35), (262, 70), (215, 75)], [(-280, 640), (-230, 632), (-225, 668), (-275, 670)]]
 SPOTS = [  # label, x, y, colour, side
     ("PUBLIX", -40, 548, "#2e8b3e", 1), ("POLICE", 60, 222, "#1d3f8a", 1), ("CITY HALL", 60, 245, "#2f6fb3", 1),
-    ("SEMINOLE CASINO", -300, 350, "#c8901e", 1), ("CAR DEALERS", -150, 304, "#8a8f98", 1), ("CAR DEALERS", 60, 304, "#8a8f98", 1),
+    ("SEMINOLE CASINO", -300, 350, "#c8901e", 1), ("CAR DEALERS", -150, 335, "#8a8f98", 1), ("CAR DEALERS", 60, 304, "#8a8f98", 1),
     ("COOPER'S HAWK", -30, 442, "#9a3b52", -1), ("GATE", 22, 95, "#d0582a", 1), ("DAVE", 230, 30, "#e33b3b", -1),
 ]
 TAGS = [("L1", X441 - 52, 600), ("L1", XPOWER + 52, 600), ("L2", -150, 372), ("L3", -60, 80), ("L3", 130, 470), ("L4", XBANKS, Y["copans"]), ("L5", 250, 235),
         ("L6", 190, 125), ("L7", -40, 560), ("L8", -95, 130)]
-RES = [("homes + lakes", -230, 480), ("homes", 165, 410), ("homes", -60, 380), ("homes", -250, 60), ("homes", -40, 40), ("homes", 165, 700), ("townhomes", -250, 260), ("offices", 170, 590), ("homes", -165, 160)]
+RES = [("homes + lakes", -230, 480), ("homes", 165, 410), ("homes", -60, 380), ("homes", -250, 60), ("homes", -40, 40), ("homes", 165, 700), ("offices", 170, 590), ("homes", -165, 160)]
 LEGEND = ["L1  service lane behind the shop strips", "L2  dirt track across the farm fields", "L3  curvy neighbourhood streets (shortcuts)", "L4  roundabout at Banks & Copans",
           "L5  park trail (bike fits, cars barely)", "L6  Wynmoore: one gate, winding streets, Dave", "L7  Sawgrass raised, on/off ramps at Lyons", "L8  canal with bridges (wade / jump)", "red bars = edge roadblocks"]
 
@@ -94,6 +97,9 @@ for (lab, poly, col, tc) in ZONES:
         t = Image.new("RGBA", (500, 30), (0, 0, 0, 0)); ImageDraw.Draw(t).text((250, 15), lab, fill=tc, font=font(14), anchor="mm"); t = t.rotate(90, expand=True)
         a, b = P(cx, 120); im.paste(t, (int(a - 15), int(b - 250)), t)
     else: d.multiline_text(P(cx, cy), lab, fill=tc, font=font(14), anchor="mm", align="center")
+for row in range(6):                                          # Walmart parking rows
+    yy = 262 + row * 8
+    for xx in range(-314, -180, 5): d.line([P(xx, yy - 2.5), P(xx, yy + 2.5)], fill="#d8d8d8", width=1)
 for L in LAKES: d.polygon([P(*p) for p in curve(L + L[:1], 6)], fill="#2d78b8")
 d.line([P(*p) for p in curve(CANAL)], fill="#2d78b8", width=int(10 * S))
 for (lab, x, y) in RES: d.text(P(x, y), lab, fill="#d6ecc2", font=font(12, False), anchor="mm")
