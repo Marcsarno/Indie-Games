@@ -1,3 +1,4 @@
+import { makeLightbar } from './lightbar.js';
 // "Groceries for Dave": the showcase mission (round 29). Three.js coordinates (x east, z south), metres.
 // (optional cold open) -> Dave texts the group -> you pick Marc, Aaron or Chris (sky switch) -> drive to Publix, stop in the Curbside box, a clerk brings the bags out ->
 // it is the police station's lunch order: one cop, then one more every 8 s up to 5, rocket cops and SWAT vans as you get close -> stop in Dave's driveway.
@@ -210,10 +211,10 @@ export function createDave(D) {
     return la <= lb ? ra.concat(be.P.slice(0, bj + 1)) : rb.concat(be.P.slice(bj).reverse());
   }
   const lerp = (a, k) => a[0] + (a[1] - a[0]) * k, clamp = (v, a, b) => Math.max(a, Math.min(b, v)), wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
-  const barGeo = new THREE.BoxGeometry(.5, .18, .3), RK = [];
+  const RK = [];
   for (let i = 0; i < 8; i++) {
     const car = makeCar('police', '#f4f4f4'); car.group.visible = false;
-    const bar = [0, 1].map(j => { const b = new THREE.Mesh(barGeo, new THREE.MeshBasicMaterial({ color: j ? 0x2b6bff : 0xff2b2b, toneMapped: false })); b.position.set(j ? .35 : -.35, car.dims[3] || 1.75, 0); car.group.add(b); return b; });
+    const bar = makeLightbar(THREE, car);
     const col = { poly: [[1e5, 1e5], [1e5 + 1, 1e5], [1e5, 1e5 + 1], [1e5, 1e5 + 2]], cx: 1e5, cz: 1e5, r: 3, vx: 0, vz: 0, mass: 1, missile: true }; colliders.push(col);
     const r = { car, bar, col, on: false }; col.push = (dx, dz, dw) => { r.vx += dx * .2; r.vz += dz * .2; r.spin += dw * 4 + (Math.random() - .5) * 6; }; RK.push(r);
   }
@@ -221,7 +222,7 @@ export function createDave(D) {
     for (let i = 0; i < 3; i++) {                        // SWAT vans: same driver as the rockets, heavier, they hold the road and can skid to a stop across it
       const car = makeCar('van', '#1b2230'); car.group.visible = false; const L = car.dims[0], Wd = car.dims[1], H = car.dims[3] || 2.2;
       for (const s_ of [-1, 1]) { const pl = new THREE.Mesh(new THREE.PlaneGeometry(L * .55, L * .14), decal); pl.position.set(s_ * (Wd / 2 + .02), H * .55, 0); pl.rotation.y = s_ * Math.PI / 2; car.group.add(pl); }
-      const bar = [0, 1].map(j => { const b = new THREE.Mesh(barGeo, new THREE.MeshBasicMaterial({ color: j ? 0x2b6bff : 0xff2b2b, toneMapped: false })); b.position.set(j ? .4 : -.4, H + .05, -L * .3); car.group.add(b); return b; });
+      const bar = makeLightbar(THREE, car, { y: H + .02, z: -L * .3, w: 1.4, pool: 6.5 });
       const col = { poly: [[1e5, 1e5], [1e5 + 1, 1e5], [1e5, 1e5 + 1], [1e5, 1e5 + 2]], cx: 1e5, cz: 1e5, r: 3.5, vx: 0, vz: 0, mass: 1, missile: true }; colliders.push(col);
       const r = { car, bar, col, on: false, swat: true }; col.push = (dx, dz, dw) => { r.vx += dx * .08; r.vz += dz * .08; r.spin += dw * 1.5; }; RK.push(r);
     } }
@@ -259,7 +260,6 @@ export function createDave(D) {
   }
   function park(r) { r.on = false; r.car.group.visible = false; r.col.cx = r.col.cz = 1e5; for (const q of r.col.poly) { q[0] = 1e5; q[1] = 1e5; } r.col.vx = r.col.vz = 0; }
   function rocketStep(dt, P, k) {
-    const flash = Math.floor(performance.now() / 160) % 2;
     for (const r of RK) {
       if (!r.on) continue; r.t += dt; r.k = Math.max(r.k, k);
       const dx = P.x - r.x, dz = P.z - r.z, d = Math.hypot(dx, dz), v = Math.hypot(r.vx, r.vz);
@@ -306,26 +306,18 @@ export function createDave(D) {
       r.x = q[0]; r.z = q[1]; r.roll += (clamp(-vl / 25, -.12, .12) - r.roll) * Math.min(1, dt * 6);
       const gone = r.swat ? (r.t > 30 || d > 160 || r.crash > 3) : r.t > 16 || d > 150 || (r.crash > 2 && d > 15) || r.crash > 4 || (r.hit && r.t > 6 && d > 30);
       if (gone) { park(r); continue; }
-      placeOnGround(r.car.group, r.x, r.z, r.th); r.car.group.rotation.z = r.roll; r.bar[0].material.color.setHex(flash ? 0xff2b2b : 0x551010); r.bar[1].material.color.setHex(flash ? 0x10204f : 0x2b6bff);
+      placeOnGround(r.car.group, r.x, r.z, r.th); r.car.group.rotation.z = r.roll;
       r.col.poly = carPoly(r.x, r.z, r.th, r.car.dims); r.col.cx = r.x; r.col.cz = r.z; r.col.r = 3; r.col.vx = r.vx; r.col.vz = r.vz;
     }
   }
-  const WARN = RK.map(() => { const d = document.createElement('div'); d.className = 'warn'; d.innerHTML = '<i></i>'; document.body.appendChild(d); return d; }), pv = new THREE.Vector3();
-  function warnStep(P) {                                   // a red arrow at the screen edge (and a whoosh) about a second before a rocket cop reaches you
-    RK.forEach((r, i) => {
-      const el = WARN[i]; let show = false;
-      if (r.on && !r.hit && !r.crash && env.hmode === 'driving') {
-        const dx = P.x - r.x, dz = P.z - r.z, d = Math.hypot(dx, dz), vc = ((r.vx - P.vx) * dx + (r.vz - P.vz) * dz) / (d || 1);
-        if (d < 70 && vc > 4 && d / vc < 1.3) {
-          show = true; pv.set(r.x, 1, r.z).project(D.camera); let sx = pv.x, sy = -pv.y; if (pv.z > 1) { sx = -sx; sy = -sy; }
-          const W = env.W, H = env.H, a = Math.atan2(sy * H, sx * W), m = Math.min(1, .9 / Math.max(Math.abs(sx), Math.abs(sy), .001));
-          const x = W / 2 + sx * m * (W / 2 - 34), y = H / 2 + sy * m * (H / 2 - 34);
-          el.style.transform = `translate(${Math.max(30, Math.min(W - 30, x))}px, ${Math.max(90, Math.min(H - 30, y))}px) rotate(${a + Math.PI / 2}rad)`;
-          if (!r.warned) { r.warned = true; env.sound('whoosh', sx); }
-        }
-      }
-      if (!r.on) r.warned = false; const disp = show ? 'block' : 'none'; if (el.style.display !== disp) el.style.display = disp;
-    });
+  const pv = new THREE.Vector3();
+  function warnStep(P) {                                   // a whoosh, panned toward it, about a second before a rocket cop reaches you (round 36: the red screen-edge arrow is gone, user: hideous, blocks play)
+    for (const r of RK) {
+      if (!r.on) { r.warned = false; continue; }
+      if (r.warned || r.hit || r.crash || env.hmode !== 'driving') continue;
+      const dx = P.x - r.x, dz = P.z - r.z, d = Math.hypot(dx, dz), vc = ((r.vx - P.vx) * dx + (r.vz - P.vz) * dz) / (d || 1);
+      if (d < 70 && vc > 4 && d / vc < 1.3) { r.warned = true; pv.set(r.x, 1, r.z).project(D.camera); env.sound('whoosh', pv.z > 1 ? -pv.x : pv.x); }
+    }
   }
   function blast(x, z, rad, emp = false) {                              // a rocket blast: rocket cops inside it spin out and wreck, a SWAT van takes two
     let n = 0;
@@ -397,7 +389,7 @@ export function createDave(D) {
     if (show) { empBtn.style.setProperty('--p', Math.round((1 - EMPS.cool / DAVE.emp.cool) * 100) + '%'); empBtn.classList.toggle('wait', EMPS.cool > 0); }
     if (EMPS.t >= 0) { EMPS.t += dt; const k = Math.min(1, EMPS.t / .5); ring.scale.setScalar(1 + k * DAVE.emp.radius); ring.material.opacity = (1 - k) * .9; if (k >= 1) { EMPS.t = -1; ring.visible = false; } }
   }
-  function clearMissiles() { for (const r of RK) { park(r); r.warned = false; } for (const el of WARN) el.style.display = 'none'; }
+  function clearMissiles() { for (const r of RK) { park(r); r.warned = false; } }
   const frustum = new THREE.Frustum(), pm = new THREE.Matrix4(), sph = new THREE.Sphere(new THREE.Vector3(), 5);
   const onScreen = (x, z) => { sph.center.set(x, 1, z); return frustum.intersectsSphere(sph); };
 
@@ -453,7 +445,7 @@ export function createDave(D) {
       for (const [u, f, turn] of (B.gap ? [[-e.hw * .6, 7.5, -.6], [e.hw * .2 + 3, 11, .5]] : [[-e.hw * .35, 7, -.7], [e.hw * .45, 9.5, .8]])) {    // two cruisers behind, angled across their lanes
         const [x, z] = W(u, f), car = makeCar('police', '#f4f4f4'), th = Math.atan2(-dir[0], -dir[1]) + turn;
         placeOnGround(car.group, x, z, th); solid(x, z, th, car.dims);
-        const bar = [0, 1].map(j => { const b_ = new THREE.Mesh(new THREE.BoxGeometry(.5, .18, .3), new THREE.MeshBasicMaterial({ color: j ? 0x2b6bff : 0xff2b2b, toneMapped: false })); b_.position.set(j ? .35 : -.35, car.dims[3] || 1.75, 0); car.group.add(b_); return b_; });
+        const bar = makeLightbar(THREE, car);
         RB.bars.push(bar); RB.parts.push({ obj: car.group, cx: x, cz: z });
       }
       RB.blockers.push({ x: at[0], z: at[1], vx: 0, vz: 0, L: 1.5, W: 2 * span, nx, nz, gap: !!B.gap });
@@ -511,8 +503,7 @@ export function createDave(D) {
     }
     if (RB.on) {
       for (const p of RB.parts) if (p.obj) { const v = Math.hypot((p.cx ?? p.obj.position.x) - P.x, (p.cz ?? p.obj.position.z) - P.z) < (p.r || 120); if (p.obj.visible !== v) p.obj.visible = v; }
-      const ph = Math.floor(performance.now() / 160) % 2, amber = Math.floor(performance.now() / 420) % 2;
-      for (const bar of RB.bars) { bar[0].material.color.setHex(ph ? 0xff2b2b : 0x551010); bar[1].material.color.setHex(ph ? 0x10204f : 0x2b6bff); }
+      const amber = Math.floor(performance.now() / 420) % 2;
       if (RB.lampMesh) RB.lampMesh.material.color.setHex(amber ? 0xffb020 : 0x4a3008);
     }
     rocketStep(dt, P, S.heat > DAVE.rocketFrom ? (S.heat - DAVE.rocketFrom) / (1 - DAVE.rocketFrom) : 0); warnStep(P);

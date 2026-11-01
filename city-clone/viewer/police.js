@@ -1,3 +1,4 @@
+import { makeLightbar } from './lightbar.js';
 // Police + wanted level (hand-off 2 design, Chinatown Wars rule): crimes raise the stars, police cars drive the road graph to you and chase/ram,
 // and WRECKING police cars is how you lose stars (K wrecks per star). Out of sight long enough also drops a star. Busted when a cop pins you.
 // States per cop: CHASE (graph route, then direct pursuit), RAM (2+ stars, full speed into you), BLOCK (parked roadblock, 3+ stars), WRECKED, LEAVE.
@@ -28,11 +29,9 @@ export function createPolice(G, deps) {
   }
   // ---------- pool ----------
   const cops = [];
-  const lightMat = [new THREE.MeshBasicMaterial({ color: 0xff2b2b, toneMapped: false }), new THREE.MeshBasicMaterial({ color: 0x2b6bff, toneMapped: false })];
-  const lightGeo = new THREE.BoxGeometry(.5, .18, .3);
   for (let i = 0; i < POL.pool; i++) {
     const car = makeCar('police', '#f4f4f4'); car.group.visible = false;
-    const bar = [new THREE.Mesh(lightGeo, lightMat[0].clone()), new THREE.Mesh(lightGeo, lightMat[1].clone())]; bar[0].position.set(-.35, (car.dims[3] || 1.75), 0); bar[1].position.set(.35, (car.dims[3] || 1.75), 0); car.group.add(bar[0], bar[1]);
+    const bar = makeLightbar(THREE, car);       // round 36: strobe bar + glow + light on the road
     const col = { poly: [[1e5, 1e5], [1e5 + 1, 1e5], [1e5, 1e5 + 1], [1e5, 1e5 + 2]], cx: 1e5, cz: 1e5, r: 3, vx: 0, vz: 0 }; colliders.push(col);
     const c = { id: i, car, g: car.group, dims: car.dims, col, bar, on: false, state: 'CHASE', x: 0, z: 0, th: 0, v: 0, dmg: 0, path: null, pi: 0, repath: 0, off: 0, stuck: 0 };
     col.mass = 320 * car.dims[0] * car.dims[1] * 1.1; col.push = (dx, dz, dw) => { c.x += dx * .12; c.z += dz * .12; c.th += dw * .25; c.v *= .5; };
@@ -47,7 +46,7 @@ export function createPolice(G, deps) {
     W.heat += amt; let s = 0; for (let k = 1; k <= 4; k++) if (W.heat >= POL.heatFor[k]) s = k; if (s > W.stars) setStars(s); W.unseen = 0; if (onStars) onStars(W);
   }
   function wreck(c) {
-    c.state = 'WRECKED'; c.v = 0; c.car.setDamage(1); c.bar[0].visible = c.bar[1].visible = false; if (onWreck) onWreck(c);
+    c.state = 'WRECKED'; c.v = 0; c.car.setDamage(1); c.bar.show(false); if (onWreck) onWreck(c);
     if (W.stars > 0 && !W.lock) { W.wrecked++; if (W.wrecked >= POL.wreckNeed[W.stars]) { setStars(W.stars - 1); W.heat = POL.heatFor[W.stars]; W.probation = POL.probation; } if (onStars) onStars(W); }
   }
   function clear() { setStars(0); W.heat = 0; W.probation = 0; W.unseen = 0; W.bust = 0; for (const c of cops) if (c.on) despawn(c); if (onStars) onStars(W); }
@@ -59,7 +58,7 @@ export function createPolice(G, deps) {
     for (let i = 0; i < N.length; i++) { const dx = N[i].x - P.x, dz = N[i].z - P.z, d = Math.hypot(dx, dz); if (d < 45 || d > 85 || onScreen(N[i].x, N[i].z)) continue;
       let sc = (dx * ux + dz * uz) / d * (block ? 3 : 1) + Math.random() * .6; if (W.force > 0 && W.goal) { const gx = W.goal[0] - P.x, gz = W.goal[1] - P.z, gl = Math.hypot(gx, gz) || 1; sc += (dx * gx + dz * gz) / (d * gl) * 1.2; } if (sc > bs) { bs = sc; best = i; } }
     if (best < 0) return false;
-    const n = N[best]; c.x = n.x; c.z = n.z; c.th = Math.atan2(-(P.x - n.x), -(P.z - n.z)); c.v = block ? 0 : 6; c.dmg = 0; c.on = true; c.g.visible = true; c.car.setDamage(0); c.bar[0].visible = c.bar[1].visible = true;
+    const n = N[best]; c.x = n.x; c.z = n.z; c.th = Math.atan2(-(P.x - n.x), -(P.z - n.z)); c.v = block ? 0 : 6; c.dmg = 0; c.on = true; c.g.visible = true; c.car.setDamage(0); c.bar.show(true);
     c.state = block ? 'BLOCK' : 'CHASE'; c.blocking = false; c.path = null; c.repath = 0; c.off = 0; c.stuck = 0;
     if (block && n.adj.length) { const ed = n.adj[0], p = ed.P[Math.min(2, ed.P.length - 1)]; c.th = Math.atan2(-(p[0] - n.x), -(p[1] - n.z)) + Math.PI / 2; }    // parked across the road
     return true;
@@ -171,7 +170,6 @@ export function createPolice(G, deps) {
     let nearest = 1e9, seen = false, pinning = false;
     for (const c of cops) {
       if (!c.on) continue;
-      c.bar[0].material.color.setHex(ph ? 0xff2b2b : 0x551010); c.bar[1].material.color.setHex(ph ? 0x10204f : 0x2b6bff);
       const dx = P.x - c.x, dz = P.z - c.z, d = Math.hypot(dx, dz); if (c.state !== 'WRECKED') { nearest = Math.min(nearest, d); if (d < 50) seen = true; }
       if (c.state === 'WRECKED' || c.state === 'BLOCK') { c.v = 0; }
       else {

@@ -196,6 +196,7 @@ import { createMissions } from './missions.js';
 import { createDave } from './dave.js';
 import { createMusic } from './music.js';
 import { createLauncher } from './rocket.js';
+import { stepLightbars } from './lightbar.js';
 import { createTrack, PAD } from './track.js';
 
 const $ = id => document.getElementById(id);
@@ -1523,7 +1524,7 @@ function update(dt, draw = true) {
     cops.step(dta, CPX.p);
   }
   if (missions) { const dr = drive && hmode === 'driving'; MPX.x = dr ? drive.x : foot.x; MPX.z = dr ? drive.z : foot.z; MPX.speed = dr ? Math.hypot(drive.vx, drive.vz) : 0; MPX.vx = dr ? drive.vx : foot.vx; MPX.vz = dr ? drive.vz : foot.vz; MPX.th = dr ? drive.th : foot.face; MPX.driving = dr; missions.step(dta, MPX); }
-  if (launcher) { launcher.step(dta); launcherHud(); } jumpHud(dta);
+  if (launcher) { launcher.step(dta); launcherHud(); } jumpHud(dta); stepLightbars(performance.now() / 1000);
   PF.mark('traffic');
   footStep(dta); combatStep(dta);
   if (ppl) { if (!(drive && hmode === 'driving')) AIX.player = null; ppl.step(dta, AIX); }

@@ -21,6 +21,10 @@ Tune panel for the car handling. Controls are touch (stick/pads) with keyboard f
 5. Test in headless Chromium with Playwright (software GL): load `?`/`#chinatown`, `window.__city.setManual(true)`, `tick(dt, draw=false)` for logic tests (drawing each frame is ~1 s), `step(dt)` = physics only. Scripted tests live only in the session scratchpad; rewrite from the hooks.
 6. Show the user before/after or concept-vs-ours sheets and animated GIFs captured with the stepped sim; commit and push to `main` after each round.
 
+## ROUND 36: COP LIGHTS, NO RED ARROW
+- The red screen-edge warning arrow is gone (user: "hideous.. and blocks game play"); the whoosh sound before a rocket cop hits stays (dave.js `warnStep`).
+- New `viewer/lightbar.js`: `makeLightbar(THREE, car, {y, z, w, pool})` on every police car (police.js cops, dave.js rocket cops, roadblock cruisers) and SWAT van. Dark bar + red/blue lenses (on police cars it exactly covers the small bar baked into the model), strobe pattern (red flash-flash, blue flash-flash, 0.9 s, random offset per car), an additive glow sprite over the lit lens and an additive coloured pool of light on the road (radius 6 m, 6.5 for SWAT). No real lights. `stepLightbars(t)` runs once a frame from index.html. Review: `art-review/round30/cop_lights.png`.
+
 ## ROUND 35: WATER YOU CAN DRIVE INTO + FASTER TESLA
 - User: "I hate the water areas, something about them being a wall". The 1231 lake collision triangles (tagged `water` at load: 3-point polys within 3 m of a `world.map` lake ring) are skipped by the car physics; in water the car slows to 6 m/s (drag 2.2/s), settles .55 m, splash on entry + spray. On foot you wade at 45 % speed. Cops (police.js) and rocket cops/SWAT (dave.js) also pass through water capped at 6.5 m/s, so a pond is no hiding spot. Rockets and the launcher's line of sight ignore water. Peds still treat it as a wall. The sea coast edge is still a wall (map edge). The bike jumps over ponds.
 - Not done: the user's "review the small ponds" (12 lakes, 5 tiny: 7-87 m2). With water drivable they no longer dead-stop you; removing or reshaping them needs a world rebuild.
