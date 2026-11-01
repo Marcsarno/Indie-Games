@@ -19,8 +19,12 @@ export const DAVE = {
   aaronHurt: 2.0, aaronHurtEmp: 1.6, relayAhead: 45,                                  // Aaron's Tesla is weak (damage x), how far up the road he waits for the hand-off (m)
   emp: { cool: 12, radius: 24 },
   rocketsCopsExtra: 2, rocketsCopEvery: 6,                                            // with the launcher on board: up to 2 more ordinary cops, one every 6 s (was 8) (round 33: the launcher made it too easy)                                                      // EMP: seconds between pulses, reach (m)
+  chrisHurt: 1.5, chrisFrom: [103.0, 32.3],                                         // round 34: Chris's bike takes this much more damage; he sets off from the road nearest City Hall (three x, z)
   reward: 1000,
 };
+// Round 34: the mission is three chapters. Each driver fails, gets an upgrade (OK only), probably wins, and Dave finds a new problem:
+// Marc (Jeep) -> rockets -> "where's the ketchup?" -> Aaron (Tesla, from Publix) -> EMP -> "my AC broke again. Hey Chris?" -> Chris (bike, from City Hall) -> jump -> mission passed.
+export const CHAPTERS = [{ ci: 0, up: 'rockets', label: 'MARC — GROCERIES' }, { ci: 1, up: 'emp', label: 'AARON — KETCHUP RUN' }, { ci: 2, up: 'jump', label: 'CHRIS — AC PART' }];
 
 export function createDave(D) {
   const { THREE, scene, makePerson, makeCar, play, walkers, colliders, carPoly, placeOnGround, banner, cops, graph, env, pushCircle, burst } = D;
@@ -42,6 +46,7 @@ export function createDave(D) {
 #phone .pick div{display:flex;justify-content:center;gap:10px;margin-top:8px}
 #phone .pick button{all:unset;cursor:pointer;display:grid;justify-items:center;gap:4px;font-size:12px;color:#222}
 #phone .pick img{width:50px;height:50px;border-radius:50%;object-fit:cover;border:3px solid #0b84ff}
+#phone .pick button.busy{opacity:.4;cursor:default} #phone .pick button.busy img{border-color:#999;filter:grayscale(1)} #phone .pick small{font-size:10px;color:#888}
 @keyframes pop{from{transform:scale(.8);opacity:0}to{transform:none;opacity:1}}
 #mfail{position:fixed;inset:0;z-index:30;display:grid;place-items:center;pointer-events:none}
 #mfail[hidden]{display:none}
@@ -61,7 +66,7 @@ export function createDave(D) {
 #mup{position:fixed;inset:0;z-index:32;display:grid;place-items:center;background:rgba(5,8,12,.55)} #mup[hidden]{display:none}
 #mup .c{width:min(300px,calc(100% - 40px));padding:20px 18px 18px;border-radius:16px;background:#141a24;color:#fff;text-align:center;font:500 15px system-ui;box-shadow:0 12px 40px rgba(0,0,0,.6);border:2px solid #ffd23f}
 #mup b{display:block;font:400 30px/1.05 "Anton",Impact,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#ffd23f;margin:6px 0 8px} #mup p{margin:0 0 16px;color:#cfd3da}
-#mup button{all:unset;cursor:pointer;display:block;padding:13px 0;border-radius:10px;background:#ffd23f;color:#111;font:700 17px system-ui}
+#mup button{all:unset;cursor:pointer;display:block;width:100%;box-sizing:border-box;padding:13px 0;border-radius:10px;background:#ffd23f;color:#111;font:700 17px system-ui}
 #mfail .dist{color:#ffd23f;font:600 14px system-ui}
 #mfail small{color:#cfd3da;font:500 13px system-ui;letter-spacing:.04em}
 .warn{position:fixed;left:0;top:0;z-index:4;width:0;height:0;pointer-events:none;display:none}
@@ -73,7 +78,7 @@ export function createDave(D) {
   const fail = document.createElement('div'); fail.id = 'mfail'; fail.hidden = true; fail.innerHTML = `<div class="c"><b>Mission failed</b><span id="mf-why"></span><span class="dist" id="mf-dist"></span><small id="mf-try"></small><button id="mf-retry">Retry</button></div>`; document.body.appendChild(fail);
   const hurt = document.createElement('div'); hurt.id = 'hurt'; document.body.appendChild(hurt);
   const up = document.createElement('div'); up.id = 'mup'; up.hidden = true; up.innerHTML = '<div class="c"><small>UPGRADE</small><b id="mu-t">Add rocket launcher?</b><p id="mu-p">Marc\'s Jeep gets a roof launcher. It aims itself. Tap FIRE.</p><button id="mu-ok">OK</button></div>'; document.body.appendChild(up);
-  const UP = { rockets: false, emp: false };          // upgrades for this visit (round 32): the launcher is offered after the first failure, there is no "no"
+  const UP = { rockets: false, emp: false, jump: false };          // upgrades for this run (round 32/34): each chapter's is offered after its first failure, there is no "no"
   const res = document.createElement('div'); res.id = 'mres'; res.hidden = true; res.innerHTML = '<h2>Delivered</h2><dl></dl><div class="b"><button id="mr-again">Play again</button><button class="k" id="mr-free">Keep driving</button></div>'; document.body.appendChild(res);
   let best = 1e9; try { best = +localStorage.getItem('gtcc-dave-best') || 1e9; } catch (e) { /* ok */ }       // closest you got to Dave's in a failed run (m, by road)
   const coldEl = document.createElement('div'); coldEl.id = 'cold'; coldEl.hidden = true; coldEl.innerHTML = '<span>Yep. That\'s me.</span><span><small>You\'re probably wondering how I got here.</small></span>'; document.body.appendChild(coldEl);
@@ -87,7 +92,7 @@ export function createDave(D) {
   let tries = 0; try { tries = +localStorage.getItem('gtcc-dave-tries') || 0; } catch (e) { /* ok */ }          // failed attempts so far (kept until you deliver)
   const saveTries = () => { try { localStorage.setItem('gtcc-dave-tries', String(tries)); } catch (e) { /* ok */ } };
   // ---------- state ----------
-  const S = { run: 0, cpNear: null, stopSaid: false, stage: 'off', t: 0, cops: 0, copT: 0, missT: 0, heat: 0, d0: 1, missiles: [], checkpoint: null, failed: false };
+  const S = { ch: 0, cpStart: null, run: 0, cpNear: null, stopSaid: false, stage: 'off', t: 0, cops: 0, copT: 0, missT: 0, heat: 0, d0: 1, missiles: [], checkpoint: null, failed: false };
   const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
   function objective(text, sub = '') { chip.hidden = !text; if (text) chip.innerHTML = `<b>Groceries for Dave</b><span>${text}</span>${sub ? `<em>${sub}</em>` : ''}`; }
   const target = () => ({ toPublix: [DAVE.curb[0], -DAVE.curb[1]], curbside: [DAVE.curb[0], -DAVE.curb[1]], chase: [DAVE.house[0], -DAVE.house[1]] })[S.stage] || null;   // minimap wants Blender x, y
@@ -103,7 +108,7 @@ export function createDave(D) {
   const skipBtn = phone.querySelector('.skip');
   function showPick() {
     skipBtn.hidden = true; const row = pick.querySelector('div'); row.innerHTML = ''; pick.hidden = false; const shownAt = performance.now();
-    env.CHARS.forEach((C, i) => { const b = document.createElement('button'); b.innerHTML = `<img src="img/${C.id}.jpg" alt="">${C.name}`; b.onclick = () => { if (performance.now() - shownAt > 900) choose(i); }; row.appendChild(b); });      // taps in the first 0.9 s are ignored (fast taps to skip the texts used to land on a face and start the game)
+    env.CHARS.forEach((C, i) => { const b = document.createElement('button'); const busy = i !== 0; if (busy) b.className = 'busy'; b.innerHTML = `<img src="img/${C.id}.jpg" alt="">${C.name}${busy ? '<small>busy</small>' : ''}`; b.onclick = () => { if (!busy && performance.now() - shownAt > 900) choose(i); }; row.appendChild(b); });      // round 34: chapter 1 is Marc's (Aaron and Chris get theirs later)      // taps in the first 0.9 s are ignored (fast taps to skip the texts used to land on a face and start the game)
   }
   function skipIntro() {                                   // tap the screen (or Skip) during the texts: all of them at once, straight to "Who's going?"
     if (S.stage !== 'intro' || !pick.hidden) return; S.run++; msgs.innerHTML = ''; for (const [w, t] of INTRO) say(w, t);
@@ -288,7 +293,7 @@ export function createDave(D) {
       r.vx = fx * vf + fz * vl; r.vz = fz * vf - fx * vl;
       // slamming into you (checked before the move: the car-vs-world push below would otherwise stop them at your bumper and count it as a wall)
       const reach = 1.7 + (P.L || 4.5) / 2 + .9;
-      if (!r.hit && d < reach && env.hmode === 'driving') {
+      if (!r.hit && d < reach && env.hmode === 'driving' && !env.air) {
         r.hit = true; const rv = Math.hypot(r.vx - P.vx, r.vz - P.vz), f = clamp(rv / 30, .35, 1.2); env.hurt((r.swat ? DAVE.swatHurt : lerp(DAVE.rocketHurt, r.k)) * f, dx / (d || 1), dz / (d || 1)); hurtFlash(); env.sound('crash');
         if (env.kick) env.kick(r.vx * .45 * f, r.vz * .45 * f, (Math.random() < .5 ? -1 : 1) * (1.5 + 2.5 * f)); if (burst) burst(P.x - dx / 2, .8, P.z - dz / 2, -dx / (d || 1), -dz / (d || 1), rv);
         if (r.swat) { r.hitCD = 1.5; r.vx *= .5; r.vz *= .5; } else { r.vx *= .3; r.vz *= .3; r.spin += (Math.random() - .5) * 8; r.crash = .01; }
@@ -344,6 +349,7 @@ export function createDave(D) {
     grp.visible = false; scene.add(grp); return grp;
   })();
   function intercept(kind) {                               // the game asks before Wasted / Busted: Marc (with the launcher) going down hands the groceries to Aaron
+    return false;                                        // round 34: off (each driver now runs a whole chapter); the hand-off is kept for the planned final relay mission
     if (S.stage !== 'chase' || S.failed || !UP.rockets || S.relay || env.cur !== 0) return false;
     startRelay(); return true;
   }
@@ -410,14 +416,14 @@ export function createDave(D) {
     lamp: new THREE.SphereGeometry(.09, 8, 6), cone: new THREE.ConeGeometry(.2, .72, 10).translate(0, .36, 0), band: new THREE.CylinderGeometry(.115, .145, .12, 10).translate(0, .42, 0),
     base: new THREE.BoxGeometry(.44, .04, .44).translate(0, .02, 0), conc: jersey, refl: new THREE.BoxGeometry(.18, .07, .02) };
   function roadblocks() {
-    if (!graph) return; const set = UP.emp ? 'far' : 'near'; if (RB.on && RB.set === set) return; if (RB.set && RB.set !== set) disposeRoadblocks(); RB.set = set; RB.on = true;
+    if (!graph) return; const set = S.ch === 2 ? 'far' : 'near'; if (RB.on && RB.set === set) return; if (RB.set && RB.set !== set) disposeRoadblocks(); RB.set = set; RB.on = true;
     if (RB.parts.length) { for (const p of RB.parts) { if (p.obj) p.obj.visible = true; if (p.col) colliders.push(p.col); } for (const k of RB.shut) SHUT.add(k); for (const [k, n] of RB.closed) CLOSED.set(k, n); if (env.setBlocks) env.setBlocks(RB.blockers, [...SHUT]); return; }   // built once, shown again on a retry
     const I = {}; for (const k in GEO) I[k] = [];                                   // instance matrices per part
     const m4 = new THREE.Matrix4(), q4 = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), one = new THREE.Vector3(1, 1, 1), v3 = new THREE.Vector3();
     const put = (k, x, y, z, th) => { q4.setFromAxisAngle(up, th); I[k].push(m4.compose(v3.set(x, y, z), q4, one).clone()); };
-    const solid = (x, z, th, dims) => { const c = { poly: carPoly(x, z, th, dims), cx: x, cz: z, r: Math.hypot(dims[0], dims[1]) / 2 + .2, vx: 0, vz: 0 }; colliders.push(c); RB.parts.push({ col: c }); };
+    const solid = (x, z, th, dims) => { const c = { poly: carPoly(x, z, th, dims), cx: x, cz: z, r: Math.hypot(dims[0], dims[1]) / 2 + .2, vx: 0, vz: 0, low: true }; colliders.push(c); RB.parts.push({ col: c }); };
     const free = (x, z) => { const q = pushCircle(x, z, 1.2, null); return Math.abs(q[0] - x) + Math.abs(q[1] - z) < .05; };
-    for (const B of UP.emp ? DAVE.blocks.concat(DAVE.blocksFar) : DAVE.blocks) {
+    for (const B of set === 'far' ? DAVE.blocks.concat(DAVE.blocksFar) : DAVE.blocks) {
       let best = null, bd = 1e18;
       graph.edges.forEach((e, k) => { if (e.road !== B.road) return; for (const end of ['a', 'b']) { const n = GN[e[end]], d = Math.hypot(n.x - B.end[0], n.z - B.end[1]); const o = GN[e[end === 'a' ? 'b' : 'a']], od = B.other ? Math.hypot(o.x - B.other[0], o.z - B.other[1]) : 0; if (d + od < bd) { bd = d + od; best = { e, k, from: end }; } } });
       if (!best) continue; const e = best.e; let P = e.pts.map(q => [q[0], -q[1]]); if (best.from === 'b') P = P.reverse();
@@ -483,11 +489,11 @@ export function createDave(D) {
     if (S.stage === 'toPublix' && P.driving && dist(me, DAVE.curb) < 30) { S.stage = 'curbside'; S.checkpoint = 'publix'; objective('Pull into Curbside Pickup', 'stop in the green box'); }
     else if (S.stage === 'curbside') curbStep(dt, P);
     else if (S.stage === 'chase') {
-      const armed = UP.rockets && !S.relay, cmax = DAVE.copMax + (armed ? DAVE.rocketsCopsExtra : 0), cevery = armed ? DAVE.rocketsCopEvery : DAVE.copEvery;
+      const armed = UP.rockets && S.ch === 0, cmax = DAVE.copMax + (armed ? DAVE.rocketsCopsExtra : 0), cevery = armed ? DAVE.rocketsCopEvery : DAVE.copEvery;
       S.copT += dt; if (S.cops < cmax && S.copT >= cevery) { S.copT = 0; S.cops++; cops.force(S.cops); banner(`${S.cops} COPS`); }
       const dh = dist(me, DAVE.house);
       if (dh < 35) { objective('STOP IN THE DRIVEWAY', `${Math.round(dh)} m`); if (!S.stopSaid) { S.stopSaid = true; banner('STOP IN THE DRIVEWAY!'); } }
-      else objective('Get the groceries to Dave', `${Math.round(dh)} m${S.t < 12 ? ' · roads closed' : ''}`);
+      else objective(GOAL[S.ch], `${Math.round(dh)} m${S.t < 12 ? ' · roads closed' : ''}`);
       if (!S.cpNear && dh < 70 && P.driving) { S.cpNear = { x: P.x, z: P.z, th: P.th, cops: S.cops, t: S.t }; banner('CHECKPOINT'); }
       S.t += dt; const pk = clamp(1 - (dh - 20) / Math.max(1, S.d0 - 20), 0, 1); S.heat = Math.min(1, pk * .7 + S.t / DAVE.rampTime * .4);
       if (S.heat > DAVE.rocketFrom && P.driving) {
@@ -511,11 +517,12 @@ export function createDave(D) {
     rocketStep(dt, P, S.heat > DAVE.rocketFrom ? (S.heat - DAVE.rocketFrom) / (1 - DAVE.rocketFrom) : 0); warnStep(P);
     const tg = target(); beacon.visible = !!tg; if (tg) { const k = 1 + Math.sin(performance.now() / 300) * .06; beacon.position.set(tg[0], 0, -tg[1]); beacon.scale.set(S.stage === 'curbside' ? .75 : k, 1, S.stage === 'curbside' ? .75 : k); }
   }
-  function restart() { if (env.launcher) env.launcher.reset(); S.relay = 0; S.cpRelay = null; env.hurtK = 1; env.invuln = false; BAG.visible = false; env.camHold(null); if (env.cur !== 0) env.relayTo(0, false); if (env.music) env.music.level(0); endFinish(false); S.cpNear = null; clearRoadblocks(); if (cops.goal) cops.goal(null); clearThugs(); clearMissiles(); cops.force(0); cops.lock(false); cops.clear(); fail.hidden = true; phone.hidden = true; S.failed = false; S.stage = 'off'; S.checkpoint = null; objective(''); env.heal(); env.resetCar(); start(); }
-  function startChase() { if (env.launcher) { if (UP.rockets && env.cur === 0) env.launcher.deploy(true); else env.launcher.reset(); } roadblocks(); S.stage = 'chase'; S.cops = 1; S.copT = 0; S.missT = 2; S.t = 0; S.heat = 0; S.d0 = Math.max(60, dist([DAVE.lot[0], DAVE.lot[1]], DAVE.house)); S.checkpoint = 'chase'; cops.lock(true); cops.force(1); if (cops.goal) { cops.goal(DAVE.house[0], DAVE.house[1]); cops.shut(SHUT, CLOSED); } S.stopSaid = false; S.swatSaid = false; S.swatT = 1; objective('Get the groceries to Dave', 'roads closed'); banner('COPS!'); setTimeout(() => { if (S.stage === 'chase' && S.t < 6) banner('ROADS CLOSED'); }, 2000); }
+  function restart() { if (env.launcher) env.launcher.reset(); S.ch = 0; S.cpStart = null; UP.rockets = UP.emp = UP.jump = false; env.jump = false; S.relay = 0; S.cpRelay = null; env.hurtK = 1; env.invuln = false; BAG.visible = false; env.camHold(null); if (env.cur !== 0) { env.relayTo(0, false); for (const ci of [1, 2]) env.placeRide(ci, 5000 + ci * 10, 40, 0); } if (env.music) env.music.level(0); endFinish(false); S.cpNear = null; clearRoadblocks(); if (cops.goal) cops.goal(null); clearThugs(); clearMissiles(); cops.force(0); cops.lock(false); cops.clear(); fail.hidden = true; phone.hidden = true; S.failed = false; S.stage = 'off'; S.checkpoint = null; objective(''); env.heal(); env.resetCar(); start(); }
+  function startChase() { if (env.launcher) { if (UP.rockets && env.cur === 0) env.launcher.deploy(true); else env.launcher.reset(); } roadblocks(); S.stage = 'chase'; S.cops = 1; S.copT = 0; S.missT = 2; S.t = 0; S.heat = 0; S.d0 = Math.max(60, dist(S.cpStart ? [S.cpStart.x, S.cpStart.z] : [DAVE.lot[0], DAVE.lot[1]], DAVE.house)); S.checkpoint = 'chase'; env.hurtK = [1, UP.emp ? DAVE.aaronHurtEmp : DAVE.aaronHurt, DAVE.chrisHurt][S.ch]; env.jump = S.ch === 2 && UP.jump; cops.lock(true); cops.force(1); if (cops.goal) { cops.goal(DAVE.house[0], DAVE.house[1]); cops.shut(SHUT, CLOSED); } S.stopSaid = false; S.swatSaid = false; S.swatT = 1; objective(GOAL[S.ch], 'roads closed'); banner('COPS!'); setTimeout(() => { if (S.stage === 'chase' && S.t < 6) banner('ROADS CLOSED'); }, 2000); }
+  const GOAL = ['Get the groceries to Dave', 'Get the ketchup to Dave', 'Get the AC part to Dave'];
   function win() {
-    if (UP.rockets && !S.relay && env.cur === 0) { reject(); return; }       // Marc made it with the launcher: Dave can't eat it, Aaron brings a fresh order
-    if (env.launcher) env.launcher.deploy(false); env.hurtK = 1; clearRoadblocks(); if (cops.goal) cops.goal(null); S.stage = 'done'; cops.force(0); cops.lock(false); cops.clear(); clearMissiles(); clearThugs(); objective(''); env.addMoney(DAVE.reward);
+    if (S.ch < 2) { nextChapter(); return; }           // round 34: Marc and Aaron make it, and Dave finds a new problem
+    if (env.launcher) env.launcher.deploy(false); env.hurtK = 1; env.jump = false; clearRoadblocks(); if (cops.goal) cops.goal(null); S.stage = 'done'; cops.force(0); cops.lock(false); cops.clear(); clearMissiles(); clearThugs(); objective(''); env.addMoney(DAVE.reward);
     const n = tries + 1; tries = 0; saveTries(); try { localStorage.removeItem('gtcc-dave-best'); } catch (e) { /* ok */ } best = 1e9;
     const stats = { time: S.mt || 0, n, wrecks: Math.max(0, env.wrecks - (S.w0 || 0)), hp: Math.round(env.hp) };
     if (env.music) env.music.sting('win'); env.slowmo(.3); banner(`MISSION PASSED  +$${DAVE.reward}`);
@@ -525,7 +532,7 @@ export function createDave(D) {
       const dv = S.daveP || (S.daveP = makePerson({ jacket: '#8a3b3b' })); const door = [DAVE.house[0] - 3.8, DAVE.house[1] + 2.3];
       dv.root.position.set(door[0], 0, door[1]); dv.root.visible = true; dv.on = true; play(dv, 'walk'); S.dave = { t: 0, from: door, to: [DAVE.house[0] - 1.6, DAVE.house[1] - .4] };
       env.cine([{ a: [DAVE.house[0] - 1, DAVE.house[1] + .5], b: [DAVE.house[0] - 2, DAVE.house[1] + .5], y0: DAVE.houseYaw - .55, y1: DAVE.houseYaw + .25, pitch: 24, d0: 17, d1: 12, dur: 6 }]);
-      msgs.innerHTML = ''; pick.hidden = true; skipBtn.hidden = true; phone.hidden = false; await wait(.05); phone.classList.add('show'); await typing('Dave', .8); say('Dave', 'YOU MADE IT?!? 😭 THANK YOU'); await wait(.8);
+      msgs.innerHTML = ''; pick.hidden = true; skipBtn.hidden = true; phone.hidden = false; await wait(.05); phone.classList.add('show'); await typing('Dave', .8); say('Dave', 'CHRIS 😭 the AC is BACK 🥶'); await wait(.9); say('Dave', 'you guys are the best. for real'); await wait(.8);
       if (n > 3) { say('Dave', `${n} tries tho 😂`); await wait(.8); }
       say(env.CHARS[env.cur].name, 'never again.', true); await wait(1.2);
       const mm = Math.floor(stats.time / 60), ss = String(Math.floor(stats.time % 60)).padStart(2, '0');
@@ -533,25 +540,43 @@ export function createDave(D) {
       res.hidden = false;
     })();
   }
-  function reject() {                                      // "I can't eat this": rocket-fuel groceries; the run goes on as Aaron from Publix with a fresh bag
-    if (env.launcher) env.launcher.deploy(false); clearRoadblocks(); S.stage = 'reject'; cops.force(0); cops.lock(false); cops.clear(); clearMissiles(); objective(''); env.slowmo(.3); if (env.music) env.music.level(0); banner('DELIVERED…?');
+  // a road spot for a chapter start: on the road nearest (x, z), pointing along the way to Dave's
+  function roadSpot(x, z) { const R = routeTo(x, z, DAVE.house[0], DAVE.house[1]); if (R.length < 6) return { x, z, th: 0 }; const a = R[2], b = R[5]; return { x: a[0], z: a[1], th: Math.atan2(-(b[0] - a[0]), -(b[1] - a[1])) }; }
+  const NEXT = [                                            // what Dave says when a chapter is delivered (round 34; the AC is true)
+    async () => { await typing('Dave', .8); say('Dave', 'YOU MADE IT 😭 thank you thank you'); await wait(1.0);
+      if (UP.rockets) { await typing('Dave', .6); say('Dave', 'why does the bag smell like rocket fuel'); await wait(1.0); }
+      await typing('Dave', .5); say('Dave', 'wait.'); await wait(.9);
+      await typing('Dave', .8); say('Dave', 'where\'s the KETCHUP?? 😩'); await wait(.9);
+      await typing('Dave', .7); say('Dave', 'I literally can\'t eat this without ketchup'); await wait(.9);
+      await typing('Dave', .6); say('Dave', 'Aaron can you grab some from Publix? 🙏'); await wait(1.0);
+      await typing('Aaron', .7); say('Aaron', 'on it 🫡'); await wait(.7); say('Marc', 'good luck bro. the cops are still out there 💀', true); await wait(1.6); },
+    async () => { await typing('Dave', .8); say('Dave', 'KETCHUP 🙌🙌'); await wait(1.0);
+      await typing('Dave', .6); say('Dave', 'ok eating now'); await wait(1.6);
+      await typing('Dave', 1.4); say('Dave', 'shoot.. my AC broke again 🥵'); await wait(1.1);
+      await typing('Dave', .6); say('Dave', 'Hey Chris?'); await wait(1.0);
+      await typing('Chris', .8); say('Chris', 'say less. grabbing a part 🏍️'); await wait(.7); say('Aaron', 'take the bike. trust me', true); await wait(1.6); },
+  ];
+  function nextChapter() {                                 // a chapter delivered: Dave comes out, texts the next problem, then the next driver sets off with the cops still out
+    if (env.launcher) env.launcher.deploy(false); env.jump = false; clearRoadblocks(); S.stage = 'reject'; cops.force(0); cops.lock(false); cops.clear(); clearMissiles(); objective(''); env.slowmo(.3); if (env.music) env.music.sting('win'); banner('DELIVERED!');
+    const ch = S.ch;
     (async () => {
       await wait(1.2); env.slowmo(1);
       const dv = S.daveP || (S.daveP = makePerson({ jacket: '#8a3b3b' })); const door = [DAVE.house[0] - 3.8, DAVE.house[1] + 2.3];
       dv.root.position.set(door[0], 0, door[1]); dv.root.visible = true; dv.on = true; play(dv, 'walk'); S.dave = { t: 0, from: door, to: [DAVE.house[0] - 1.6, DAVE.house[1] - .4] };
-      env.cine([{ a: [DAVE.house[0] - 1, DAVE.house[1] + .5], b: [DAVE.house[0] - 2, DAVE.house[1] + .5], y0: DAVE.houseYaw - .55, y1: DAVE.houseYaw + .25, pitch: 24, d0: 17, d1: 12, dur: 7 }]);
+      env.cine([{ a: [DAVE.house[0] - 1, DAVE.house[1] + .5], b: [DAVE.house[0] - 2, DAVE.house[1] + .5], y0: DAVE.houseYaw - .55, y1: DAVE.houseYaw + .25, pitch: 24, d0: 17, d1: 12, dur: 14 }]);
       msgs.innerHTML = ''; pick.hidden = true; skipBtn.hidden = true; phone.hidden = false; await wait(.05); phone.classList.add('show');
-      await typing('Dave', .8); say('Dave', 'why does it smell like ROCKET FUEL 🤢'); await wait(1.1);
-      await typing('Dave', .7); say('Dave', 'I can\'t eat this.'); await wait(1.0);
-      await typing('Dave', .8); say('Dave', 'Aaron\'s grabbing a fresh order. bring me THAT one.'); await wait(1.0);
-      say('Aaron', 'on it 🫡', false); await wait(1.4);
+      await NEXT[ch]();
       const fd = document.getElementById('fade'); fd.classList.add('on'); await wait(.7);
       phone.classList.remove('show'); phone.hidden = true; if (S.daveP) S.daveP.root.visible = false; S.dave = null; env.cineStop();
-      // Aaron at Publix with the fresh bag: the chase starts there, his Tesla is weak
-      env.placeRide(1, DAVE.lot[0], DAVE.lot[1], DAVE.lot[2]); env.relayTo(1, false); env.resetCar(DAVE.lot[0], DAVE.lot[1], DAVE.lot[2]); env.heal();
-      S.relay = 1; startChase(); S.checkpoint = 'relay'; S.cpRelay = { x: DAVE.lot[0], z: DAVE.lot[1], th: DAVE.lot[2], cops: 1, t: 0 }; env.hurtK = UP.emp ? DAVE.aaronHurtEmp : DAVE.aaronHurt;
-      await wait(.3); fd.classList.remove('on'); banner('AARON — FRESH ORDER');
+      startChapter(ch + 1);
+      await wait(.3); fd.classList.remove('on'); banner(CHAPTERS[S.ch].label);
     })();
+  }
+  function startChapter(n) {                               // the next driver takes over at their start (Aaron: Publix lot, Chris: by City Hall); the last ride is put away
+    const old = env.cur, C = CHAPTERS[n], sp = n === 1 ? { x: DAVE.lot[0], z: DAVE.lot[1], th: DAVE.lot[2] } : roadSpot(DAVE.chrisFrom[0], DAVE.chrisFrom[1]);
+    S.ch = n; S.cpStart = sp; env.placeRide(C.ci, sp.x, sp.z, sp.th); env.relayTo(C.ci, false); env.resetCar(sp.x, sp.z, sp.th); env.heal();
+    if (old !== C.ci) env.placeRide(old, 5000 + old * 10, 40, 0);       // out of Dave's driveway
+    S.cpNear = null; S.failed = false; startChase();
   }
   function daveStep(dt) {                                  // Dave walks from his door to your car and waits there
     const D_ = S.dave, w = S.daveP; if (!w) return; D_.t += dt; const k = Math.min(1, D_.t / 2.2), x = D_.from[0] + (D_.to[0] - D_.from[0]) * k, z = D_.from[1] + (D_.to[1] - D_.from[1]) * k;
@@ -571,22 +596,19 @@ export function createDave(D) {
     }
   }
   fail.querySelector('#mf-retry').onclick = () => {
-    if (!UP.rockets && env.launcher) { offer('rockets'); return; }        // the first failure: the upgrade offer comes before the retry
-    if (S.relay && !UP.emp) { offer('emp'); return; }                      // Aaron down: the EMP
+    const k = CHAPTERS[S.ch].up; if (!UP[k] && (k !== 'rockets' || env.launcher)) { offer(k); return; }      // each chapter's first failure: its upgrade comes before the retry
     retry();
   };
   let offering = '';
   function offer(k) {
     offering = k; fail.hidden = true; up.hidden = false;
-    up.querySelector('#mu-t').textContent = k === 'emp' ? 'Give Aaron\'s Tesla EMP?' : 'Add rocket launcher?';
-    up.querySelector('#mu-p').textContent = k === 'emp' ? 'An electric pulse that wipes out every police car around him. Tap EMP.' : 'Marc\'s Jeep gets a roof launcher. It aims itself. Tap FIRE.';
+    const T = { rockets: ['Add rocket launcher?', 'Marc\'s Jeep gets a roof launcher. It aims itself. Tap FIRE.'], emp: ['Give Aaron\'s Tesla EMP?', 'An electric pulse that wipes out every police car around him. Tap EMP.'],
+      jump: ['Give Chris ability to jump?', 'Tap JUMP: the bike flies over cars, cops and roadblocks in slow motion. You can steer in the air.'] }[k];
+    up.querySelector('#mu-t').textContent = T[0]; up.querySelector('#mu-p').textContent = T[1];
   }
   up.querySelector('#mu-ok').onclick = async () => {
     up.hidden = true;
-    if (offering === 'emp') { UP.emp = true; banner('EMP'); retry(); return; }
-    UP.rockets = true; banner('ROCKET LAUNCHER');
-    if (env.cur !== 0) { env.switchTo(0); await wait(2.8); }                                 // it is Marc's Jeep that gets it
-    retry();
+    UP[offering] = true; banner({ rockets: 'ROCKET LAUNCHER', emp: 'EMP', jump: 'JUMP' }[offering]); retry();
   };
   function retry() {                 // retry from the last checkpoint
     fail.hidden = true; S.failed = false; S.grace = performance.now() + 3000; clearMissiles(); cops.clear(); env.heal();
@@ -594,7 +616,7 @@ export function createDave(D) {
       const c = S.cpRelay; env.resetCar(c.x, c.z, c.th); startChase(); S.checkpoint = 'relay'; S.relay = 1; S.cops = c.cops; S.t = c.t; cops.force(S.cops); env.hurtK = UP.emp ? DAVE.aaronHurtEmp : DAVE.aaronHurt; banner(UP.emp ? 'AARON + EMP' : 'AARON');
     }
     else if (S.checkpoint === 'chase' && S.cpNear) { const c = S.cpNear; clearThugs(); env.resetCar(c.x, c.z, c.th); startChase(); S.cops = c.cops; S.t = c.t; cops.force(S.cops); banner('CHECKPOINT'); }
-    else if (S.checkpoint === 'chase') { clearThugs(); env.resetCar(DAVE.lot[0], DAVE.lot[1], DAVE.lot[2]); startChase(); }
+    else if (S.checkpoint === 'chase') { clearThugs(); const c = S.cpStart || { x: DAVE.lot[0], z: DAVE.lot[1], th: DAVE.lot[2] }; env.resetCar(c.x, c.z, c.th); startChase(); }
     else if (S.checkpoint === 'publix') { clearThugs(); env.resetCar(DAVE.lot[0], DAVE.lot[1], DAVE.lot[2]); S.stage = 'curbside'; objective('Pull into Curbside Pickup', 'stop in the green box'); }
     else { env.resetCar(); S.stage = 'toPublix'; objective('Drive to Publix'); }
   };

@@ -1,6 +1,6 @@
 # City-clone notes: "Grand Theft Coconut Creek" (GTCC)
 
-Last updated 2026-10-30. **Start here.** `HANDOFF.md` is only the original brief (pixel-art plan, now superseded).
+Last updated 2026-11-01. **Start here.** `HANDOFF.md` is only the original brief (pixel-art plan, now superseded).
 
 ## What this is
 A top-down open-city crime game for portrait phones in the browser, set in Coconut Creek, Florida. Real 3D (Three.js) with every model made by Python scripts in headless Blender.
@@ -21,7 +21,18 @@ Tune panel for the car handling. Controls are touch (stick/pads) with keyboard f
 5. Test in headless Chromium with Playwright (software GL): load `?`/`#chinatown`, `window.__city.setManual(true)`, `tick(dt, draw=false)` for logic tests (drawing each frame is ~1 s), `step(dt)` = physics only. Scripted tests live only in the session scratchpad; rewrite from the hooks.
 6. Show the user before/after or concept-vs-ours sheets and animated GIFs captured with the stepped sim; commit and push to `main` after each round.
 
-## STATE AT END OF ROUND 33 (read this first after a compact; round-by-round details follow below)
+## ROUND 34: THE MISSION IS NOW THREE CHAPTERS (user's design, supersedes steps 2 and 5 below)
+- Pick screen: only Marc can go (Aaron and Chris greyed out, "busy").
+- **Ch 1 Marc (Jeep):** curbside at Publix -> chase. Fail -> "Add rocket launcher?" (OK only). Deliver -> Dave walks out and texts: thank you / "why does the bag smell like rocket fuel" (only with the launcher) / "wait." / "where's the KETCHUP??" / "Aaron can you grab some from Publix?".
+- **Ch 2 Aaron (Tesla, x2 damage):** starts in the Publix lot, chase starts at once. Fail -> "Give Aaron's Tesla EMP?" (x1.6 damage). Deliver -> "KETCHUP 🙌🙌" / "ok eating now" / "shoot.. my AC broke again 🥵" / "Hey Chris?" (the AC part is true).
+- **Ch 3 Chris (motorcycle, x1.5 damage):** starts on the road near City Hall (`DAVE.chrisFrom`, ~284 m out), the far roadblock set (adds Wiles Rd). Fail -> "Give Chris ability to jump?". Deliver -> the old finish (Dave: "the AC is BACK 🥶"), results card.
+- **Jump** (index.html `JUMP`, `startJump`/`land`/`jumpHud`, button `#b-jump`, key Q): only on the bike when `DENV.jump`. 0.95 s airborne (game time), 3.6 m peak, 2 s cooldown, the world at 0.35x while airborne, steering works. While airborne the physics skips colliders flagged soft / mass / missile / ai / `low` (roadblock barricades + cruisers are `low`), but never buildings; cops' `hitYou` and rocket cops ignore you (`P.air`, `env.air`). Tested: at 24 m/s it clears a roadblock and lands ~44 m past (without the jump the bike stops at it).
+- Retry checkpoints: chapter start (`S.cpStart`) or the checkpoint near Dave's. "Play again" resets to chapter 1 with no upgrades. The previous rides go to storage (5000, 40) so the driveway stays clear.
+- The old relay hand-off (`intercept`/`startRelay`, the bag shot) is switched off but kept for the **planned final mission: "some sort of relay"** (user, not designed yet).
+- Fixed: the upgrade card's OK button was a tiny pill (a `display:block` button in Chrome shrinks to fit; now width 100%).
+- Review image: `art-review/round30/chapters.png`.
+
+## STATE AT END OF ROUND 33 (round 34 above changes the flow) (read this first after a compact; round-by-round details follow below)
 **Goal (user):** a showcase for ONE near-impossible, funny mission, "Groceries for Dave" (`viewer/dave.js`). "So hard it's funny" (Super Meat Boy) but barely winnable. Story escalates through upgrades you can't refuse.
 **Mission flow now:**
 1. Title (Vice City style, fly-over of the landmarks, START, "Cold open: on/off" toggle). Cold open (default on): ~6 s chase on a rail, freeze-frame + record scratch "Yep. That's me. / You're probably wondering how I got here."
@@ -31,7 +42,7 @@ Tune panel for the car handling. Controls are touch (stick/pads) with keyboard f
 5. Escalation (upgrades per page visit, OK-only cards): fail #1 -> "Add rocket launcher?" (Marc's Jeep, roof launcher rises from a hatch, auto-aim, FIRE + 6 s cooldown; +2 cops, faster). Marc with the launcher: dying -> slow-mo RELAY hand-off of the grocery bag ("FOR CREEK PD" sticker) to Aaron's Tesla up the road; arriving -> Dave "I can't eat this" (rocket fuel) -> Aaron restarts from Publix with a fresh order. Aaron's Tesla takes x2 damage -> dies -> "Give Aaron's Tesla EMP?" -> retry from the hand-off with EMP (24 m pulse, 12 s cooldown, x1.6 damage) and one more roadblock (Wiles Rd at Hammock).
 6. Win: slow-mo, camera to Dave's door, Dave walks out, texts, results card (time, attempt, cops wrecked, health, $1000), Play again / Keep driving.
 **IDEAS / NEXT (user's, not built yet):**
-- **Step 3 of the relay (next to build):** Aaron (with EMP) dies -> hand-off to Chris on the motorcycle (same slow-mo bag shot); the EMP only took out the cops around Aaron. Chris dies -> "Give Chris the ability to jump?" (OK only): the bike jumps, full control and turning in the air, slow motion in the air.
+- (DONE differently in round 34, see above) **Step 3 of the relay:** Aaron (with EMP) dies -> hand-off to Chris on the motorcycle (same slow-mo bag shot); the EMP only took out the cops around Aaron. Chris dies -> "Give Chris the ability to jump?" (OK only): the bike jumps, full control and turning in the air, slow motion in the air.
 - From my polish lists, not yet done: near-miss slow-mo when a rocket/SWAT just misses; rocket cops + SWAT as dots on the minimap; distance counter by road instead of straight line; the eggs meter ("don't crack the eggs", changes Dave's thank-you text); the truck of three guys running you off the road on the way to Publix (option, user liked curbside more).
 - Backlog the user asked to keep (older): building pass (signs on more sides, district identity, fill empty blocks, canal path, fun sweeping roads), landmarks Wynmoore (north lobe) + Broward College (east), coast decision ("not a coastal city, decide later"), jump ramp, drawbridge, cop patrols on main roads; no overpass.
 - User wants to see phone fps (`?hud=1`) since shadows were fixed (shadow box now really 68 m) and chases got busier.

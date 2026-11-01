@@ -84,7 +84,9 @@ body.cine .hud, body.cine #chars, body.cine #mission, body.cine #place, body.cin
 #b-fire span { display: grid; place-items: center; position: absolute; inset: 6px; border-radius: 50%; background: #ffd23f; } #b-fire.wait span { background: #4a4440; color: #bbb; } #b-fire[hidden] { display: none; }
 #reticle { position: fixed; left: 0; top: 0; z-index: 3; width: 54px; height: 54px; margin: -27px 0 0 -27px; pointer-events: none; border: 3px solid #ff3b2a; border-radius: 50%; box-shadow: 0 0 8px #ff3b2a; display: none; }
 #reticle::before, #reticle::after { content: ''; position: absolute; background: #ff3b2a; } #reticle::before { left: 50%; top: -9px; bottom: -9px; width: 3px; margin-left: -1.5px; } #reticle::after { top: 50%; left: -9px; right: -9px; height: 3px; margin-top: -1.5px; }
-body.cine #b-fire, body.cine #reticle { visibility: hidden; }
+body.cine #b-fire, body.cine #reticle, body.cine #b-jump { visibility: hidden; }
+#b-jump { position: fixed; z-index: 3; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(222px + env(safe-area-inset-bottom, 0px)); width: 80px; height: 80px; border-radius: 50%; border: 0; padding: 0; font: 700 15px/1 var(--display); letter-spacing: .1em; color: #0e1a08; background: conic-gradient(#8dff5a var(--p, 100%), rgba(10, 24, 12, .85) 0); box-shadow: 0 0 0 3px rgba(0, 0, 0, .5), 0 0 16px rgba(141, 255, 90, .6); touch-action: none; }
+#b-jump span { display: grid; place-items: center; position: absolute; inset: 6px; border-radius: 50%; background: #d2ffb0; } #b-jump.wait span { background: #3c463a; color: #aaa; } #b-jump[hidden] { display: none; }
 #t-cont { margin: 10px 0 0; text-align: center; color: #e8dff0; font: 500 13px var(--display); letter-spacing: .08em; }
 #title[hidden], #bigmap[hidden], #hint[hidden] { display: none; }
 #bigmap { position: fixed; inset: 0; z-index: 21; background: #12324f; display: grid; grid-template-rows: 1fr auto; gap: 10px; padding: calc(12px + env(safe-area-inset-top, 0px)) 12px calc(16px + env(safe-area-inset-bottom, 0px)); }
@@ -170,7 +172,7 @@ body.cine #b-fire, body.cine #reticle { visibility: hidden; }
 </div>
 <div id="chars" aria-label="Switch character"></div>
 <div id="banner"></div>
-<button id="b-fire" hidden aria-label="Fire rocket"><span>FIRE</span></button><div id="reticle"></div>
+<button id="b-fire" hidden aria-label="Fire rocket"><span>FIRE</span></button><button id="b-jump" hidden aria-label="Jump"><span>JUMP</span></button><div id="reticle"></div>
 <div id="title" hidden><div class="logo"><div class="gt">Grand Theft</div><div class="cc">Coconut Creek</div><div class="fl">Florida</div></div><div><button id="t-play">Start</button><button id="t-cold" aria-pressed="true">Cold open: on</button><p id="t-cont"></p></div></div>
 <div id="bigmap" hidden><canvas id="bigc"></canvas><button class="btn" id="bm-close">Close map</button></div>
 <div id="hint" hidden><div class="hint-stick">Drag: steer + speed</div><div class="hint-r">Brake &middot; Horn &middot; Exit</div><div class="hint-map">Tap the map for the full map &middot; &#9776; pauses</div></div>
@@ -549,7 +551,7 @@ const DENV = {                                     // what the Dave mission read
   get foot() { return foot; }, get hmode() { return hmode; }, get cur() { return cur; }, get CHARS() { return CHARS; }, get respawning() { return respawning; }, lastDeath: '',
   get carMass() { return drive ? drive.mass * TUNE.heroMass * (drive.st ? drive.st.ram : 1) : 2000; },
   setBlocks: (cars, shut) => { BLK.cars = cars; BLK.shut = new Set(shut); ROUTE.t = 0; }, switchTo: i => switchTo(i, true), cine: (sh, loop) => cine(sh, loop), cineStop: () => cineStop(), get cineOn() { return !!CINE.shots; }, addMoney: v => { game.money += v; }, heal: () => { game.hp = 100; }, resetCar: (x, z, th) => resetCar(x, z, th),
-  invuln: false, hurtK: 1,
+  invuln: false, hurtK: 1, jump: false, get air() { return !!(drive && drive.air > 0); },
   hurt: (amt, dx, dz) => { if (DENV.invuln) return; amt *= DENV.hurtK; game.hp = Math.max(0, game.hp - amt); rig.shake = Math.min(1, rig.shake + .35); if (hmode === 'foot') { foot.lx += dx * 6; foot.lz += dz * 6; } },
   sound: (k, pan) => { if (k === 'crash') crashSound(12); else if (k === 'whoosh') whooshSound(pan || 0); else if (k === 'scratch') scratchSound(); else if (k === 'zap') zapSound(); else if (k === 'boom') boomSound(); },
   get W() { return innerWidth; }, get H() { return innerHeight; },
@@ -583,6 +585,27 @@ if (launcher) {
   $('b-fire').addEventListener('pointerdown', e => { e.preventDefault(); ensureAudio(); launcher.fire(); });
   addEventListener('keydown', e => { if (e.code === 'KeyF') launcher.fire(); });
 }
+/* Chris's bike jump (round 34, the Dave mission's third upgrade): JUMP launches the bike; in the air the world runs in slow motion, the steering still works,
+   and the bike passes over cars, cops, shrubs and roadblocks (never buildings). Lands with a thump and a dust puff. */
+const JUMP = { T: .95, H: 3.6, cool: 2.0, slow: .35, minV: 4 };       // airborne game-seconds, peak height m, seconds between jumps, world speed in the air, slowest speed that jumps
+let jumpCool = 0;
+function startJump() {
+  if (!DENV.jump || !drive || hmode !== 'driving' || drive.car.kind !== 'moto' || drive.air > 0 || jumpCool > 0 || CINE.shots || paused) return;
+  if (Math.hypot(drive.vx, drive.vz) < JUMP.minV) { banner('NEED SPEED'); return; }
+  drive.air = JUMP.T; jumpCool = JUMP.cool; if (timeK === 1) timeK = JUMP.slow; ensureAudio(); whooshSound(0);
+  puff(drive.x, .3, drive.z, 1.6, 0xcbbfa8, .7, .4, 1.4); rig.shake = Math.min(1, rig.shake + .15);
+}
+function land(c) {
+  c.air = 0; if (timeK === JUMP.slow) timeK = 1; crashSound(7); rig.shake = Math.min(1, rig.shake + .35);
+  for (let i = 0; i < 3; i++) puff(c.x + (Math.random() - .5) * 2, .25, c.z + (Math.random() - .5) * 2, 1.8 + Math.random(), 0xcbbfa8, .9, .5, 1.6);
+}
+function jumpHud(dt) {
+  jumpCool = Math.max(0, jumpCool - dt); if (timeK === JUMP.slow && !(drive && drive.air > 0)) timeK = 1;
+  const show = DENV.jump && hmode === 'driving' && !!drive && drive.car.kind === 'moto'; setHidden($('b-jump'), !show);
+  if (show) { $('b-jump').style.setProperty('--p', Math.round((1 - jumpCool / JUMP.cool) * 100) + '%'); $('b-jump').classList.toggle('wait', jumpCool > 0 || drive.air > 0); }
+}
+$('b-jump').addEventListener('pointerdown', e => { e.preventDefault(); startJump(); });
+addEventListener('keydown', e => { if (e.code === 'KeyQ' && !e.repeat) startJump(); });
 const RV = new THREE.Vector3();
 function launcherHud() {                             // FIRE button (cooldown ring) while the launcher is up; red reticle on the target
   if (!launcher) return; const show = launcher.up && hmode === 'driving'; setHidden($('b-fire'), !show);
@@ -900,7 +923,8 @@ function physicsStep(dt) {
       }
     }
   }
-  if (driving && TUNE.assist > 0 && Math.abs(tgt) < .05 && vf > 4 && !input.hand && !brk) { const d = roadDir(c.x, c.z, c.th); if (d !== null) tgt = clamp(-d * 2.5 * TUNE.assist, -.6, .6); }     // road assist: hands off the steering, the car lines up with the road
+  const air = c.air > 0; if (air) { c.air -= dt; if (c.air <= 0) land(c); }      // Chris's jump (round 34): airborne, full steering, flies over cars and roadblocks (not buildings)
+  if (driving && !air && TUNE.assist > 0 && Math.abs(tgt) < .05 && vf > 4 && !input.hand && !brk) { const d = roadDir(c.x, c.z, c.th); if (d !== null) tgt = clamp(-d * 2.5 * TUNE.assist, -.6, .6); }     // road assist: hands off the steering, the car lines up with the road
   if (driving && TUNE.stickDrive && TUNE.backup) {                    // joystick modes: pushing into something without moving for 0.6 s backs the car off by itself for 0.9 s
     if (!(c.bkT > 0)) { c.pushT = gasK > .4 && Math.hypot(c.vx, c.vz) < 1 && c.inContact ? (c.pushT || 0) + dt : 0; if (c.pushT > .6) { c.pushT = 0; c.bkT = .9; c.bkS = tgt > .05 ? -.8 : tgt < -.05 ? .8 : .8; } }
     if (c.bkT > 0) { c.bkT -= dt; rev = true; gasK = 0; slow = 0; tgt = c.bkS; }
@@ -921,12 +945,13 @@ function physicsStep(dt) {
   let wT = -Math.tan(c.steer * maxSteer) * vf / (c.car.dims[2] || CAR.wb); if (c.slide) wT *= 1.2; if (driving && input.hand) wT += -c.steer * TUNE.handYaw * Math.min(1, Math.hypot(vf, vl) / 5);     // handbrake + steer swings the car round (the GTA U-turn); total speed, so it keeps turning once the car is sliding sideways
   c.w += (wT - c.w) * (1 - Math.exp(-TUNE.yawEase * dt));
   c.vx = fx * vf + rx * vl; c.vz = fz * vf + rz * vl;
-  { const [gx, gz] = groundGrad(c.x, c.z); if (gx || gz) { c.vx -= 9.8 * gx * dt * .85; c.vz -= 9.8 * gz * dt * .85; } }     // hills: gravity pulls the car down the slope
+  if (!air) { const [gx, gz] = groundGrad(c.x, c.z); if (gx || gz) { c.vx -= 9.8 * gx * dt * .85; c.vz -= 9.8 * gz * dt * .85; } }     // hills: gravity pulls the car down the slope
   c.x += c.vx * dt; c.z += c.vz * dt; c.th += c.w * dt;
   c.nowSoft = new Set(); c.inSoft = c.inSoft || new Set(); c.inContact = false;
   const near_ = nearCols(c.x, c.z, 6).slice();
   for (let pass = 0; pass < 2; pass++) for (const B of near_) {
     if (Math.hypot(B.cx - c.x, B.cz - c.z) > B.r + 3.2) continue;
+    if (air && (B.soft || B.mass || B.missile || B.ai || B.low)) continue;          // in the air: over cars, cops, shrubs and barricades
     if (B.soft) { if (pass === 0) brush(c, B, dt); continue; }
     if (B.tree && c === drive && hitTree(c, B)) continue;
     const v = contact(c, B, TUNE.bounce); if (v > 0) c.inContact = true; if (v > 1.2) { onImpact(c, B.mass ? v * .7 : v); if (c === drive && B.onHit) B.onHit(v); if (c === drive && B.ai && v > 10 && cops) cops.crime('carcrash', .25); }
@@ -986,7 +1011,7 @@ function hornSound() {
 function resetCar(x = world.start.x, z = -world.start.y, th = rad(world.start.rz)) {      // put the player's own car back and the hero in it
   if (drive && drive !== heroVeh()) parkVehicle(drive);
   const v = heroVeh(); removeCarCollider(v); drive = v; hmode = 'driving';
-  Object.assign(v, { x, z, th, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, hardest: 0, hits: 0, mode: 'driving' }); v.car.setDamage(0); v.car.setAll(false); clearMarks(v.car);
+  Object.assign(v, { air: 0, x, z, th, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, hardest: 0, hits: 0, mode: 'driving' }); v.car.setDamage(0); v.car.setAll(false); clearMarks(v.car);
   v.car.group.position.set(x, 0, z); v.car.group.rotation.y = th; pilot.root.visible = false; v.car.occupants.FL = pilot; seatRider(v);
 }
 
@@ -1065,7 +1090,7 @@ const BLK = { cars: [], shut: new Set() };
 const CAMHOLD = { on: false, x: 0, z: 0, yaw: 0, pitch: 50, dist: 44 };      // the mission holds the camera (the relay hand-off shot)
 function relayTo(ci, burnOld) {                     // the relay (round 33): take over another character's ride where it stands, no sky camera; the old ride stays put
   if (ci === cur) return; const C = CHARS[ci], v = vehs[C.ride]; if (!v) return;
-  if (drive) { const d = drive; drive = null; unseatRider(); parkVehicle(d); if (burnOld) d.car.setDamage(1); }
+  if (drive) { const d = drive; drive = null; d.air = 0; unseatRider(); parkVehicle(d); if (burnOld) d.car.setDamage(1); }
   stopRoam(C); removeCarCollider(v); Object.assign(v, { vx: 0, vz: 0, w: 0, mode: 'driving', px: undefined });
   cur = ci; pilot = C.person; ride = C.ride; drive = v; hmode = 'driving'; seatRider(v); rig.yaw = v.th;
   for (const b of document.querySelectorAll('#chars button')) b.classList.toggle('on', +b.dataset.ci === ci);
@@ -1461,6 +1486,7 @@ function update(dt, draw = true) {
     if (drive.px !== undefined && Math.abs(drive.px - x) + Math.abs(drive.pz - z) < 3) { x = drive.px + (x - drive.px) * al; z = drive.pz + (z - drive.pz) * al; th = drive.pth + wrapA(th - drive.pth) * al; }
     drive.rx = x; drive.rz = z; placeOnGround(drive.car.group, x, z, th);
     if (drive.car.kind === 'moto') { const tl = clamp(drive.w * Math.hypot(drive.vx, drive.vz) * TUNE.motoLean, -.6, .6); drive.lean = (drive.lean || 0) + (tl - (drive.lean || 0)) * (1 - Math.exp(-8 * dt)); drive.car.group.rotation.z += drive.lean; }     // the bike leans into the turn
+    if (drive.air > 0) { const k = 1 - drive.air / JUMP.T; drive.car.group.position.y += 4 * JUMP.H * k * (1 - k); drive.car.group.rotation.x += (.5 - k) * .55; }     // the jump arc, nose up then down
   }
   if (loose.size) looseStep(dta);
   debrisStep(dta); splatStep(dta); treeStep(dta); puffStep(dt); hoodSmoke(dt);
@@ -1474,7 +1500,7 @@ function update(dt, draw = true) {
   });
   if (ai) {
     AIX.cx = rig.tx; AIX.cz = rig.tz;
-    if (drive && hmode === 'driving') { const P = AIX.p; P.x = drive.x; P.z = drive.z; P.vx = drive.vx; P.vz = drive.vz; P.L = drive.car.dims[0]; P.W = drive.car.dims[1]; P.th = drive.th; AIX.player = P; } else AIX.player = null;
+    if (drive && hmode === 'driving') { const P = AIX.p; P.x = drive.x; P.z = drive.z; P.vx = drive.vx; P.vz = drive.vz; P.L = drive.car.dims[0]; P.W = drive.car.dims[1]; P.th = drive.th; P.air = drive.air > 0; AIX.player = P; } else AIX.player = null;
     if (hmode === 'foot') { AIX.f.x = foot.x; AIX.f.z = foot.z; AIX.foot = AIX.f; } else AIX.foot = null;
     AIX.peds = ppl ? ppl.people : null; ai.step(dta, AIX);
   }
@@ -1483,7 +1509,7 @@ function update(dt, draw = true) {
     cops.step(dta, CPX.p);
   }
   if (missions) { const dr = drive && hmode === 'driving'; MPX.x = dr ? drive.x : foot.x; MPX.z = dr ? drive.z : foot.z; MPX.speed = dr ? Math.hypot(drive.vx, drive.vz) : 0; MPX.vx = dr ? drive.vx : foot.vx; MPX.vz = dr ? drive.vz : foot.vz; MPX.th = dr ? drive.th : foot.face; MPX.driving = dr; missions.step(dta, MPX); }
-  if (launcher) { launcher.step(dta); launcherHud(); }
+  if (launcher) { launcher.step(dta); launcherHud(); } jumpHud(dta);
   PF.mark('traffic');
   footStep(dta); combatStep(dta);
   if (ppl) { if (!(drive && hmode === 'driving')) AIX.player = null; ppl.step(dta, AIX); }

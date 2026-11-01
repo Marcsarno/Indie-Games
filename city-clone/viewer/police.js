@@ -130,7 +130,7 @@ export function createPolice(G, deps) {
     return false;
   }
   function hitYou(c, P, d, fx, fz) {             // a cop running into your car: momentum into you (and spin from where it lands: a hit on your back corner spins you, a PIT)
-    const now = performance.now(); if ((c.ramT || 0) > now || d > (c.dims[0] + P.L) / 2 + .5) return;
+    const now = performance.now(); if (P.air || (c.ramT || 0) > now || d > (c.dims[0] + P.L) / 2 + .5) return;
     const nx = (P.x - c.x) / (d || 1), nz = (P.z - c.z) / (d || 1), vc = (fx * c.v - P.vx) * nx + (fz * c.v - P.vz) * nz; if (vc < 2.5) return;
     const mc = c.col.mass || 2500, mp = playerMass ? playerMass() : 2500, J = vc * 1.25 * mc * mp / (mc + mp), dvp = J / mp;
     const rx = (c.x - P.x) * .5, rz = (c.z - P.z) * .5, I = mp * ((P.L || 4.5) ** 2 + (P.W || 1.9) ** 2) / 12;
