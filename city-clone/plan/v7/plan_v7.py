@@ -21,7 +21,7 @@ XW, XE, YS, YN = X441 - EDGE, XPOWER + EDGE, Y["pkwy"] - 60, Y["hillsboro"] + 60
 # ---- roads: name, polyline, width m, kind: art (arterial), col (collector), hwy (expressway), loc (neighbourhood street), dirt, trail ----
 ROADS = [
     ("State Rd 7 (US 441)", [(X441, YS), (X441, YN)], 24, "art"),
-    ("Banks Rd", [(XBANKS, YS), (XBANKS, Y["sample"])], 12, "col"),
+    ("Banks Rd", [(XBANKS, Y["pkwy"]), (XBANKS, 178)], 12, "col"),            # user: only reachable from Coconut Creek Pkwy (a dead end with a cul-de-sac)
     ("Lyons Rd", [(XLYONS, YS), (XLYONS, YN)], 22, "art"),
     ("Powerline Rd", [(XPOWER, YS), (XPOWER, YN)], 22, "art"),
     ("Coconut Creek Pkwy", [(XW, Y["pkwy"]), (XE, Y["pkwy"])], 18, "art"),
@@ -38,14 +38,13 @@ ROADS = [
     # L2 farm-field dirt track: casino corner to Lyons & Wiles, cutting the corner
     ("", curve([(-300, Y["sample"] + 8), (-245, 360), (-150, 372), (-60, 405), (-12, Y["wiles"] - 6)]), 7, "dirt"),
     # L3 neighbourhood loops: curvy streets that link two arterials (shortcuts and hiding places)
-    ("", curve([(XBANKS, 60), (-120, 95), (-60, 80), (-30, 120), (XLYONS, 150)]), 9, "loc"),
-    ("", curve([(X441, 120), (-280, 150), (-230, 140), (-200, 170), (XBANKS, 160)]), 9, "loc"),
+    ("", curve([(XLYONS, 150), (-30, 125), (-60, 85), (-40, 45), (XLYONS, 30)]), 9, "loc"),
+    ("", curve([(XBANKS, 50), (-210, 75), (-270, 70), (-290, 115), (-235, 150), (XBANKS, 135)]), 9, "loc"),
     ("", curve([(XLYONS, 470), (60, 495), (130, 470), (200, 505), (260, 470), (XPOWER, 490)]), 9, "loc"),
     ("", curve([(X441, 470), (-270, 450), (-220, 490), (-150, 450), (-100, 478)]), 9, "loc"),
     ("", curve([(XLYONS, 690), (60, 705), (120, 680), (190, 700), (250, 668), (XPOWER, 690)]), 9, "loc"),
     ("", curve([(X441, 690), (-260, 705), (-190, 680), (-120, 702), (-60, 690), (XLYONS, 700)]), 9, "loc"),
     ("", curve([(XLYONS, 380), (80, 360), (160, 395), (240, 370), (XPOWER, 385)]), 9, "loc"),
-    # L4 roundabout at Banks & Copans (drawn as a ring below)
     # L5 Tradewinds park trail: narrow, bikes squeeze through, cars barely
     ("", curve([(160, Y["copans"] + 12), (190, 250), (250, 235), (290, 280), (318, Y["sample"] - 12)]), 4, "trail"),
     # L6 Wynmoore: one gated entrance off Lyons, winding streets, Dave at the far end
@@ -56,13 +55,14 @@ ROADS = [
     ("", curve([(-80, 575), (-40, 560), (-8, 540)]), 8, "ramp"),
     ("", curve([(8, 618), (40, 630), (90, 618)]), 8, "ramp"),
 ]
-ROADS += [("", [(X441, 285), (-320, 285)], 8, "loc"), ("", [(-230, Y["sample"]), (-230, 310)], 8, "loc"), ("", [(-175, 240), (XBANKS, 240)], 8, "loc")]   # Walmart lot entrances (441, Sample, Banks)
-ROUNDABOUTS = [(XBANKS, Y["copans"], 18)]
+ROADS += [("", [(X441, 235), (-320, 235)], 8, "loc"), ("", [(X441, 285), (-320, 285)], 8, "loc"), ("", [(-290, Y["sample"]), (-290, 310)], 8, "loc")]   # Walmart lot entrances (two off 441, one off Sample)
+ROUNDABOUTS = []
+CULS = [(XBANKS, 178, 11)]
 # canal (L8): runs north-south between Banks and Lyons from Pkwy to Sample, crossed by bridges on each arterial; you can wade it or jump it on the bike
 CANAL = [(-85, Y["pkwy"] - 60), (-80, 60), (-95, 130), (-82, 200), (-88, 260), (-80, Y["sample"])]
 ZONES = [  # label, polygon, fill, text colour
-    ("", [(-320, 210), (-175, 210), (-175, 310), (-320, 310)], "#7d8086", "#ffffff"),                      # user: Super Walmart, SW corner of Sample & 441, giant parking lot
-    ("WALMART\nSUPERCENTER", [(-300, 222), (-195, 222), (-195, 256), (-300, 256)], "#2f64ad", "#ffffff"),
+    ("", [(-320, 210), (-178, 210), (-178, 310), (-320, 310)], "#7d8086", "#ffffff"),                      # user: Super Walmart on the east side of 441 (front lot along 441), south of Sample
+    ("WALMART\nSUPER-\nCENTER", [(-228, 218), (-184, 218), (-184, 302), (-228, 302)], "#2f64ad", "#ffffff"),
     ("WYNMOORE\n(gated, golf)", [(14, 14), (316, 14), (316, 186), (14, 186)], "#e9d8a6", "#5a4310"),
     ("FARM FIELDS", [(-316, 334), (-130, 334), (-130, 416), (-316, 416)], "#c9b27a", "#5a4310"),
     ("TRADEWINDS PARK\n+ BUTTERFLY WORLD", [(150, 214), (316, 214), (316, 306), (150, 306)], "#7cc05a", "#1f4d12"),
@@ -76,10 +76,10 @@ SPOTS = [  # label, x, y, colour, side
     ("SEMINOLE CASINO", -300, 350, "#c8901e", 1), ("CAR DEALERS", -150, 335, "#8a8f98", 1), ("CAR DEALERS", 60, 304, "#8a8f98", 1),
     ("COOPER'S HAWK", -30, 442, "#9a3b52", -1), ("GATE", 22, 95, "#d0582a", 1), ("DAVE", 230, 30, "#e33b3b", -1),
 ]
-TAGS = [("L1", X441 - 52, 600), ("L1", XPOWER + 52, 600), ("L2", -150, 372), ("L3", -60, 80), ("L3", 130, 470), ("L4", XBANKS, Y["copans"]), ("L5", 250, 235),
+TAGS = [("L1", X441 - 52, 600), ("L1", XPOWER + 52, 600), ("L2", -150, 372), ("L3", -60, 80), ("L3", 130, 470), ("L4", XBANKS, 178), ("L5", 250, 235),
         ("L6", 190, 125), ("L7", -40, 560), ("L8", -95, 130)]
 RES = [("homes + lakes", -230, 480), ("homes", 165, 410), ("homes", -60, 380), ("homes", -250, 60), ("homes", -40, 40), ("homes", 165, 700), ("offices", 170, 590), ("homes", -165, 160)]
-LEGEND = ["L1  service lane behind the shop strips", "L2  dirt track across the farm fields", "L3  curvy neighbourhood streets (shortcuts)", "L4  roundabout at Banks & Copans",
+LEGEND = ["L1  service lane behind the shop strips", "L2  dirt track across the farm fields", "L3  curvy neighbourhood streets (shortcuts)", "L4  (cut) Banks Rd: dead end, only from the Pkwy",
           "L5  park trail (bike fits, cars barely)", "L6  Wynmoore: one gate, winding streets, Dave", "L7  Sawgrass raised, on/off ramps at Lyons", "L8  canal with bridges (wade / jump)", "red bars = edge roadblocks"]
 
 S = 1.15; PAD = 50
@@ -97,9 +97,9 @@ for (lab, poly, col, tc) in ZONES:
         t = Image.new("RGBA", (500, 30), (0, 0, 0, 0)); ImageDraw.Draw(t).text((250, 15), lab, fill=tc, font=font(14), anchor="mm"); t = t.rotate(90, expand=True)
         a, b = P(cx, 120); im.paste(t, (int(a - 15), int(b - 250)), t)
     else: d.multiline_text(P(cx, cy), lab, fill=tc, font=font(14), anchor="mm", align="center")
-for row in range(6):                                          # Walmart parking rows
-    yy = 262 + row * 8
-    for xx in range(-314, -180, 5): d.line([P(xx, yy - 2.5), P(xx, yy + 2.5)], fill="#d8d8d8", width=1)
+for col_ in range(7):                                         # Walmart parking rows (the lot faces 441)
+    xx = -310 + col_ * 12
+    for yy in range(216, 306, 5): d.line([P(xx - 3, yy), P(xx + 3, yy)], fill="#d8d8d8", width=1)
 for L in LAKES: d.polygon([P(*p) for p in curve(L + L[:1], 6)], fill="#2d78b8")
 d.line([P(*p) for p in curve(CANAL)], fill="#2d78b8", width=int(10 * S))
 for (lab, x, y) in RES: d.text(P(x, y), lab, fill="#d6ecc2", font=font(12, False), anchor="mm")
@@ -109,6 +109,8 @@ for kind_pass in (("dirt", "trail", "loc"), ("col", "art"), ("ramp", "hwy")):
         if kind not in kind_pass: continue
         c, ln = STY[kind]; d.line([P(*p) for p in pts], fill=c, width=max(3, int(w * S)), joint="curve")
         if ln: d.line([P(*p) for p in pts], fill=ln, width=2 if kind != "col" else 1, joint="curve")
+for x, y, r in CULS:
+    a, b = P(x, y); R = r * S; d.ellipse([a - R, b - R, a + R, b + R], fill="#3a3c40")
 for x, y, r in ROUNDABOUTS:
     a, b = P(x, y); R = r * S; d.ellipse([a - R, b - R, a + R, b + R], outline="#3a3c40", width=int(10 * S)); d.ellipse([a - R + 8, b - R + 8, a + R - 8, b + R - 8], fill="#7cc05a")
 # edge roadblocks: every road that reaches the edge
@@ -122,7 +124,7 @@ for name, pts, w, kind in ROADS:
     if not name: continue
     if pts[0][0] == pts[-1][0]:
         t = Image.new("RGBA", (360, 36), (0, 0, 0, 0)); ImageDraw.Draw(t).text((180, 18), name, fill="white", font=font(15), anchor="mm", stroke_width=3, stroke_fill="#1b1b1b")
-        t = t.rotate(90, expand=True); cx, cy = P(pts[0][0], 120 if name != "Banks Rd" else 250); im.paste(t, (int(cx - t.width / 2 - w * S / 2 - 13), int(cy - t.height / 2)), t)
+        t = t.rotate(90, expand=True); cx, cy = P(pts[0][0], 120 if name != "Banks Rd" else 100); im.paste(t, (int(cx - t.width / 2 - w * S / 2 - 13), int(cy - t.height / 2)), t)
     else: OUT(name, P(X441 + 8, (pts[0][1] if kind != "art" or "Winston" not in name else Y["winston"] + 20) + (13 if kind != "hwy" else 21)), 14 if kind != "col" else 12, anchor="ls")
 for (lab, x, y, col, side) in SPOTS:
     cx, cy = P(x, y); d.ellipse([cx - 8, cy - 8, cx + 8, cy + 8], fill=col, outline="white", width=2); OUT(lab, (cx + 12 * side, cy), 12, anchor="lm" if side > 0 else "rm")
