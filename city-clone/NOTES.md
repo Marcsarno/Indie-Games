@@ -21,6 +21,11 @@ Tune panel for the car handling. Controls are touch (stick/pads) with keyboard f
 5. Test in headless Chromium with Playwright (software GL): load `?`/`#chinatown`, `window.__city.setManual(true)`, `tick(dt, draw=false)` for logic tests (drawing each frame is ~1 s), `step(dt)` = physics only. Scripted tests live only in the session scratchpad; rewrite from the hooks.
 6. Show the user before/after or concept-vs-ours sheets and animated GIFs captured with the stepped sim; commit and push to `main` after each round.
 
+## PROPOSED (waiting on the user): CITY EXPANSION + DAVE MOVES INTO A GATED COMMUNITY
+- Found: the viewer's 700 m green ground plane (y -.3) sits above the sea plane (-.35), so the sea outside the coast renders as GRASS in game (minimap shows it blue). The west lobe (x -290..-190) is nearly empty.
+- Plan sent (sketch `art-review/round30/expansion_plan.png`): fill the bay NW of Dave, push the west coast out ~80 m, build a gated community there with Dave's house deep inside (~130 m further). Finale beats: 1 guard gate with a barrier arm (choke point, cop pile-ups), 2 canal with two narrow bridges (wade / jump), 3 winding streets + cul-de-sacs + speed bumps (bike ramps), golf carts as traffic, 4 golf-cart path shortcut, 5 home stretch with SWAT from side streets. Roadblocks move to the community edges. Also fix the sea to look like water everywhere.
+- Asked: gated community OK? which beats? is Dave's real neighborhood gated (use its name)?
+
 ## ROUND 36: COP LIGHTS, NO RED ARROW
 - The red screen-edge warning arrow is gone (user: "hideous.. and blocks game play"); the whoosh sound before a rocket cop hits stays (dave.js `warnStep`).
 - New `viewer/lightbar.js`: `makeLightbar(THREE, car, {y, z, w, pool})` on every police car (police.js cops, dave.js rocket cops, roadblock cruisers) and SWAT van. Dark bar + red/blue lenses (on police cars it exactly covers the small bar baked into the model), strobe pattern (red flash-flash, blue flash-flash, 0.9 s, random offset per car), an additive glow sprite over the lit lens and an additive coloured pool of light on the road (radius 6 m, 6.5 for SWAT). No real lights. `stepLightbars(t)` runs once a frame from index.html. Review: `art-review/round30/cop_lights.png`.
