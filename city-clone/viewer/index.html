@@ -115,6 +115,9 @@ body.cine #b-fire, body.cine #reticle, body.cine #b-jump { visibility: hidden; }
 .mgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .mcard .btn { padding: 12px 8px; font-size: 14px; }
 .mcard .mbig { padding: 16px; font-size: 20px; background: var(--lamp); color: var(--night); border-color: var(--lamp); }
+#roadnow { margin-top: 3px; max-width: 150px; text-align: right; font: 600 13px/1.15 var(--display); letter-spacing: .05em; color: #ffd27f; text-shadow: 0 1px 3px rgba(0, 0, 0, .9); pointer-events: none; }
+#roadnow b { display: inline-block; min-width: 22px; margin-right: 5px; padding: 1px 4px; border-radius: 4px; background: rgba(12, 16, 22, .75); color: #fff; font-weight: 700; text-align: center; }
+.mini b#mini-n { transform: translate(-50%, -50%); top: 50%; padding: 1px 3px; border-radius: 3px; background: #c8362a; color: #fff; text-shadow: none; }
 #spd { font: 600 15px/1 var(--display); letter-spacing: .06em; color: var(--paper); text-shadow: 0 1px 3px rgba(0, 0, 0, .8); font-variant-numeric: tabular-nums; min-height: 15px; }
 .dmgbar i { background: #f0a030; transform: scaleX(0); }
 #cash { font: 600 22px/1 var(--display); letter-spacing: .05em; color: var(--paper); text-shadow: 0 1px 3px rgba(0, 0, 0, .7); font-variant-numeric: tabular-nums; }
@@ -156,7 +159,7 @@ body.cine #b-fire, body.cine #reticle, body.cine #b-jump { visibility: hidden; }
   <button class="btn" id="tunecopybtn">Copy settings + track results</button><textarea id="tunecopy" readonly hidden></textarea>
 </div>
 
-<div class="hud corner" id="corner"><div id="stars" aria-label="Wanted level"><i>★</i><i>★</i><i>★</i><i>★</i></div><div id="cash">$0</div><div class="hpbar"><i id="hp"></i></div><div class="hpbar dmgbar" id="dmgbox" hidden><i id="dmg"></i></div><div class="mini" id="minibox"><canvas id="mini" width="200" height="200"></canvas><b>N</b></div><div id="spd"></div></div>
+<div class="hud corner" id="corner"><div id="stars" aria-label="Wanted level"><i>★</i><i>★</i><i>★</i><i>★</i></div><div id="cash">$0</div><div class="hpbar"><i id="hp"></i></div><div class="hpbar dmgbar" id="dmgbox" hidden><i id="dmg"></i></div><div class="mini" id="minibox"><canvas id="mini" width="200" height="200"></canvas><b id="mini-n">N</b></div><div id="spd"></div><div id="roadnow"><b id="rn-dir">N</b><span id="rn-road"></span></div></div>
 <div class="hud pad" id="pad">
   <div class="cl"><button class="pb sm" id="b-unstick" style="display:none">Un-<br>stick</button><button class="pb" id="b-left" aria-label="Steer left"><i class="l"></i></button><button class="pb" id="b-right" aria-label="Steer right"><i class="r"></i></button><div class="stick" id="dstick" aria-label="Drive: direction and speed" hidden><div class="knob" id="dknob"></div></div></div>
   <div class="cr">
@@ -902,6 +905,14 @@ function placeStep(dt, x, y) {                    // "you are entering" banner: 
   PLACE.ta = area === PLACE.candA ? PLACE.ta + st : 0; PLACE.candA = area; PLACE.ts = street === PLACE.candS ? PLACE.ts + st : 0; PLACE.candS = street;
   if (area && area !== PLACE.area && PLACE.ta >= .6) { PLACE.area = area; $('pl-area').textContent = area; $('pl-street').textContent = PLACE.street = street || ''; PLACE.show = 3.5; }
   else if (street && street !== PLACE.street && PLACE.ts >= .6) { PLACE.street = street; $('pl-street').textContent = street; if (PLACE.show <= 0) $('pl-area').textContent = ''; PLACE.show = Math.max(PLACE.show, 2.5); }
+  // round 44 (user: "Need a compass and what road we are currently on"): always-on heading + road under the speed; unnamed streets show the district
+  const now = (PLACE.ts >= .6 || hmode !== 'driving' ? PLACE.candS : PLACE.street) || area || '';
+  if (now !== PLACE.now) { PLACE.now = now; $('rn-road').textContent = now; }
+}
+function compassStep() {
+  const th = hmode === 'driving' && drive ? drive.th : rig.yaw, deg = ((-th * 180 / Math.PI) % 360 + 360) % 360;
+  const d = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(deg / 45) % 8]; if (d !== compassStep.d) { compassStep.d = d; $('rn-dir').textContent = d; }
+  const a = rig.yaw, n = $('mini-n'); n.style.left = (50 + 41 * Math.sin(a)) + '%'; n.style.top = (50 - 41 * Math.cos(a)) + '%';
 }
 let RSEG = null;
 function roadDir(x, z, th) {                      // road assist: turn (rad) from the car's heading to the nearest road running roughly the same way; null when none within 9 m and 35 deg
@@ -1588,6 +1599,7 @@ function update(dt, draw = true) {
   upd.speedZoom += ((playView && hmode === 'driving' ? Math.min(speed, 28) / 28 * TUNE.camZoom : 0) - upd.speedZoom) * (1 - Math.exp(-2 * dt));
   { const ext = track.active ? 1e5 : world.extent; rig.tx = clamp(rig.tx, -ext, ext); rig.tz = clamp(rig.tz, -ext, ext); }
   if (rig.mode === 'drive') cullStep(dt); else for (const c of cullables) c.o.visible = true;
+  compassStep();
   HYD.step(dt, Object.values(vehs));
   if (!SW.on && !CINE.shots && !CAMHOLD.on) { let ty = 0; const dv = hmode === 'driving' && drive;           // camera yaw: turns with the car while driving (eases, holds when nearly stopped, reversing or handbraking), back to north-up on foot
     if (playView && rig.mode === 'drive' && dv && TUNE.camYaw) {
