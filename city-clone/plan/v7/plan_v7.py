@@ -117,16 +117,39 @@ BREAKERS = [(XE - 40, 1075), (X441 - 55, 450), (-400, 1180), (-150, 950), (-160,
 HIDES = [(X441 - 55, 1175), (-600, 1222), (0, 1500), (XW + 60, 540)]
 STARS = [(-710, 1010), (600, 655), (-107, 775), (100, 440), (XW + 64, 745), (-400, 1255), (92, 772), (210, 1690)]
 BRIDGES = [(XCANAL, 0), (XCANAL, Y["copans"]), (XCANAL, Y["sample"])]
+# ---- draft 8 (user): the fun way is THROUGH the landmarks. Hidden cut-throughs link the lots, plazas, drive-thrus, fields and alleys across the
+# main roads, and road work blocks the straight runs, so the best line weaves through the city instead of going straight down Lyons.
+st([(XCANAL + 14, Y["sample"] - 14), (XCANAL + 14, 14)], 6, "trail")          # canal maintenance path (east bank), hidden behind the houses
+st([(X441 + 14, 140), (XCANAL - 10, 140)], 6, "alley"); st([(XCANAL + 10, 140), (-35, 140)], 6, "alley")   # service alley behind the Pkwy shops
+CUTS = [  # (label, polyline): each is a gap a driver can find (median gap, hedge gap, fence gate, drive-thru, plaza, loading ramp)
+    ("1", [(-150, 1345), (-150, 1282)]),                       # Publix lot -> across Winston (median gap) -> Promenade
+    ("2", [(-400, 1270), (-400, 1215), (-470, 1150), (-400, 1095)]),   # through the Promenade plaza, round the fountain, out to Wiles
+    ("3", [(-100, 1180), (-100, 1095)]),                       # Cooper's Hawk valet lane
+    ("4", [(-400, 1060), (-400, 1000), (-250, 960), (-330, 900), (-250, 850)]),   # dealer lots: through a showroom (glass), slalom the car rows, out to Sample
+    ("5", [(-120, 818), (-120, 785), (-110, 640), (-110, 520)]),     # median gap on Sample -> City Hall plaza -> steps down to Copans (jump)
+    ("6", [(XCANAL + 14, 480), (XCANAL + 14, 160)]),           # canal path
+    ("7", [(XCANAL + 10, 140), (-450, 140), (-470, 120), (-470, 18)]),   # service alley -> Walgreens drive-thru -> Pkwy, right at Banks
+    ("8", [(60, 815), (60, 785), (130, 730), (90, 690), (190, 640)]),     # McDonald's drive-thru -> gas station lot
+    ("9", [(360, 600), (420, 580), (500, 600), (560, 548)]),   # Butterfly World service gate -> Copans
+    ("10", [(40, 360), (300, 330), (520, 280), (600, 240)]),   # smash the Wynmoore gate, across the golf course, fence gap into the school
+    ("11", [(600, 232), (580, 130), (600, 40), (600, 14)]),    # across the football field, out the bus loop to the Pkwy
+    ("12", [(XW + 120, 700), (XW + 32, 780), (XW + 15, 760)]), # Walmart lot -> loading-dock ramp -> back lane (jump)
+]
+BLOCKS = [((0, 1075 - 40), (0, 800 + 40)), ((0, 500 - 40), (0, 0 + 40)), ((-330, 0), (-330, 0))]   # road work on Lyons (Wiles-Sample, Copans-Pkwy)
+BLOCKS = BLOCKS[:2]
 ROUTES = [
-    ("A  fast: Lyons straight down, Pkwy, Banks", "#4fa3ff", [PUBLIX, (-14, 1330), (-14, 14), (XBANKS + 8, 14), (XBANKS + 8, -112), (-610, -112), DAVE]),
-    ("B  sneaky: 441, Walmart lot, back lane", "#ffb03a", [PUBLIX, (-200, 1330), (X441, 1366), (X441, 700), (XW + 120, 690), (XW + 15, 640), (XW + 15, -14), (XBANKS - 8, -14), (XBANKS - 8, -128), (-610, -128), DAVE]),
-    ("C  creative: Promenade, dealer lots, canal", "#d070ff", [PUBLIX, (-300, 1300), (-300, 1110), (-300, 1045), (-300, 835), (XCANAL, 812), (XCANAL, 0), (XCANAL, -230), (-330, -180), (-560, -150), (-625, -128), DAVE]),
+    ("WEST LINE: Promenade, dealers, City Hall, canal path, Walgreens", "#3fe07b",
+     [PUBLIX, (-150, 1345), (-150, 1282), (-400, 1215), (-470, 1150), (-400, 1095), (-400, 1000), (-250, 960), (-330, 900), (-250, 850), (-120, 818), (-110, 640), (-110, 520), (XCANAL + 14, 480), (XCANAL + 14, 160), (XCANAL + 10, 140), (-450, 140), (-470, 18), (XBANKS + 8, -8), (XBANKS + 8, -112), (-610, -112), DAVE]),
+    ("EAST LINE: McDonald's, Butterfly World, golf course, HS field", "#ffb03a",
+     [PUBLIX, (-30, 1330), (14, 1300), (14, 1090), (60, 1075), (60, 815), (130, 730), (190, 640), (360, 600), (500, 600), (560, 548), (300, 515), (40, 470), (40, 360), (300, 330), (520, 280), (600, 240), (580, 130), (600, 14), (300, -8), (XBANKS + 8, -14), (XBANKS + 8, -120), (-610, -120), DAVE]),
+    ("441 LINE: Walmart lot, loading ramp, back lane", "#d070ff",
+     [PUBLIX, (-200, 1330), (X441, 1366), (X441, 700), (XW + 120, 700), (XW + 32, 780), (XW + 15, 640), (XW + 15, -14), (XBANKS - 8, -14), (XBANKS - 8, -128), (-610, -128), DAVE]),
 ]
 
 # ---- draw ----
 S = .44; PAD = 40
 X0, X1, Y0, Y1 = XW - 20, XE + 20, YS - 50, YN + 20
-W, H = int((X1 - X0) * S) + 2 * PAD + 400, int((Y1 - Y0) * S) + 2 * PAD + 40
+W, H = int((X1 - X0) * S) + 2 * PAD + 470, int((Y1 - Y0) * S) + 2 * PAD + 40
 P = lambda x, y: (PAD + (x - X0) * S, PAD + 40 + (Y1 - y) * S)
 def font(sz, b=True): return ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if b else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", sz)
 im = Image.new("RGB", (W, H), "#2b3a26"); d = ImageDraw.Draw(im)
@@ -180,6 +203,10 @@ for name, pts, w, kind in ROADS:
         t = t.rotate(90, expand=True); cx, cy = P(pts[0][0], 380 if name != "Banks Rd" else -260); im.paste(t, (int(cx - t.width / 2 - w * S / 2 - 11), int(cy - t.height / 2)), t)
     else: OUT(name, P(X441 + 20, (pts[0][1] if "Winston" not in name and "Sawgrass" not in name else (1366 if "Winston" in name else 1440)) + 22), 12 if kind != "col" else 10, anchor="ls")
 d.text(P(-780, 1300), "THE PROMENADE", fill="#fff2a8", font=font(12), anchor="ls", stroke_width=3, stroke_fill="#1b1b1b")
+for (a, b) in BLOCKS:                                          # road work: striped closures across Lyons
+    for k in range(0, 9):
+        y = a[1] + (b[1] - a[1]) * k / 8; d.line([P(a[0] - 16, y), P(a[0] + 16, y)], fill="#ff8c1a" if k % 2 == 0 else "#ffffff", width=5)
+    m = P(a[0], (a[1] + b[1]) / 2); d.rounded_rectangle([m[0] + 14, m[1] - 9, m[0] + 92, m[1] + 9], 4, fill="#ff8c1a"); d.text((m[0] + 53, m[1]), "ROAD WORK", fill="#1b1b1b", font=font(9), anchor="mm")
 for (lab, col, pts) in ROUTES:
     q = [P(*p) for p in pts]
     for i in range(len(q) - 1):
@@ -188,6 +215,9 @@ for (lab, col, pts) in ROUTES:
 def badge(x, y, txt, fill, fg="#1b1b1b", r=8):
     cx, cy = P(x, y); d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=fill, outline="#1b1b1b", width=2); d.text((cx, cy), txt, fill=fg, font=font(10), anchor="mm")
 def star(cx, cy, r=10): d.polygon([(cx + (r if k % 2 == 0 else r * .45) * math.sin(k * math.pi / 5), cy - (r if k % 2 == 0 else r * .45) * math.cos(k * math.pi / 5)) for k in range(10)], fill="#fff2a8", outline="#1b1b1b")
+for (lab, pts) in CUTS:
+    q = [P(*p) for p in pts]; d.line(q, fill="#22e0ff", width=3, joint="curve")
+    cx, cy = q[len(q) // 2]; d.rounded_rectangle([cx - 11, cy - 9, cx + 11, cy + 9], 4, fill="#22e0ff", outline="#1b1b1b"); d.text((cx, cy), lab, fill="#1b1b1b", font=font(10), anchor="mm")
 for x, y in BRIDGES: cx, cy = P(x, y); d.rectangle([cx - 7, cy - 11, cx + 7, cy + 11], outline="#e9e2c8", width=3)
 for x, y in JUMPS: badge(x, y, "J", "#ffe14a")
 for x, y in BREAKERS: badge(x, y, "P", "#ff5a4a", "white")
@@ -195,7 +225,7 @@ for x, y in HIDES: badge(x, y, "H", "#9a6bff", "white")
 for x, y in STARS: star(*P(x, y))
 for (lab, x, y, col, side) in SPOTS:
     cx, cy = P(x, y); d.ellipse([cx - 8, cy - 8, cx + 8, cy + 8], fill=col, outline="white", width=2); OUT(lab, (cx + 12 * side, cy), 12, anchor="lm" if side > 0 else "rm")
-OUT("COCONUT CREEK  -  PLAN v7 (draft 7: 2.5x scale, designed blocks)", (PAD, 16), 19)
+OUT("COCONUT CREEK  -  PLAN v7 (draft 8: through the landmarks)", (PAD, 16), 19)
 lx = int(P(XE, 0)[0]) + 36; ly = PAD + 70
 def leg(i, draw, text): y = ly + i * 27; draw(lx + 10, y); d.text((lx + 30, y), text, fill="#f0ead6", font=font(12), anchor="lm")
 OUT("KEY", (lx, ly - 30), 15)
@@ -206,11 +236,16 @@ leg(4, lambda x, y: d.rectangle([x - 7, y - 10, x + 7, y + 10], outline="#e9e2c8
 leg(5, lambda x, y: d.rectangle([x - 10, y - 7, x + 10, y + 7], fill="#7d8086"), "parking lot / drive aisles (cut through)")
 leg(6, lambda x, y: d.rectangle([x - 4, y - 4, x + 4, y + 4], fill="#e0c9a6", outline="#a8865a"), "house")
 leg(7, lambda x, y: d.line([(x - 10, y), (x + 10, y)], fill="#e8312a", width=6), "edge roadblock")
-OUT("PUBLIX TO DAVE: 3 WAYS", (lx, ly + 9 * 27), 15)
+leg(8, lambda x, y: (d.rounded_rectangle([x - 11, y - 9, x + 11, y + 9], 4, fill="#22e0ff", outline="#1b1b1b"), d.text((x, y), "#", fill="#1b1b1b", font=font(10), anchor="mm")), "hidden cut-through (list below)")
+leg(9, lambda x, y: d.line([(x - 10, y), (x + 10, y)], fill="#ff8c1a", width=6), "road work: Lyons blocked")
+OUT("PUBLIX TO DAVE", (lx, ly + 11 * 27), 15)
 for i, (lab, col, pts) in enumerate(ROUTES):
-    y = ly + 10 * 27 + i * 25; d.line([(lx, y), (lx + 22, y)], fill=col, width=5); d.text((lx + 30, y), lab, fill="#f0ead6", font=font(12), anchor="lm")
-OUT("BLOCK DESIGNS (no wiggles)", (lx, ly + 14 * 27), 15)
-for i, t in enumerate(["grid pocket: straight streets, T-junctions, alleys", "lake loop: ring drive = long fast sweeper, cul-de-sacs", "boulevard: divided entry, roundabout, 120 m bend"]):
-    d.text((lx, ly + 15 * 27 + i * 24), t, fill="#f0ead6", font=font(12))
+    y = ly + 12 * 27 + i * 38; d.line([(lx, y), (lx + 22, y)], fill=col, width=5)
+    for k, part in enumerate([lab[:lab.index(':') + 1], lab[lab.index(':') + 2:]]): d.text((lx + 30, y - 8 + k * 15), part, fill="#f0ead6" if k else col, font=font(11 if k else 12, k == 0), anchor="lm")
+OUT("CUT-THROUGHS", (lx, ly + 17 * 27), 15)
+CT_TXT = ["1  Publix lot, median gap across Winston", "2  Promenade plaza, round the fountain", "3  Cooper's Hawk valet lane", "4  dealer showroom glass, car-row slalom",
+          "5  City Hall plaza, jump the steps", "6  canal path behind the houses", "7  shop alley, Walgreens drive-thru", "8  McDonald's drive-thru", "9  Butterfly World service gate",
+          "10 smash the Wynmoore gate, golf course", "11 football field, out the bus loop", "12 Walmart loading-dock ramp"]
+for i, t in enumerate(CT_TXT): d.text((lx, ly + 18 * 27 + i * 20), t, fill="#bff6ff", font=font(11))
 sx, sy = P(XW, YS - 30); d.line([(sx, sy), (sx + 250 * S, sy)], fill="white", width=4); OUT("250 m  (~9 s at 100 km/h)", (sx + 125 * S, sy - 11), 11, anchor="mm")
 im.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), "plan_v7.png")); print(W, H, len(HOUSES), "houses")
