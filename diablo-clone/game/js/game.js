@@ -67,6 +67,7 @@ function startLevel(level, seed) {
   flowT = 0; computeFlow();
   warmStep(1e9, prewarm());   // idle poses + the hero's walk now, behind the level fade; the rest during play
   G.msg = [];
+  if (LV.night) say('NIGHT HAS FALLEN', 39, 3);
   say(LV.outdoor ? areaName() : `${TH().name} LEVEL ${LV.depth}`, 51, 3);
   if (!LV.outdoor && isBossFloor(LV.depth)) say('SOMETHING VAST STIRS IN THE DARK', 22, 4);
   if (LV.area === 'forest') say(LV.autumn ? 'A TREANT ELDER HOLDS THE WAY DOWN' : 'AN OGRE WARLORD HOLDS THE WAY DOWN', 22, 4);
@@ -787,8 +788,10 @@ function lightPass(chars, kx, ky) {
   const t = G.t;
   cyclePalette(t);
   // outdoors: flat daylight at the identity level (the ramps as drawn), no hero light
-  const amb = LV.outdoor ? 0.6 : 0;
-  const dyn = LV.outdoor ? [] : [{ x: kx, y: ky, z: 34, r: 145, i: 0.62 }];
+  // night outdoors (every third town and forest): dim moonlight, the hero carries a light, and the
+  // lanterns, fires and windows matter
+  const amb = LV.outdoor ? (LV.night ? 0.3 : 0.6) : 0;
+  const dyn = LV.outdoor && !LV.night ? [] : [{ x: kx, y: ky, z: 34, r: LV.night ? 120 : 145, i: LV.night ? 0.42 : 0.62 }];
   for (const p of projectiles) if (p.kind !== 'arrow' && dyn.length < 5) { const [x, y] = iso(p.fi, p.fj); dyn.push({ x, y, z: p.z, r: 70, i: 0.8 }); }
   const fl = g => 1 + 0.07 * Math.sin(t * 11 + g * 2.3) + 0.05 * Math.sin(t * 23.7 + g * 5.1) + 0.04 * Math.sin(t * 37 + g);
   const f0 = fl(0), f1 = fl(1), A = staticLight[0], B = staticLight[1];

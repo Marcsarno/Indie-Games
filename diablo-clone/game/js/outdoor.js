@@ -695,17 +695,18 @@ function buildOutdoor(back) {
     } else if (d.kind === 'lantern' || d.kind === 'signpost' || d.kind === 'pumpkin') {
       const [x, y] = iso(d.fi, d.fj), sp = d.kind === 'lantern' ? OUT.lantern() : d.kind === 'signpost' ? OUT.signpost() : OUT.pumpkin(d.seed);
       props.push({ depth: d.fi + d.fj, sp, wx: x, wy: y + 1, tile: tIdx(Math.floor(d.fi), Math.floor(d.fj)) });
-      if (d.kind === 'lantern') lights.push({ x: x + 4, y, z: 20, r: 60, i: 0.25, seed: Math.floor(x) });
+      if (d.kind === 'lantern') lights.push({ x: x + 4, y, z: 20, r: LV.night ? 110 : 60, i: LV.night ? 0.7 : 0.25, seed: Math.floor(x) });
     } else if (d.kind === 'campfire') {
       const [x, y] = iso(d.i + 0.5, d.j + 0.5);
       props.push({ depth: d.i + d.j + 1, sp: OUT.campfire(), wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
       fires.push({ wx: x, wy: y - 2, h: 14, w: 5, seed: d.i * 31 + d.j, ember: 0.12, tile: tIdx(d.i, d.j) });
-      lights.push({ x, y, z: 16, r: 90, i: 0.35, seed: d.i + d.j * 7 });
+      lights.push({ x, y, z: 16, r: LV.night ? 150 : 90, i: LV.night ? 0.9 : 0.35, seed: d.i + d.j * 7 });
     } else if (BUILD[d.kind.replace('2', '')] || d.kind === 'stall2') {
       const dw = d.w || 1, dh = d.h || 1, ci = d.i + dw / 2, cj = d.j + dh / 2, [x, y] = iso(ci, cj);   // forest tents have no footprint size
       const sp = d.kind === 'stall' ? BUILD.stall(0) : d.kind === 'stall2' ? BUILD.stall(1) : BUILD[d.kind]();
       props.push({ depth: ci + cj + 0.5, sp, wx: x, wy: y, tile: tIdx(d.i + dw - 1, d.j + dh - 1) });
       shadows.push([x + 10, y + 6, (dw + dh) * 11, (dw + dh) * 5]);
+      if (LV.night && (d.kind === 'cabin' || d.kind === 'hut')) lights.push({ x: x + 12, y: y + 4, z: 12, r: 90, i: 0.6, seed: d.i });   // warm windows
       if (d.kind === 'forge') {
         const [fx, fy] = iso(ci + 1.2, cj + 0.15);
         lights.push({ x: fx, y: fy, z: 8, r: 60, i: 0.3, seed: 5 });

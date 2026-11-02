@@ -67,7 +67,7 @@ function genLevel(level, seed) {
   // levels cycle town -> forest -> three dungeon floors (outdoor.js); LV.diff drives difficulty
   const A = areaOf(level);
   resizeWorld(A.kind === 'forest' ? 64 : 40, A.kind === 'forest' ? 64 : 40);
-  LV.area = A.kind; LV.cyc = A.cyc; LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.autumn = A.cyc % 2 === 1; LV.plaza = null; LV.npcs = []; LV.critters = [];
+  LV.area = A.kind; LV.cyc = A.cyc; LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.autumn = A.cyc % 2 === 1; LV.night = A.kind !== 'dungeon' && A.cyc % 3 === 2; LV.plaza = null; LV.npcs = []; LV.critters = [];
   if (LV.outdoor) { LV.theme = A.kind; genOutdoor(level, seed, A); LV.level = level; LV.seed = seed; return; }
   LV.theme = themeOf(LV.depth);
   for (let attempt = 0; attempt < 20; attempt++) if (tryGen(LV.diff, seed + attempt * 7919)) { LV.level = level; LV.seed = seed; return; }
