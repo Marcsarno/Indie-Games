@@ -203,7 +203,7 @@ const $ = id => document.getElementById(id);
 for (const t of ['gesturestart', 'gesturechange', 'dblclick', 'contextmenu', 'selectstart']) document.addEventListener(t, e => { if (!(e.target.closest && e.target.closest('input, textarea'))) e.preventDefault(); }, { passive: false });   // iOS: no page zoom, no copy/paste popup while playing
 { let lastEnd = 0; document.addEventListener('touchend', e => { const t = performance.now(); if (t - lastEnd < 320 && !(e.target.closest && e.target.closest('input, textarea'))) e.preventDefault(); lastEnd = t; }, { passive: false }); }   // double-tap zoom
 for (const el of [$('view'), $('pad'), $('padf')]) for (const t of ['touchstart', 'touchmove']) el.addEventListener(t, e => e.preventDefault(), { passive: false });   // iOS: no long-press magnifier, no swipe-back while a thumb is on the game (the controls use pointer events, which still fire)
-const WN = location.hash === '#chinatown' ? 'chinatown' : 'coconut', WD = 'worlds/' + WN + '/';      // which world to load (hash #chinatown or default)
+const WN = (location.search.match(/[?&]world=(\w+)/) || [])[1] || (location.hash === '#chinatown' ? 'chinatown' : 'coconut'), WD = 'worlds/' + WN + '/';      // ?world=cc = the rebuilt city (round 38, in progress)      // which world to load (hash #chinatown or default)
 addEventListener('hashchange', () => location.reload());
 const MAN = JSON.parse('__MANIFEST__'.startsWith('__') ? '{}' : '__MANIFEST__');            // content hash per asset, written by build.sh on Vercel: unchanged files stay in the browser cache across deploys
 const A = u => MAN[u] ? u + '?v=' + MAN[u] : u;
@@ -572,7 +572,7 @@ const DENV = {                                     // what the Dave mission read
   freeze: on => { paused = on; },
   kick: (vx, vz, spin) => { if (DENV.invuln) return; if (drive && hmode === 'driving') { drive.vx += vx; drive.vz += vz; drive.w += spin; rig.shake = Math.min(1, rig.shake + .5); const m = Math.hypot(vx, vz) || 1; crashFx(drive, drive.x - vx / m * 2.2, drive.z - vz / m * 2.2, vx / m, vz / m, m * 3); } },      // a rocket cop slams into you
 };
-const missions = !graph ? null : DEV ? createMissions(graph, { THREE, scene, groundH, banner: t => banner(t), addMoney: v => { game.money += v; }, cops, heights: world.heights })
+const missions = !graph || WN !== 'coconut' ? null : DEV ? createMissions(graph, { THREE, scene, groundH, banner: t => banner(t), addMoney: v => { game.money += v; }, cops, heights: world.heights })
   : createDave({ THREE, scene, makePerson: o => makePerson(o), makeCar: (k, c) => makeCar(k, c), play: (a, n, o) => play(a, n, o), walkers, colliders, carPoly: (x, z, th, d) => carPoly(x, z, th, d), placeOnGround, banner: t => banner(t), cops, graph, camera, env: DENV, pushCircle: (x, z, r, skip) => pushCircle(x, z, r, skip), burst: (x, y, z, nx, nz, p) => burst(x, y, z, nx, nz, p) });
 const MPX = { x: 0, z: 0, vx: 0, vz: 0, th: 0, speed: 0, driving: false };
 const launcher = !launcherG ? null : createLauncher({ THREE, scene, glb: launcherG, camera, pushCircle: (x, z, r, sk) => pushCircle(x, z, r, sk), getCar: () => (hmode === 'driving' && drive ? drive : null), carHeight: car => car.fxH || (car.fxH = carHeight(car)),
@@ -1157,6 +1157,7 @@ function cineStep(dt) {
 }
 const LMK3 = n => { const L = LMK.find(q => q.n === n); return [L.x, -L.y]; };
 function titleShots() {                             // drift over the best landmarks, a slow swing round each one
+  if (world.landmarks) return world.landmarks.slice(0, 6).map(([n, x, y], i) => ({ a: [x + 6, -y], b: [x - 6, -y], y0: i * 1.1, y1: i * 1.1 + .7, pitch: 30, d0: 70, d1: 62, dur: 8, fade: true }));     // the rebuilt city lists its own
   const sh = (n, dx, dz, y0, y1, d = 62, pitch = 30) => { const [x, z] = LMK3(n); return { a: [x + dx, z + dz], b: [x - dx, z - dz], y0, y1, pitch, d0: d, d1: d - 8, dur: 8, fade: true }; };
   return [sh('Publix', 6, 0, -.45, .25), sh('Casino', 0, 6, -.4, .4, 70), sh('City Hall', -6, 0, 3.6, 4.3, 58), sh('Promenade', 0, -6, 2.9, 3.6, 64), sh('Trash Mountain', 6, 4, .9, 1.6, 90, 34), sh('Police', 0, 6, 5.6, 6.3, 56)];
 }
@@ -1320,7 +1321,7 @@ function drawBigMap() {
       g.save(); g.translate(X((a[0] + b[0]) / 2), Y((a[1] + b[1]) / 2)); g.rotate(ang); g.lineWidth = 3; g.strokeStyle = 'rgba(20,24,30,.85)'; g.strokeText(name, 0, 0); g.fillStyle = '#fff'; g.fillText(name, 0, 0); g.restore(); }
   }
   g.font = '700 12px Barlow Condensed, sans-serif'; g.textAlign = 'center';
-  for (const [n, p] of MAPLAB) { const x = X((p[0] - 690) * .43), y = Y(-(p[1] - 545) * .43); g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(n.toUpperCase(), x, y); g.fillStyle = '#ffd23f'; g.fillText(n.toUpperCase(), x, y); }
+  for (const [n, p] of (world.landmarks ? world.landmarks.map(l => [l[0], [690 + l[1] / .43, 545 - l[2] / .43]]) : MAPLAB)) { const x = X((p[0] - 690) * .43), y = Y(-(p[1] - 545) * .43); g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(n.toUpperCase(), x, y); g.fillStyle = '#ffd23f'; g.fillText(n.toUpperCase(), x, y); }
   if (missions) for (const m of missions.list) if (!m.done) { g.beginPath(); g.arc(X(m.a[0]), Y(m.a[1]), 6, 0, 7); g.fillStyle = '#ffd23f'; g.fill(); g.lineWidth = 2; g.strokeStyle = '#111'; g.stroke(); }
   const px = hmode === 'foot' ? foot.x : drive ? drive.x : rig.tx, pz = hmode === 'foot' ? foot.z : drive ? drive.z : rig.tz, face = hmode === 'foot' ? foot.face : drive ? drive.th : 0;
   g.save(); g.translate(X(px), Y(-pz)); g.rotate(-face); g.beginPath(); g.moveTo(0, -11); g.lineTo(8, 8); g.lineTo(0, 4); g.lineTo(-8, 8); g.closePath(); g.fillStyle = '#5cff7a'; g.fill(); g.lineWidth = 2.5; g.strokeStyle = '#0b1a10'; g.stroke(); g.restore();
@@ -1390,7 +1391,7 @@ cv.addEventListener('wheel', e => { e.preventDefault(); if (rig.mode === 'drive'
 const game = { money: world.money, hp: 100 };
 const mini = $('mini'), mx = mini.getContext('2d'); let miniT = 0, lastCash = -1, lastHp = -1;
 if (!world.map) $('minibox').hidden = true;
-const LMK = [['Publix', 868, 372, '#2e8b3e', 'P'], ['Casino', 1180, 495, '#c8901e', '$'], ['City Hall', 930, 620, '#2f6fb3', 'H'], ['Police', 1030, 640, '#1d3f8a', '★'], ['Promenade', 1120, 960, '#c2457a', 'M'], ['Stadium', 1015, 735, '#5a7d2a', 'S'], ['Trash Mountain', 997, 183, '#7a5a2a', '▲']].map(([n, x, y, col, ch]) => ({ n, x: (x - 690) * .43, y: -(y - 545) * .43, col, ch }));     // reference-map px -> Blender metres
+const LMK = world.landmarks ? world.landmarks.map(([n, x, y, col, ch]) => ({ n, x, y, col, ch })) : [['Publix', 868, 372, '#2e8b3e', 'P'], ['Casino', 1180, 495, '#c8901e', '$'], ['City Hall', 930, 620, '#2f6fb3', 'H'], ['Police', 1030, 640, '#1d3f8a', '★'], ['Promenade', 1120, 960, '#c2457a', 'M'], ['Stadium', 1015, 735, '#5a7d2a', 'S'], ['Trash Mountain', 997, 183, '#7a5a2a', '▲']].map(([n, x, y, col, ch]) => ({ n, x: (x - 690) * .43, y: -(y - 545) * .43, col, ch }));     // reference-map px -> Blender metres
 const ROUTE = { t: 0, key: '', pts: null };
 function routeTo(px, py, tx, ty) {                // shortest drive along the lane graph (Blender metres in and out): node nearest you -> node nearest the target
   if (!graph) return null; const N = graph.nodes, E = graph.edges, near = (x, y) => { let b = 0, bd = 1e18; N.forEach((n, i) => { const d = (n.x - x) ** 2 + (n.y - y) ** 2; if (d < bd) { bd = d; b = i; } }); return b; };
@@ -1460,7 +1461,7 @@ function stuckStep(dt) {                         // the button only shows when y
   try { renderer.compile(scene, camera); renderer.render(scene, camera); } catch (e) { /* ok */ }
   for (const o of vis) o.visible = false; for (const [o, f] of fc) o.frustumCulled = f;
 })();
-const SAVE_KEY = 'gtcc-save';
+const SAVE_KEY = 'gtcc-save' + (WN === 'coconut' ? '' : '-' + WN);
 function saveGame() { if (noSave) return; try { const d = drive && hmode === 'driving' && drive === heroVeh() ? drive : null; localStorage.setItem(SAVE_KEY, JSON.stringify({ t: Date.now(), money: Math.round(game.money), car: track.active && track.back ? track.back.map(v => +v.toFixed(3)) : d ? [+d.x.toFixed(1), +d.z.toFixed(1), +d.th.toFixed(3)] : null, done: missions ? missions.list.filter(m => m.done).map(m => m.id) : [] })); } catch (e) { /* storage may be blocked */ } }
 try { const sv = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
   if (sv && Date.now() - sv.t < 14 * 864e5 && !/[?&]fresh/.test(location.search)) { game.money = sv.money; if (missions) { for (const m of missions.list) if ((sv.done || []).includes(m.id)) m.done = true; missions.refresh(); } if (sv.car && Math.abs(sv.car[0]) < 400 && Math.abs(sv.car[1]) < 400) resetCar(sv.car[0], sv.car[1], sv.car[2]); }

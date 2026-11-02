@@ -4,7 +4,7 @@ is DESIGNED from straights and true circular arcs instead of wiggly streets (use
   grid pocket (straight streets, T-junctions, an alley), lake loop (a ring drive round a lake = a long fast sweeper, cul-de-sacs), boulevard + roundabout.
 Coordinates in metres: x east, y north, origin = Lyons Rd at Coconut Creek Pkwy. Run: python3 plan_v7.py -> plan_v7.png"""
 from PIL import Image, ImageDraw, ImageFont
-import math, os
+import math, os, json
 
 X441, XBANKS, XLYONS, XPOWER = -825, -450, 0, 825
 Y = dict(pkwy=0, copans=500, sample=800, wiles=1075, winston=1312, johnson=1625, hillsboro=1825)
@@ -272,3 +272,23 @@ OUT("DETOURS", (lx, ly + 17 * 27 + 8), 15)
 for i, (t, col) in enumerate(CT_TXT): d.text((lx, ly + 18 * 27 + 8 + i * 19), t, fill=col, font=font(11))
 sx, sy = P(XW, YS - 30); d.line([(sx, sy), (sx + 250 * S, sy)], fill="white", width=4); OUT("250 m  (~9 s at 100 km/h)", (sx + 125 * S, sy - 11), 11, anchor="mm")
 im.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), "plan_v7.png")); print(W, H, len(HOUSES), "houses")
+
+# ---- layout.json: the plan as data for the 3D builder (blender/scripts/cc_scene.py) and the traffic graph (cc_graph.py) ----
+def _ell(cx, cy, rx, ry, n=72): return [(round(cx + rx * math.cos(2 * math.pi * i / n), 2), round(cy + ry * math.sin(2 * math.pi * i / n), 2)) for i in range(n)]
+_rp = lambda pts: [[round(x, 2), round(y, 2)] for x, y in pts]
+_roads, _nloc = [], 0
+for name, pts, w, kind in ROADS:
+    if not name: _nloc += 1; name = f"{kind}_{_nloc}"
+    _roads.append(dict(name=name, kind=kind, w=w, pts=_rp(pts), closed=False))
+for i, (cx, cy, rx, ry) in enumerate(RINGS): _roads.append(dict(name=f"ring_{i}", kind="loc", w=9 if rx > 60 else 7, pts=_rp(_ell(cx, cy, rx, ry)), closed=True))
+LAYOUT = dict(
+    bounds=dict(xw=XW, xe=XE, ys=YS, yn=YN), arterials=dict(x441=X441, xbanks=XBANKS, xlyons=XLYONS, xpower=XPOWER, **Y), canal=dict(x=XCANAL, y0=-230, y1=Y["sample"], w=14),
+    roads=_roads, culs=[dict(x=x, y=y, r=r) for x, y, r in CULS], roundabouts=[dict(x=x, y=y, r=r) for x, y, r in RBTS],
+    lakes=[dict(x=cx, y=cy, rx=rx, ry=ry) for cx, cy, rx, ry in LAKES], houses=_rp(HOUSES),
+    zones=[dict(label=lab, poly=_rp(poly), color=col) for lab, poly, col, tc in ZONES],
+    lots=[dict(poly=_rp(poly), dir=dirn, step=step, buildings=[dict(x0=a, y0=b, x1=c, y1=e, color=col, label=lab) for a, b, c, e, col, lab in blds]) for poly, blds, step, dirn in LOTS],
+    jumps=_rp(JUMPS), breakers=_rp(BREAKERS), hides=_rp(HIDES), stars=_rp(STARS), bridges=_rp(BRIDGES),
+    cuts=[dict(label=lab, color=col, pts=_rp(pts)) for lab, col, pts in CUTS], blocks=[dict(x=x, y=y, along=al, color=col) for x, y, al, col in BLOCKS],
+    routes=[dict(label=lab, color=col, pts=_rp(pts)) for lab, col, pts in ROUTES], dave=list(DAVE), publix=list(PUBLIX), gate=[50, 360])
+json.dump(LAYOUT, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "layout.json"), "w"), separators=(",", ":"))
+print("layout.json", len(_roads), "roads", len(HOUSES), "houses")
