@@ -84,6 +84,10 @@ defMat('WATERM', WATER, 2, { span: 0.6, spec: [0.95, 118] });
 defMat('CLOTH_TAN', [33, 99, 100, 101, 102], 2, { span: 0.6 });
 defMat('CLOTH_WHITE', [24, 25, 26, 27], 2, { span: 0.6 });
 defMat('LAMP', [17], 0, { flat: true, emis: true });
+// chibi faces read best almost flat and light, like the references
+defMat('FACE', [61, 62, 63, 125], 2, { span: 0.45 });
+defMat('EYE', [2], 0, { flat: true });
+defMat('MOUTH', [61], 0, { flat: true });
 defMat('GOBLIN', [52, 53, 54, 55, 97], 2, { span: 0.9 });
 defMat('FUR', [2, 65, 66, 67, 68, 69], 4, { span: 0.9 });   // wolf grey
 

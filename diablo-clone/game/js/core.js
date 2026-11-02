@@ -35,6 +35,7 @@ const PAL_HEX = [
   '142a44', '1e4566', '2f6a8a', '5b9cb4', 'a8d8e0',                     // 114-118 water
   '4a1a14', '7a2c1a', 'a8461e', 'cf6e2a',                               // 119-122 autumn leaves
   '3fae3a', '8af06a',                                                   // 123-124 lime (markers, emissive only)
+  'f2cc9e',                                                             // 125 light skin (top of the skin ramp)
 ];
 const NPAL = PAL_HEX.length;
 const PR = new Uint8Array(NPAL), PG = new Uint8Array(NPAL), PB = new Uint8Array(NPAL);
@@ -56,7 +57,7 @@ const FLESH = [44, 45, 46, 47];
 const GOLD = [48, 49, 50, 51];
 const GREEN = [52, 53, 54, 55];
 const PURPLE = [56, 57, 58, 59];
-const SKIN = [60, 61, 62, 63];
+const SKIN = [60, 61, 62, 63, 125];
 const CAVE = [64, 65, 66, 67, 68, 69];
 const FUNGUS = [70, 71, 72];
 const HELL = [73, 74, 75, 76, 77, 78];
