@@ -277,17 +277,30 @@ def lot_edge(a0, a1, b, vert, blds):
 BRAND_DEALERS = ("FORD", "TOYOTA", "HONDA", "KIA", "CHEVROLET", "NISSAN")
 
 def dealer_cars(lot, blds):
-    """Dealer display lots: tight rows of new cars nose-to-the-road (static, linked duplicates, box colliders)."""
-    x0, x1, y0, y1 = lot; by0 = min(b_["y0"] for b_ in blds)
-    y = y0 + 6; r = 0
-    while y < by0 - 8:
-        x = x0 + 5
-        while x < x1 - 4:
-            if RF.random() < .9:
-                c = CARCOL[(int(x * 7) + r * 3) % len(CARCOL)]; o = linked(f"dcar_{c[1:]}", lambda nm, c=c: display_car(nm, c)); place(o, x, y, "s"); cbox(x, y, 1.9, 4.5)
-            x += 3.1
-        y += 6.4 if r % 2 == 0 else 8.5; r += 1
-
+    """Round 41 (user: "just like three rows of like five cars each, kind of spread out... a show area... a shop, a repair area, car wash"):
+    a raised show pad up front (3 x 5 cars, angled), a hero car on a ramp, brand flags, a small customer lot, a service building + car wash beside the showroom."""
+    x0, x1, y0, y1 = lot; cx = (x0 + x1) / 2; key = blds[0]["label"].lower(); A = flat(acc(key))
+    BB.box(flat("#d9d6cf"), cx - 23, cx + 23, y0 + 5, y0 + 37, 0, .2); BB.box(A, cx - 23, cx + 23, y0 + 4.6, y0 + 5, 0, .22)          # show pad with a brand-colour edge
+    for r in range(3):
+        for i in range(5):
+            x, y = cx - 17 + i * 8.5, y0 + 11 + r * 10.5; c = CARCOL[(i * 3 + r * 5 + len(key)) % len(CARCOL)]
+            o = linked(f"dcar_{c[1:]}", lambda nm, c=c: display_car(nm, c)); place(o, x, y, rz=25 if (i + r) % 2 else -25); o.location.z = .2; cbox(x, y, 2.2, 4.6, 25 if (i + r) % 2 else -25)
+    hx, hy = x0 + 9, y0 + 14; BB.box(flat("#9aa0a6"), hx - 3.2, hx + 3.2, hy - 3.2, hy + 3.2, 0, 1.3); BB.box(A, hx - 3.3, hx + 3.3, hy - 3.3, hy + 3.3, 1.3, 1.4)   # hero car up on a plinth
+    c = CARCOL[4]; o = linked(f"dcar_{c[1:]}", lambda nm, c=c: display_car(nm, c)); place(o, hx, hy, rz=-35); o.location.z = 1.4; cbox(hx, hy, 6.6, 6.6)
+    for i in range(8):                                                                            # flag poles along Sample
+        fx = x0 + 6 + i * 11; tbox(FIX, flat("#d8dcdf"), fx - .07, fx + .07, y0 + 1.6, y0 + 1.75, 0, 7.0); tbox(FIX, A if i % 2 else flat("#f4f6f8"), fx + .07, fx + 1.6, y0 + 1.62, y0 + 1.72, 5.6, 6.8)
+    place(pylon(f"py_{key}", key, 9.0, 5.0), x1 - 5, y0 + 3, "s")
+    for yy in (y0 + 46, y0 + 63):                                                                 # small customer lot: two rows of stalls, a few cars
+        for xx in range(int(x0 + 18), int(x1 - 14), 3):
+            RB.box(m["white"], xx - .05, xx + .05, yy, yy + 5.2, .028, .034)
+            if RF.random() < .3: c = CARCOL[RF.randrange(len(CARCOL))]; o = linked(f"dcar_{c[1:]}", lambda nm, c=c: display_car(nm, c)); place(o, xx + 1.5, yy + 2.6, rz=0 if yy > y0 + 50 else 180); cbox(xx + 1.5, yy + 2.6, 1.9, 4.5)
+    def bays(b, hx_, hy_, h):
+        for i in range(3): x = -hx_ + 4 + i * 7; b.box(flat("#8d9096"), x - 2.6, x + 2.6, -hy_ - .08, -hy_, .1, 4.4)
+    sx, sy = x0 + 8.5, y0 + 84; place(bldg(f"svc_{key}", 22, 14, 6.5, wall="#d6d2c8", key="service", accent=acc(key), canopy=False, sign_h=1.4, extra=bays), sx, sy, "e"); cbox(sx, sy, 14, 22)
+    wx, wy = x1 - 6, y0 + 80; place(carwash(f"cw_{key}", "carwash"), wx, wy, "w"); cbox(wx, wy, 9, 30)
+    BB.box(flat("#cfcac0"), sx + 7, sx + 16, sy - 11, sy + 11, 0, .05)                                # service apron
+    BB.box(flat("#5f9a3c"), x0 + 3, x1 - 3, y0 + 39.5, y0 + 42.5, 0, .16)                              # planted strip between the show pad and the customer lot
+    for i in range(6): prop("palm_medium" if i % 2 else "shrub_a", x0 + 8 + i * 14.5, y0 + 41)
 # ------------------------------------------------------------------ outparcel pads along US 441 and Powerline ------------------------------------------------------------------
 def in_water(x, y, m=6):
     for lk in LP["lakes"]:
