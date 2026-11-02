@@ -20,19 +20,30 @@ const areaName = () => LV.outdoor ? AREA_NAMES[LV.area][LV.cyc % 3] : `${TH().na
 // interpolated per pixel, so edges are smooth without a per-pixel search
 const PF = 4;
 let PW = MW * PF + 1, PH = MH * PF + 1, pathField = new Float32Array(PW * PH);
+// the same field for the forest's river (LV.river segments); 99 everywhere when there is none
+let riverField = new Float32Array(PW * PH);
 function bakePathField() {
-  if (PW !== MW * PF + 1 || PH !== MH * PF + 1) { PW = MW * PF + 1; PH = MH * PF + 1; pathField = new Float32Array(PW * PH); }
-  pathField.fill(99);
-  for (const [x0, y0, x1, y1, w] of LV.paths) {
+  if (PW !== MW * PF + 1 || PH !== MH * PF + 1) { PW = MW * PF + 1; PH = MH * PF + 1; pathField = new Float32Array(PW * PH); riverField = new Float32Array(PW * PH); }
+  bakeSegField(pathField, LV.paths);
+  bakeSegField(riverField, LV.river || []);
+}
+function bakeSegField(field, segs) {
+  field.fill(99);
+  for (const [x0, y0, x1, y1, w] of segs) {
     const dx = x1 - x0, dy = y1 - y0, l2 = dx * dx + dy * dy || 1;
     const a0 = Math.max(0, Math.floor((Math.min(x0, x1) - 4) * PF)), a1 = Math.min(PW - 1, Math.ceil((Math.max(x0, x1) + 4) * PF));
     const b0 = Math.max(0, Math.floor((Math.min(y0, y1) - 4) * PF)), b1 = Math.min(PH - 1, Math.ceil((Math.max(y0, y1) + 4) * PF));
     for (let b = b0; b <= b1; b++) for (let a = a0; a <= a1; a++) {
       const px = a / PF, py = b / PF, t = clamp(((px - x0) * dx + (py - y0) * dy) / l2, 0, 1);
       const d = Math.hypot(px - x0 - dx * t, py - y0 - dy * t) - w;
-      if (d < pathField[b * PW + a]) pathField[b * PW + a] = d;
+      if (d < field[b * PW + a]) field[b * PW + a] = d;
     }
   }
+}
+function riverD(fi, fj) {
+  if (!LV.river || !LV.river.length) return 99;
+  const x = clamp(fi * PF, 0, PW - 1.001), y = clamp(fj * PF, 0, PH - 1.001), xi = x | 0, yi = y | 0, fx = x - xi, fy = y - yi, k = yi * PW + xi;
+  return (riverField[k] * (1 - fx) + riverField[k + 1] * fx) * (1 - fy) + (riverField[k + PW] * (1 - fx) + riverField[k + PW + 1] * fx) * fy;
 }
 function pathD(fi, fj) {   // signed distance to the nearest path edge, in tiles (< 0 = on the path)
   const x = clamp(fi * PF, 0, PW - 1.001), y = clamp(fj * PF, 0, PH - 1.001), xi = x | 0, yi = y | 0, fx = x - xi, fy = y - yi;
@@ -52,6 +63,7 @@ function addPath(a, b, w, R) {
 }
 
 // ---------------------------------------------------------------- generation
+const rdNoise = (A, B) => (vnoise(A, B, 11, 91) - 0.5) * 0.18;
 // normalized distance to the nearest pond's wobbly edge (< 1 = water)
 function pondD(fi, fj) {
   let best = 9;
@@ -64,7 +76,7 @@ function pondD(fi, fj) {
 }
 function genOutdoor(level, seed, A) {
   const R = rng(seed);
-  LV.ponds = [];
+  LV.ponds = []; LV.river = []; LV.bridges = [];
   LV.map.fill(FLOOR); LV.solid.fill(0); LV.tall.fill(0); LV.roomOf.fill(-1); LV.seen.fill(1); LV.vis.fill(1);
   LV.decor = []; LV.spawns = []; LV.paths = []; LV.rooms = []; LV.npcs = [];
   bakeCanopy(A.cyc % 2 === 1);   // before the floor bake, which samples it past the map edge
@@ -111,6 +123,14 @@ function genForest(R, A) {
     addPath([C[best[0]].x, C[best[0]].y], [C[best[1]].x, C[best[1]].y], 0.75, R); inTree.push(best[1]);
   }
   for (let e = 0; e < 2; e++) { const a = R.int(0, C.length - 1), b = R.int(0, C.length - 1); if (a !== b) addPath([C[a].x, C[a].y], [C[b].x, C[b].y], 0.6, R); }
+  // a river meanders across the forest; wherever a path crosses it there is a plank bridge
+  {
+    let j = MH * (0.35 + R() * 0.3), dj = 0, prev = [0, j];
+    for (let i = 1; i <= MW; i++) {
+      dj = clamp(dj + (R() - 0.5) * 0.5, -0.7, 0.7); j = clamp(j + dj, MH * 0.2, MH * 0.8);
+      LV.river.push([prev[0], prev[1], i, j, 1.15 + Math.sin(i * 0.3) * 0.2]); prev = [i, j];
+    }
+  }
   bakePathField();
   LV.rooms = C.map(c => ({ x: Math.floor(c.x - c.r), y: Math.floor(c.y - c.r), w: Math.ceil(c.r * 2), h: Math.ceil(c.r * 2), cx: Math.floor(c.x), cy: Math.floor(c.y), clr: c }));
   LV.start = LV.rooms[0];
@@ -118,12 +138,17 @@ function genForest(R, A) {
   LV.rooms.forEach((r, n) => { const d = Math.hypot(r.cx - LV.start.cx, r.cy - LV.start.cy); if (n && d > fd) { fd = d; far = n; } });
   LV.stairs = { i: LV.rooms[far].cx, j: LV.rooms[far].cy, room: far, entrance: true };
   plantEdge(R, autumn);
+  // river tiles are water (solid) except where a path crosses: those are bridges
+  for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
+    if (riverD(i + 0.5, j + 0.5) >= 0.05) continue;
+    if (pathD(i + 0.5, j + 0.5) < 0.35) { LV.solid[tIdx(i, j)] = 0; LV.bridges.push([i, j]); } else LV.solid[tIdx(i, j)] = 1;
+  }
   const inClearing = (i, j) => C.some(c => Math.hypot(i + 0.5 - c.x, j + 0.5 - c.y) < c.r + 0.6);
   // ponds in the woods away from paths and clearings; their tiles are solid water
   LV.ponds = [];
   for (let t = 0; t < 400 && LV.ponds.length < Math.round(3 * area); t++) {
     const x = 6 + R() * (MW - 12), y = 6 + R() * (MH - 12), rx = 1.8 + R() * 2.2, ry = 1.6 + R() * 1.8;
-    if (pathD(x, y) < Math.max(rx, ry) + 1.2 || C.some(c => Math.hypot(c.x - x, c.y - y) < c.r + Math.max(rx, ry) + 1) || LV.ponds.some(p => Math.hypot(p.x - x, p.y - y) < 8)) continue;
+    if (pathD(x, y) < Math.max(rx, ry) + 1.2 || riverD(x, y) < Math.max(rx, ry) + 2 || C.some(c => Math.hypot(c.x - x, c.y - y) < c.r + Math.max(rx, ry) + 1) || LV.ponds.some(p => Math.hypot(p.x - x, p.y - y) < 8)) continue;
     LV.ponds.push({ x, y, rx, ry, seed: R.int(1, 1e6) });
     for (let j = Math.floor(y - ry - 1); j <= y + ry + 1; j++) for (let i = Math.floor(x - rx - 1); i <= x + rx + 1; i++) if (i > 0 && j > 0 && i < MW && j < MH && pondD(i + 0.5, j + 0.5) < 1.1) LV.solid[tIdx(i, j)] = 1;
   }
@@ -326,6 +351,23 @@ const canopyAt = (x, y) => CANOPY[(((y % 64) + 64) % 64) * 96 + (((x % 96) + 96)
 function outdoorFloor(x, y, A, B, ti, tj) {
   if (ti < 0 || tj < 0 || ti >= MW || tj >= MH) return canopyAt(x, y);
   const fi = A / 32, fj = B / 32;
+  if (LV.river && LV.river.length) {
+    const rd = riverD(fi, fj) + (rdNoise(A, B));
+    if (rd < 0.25) {
+      if (rd < 0 && pathD(fi, fj) < 0.45) {   // a bridge: planks across the current, dark gaps, rail shadows
+        const pl = Math.floor((A + B) / 6), gap = ((A + B) % 6 + 6) % 6 < 1;
+        if (pathD(fi, fj) > 0.25) return DIRT[1];
+        return gap ? DIRT[0] : DIRT[2 + (hash(pl, 3, 92) * 2 | 0)];
+      }
+      if (rd < 0) {   // flowing water: streaks along the current, darker in the middle
+        let t = rd < -0.6 ? 1 : 2;
+        if (hash(Math.floor((A - B) / 9), Math.floor((A + B) / 2), 93) < 0.08) t = 3;
+        if (hash(x, y, 94) < 0.008) t = 4;
+        return WATER[t];
+      }
+      return rd < 0.12 ? DIRT[4] : BAYER[((y & 3) << 2) | (x & 3)] < (0.25 - rd) / 0.13 ? DIRT[3] : grassAt(x, y, A, B);
+    }
+  }
   if (LV.ponds && LV.ponds.length) {   // water: deeper toward the middle, ripple lines, lily pads; a sandy shore
     const wd = pondD(fi, fj);
     if (wd < 1) {

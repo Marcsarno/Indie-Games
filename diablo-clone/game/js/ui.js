@@ -219,7 +219,7 @@ function drawAutomap() {
     const at = (i, j) => [Math.round(ox + (i - j) * s - (hero.fi - hero.fj) * s), Math.round(oy + (i + j) * s / 2 - (hero.fi + hero.fj) * s / 2)];
     for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
       const [x, y] = at(i, j); if (x < 0 || y < 0 || x >= W - 1 || y >= H) continue;
-      const pd = pondD(i + 0.5, j + 0.5), col = pd < 1 ? 117 : pathD(i + 0.5, j + 0.5) < 0.1 ? 102 : LV.solid[tIdx(i, j)] ? 95 : 88;
+      const pd = Math.min(pondD(i + 0.5, j + 0.5), riverD(i + 0.5, j + 0.5) < 0 && pathD(i + 0.5, j + 0.5) >= 0.35 ? 0 : 9), col = pd < 1 ? 117 : pathD(i + 0.5, j + 0.5) < 0.1 ? 102 : LV.solid[tIdx(i, j)] ? 95 : 88;
       fillRect(x - 1, y, 3, 2, col);
     }
     const [sx, sy] = at(LV.stairs.i, LV.stairs.j); fillRect(sx - 1, sy - 1, 3, 3, 40);
@@ -283,7 +283,11 @@ function drawInventory() {
   L.bag.forEach((r, n) => {
     const it = hero.bag[n];
     fillRect(r.x, r.y, r.w, r.h, 4); frame(r.x, r.y, r.w, r.h, INV.sel && INV.sel.item === it && it ? 51 : 6, 3);
-    if (it) { sprite(itemIcon(it), r.x + 17, r.y + 21, 1, 4); put(r.x + 2, r.y + 2, RARITY_COL[it.rarity]); put(r.x + 3, r.y + 2, RARITY_COL[it.rarity]); }
+    if (it) {
+      sprite(itemIcon(it), r.x + 17, r.y + 21, 1, 4); put(r.x + 2, r.y + 2, RARITY_COL[it.rarity]); put(r.x + 3, r.y + 2, RARITY_COL[it.rarity]);
+      const b = ITEM_BASES[it.base], cur = hero.equip[b.slot];
+      if (b.slot !== 'potion' && (!cur || itemScore(it) > itemScore(cur) + 0.5)) for (let k = 0; k < 3; k++) for (let x = -k; x <= k; x++) put(r.x + r.w - 6 + x, r.y + 3 + k, 55);   // upgrade arrow
+    }
   });
   // detail panel
   const py = 176 + 3 * 34 + 6;
@@ -292,7 +296,11 @@ function drawInventory() {
     text(itemName(it), 12, py, RARITY_COL[it.rarity]);
     itemLines(it).forEach((l, n) => text(l, 12, py + 9 + n * 7, 25));
     const cur = INV.sel.from === 'bag' ? hero.equip[b.slot] : null;
-    if (cur) text(`WORN: ${itemName(cur)}`, 12, py + 9 + 7 * itemLines(it).length + 3, 24);
+    if (cur) {   // what equipping it would change, against what is worn now
+      const y0 = py + 9 + 7 * itemLines(it).length + 3;
+      text(`VS ${itemName(cur)}`, 12, y0, 24);
+      compareLines(it, cur).forEach(([l, c], n) => text(l, 130, py + 9 + n * 7, c));
+    }
     L.btns = [];
     const bw = 70, by = Math.min(H - 26, py + 64);
     const mk = (label, x, on) => { fillRect(x, by, bw, 18, 5); frame(x, by, bw, 18, 8, 2); textC(label, x + bw / 2, by + 6, 27); L.btns.push({ x, y: by, w: bw, h: 18, on }); };

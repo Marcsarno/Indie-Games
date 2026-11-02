@@ -75,6 +75,28 @@ function rollItem(R, level, forceBase) {
   if (it.rarity === 'rare') it.title = R.pick(['GRIM', 'DREAD', 'BLOOD', 'GLOOM', 'BONE', 'STORM', 'DOOM', 'ASH']) + ' ' + R.pick(['BITE', 'WARD', 'SHELL', 'CROWN', 'SCAR', 'HOWL', 'MARK']);
   return it;
 }
+// rough worth of an item in its slot, for the bag's upgrade arrows and the comparison lines
+function itemScore(it) {
+  const b = ITEM_BASES[it.base], m = it.mods || {};
+  const avg = b.dmg ? (b.dmg[0] + b.dmg[1]) / 2 : 0;
+  return (avg + (m.dmgFlat || 0)) * (1 + (m.dmgPct || 0) / 100) * (b.slow ? 0.9 : 1) + (b.armor || 0) + (m.armorFlat || 0) + (b.block || 0) * 0.3
+    + (m.hp || 0) * 0.25 + (m.mana || 0) * 0.1 + (m.leech || 0) * 0.6 + (m.crit || 0) * 0.5 + (m.atkSpeed || 0) * 0.35 + (m.speed || 0) * 0.3
+    + (m.thorns || 0) * 0.1 + (m.regen || 0) * 3 + (m.fireburst ? 8 : 0);
+}
+// what changes if `it` replaces `cur`: [text, color] lines, green for gains and red for losses
+function compareLines(it, cur) {
+  const b = ITEM_BASES[it.base], c = ITEM_BASES[cur.base], m = it.mods || {}, n = cur.mods || {}, out = [];
+  const dmg = x => x.dmg ? (x.dmg[0] + x.dmg[1]) / 2 : 0;
+  const d = (dmg(b) + (m.dmgFlat || 0)) * (1 + (m.dmgPct || 0) / 100) - (dmg(c) + (n.dmgFlat || 0)) * (1 + (n.dmgPct || 0) / 100);
+  if (Math.abs(d) >= 0.5) out.push([`${d > 0 ? '+' : ''}${d.toFixed(1)} AVG DAMAGE`, d > 0 ? 55 : 23]);
+  const a = (b.armor || 0) + (m.armorFlat || 0) - (c.armor || 0) - (n.armorFlat || 0);
+  if (a) out.push([`${a > 0 ? '+' : ''}${a} ARMOR`, a > 0 ? 55 : 23]);
+  const h = (m.hp || 0) - (n.hp || 0);
+  if (h) out.push([`${h > 0 ? '+' : ''}${h} LIFE`, h > 0 ? 55 : 23]);
+  const s = itemScore(it) - itemScore(cur);
+  out.push([s > 0.5 ? 'BETTER THAN WORN' : s < -0.5 ? 'WORSE THAN WORN' : 'ABOUT THE SAME', s > 0.5 ? 55 : s < -0.5 ? 23 : 25]);
+  return out;
+}
 function itemName(it) {
   const b = ITEM_BASES[it.base];
   if (it.rarity === 'legend') return it.name;
