@@ -35,7 +35,7 @@ ROADS = [  # name, polyline, width m, kind
     ("", [(XW + 15, 0), (XW + 15, Y["hillsboro"])], 8, "loc"), ("", [(XE - 15, YS + 30), (XE - 15, Y["hillsboro"])], 8, "loc"),           # back lanes behind the shop strips
     ("", [(-200, 1440), (-100, 1400), (-20, 1350)], 9, "ramp"), ("", [(20, 1545), (100, 1575), (225, 1545)], 9, "ramp"),                  # Sawgrass ramps at Lyons
 ]
-HOUSES = []; CULS = []; RINGS = []; LAKES = []; RBTS = []
+HOUSES = []; CULS = []; RINGS = [(-712, 912, 46, 20)]; LAKES = []; RBTS = []
 def st(pts, w=9, kind="loc"): ROADS.append(("", pts, w, kind))
 def houses_along(a, b, gap=26, off=16):
     L = math.dist(a, b); n = int(L / gap); ux, uy = (b[0] - a[0]) / (L or 1), (b[1] - a[1]) / (L or 1)
@@ -72,7 +72,7 @@ grid(-790, 160, -250, 465, step=90)                                          # W
 grid(-180, 160, -35, 465, step=72, alley=False)                              # E of the canal
 st([(X441, 300), (XLYONS, 300)])                                             # one through street 441 <-> Lyons (fords the canal)
 boulevard(-790, 535, -250, 765, -520)                                        # townhomes, Copans -> Sample
-lake_loop(410, 940, 190, 45, [(XLYONS + 12, 940), (XPOWER - 12, 940), (410, Y["sample"] + 13)], culs=(110, 70))     # E of Lyons, Sample -> Wiles
+st([(60, Y["wiles"] - 12), (60, Y["sample"] + 13)], 7, "loc")                     # user: Trash Mountain fills E of Lyons, Sample -> Wiles (landmark, not drivable); a gated landfill service road runs down its west side
 grid(35, 1110, 265, 1290, step=76)                                           # homes by Lyons on Wiles (first third)
 grid(-790, 1480, -35, 1600, step=95, join=("n",))                            # N of Sawgrass, W of Lyons (Johnson side)
 lake_loop(-410, 1725, 260, 35, [(X441 + 13, 1725), (XLYONS - 12, 1725), (-410, Y["hillsboro"] - 12)], culs=(250, 290))   # Johnson -> Hillsboro
@@ -92,7 +92,7 @@ def R_(x0, y0, x1, y1): return [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
 ZONES = [("SHOPS  GAS  FAST FOOD", R_(XW, YS, X441 - 15, YN), "#c7a98a", "#4a2e1a"), ("SHOPS  GAS  FAST FOOD", R_(XPOWER + 15, YS, XE, YN), "#c7a98a", "#4a2e1a"),
          ("WYNMOORE (gated golf)", R_(35, 250, 790, 465), "#cfe0a8", "#3d4d10"), ("", R_(35, 35, 790, 232), "#86b86a", ""),
          ("BUTTERFLY WORLD + TRADEWINDS PARK", R_(375, 535, 790, 765), "#7cc05a", "#1f4d12"), ("SABAL PINES PARK", R_(530, 1110, 790, 1290), "#7cc05a", "#1f4d12"),
-         ("SEMINOLE CASINO", R_(-790, 835, -630, 1040), "#c8901e", "#3a2405"), ("", R_(35, -505, 790, -35), "#7cc05a", ""), ("construction site", R_(470, 1650, 790, 1790), "#b9a37a", "#4a3a1a"),
+         ("TRASH MOUNTAIN", R_(80, 835, 790, 1040), "#8a7a52", "#2e2410"), ("", R_(35, -505, 790, -35), "#7cc05a", ""), ("construction site", R_(470, 1650, 790, 1790), "#b9a37a", "#4a3a1a"),
          ("offices", R_(35, 1345, 790, 1490), "#9db58a", "#2a3a1a")]
 LOTS = [  # (polygon, buildings (x0, y0, x1, y1, colour, label), aisle step, direction)
     (R_(XW + 25, 520, X441 - 20, 790), [(XW + 28, 560, XW + 100, 760, "#2f64ad", "WALMART")], 10, "v"),
@@ -103,7 +103,8 @@ LOTS = [  # (polygon, buildings (x0, y0, x1, y1, colour, label), aisle step, dir
     (R_(35, 680, 170, 785), [(50, 715, 110, 765, "#d22d24", "McD")], 8, "h"),
     (R_(-180, 530, -35, 785), [(-170, 650, -50, 770, "#2f6fb3", "CITY HALL"), (-170, 545, -50, 625, "#1d3f8a", "POLICE")], 9, "h"),
     (R_(280, 1110, 510, 1290), [(290, 1190, 500, 1280, "#b8865a", "COCONUT CREEK ELEMENTARY")], 10, "v"),
-    (R_(50, 50, 380, 220), [(60, 125, 300, 210, "#b8865a", "COCONUT CREEK HIGH")], 10, "v"),
+    (R_(400, 50, 780, 220), [(470, 125, 765, 210, "#b8865a", "COCONUT CREEK HIGH")], 10, "v"),                         # user: the football field is by Lyons, the school behind it
+    (R_(-790, 845, -630, 1040), [(-775, 950, -650, 1032, "#c8901e", "SEMINOLE CASINO")], 10, "h"),                     # casino + valet loop + lot (a way through)
     (R_(35, 1600, 190, 1700), [(45, 1640, 150, 1695, "#b8322a", "FIRE STATION")], 8, "h"),
     (R_(-790, 30, -35, 125), [(-780, 75, -650, 120, "#c8102e", "WALGREENS"), (-630, 75, -540, 120, "#d6a24a", "PIZZA"), (-520, 75, -430, 120, "#c56a4a", "DELI"), (-190, 75, -50, 120, "#7a9ac8", "CLEANERS")], 9, "v"),
     (R_(35, -230, 290, -50), [(50, -150, 250, -60, "#5b8fc9", "REC CENTER")], 10, "v"), (R_(560, -230, 790, -50), [(580, -150, 770, -60, "#5b8fc9", "POOL")], 10, "v"),
@@ -113,9 +114,9 @@ LOTS = [  # (polygon, buildings (x0, y0, x1, y1, colour, label), aisle step, dir
 DAVE = (-700, -320); PUBLIX = (-150, 1405)
 SPOTS = [("GATE", 50, 360, "#d0582a", 1), ("DAVE", DAVE[0], DAVE[1], "#e33b3b", 1)]
 JUMPS = [(XCANAL, 650), (XCANAL, 300), (XW + 32, 780), (600, 1760), (575, 300), (760, 70), (-325, 900), (275, -400), (525, -400)]
-BREAKERS = [(XE - 40, 1075), (X441 - 55, 450), (-400, 1180), (-150, 950), (-160, 1440), (50, 375), (580, 225), (390, 755), (510, 1725)]
+BREAKERS = [(XE - 40, 1075), (X441 - 55, 450), (-400, 1180), (-150, 950), (-160, 1440), (50, 375), (200, 222), (390, 755), (510, 1725)]
 HIDES = [(X441 - 55, 1175), (-600, 1222), (0, 1500), (XW + 60, 540)]
-STARS = [(-710, 1010), (600, 655), (-107, 775), (100, 440), (XW + 64, 745), (-400, 1255), (92, 772), (210, 1690)]
+STARS = [(-712, 1040), (600, 655), (450, 1000), (-107, 775), (100, 440), (XW + 64, 745), (-400, 1255), (92, 772), (210, 1690)]
 BRIDGES = [(XCANAL, 0), (XCANAL, Y["copans"]), (XCANAL, Y["sample"])]
 # ---- draft 8 (user): the fun way is THROUGH the landmarks. Hidden cut-throughs link the lots, plazas, drive-thrus, fields and alleys across the
 # main roads, and road work blocks the straight runs, so the best line weaves through the city instead of going straight down Lyons.
@@ -131,9 +132,11 @@ CUTS = [  # (label, polyline): each is a gap a driver can find (median gap, hedg
     ("7", [(XCANAL + 10, 140), (-450, 140), (-470, 120), (-470, 18)]),   # service alley -> Walgreens drive-thru -> Pkwy, right at Banks
     ("8", [(60, 815), (60, 785), (130, 730), (90, 690), (190, 640)]),     # McDonald's drive-thru -> gas station lot
     ("9", [(360, 600), (420, 580), (500, 600), (560, 548)]),   # Butterfly World service gate -> Copans
-    ("10", [(40, 360), (300, 330), (520, 280), (600, 240)]),   # smash the Wynmoore gate, across the golf course, fence gap into the school
-    ("11", [(600, 232), (580, 130), (600, 40), (600, 14)]),    # across the football field, out the bus loop to the Pkwy
+    ("10", [(40, 360), (250, 325), (230, 240)]),   # smash the Wynmoore gate, across the golf course, fence gap into the school
+    ("11", [(225, 232), (200, 130), (230, 40), (230, 14)]),    # across the football field, out the bus loop to the Pkwy
     ("12", [(XW + 120, 700), (XW + 32, 780), (XW + 15, 760)]), # Walmart lot -> loading-dock ramp -> back lane (jump)
+    ("13", [(X441 - 2, 1000), (-760, 925), (-712, 905), (-665, 925), (-700, 870), (-700, 813)]),   # casino: in off 441, round the valet loop under the porte-cochere, out through the lot to Sample
+    ("14", [(60, 1062), (60, 960), (60, 848)]),                # the gated landfill road beside Trash Mountain
 ]
 BLOCKS = [((0, 1075 - 40), (0, 800 + 40)), ((0, 500 - 40), (0, 0 + 40)), ((-330, 0), (-330, 0))]   # road work on Lyons (Wiles-Sample, Copans-Pkwy)
 BLOCKS = BLOCKS[:2]
@@ -141,9 +144,9 @@ ROUTES = [
     ("WEST LINE: Promenade, dealers, City Hall, canal path, Walgreens", "#3fe07b",
      [PUBLIX, (-150, 1345), (-150, 1282), (-400, 1215), (-470, 1150), (-400, 1095), (-400, 1000), (-250, 960), (-330, 900), (-250, 850), (-120, 818), (-110, 640), (-110, 520), (XCANAL + 14, 480), (XCANAL + 14, 160), (XCANAL + 10, 140), (-450, 140), (-470, 18), (XBANKS + 8, -8), (XBANKS + 8, -112), (-610, -112), DAVE]),
     ("EAST LINE: McDonald's, Butterfly World, golf course, HS field", "#ffb03a",
-     [PUBLIX, (-30, 1330), (14, 1300), (14, 1090), (60, 1075), (60, 815), (130, 730), (190, 640), (360, 600), (500, 600), (560, 548), (300, 515), (40, 470), (40, 360), (300, 330), (520, 280), (600, 240), (580, 130), (600, 14), (300, -8), (XBANKS + 8, -14), (XBANKS + 8, -120), (-610, -120), DAVE]),
-    ("441 LINE: Walmart lot, loading ramp, back lane", "#d070ff",
-     [PUBLIX, (-200, 1330), (X441, 1366), (X441, 700), (XW + 120, 700), (XW + 32, 780), (XW + 15, 640), (XW + 15, -14), (XBANKS - 8, -14), (XBANKS - 8, -128), (-610, -128), DAVE]),
+     [PUBLIX, (-30, 1330), (14, 1300), (14, 1090), (60, 1062), (60, 960), (60, 848), (60, 815), (130, 730), (190, 640), (360, 600), (500, 600), (560, 548), (300, 515), (40, 470), (40, 360), (250, 325), (230, 240), (200, 130), (230, 14), (150, -8), (XBANKS + 8, -14), (XBANKS + 8, -120), (-610, -120), DAVE]),
+    ("CASINO LINE: casino valet loop, Walmart lot, loading ramp, back lane", "#d070ff",
+     [PUBLIX, (-200, 1330), (X441, 1366), (X441 + 8, 1000), (-760, 925), (-712, 905), (-665, 925), (-700, 870), (-700, 813), (X441 + 8, 806), (X441 - 14, 790), (XW + 120, 700), (XW + 32, 780), (XW + 15, 640), (XW + 15, -14), (XBANKS - 8, -14), (XBANKS - 8, -128), (-610, -128), DAVE]),
 ]
 
 # ---- draw ----
@@ -161,6 +164,9 @@ for (lab, poly, col, tc) in ZONES:
 for side, x in ((-1, X441 - 92), (1, XPOWER + 52)):
     t = Image.new("RGBA", (700, 24), (0, 0, 0, 0)); ImageDraw.Draw(t).text((350, 12), "SHOPS   GAS   FAST FOOD   CAR WASH", fill="#4a2e1a", font=font(11), anchor="mm"); t = t.rotate(90, expand=True)
     a, b = P(x, 1650); im.paste(t, (int(a - 12), int(b - 350)), t)
+for k, (rx, ry, col) in enumerate([(330, 95, "#7d6d48"), (270, 75, "#6f7a45"), (200, 55, "#7f8a52"), (120, 34, "#93a060")]):      # Trash Mountain: a big grassy mound
+    c = P(440, 945); d.ellipse([c[0] - rx * S, c[1] - ry * S, c[0] + rx * S, c[1] + ry * S], fill=col)
+d.text(P(440, 945), "TRASH MOUNTAIN", fill="white", font=font(13), anchor="mm", stroke_width=3, stroke_fill="#2e2410")
 for (poly, blds, step, dirn) in LOTS:
     d.polygon([P(*p) for p in poly], fill="#7d8086"); xs = [p[0] for p in poly]; ys = [p[1] for p in poly]; x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
     if dirn == "v":
@@ -172,7 +178,7 @@ for (poly, blds, step, dirn) in LOTS:
         if lab: d.text(P((a + c) / 2, (b + e) / 2), lab, fill="white", font=font(8), anchor="mm", stroke_width=2, stroke_fill="#1b1b1b")
 for yy in range(850, 970, 14):                                       # dealer car rows
     for xx in range(-600, -40, 8): d.rectangle([P(xx, yy + 3), P(xx + 5, yy - 3)], fill=["#d33", "#eee", "#36c", "#222", "#c9a227"][(xx // 8 + yy) % 5])
-tx, ty = P(580, 130); d.ellipse([tx - 70 * S * 2.2, ty - 32 * S * 2.2, tx + 70 * S * 2.2, ty + 32 * S * 2.2], fill="#b5533c"); d.rectangle([tx - 44 * S * 2.2, ty - 20 * S * 2.2, tx + 44 * S * 2.2, ty + 20 * S * 2.2], fill="#4f9a3a", outline="white")
+tx, ty = P(200, 130); d.ellipse([tx - 70 * S * 2.2, ty - 32 * S * 2.2, tx + 70 * S * 2.2, ty + 32 * S * 2.2], fill="#b5533c"); d.rectangle([tx - 44 * S * 2.2, ty - 20 * S * 2.2, tx + 44 * S * 2.2, ty + 20 * S * 2.2], fill="#4f9a3a", outline="white")
 def court(x0, y0, x1, y1, col): d.rectangle([P(x0, y1), P(x1, y0)], fill=col, outline="white")
 for i in range(4): court(320 + i * 50, -150, 360 + i * 50, -70, "#b5533c")
 for i in range(4): court(60 + i * 45, -480, 95 + i * 45, -330, "#4b8bbf")
@@ -206,7 +212,7 @@ d.text(P(-780, 1300), "THE PROMENADE", fill="#fff2a8", font=font(12), anchor="ls
 for (a, b) in BLOCKS:                                          # road work: striped closures across Lyons
     for k in range(0, 9):
         y = a[1] + (b[1] - a[1]) * k / 8; d.line([P(a[0] - 16, y), P(a[0] + 16, y)], fill="#ff8c1a" if k % 2 == 0 else "#ffffff", width=5)
-    m = P(a[0], (a[1] + b[1]) / 2); d.rounded_rectangle([m[0] + 14, m[1] - 9, m[0] + 92, m[1] + 9], 4, fill="#ff8c1a"); d.text((m[0] + 53, m[1]), "ROAD WORK", fill="#1b1b1b", font=font(9), anchor="mm")
+    m = P(a[0], (a[1] + b[1]) / 2); d.rounded_rectangle([m[0] - 92, m[1] - 9, m[0] - 14, m[1] + 9], 4, fill="#ff8c1a"); d.text((m[0] - 53, m[1]), "ROAD WORK", fill="#1b1b1b", font=font(9), anchor="mm")
 for (lab, col, pts) in ROUTES:
     q = [P(*p) for p in pts]
     for i in range(len(q) - 1):
@@ -245,7 +251,7 @@ for i, (lab, col, pts) in enumerate(ROUTES):
 OUT("CUT-THROUGHS", (lx, ly + 17 * 27), 15)
 CT_TXT = ["1  Publix lot, median gap across Winston", "2  Promenade plaza, round the fountain", "3  Cooper's Hawk valet lane", "4  dealer showroom glass, car-row slalom",
           "5  City Hall plaza, jump the steps", "6  canal path behind the houses", "7  shop alley, Walgreens drive-thru", "8  McDonald's drive-thru", "9  Butterfly World service gate",
-          "10 smash the Wynmoore gate, golf course", "11 football field, out the bus loop", "12 Walmart loading-dock ramp"]
+          "10 smash the Wynmoore gate, golf course", "11 football field, out the bus loop", "12 Walmart loading-dock ramp", "13 casino valet loop, out through the lot", "14 landfill road past Trash Mountain"]
 for i, t in enumerate(CT_TXT): d.text((lx, ly + 18 * 27 + i * 20), t, fill="#bff6ff", font=font(11))
 sx, sy = P(XW, YS - 30); d.line([(sx, sy), (sx + 250 * S, sy)], fill="white", width=4); OUT("250 m  (~9 s at 100 km/h)", (sx + 125 * S, sy - 11), 11, anchor="mm")
 im.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), "plan_v7.png")); print(W, H, len(HOUSES), "houses")
