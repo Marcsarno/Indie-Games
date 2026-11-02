@@ -34,14 +34,33 @@ const AFFIXES = [
   { suf: 'OF MIND', stat: 'mana', roll: [4, 12], slots: ['helm', 'chest', 'weapon'] },
   { suf: 'OF LEECH', stat: 'leech', roll: [2, 5], slots: ['weapon'] },
   { suf: 'OF SPEED', stat: 'speed', roll: [5, 12], slots: ['chest', 'helm'] },
+  // round 16
+  { suf: 'OF PRECISION', stat: 'crit', roll: [3, 8], slots: ['weapon', 'helm'] },
+  { pre: 'THORNED', stat: 'thorns', roll: [10, 25], slots: ['chest', 'shield'] },
+  { pre: 'SWIFT', stat: 'atkSpeed', roll: [8, 15], slots: ['weapon'] },
+  { suf: 'OF RENEWAL', stat: 'regen', roll: [1, 2], slots: ['helm', 'chest'] },
 ];
-const RARITY_COL = { normal: 26, magic: 40, rare: 51 };
+// legendaries (round 16): fixed names and powers, an orange beam; bosses always drop one
+const LEGENDARIES = [
+  { base: 'long_sword', name: 'EMBERBRAND', mods: { dmgPct: 60, fireburst: 1 }, lore: "FORGED IN A DRAGON'S THROAT" },
+  { base: 'crown_helm', name: 'CROWN OF THE OAK KING', mods: { hp: 25, regen: 3 }, lore: 'THE FOREST MENDS YOU' },
+  { base: 'tower_shield', name: 'GRAVEWARDEN', mods: { armorFlat: 8, thorns: 60 }, lore: 'WHAT STRIKES YOU BLEEDS' },
+  { base: 'brigandine', name: 'STORMHIDE', mods: { speed: 18, atkSpeed: 25 }, lore: 'LIGHTNING IN YOUR STEP' },
+  { base: 'greatsword', name: 'BLOODDRINKER', mods: { dmgPct: 40, leech: 12 }, lore: 'IT IS NEVER FULL' },
+  { base: 'war_axe', name: "WARLORD'S MAUL", mods: { dmgPct: 50, crit: 15 }, lore: 'TAKEN FROM THE OGRE' },
+];
+function rollLegendary(R) {
+  const L = R.pick(LEGENDARIES);
+  return { id: itemSerial++, base: L.base, rarity: 'legend', name: L.name, lore: L.lore, mods: { ...L.mods } };
+}
+const RARITY_COL = { normal: 26, magic: 40, rare: 51, legend: 112 };
 let itemSerial = 1;
 function rollItem(R, level, forceBase) {
   const bases = Object.keys(ITEM_BASES).filter(k => ITEM_BASES[k].lvl <= level + 1 && ITEM_BASES[k].slot !== 'potion');
   const baseId = forceBase || R.pick(bases), base = ITEM_BASES[baseId];
   const it = { id: itemSerial++, base: baseId, rarity: 'normal', mods: {} };
   if (base.slot === 'potion') return it;
+  if (!forceBase && R() < 0.008 + level * 0.002) return rollLegendary(R);
   const q = R();
   it.rarity = q < 0.06 + level * 0.01 ? 'rare' : q < 0.34 ? 'magic' : 'normal';
   const n = it.rarity === 'rare' ? R.int(2, 3) : it.rarity === 'magic' ? 1 : 0;
@@ -58,13 +77,14 @@ function rollItem(R, level, forceBase) {
 }
 function itemName(it) {
   const b = ITEM_BASES[it.base];
+  if (it.rarity === 'legend') return it.name;
   if (it.rarity === 'rare' && it.title) return it.title;
   return [it.prefix, b.name, it.suffix].filter(Boolean).join(' ');
 }
 function itemLines(it) {
   const b = ITEM_BASES[it.base], m = it.mods, L = [];
   if (b.slot === 'potion') return ['RESTORES ' + b.heal + ' LIFE'];
-  if (it.rarity === 'rare') L.push(b.name);
+  if (it.rarity === 'rare' || it.rarity === 'legend') L.push(b.name);
   if (b.dmg) L.push(`DAMAGE ${b.dmg[0]}-${b.dmg[1]}${b.slow ? ' (SLOW)' : ''}`);
   if (b.armor) L.push(`ARMOR ${b.armor}`);
   if (b.block) L.push(`BLOCK ${b.block}%`);
@@ -75,6 +95,12 @@ function itemLines(it) {
   if (m.mana) L.push(`+${m.mana} MANA`);
   if (m.leech) L.push(`${m.leech}% LIFE STEAL`);
   if (m.speed) L.push(`+${m.speed}% MOVE SPEED`);
+  if (m.crit) L.push(`+${m.crit}% CRITICAL CHANCE`);
+  if (m.thorns) L.push(`${m.thorns}% DAMAGE RETURNED`);
+  if (m.atkSpeed) L.push(`+${m.atkSpeed}% ATTACK SPEED`);
+  if (m.regen) L.push(`+${m.regen} LIFE PER SECOND`);
+  if (m.fireburst) L.push('KILLS EXPLODE IN FIRE');
+  if (it.lore) L.push(it.lore);
   return L;
 }
 

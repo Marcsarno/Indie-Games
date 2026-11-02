@@ -6,11 +6,12 @@
 // world needs no runtime cutaway. Floors, walls and static props are baked; barrels and chests
 // stay dynamic so they can break and open.
 
-const MW = 40, MH = 40;
+// map size in tiles: dungeons and towns are 40x40, forests bigger (resizeWorld reallocates)
+let MW = 40, MH = 40;
 const VOID = 0, FLOOR = 1, WALL = 2;
 const WALL_TALL = 64, WALL_LOW = 14;
-const WX0 = MH * 16 + 24, WY0 = WALL_TALL + 24;
-const WW = (MW + MH) * 16 + 48, WH = (MW + MH) * 8 + WY0 + 32;
+const WY0 = WALL_TALL + 24;
+let WX0 = MH * 16 + 24, WW = (MW + MH) * 16 + 48, WH = (MW + MH) * 8 + WY0 + 32;
 const iso = (fi, fj) => [WX0 + (fi - fj) * 16, WY0 + (fi + fj) * 8];
 // screen offset (dx, dy) in world px -> tile-space offset, isotropic on the ground
 const screenToTile = (sx, sy) => [(sx / 16 + sy / 8) / 2, (sy / 8 - sx / 16) / 2];
@@ -54,9 +55,18 @@ function los(a, b, c, d) {
 }
 
 // ---------------------------------------------------------------- generation
+function resizeWorld(mw, mh) {
+  if (mw === MW && mh === MH) return;
+  MW = mw; MH = mh; WX0 = MH * 16 + 24; WW = (MW + MH) * 16 + 48; WH = (MW + MH) * 8 + WY0 + 32;
+  const n = MW * MH, p = WW * WH;
+  LV.map = new Uint8Array(n); LV.tall = new Uint8Array(n); LV.solid = new Uint8Array(n); LV.roomOf = new Int16Array(n); LV.seen = new Uint8Array(n); LV.vis = new Float32Array(n);
+  floorBuf = new Uint8Array(p); wIdx = new Uint8Array(p); wZ = new Uint8Array(p); wFloor = new Uint8Array(p); wTile = new Int16Array(p);
+  staticLight[0] = new Float32Array(p); staticLight[1] = new Float32Array(p);
+}
 function genLevel(level, seed) {
   // levels cycle town -> forest -> three dungeon floors (outdoor.js); LV.diff drives difficulty
   const A = areaOf(level);
+  resizeWorld(A.kind === 'forest' ? 64 : 40, A.kind === 'forest' ? 64 : 40);
   LV.area = A.kind; LV.cyc = A.cyc; LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.autumn = A.cyc % 2 === 1; LV.plaza = null; LV.npcs = []; LV.critters = [];
   if (LV.outdoor) { LV.theme = A.kind; genOutdoor(level, seed, A); LV.level = level; LV.seed = seed; return; }
   LV.theme = themeOf(LV.depth);
@@ -418,9 +428,9 @@ const PROPS = {
 };
 
 // ---------------------------------------------------------------- bake
-const floorBuf = new Uint8Array(WW * WH);
-const wIdx = new Uint8Array(WW * WH), wZ = new Uint8Array(WW * WH), wFloor = new Uint8Array(WW * WH);
-const wTile = new Int16Array(WW * WH);
+let floorBuf = new Uint8Array(WW * WH);
+let wIdx = new Uint8Array(WW * WH), wZ = new Uint8Array(WW * WH), wFloor = new Uint8Array(WW * WH);
+let wTile = new Int16Array(WW * WH);
 const props = [];    // static, baked, depth-sorted with characters where they overlap
 const dynProps = []; // barrels and chests: drawn every frame
 const fires = [];    // flames {wx, wy, h, w, seed}

@@ -253,6 +253,7 @@ function houndRig(look, st) {
   for (const s of [-1, 1]) {
     r.sph(V.add(hd, [2.7, s * 1.9, 0.8]), 0.65, look.eye || M.EYE_RED, { noShadow: true });
     // horns sweep back, then up and forward like a bull's
+    if (fur && look.boar) { r.cone(V.add(hd, [4.6, s * 1.4, -1.4]), V.add(hd, [5.4, s * 2.6, 1.2]), 0.8, 0.2, M.BONE, { noShadow: true }); r.cone(V.add(hd, [-0.6, s * 2.2, 1.6]), V.add(hd, [-1.4, s * 3.4, 3.4]), 1.3, 0.3, skin); continue; }   // tusks, small ears
     if (fur) { r.cone(V.add(hd, [-0.8, s * 1.8, 2.2]), V.add(hd, [-1.6, s * 2.6, 6.4]), 1.6, 0.3, skin); continue; }   // pointed ears
     const a = V.add(hd, [-0.6, s * 2.2, 2]), b = V.add(hd, [-1.8, s * 4.8, 4.2]), c = V.add(hd, [0.6, s * 6.2, 6.8]), e = V.add(hd, [3.8, s * 5.6, 7.6]);
     r.group(() => { r.cone(a, b, 1.5, 1.3, bone); r.cone(b, c, 1.3, 0.9, bone); r.cone(c, e, 0.9, 0.3, bone); });
@@ -270,6 +271,83 @@ function houndRig(look, st) {
 }
 
 // ---------------------------------------------------------------- spider
+// ---------------------------------------------------------------- the ogre warlord (forest boss)
+// A big chibi ogre: grey-green hide, round belly, tusked underbite, a top-knot, leather straps
+// with a skull buckle, and a huge spiked club. Swings like the hero (posed heavy keys).
+const OGRE_B = { hipH: 12, thigh: 6.4, shin: 6, ankle: 1.4, spine: 9, shW: 8.4, shZ: 3, neck: 10.5, upper: 7, fore: 6.5, hipW: 4, stride: 5, lift: 2.4, duty: 0.55, bob: 0.8, sway: 0.6, runLean: 0.1, counter: 0.1, stance: 1.5 };
+function ogreRig(look, st) {
+  const B = OGRE_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J, skin = M.OGRE;
+  for (const [hip, knee, ank] of [[J.hipL, J.kneeL, J.ankL], [J.hipR, J.kneeR, J.ankR]]) {
+    r.cone(hip, knee, 3.4, 3.0, skin); r.cone(knee, ank, 3.0, 2.6, skin);
+    r.ell(V.add(ank, [2.2, 0, -0.8]), [3.8, 2.8, 1.6], M.LEATHER);
+  }
+  r.group(() => {   // belly and chest as one mass
+    r.ell(V.mad(J.pelvis, up, 2), [6.4, 7.4, 6], skin);
+    r.ell(V.mad(J.chest, up, 0.6), [5.6, 8.2, 5.4], skin, frameAlong(fwd, up));
+  });
+  const belt = V.mad(J.pelvis, up, 0.5);
+  r.ell(belt, [6.8, 7.8, 1.5], M.LEATHER, frameAlong(fwd, up));
+  skullAt(r, V.mad(belt, fwd, 6.6), fwd, sideR, up, M.BONE, M.DARK, 0, 0.75);
+  r.box(V.add(V.mad(J.pelvis, fwd, 5.5), V.mul(up, -3.5)), [0.5, 3.6, 3.2], M.LEATHER, frameAlong(fwd, up));
+  r.cone(V.add(V.mad(J.chest, up, 4), V.mul(sideR, -6)), V.add(V.mad(J.pelvis, up, 1), V.mul(sideR, 5)), 1.0, 1.0, M.LEATHER);   // strap
+  for (const [sh, sd] of [[J.shL, -1], [J.shR, 1]]) {   // shoulder pads with spikes
+    const c = V.mad(sh, up, 1.2);
+    r.ell(c, [4.2, 4.2, 3], M.LEATHER, frameAlong(fwd, up));
+    r.cone(V.mad(c, up, 2), V.add(V.mad(c, up, 5.5), V.mul(sideR, sd * 1.5)), 1.2, 0.2, M.BONE);
+  }
+  // arms: the club in the right hand on the posed swing plane; the left hand a big fist
+  const sw = atkIndex(st.clip) >= 0 ? st.key : null, list = sw ? SWINGS.heavy : null;
+  const pivot = V.add(V.add(J.chest, V.mul(sideR, 3.5)), V.add(V.mul(up, 4), V.mul(fwd, 1)));
+  const U = V.norm(V.add(V.mul(up, Math.cos(0.22)), V.mul(sideR, Math.sin(0.22)))), inPlane = a => V.norm(V.add(V.mul(fwd, Math.cos(a)), V.mul(U, Math.sin(a))));
+  let handR, bd;
+  if (sw) { handR = V.mad(pivot, inPlane(sw.a), (sw.r || 6.5) * 1.3); bd = inPlane(sw.a + (sw.ck || 0)); }
+  else { handR = V.add(V.add(J.shR, V.mul(fwd, 3 + J.swingArm * 1.5)), V.add(V.mul(up, -9), V.mul(sideR, 3))); bd = V.norm(V.add(V.add(V.mul(fwd, 0.5), V.mul(up, 0.75)), V.mul(sideR, 0.3))); }
+  if (st.clip === 'death') { handR = V.add(J.shR, [3, 3, -11]); bd = V.norm([1, 0.4, -0.6]); }
+  const handL = st.clip === 'death' ? V.add(J.shL, [2, -3, -10]) : V.add(V.add(J.shL, V.mul(fwd, 4 - J.swingArm * 2)), V.add(V.mul(up, -9), V.mul(sideR, -2)));
+  for (const [sh, hand, s] of [[J.shR, handR, 1], [J.shL, handL, -1]]) {
+    const a = armTo(J, sh, hand, B, s);
+    r.cone(sh, a.el, 2.8, 2.4, skin); r.cone(a.el, a.hand, 2.4, 2.2, skin); r.sph(a.hand, 2.7, skin);
+    r.cyl(V.lerp(a.el, a.hand, 0.3), V.lerp(a.el, a.hand, 0.7), 2.6, M.LEATHER);   // bracers
+  }
+  // club: a thick haft swelling into a studded head
+  const g = handR;
+  r.cone(V.mad(g, bd, -3), V.mad(g, bd, 12), 1.4, 3.4, M.WOOD);
+  for (let k = 0; k < 7; k++) { const a = k * 2.4, t = 7 + (k % 3) * 2, ax = V.norm(V.add(V.mul(V.cross(bd, up), Math.cos(a)), V.mul(V.cross(bd, V.norm(V.cross(bd, up))), Math.sin(a)))); const b = V.mad(V.mad(g, bd, t), ax, 2.8); r.cone(b, V.mad(b, ax, 2.4), 0.9, 0.2, M.IRON, { noShadow: true }); }
+  if (sw && sw.smear && st.prev) smearArc(r, pivot, fwd, U, st.prev.a + (st.prev.ck || 0), sw.a + (sw.ck || 0), 8, 22);
+  // head: big, a heavy brow over small yellow eyes, an underbite with two tusks, a top-knot
+  const hd = J.head, h0 = r.p.length;
+  r.ell(hd, [4.6, 4.8, 4.2], skin, frameAlong(fwd, up), { mf: p => { const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = Math.abs(V.dot(q, sideR)), z2 = V.dot(q, up); if (f2 > 2.4 && Math.abs(s2 - 1.7) < 0.55 && Math.abs(z2 - 0.4) < 0.5) return M.EYE_YEL; if (f2 > 2.4 && Math.abs(z2 - 1.3) < 0.35 && s2 < 3) return M.DARK; if (f2 > 3 && z2 < -1.6 && z2 > -2.6 && s2 < 2.2) return M.DARK; return 0; } });
+  r.ell(V.add(V.mad(hd, fwd, 2.4), V.mul(up, -2.4)), [2.6, 3.8, 1.8], skin, frameAlong(fwd, up));   // jaw
+  for (const s of [-1, 1]) {
+    const b = V.add(V.add(V.mad(hd, fwd, 4.2), V.mul(sideR, s * 1.8)), V.mul(up, -2.2));
+    r.cone(b, V.add(b, V.add(V.mul(up, 2.6), V.mul(fwd, 0.4))), 0.8, 0.2, M.BONE, { noShadow: true });
+    r.cone(V.add(V.mad(hd, up, 0.6), V.mul(sideR, s * 4.2)), V.add(V.add(V.mad(hd, up, 1.6), V.mul(sideR, s * 6.6)), V.mul(fwd, -1)), 1.4, 0.3, skin);   // ears
+  }
+  r.cone(V.add(V.mad(hd, up, 3.6), V.mul(fwd, -1)), V.add(V.mad(hd, up, 8), V.mul(fwd, -3)), 1.6, 0.4, M.HAIR);   // top-knot
+  bigHead(r, h0, hd, 1.2);
+  if (st.clip === 'death') deathTip(r, B, st.f, -1);
+  if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
+  return r;
+}
+// a slime: one glossy jelly body that squashes on landing and stretches as it hops, with big eyes
+function slimeRig(look, st) {
+  const r = new Rig(), { clip, f } = st, mat = look.blue ? M.SLIME_B : M.SLIME, R0 = 6 * (look.big ? 1.5 : 1);
+  let sq = 0, lift = 0, lean = 0;
+  if (clip === 'walk') { const ph = f / 8 * Math.PI * 2; lift = Math.max(0, Math.sin(ph)) * 4.5; sq = 0.4 * Math.cos(ph * 2); }
+  else if (clip === 'idle') sq = 0.12 * Math.sin(f * Math.PI / 2);
+  else if (clip === 'attack') { const k = st.key; sq = k.a > 0.8 ? 0.55 : k.hit ? -0.4 : 0.1; lean = k.hit ? 3 : k.a > 0.8 ? -1 : 0; }
+  else if (clip === 'hit') sq = 0.35;
+  else if (clip === 'death') sq = 0.3 + f * 0.13;
+  const c = [lean, 0, R0 * (1 - sq * 0.5) + lift];
+  r.ell(c, [R0 * (1 + sq * 0.45), R0 * (1 + sq * 0.45), R0 * (1 - sq * 0.55)], mat, null, { mf: p => {
+    const q = V.sub(p, c);
+    if (q[0] > R0 * 0.5 && Math.abs(Math.abs(q[1]) - R0 * 0.32) < R0 * 0.14 && Math.abs(q[2] - R0 * 0.18) < R0 * 0.2) return q[2] > R0 * 0.3 ? M.CLOTH_WHITE : M.DARK;
+    return 0;
+  } });
+  if (clip !== 'death') r.ell([lean * 0.7, 0, R0 * 0.35 + lift], [R0 * 0.55, R0 * 0.55, R0 * 0.3], mat, null, { noShadow: true });   // the denser core shows through low down
+  if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
+  return r;
+}
 // a town chicken: white body, red comb, pecks while idle and trots on two thin legs
 function chickenRig(look, st) {
   const r = new Rig(), { clip, f } = st, walk = clip === 'walk', peck = clip === 'idle' && f % 4 === 2;
@@ -341,6 +419,8 @@ const FAMILIES = {
   hound: { size: [80, 64, 38, 50], rig: houndRig, swing: () => SWINGS.bite },
   spider: { size: [80, 60, 40, 46], rig: spiderRig, swing: () => SWINGS.bite },
   chicken: { size: [28, 28, 14, 22], rig: chickenRig, swing: () => SWINGS.bite },
+  slime: { size: [48, 44, 24, 32], gait: 0.13, rig: slimeRig, swing: () => SWINGS.bite },
+  ogre: { size: [140, 140, 70, 112], gait: gaitFrameTiles(OGRE_B, 1.5), rig: ogreRig, swing: () => SWINGS.heavy },
 };
 // Variants: same family, different look and stats. `kind` is what the roster ledger counts.
 const MONSTERS = {
@@ -350,6 +430,12 @@ const MONSTERS = {
   fallen: { family: 'fallen', name: 'FALLEN ONE', look: {}, hp: 7, dmg: [1, 3], speed: 40, reach: 1.15, xp: 6, chest: 12, shadow: 5, pack: true },
   shaman: { family: 'fallen', name: 'FALLEN SHAMAN', look: { staff: true, hood: true, skin: M.SKIN }, hp: 9, dmg: [3, 6], speed: 28, reach: 6, ranged: 'firebolt', xp: 16, chest: 12, shadow: 5 },
   hound: { family: 'hound', name: 'BONE HOUND', look: {}, hp: 16, dmg: [3, 6], speed: 52, reach: 1.35, xp: 18, chest: 12, shadow: 10 },
+  warlord: { family: 'ogre', name: 'OGRE WARLORD', look: { scale: 1.5 }, hp: 140, dmg: [8, 14], speed: 22, reach: 2.1, xp: 160, chest: 46, shadow: 13, unique: true, boss: 'slam' },
+  slime: { family: 'slime', name: 'SLIME', look: {}, hp: 8, dmg: [1, 3], speed: 30, reach: 1.15, xp: 6, chest: 9, shadow: 7, pack: true, where: 'out' },
+  blueslime: { family: 'slime', name: 'BIG BLUE SLIME', look: { blue: true, big: true }, hp: 30, dmg: [3, 7], speed: 24, reach: 1.4, xp: 30, chest: 14, shadow: 10, where: 'out', minLevel: 2 },
+  boar: { family: 'hound', name: 'BOAR', look: { skin: M.BOAR, eye: M.EYE_RED, wolf: true, boar: true }, hp: 20, dmg: [3, 6], speed: 48, reach: 1.35, xp: 18, chest: 12, shadow: 10, where: 'out' },
+  gshaman: { family: 'fallen', name: 'GOBLIN SHAMAN', look: { skin: M.GOBLIN, goblin: true, staff: true }, hp: 9, dmg: [3, 6], speed: 30, reach: 6, ranged: 'firebolt', xp: 16, chest: 12, shadow: 5, where: 'out' },
+  brigand: { family: 'hero', name: 'BRIGAND', look: { team: 'tan', helm: 'cap', chest: 'chain', weapon: 'axe', shield: 'none', hair: 'brown', cape: 'red' }, hp: 22, dmg: [3, 7], speed: 30, reach: 1.35, xp: 24, chest: 18, shadow: 7, where: 'out' },
   wolf: { family: 'hound', name: 'WOLF', look: { skin: M.FUR, eye: M.EYE_YEL, wolf: true }, hp: 14, dmg: [2, 5], speed: 54, reach: 1.35, xp: 15, chest: 12, shadow: 10, pack: true, where: 'out' },
   goblin: { family: 'fallen', name: 'GOBLIN', look: { skin: M.GOBLIN, goblin: true }, hp: 9, dmg: [2, 4], speed: 38, reach: 1.15, xp: 8, chest: 12, shadow: 5, pack: true, where: 'out' },
   ghoulhound: { family: 'hound', name: 'HELL HOUND', look: { skin: M.FLESH, bone: M.OLDBONE, eye: M.FIREM, scale: 1.15 }, hp: 28, dmg: [5, 9], speed: 50, reach: 1.45, xp: 34, chest: 13, shadow: 11, minLevel: 2 },

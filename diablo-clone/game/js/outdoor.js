@@ -18,9 +18,10 @@ const areaName = () => LV.outdoor ? AREA_NAMES[LV.area][LV.cyc % 3] : `${TH().na
 // ---------------------------------------------------------------- paths
 // paths are polylines in tile space; their distance field is sampled 4x per tile and
 // interpolated per pixel, so edges are smooth without a per-pixel search
-const PF = 4, PW = MW * PF + 1, PH = MH * PF + 1;
-const pathField = new Float32Array(PW * PH);
+const PF = 4;
+let PW = MW * PF + 1, PH = MH * PF + 1, pathField = new Float32Array(PW * PH);
 function bakePathField() {
+  if (PW !== MW * PF + 1 || PH !== MH * PF + 1) { PW = MW * PF + 1; PH = MH * PF + 1; pathField = new Float32Array(PW * PH); }
   pathField.fill(99);
   for (const [x0, y0, x1, y1, w] of LV.paths) {
     const dx = x1 - x0, dy = y1 - y0, l2 = dx * dx + dy * dy || 1;
@@ -51,8 +52,19 @@ function addPath(a, b, w, R) {
 }
 
 // ---------------------------------------------------------------- generation
+// normalized distance to the nearest pond's wobbly edge (< 1 = water)
+function pondD(fi, fj) {
+  let best = 9;
+  for (const p of LV.ponds || []) {
+    const ex = (fi - p.x) / p.rx, ey = (fj - p.y) / p.ry;
+    if (ex > 1.6 || ex < -1.6 || ey > 1.6 || ey < -1.6) continue;   // far from this pond: skip the noise (load time)
+    const d = Math.hypot(ex, ey) - (vnoise(fi * 9, fj * 9, 7, p.seed % 97) - 0.5) * 0.25; if (d < best) best = d;
+  }
+  return best;
+}
 function genOutdoor(level, seed, A) {
   const R = rng(seed);
+  LV.ponds = [];
   LV.map.fill(FLOOR); LV.solid.fill(0); LV.tall.fill(0); LV.roomOf.fill(-1); LV.seen.fill(1); LV.vis.fill(1);
   LV.decor = []; LV.spawns = []; LV.paths = []; LV.rooms = []; LV.npcs = [];
   bakeCanopy(A.cyc % 2 === 1);   // before the floor bake, which samples it past the map edge
@@ -85,8 +97,8 @@ function treeKind(R, autumn) {
 function genForest(R, A) {
   const autumn = A.cyc % 2 === 1;
   // clearings, spread out; the first is the entry from town, the farthest holds the dungeon
-  const C = [];
-  for (let t = 0; t < 600 && C.length < 9; t++) {
+  const C = [], area = MW * MH / 1600, nC = Math.round(9 * area);   // the forest scales with the map
+  for (let t = 0; t < 3000 && C.length < nC; t++) {
     const x = 6 + R() * (MW - 12), y = 6 + R() * (MH - 12);
     if (edgeBand(Math.floor(x), Math.floor(y)) || C.some(c => Math.hypot(c.x - x, c.y - y) < 8.5)) continue;
     C.push({ x, y, r: 2.4 + R() * 1.8 });
@@ -107,6 +119,14 @@ function genForest(R, A) {
   LV.stairs = { i: LV.rooms[far].cx, j: LV.rooms[far].cy, room: far, entrance: true };
   plantEdge(R, autumn);
   const inClearing = (i, j) => C.some(c => Math.hypot(i + 0.5 - c.x, j + 0.5 - c.y) < c.r + 0.6);
+  // ponds in the woods away from paths and clearings; their tiles are solid water
+  LV.ponds = [];
+  for (let t = 0; t < 400 && LV.ponds.length < Math.round(3 * area); t++) {
+    const x = 6 + R() * (MW - 12), y = 6 + R() * (MH - 12), rx = 1.8 + R() * 2.2, ry = 1.6 + R() * 1.8;
+    if (pathD(x, y) < Math.max(rx, ry) + 1.2 || C.some(c => Math.hypot(c.x - x, c.y - y) < c.r + Math.max(rx, ry) + 1) || LV.ponds.some(p => Math.hypot(p.x - x, p.y - y) < 8)) continue;
+    LV.ponds.push({ x, y, rx, ry, seed: R.int(1, 1e6) });
+    for (let j = Math.floor(y - ry - 1); j <= y + ry + 1; j++) for (let i = Math.floor(x - rx - 1); i <= x + rx + 1; i++) if (i > 0 && j > 0 && i < MW && j < MH && pondD(i + 0.5, j + 0.5) < 1.1) LV.solid[tIdx(i, j)] = 1;
+  }
   // interior trees, thicker away from paths and clearings
   for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
     if (edgeBand(i, j) || inClearing(i, j)) continue;
@@ -115,7 +135,7 @@ function genForest(R, A) {
     if (R() < dens && canTree(i, j)) { LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'tree', i, j, ...treeKind(R, autumn), jx: (R() - 0.5) * 0.4, jy: (R() - 0.5) * 0.4 }); }
   }
   // undergrowth and clutter: bushes, rocks, stumps, logs, mushrooms, ferns
-  for (let n = 0; n < 150; n++) {
+  for (let n = 0; n < 150 * area; n++) {
     const fi = 3 + R() * (MW - 6), fj = 3 + R() * (MH - 6), i = Math.floor(fi), j = Math.floor(fj);
     if (edgeBand(i, j) || solidAt(i, j) || pathD(fi, fj) < 0.2) continue;
     const q = R(), seed = R.int(0, 5);
@@ -149,13 +169,21 @@ function genForest(R, A) {
   }
   // flowers are painted into the ground; barrels by camps
   LV.decor.push({ kind: 'meadow', seed: R.int(1, 1e6) });
+  // the warlord's lair: he waits at the dungeon entrance among a goblin camp; the way down is
+  // sealed until he falls
+  {
+    const r = LV.rooms[far], c = C[far];
+    LV.spawns.push({ id: 'warlord', fi: c.x + 1.2, fj: c.y - 1.2 });
+    for (const [dx, dy] of [[-2.4, -1.6], [2.2, 1.8]]) { const i = Math.floor(c.x + dx), j = Math.floor(c.y + dy); if (!solidAt(i, j) && Math.hypot(i - S.i, j - S.j) > 1.5) { LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'tent', i, j }); } }
+    void r;
+  }
   // monsters: a pack per clearing (more in camps), plus a few on the paths
   // the forest's own (goblins, wolves) come often; dungeon dwellers wander out now and then
   const pool = Object.keys(MONSTERS).filter(id => !MONSTERS[id].unique && (MONSTERS[id].minLevel || 1) <= A.diff && !['spider', 'shaman', 'burning'].includes(id));
-  for (const id of ['goblin', 'goblin', 'wolf', 'wolf']) pool.push(id);
+  for (const id of ['goblin', 'goblin', 'wolf', 'wolf', 'slime', 'slime', 'boar', 'gshaman', 'brigand']) pool.push(id);
   const free = (x, y, rad) => { for (let t = 0; t < 30; t++) { const fi = x + (R() - 0.5) * rad * 2, fj = y + (R() - 0.5) * rad * 2; if (!blocked(fi, fj)) return [fi, fj]; } return null; };
   LV.rooms.forEach((r, n) => {
-    if (n === 0) return;
+    if (n === 0 || n === far) return;
     let budget = (camps.includes(n) ? 4 : 2) + Math.floor(A.diff * 0.6);
     while (budget > 0) {
       const id = R.pick(pool), m = MONSTERS[id], count = m.pack ? R.int(2, 3) : 1;
@@ -266,9 +294,20 @@ const canopyAt = (x, y) => CANOPY[(((y % 64) + 64) % 64) * 96 + (((x % 96) + 96)
 function outdoorFloor(x, y, A, B, ti, tj) {
   if (ti < 0 || tj < 0 || ti >= MW || tj >= MH) return canopyAt(x, y);
   const fi = A / 32, fj = B / 32;
+  if (LV.ponds && LV.ponds.length) {   // water: deeper toward the middle, ripple lines, lily pads; a sandy shore
+    const wd = pondD(fi, fj);
+    if (wd < 1) {
+      if (hash(Math.floor(x / 5), Math.floor(y / 3), 81) < 0.04 && wd < 0.8) return (x + y) % 5 === 0 ? 91 : LEAF[4];
+      let t = wd < 0.45 ? 1 : 2;
+      if ((y + Math.floor(vnoise(A, B, 12, 82) * 4)) % 6 === 0 && hash(x >> 2, y, 83) < 0.45) t = 3;
+      if (hash(x, y, 84) < 0.01) t = 4;
+      return WATER[t];
+    }
+    if (wd < 1.18) return wd < 1.06 ? DIRT[4] : BAYER[((y & 3) << 2) | (x & 3)] < (1.18 - wd) / 0.12 ? DIRT[3] : grassAt(x, y, A, B);
+  }
   let pd = pathD(fi, fj);
   if (LV.plaza) pd = Math.min(pd, Math.hypot(fi - LV.plaza.x, fj - LV.plaza.y) - LV.plaza.r);
-  pd += (vnoise(A, B, 9, 71) - 0.5) * 0.35;
+  if (pd < 0.6) pd += (vnoise(A, B, 9, 71) - 0.5) * 0.35;   // edge wobble only matters near a path
   if (pd < -0.05) return dirtAt(x, y, A, B);
   if (pd < 0.12) return BAYER[((y & 3) << 2) | (x & 3)] < (0.12 - pd) / 0.17 ? dirtAt(x, y, A, B) : GRASS[1];
   if (pd < 0.3) return GRASS[clamp(Math.floor(1.5 + vnoise(A, B, 6, 23) * 1.5), 0, 6)];   // trodden edge
@@ -277,7 +316,7 @@ function outdoorFloor(x, y, A, B, ti, tj) {
 // a flower meadow: clusters of white, yellow and pink dots where the grass is lush
 function stampMeadow(seed) {
   const R = rng(seed), cols = [[27, 26], [51, 50], [59, 58], [23, 22]];
-  for (let n = 0; n < 160; n++) {
+  for (let n = 0; n < 160 * MW * MH / 1600; n++) {
     const fi = 3 + R() * (MW - 6), fj = 3 + R() * (MH - 6);
     if (pathD(fi, fj) < 0.5 || LV.solid[tIdx(Math.floor(fi), Math.floor(fj))]) continue;
     const [x, y] = iso(fi, fj), col = cols[R.int(0, 3)];
@@ -501,10 +540,10 @@ function buildOutdoor(back) {
       fires.push({ wx: x, wy: y - 2, h: 14, w: 5, seed: d.i * 31 + d.j, ember: 0.12, tile: tIdx(d.i, d.j) });
       lights.push({ x, y, z: 16, r: 90, i: 0.35, seed: d.i + d.j * 7 });
     } else if (BUILD[d.kind.replace('2', '')] || d.kind === 'stall2') {
-      const ci = d.i + d.w / 2, cj = d.j + d.h / 2, [x, y] = iso(ci, cj);
+      const dw = d.w || 1, dh = d.h || 1, ci = d.i + dw / 2, cj = d.j + dh / 2, [x, y] = iso(ci, cj);   // forest tents have no footprint size
       const sp = d.kind === 'stall' ? BUILD.stall(0) : d.kind === 'stall2' ? BUILD.stall(1) : BUILD[d.kind]();
-      props.push({ depth: ci + cj + 0.5, sp, wx: x, wy: y, tile: tIdx(d.i + d.w - 1, d.j + d.h - 1) });
-      shadows.push([x + 10, y + 6, (d.w + d.h) * 11, (d.w + d.h) * 5]);
+      props.push({ depth: ci + cj + 0.5, sp, wx: x, wy: y, tile: tIdx(d.i + dw - 1, d.j + dh - 1) });
+      shadows.push([x + 10, y + 6, (dw + dh) * 11, (dw + dh) * 5]);
       if (d.kind === 'forge') {
         const [fx, fy] = iso(ci + 1.2, cj + 0.15);
         lights.push({ x: fx, y: fy, z: 8, r: 60, i: 0.3, seed: 5 });
@@ -573,7 +612,7 @@ function trade(n) {
     const items = hero.bag.filter(it => !Object.values(hero.equip).includes(it));
     if (!items.length) { say('NOTHING TO SELL', 26, 1.5); return; }
     let g = 0;
-    for (const it of items) g += Math.max(3, Math.round((it.lvl || 1) * ({ normal: 4, magic: 10, rare: 25 }[it.rarity] || 4)));
+    for (const it of items) g += Math.max(3, Math.round((it.lvl || 1) * ({ normal: 4, magic: 10, rare: 25, legend: 80 }[it.rarity] || 4)));
     hero.bag = hero.bag.filter(it => !items.includes(it)); hero.gold += g; sfx('gold'); say(`SOLD ${items.length} FOR ${g} GOLD`, 51, 2);
   }
   saveGame();

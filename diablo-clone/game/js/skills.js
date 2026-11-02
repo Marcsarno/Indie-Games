@@ -132,6 +132,7 @@ function setupBoss() {
 }
 function bossAlive() { return boss && alive(boss); }
 function updateBoss(e, dt, d, dx, dy) {
+  if (e.def.boss === 'slam') return updateWarlord(e, dt, d);
   // returns true when the lunge state machine owns this frame
   e.special -= dt;
   if (e.lunge > 0) {   // telegraph: rear up and mark the line on the floor
@@ -156,8 +157,49 @@ function updateBoss(e, dt, d, dx, dy) {
   }
   return false;
 }
+// The ogre warlord: every few seconds he raises his club and slams the ground where the hero
+// stood; a blinking red ring marks the spot (0.9 s to get out). At half life he bellows for goblins.
+function updateWarlord(e, dt, d) {
+  e.special -= dt;
+  if (!e.called && e.hp < e.maxHp * 0.5) {
+    e.called = true; say('THE WARLORD CALLS HIS GOBLINS', 22, 2.5); sfx('cry');
+    for (let k = 0; k < 4; k++) { const a = k / 4 * 6.283; const g = makeEnemy(k % 2 ? 'goblin' : 'gshaman', e.fi + Math.cos(a) * 2.5, e.fj + Math.sin(a) * 2.5, enemies.length); if (!blocked(g.fi, g.fj)) { g.state = 'hunt'; enemies.push(g); } }
+  }
+  if (e.slamT > 0) {
+    e.slamT -= dt; e.clip = 'attack'; e.atk = 0; e.dir = dirFrom(e.lx - e.fi, e.ly - e.fj);
+    if (e.slamT <= 0.12) e.atk = 380;   // the club comes down
+    if (e.slamT <= 0) {
+      if (Math.hypot(hero.fi - e.lx, hero.fj - e.ly) < 2.0) hurtHero(Math.round(roll(e.dmg) * 1.6), e);
+      if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.6);
+      const [x, y] = iso(e.lx, e.ly);
+      for (let k = 0; k < 30; k++) { const a = k / 30 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 80, Math.sin(a) * 40, 50 + Math.random() * 40, 1, k % 3 ? (LV.outdoor ? DIRT[3] : S[5]) : DIRT[4]); }
+      sfx('crit'); e.atk = -1; e.cool = 1.1; e.special = 4 + Math.random() * 2.5;
+    }
+    return true;
+  }
+  if (e.special <= 0 && d < 6.5 && d > 1.2) {
+    e.lx = hero.fi; e.ly = hero.fj; e.slamT = 0.9; sfx('heavySwing');
+    return true;
+  }
+  return false;
+}
+// the warning ring: a blinking red ellipse on the ground where the slam will land
+function drawSlamRing() {
+  if (!bossAlive() || !(boss.slamT > 0)) return;
+  const [cx0, cy0] = iso(boss.lx, boss.ly), cx = cx0 - camX, cy = cy0 - camY, rx = 2.0 * 22.6, ry = rx / 2, blink = Math.floor(G.t * 14) % 2;
+  const fill = 1 - boss.slamT / 0.9;
+  for (let a = 0; a < 160; a++) {
+    const t = a / 160 * Math.PI * 2;
+    for (const k of [1, fill]) {
+      const x = Math.round(cx + Math.cos(t) * rx * k), y = Math.round(cy + Math.sin(t) * ry * k);
+      if (x < 0 || y < 0 || x >= W || y >= H || ((a + blink) & 1 && k === 1)) continue;
+      scr[y * W + x] = RED[k === 1 ? 3 : 2] | EMIS;
+    }
+  }
+}
 // a red dotted warning line from the broodmother to where her lunge will land
 function drawTelegraph() {
+  drawSlamRing();
   if (!bossAlive() || !(boss.lunge > 0)) return;
   const [ax, ay] = iso(boss.fi, boss.fj), [bx, by] = iso(boss.lx, boss.ly), n = Math.ceil(Math.hypot(bx - ax, by - ay));
   const blink = Math.floor(G.t * 12) % 2;

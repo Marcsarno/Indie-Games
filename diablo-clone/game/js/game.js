@@ -39,6 +39,7 @@ function recalcHero() {
   STAT.maxHp = 40 + (hero.lvl - 1) * 9 + (mods.hp || 0);
   STAT.maxMana = 20 + (hero.lvl - 1) * 4 + (mods.mana || 0);
   STAT.leech = mods.leech || 0;
+  STAT.crit = mods.crit || 0; STAT.thorns = mods.thorns || 0; STAT.atkSpeed = mods.atkSpeed || 0; STAT.regen = mods.regen || 0; STAT.fireburst = mods.fireburst || 0;
   STAT.speed = 4.2 * (1 + (mods.speed || 0) / 100);
   STAT.slow = !!w?.slow;
   hero.look = { team: hero.team, helm: it('helm')?.look || 'none', chest: it('chest')?.look || 'tunic', weapon: w?.look || 'sword', shield: it('shield')?.look || 'none' };
@@ -62,6 +63,7 @@ function startLevel(level, seed) {
   G.msg = [];
   say(LV.outdoor ? areaName() : `${TH().name} LEVEL ${LV.depth}`, 51, 3);
   if (!LV.outdoor && isBossFloor(LV.depth)) say('SOMETHING VAST STIRS IN THE DARK', 22, 4);
+  if (LV.area === 'forest') say('AN OGRE WARLORD HOLDS THE WAY DOWN', 22, 4);
 }
 function makeEnemy(id, fi, fj, n) {
   const m = MONSTERS[id], lv = LV.diff;
@@ -97,8 +99,9 @@ function warmStep(budgetMs, maxCount = Infinity) {
 }
 
 // ---------------------------------------------------------------- flow field toward the hero
-let flow = new Int16Array(MW * MH), flowT = 0;
+let flow = new Int16Array(MW * MH), flowT = 0;   // reallocated in computeFlow when the map size changes
 function computeFlow() {
+  if (flow.length !== MW * MH) flow = new Int16Array(MW * MH);
   const hi = Math.floor(hero.fi), hj = Math.floor(hero.fj);
   if (hi < 0 || hj < 0 || hi >= MW || hj >= MH) return;
   flow = bfs(hi, hj);
@@ -218,7 +221,14 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false) {
     const streak = killStreak();
     gainXp(e.def.xp * (1 + (LV.diff - 1) * 0.3) * (e.champ ? 3 : 1) * (1 + Math.max(0, streak - 2) * 0.1));
     dropLoot(e.fi, e.fj, e.def.unique ? 4 : e.champ ? 2 : 1, e.def.unique || !!e.champ);
-    if (e === boss) { say('THE BROODMOTHER IS SLAIN', 51, 4); say('THE WAY DOWN IS OPEN', 26, 4); sfx('levelUp'); }
+    if (e.def.unique || (e.champ && Math.random() < 0.08)) groundItems.push({ item: rollLegendary(rng((Math.random() * 1e9) | 0)), fi: e.fi, fj: e.fj, t: 0 });
+    // Emberbrand: the kill erupts in fire that scorches everything close by (no chain reactions)
+    if (STAT.fireburst && !G.bursting) {
+      G.bursting = true; burst(2, ex, ey, e.def.chest * 0.6, 26, 110, 16); burst(3, ex, ey, 6, 14, 40, 17); sfx('fireball');
+      for (const o of enemies) if (o !== e && alive(o) && Math.hypot(o.fi - e.fi, o.fj - e.fj) < 1.9) damageEnemy(o, Math.max(1, Math.round(heroDmg(1) * 0.6)), e.fi, e.fj, false);
+      G.bursting = false;
+    }
+    if (e === boss) { say(`THE ${e.def.name} IS SLAIN`, 51, 4); say('THE WAY DOWN IS OPEN', 26, 4); sfx('levelUp'); }
     G.kills++;
   } else {
     e.stop = crit ? 0.11 : 0.07; hero.stop = Math.max(hero.stop, e.stop); sfx('hit');
@@ -254,7 +264,7 @@ function heroHitResolve(all = false) {
     if (!alive(e)) continue;
     const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy), rr = reach + (e.def.unique ? 0.5 : 0.2);
     if (d > rr || (!all && d > 0.3 && (dx * fx + dy * fy) / d < 0.35)) continue;
-    const crit = Math.random() < CRIT_CHANCE;
+    const crit = Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100;
     damageEnemy(e, heroDmg(crit ? 2 : 1), hero.fi, hero.fj, crit); any = true;
   }
   for (const p of dynProps) {
@@ -299,7 +309,7 @@ function pickup(g) {
   const b = ITEM_BASES[g.item.base];
   if (b.slot === 'potion') { if (hero.potions >= 8) return false; hero.potions++; sfx('pickup'); say('HEALING POTION', 22, 1.2); return true; }
   if (hero.bag.length >= BAG_SIZE) { if (!g.warned) say('YOUR BAG IS FULL', 22, 1.5); g.warned = true; return false; }
-  hero.bag.push(g.item); say(itemName(g.item), RARITY_COL[g.item.rarity], 2); sfx('pickup');
+  hero.bag.push(g.item); say((g.item.rarity === 'legend' ? 'LEGENDARY: ' : '') + itemName(g.item), RARITY_COL[g.item.rarity], g.item.rarity === 'legend' ? 3.5 : 2); sfx(g.item.rarity === 'legend' ? 'levelUp' : 'pickup');
   // an empty slot is filled right away so the new look shows immediately
   if (!hero.equip[b.slot]) equipItem(g.item);
   return true;
@@ -320,6 +330,7 @@ function prewarmHero() { for (let d = 0; d < 8; d++) { warmQueue.unshift([ 'hero
 // ---------------------------------------------------------------- update
 const input = { mx: 0, my: 0, attack: false, keys: new Set() };
 function update(dt) {
+  if (STAT.regen && !hero.dead && G.mode === 'play') hero.hp = Math.min(STAT.maxHp, hero.hp + STAT.regen * dt);
   G.t += dt;
   for (const m of G.msg) m.t -= dt; G.msg = G.msg.filter(m => m.t > 0);
   if (G.fadeTo) { G.fade = Math.min(1, G.fade + dt * 2.5); if (G.fade >= 1) { const f = G.fadeTo; G.fadeTo = null; f(); } }
@@ -393,7 +404,7 @@ function updateHero(dt) {
   if (hero.cast >= 0) { hero.cast -= dt; hero.clip = 'channel'; if (hero.cast < 0) { hero.cast = -1; hero.clip = 'idle'; } }
   if (hero.atk >= 0) {
     hero.clip = ATTACK_CLIPS[hero.combo] || 'attack';
-    hero.atk += dt * 1000;
+    hero.atk += dt * 1000 * (1 + (STAT.atkSpeed || 0) / 100);
     const sw = weaponSwing(hero.look, hero.combo), ki = swingKey(sw, hero.atk);
     if (ki >= 0 && sw[ki].mv) lungeHero(sw[ki].mv * dt * 1000 / sw[ki].ms);
     if (ki >= 0 && sw[ki].hit && !hero.hitDone) {
@@ -417,7 +428,7 @@ function updateHero(dt) {
   // stairs
   const s = LV.stairs;
   if (!G.fadeTo && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55 && bossAlive()) {
-    if (!(G.sealT > 0)) { say('THE BROODMOTHER GUARDS THE WAY DOWN', 22, 2); G.sealT = 3; }
+    if (!(G.sealT > 0)) { say(`THE ${boss.def.name} GUARDS THE WAY DOWN`, 22, 2); G.sealT = 3; }
   } else if (!G.fadeTo && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55) {
     sfx('stairs');
     G.fadeTo = () => { startLevel(LV.level + 1, (LV.seed * 31 + 17) >>> 0); saveGame(); };
@@ -428,6 +439,7 @@ function updateHero(dt) {
 }
 function updateEnemy(e, dt) {
   if (e.dying >= 0) {
+    e.flash = Math.max(0, e.flash - dt);   // the kill flash is brief; the death animation shows after it
     if (e.stop > 0) { e.stop -= dt; return; }
     e.dying += dt;
     if (e.dying >= 0.6 && !e.corpse) {   // the last death frame becomes part of the floor
@@ -504,6 +516,7 @@ function hurtHero(dmg, src) {
   floater(String(dmg), hero.fi, hero.fj, 46, 23);
   const [x, y] = screenOf(hero); burst(1, x, y, 24, 6, 40, 22);
   if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.25);
+  if (STAT.thorns && src && src.def && alive(src)) damageEnemy(src, Math.max(1, Math.round(dmg * STAT.thorns / 100)), hero.fi, hero.fj, false);   // thorns
   if (hero.hp <= 0) {
     sfx('death');
     hero.hp = 0; hero.dead = 0.001; hero.clip = 'death'; hero.clock = 0; hero.atk = -1;
@@ -633,7 +646,9 @@ function render() {
     }
   }
   const visAt = (fi, fj) => LV.vis[tIdx(clamp(Math.floor(fi), 0, MW - 1), clamp(Math.floor(fj), 0, MH - 1))];
-  const chars = [hero, ...enemies.filter(e => !e.corpse && visAt(e.fi, e.fj) > 0.25), ...npcs];
+  // only characters near the screen are drawn (the big forest holds many more than are in view)
+  const onScreen = c => { const [x, y] = screenOf(c); return x > camX - 70 && x < camX + W + 70 && y > camY - 30 && y < camY + H + 90; };
+  const chars = [hero, ...enemies.filter(e => !e.corpse && visAt(e.fi, e.fj) > 0.25 && onScreen(e)), ...npcs.filter(onScreen)];
   const boxes = chars.map(c => { const [x, y] = screenOf(c); return [x - 40, y - 64, x + 40, y + 8, c.fi + c.fj]; });
   // a baked prop only needs drawing again if it should cover a character it overlaps (it is in
   // front of it); props behind every character are already right in the baked world

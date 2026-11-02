@@ -244,7 +244,7 @@ const GEAR_LOOKS = {
   weapon: ['sword', 'axe', 'mace', 'flail', 'greatsword'],
   shield: ['none', 'buckler', 'round', 'kite', 'tower'],
 };
-const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}`;
+const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}.${eq.cape || ''}`;
 // combo 1 = the second swing of a quick pair (a backhand)
 // a quick string of swings: forehand, backhand, then a finisher (sword thrust or heavy slam)
 const ATTACK_CLIPS = ['attack', 'attack2', 'attack3'];
@@ -377,7 +377,7 @@ function heroRig(eq, st) {
     const dn = V.norm(V.add(V.add(V.mul(up, -Math.cos(th)), V.mul(fwd, -Math.sin(th))), V.mul(sideR, side)));
     const a1 = V.norm(V.sub(sideR, V.mul(dn, V.dot(sideR, dn)))), a0 = V.cross(a1, dn);
     const top = V.add(V.mad(J.chest, up, B.shZ + 0.6), V.mul(fwd, -2.6)), L = 8.2;
-    r.box(V.mad(top, dn, L / 2), [0.5, B.shW * 0.78, L / 2], CAPE_M, [a0, a1, dn], { mf: p => V.dot(V.sub(p, top), dn) > L - 1.2 ? M.LEATHER : 0 });
+    r.box(V.mad(top, dn, L / 2), [0.5, B.shW * 0.78, L / 2], TEAM[eq.cape] || CAPE_M, [a0, a1, dn], { mf: p => V.dot(V.sub(p, top), dn) > L - 1.2 ? M.LEATHER : 0 });
   }
   const hr0 = r.p.length;
   // head

@@ -154,7 +154,7 @@ function drawHud() {
   // the boss's health bar, once she is awake
   if (bossAlive() && boss.state !== 'sleep') {
     const bw = 150, bx = Math.round(W / 2 - bw / 2), by = 24, f = boss.hp / boss.maxHp;
-    textC('BROODMOTHER', W / 2, by - 8, 22);
+    textC(boss.def.name, W / 2, by - 8, 22);
     fillRect(bx - 1, by - 1, bw + 2, 6, BLK);
     for (let x = 0; x < bw; x++) for (let y = 0; y < 4; y++) put(bx + x, by + y, x < bw * f ? (y === 0 ? 23 : y === 3 ? 20 : 22) : 3);
   }
