@@ -310,18 +310,24 @@ const OUT = {
     r.cone([0, 0, 0], [0, 0, H * 0.35], 2.8, 2.0, M.BARK);
     // stacked, drooping tiers: each a wide cone whose skirt is darker underneath
     for (let k = 0; k < tiers; k++) {
-      const z0 = H * (0.18 + k * 0.17), rad = 13 - k * (10 / tiers) + R() * 1.2, top = z0 + rad * 1.25;
-      r.cone([R() - 0.5, R() - 0.5, z0], [0, 0, top], rad, 0.6, M.PINE, { mf: p => (p[2] - z0 < 1.6 && hash(Math.floor(Math.atan2(p[1], p[0]) * 7), k, seed) < 0.5) ? M.LEAFM : 0 });
+      const z0 = H * (0.25 + k * 0.155), rad = 13 - k * (10 / tiers) + R() * 1.2, top = z0 + rad * 1.25;
+      r.cone([R() - 0.5, R() - 0.5, z0 + 1], [0, 0, top], rad * 0.82, 0.6, M.PINE);
+      // drooping branch tips around the tier give the jagged, layered edge of the references
+      const nb = 7 + (k < 2 ? 2 : 0), a0 = R() * 6.28;
+      for (let b = 0; b < nb; b++) {
+        const a = a0 + b / nb * Math.PI * 2, rr = rad * (0.95 + R() * 0.2);
+        r.cone([Math.cos(a) * rad * 0.25, Math.sin(a) * rad * 0.25, z0 + rad * 0.55], [Math.cos(a) * rr, Math.sin(a) * rr, z0 - 0.5], rad * 0.32, 0.7, M.PINE);
+      }
     }
   }, [64, 104, 32, 92]),
   oak: (seed, autumn) => propSprite((autumn ? 'autumn' : 'oak') + seed, r => {
-    const R = rng(seed + 23), H = 26 + R() * 8, leaf = autumn ? M.AUTUMNM : M.LEAFM;
-    r.cone([0, 0, 0], [0, 0, H], 3.4, 2.4, M.BARK);
+    const R = rng(seed + 23), H = 18 + R() * 6, leaf = autumn ? M.AUTUMNM : M.LEAFM;
+    r.cone([0, 0, 0], [0, 0, H], 4.0, 2.8, M.BARK);
     for (let k = 0; k < 3; k++) { const a = k * 2.1 + R(); r.cone([0, 0, H * 0.7], [Math.cos(a) * 7, Math.sin(a) * 7, H + 4], 1.6, 0.9, M.BARK); }
     for (const s of [-1, 1]) r.cone([0, 0, 2], [s * 4, s * 2, 0], 1.6, 0.6, M.BARK);   // roots
     // leafy clumps: separate parts, so each gets its own outline and reads as a clump
     const clumps = [[0, 0, H + 9, 11], [-6, 5, H + 4, 8], [6, -5, H + 5, 8], [5, 6, H + 2, 7.5], [-5, -6, H + 6, 7.5], [0, 0, H + 16, 7.5], [-2, 7, H + 12, 6], [3, -3, H - 1, 7]];
-    for (const [x, y, z, rad] of clumps) { const k = 0.85 + R() * 0.3; r.sph([x * k, y * k, z], rad * k, leaf); }
+    for (const [x, y, z, rad] of clumps) { const k = 0.95 + R() * 0.3; r.sph([x * k * 1.1, y * k * 1.1, z], rad * k * 1.12, leaf); }
   }, [80, 100, 40, 84]),
   bush: (seed, autumn) => propSprite('bush' + seed + (autumn ? 'a' : ''), r => {
     const R = rng(seed + 31), leaf = autumn ? M.AUTUMNM : M.LEAFM;

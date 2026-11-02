@@ -72,7 +72,7 @@ defMat('MARKB', [21, 22, 23], 1, { span: 0.5 });
 defMat('BLOODY', [19, 20, 21, 22], 1, { span: 0.8 });
 // outdoors (round 13)
 defMat('LEAFM', LEAF, 3, { span: 0.9 });
-defMat('PINE', [92, 93, 94, 95, 96], 2, { span: 1.0 });
+defMat('PINE', [92, 93, 94, 95, 96], 3, { span: 1.0 });
 defMat('AUTUMNM', [119, 120, 121, 122, 112], 2, { span: 0.9 });
 defMat('GRASSM', GRASS, 3, { span: 0.8 });
 defMat('PLANK', DIRT, 2, { span: 0.8 });
