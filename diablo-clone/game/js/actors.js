@@ -24,10 +24,10 @@ const SWINGS = {
   // forehand: high behind the right shoulder, diagonally down across to the low left
   light: withTilt([
     K(1.9, 100, { ck: 0.3, r: 4.8, tw: 0.42, ln: -0.04, bob: -0.4, fl: 1.5, fr: -3.5 }),
-    K(1.2, 45, { smear: true, ck: 0.35, r: 6.2, tw: 0.15, ln: 0.08, bob: -0.6, fl: 3.5, fr: -3.2, mv: 0.05 }),
-    K(0.3, 45, { smear: true, ck: 0.1, r: 7.4, tw: -0.2, ln: 0.16, bob: -1.0, fl: 5, fr: -3.2, mv: 0.05 }),
-    K(-0.45, 50, { smear: true, hit: true, ck: -0.1, r: 7.4, tw: -0.42, ln: 0.2, bob: -1.6, fl: 5.5, fr: -3.6, mv: 0.04 }),
-    K(-0.85, 110, { ck: -0.2, r: 6.2, tw: -0.5, ln: 0.16, bob: -1.4, fl: 5.5, fr: -3.6 }),
+    K(1.1, 45, { smear: true, ck: 0.35, r: 6.2, tw: 0.15, ln: 0.08, bob: -0.6, fl: 3.5, fr: -3.2, mv: 0.05 }),
+    K(0.15, 45, { smear: true, ck: 0.1, r: 7.4, tw: -0.2, ln: 0.16, bob: -1.0, fl: 5, fr: -3.2, mv: 0.05 }),
+    K(-0.65, 50, { smear: true, hit: true, ck: -0.1, r: 7.4, tw: -0.42, ln: 0.2, bob: -1.6, fl: 5.5, fr: -3.6, mv: 0.04 }),
+    K(-1.1, 110, { ck: -0.25, r: 6.2, tw: -0.5, ln: 0.16, bob: -1.4, fl: 5.5, fr: -3.6 }),
     K(0.6, 70, { ck: 0.3, r: 5.6, tw: -0.12, ln: 0.08, bob: -0.6, fl: 4, fr: -3 }),
   ], 0.65),
   // backhand (second swing of a combo): from the low left, rising across to the high right
@@ -108,15 +108,17 @@ function tipRig(rig, pivot, pitch, roll = 0, drop = 0) {
 let SMEAR_MODE = 'subtle';   // user disliked the long bright crescent (round 9); 'subtle' is a short thin streak, 'none' turns it off
 function smearArc(rig, pivot, F, U, a0, a1, r0, r1) {
   if (SMEAR_MODE === 'none') return;
-  const subtle = SMEAR_MODE === 'subtle', N = subtle ? 4 : 7, span = subtle ? 0.45 : 1;
+  const subtle = SMEAR_MODE === 'subtle', N = subtle ? 5 : 7, span = subtle ? 0.6 : 1;
   for (let s = 0; s < N; s++) {
     const t0 = s / N * span, t1 = (s + 1) / N * span;
     const A0 = lerp(a1, a0, t0), A1 = lerp(a1, a0, t1);
-    const age = t0 / span, col = subtle ? (age < 0.5 ? 31 : 30) : age < 0.3 ? 27 : age < 0.65 ? 26 : 25;
-    const ri = subtle ? r1 - 3.2 + age * 1.6 : lerp(r0, r1, 0.35 + 0.65 * age);   // the trail thins as it ages
+    const age = t0 / span, col = subtle ? (age < 0.4 ? 32 : 31) : age < 0.3 ? 27 : age < 0.65 ? 26 : 25;
+    // subtle: a thin line following the blade tip (a wide band read as a forked tip)
+    const ri = subtle ? r1 - 1.4 + age * 0.4 : lerp(r0, r1, 0.35 + 0.65 * age);   // the trail thins as it ages
     const dir = a => V.add(V.mul(F, Math.cos(a)), V.mul(U, Math.sin(a)));
     const p00 = V.mad(pivot, dir(A0), ri), p01 = V.mad(pivot, dir(A0), r1), p10 = V.mad(pivot, dir(A1), ri), p11 = V.mad(pivot, dir(A1), r1);
-    rig.tri(p00, p01, p11, col, subtle); rig.tri(p00, p11, p10, col, subtle);
+    const dith = subtle;   // dotted along its whole length: a solid stroke read as a hooked tip
+    rig.tri(p00, p01, p11, col, dith); rig.tri(p00, p11, p10, col, dith);
   }
 }
 
@@ -226,8 +228,9 @@ function bigHead(r, from, hd, HK) {
 // ---------------------------------------------------------------- the hero (knight)
 // chibi proportions (round 13, the user's style references): short legs and body, the head drawn
 // HERO_HK times bigger (about 40% of the height), body parts slimmed by HERO_BK
-const HERO_B = { hipH: 11.5, thigh: 6.2, shin: 5.6, ankle: 1.3, spine: 6, shW: 5.4, shZ: 3, neck: 10.5, upper: 4.8, fore: 4.4, hipW: 2.4, stride: 5.6, lift: 3.2, stance: 1.2,
-  duty: 0.38, bob: 0.7, sway: 0.35, runLean: 0.16, counter: 0.2 };   // the hero's travel speed is a jog
+const HERO_B = { hipH: 11.5, thigh: 6.2, shin: 5.6, ankle: 1.3, spine: 6, shW: 5.4, shZ: 3, neck: 10.5, upper: 4.8, fore: 4.4, hipW: 2.4, stride: 6.4, lift: 4.0, stance: 1.2,
+  duty: 0.34, bob: 1.0, sway: 0.35, runLean: 0.18, counter: 0.22 };   // round 15: longer stride, more air, higher knees
+const CAPE_M = M.CLOTH_GREEN;   // a green cloak, like the heroes in the references
 const HERO_HK = 1.5, HERO_BK = 0.8;
 const HERO_GAIT = gaitFrameTiles(HERO_B);
 const TEAM = { red: M.CLOTH_RED, blue: M.CLOTH_BLUE, green: M.CLOTH_GREEN, tan: M.CLOTH_TAN, purple: M.CLOTH_PURPLE, white: M.CLOTH_WHITE };
@@ -262,13 +265,13 @@ function heroRig(eq, st) {
 
   // legs
   for (const [hip, knee, ank, s] of [[J.hipL, J.kneeL, J.ankL, -1], [J.hipR, J.kneeR, J.ankR, 1]]) {
-    r.cone(hip, knee, 2.3 + bulk, 2.0 + bulk, plate ? PL : M.CLOTH_DARK);
+    r.cone(hip, knee, 2.3 + bulk, 2.0 + bulk, plate ? PL : M.CLOTH_TAN);   // brown leather trousers
     r.cone(knee, ank, 1.9 + bulk * 1.0, 1.6 + bulk * 0.8, legM);
     if (plate) { const kc = V.add(knee, [1.4, 0, 0.3]); r.sph(kc, 2.4, PL); }   // poleyn
-    r.ell(V.add(ank, [2.0, 0, -0.9]), plate ? [3.9, 2.4, 1.5] : [3.1, 1.6, 1.2], legM);
+    r.ell(V.add(ank, [2.0, 0, -0.9]), plate ? [3.9, 2.4, 1.5] : [4.0, 2.2, 1.6], legM);   // chunky chibi boots
   }
   // hips, belt and tabard
-  r.ell(J.pelvis, [3.4 + bulk, 4.2 + bulk * 1.4, 3.2 + bulk * 0.4], plate ? PL : chain ? M.CHAIN : M.CLOTH_DARK);
+  r.ell(J.pelvis, [3.4 + bulk, 4.2 + bulk * 1.4, 3.2 + bulk * 0.4], plate ? PL : chain ? M.CHAIN : M.CLOTH_TAN);
   const belt = V.mad(J.pelvis, up, 3.0);
   if (!plate) { r.ell(belt, [3.8 + bulk * 1.4, 4.6 + bulk * 1.6, 1.1], M.LEATHER, frameAlong(fwd, up)); r.sph(V.mad(belt, fwd, 3.8 + bulk * 1.4), 1.0, M.GOLD); }
   if (chain) r.box(V.add(V.mad(J.pelvis, fwd, 4.3), [0, 0, -2.5]), [0.5, 3.0, 5.2], team, frameAlong(fwd, up));
@@ -360,6 +363,22 @@ function heroRig(eq, st) {
   // slim every body part made so far (centers stay put), then build the head at normal size and
   // scale it up about its center
   for (const q of r.p) { if (q.a) { q.ra *= HERO_BK; q.rb *= HERO_BK; } if (q.r) q.r *= HERO_BK; if (q.rad) q.rad = V.mul(q.rad, HERO_BK); if (q.half) q.half = V.mul(q.half, HERO_BK); }
+  // a short cloak hanging from the shoulders: it streams back and flutters when he runs, swings
+  // forward when he stops, and follows the shoulders through a swing (secondary motion)
+  {
+    const c = st.clip, ph = st.f / 8 * Math.PI * 2;
+    let th = 0.14, side = 0;
+    if (c === 'walk') { th = 0.62 + 0.12 * Math.sin(ph * 2); side = J.swingArm * 0.18; }
+    else if (c === 'go') th = 0.45;
+    else if (c === 'stop') th = -0.12;
+    else if (c === 'bash') th = 0.75;
+    else if (atkIndex(c) >= 0) { th = 0.22 + Math.abs(J.twist) * 0.6; side = -J.twist * 0.5; }
+    else if (c === 'idle') th = 0.12 + (st.f % 4 === 2 ? 0.03 : 0);
+    const dn = V.norm(V.add(V.add(V.mul(up, -Math.cos(th)), V.mul(fwd, -Math.sin(th))), V.mul(sideR, side)));
+    const a1 = V.norm(V.sub(sideR, V.mul(dn, V.dot(sideR, dn)))), a0 = V.cross(a1, dn);
+    const top = V.add(V.mad(J.chest, up, B.shZ + 0.6), V.mul(fwd, -2.6)), L = 8.2;
+    r.box(V.mad(top, dn, L / 2), [0.5, B.shW * 0.78, L / 2], CAPE_M, [a0, a1, dn], { mf: p => V.dot(V.sub(p, top), dn) > L - 1.2 ? M.LEATHER : 0 });
+  }
   const hr0 = r.p.length;
   // head
   const hd = J.head;

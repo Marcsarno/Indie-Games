@@ -363,7 +363,9 @@ function updateHero(dt) {
   if (moving) {
     if (l > 1) { vx /= l; vy /= l; }
     // screen direction -> ground direction (isotropic): right = +i-j, down = +i+j
-    const gi = (vx + vy) * Math.SQRT1_2, gj = (vy - vx) * Math.SQRT1_2, sp = STAT.speed * (hero.whirl > 0 ? 0.6 : 1) * Math.min(1, l) * dt;
+    // a quick ramp up to full speed (0.1 s) gives the start some weight
+    const ramp = Math.min(1, 0.45 + (hero.runT || 0) / 0.1);
+    const gi = (vx + vy) * Math.SQRT1_2, gj = (vy - vx) * Math.SQRT1_2, sp = STAT.speed * (hero.whirl > 0 ? 0.6 : 1) * Math.min(1, l) * ramp * dt;
     const f0 = hero.fi, j0 = hero.fj;
     tryMove(hero, gi * sp, gj * sp);
     const moved = Math.hypot(hero.fi - f0, hero.fj - j0);
