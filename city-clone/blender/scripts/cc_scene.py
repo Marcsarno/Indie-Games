@@ -54,7 +54,7 @@ for z in LP["zones"]:
 tick_("ground")
 
 # ================================================================  ROADS  ================================================================
-RANK = dict(hwy=13, art=10, col=7, blvd=5, loc=4, ramp=3, alley=2)
+RANK = dict(hwy=13, art=10, col=7, blvd=5, loc=4, ramp=3, alley=2, driven=4, drive=3)       # round 44: drive / driven = the Promenade's one-lane-each-way streets
 NET, TRAILS = [], []
 for d in LP["roads"]:
     k, hw = d["kind"], d["w"] / 2; closed = d["closed"]; pts = []
@@ -62,7 +62,7 @@ for d in LP["roads"]:
         if not pts or math.dist(pts[-1], p) > .3: pts.append(tuple(p))                              # drop repeated points (the catmull spline divides by segment length)
     if not closed and math.dist(pts[0], pts[-1]) < .5 and len(pts) > 8: closed = True; pts = pts[:-1]      # the Hammocks ring is drawn as a loop
     if k == "trail": TRAILS.append((d["name"], pts, hw)); continue
-    kw = dict(hw=hw, rank=RANK[k], flare=6.5 if k == "art" else 4.5 if k in ("col", "blvd", "loc") else 2.5, closed=closed)
+    kw = dict(hw=hw, rank=RANK[k], flare=6.5 if k == "art" else 4.5 if k in ("col", "blvd", "loc") else 3.0 if k in ("drive", "driven") else 2.5, closed=closed)
     if d["name"] == "Lyons Rd": kw.update(mh=2.0, rank=12, flare=7.0)
     if k == "art" and abs(pts[0][1] - pts[-1][1]) < abs(pts[0][0] - pts[-1][0]): kw.update(rank=9)          # east-west arterials meet the north-south ones as children (no overlapping curbs)
     if k == "art": kw.update(xwalk=True)
@@ -136,6 +136,9 @@ for lot in LP["lots"]:
     if blds and blds[0]["label"] == "McD": mcd_site((x0, x1, y0, y1)); continue                # round 44: tight lot + drive-thru loop (cc_fill3)
     if blds and blds[0]["label"] in BRAND_DEALERS:                                            # dealer display lot: rows of new cars instead of stalls
         dealer_cars((x0, x1, y0, y1), blds)
+        for b_ in blds: SITE(b_, (x0, x1, y0, y1))
+        continue
+    if lot["dir"] == "n":                                                                      # round 44: blocks with no parking (pedestrian main street, shop rows)
         for b_ in blds: SITE(b_, (x0, x1, y0, y1))
         continue
     a0, a1, b0, b1 = (y0, y1, x0, x1) if vert else (x0, x1, y0, y1)                            # rows run along b; stalls step along b, rows stack along a

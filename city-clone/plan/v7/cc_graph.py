@@ -4,11 +4,11 @@ Run: python3 plan/v7/cc_graph.py -> viewer/worlds/cc/graph.json"""
 import os, json, math
 HERE = os.path.dirname(os.path.abspath(__file__)); LP = json.load(open(os.path.join(HERE, "layout.json")))
 OUT = os.path.join(HERE, "..", "..", "viewer", "worlds", "cc", "graph.json")
-DRIVE = {"hwy", "art", "col", "blvd", "loc", "ramp"}                       # alleys and trails are for the player only
+DRIVE = {"hwy", "art", "col", "blvd", "loc", "ramp", "drive", "driven"}           # round 44: Promenade streets carry traffic                       # alleys and trails are for the player only
 def base_of(d):
     k = d["kind"]
     if d["name"] == "Lyons Rd": return 12
-    return {"hwy": 12, "art": 10, "col": 8, "blvd": 6, "ramp": 6, "loc": 5}[k]
+    return {"hwy": 12, "art": 10, "col": 8, "blvd": 6, "ramp": 6, "loc": 5, "drive": 4, "driven": 4}[k]
 def lane_of(d):
     hw = d["w"] / 2
     if d["name"] == "Lyons Rd": return 5.6

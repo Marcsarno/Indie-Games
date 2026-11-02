@@ -42,6 +42,8 @@ SIGNS = {
     "butterfly": ("BUTTERFLY WORLD", "#2e7d32", "#ffe14a", "#2e7d32"), "wynmoor": ("WYNMOOR", "#f2ead6", "#2f4f2f", "#2f4f2f"), "hammocks": ("THE HAMMOCKS", "#f2ead6", "#3a5a2a", "#3a5a2a"),
     "storage": ("PUBLIC STORAGE", "#f37021", "#ffffff", "#f37021"), "church": ("COMMUNITY CHURCH", "#f2eee4", "#3a4a6a", "#3a4a6a"), "stables": ("TRADEWINDS STABLES", "#5a3a20", "#ffffff", "#9e3a2a"),
     "comingsoon": ("COMING SOON", "#1d3b6e", "#ffffff", "#1d3b6e"),
+    "cheesecake": ("THE CHEESECAKE FACTORY", "#f2e6c8", "#5a3a20", "#b8863a"), "dsw": ("DSW", "#1d1d1d", "#ffffff", "#1d1d1d"), "kobe": ("KOBE", "#7a1f1f", "#ffffff", "#1d1d1d"),
+    "silverspot": ("SILVERSPOT", "#1d1d1d", "#d9b56a", "#1d1d1d"),
     "sabal": ("SABAL PINES PARK", "#5a3a20", "#ffffff", "#5a3a20"), "tradewinds": ("TRADEWINDS PARK", "#5a3a20", "#ffffff", "#5a3a20"), "plaza": ("COCONUT CREEK PLAZA", "#f2e6c8", "#5a3a20", "#5a3a20"),
 }
 def make(key, text, bg, fg, w=512, h=128):

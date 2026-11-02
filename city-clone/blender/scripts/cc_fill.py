@@ -150,11 +150,15 @@ def lawn(x0, y0, x1, y1, trees=True):
 def SITE(b_, lot):
     """Replace one plan building rectangle with real models (scaled to real size, the rest of the rectangle becomes lawn / plaza)."""
     lab = b_["label"]; x0, y0, x1, y1 = b_["x0"], b_["y0"], b_["x1"], b_["y1"]; cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    face = {"WALMART": "e", "CITY HALL": "e", "POLICE": "e", "McD": "w", "COOPER'S HAWK": "e", "SHOPS": "s", "": "s", "SHOPS_N": "n", "WORLD OF BEER": "s", "STARBUCKS": "n"}.get(lab) or best_face(x0, y0, x1, y1, lot)
+    face = {"WALMART": "e", "CITY HALL": "e", "POLICE": "e", "McD": "w", "COOPER'S HAWK": "e", "CINEMA": "e", "SHOPS": "s", "": "s", "SHOPS_N": "n", "SHOPS_E": "e", "SHOPS_W": "w", "WORLD OF BEER": "s", "STARBUCKS": "n"}.get(lab) or best_face(x0, y0, x1, y1, lot)
     lw, ld = world_dims(face, x1 - x0, y1 - y0)                                               # rect size in the model's frame (width along the front)
     def col(w, d, x=cx, y=cy): ww, dd = world_dims(face, w, d); cbox(x, y, ww, dd); APRONS.append((x, y, ww, dd, face))
     def front_pt(dist):                                                                      # a point `dist` in front of the rect's front edge, centred
         return {"s": (cx, y0 - dist), "n": (cx, y1 + dist), "w": (x0 - dist, cy), "e": (x1 + dist, cy)}[face]
+    if lab.startswith("P:"):                                                                   # round 44: generic real-business building filling its rectangle, P:<sign key>:<face>:<height>
+        _, key, f_, h_ = lab.split(":"); ww, dd = world_dims(f_, x1 - x0, y1 - y0)
+        place(bldg(f"pb_{key}", ww, dd, float(h_), wall=RF.choice(["#efe6d2", "#e8d7b8", "#d9c9a8", "#f2efe8"]), key=key, accent=acc(key), roof="flat", sign_h=min(2.6, float(h_) * .28), glass_front=ww > 30), cx, cy, f_)
+        cbox(cx, cy, x1 - x0, y1 - y0); APRONS.append((cx, cy, x1 - x0, y1 - y0, f_)); return
     nm = lab.lower().replace(" ", "_").replace("'", "") or "bldg"
     if lab in BRAND_DEALERS:
         key = lab.lower(); place(showroom(f"dealer_{key}", key), cx, cy, face); col(48, 28)
@@ -210,7 +214,8 @@ def SITE(b_, lot):
             place(o, px, py, face); cbox(px, py, *world_dims(face, min(lw / 2 - 6, 50), min(ld - 6, 24)))
         return
     if lab == "CINEMA":
-        k = min(lw / 30, ld / 22, 1.8); place(LMP.cinema("cinema"), cx, cy, face, k, k, k); col(30 * k, 22 * k); return
+        k = min(lw / 30, ld / 22, 1.8); place(LMP.cinema("cinema"), cx, cy, face, k, k, k); col(30 * k, 22 * k)
+        place(pylon("silverspot_sign", "silverspot", 8.0, 6.0), *front_pt(6), face); return                    # round 44: the real cinema is Silverspot
     if lab == "COOPER'S HAWK":
         px = x0 + 15; place(bldg("coopershawk", min(lw, 44), 28, 9.0, wall="#b9a58a", key="coopershawk", accent="#3a2a1a", roof="hip", roof_hex="#5a4a3a", sign_h=2.2), px, cy, face); cbox(px, cy, 28, min(lw, 44)); return
     if lab == "PLAZA":                                                                       # the Promenade's fountain plaza: pavers, fountain, cafe tables, a shop row along the back
@@ -223,9 +228,9 @@ def SITE(b_, lot):
             if abs(px - cx) < 14: continue
             place(LMP.planter(f"pplanter_{i}"), px, cy + 3, "s"); place(LMP.bench(f"pbench_{i}"), px + 5, cy - 2.5, "s"); cbox(px, cy + 3, 2.4, 1.2)
             if i % 2 == 0: prop("oak", px, cy - 6, .8)
-        place(LMP.entry_arch("prom_arch"), x1 - 2, cy, "e"); place(pylon("prom_sign", "promenade", 7.0, 7.0), x1 + 40, y1 + 30, "s")
+        place(LMP.entry_arch("prom_arch"), x1 - 2, cy, "e"); place(pylon("prom_sign", "promenade", 7.0, 7.0), x1 - 4, y1 + 2, "e")
         return
-    if lab in ("SHOPS", "", "SHOPS_N"):                                                                 # shop rows, back to back when the rectangle is deep
+    if lab in ("SHOPS", "", "SHOPS_N", "SHOPS_E", "SHOPS_W"):                                                                 # shop rows, back to back when the rectangle is deep
         rows = 2 if ld > 30 else 1
         for r in range(rows):
             if face in "sn": py = (y0 + 6.5 if r == 0 else y1 - 6.5) if rows == 2 else cy; shop_run(lw, cx, py, ("s" if face == "s" else "n") if rows == 1 else ("s" if r == 0 else "n"), int(cx + r))
@@ -416,7 +421,7 @@ def extra_houses(placed_xy):
     X441, XP = LP["arterials"]["x441"], LP["arterials"]["xpower"]; n = 0; added = []
     for r in net:
         if r.rank not in (4, 5) or r.hw < 3.5: continue
-        if r.name.startswith("ramp") or r.name.startswith("alley") or r.name.startswith("rbt"): continue
+        if r.name.startswith(("ramp", "alley", "rbt", "Promenade")): continue
         s = 9.0
         while s < r.L - 9:
             for side in (1, -1):

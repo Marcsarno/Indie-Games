@@ -37,6 +37,16 @@ ROADS = [  # name, polyline, width m, kind
 ]
 HOUSES = []; CULS = []; RINGS = [(-712, 912, 46, 20)]; LAKES = []; RBTS = []
 def st(pts, w=9, kind="loc"): ROADS.append(("", pts, w, kind))
+def wy(x):                                                                        # Winston Park Blvd centre-line y at x (it curves west of Lyons)
+    for (ax, ay), (bx, by) in zip(WINSTON, WINSTON[1:]):
+        if min(ax, bx) <= x <= max(ax, bx) and ax != bx: return ay + (by - ay) * (x - ax) / (bx - ax)
+    return 1312
+# round 44 (user's satellite sketch of the real Promenade): one-lane-each-way internal drives with traffic: a west spine and a middle street from Wiles (south, = Cullum Rd)
+# to Winston (north), a main entrance off Lyons through the middle and a south entrance; blocks between them: Cooper's Hawk (NE), World of Beer main street (NW),
+# Cheesecake Factory + DSW (SE), Silverspot cinema + Kobe (SW)
+PX_W, PX_M, PY_MAIN, PY_S = -330, -175, 1192, 1132
+ROADS.append(("Promenade West Dr", [(PX_W, Y["wiles"]), (PX_W, round(wy(PX_W), 1))], 7, "driven")); ROADS.append(("Promenade Dr", [(PX_M, Y["wiles"]), (PX_M, round(wy(PX_M), 1))], 7, "driven"))
+ROADS.append(("Promenade Blvd", [(XLYONS, PY_MAIN), (PX_W, PY_MAIN)], 7, "drive")); ROADS.append(("Promenade South Dr", [(XLYONS, PY_S), (PX_M, PY_S)], 7, "drive"))
 def houses_along(a, b, gap=17, off=17):
     L = math.dist(a, b); n = int(L / gap); ux, uy = (b[0] - a[0]) / (L or 1), (b[1] - a[1]) / (L or 1)
     for i in range(1, n):
@@ -118,9 +128,16 @@ LOTS = [] + [  # (polygon, buildings (x0, y0, x1, y1, colour, label), aisle step
 ] + [  # body shops + service lots behind the dealers, on a service road off Lyons
     (R_(-608 + i * 190, 995, -425 + i * 190, 1045), [(-600 + i * 190, 1008, -555 + i * 190, 1040, "#b9b2a4", "BODY SHOP"), (-500 + i * 190, 1008, -455 + i * 190, 1040, "#b9b2a4", "SERVICE")], 6, "h") for i in range(3)
 ] + [
-    (R_(-790, 1110, -35, 1282), [(-780, 1215, -680, 1275, "#c56a4a", "CINEMA"), (-660, 1170, -540, 1275, "#7d8086", "GARAGE"), (-520, 1182, -200, 1238, "#e4d9c2", "PLAZA"),
-                                  (-520, 1240, -246, 1276, "#d6a24a", "SHOPS"), (-244, 1240, -200, 1276, "#3a2a1a", "WORLD OF BEER"),
-                                  (-440, 1150, -246, 1180, "#d6a24a", "SHOPS_N"), (-244, 1150, -200, 1180, "#00704a", "STARBUCKS"), (-160, 1115, -45, 1165, "#9a3b52", "COOPER'S HAWK"), (-180, 1236, -60, 1276, "#d6a24a", "SHOPS")], 10, "v"),
+    # the Promenade, round 44: four blocks between the internal drives (see PX_W / PX_M / PY_MAIN / PY_S above)
+    (R_(-168, 1199, -20, 1297), [(-82, 1252, -24, 1294, "#9a3b52", "P:coopershawk:s:9"), (-166, 1272, -88, 1294, "#d6a24a", "SHOPS"), (-166, 1201, -152, 1268, "#d6a24a", "SHOPS_W"),
+                                 (-148, 1201, -40, 1215, "#d6a24a", "SHOPS_N")], 10, "v"),            # NE: Cooper's Hawk + shops, lot
+    (R_(-323, 1199, -182, 1302), [(-322, 1222, -184, 1270, "#e4d9c2", "PLAZA"), (-234, 1274, -184, 1300, "#3a2a1a", "WORLD OF BEER"), (-322, 1274, -238, 1300, "#d6a24a", "SHOPS"),
+                                  (-234, 1200, -184, 1220, "#00704a", "STARBUCKS"), (-322, 1200, -238, 1220, "#d6a24a", "SHOPS_N")], 10, "n"),                   # NW: World of Beer main street (no parking)
+    (R_(-168, 1139, -20, 1185), [(-92, 1141, -24, 1183, "#c9a46a", "P:cheesecake:w:9"), (-166, 1141, -152, 1183, "#d6a24a", "SHOPS_W")], 10, "v"),                                                             # SE north: Cheesecake Factory, lot
+    (R_(-168, 1092, -20, 1125), [(-166, 1094, -92, 1123, "#3a3a3a", "P:dsw:n:8"), (-88, 1094, -24, 1123, "#d6a24a", "SHOPS_N")], 10, "n"),                      # SE south: DSW + shops on Wiles
+    (R_(-323, 1092, -182, 1185), [(-321, 1094, -262, 1150, "#c56a4a", "CINEMA"), (-321, 1156, -262, 1183, "#7a1f1f", "P:kobe:e:7"), (-198, 1094, -184, 1183, "#d6a24a", "SHOPS_E")], 10, "v"),                 # SW: Silverspot + Kobe, lot
+    (R_(-783, 1092, -337, 1318), [(-660, 1170, -540, 1275, "#7d8086", "GARAGE"), (-781, 1100, -690, 1300, "#d9d2c4", "P:promenade:e:10"),
+                                 (-352, 1100, -339, 1224, "#d6a24a", "SHOPS_E"), (-352, 1266, -339, 1310, "#d6a24a", "SHOPS_E"), (-520, 1278, -370, 1314, "#d9d2c4", "P:tjmaxx:s:8"), (-530, 1094, -380, 1128, "#d9d2c4", "P:marshalls:n:8")], 10, "v"),             # west: garage (C2 jump) + anchor, lot
     (R_(-790, 1345, -35, 1395), [(-780, 1355, -600, 1390, "#d6a24a", ""), (-560, 1355, -380, 1390, "#c56a4a", "")], 10, "v"),
     (R_(-260, 1340, -35, 1430), [(-240, 1380, -55, 1425, "#2e8b3e", "PUBLIX")], 10, "v"),
     (R_(18, 728, 76, 785), [(43, 743, 57, 765, "#d22d24", "McD")], 8, "h"),                 # round 44 sample: real-size McDonald's on a tight lot (was 135 x 105 m)
@@ -147,7 +164,7 @@ st([(XCANAL + 14, Y["sample"] - 14), (XCANAL + 14, 14)], 6, "trail")          # 
 st([(X441 + 14, 140), (XCANAL - 10, 140)], 6, "alley"); st([(XCANAL + 10, 140), (-35, 140)], 6, "alley")   # service alley behind the Pkwy shops
 MARC, AARON, CHRIS = "#4fa3ff", "#ffb03a", "#e07bff"
 CUTS = [  # (label, colour, polyline): the detours, each through a landmark
-    ("M1", MARC, [(-14, 1200), (-60, 1195), (-100, 1150), (-100, 1092), (-14, 1088)]),           # round Cooper's Hawk (valet lane), onto Wiles, back to Lyons
+    ("M1", MARC, [(-14, 1132), (-175, 1132), (-175, 1192), (-14, 1192)]),           # round Cooper's Hawk (valet lane), onto Wiles, back to Lyons
     ("M2", MARC, [(12, 776), (40, 774), (64, 768), (64, 738), (34, 736), (12, 736)]),                       # McDonald's drive-thru, back onto Lyons
     ("M3", MARC, [(-14, 640), (-60, 640), (-110, 585), (-110, 515)]),                            # swerve across Lyons through the police station lot (past the cruisers) to Copans
     ("M4", MARC, [(-14, 150), (-200, 140), (-450, 140), (-470, 110), (-470, 14)]),                # shop alley, out the Walgreens drive-thru, Banks is right there
@@ -156,7 +173,7 @@ CUTS = [  # (label, colour, polyline): the detours, each through a landmark
     ("A3", AARON, [(390, 790), (430, 700), (560, 650), (560, 548)]),                            # through Butterfly World (service gate, past the dome)
     ("A4", AARON, [(40, 360), (250, 325), (230, 240)]),                                         # smash the Wynmoore gate, across the golf course
     ("A5", AARON, [(225, 232), (200, 130), (230, 40), (230, 14)]),                              # across the football field, out the bus loop
-    ("C1", CHRIS, [(-150, 1345), (-150, 1293), (-191, 1293), (-191, 1206), (-360, 1206), (-470, 1150)]),         # through the paseo, under the arch, jump the fountain                    # Publix lot, median gap, Promenade plaza: jump the fountain
+    ("C1", CHRIS, [(-150, 1345), (-160, 1316), (-175, 1300), (-175, 1246), (-253, 1246), (-330, 1246), (-350, 1244), (-400, 1205), (-470, 1150)]),         # through the paseo, under the arch, jump the fountain                    # Publix lot, median gap, Promenade plaza: jump the fountain
     ("C2", CHRIS, [(-600, 1282), (-600, 1230), (-600, 1170), (-600, 1095)]),                    # up the parking garage, jump off the top deck onto Wiles
     ("C3", CHRIS, [(-700, 1062), (-780, 1000), (-712, 925), (-665, 920), (-700, 870), (-700, 813)]),   # casino valet loop, out through the lot
     ("C4", CHRIS, [(XW + 120, 760), (XW + 32, 780), (XW + 15, 760)]),                            # Walmart loading-dock ramp onto the back lane
@@ -170,13 +187,13 @@ BLOCKS = [  # (x, y, along: 'ns' road runs north-south, colour): that chapter's 
 ]
 ROUTES = [
     ("MARC (Jeep): Lyons, hopping off through Cooper's Hawk, McDonald's, the police station, Walgreens", MARC,
-     [PUBLIX, (-14, 1330), (-14, 1200), (-60, 1195), (-100, 1150), (-100, 1092), (-14, 1088), (-14, 800), (12, 776), (40, 774), (64, 768), (64, 738), (34, 736), (12, 736), (-14, 640), (-60, 640), (-110, 585), (-110, 515), (-14, 508),
+     [PUBLIX, (-14, 1330), (-14, 1132), (-175, 1132), (-175, 1192), (-14, 1192), (-14, 800), (12, 776), (40, 774), (64, 768), (64, 738), (34, 736), (12, 736), (-14, 640), (-60, 640), (-110, 585), (-110, 515), (-14, 508),
       (-14, 150), (-200, 140), (-450, 140), (-470, 110), (-470, 14), (XBANKS + 8, -8), (XBANKS + 8, -112), (-610, -112), DAVE]),
     ("AARON (Tesla): the east side: school loop, Trash Mountain, Butterfly World, golf course, football field", AARON,
      [PUBLIX, (-14, 1330), (400, 1312), (400, 1250), (330, 1180), (400, 1092), (60, 1075), (60, 960), (60, 848), (390, 800), (430, 700), (560, 650), (560, 548), (300, 515), (40, 470), (40, 360), (250, 325), (230, 240), (200, 130), (230, 14),
       (100, -8), (XBANKS + 8, -14), (XBANKS + 8, -120), (-610, -120), DAVE]),
     ("CHRIS (bike): the jumps: fountain, garage roof, casino loop, loading dock, the Hammocks, canal path", CHRIS,
-     [PUBLIX, (-150, 1345), (-150, 1293), (-191, 1293), (-191, 1206), (-360, 1206), (-470, 1150), (-600, 1170), (-600, 1095), (-700, 1062), (-780, 1000), (-712, 925), (-665, 920), (-700, 870), (-700, 813), (X441, 806), (XW + 120, 780), (XW + 32, 780), (XW + 15, 760),
+     [PUBLIX, (-150, 1345), (-160, 1316), (-175, 1300), (-175, 1246), (-253, 1246), (-330, 1246), (-350, 1244), (-400, 1205), (-470, 1150), (-600, 1170), (-600, 1095), (-700, 1062), (-780, 1000), (-712, 925), (-665, 920), (-700, 870), (-700, 813), (X441, 806), (XW + 120, 780), (XW + 32, 780), (XW + 15, 760),
       (XW + 15, 330), (-740, 320), (-470, 320), (-470, 200), (-470, 140), (XCANAL + 14, 140), (XCANAL + 14, 14), (XCANAL + 14, -200), (-330, -180), (-560, -150), (-625, -128), DAVE]),
 ]
 CT_TXT = [("M1 round Cooper's Hawk, Wiles, back to Lyons", MARC), ("M2 McDonald's drive-thru", MARC), ("M3 across Lyons through the police lot", MARC), ("M4 shop alley, Walgreens drive-thru", MARC),
@@ -221,9 +238,9 @@ bf = P(650, -460); d.pieslice([bf[0] - 120 * S, bf[1] - 120 * S, bf[0] + 120 * S
 for (cx, cy, rx, ry) in LAKES: d.ellipse([P(cx - rx, cy + ry), P(cx + rx, cy - ry)], fill="#2d78b8")
 d.line([P(XCANAL, Y["sample"]), P(XCANAL, -230)], fill="#2d78b8", width=max(3, int(14 * S)))
 for (x, y) in HOUSES: a, b = P(x, y); d.rectangle([a - 3, b - 3, a + 3, b + 3], fill="#e0c9a6", outline="#a8865a")
-STY = {"art": ("#3a3c40", "#e8c34a"), "col": ("#3a3c40", "#e8c34a"), "hwy": ("#8a7a50", "#f4f0e0"), "loc": ("#55585e", None), "blvd": ("#55585e", "#9fd36b"), "alley": ("#8a8a8a", None), "trail": ("#d9c9a0", None), "ramp": ("#8a7a50", None)}
+STY = {"art": ("#3a3c40", "#e8c34a"), "col": ("#3a3c40", "#e8c34a"), "hwy": ("#8a7a50", "#f4f0e0"), "loc": ("#55585e", None), "blvd": ("#55585e", "#9fd36b"), "alley": ("#8a8a8a", None), "trail": ("#d9c9a0", None), "ramp": ("#8a7a50", None), "drive": ("#6a6d72", None), "driven": ("#6a6d72", None)}
 for (cx, cy, rx, ry) in RINGS: d.ellipse([P(cx - rx, cy + ry), P(cx + rx, cy - ry)], outline="#55585e", width=max(3, int(9 * S)))
-for kind_pass in (("alley", "trail", "loc", "blvd"), ("col", "art"), ("ramp", "hwy")):
+for kind_pass in (("alley", "trail", "loc", "blvd", "drive", "driven"), ("col", "art"), ("ramp", "hwy")):
     for name, pts, w, kind in ROADS:
         if kind not in kind_pass: continue
         c, ln = STY[kind]; d.line([P(*p) for p in pts], fill=c, width=max(2, int(w * S)), joint="curve")
