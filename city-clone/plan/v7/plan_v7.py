@@ -41,6 +41,7 @@ ROADS = [
     ("", curve([(X441, 110), (-260, 80), (-190, 130), (-130, 95), (-60, 125), (XLYONS, 90)]), 9, "loc"),          # 441 <-> Lyons, fords the canal
     ("", curve([(X441, 255), (-280, 240), (-220, 270), (-160, 240), (-110, 262)]), 9, "loc"),
     ("", curve([(XLYONS, 380), (80, 360), (160, 395), (240, 370), (XPOWER, 385)]), 9, "loc"),
+    ("", curve([(XLYONS, 470), (70, 495), (150, 465), (230, 492), (XPOWER, 470)]), 9, "loc"),
     ("", curve([(XLYONS, 690), (60, 705), (120, 680), (190, 700), (250, 668), (XPOWER, 690)]), 9, "loc"),
     ("", curve([(X441, 690), (-260, 705), (-190, 680), (-120, 702), (-60, 690), (XLYONS, 700)]), 9, "loc"),
     # south band: Dave's street off Banks (a loop with a cul-de-sac) + the east neighbourhood
@@ -74,22 +75,22 @@ ZONES = [  # (label, polygon, fill, text colour) drawn in order
 LOTS = [
     (R(XW + 22, 206, X441 - 16, 314), [(XW + 24, 214, XW + 62, 306, "#2f64ad", "WALMART")], 9, "v"),                            # user: Walmart west of 441, giant lot facing 441
     (R(-244, 334, -14, 418), [(-238, 392, -196, 414, "#9aa3ad", "FORD"), (-176, 392, -134, 414, "#c9ccd1", "TOYOTA"), (-114, 392, -72, 414, "#9aa3ad", "HONDA"), (-56, 392, -18, 414, "#c9ccd1", "KIA")], 7, "h"),   # car dealers
-    (R(-316, 444, -14, 512), [(-306, 486, -262, 508, "#c56a4a", ""), (-252, 486, -208, 508, "#d6a24a", ""), (-180, 470, -140, 490, "#e4d9c2", "PLAZA"), (-120, 486, -76, 508, "#c56a4a", ""), (-62, 450, -20, 470, "#9a3b52", "COOPER'S\nHAWK")], 8, "v"),
-    (R(14, 444, 316, 510), [(24, 486, 74, 508, "#d6a24a", ""), (90, 486, 140, 508, "#c56a4a", "CINEMA"), (160, 450, 220, 500, "#7d8086", "GARAGE"), (236, 486, 306, 508, "#d6a24a", "")], 8, "v"),
+    (R(-316, 444, -14, 512), [(-306, 486, -262, 508, "#c56a4a", ""), (-252, 470, -208, 508, "#7d8086", "GARAGE"), (-180, 470, -140, 490, "#e4d9c2", "PLAZA"), (-120, 486, -76, 508, "#c56a4a", ""), (-62, 450, -20, 470, "#9a3b52", "COOPER'S\nHAWK")], 8, "v"),
     (R(-316, 536, -14, 562), [(-96, 540, -20, 560, "#2e8b3e", "PUBLIX"), (-200, 540, -120, 556, "#c56a4a", ""), (-306, 540, -226, 556, "#d6a24a", "")], 8, "v"),
     (R(14, 216, 66, 306), [(22, 280, 52, 300, "#d22d24", "McD")], 7, "h"),
+    (R(-72, 212, -14, 308), [(-66, 262, -20, 300, "#2f6fb3", "CITY\nHALL"), (-66, 218, -20, 248, "#1d3f8a", "POLICE")], 8, "h"),       # user: City Hall + police on the WEST side of Lyons
     (R(20, 20, 150, 88), [(28, 54, 112, 84, "#b8865a", "COCONUT CREEK\nHIGH SCHOOL")], 8, "v"),                                                      # McDonald's on the corner of Sample & Lyons
 ]
-LAKES = [[(-300, 40), (-255, 30), (-215, 60), (-230, 82), (-290, 78)], [(170, 340), (250, 335), (262, 352), (190, 358)], [(60, 655), (120, 650), (128, 668), (70, 670)],
+LAKES = [[(90, 470), (140, 462), (150, 482), (100, 490)], [(-300, 40), (-255, 30), (-215, 60), (-230, 82), (-290, 78)], [(170, 340), (250, 335), (262, 352), (190, 358)], [(60, 655), (120, 650), (128, 668), (70, 670)],
          [(200, 152), (240, 150), (246, 162), (206, 164)], [(-280, 640), (-230, 632), (-225, 668), (-275, 670)], [(-140, -80), (-75, -88), (-60, -125), (-110, -140), (-150, -115)],
          [(150, -110), (230, -115), (240, -95), (160, -88)]]
-SPOTS = [("POLICE", 100, 222, "#1d3f8a", 1), ("CITY HALL", 100, 245, "#2f6fb3", 1), ("GATE", 22, 145, "#d0582a", 1), ("DAVE", -262, -132, "#e33b3b", 1)]
+SPOTS = [("GATE", 22, 145, "#d0582a", 1), ("DAVE", -262, -132, "#e33b3b", 1)]
 JUMPS = [(-84, 262), (-90, 125), (XW + 28, 310), (220, 705), (230, 118), (-130, 360), (300, 30)]          # canal banks x2, Walmart loading dock, construction site, golf mound, car-carrier ramp at the dealers
 BREAKERS = [(XPOWER + 45, 430), (X441 - 50, 180), (-160, 460), (-60, 380), (-62, 568), (20, 145), (232, 86), (155, 300), (205, 690)]   # gas x2, plaza fountain, dealer cars, cart corral, Wynmoore gate arm, Butterfly World sign, scaffolding
-HIDES = [(X441 - 50, 470), (190, 475), (0, 600), (XW + 40, 212)]                                # car wash, Promenade garage, under the overpass, Walmart garden centre
-STARS = [(-283, 400), (240, 262), (100, 258), (40, 170), (XW + 43, 296), (-160, 500), (37, 306)]   # casino tower, Butterfly World dome, City Hall clock, Wynmoore water tower, Walmart sign, Promenade sign, golden arches
+HIDES = [(X441 - 50, 470), (-230, 489), (0, 600), (XW + 40, 212)]                                # car wash, Promenade garage, under the overpass, Walmart garden centre
+STARS = [(-283, 400), (240, 262), (-43, 304), (40, 170), (XW + 43, 296), (-160, 500), (37, 306)]   # casino tower, Butterfly World dome, City Hall clock, Wynmoore water tower, Walmart sign, Promenade sign, golden arches
 BRIDGES = [(-85, Y["pkwy"]), (-82, Y["copans"]), (-85, Y["sample"])]
-TXT = [("homes + lake", -240, 150), ("townhomes", -230, 290), ("homes", 165, 410), ("homes", -240, 610), ("construction site", 230, 680), ("offices", 170, 590),
+TXT = [("homes + lake", -240, 150), ("townhomes", -230, 290), ("homes", 165, 410), ("homes + lake", 230, 505), ("?", 100, 260), ("homes", -240, 610), ("construction site", 230, 680), ("offices", 170, 590),
        ("Dave's street", -232, -70), ("homes + lake", 200, -20), ("homes", -280, -170), ("homes", 90, 610)]
 DAVE = (-262, -132); PUBLIX = (-58, 549)
 ROUTES = [
@@ -165,7 +166,7 @@ for x, y in HIDES: badge(x, y, "H", "#9a6bff", "white")
 for x, y in STARS: star(*P(x, y))
 for (lab, x, y, col, side) in SPOTS:
     cx, cy = P(x, y); d.ellipse([cx - 8, cy - 8, cx + 8, cy + 8], fill=col, outline="white", width=2); OUT(lab, (cx + 12 * side, cy), 12, anchor="lm" if side > 0 else "rm")
-OUT("COCONUT CREEK  -  PLAN v7 (draft 5)", (PAD, 16), 20)
+OUT("COCONUT CREEK  -  PLAN v7 (draft 6)", (PAD, 16), 20)
 lx = int(P(XE, 0)[0]) + 40; ly = PAD + 60
 def leg(i, draw, text): y = ly + i * 28; draw(lx + 10, y); d.text((lx + 30, y), text, fill="#f0ead6", font=font(12), anchor="lm")
 OUT("KEY", (lx, ly - 30), 15)
