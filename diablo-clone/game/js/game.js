@@ -226,7 +226,7 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false) {
     else stampBlood(Math.round(ex), Math.round(ey), e.def.unique ? 6 : 3, (Math.random() * 1e6) | 0, e.fam === 'spider' ? GREEN : RED);
     const streak = killStreak();
     gainXp(e.def.xp * (1 + (LV.diff - 1) * 0.3) * (e.champ ? 3 : 1) * (1 + Math.max(0, streak - 2) * 0.1));
-    dropLoot(e.fi, e.fj, e.def.unique ? 4 : e.champ ? 2 : 1, e.def.unique || !!e.champ);
+    dropLoot(e.fi, e.fj, e.def.unique ? 4 : e.champ || e.def.elite ? 3 : 1, e.def.unique || !!e.champ || !!e.def.elite);
     if (e.def.unique || (e.champ && Math.random() < 0.08)) groundItems.push({ item: rollLegendary(rng((Math.random() * 1e9) | 0)), fi: e.fi, fj: e.fj, t: 0 });
     // Emberbrand: the kill erupts in fire that scorches everything close by (no chain reactions)
     if (STAT.fireburst && !G.bursting) {
@@ -234,7 +234,7 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false) {
       for (const o of enemies) if (o !== e && alive(o) && Math.hypot(o.fi - e.fi, o.fj - e.fj) < 1.9) damageEnemy(o, Math.max(1, Math.round(heroDmg(1) * 0.6)), e.fi, e.fj, false);
       G.bursting = false;
     }
-    if (e === boss) { say(`THE ${e.def.name} IS SLAIN`, 51, 4); say('THE WAY DOWN IS OPEN', 26, 4); sfx('levelUp'); }
+    if (e === boss) { say(`THE ${e.def.name} IS SLAIN`, 51, 4); say('THE WAY DOWN IS OPEN', 26, 4); sfx('levelUp'); G.slowmo = 0.9; G.bossIntro = 0; }
     G.kills++;
   } else {
     e.stop = crit ? 0.11 : 0.07; hero.stop = Math.max(hero.stop, e.stop); sfx('hit');
@@ -307,10 +307,12 @@ function dropLoot(fi, fj, n, rich) {
     const q = Math.random();
     if (q < 0.45 || rich && k === 0) groundItems.push({ gold: Math.round((2 + Math.random() * 6) * LV.diff * (rich ? 3 : 1)), fi: p[0], fj: p[1], t: 0 });
     else if (q < 0.6) groundItems.push({ item: rollItem(R, LV.diff, 'heal'), fi: p[0], fj: p[1], t: 0 });
+    else if (q < 0.66 || (rich && k === 1)) groundItems.push({ gem: GEMS[Math.min(3, Math.floor(Math.random() * (1.5 + LV.diff * 0.5)))], fi: p[0], fj: p[1], t: 0 });   // gems: rarer kinds deeper in
     else if (q < (rich ? 1 : 0.8)) groundItems.push({ item: rollItem(R, LV.diff), fi: p[0], fj: p[1], t: 0 });
   }
 }
 function pickup(g) {
+  if (g.gem) { const v = Math.round(g.gem.worth * (1 + LV.diff * 0.25)); hero.gold += v; sfx('gold'); floater(`${g.gem.name} +${v}`, g.fi, g.fj, 12, g.gem.cols[2]); return true; }
   if (g.gold) { sfx('gold'); hero.gold += g.gold; floater(g.gold + ' GOLD', g.fi, g.fj, 10, 50); return true; }
   const b = ITEM_BASES[g.item.base];
   if (b.slot === 'potion') { if (hero.potions >= 8) return false; hero.potions++; sfx('pickup'); say('HEALING POTION', 22, 1.2); return true; }
@@ -336,6 +338,9 @@ function prewarmHero() { for (let d = 0; d < 8; d++) { warmQueue.unshift([ 'hero
 // ---------------------------------------------------------------- update
 const input = { mx: 0, my: 0, attack: false, keys: new Set() };
 function update(dt) {
+  // a boss's death plays in slow motion for a moment
+  if (G.slowmo > 0) { G.slowmo -= dt; dt *= 0.35; }
+  if (G.bossIntro > 0) G.bossIntro -= dt;
   if (STAT.regen && !hero.dead && G.mode === 'play') hero.hp = Math.min(STAT.maxHp, hero.hp + STAT.regen * dt);
   G.t += dt;
   for (const m of G.msg) m.t -= dt; G.msg = G.msg.filter(m => m.t > 0);
@@ -347,6 +352,7 @@ function update(dt) {
   updateHero(dt);
   flowT -= dt; if (flowT <= 0) { flowT = 0.4; computeFlow(); }
   for (const e of enemies) updateEnemy(e, dt);
+  if (boss && !boss.introduced && boss.state !== 'sleep' && alive(boss)) { boss.introduced = true; G.bossIntro = 2.8; sfx('cry'); }   // the title card
   updateNpcs(dt);
   separate();
   updateProjectiles(dt);
@@ -676,7 +682,7 @@ function render() {
   for (const g of groundItems) {
     const [x, y] = iso(g.fi, g.fj), bounce = g.t < 0.4 ? Math.round(Math.sin(g.t / 0.4 * Math.PI) * 8) : 0;
     const tile = tIdx(Math.floor(g.fi), Math.floor(g.fj));
-    list.push({ depth: g.fi + g.fj - 0.3, draw: () => { if (g.gold) return drawGold(x, y - bounce, tile); if (g.item.rarity !== 'normal' && g.t > 0.4) drawBeam(x, y, RARITY_COL[g.item.rarity], tile, g.item.id); blit(itemIcon(g.item), x, y - bounce + 4, false, 0, tile); } });
+    list.push({ depth: g.fi + g.fj - 0.3, draw: () => { if (g.gold) return drawGold(x, y - bounce, tile); if (g.gem) return drawGem(x, y - bounce, tile, g.gem); if (g.item.rarity !== 'normal' && g.t > 0.4) drawBeam(x, y, RARITY_COL[g.item.rarity], tile, g.item.id, g.item.rarity === 'legend'); blit(itemIcon(g.item), x, y - bounce + 4, false, 0, tile); } });
   }
   chars.forEach((c, n) => {
     const [x, y] = screenOf(c);
@@ -708,14 +714,27 @@ function render() {
   ctx.putImageData(outImg, 0, 0);
 }
 // magic and rare drops send up a thin flickering beam of their color so they're easy to spot
-function drawBeam(x, y, col, tile, seed) {
-  const sx = Math.round(x - camX), sy = Math.round(y - camY) + 2, hgt = 26;
+function drawBeam(x, y, col, tile, seed, legend = false) {
+  const sx = Math.round(x - camX), sy = Math.round(y - camY) + 2, hgt = legend ? 48 : 26;
+  if (legend) for (let k = 0; k < 4; k++) {   // sparks rising up the legendary beam
+    const ph = (G.t * 0.7 + k / 4 + seed * 0.13) % 1, px = sx + Math.round(Math.sin(ph * 9 + k) * 4), py = sy - Math.round(ph * hgt * 1.1);
+    if (px >= 0 && py >= 0 && px < W && py < H) { scr[py * W + px] = (ph < 0.5 ? 113 : 51) | EMIS; tbuf[py * W + px] = tile; }
+  }
   for (let r = 0; r < hgt; r++) {
     const yy = sy - r; if (yy < 0 || yy >= H || sx < 1 || sx >= W - 1) continue;
     const fadeK = r / hgt, b = BAYER[((yy & 3) << 2) | (sx & 3)];
     if (b < fadeK || (r + Math.floor(G.t * 20 + seed)) % 7 === 0) continue;
     const o = yy * W + sx; scr[o] = col | EMIS; tbuf[o] = tile;
     if (r < hgt * 0.5 && b > fadeK * 2) { scr[o - 1] = col | EMIS; tbuf[o - 1] = tile; }
+  }
+}
+// gems: a cut stone with a glint that turns into gold when picked up
+const GEMS = [{ name: 'RUBY', cols: [20, 22, 23], worth: 40 }, { name: 'SAPPHIRE', cols: [38, 39, 40], worth: 50 }, { name: 'EMERALD', cols: [53, 54, 55], worth: 60 }, { name: 'AMETHYST', cols: [57, 58, 59], worth: 80 }];
+function drawGem(x, y, tile, gem) {
+  const sx = Math.round(x - camX), sy = Math.round(y - camY) - 2, [d, m, l] = gem.cols, glint = Math.floor(G.t * 3 + sx) % 6 === 0;
+  for (const [a, b, c] of [[0, -3, BLK], [-1, -2, BLK], [1, -2, BLK], [-2, -1, BLK], [2, -1, BLK], [-2, 0, BLK], [2, 0, BLK], [-1, 1, BLK], [1, 1, BLK], [0, 2, BLK], [0, -2, l], [-1, -1, l], [0, -1, m], [1, -1, m], [-1, 0, m], [0, 0, m], [1, 0, d], [0, 1, d]]) {
+    const xx = sx + a, yy = sy + b; if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+    const o = yy * W + xx; scr[o] = (glint && a === -1 && b === -1) ? 27 | EMIS : c; zbuf[o] = 3; tbuf[o] = tile; cid[o] = 0;
   }
 }
 function drawGold(x, y, tile) {

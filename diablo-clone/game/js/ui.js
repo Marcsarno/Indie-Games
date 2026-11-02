@@ -123,6 +123,12 @@ const glyphMap = (cx, cy) => { fillRect(cx - 6, cy - 5, 13, 11, 26); frame(cx - 
 
 function drawHud() {
   drawNpcLabels();
+  // a boss's title card when it first wakes: a dark band slides open with its name and epithet
+  if (G.bossIntro > 0 && boss) {
+    const t = 2.8 - G.bossIntro, open = Math.min(1, t / 0.25, G.bossIntro / 0.35), cy = Math.round(H * 0.3), hh = Math.round(22 * open);
+    for (let y = cy - hh; y < cy + hh; y++) for (let x = 0; x < W; x++) if (BAYER[((y & 3) << 2) | (x & 3)] < 0.75) put(x, y, BLK);
+    if (open > 0.8) { textC(boss.def.name, W / 2, cy - 11, 22, 2); if (boss.def.title) textC(boss.def.title, W / 2, cy + 6, 26); }
+  }
   const t = G.t;
   if (G.mode === 'title') return drawTitle();
   // minimap (automap of explored tiles)
@@ -181,7 +187,7 @@ function drawHud() {
   // floor item labels near the hero (Diablo shows names over loot)
   // item labels stack upward instead of overlapping (Diablo does the same)
   const placed = [];
-  for (const g of groundItems.filter(g => !g.gold && Math.hypot(g.fi - hero.fi, g.fj - hero.fj) <= 5 && LV.vis[tIdx(Math.floor(g.fi), Math.floor(g.fj))]).sort((a, b) => b.fi + b.fj - a.fi - a.fj)) {
+  for (const g of groundItems.filter(g => !g.gold && !g.gem && Math.hypot(g.fi - hero.fi, g.fj - hero.fj) <= 5 && LV.vis[tIdx(Math.floor(g.fi), Math.floor(g.fj))]).sort((a, b) => b.fi + b.fj - a.fi - a.fj)) {
     const [x, y] = iso(g.fi, g.fj), name = itemName(g.item), w = textWidth(name);
     let sx2 = Math.round(x - camX), sy2 = Math.round(y - camY) - 14;
     for (let tries = 0; tries < 6 && placed.some(r => Math.abs(r[0] - sx2) * 2 < r[2] + w + 4 && Math.abs(r[1] - sy2) < 7); tries++) sy2 -= 7;

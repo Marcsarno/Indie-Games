@@ -186,6 +186,7 @@ function genForest(R, A) {
     const ti = Math.floor(c.x - 1.6), tj = Math.floor(c.y - 1.8);
     if (!solidAt(ti, tj)) { LV.solid[tIdx(ti, tj)] = 1; LV.decor.push({ kind: 'tent', i: ti, j: tj }); }
     LV.decor.push({ kind: 'log', fi: c.x + 1.4, fj: c.y + 0.2, seed: 1, yaw: 1.2 }, { kind: 'log', fi: c.x - 0.2, fj: c.y + 1.5, seed: 2, yaw: 0.1 });
+    if (n === camps[0]) LV.spawns.push({ id: 'gchief', fi: c.x + 1.2, fj: c.y - 1 });   // one camp has a chieftain
   }
   // ruins: in a clearing or two, a broken ring of crumbling walls and columns around an old statue,
   // with a chest and a few brigands keeping it
