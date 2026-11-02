@@ -150,7 +150,7 @@ def lawn(x0, y0, x1, y1, trees=True):
 def SITE(b_, lot):
     """Replace one plan building rectangle with real models (scaled to real size, the rest of the rectangle becomes lawn / plaza)."""
     lab = b_["label"]; x0, y0, x1, y1 = b_["x0"], b_["y0"], b_["x1"], b_["y1"]; cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    face = {"WALMART": "e", "CITY HALL": "e", "POLICE": "e", "McD": "w", "COOPER'S HAWK": "e", "SHOPS": "s", "": "s", "SHOPS_N": "n"}.get(lab) or best_face(x0, y0, x1, y1, lot)
+    face = {"WALMART": "e", "CITY HALL": "e", "POLICE": "e", "McD": "w", "COOPER'S HAWK": "e", "SHOPS": "s", "": "s", "SHOPS_N": "n", "WORLD OF BEER": "s", "STARBUCKS": "n"}.get(lab) or best_face(x0, y0, x1, y1, lot)
     lw, ld = world_dims(face, x1 - x0, y1 - y0)                                               # rect size in the model's frame (width along the front)
     def col(w, d, x=cx, y=cy): ww, dd = world_dims(face, w, d); cbox(x, y, ww, dd)
     def front_pt(dist):                                                                      # a point `dist` in front of the rect's front edge, centred
@@ -230,6 +230,13 @@ def SITE(b_, lot):
         for r in range(rows):
             if face in "sn": py = (y0 + 6.5 if r == 0 else y1 - 6.5) if rows == 2 else cy; shop_run(lw, cx, py, ("s" if face == "s" else "n") if rows == 1 else ("s" if r == 0 else "n"), int(cx + r))
             else: px = (x0 + 6.5 if r == 0 else x1 - 6.5) if rows == 2 else cx; shop_run(lw, px, cy, "w" if (rows == 1 and face == "w") or (rows == 2 and r == 0) else "e", int(cy + r))
+        return
+    if lab in ("WORLD OF BEER", "STARBUCKS"):                                                   # the Promenade's corner spots by the arch (user: Starbucks + World of Beer)
+        key = "worldofbeer" if lab == "WORLD OF BEER" else "starbucks"; d_ = min(ld - 8, 24)
+        wall = "#6b4a32" if key == "worldofbeer" else "#e9e1d0"; py = (y1 - d_ / 2) if face == "s" else (y0 + d_ / 2)
+        bsign = lambda b, hx, hy, h, key=key: (b.box(flat(acc(key)), -hx * .6, hx * .6, hy + .06, hy + .2, h - 2.7, h - .3), b.box(sgn(key), -hx * .5, hx * .5, hy + .2, hy + .34, h - 2.5, h - .5))   # sign on the back too
+        place(bldg(key, lw - 2, d_, 7.5, wall=wall, key=key, accent=acc(key), roof="flat", sign_h=2.0, glass_front=True, extra=bsign), cx, py, face); cbox(cx, py, lw - 2, d_)
+        for i in range(3): place(LMP.cafe_set(f"{key}_patio_{i}", "#00704a" if key == "starbucks" else "#b5862a"), x0 + 8 + i * 13, (y0 + 3.5) if face == "s" else (y1 - 3.5), "s")
         return
     if lab == "McD":
         place(fastfood("mcd", "mcd"), cx, cy, face); col(17, 12); place(pylon("mcd_pylon", "mcd", 9.0), *front_pt(14), face); return
