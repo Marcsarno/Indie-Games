@@ -534,10 +534,25 @@ def mcd_site(lot):
     b.box(PAVE, 34, 41.5, 748, 760, .14, .18)
     for (x, y) in ((36, 751), (36, 757), (39.5, 751), (39.5, 757)): CV.picnic(b, CV.civic_mats(), lambda *a, **k: None, x, y)
     put(b, 0, 0, 0)
-    # the freed land east of the lot: a Chase pad with its own small lot (shows the density we get back when lots shrink)
-    surface_lot(86, 150, 768, 783, .4, drive=(108, 116, 783, 790))
-    o = bank("chase_sample", "chase"); place(o, 118, 752, "n"); cbox(118, 752, 18, 14); FOOT.append((100, 740, 136, 762))
-    place(pylon("chase_pylon", "chase", 6.0), 146, 788, "n")
+    # round 44b (user: "still looks like too much space.. more generic commercial buildings with a plaza style design"): the old lot becomes a Florida strip plaza
+    # (L of inline shops with a corner tower round ONE shared lot), a Dunkin' pad south of McDonald's and a Chase pad on the Sample frontage; all lots join up so you can weave through
+    o = BF.make_plaza("sq_east", 80, 16, 7.2, tower_x=34, tower_sign="shops", seed=5); place(o, 160, 735, "w"); cbox(160, 735, 16, 80); FOOT.append((150, 693, 170, 777))
+    o = BF.make_plaza("sq_south", 58, 16, 7.0, shops=(("pizza", 6, "#b8321f"), ("nails", 5, "#7a2f6a"), ("coffee", 6, "#21453a"), ("restaurant_fl", 7, "#8c1c1c")), seed=8); place(o, 117, 690, "n"); cbox(117, 690, 58, 16); FOOT.append((86, 680, 150, 700))
+    w = TB(T43)
+    w.box(PAVE, 146, 152, 699, 777, 0, .14); w.box(PAVE, 84, 152, 698.5, 703.5, 0, .14)                      # shop-front walks
+    for y in range(704, 776, 9): prop("palm_small", 147.5, y, col=False)
+    RB.box(ASPH, 76, 84, 728, 772, 0, .027)                                                                   # McDonald's lot opens into the plaza lot
+    surface_lot(84, 145, 704, 750, .35)
+    o = bank("chase_sample", "chase"); place(o, 112, 766, "n"); cbox(112, 766, 18, 14); FOOT.append((90, 754, 140, 786))
+    w.box(flat("#5d9a3a"), 84, 98, 754, 783, 0, .14); w.box(flat("#5d9a3a"), 126, 145, 754, 783, 0, .14)
+    RB.box(ASPH, 99, 125, 750, 759, 0, .027); RB.box(ASPH, 126, 136, 759, 790, 0, .027)                     # Chase drive-thru lane out to Sample
+    for (x, y) in ((88, 760), (140, 762), (90, 778), (138, 778)): prop("palm_medium", x, y)
+    place(pylon("chase_pylon", "chase", 6.0), 146, 788, "n"); place(pylon("sq_pylon", "plaza", 8.0, 6.0), 170, 788, "n")
+    o = fastfood("dunkin_mcd", "dunkin"); place(o, 40, 707, "w", 1.1, 1.1, 1.0); cbox(40, 707, 13.2, 18.7); APRONS.append((40, 707, 13.2, 18.7, "w")); FOOT.append((18, 682, 50, 726))
+    surface_lot(52, 84, 684, 726, .35); RB.box(ASPH, 18, 52, 684, 694, 0, .027)                                # Dunkin' side lot + drive-thru exit to Lyons
+    w.box(flat("#5d9a3a"), 18, 30, 695, 722, 0, .14); w.box(HED, 18.2, 19.6, 696, 721, 0, 1.0); prop("palm_medium", 22, 702); prop("palm_medium", 22, 716)
+    place(pylon("dunkin_pylon", "dunkin", 6.5), 22, 726, "w")
+    put(w, 0, 0, 0)
 
 def gap_fill():
     for fn in (hs_athletics, golf, golf_trees, construction, offices_more, butterfly_garden, skate_dress, rec_park_more, sabal_more, lake_parks, storage, townhomes, church):
