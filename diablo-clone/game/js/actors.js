@@ -188,10 +188,15 @@ function deathTip(rig, B, f, dir = -1, side = 1) {
 }
 
 // ---------------------------------------------------------------- the hero (knight)
-const HERO_B = { hipH: 18, thigh: 9.5, shin: 8.5, ankle: 1.8, spine: 8, shW: 7.0, shZ: 4, neck: 12.5, upper: 6.5, fore: 6, hipW: 3.0, stride: 8, lift: 4.2, stance: 1.6,
-  duty: 0.38, bob: 0.9, sway: 0.45, runLean: 0.2, counter: 0.2 };   // the hero's travel speed is a jog
+// chibi proportions (round 13, the user's style references): short legs and body, the head drawn
+// HERO_HK times bigger (about 40% of the height), body parts slimmed by HERO_BK
+const HERO_B = { hipH: 11.5, thigh: 6.2, shin: 5.6, ankle: 1.3, spine: 6, shW: 5.4, shZ: 3, neck: 10.5, upper: 4.8, fore: 4.4, hipW: 2.4, stride: 5.6, lift: 3.2, stance: 1.2,
+  duty: 0.38, bob: 0.7, sway: 0.35, runLean: 0.16, counter: 0.2 };   // the hero's travel speed is a jog
+const HERO_HK = 1.5, HERO_BK = 0.8;
 const HERO_GAIT = gaitFrameTiles(HERO_B);
-const TEAM = { red: M.CLOTH_RED, blue: M.CLOTH_BLUE };
+const TEAM = { red: M.CLOTH_RED, blue: M.CLOTH_BLUE, green: M.CLOTH_GREEN, tan: M.CLOTH_TAN, purple: M.CLOTH_PURPLE, white: M.CLOTH_WHITE };
+// townsfolk share the hero's rig: hair color, a beard, or no weapon at all
+const HAIRM = { orange: M.HAIR_O, brown: M.HAIR, blond: M.STRAWM, grey: M.CLOTH_WHITE };
 
 // Equipment is visual family ids, separate from item stats: many items share one look.
 const GEAR_LOOKS = {
@@ -200,7 +205,7 @@ const GEAR_LOOKS = {
   weapon: ['sword', 'axe', 'mace', 'flail', 'greatsword'],
   shield: ['none', 'buckler', 'round', 'kite', 'tower'],
 };
-const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}`;
+const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}`;
 // combo 1 = the second swing of a quick pair (a backhand)
 function weaponSwing(eq, combo = 0) { return eq.weapon === 'sword' ? (combo ? SWINGS.light2 : SWINGS.light) : (combo ? SWINGS.heavy2 : SWINGS.heavy); }
 // how far the weapon's tip is from the swing pivot (smears and reach)
@@ -307,18 +312,41 @@ function heroRig(eq, st) {
     r.ell(c, plate ? [5.0, 5.0, 4.4] : [4.2, 4.0, 3.4], plate ? PL : M.LEATHER, frameAlong(fwd, up), { mf: eq.chest === 'darkplate' ? (p => V.dot(V.sub(p, c), up) < -2.6 ? M.MARKB : 0) : null });
     if (plate) r.sph(V.add(V.add(c, V.mul(fwd, 4.4)), V.mul(up, -1)), 0.9, M.STEEL);
   }
+  // slim every body part made so far (centers stay put), then build the head at normal size and
+  // scale it up about its center
+  for (const q of r.p) { if (q.a) { q.ra *= HERO_BK; q.rb *= HERO_BK; } if (q.r) q.r *= HERO_BK; if (q.rad) q.rad = V.mul(q.rad, HERO_BK); if (q.half) q.half = V.mul(q.half, HERO_BK); }
+  const hr0 = r.p.length;
   // head
   const hd = J.head;
-  const helmF = frameAlong(fwd, up);
+  const helmF = frameAlong(fwd, up), hairM = HAIRM[eq.hair] || M.HAIR_O, bald = eq.hair === 'bald';
   if (eq.helm === 'none' || eq.helm === 'cap') {
-    r.ell(hd, [4.2, 4.0, 4.8], M.SKIN, helmF, { mf: p => {
+    // chibi face: big dark eyes with a light catch, set wide and a little high so they read from above
+    r.ell(hd, [4.3, 4.3, 4.5], M.SKIN, helmF, { mf: p => {
       const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up);
-      if (f2 > 2.6 && Math.abs(Math.abs(s2) - 1.5) < 0.6 && Math.abs(z2 - 1.0) < 0.6) return M.DARK;   // eyes (set high to read from above)
-      if (eq.helm === 'none' && (z2 > 1.6 - f2 * 0.15 || f2 < -1.2)) return M.HAIR;
+      if (f2 > 2.2 && Math.abs(Math.abs(s2) - 1.75) < 0.75 && z2 > -1.4 && z2 < 0.9) return (z2 > 0.25 && Math.abs(s2) < 1.75) ? M.CLOTH_WHITE : M.DARK;
+      if (f2 > 2.2 && Math.abs(Math.abs(s2) - 1.9) < 0.95 && Math.abs(z2 - 1.45) < 0.3) return M.HAIR;   // brows
+      if (eq.helm === 'none' && !bald && (z2 > 2.2 - f2 * 0.1 || f2 < -1.4)) return hairM;
       return 0;
     } });
-    if (eq.helm === 'cap') r.ell(V.mad(hd, up, 2.2), [5.0, 4.9, 3.6], M.IRON, helmF);
-    if (eq.helm === 'none') r.cone(V.mad(V.mad(hd, up, -1.6), fwd, 3.2), V.mad(V.mad(hd, up, -3.8), fwd, 2.8), 1.3, 0.9, M.HAIR);   // short beard
+    if (eq.helm === 'cap') r.ell(V.mad(hd, up, 2.2), [5.0, 4.9, 3.6], M.STEEL, helmF, { mf: p => V.dot(V.sub(p, hd), up) < 0.6 ? M.LEATHER : 0 });
+    if (eq.beard) r.ell(V.add(V.mad(hd, up, -2.6), V.mul(fwd, 2.4)), [2.6, 3.4, 2.8], bald ? M.HAIR : hairM, helmF, { noShadow: true });   // a big round beard
+    if (eq.helm === 'none' && !bald) {   // spiky hair swept up and back, over the brow
+      // [forward, side, up, radius, length]: a crown of spikes swept back, side tufts over the ears,
+      // and two bangs hanging over the brow
+      const spikes = [[0.6, 0, 4.0, 1.5, 3.4], [-1.4, 2.2, 3.4, 1.4, 3.2], [-1.4, -2.2, 3.4, 1.4, 3.2], [-3.4, 0.8, 2.4, 1.5, 3.0], [-3.4, -0.8, 2.4, 1.5, 3.0], [1.6, 2.6, 2.6, 1.1, 2.4], [1.6, -2.6, 2.6, 1.1, 2.4], [-2.2, 3.6, 0.6, 1.1, 2.2], [-2.2, -3.6, 0.6, 1.1, 2.2]];
+      {
+        r.ell(V.add(V.mad(hd, up, 2.0), V.mul(fwd, -1.2)), [4.1, 4.4, 2.9], hairM, helmF, { noShadow: true });
+        for (const [f2, s2, z2, rr, len] of spikes) {
+          const base = V.add(V.add(V.mad(hd, fwd, f2 * 0.8), V.mul(sideR, s2 * 0.8)), V.mul(up, z2 * 0.7));
+          const dir = V.norm(V.add(V.add(V.mul(fwd, f2 * 0.1 - 0.7), V.mul(sideR, s2 * 0.3)), V.mul(up, 0.7)));   // swept back and out
+          r.cone(base, V.mad(base, dir, len * 1.25), rr, 0.3, hairM, { noShadow: true });
+        }
+        for (const sd of [-1, 1]) {   // bangs
+          const base = V.add(V.add(V.mad(hd, fwd, 3.0), V.mul(sideR, sd * 1.0)), V.mul(up, 2.6));
+          r.cone(base, V.add(base, V.add(V.add(V.mul(fwd, 1.2), V.mul(sideR, sd * 1.2)), V.mul(up, -1.6))), 1.0, 0.3, hairM, { noShadow: true });
+        }
+      }
+    }
   } else {
     if (eq.helm === 'barbute') {
       // barbute: close round helm with a T-shaped face opening
@@ -363,6 +391,14 @@ function heroRig(eq, st) {
       }
     }
   }
+  {   // the head (skin, hair, helm) drawn big about its center
+    const HK = HERO_HK, sc = q => V.add(hd, V.mul(V.sub(q, hd), HK));
+    for (const q of r.p.slice(hr0)) {
+      if (q.c) q.c = sc(q.c); if (q.a) { q.a = sc(q.a); q.b = sc(q.b); q.ra *= HK; q.rb *= HK; }
+      if (q.r) q.r *= HK; if (q.rad) q.rad = V.mul(q.rad, HK); if (q.half) q.half = V.mul(q.half, HK);
+      if (q.mf) { const f0 = q.mf; q.mf = (p, n) => f0(V.add(hd, V.mul(V.sub(p, hd), 1 / HK)), n); }
+    }
+  }
   // shield on the left forearm, face turned outward
   if (eq.shield !== 'none') {
     const n = V.norm(V.add(V.mul(fwd, 0.75), V.mul(sideR, -0.65)));
@@ -386,6 +422,7 @@ function heroRig(eq, st) {
     }
   }
   // weapon
+  if (eq.weapon === 'none') { if (st.clip === 'death') deathTip(r, B, st.f, -1); return r; }
   const g = aR.hand;
   const wide = V.norm(V.cross(bd, V.len(V.cross(bd, up)) > 0.3 ? up : fwd));
   const wf = [bd, wide, V.cross(bd, wide)];

@@ -260,6 +260,19 @@ function houndRig(look, st) {
 }
 
 // ---------------------------------------------------------------- spider
+// a town chicken: white body, red comb, pecks while idle and trots on two thin legs
+function chickenRig(look, st) {
+  const r = new Rig(), { clip, f } = st, walk = clip === 'walk', peck = clip === 'idle' && f % 4 === 2;
+  const bob = walk ? (f % 2 ? 0.6 : 0) : 0;
+  for (const s of [-1, 1]) { const ph = walk ? Math.sin((f / 8) * Math.PI * 2 + (s > 0 ? Math.PI : 0)) * 1.6 : 0; r.cone([ph * 0.5, s * 1.3, 4], [ph, s * 1.3, 0.3], 0.6, 0.6, M.GOLD, { noShadow: true }); }
+  r.group(() => { r.ell([0, 0, 6 + bob], [4.2, 3.2, 3.2], M.CLOTH_WHITE); r.cone([-3, 0, 6.5 + bob], [-5.5, 0, 10 + bob], 2.2, 0.8, M.CLOTH_WHITE); });
+  const hd = peck ? [5, 0, 4] : [3.4, 0, 10 + bob];
+  r.sph(hd, 2.3, M.CLOTH_WHITE, { mf: p => p[0] - hd[0] > 1 && Math.abs(Math.abs(p[1] - hd[1]) - 1.1) < 0.5 && Math.abs(p[2] - hd[2] - 0.4) < 0.5 ? M.DARK : 0 });
+  r.cone(V.add(hd, [1.8, 0, 0]), V.add(hd, [3.6, 0, -0.4]), 0.8, 0.2, M.GOLD, { noShadow: true });
+  r.ell(V.add(hd, [0.2, 0, 2.2]), [1.4, 0.6, 1.1], M.CLOTH_RED, null, { noShadow: true });
+  r.ell(V.add(hd, [1.6, 0, -1.6]), [0.6, 0.5, 0.9], M.CLOTH_RED, null, { noShadow: true });
+  return r;
+}
 function spiderRig(look, st) {
   const r = new Rig(), ch = look.chitin || M.CHITIN;
   const { clip, f } = st;
@@ -317,6 +330,7 @@ const FAMILIES = {
   fallen: { size: [52, 48, 26, 40], gait: gaitFrameTiles(FALLEN_B), rig: fallenRig, swing: e => e.look.staff ? SWINGS.cast : SWINGS.claw },
   hound: { size: [80, 64, 38, 50], rig: houndRig, swing: () => SWINGS.bite },
   spider: { size: [80, 60, 40, 46], rig: spiderRig, swing: () => SWINGS.bite },
+  chicken: { size: [28, 28, 14, 22], rig: chickenRig, swing: () => SWINGS.bite },
 };
 // Variants: same family, different look and stats. `kind` is what the roster ledger counts.
 const MONSTERS = {

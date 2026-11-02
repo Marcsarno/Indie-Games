@@ -53,18 +53,18 @@ function startLevel(level, seed) {
   buildWorld();
   hero.fi = LV.start.cx + 0.5; hero.fj = LV.start.cy + 0.5; hero.atk = -1; hero.clip = 'idle'; hero.dead = 0;
   enemies = LV.spawns.map((s, n) => makeEnemy(s.id, s.fi, s.fj, n));
-  { const R = rng(seed ^ 0x5bd1); for (const e of enemies) if (!e.def.unique && R() < champChance(level)) makeChampion(e, R); }
-  resetSkills(); setupBoss();
+  { const R = rng(seed ^ 0x5bd1); for (const e of enemies) if (!e.def.unique && R() < champChance(LV.diff)) makeChampion(e, R); }
+  makeNpcs(); resetSkills(); setupBoss();
   groundItems = []; projectiles = []; floaters = []; pclear();
   updateFov(hero.fi, hero.fj);
   flowT = 0; computeFlow();
   warmStep(1e9, prewarm());   // idle poses + the hero's walk now, behind the level fade; the rest during play
   G.msg = [];
-  say(`${TH().name} LEVEL ${level}`, 51, 3);
-  if (isBossFloor(level)) say('SOMETHING VAST STIRS IN THE DARK', 22, 4);
+  say(LV.outdoor ? areaName() : `${TH().name} LEVEL ${LV.depth}`, 51, 3);
+  if (!LV.outdoor && isBossFloor(LV.depth)) say('SOMETHING VAST STIRS IN THE DARK', 22, 4);
 }
 function makeEnemy(id, fi, fj, n) {
-  const m = MONSTERS[id], lv = LV.level;
+  const m = MONSTERS[id], lv = LV.diff;
   const scale = 1 + (lv - 1) * 0.22;
   return {
     id, def: m, fam: m.family, look: m.look, fi, fj, home: [fi, fj], dir: (n * 3) % 8, clip: 'idle', clock: n * 0.13, walk: 0,
@@ -153,6 +153,9 @@ const roll = r => r[0] + Math.floor(Math.random() * (r[1] - r[0] + 1));
 // ---------------------------------------------------------------- hero actions
 function heroAttack() {
   if (G.mode !== 'play' || hero.dead || heroBusy()) return;
+  // beside a trader in town, a tap trades instead of swinging
+  const tr = LV.outdoor && nearTrader();
+  if (tr) { if (G.t > (hero.tradeT || 0)) { hero.tradeT = G.t + 0.6; trade(tr); } return; }
   // target assist: face the nearest enemy within reach of a step or two
   let best = null, bd = 4.2;
   for (const e of enemies) { if (!alive(e) || LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] < 0.3) continue; const d = Math.hypot(e.fi - hero.fi, e.fj - hero.fj); if (d < bd) { bd = d; best = e; } }
@@ -213,7 +216,7 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false) {
     if (bony) shatter(e, fromFi, fromFj);   // skeletons burst apart into a heap of bones
     else stampBlood(Math.round(ex), Math.round(ey), e.def.unique ? 6 : 3, (Math.random() * 1e6) | 0, e.fam === 'spider' ? GREEN : RED);
     const streak = killStreak();
-    gainXp(e.def.xp * (1 + (LV.level - 1) * 0.3) * (e.champ ? 3 : 1) * (1 + Math.max(0, streak - 2) * 0.1));
+    gainXp(e.def.xp * (1 + (LV.diff - 1) * 0.3) * (e.champ ? 3 : 1) * (1 + Math.max(0, streak - 2) * 0.1));
     dropLoot(e.fi, e.fj, e.def.unique ? 4 : e.champ ? 2 : 1, e.def.unique || !!e.champ);
     if (e === boss) { say('THE BROODMOTHER IS SLAIN', 51, 4); say('THE WAY DOWN IS OPEN', 26, 4); sfx('levelUp'); }
     G.kills++;
@@ -285,9 +288,9 @@ function dropLoot(fi, fj, n, rich) {
     let p = [fi + Math.cos(a) * r, fj + Math.sin(a) * r];
     if (blocked(p[0], p[1])) p = [fi, fj];
     const q = Math.random();
-    if (q < 0.45 || rich && k === 0) groundItems.push({ gold: Math.round((2 + Math.random() * 6) * LV.level * (rich ? 3 : 1)), fi: p[0], fj: p[1], t: 0 });
-    else if (q < 0.6) groundItems.push({ item: rollItem(R, LV.level, 'heal'), fi: p[0], fj: p[1], t: 0 });
-    else if (q < (rich ? 1 : 0.8)) groundItems.push({ item: rollItem(R, LV.level), fi: p[0], fj: p[1], t: 0 });
+    if (q < 0.45 || rich && k === 0) groundItems.push({ gold: Math.round((2 + Math.random() * 6) * LV.diff * (rich ? 3 : 1)), fi: p[0], fj: p[1], t: 0 });
+    else if (q < 0.6) groundItems.push({ item: rollItem(R, LV.diff, 'heal'), fi: p[0], fj: p[1], t: 0 });
+    else if (q < (rich ? 1 : 0.8)) groundItems.push({ item: rollItem(R, LV.diff), fi: p[0], fj: p[1], t: 0 });
   }
 }
 function pickup(g) {
@@ -326,6 +329,7 @@ function update(dt) {
   updateHero(dt);
   flowT -= dt; if (flowT <= 0) { flowT = 0.4; computeFlow(); }
   for (const e of enemies) updateEnemy(e, dt);
+  updateNpcs(dt);
   separate();
   updateProjectiles(dt);
   updateParticles(dt);
@@ -609,11 +613,11 @@ function render() {
     }
     for (let x = 0; x < W; x++) {
       const wx = camX + x, o = y * W + x, inside = wy >= 0 && wy < WH && wx >= 0 && wx < WW;
-      scr[o] = inside ? wIdx[row + wx] : BLK; zbuf[o] = inside ? wZ[row + wx] : 0; tbuf[o] = inside ? wTile[row + wx] : -1;
+      scr[o] = inside ? wIdx[row + wx] : LV.outdoor ? canopyAt(wx, wy) : BLK; zbuf[o] = inside ? wZ[row + wx] : 0; tbuf[o] = inside ? wTile[row + wx] : -1;
     }
   }
   const visAt = (fi, fj) => LV.vis[tIdx(clamp(Math.floor(fi), 0, MW - 1), clamp(Math.floor(fj), 0, MH - 1))];
-  const chars = [hero, ...enemies.filter(e => !e.corpse && visAt(e.fi, e.fj) > 0.25)];
+  const chars = [hero, ...enemies.filter(e => !e.corpse && visAt(e.fi, e.fj) > 0.25), ...npcs];
   const boxes = chars.map(c => { const [x, y] = screenOf(c); return [x - 40, y - 64, x + 40, y + 8]; });
   const list = props.filter(p => {
     const x0 = p.wx - p.sp.ax, y0 = p.wy - p.sp.ay, x1 = x0 + p.sp.w, y1 = y0 + p.sp.h;
@@ -637,7 +641,7 @@ function render() {
   }
   chars.forEach((c, n) => {
     const [x, y] = screenOf(c);
-    if (c.clip !== 'death') shadowBlob(x, y + 1, c === hero ? 8 : c.def.shadow * (c.look.scale || 1));
+    if (c.clip !== 'death') shadowBlob(x, y + 1, c === hero || c.role ? (c.fam === 'chicken' ? 4 : 8) : c.def.shadow * (c.look.scale || 1));
     list.push({ depth: c.fi + c.fj, draw: () => {
       const sp = getSprite(c.fam, c.look, c.dir, c.clip, frameOf(c), c);
       const jit = c.stop > 0 && c !== hero && c.dying < 0 ? (Math.floor(t * 33) % 2 ? 1 : -1) : 0;
@@ -647,6 +651,7 @@ function render() {
   for (const p of projectiles) list.push({ depth: p.fi + p.fj, draw: () => drawProjectile(p) });
   // flames sort with everything else, so a character in front of a brazier hides its fire
   for (const f of fires) if (LV.vis[f.tile] > 0.1 || LV.seen[f.tile]) list.push({ depth: (f.tile % MW) + Math.floor(f.tile / MW) + (f.depthAdd ?? 1.2), draw: () => flame(f.wx, f.wy, f.h, f.w, t, f.seed) });
+  heroRing(kx, ky + 1);
   list.sort((a, b) => a.depth - b.depth);
   for (const d of list) d.draw();
   drawTelegraph();
@@ -699,7 +704,9 @@ function drawProjectile(p) {
 function lightPass(chars, kx, ky) {
   const t = G.t;
   cyclePalette(t);
-  const dyn = [{ x: kx, y: ky, z: 34, r: 145, i: 0.62 }];
+  // outdoors: flat daylight at the identity level (the ramps as drawn), no hero light
+  const amb = LV.outdoor ? 0.6 : 0;
+  const dyn = LV.outdoor ? [] : [{ x: kx, y: ky, z: 34, r: 145, i: 0.62 }];
   for (const p of projectiles) if (p.kind !== 'arrow' && dyn.length < 5) { const [x, y] = iso(p.fi, p.fj); dyn.push({ x, y, z: p.z, r: 70, i: 0.8 }); }
   const fl = g => 1 + 0.07 * Math.sin(t * 11 + g * 2.3) + 0.05 * Math.sin(t * 23.7 + g * 5.1) + 0.04 * Math.sin(t * 37 + g);
   const f0 = fl(0), f1 = fl(1), A = staticLight[0], B = staticLight[1];
@@ -707,7 +714,7 @@ function lightPass(chars, kx, ky) {
     const wy = camY + y, o0 = y * W;
     if (wy < 0 || wy >= WH) { lbuf.fill(0, o0, o0 + W); continue; }
     const row = wy * WW + camX;
-    for (let x = 0; x < W; x++) { const wx = camX + x; lbuf[o0 + x] = (wx >= 0 && wx < WW) ? A[row + x] * f0 + B[row + x] * f1 : 0; }
+    for (let x = 0; x < W; x++) { const wx = camX + x; lbuf[o0 + x] = amb + ((wx >= 0 && wx < WW) ? A[row + x] * f0 + B[row + x] * f1 : 0); }
   }
   for (const L of dyn) {
     const lx = L.x - camX, ly = L.y - camY, r = L.r, r2 = r * r, li = L.i;
@@ -734,11 +741,11 @@ function lightPass(chars, kx, ky) {
       const v = scr[o];
       if (v === BLK) { out32[o] = black; continue; }
       const tk = tbuf[o];
-      if (tk < 0 || !seen[tk]) { out32[o] = black; continue; }
+      if (tk < 0 ? !LV.outdoor : !seen[tk]) { out32[o] = black; continue; }
       if (v & EMIS) { out32[o] = PAL32[CYCLE[v & 127]]; continue; }
       const ci = cid[o];
       if (ci) { out32[o] = LCOL[cl[ci - 1] + v]; continue; }
-      const vv = vis[tk];
+      const vv = tk < 0 ? 1 : vis[tk];
       // remembered areas sit at a dim floor level; visible areas get their real light
       const l = (shd[o] ? lbuf[o] * 0.4 : lbuf[o]) * BANDS * vv + 0.9 * (1 - vv) + BAYER[by | (x & 3)];
       const L = (l | 0) * NPAL;

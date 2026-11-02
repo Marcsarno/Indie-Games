@@ -26,6 +26,7 @@ const THEMES = {
   crypt: { name: 'CRYPT', ramp: S, torch: 0.4, banners: true },
   caves: { name: 'CAVES', ramp: CAVE, torch: 0.16, banners: false },
   hell: { name: 'HELL', ramp: HELL, torch: 0.24, banners: true },
+  town: { name: 'TOWN', ramp: S, torch: 0 }, forest: { name: 'FOREST', ramp: S, torch: 0 },
 };
 const themeOf = level => ['crypt', 'caves', 'hell'][Math.floor((level - 1) / 2) % 3];
 const TH = () => THEMES[LV.theme || 'crypt'];
@@ -54,8 +55,12 @@ function los(a, b, c, d) {
 
 // ---------------------------------------------------------------- generation
 function genLevel(level, seed) {
-  LV.theme = themeOf(level);
-  for (let attempt = 0; attempt < 20; attempt++) if (tryGen(level, seed + attempt * 7919)) { LV.level = level; LV.seed = seed; return; }
+  // levels cycle town -> forest -> three dungeon floors (outdoor.js); LV.diff drives difficulty
+  const A = areaOf(level);
+  LV.area = A.kind; LV.cyc = A.cyc; LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.autumn = A.cyc % 2 === 1; LV.plaza = null; LV.npcs = []; LV.critters = [];
+  if (LV.outdoor) { LV.theme = A.kind; genOutdoor(level, seed, A); LV.level = level; LV.seed = seed; return; }
+  LV.theme = themeOf(LV.depth);
+  for (let attempt = 0; attempt < 20; attempt++) if (tryGen(LV.diff, seed + attempt * 7919)) { LV.level = level; LV.seed = seed; return; }
   throw new Error('level generation failed');
 }
 function tryGen(level, seed) {
@@ -205,7 +210,7 @@ function placeSpawns(R, level) {
       budget -= m.pack ? 2 : 1;
     }
   });
-  if (isBossFloor(level)) {   // the broodmother's lair: she waits in the stairs room among egg sacs
+  if (isBossFloor(LV.depth)) {   // the broodmother's lair: she waits in the stairs room among egg sacs
     const n = LV.stairs.room, r = LV.rooms[n];
     for (let k = S.length - 1; k >= 0; k--) if (LV.roomOf[tIdx(Math.floor(S[k].fi), Math.floor(S[k].fj))] === n) S.splice(k, 1);
     const p = free(r); if (p) S.push({ id: 'broodmother', fi: p[0], fj: p[1] });
@@ -426,6 +431,7 @@ function genFloor() {
     const ti = Math.floor(A / 32), tj = Math.floor(B / 32), t = tileAt(ti, tj), k = y * WW + x;
     let v = BLK;
     wTile[k] = (ti >= 0 && tj >= 0 && ti < MW && tj < MH) ? tIdx(ti, tj) : -1;
+    if (LV.outdoor) { floorBuf[k] = outdoorFloor(x, y, A, B, ti, tj); continue; }
     if (t === FLOOR) {
       const room = LV.roomOf[tIdx(ti, tj)] >= 0;
       if (LV.theme === 'caves') {   // uneven dirt and rock, no tiling, cracks and pebbles
@@ -506,6 +512,7 @@ function buildWorld() {
   genFloor();
   props.length = 0; dynProps.length = 0; fires.length = 0; lights.length = 0;
   const back = [];
+  if (LV.outdoor) buildOutdoor(back);
   for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
     if (tileAt(i, j) !== WALL) continue;
     const tall = LV.tall[tIdx(i, j)];
@@ -576,7 +583,7 @@ function buildWorld() {
     s.sp = sp; s.wx = x; s.wy = y;
   }
   wIdx.set(floorBuf); wZ.fill(0); wFloor.fill(1);
-  blitWorld(LV.stairs.sp, LV.stairs.wx, LV.stairs.wy + 1, 0, -1, true);
+  if (!LV.stairs.road) blitWorld(LV.stairs.sp, LV.stairs.wx, LV.stairs.wy + 1, 0, -1, true);
   for (const d of LV.decor) {
     if (d.kind === 'blood') { const [x, y] = iso(d.fi, d.fj); stampBlood(Math.round(x), Math.round(y), d.size, d.seed); }
     if (d.kind === 'lava') { const [x, y] = iso(d.fi, d.fj); stampLava(Math.round(x), Math.round(y), d.size, d.seed); }
@@ -625,6 +632,7 @@ const staticLight = [new Float32Array(WW * WH), new Float32Array(WW * WH)];
 // seen = explored (remembered, drawn dim); vis = visible now (0..1, soft edge)
 const FOV_R = 9.5;
 function updateFov(pi, pj) {
+  if (LV.outdoor) return;   // outdoors in daylight everything is in view
   LV.vis.fill(0);
   const i0 = Math.max(0, Math.floor(pi - FOV_R)), i1 = Math.min(MW - 1, Math.ceil(pi + FOV_R));
   const j0 = Math.max(0, Math.floor(pj - FOV_R)), j1 = Math.min(MH - 1, Math.ceil(pj + FOV_R));

@@ -122,6 +122,7 @@ const glyphSound = (cx, cy) => {
 const glyphMap = (cx, cy) => { fillRect(cx - 6, cy - 5, 13, 11, 26); frame(cx - 6, cy - 5, 13, 11, 27, 24); line(cx - 4, cy + 3, cx - 1, cy - 1, 22); line(cx - 1, cy - 1, cx + 4, cy + 2, 22); put(cx + 4, cy - 3, 22); };
 
 function drawHud() {
+  drawNpcLabels();
   const t = G.t;
   if (G.mode === 'title') return drawTitle();
   // minimap (automap of explored tiles)
@@ -175,7 +176,7 @@ function drawHud() {
     for (let y = -6; y <= 6; y++) for (let x = -6; x <= 6; x++) { const d = Math.hypot(x, y); if (d <= 6) put(kx + x, ky + y, d > 5 ? 28 : (-x - y) > 2 ? 31 : 30); }
   }
   // top line: level and gold
-  text(`${TH().name} ${LV.level}`, 4, 4, 26);
+  text(areaName(), 4, 4, 26);
   text(`${hero.gold} GOLD`, 4, 11, 50);
   // floor item labels near the hero (Diablo shows names over loot)
   // item labels stack upward instead of overlapping (Diablo does the same)

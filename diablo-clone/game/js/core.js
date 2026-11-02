@@ -25,6 +25,15 @@ const PAL_HEX = [
   '1f6f6a', '3fbfae', '9ff5e0',                                         // 70-72 glowing fungus
   '1f0c0c', '341414', '4d1c18', '6b2a1f', '8c3a26', 'a85232',           // 73-78 hell stone
   '5a1206', '9a2208', 'd8420c', 'f8781a', 'ffb43a', 'ffe27a',           // 79-84 lava (color-cycled)
+  // outdoors (round 13, sampled from the user's style references): shadows lean blue-green, lights
+  // lean olive-yellow
+  '1f3326', '2b4630', '3d5a35', '55703c', '6f8545', '8f9a55', 'b0ad6a', // 85-91 grass
+  '17291f', '233d2a', '325634', '4a7238', '6a8d40', '93ac58',           // 92-97 leaves / pine
+  '3a2a20', '56402c', '735a3c', '93764e', 'b0935f', 'cbb07a',           // 98-103 dirt / planks
+  '5a4220', '876426', 'b08a34', 'd4b350', 'eed580',                     // 104-108 straw / thatch
+  '5a1f0c', '9a3d12', 'd0661c', 'f29a3a', 'ffc77a',                     // 109-113 orange (hair, pumpkins)
+  '142a44', '1e4566', '2f6a8a', '5b9cb4', 'a8d8e0',                     // 114-118 water
+  '4a1a14', '7a2c1a', 'a8461e', 'cf6e2a',                               // 119-122 autumn leaves
 ];
 const NPAL = PAL_HEX.length;
 const PR = new Uint8Array(NPAL), PG = new Uint8Array(NPAL), PB = new Uint8Array(NPAL);
@@ -51,6 +60,13 @@ const CAVE = [64, 65, 66, 67, 68, 69];
 const FUNGUS = [70, 71, 72];
 const HELL = [73, 74, 75, 76, 77, 78];
 const LAVA = [79, 80, 81, 82, 83, 84];
+const GRASS = [85, 86, 87, 88, 89, 90, 91];
+const LEAF = [92, 93, 94, 95, 96, 97];
+const DIRT = [98, 99, 100, 101, 102, 103];
+const STRAW = [104, 105, 106, 107, 108];
+const ORANGE = [109, 110, 111, 112, 113];
+const WATER = [114, 115, 116, 117, 118];
+const AUTUMN = [119, 120, 121, 122];
 const BLK = 1, K1 = 2, K2 = 3, EMIS = 128;
 
 // Light tables (Diablo 1's method): lighting never mixes RGB. Level L maps each palette index to
@@ -58,7 +74,7 @@ const BLK = 1, K1 = 2, K2 = 3, EMIS = 128;
 // shared tail; above L_ID it steps up for torch-side over-exposure. Emissive pixels skip the tables.
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const TAIL = [1, 2, 3];
-const PAL_RAMPS = [S, FIRE, RED, BONE, STEEL, WOOD, BLUE, CHITIN, FLESH, GOLD, GREEN, PURPLE, SKIN, CAVE, FUNGUS, HELL, LAVA];
+const PAL_RAMPS = [S, FIRE, RED, BONE, STEEL, WOOD, BLUE, CHITIN, FLESH, GOLD, GREEN, PURPLE, SKIN, CAVE, FUNGUS, HELL, LAVA, GRASS, LEAF, DIRT, STRAW, ORANGE, WATER, AUTUMN];
 const LEVELS = 9, L_ID = 3, BANDS = 5;
 const LTAB = Array.from({ length: LEVELS }, () => new Uint8Array(NPAL));
 for (let i = 1; i < NPAL; i++) {
