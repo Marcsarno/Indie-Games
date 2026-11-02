@@ -280,7 +280,8 @@ function drawInventory() {
   const nm = { helm: 'HEAD', chest: 'BODY', weapon: 'HAND', shield: 'OFF' };
   for (const s of SLOTS) {
     const r = L.slots[s], it = hero.equip[s];
-    fillRect(r.x, r.y, r.w, r.h, 4); frame(r.x, r.y, r.w, r.h, INV.sel && INV.sel.slot === s ? 51 : 8, 3);
+    const special = it && (it.rarity === 'legend' || it.rarity === 'set') ? RARITY_COL[it.rarity] : 8;
+    fillRect(r.x, r.y, r.w, r.h, 4); frame(r.x, r.y, r.w, r.h, INV.sel && INV.sel.slot === s ? 51 : special, 3);
     if (it) sprite(itemIcon(it), r.x + 15, r.y + 21, 1, 4); else textC(nm[s], r.x + 15, r.y + 13, 6);
     if (it) put(r.x + 2, r.y + 2, RARITY_COL[it.rarity]);
   }
@@ -290,7 +291,9 @@ function drawInventory() {
   frame(L.color.x, L.color.y, L.color.w, L.color.h, 8, 3); textC('COLOR', L.color.x + 27, L.color.y + 5, hero.team === 'red' ? 22 : 39);
   L.bag.forEach((r, n) => {
     const it = hero.bag[n];
-    fillRect(r.x, r.y, r.w, r.h, 4); frame(r.x, r.y, r.w, r.h, INV.sel && INV.sel.item === it && it ? 51 : 6, 3);
+    // legendaries and set pieces get a border in their color so they stand out in the bag
+    const special = it && (it.rarity === 'legend' || it.rarity === 'set') ? RARITY_COL[it.rarity] : 6;
+    fillRect(r.x, r.y, r.w, r.h, 4); frame(r.x, r.y, r.w, r.h, INV.sel && INV.sel.item === it && it ? 51 : special, 3);
     if (it) {
       sprite(itemIcon(it), r.x + 17, r.y + 21, 1, 4); put(r.x + 2, r.y + 2, RARITY_COL[it.rarity]); put(r.x + 3, r.y + 2, RARITY_COL[it.rarity]);
       const b = ITEM_BASES[it.base], cur = hero.equip[b.slot];
