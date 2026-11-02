@@ -53,8 +53,9 @@ ROADS = [
     ("", curve([(-92, -95), (-130, -120), (-180, -128), (-235, -112)]), 4, "trail"),                                 # lake path to Dave's street
     ("", curve([(XPOWER, 140), (316, 138), (300, 130)]), 5, "trail"),                                                # Wynmoore golf-cart back gate
     # Wynmoore streets (gated golf community, one gate on Lyons)
-    ("", curve([(XLYONS, 95), (40, 95), (90, 120), (140, 95), (190, 125), (240, 90), (270, 50), (230, 30)]), 9, "loc"),
-    ("", curve([(190, 125), (220, 160), (280, 165), (300, 130)]), 8, "loc"),
+    ("", curve([(XLYONS, 145), (40, 145), (90, 168), (150, 140), (210, 170), (260, 138), (300, 130)]), 9, "loc"),     # Wynmoore (north half of the block)
+    ("", curve([(150, 140), (170, 115), (120, 108)]), 8, "loc"),
+    ("", [(XLYONS, 40), (24, 40)], 8, "loc"), ("", [(140, 14), (140, 20)], 8, "loc"),                                   # high school: driveway off Lyons, bus loop off the Pkwy
     # Sawgrass ramps at Lyons
     ("", curve([(-80, 575), (-40, 560), (-8, 540)]), 8, "ramp"), ("", curve([(8, 618), (40, 630), (90, 618)]), 8, "ramp"),
 ]
@@ -64,7 +65,8 @@ def R(x0, y0, x1, y1): return [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
 ZONES = [  # (label, polygon, fill, text colour) drawn in order
     ("SHOPS  GAS  FAST FOOD", R(XW, YS, X441 - 14, YN), "#c7a98a", "#4a2e1a"),
     ("SHOPS  GAS  FAST FOOD", R(XPOWER + 14, YS, XE, YN), "#c7a98a", "#4a2e1a"),
-    ("WYNMOORE\n(gated golf)", R(14, 14, 316, 186), "#e9d8a6", "#5a4310"),
+    ("WYNMOORE\n(gated golf)", R(14, 100, 316, 186), "#e9d8a6", "#5a4310"),
+    ("", R(14, 14, 316, 92), "#86b86a", "#1f4d12"),                                                                      # user: Coconut Creek High School = the south half, on the Pkwy
     ("BUTTERFLY WORLD\n+ TRADEWINDS PARK", R(150, 214, 316, 306), "#7cc05a", "#1f4d12"),
     ("SEMINOLE\nCASINO", R(-316, 334, -250, 416), "#c8901e", "#3a2405"),
 ]
@@ -75,14 +77,15 @@ LOTS = [
     (R(-316, 444, -14, 512), [(-306, 486, -262, 508, "#c56a4a", ""), (-252, 486, -208, 508, "#d6a24a", ""), (-180, 470, -140, 490, "#e4d9c2", "PLAZA"), (-120, 486, -76, 508, "#c56a4a", ""), (-62, 450, -20, 470, "#9a3b52", "COOPER'S\nHAWK")], 8, "v"),
     (R(14, 444, 316, 510), [(24, 486, 74, 508, "#d6a24a", ""), (90, 486, 140, 508, "#c56a4a", "CINEMA"), (160, 450, 220, 500, "#7d8086", "GARAGE"), (236, 486, 306, 508, "#d6a24a", "")], 8, "v"),
     (R(-316, 536, -14, 562), [(-96, 540, -20, 560, "#2e8b3e", "PUBLIX"), (-200, 540, -120, 556, "#c56a4a", ""), (-306, 540, -226, 556, "#d6a24a", "")], 8, "v"),
-    (R(14, 216, 66, 306), [(22, 280, 52, 300, "#d22d24", "McD")], 7, "h"),                                                      # McDonald's on the corner of Sample & Lyons
+    (R(14, 216, 66, 306), [(22, 280, 52, 300, "#d22d24", "McD")], 7, "h"),
+    (R(20, 20, 150, 88), [(28, 54, 112, 84, "#b8865a", "COCONUT CREEK\nHIGH SCHOOL")], 8, "v"),                                                      # McDonald's on the corner of Sample & Lyons
 ]
 LAKES = [[(-300, 40), (-255, 30), (-215, 60), (-230, 82), (-290, 78)], [(170, 340), (250, 335), (262, 352), (190, 358)], [(60, 655), (120, 650), (128, 668), (70, 670)],
-         [(200, 40), (250, 35), (262, 70), (215, 75)], [(-280, 640), (-230, 632), (-225, 668), (-275, 670)], [(-140, -80), (-75, -88), (-60, -125), (-110, -140), (-150, -115)],
+         [(200, 152), (240, 150), (246, 162), (206, 164)], [(-280, 640), (-230, 632), (-225, 668), (-275, 670)], [(-140, -80), (-75, -88), (-60, -125), (-110, -140), (-150, -115)],
          [(150, -110), (230, -115), (240, -95), (160, -88)]]
-SPOTS = [("POLICE", 100, 222, "#1d3f8a", 1), ("CITY HALL", 100, 245, "#2f6fb3", 1), ("GATE", 22, 95, "#d0582a", 1), ("DAVE", -262, -132, "#e33b3b", 1)]
-JUMPS = [(-84, 262), (-90, 125), (XW + 28, 310), (220, 705), (150, 60), (-130, 360)]          # canal banks x2, Walmart loading dock, construction site, golf mound, car-carrier ramp at the dealers
-BREAKERS = [(XPOWER + 45, 430), (X441 - 50, 180), (-160, 460), (-60, 380), (-62, 568), (20, 95), (155, 300), (205, 690)]   # gas x2, plaza fountain, dealer cars, cart corral, Wynmoore gate arm, Butterfly World sign, scaffolding
+SPOTS = [("POLICE", 100, 222, "#1d3f8a", 1), ("CITY HALL", 100, 245, "#2f6fb3", 1), ("GATE", 22, 145, "#d0582a", 1), ("DAVE", -262, -132, "#e33b3b", 1)]
+JUMPS = [(-84, 262), (-90, 125), (XW + 28, 310), (220, 705), (230, 118), (-130, 360), (300, 30)]          # canal banks x2, Walmart loading dock, construction site, golf mound, car-carrier ramp at the dealers
+BREAKERS = [(XPOWER + 45, 430), (X441 - 50, 180), (-160, 460), (-60, 380), (-62, 568), (20, 145), (232, 86), (155, 300), (205, 690)]   # gas x2, plaza fountain, dealer cars, cart corral, Wynmoore gate arm, Butterfly World sign, scaffolding
 HIDES = [(X441 - 50, 470), (190, 475), (0, 600), (XW + 40, 212)]                                # car wash, Promenade garage, under the overpass, Walmart garden centre
 STARS = [(-283, 400), (240, 262), (100, 258), (40, 170), (XW + 43, 296), (-160, 500), (37, 306)]   # casino tower, Butterfly World dome, City Hall clock, Wynmoore water tower, Walmart sign, Promenade sign, golden arches
 BRIDGES = [(-85, Y["pkwy"]), (-82, Y["copans"]), (-85, Y["sample"])]
@@ -123,6 +126,8 @@ for (poly, blds, step, dirn) in LOTS:
 for yy in range(340, 386, 8):                                   # dealer lots: rows of cars
     for xx in range(-240, -16, 6): d.rectangle([P(xx, yy + 2), P(xx + 3.5, yy - 2)], fill=["#d33", "#eee", "#36c", "#222", "#c9a227"][(xx // 6 + yy) % 5])
 pa, pb = P(-316, 519); d.text((pa + 4, pb), "THE PROMENADE  -  shops, restaurants, Publix: cut through the lots", fill="#fff2a8", font=font(12), anchor="lm", stroke_width=3, stroke_fill="#1b1b1b")
+tx, ty = P(232, 52); d.ellipse([tx - 70, ty - 32, tx + 70, ty + 32], fill="#b5533c"); d.rectangle([tx - 44, ty - 20, tx + 44, ty + 20], fill="#4f9a3a", outline="white")   # running track + football field
+d.line([(tx, ty - 20), (tx, ty + 20)], fill="white", width=1)
 for L in LAKES: d.polygon([P(*p) for p in curve(L + L[:1], 6)], fill="#2d78b8")
 d.line([P(*p) for p in curve(CANAL)], fill="#2d78b8", width=int(10 * S))
 for (lab, x, y) in TXT: d.text(P(x, y), lab, fill="#d6ecc2", font=font(11, False), anchor="mm")
