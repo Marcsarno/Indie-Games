@@ -203,7 +203,7 @@ function genForest(R, A) {
     const si = Math.floor(c.x), sj = Math.floor(c.y);
     if (!solidAt(si, sj)) { LV.solid[tIdx(si, sj)] = 1; LV.decor.push({ kind: 'statue', i: si, j: sj }); }
     if (!solidAt(si + 1, sj - 1)) { LV.solid[tIdx(si + 1, sj - 1)] = 1; LV.decor.push({ kind: 'chest', i: si + 1, j: sj - 1, seed: R.int(1, 1e6) }); }
-    for (let b = 0; b < 2; b++) LV.spawns.push({ id: 'brigand', fi: c.x - 1 + b * 2, fj: c.y + 1.2 });
+    for (let b = 0; b < 2; b++) LV.spawns.push({ id: LV.night ? 'wraith' : 'brigand', fi: c.x - 1 + b * 2, fj: c.y + 1.2 });   // at night the ruins are haunted
     c.ruin = true;
   }
   // shrines: a stone pedestal under a floating crystal; touching one grants a blessing once

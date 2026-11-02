@@ -177,6 +177,7 @@ Full detail: `reports/Better code generated pixel art.md` and
   only a stand-in.
 
 ## Next steps for the game build
+- After round 16: the gathering plan (chop trees that fall and drop logs, mine stone/ore veins, auto tools) and smith crafting from those materials; forest frame cost is mostly the full-screen light pass (2 ms of 3.25 ms at 1x) shared with dungeons, a daytime fast path could help phones; forest load is 2.3–2.8 s at 4x (floor bake), a chunked or lazy bake would cut it further. Run `node tools/journey.cjs` after any world or boss change.
 - After round 13: night/day (lanterns and lit windows are ready for it), more town services (smith upgrades, stash), NPC chatter bubbles, water/streams and bridges in forests, building interiors (tavern, refs 'Choose heroes'), forest performance (cull the per-frame prop list by screen rect).
 0. Ideas after round 9: skill tree/points, a town or stash between floors, more boss types per theme, sprite cache persistence (IndexedDB) to cut first-seconds build cost, item comparison arrows in the bag.
 1. Act on the user's phone test (controls, layout, frame time on the real device).
