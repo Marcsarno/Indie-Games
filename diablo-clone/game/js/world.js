@@ -223,8 +223,10 @@ function placeSpawns(R, level) {
   if (isBossFloor(LV.depth)) {   // the broodmother's lair: she waits in the stairs room among egg sacs
     const n = LV.stairs.room, r = LV.rooms[n];
     for (let k = S.length - 1; k >= 0; k--) if (LV.roomOf[tIdx(Math.floor(S[k].fi), Math.floor(S[k].fj))] === n) S.splice(k, 1);
-    const p = free(r); if (p) S.push({ id: 'broodmother', fi: p[0], fj: p[1] });
-    for (let t = 0, eggs = 0; t < 60 && eggs < 5; t++) { const i = R.int(r.x, r.x + r.w - 1), j = R.int(r.y, r.y + r.h - 1); if (trySolid(i, j)) { LV.decor.push({ kind: 'egg', i, j, seed: R.int(1, 1e6) }); eggs++; } }
+    // every sixth floor the Skeleton King holds court instead of the broodmother
+    const king = LV.depth % 6 === 0;
+    const p = free(r); if (p) S.push({ id: king ? 'skelking' : 'broodmother', fi: p[0], fj: p[1] });
+    for (let t = 0, eggs = 0; t < 60 && eggs < (king ? 0 : 5); t++) { const i = R.int(r.x, r.x + r.w - 1), j = R.int(r.y, r.y + r.h - 1); if (trySolid(i, j)) { LV.decor.push({ kind: 'egg', i, j, seed: R.int(1, 1e6) }); eggs++; } }
   }
 }
 

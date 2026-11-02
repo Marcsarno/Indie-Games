@@ -88,6 +88,7 @@ defMat('HOLY', [51], 0, { flat: true, emis: true });
 defMat('SLIME', [52, 53, 54, 55, 97], 3, { span: 0.8, spec: [0.93, 91] });   // glossy jelly
 defMat('SLIME_B', [37, 38, 39, 40, 117], 3, { span: 0.8, spec: [0.93, 118] });
 defMat('OGRE', [2, 64, 87, 88, 89, 90], 3, { span: 0.9 });   // grey-green hide
+defMat('RUIN', [65, 66, 67, 68, 69, 26], 4, { span: 0.9 });   // pale weathered stone
 defMat('BOAR', [2, 98, 99, 100, 101], 3, { span: 0.9 });
 // chibi faces read best almost flat and light, like the references
 defMat('FACE', [61, 62, 63, 125], 2, { span: 0.45 });

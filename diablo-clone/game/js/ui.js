@@ -214,6 +214,19 @@ function fade(a) {
 }
 function drawAutomap() {
   const s = 3, ox = W / 2, oy = 70;
+  if (LV.outdoor) {   // outdoors: woods, paths, water, the way on and the boss, over a darkened view
+    fade(0.5);
+    const at = (i, j) => [Math.round(ox + (i - j) * s - (hero.fi - hero.fj) * s), Math.round(oy + (i + j) * s / 2 - (hero.fi + hero.fj) * s / 2)];
+    for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
+      const [x, y] = at(i, j); if (x < 0 || y < 0 || x >= W - 1 || y >= H) continue;
+      const pd = pondD(i + 0.5, j + 0.5), col = pd < 1 ? 117 : pathD(i + 0.5, j + 0.5) < 0.1 ? 102 : LV.solid[tIdx(i, j)] ? 95 : 88;
+      fillRect(x - 1, y, 3, 2, col);
+    }
+    const [sx, sy] = at(LV.stairs.i, LV.stairs.j); fillRect(sx - 1, sy - 1, 3, 3, 40);
+    if (bossAlive()) { const [bx, by] = at(boss.fi, boss.fj); fillRect(bx - 1, by - 1, 3, 3, 22); }
+    fillRect(Math.round(ox) - 1, Math.round(oy) - 1, 3, 3, 123 | 0);
+    return;
+  }
   for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
     const k = tIdx(i, j); if (!LV.seen[k] || LV.map[k] !== WALL) continue;
     const x = ox + (i - j) * s - (hero.fi - hero.fj) * s, y = oy + (i + j) * s / 2 - (hero.fi + hero.fj) * s / 2;

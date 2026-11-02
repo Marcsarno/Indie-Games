@@ -133,6 +133,7 @@ function setupBoss() {
 function bossAlive() { return boss && alive(boss); }
 function updateBoss(e, dt, d, dx, dy) {
   if (e.def.boss === 'slam') return updateWarlord(e, dt, d);
+  if (e.def.boss === 'king') return updateKing(e, dt, d);
   // returns true when the lunge state machine owns this frame
   e.special -= dt;
   if (e.lunge > 0) {   // telegraph: rear up and mark the line on the floor
@@ -181,6 +182,27 @@ function updateWarlord(e, dt, d) {
     e.lx = hero.fi; e.ly = hero.fj; e.slamT = 0.9; sfx('heavySwing');
     return true;
   }
+  return false;
+}
+// The Skeleton King: every few seconds he raises his sword and calls the dead up out of the floor
+// around him (a ring of three, at most six of his raised at once); otherwise he fights in melee.
+function updateKing(e, dt, d) {
+  e.special = (e.special ?? 3) - dt;
+  if (e.raiseT > 0) {
+    e.raiseT -= dt; e.clip = 'attack'; e.atk = 0;
+    if (e.raiseT <= 0) {
+      const mine = enemies.filter(o => o.raisedBy === e && alive(o)).length;
+      for (let k = 0; k < Math.min(3, 6 - mine); k++) {
+        const a = k / 3 * 6.283 + Math.random(), fi = e.fi + Math.cos(a) * 1.8, fj = e.fj + Math.sin(a) * 1.8;
+        if (blocked(fi, fj)) continue;
+        const s = makeEnemy('skeleton', fi, fj, enemies.length); s.state = 'hunt'; s.raisedBy = e; enemies.push(s);
+        const [x, y] = iso(fi, fj); burst(5, x, y, 4, 10, 40, 25); burst(4, x, y, 6, 8, 30, 59);
+      }
+      sfx('cry'); e.atk = -1; e.cool = 0.8; e.special = 7 + Math.random() * 3;
+    }
+    return true;
+  }
+  if (e.special <= 0 && d < 9) { e.raiseT = 0.7; say('THE KING RAISES HIS DEAD', 22, 2); return true; }
   return false;
 }
 // the warning ring: a blinking red ellipse on the ground where the slam will land

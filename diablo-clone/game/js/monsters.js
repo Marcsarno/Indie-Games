@@ -125,7 +125,17 @@ function skeletonRig(look, st) {
   const sk0 = r.p.length;
   skullAt(r, look.armored ? V.mad(J.head, up, 0.6) : J.head, fwd, sideR, up, bone, eye, st.clip === 'attack' && sw.hit ? 0.8 : 0, look.armored ? 1.15 : 1);
   if (look.helm) r.ell(V.mad(J.head, up, 1.8), [4.5, 4.5, 3.2], M.IRON);
+  if (look.crown) {   // the Skeleton King: a gold crown with points and red stones
+    const cc = V.mad(J.head, up, 3.2);
+    r.cyl(cc, V.mad(cc, up, 1.6), 4.2, M.GOLD);
+    for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2, b = V.add(V.mad(cc, up, 1.4), V.add(V.mul(fwd, Math.cos(a) * 3.9), V.mul(sideR, Math.sin(a) * 3.9))); r.cone(b, V.mad(b, up, 2.6), 0.9, 0.2, M.GOLD); }
+    r.sph(V.add(V.mad(cc, up, 0.8), V.mul(fwd, 4.3)), 0.8, M.EYE_RED, { noShadow: true });
+  }
   bigHead(r, sk0, J.head, 1.4);   // chibi skull
+  if (look.crown) {   // and a royal cloak
+    const top = V.add(V.mad(J.chest, up, 3.4), V.mul(fwd, -2.4)), dn = V.norm(V.add(V.mul(up, -1), V.mul(fwd, -0.25))), a1 = V.norm(V.sub(sideR, V.mul(dn, V.dot(sideR, dn))));
+    r.box(V.mad(top, dn, 6.5), [0.5, 5.5, 6.5], M.CLOTH_RED, [V.cross(a1, dn), a1, dn], { mf: p => V.dot(V.sub(p, top), dn) > 11.5 ? M.GOLD : 0 });
+  }
   if (look.scale || 1.1) scaleRig(r, look.scale || 1.1);
   if (st.clip === 'death') {   // collapses in a heap: tip forward and drop hard
     tipRig(r, [2, 0, 0], [0, 0.25, 0.7, 1.2, 1.45, 1.55][st.f], -0.4 * st.f / 5, [0, 1, 1.6, 2, 2.2, 2.3][st.f]);
@@ -430,7 +440,8 @@ const MONSTERS = {
   fallen: { family: 'fallen', name: 'FALLEN ONE', look: {}, hp: 7, dmg: [1, 3], speed: 40, reach: 1.15, xp: 6, chest: 12, shadow: 5, pack: true },
   shaman: { family: 'fallen', name: 'FALLEN SHAMAN', look: { staff: true, hood: true, skin: M.SKIN }, hp: 9, dmg: [3, 6], speed: 28, reach: 6, ranged: 'firebolt', xp: 16, chest: 12, shadow: 5 },
   hound: { family: 'hound', name: 'BONE HOUND', look: {}, hp: 16, dmg: [3, 6], speed: 52, reach: 1.35, xp: 18, chest: 12, shadow: 10 },
-  warlord: { family: 'ogre', name: 'OGRE WARLORD', look: { scale: 1.5 }, hp: 140, dmg: [8, 14], speed: 22, reach: 2.1, xp: 160, chest: 46, shadow: 13, unique: true, boss: 'slam' },
+  skelking: { family: 'skeleton', name: 'SKELETON KING', look: { weapon: 'sword', shield: false, armored: true, crown: true, eye: M.FIREM, scale: 1.6, size: [124, 132, 62, 104] }, hp: 170, dmg: [9, 16], speed: 24, reach: 1.9, xp: 200, chest: 42, shadow: 11, unique: true, boss: 'king', minLevel: 99 },
+  warlord: { family: 'ogre', name: 'OGRE WARLORD', minLevel: 99, look: { scale: 1.5 }, hp: 140, dmg: [8, 14], speed: 22, reach: 2.1, xp: 160, chest: 46, shadow: 13, unique: true, boss: 'slam' },
   slime: { family: 'slime', name: 'SLIME', look: {}, hp: 8, dmg: [1, 3], speed: 30, reach: 1.15, xp: 6, chest: 9, shadow: 7, pack: true, where: 'out' },
   blueslime: { family: 'slime', name: 'BIG BLUE SLIME', look: { blue: true, big: true }, hp: 30, dmg: [3, 7], speed: 24, reach: 1.4, xp: 30, chest: 14, shadow: 10, where: 'out', minLevel: 2 },
   boar: { family: 'hound', name: 'BOAR', look: { skin: M.BOAR, eye: M.EYE_RED, wolf: true, boar: true }, hp: 20, dmg: [3, 6], speed: 48, reach: 1.35, xp: 18, chest: 12, shadow: 10, where: 'out' },

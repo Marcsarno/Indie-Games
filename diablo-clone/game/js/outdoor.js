@@ -162,6 +162,24 @@ function genForest(R, A) {
     if (!solidAt(ti, tj)) { LV.solid[tIdx(ti, tj)] = 1; LV.decor.push({ kind: 'tent', i: ti, j: tj }); }
     LV.decor.push({ kind: 'log', fi: c.x + 1.4, fj: c.y + 0.2, seed: 1, yaw: 1.2 }, { kind: 'log', fi: c.x - 0.2, fj: c.y + 1.5, seed: 2, yaw: 0.1 });
   }
+  // ruins: in a clearing or two, a broken ring of crumbling walls and columns around an old statue,
+  // with a chest and a few brigands keeping it
+  const ruinRooms = LV.rooms.map((r, n) => n).filter(n => n && n !== far && !camps.includes(n) && C[n].r > 3).sort(() => R() - 0.5).slice(0, Math.max(1, Math.round(area * 0.7)));
+  for (const n of ruinRooms) {
+    const c = C[n];
+    for (let k = 0; k < 14; k++) {
+      if (k % 5 === 2) continue;   // gaps in the ring
+      const a = k / 14 * Math.PI * 2, i = Math.floor(c.x + Math.cos(a) * (c.r + 0.2)), j = Math.floor(c.y + Math.sin(a) * (c.r + 0.2));
+      if (solidAt(i, j) || pathD(i + 0.5, j + 0.5) < 0.2) continue;
+      LV.solid[tIdx(i, j)] = 1;
+      LV.decor.push(k % 3 === 0 ? { kind: 'column', i, j, seed: R.int(0, 3) } : { kind: 'ruinwall', i, j, a: a + Math.PI / 2, seed: R.int(0, 3) });
+    }
+    const si = Math.floor(c.x), sj = Math.floor(c.y);
+    if (!solidAt(si, sj)) { LV.solid[tIdx(si, sj)] = 1; LV.decor.push({ kind: 'statue', i: si, j: sj }); }
+    if (!solidAt(si + 1, sj - 1)) { LV.solid[tIdx(si + 1, sj - 1)] = 1; LV.decor.push({ kind: 'chest', i: si + 1, j: sj - 1, seed: R.int(1, 1e6) }); }
+    for (let b = 0; b < 2; b++) LV.spawns.push({ id: 'brigand', fi: c.x - 1 + b * 2, fj: c.y + 1.2 });
+    c.ruin = true;
+  }
   // a chest or two at the edge of a clearing
   for (let c = 0; c < 2; c++) {
     const r = LV.rooms[R.int(1, LV.rooms.length - 1)], a = R() * 6.28, i = Math.floor(r.clr.x + Math.cos(a) * (r.clr.r - 0.3)), j = Math.floor(r.clr.y + Math.sin(a) * (r.clr.r - 0.3));
@@ -402,6 +420,21 @@ const OUT = {
     const R = rng(seed + 47), h = 18 + R() * 10;
     r.cone([0, 0, 0], [R() - 0.5, R() - 0.5, h], 4.4, 2.6, M.ROCK, { mf: p => hash(Math.floor(p[0] + p[2]), Math.floor(p[1]), 9) < 0.08 ? M.LEAFM : 0 });
   }, [24, 44, 12, 34]),
+  ruinwall: (yaw, seed) => propSprite('ruinwall' + Math.round(yaw * 4) + seed, r => {
+    // a crumbling stretch of pale wall: stone courses, a jagged broken top with moss, a fallen block
+    const R = rng(seed + 61);
+    for (let k = -2; k <= 2; k++) {
+      const h = 14 + R() * 18 * (1 - Math.abs(k) * 0.2);
+      r.box([0, k * 4.5, h / 2], [3.2, 2.3, h / 2], M.RUIN, null, { mf: p => (Math.floor(p[2] / 4) + k) % 3 === 0 && Math.abs(((p[2] / 4) % 1)) < 0.18 ? M.ROCK : p[2] > h - 1.6 ? M.LEAFM : 0 });
+    }
+    r.box([5.5, 3, 1.8], [2.4, 2.8, 1.8], M.RUIN, [V.norm([1, 0.4, 0]), V.norm([-0.4, 1, 0]), [0, 0, 1]]);
+  }, [40, 64, 20, 50], Math.round(yaw * 4) / 4),
+  column: (seed) => propSprite('column' + seed, r => {
+    const R = rng(seed + 67), h = 22 + R() * 18;
+    r.box([0, 0, 1.4], [5.5, 5.5, 1.4], M.RUIN);
+    r.cyl([0, 0, 2.8], [0, 0, h], 3.8, M.RUIN, { mf: p => p[2] > h - 1.2 ? M.LEAFM : Math.abs(Math.sin(Math.atan2(p[1], p[0]) * 6)) < 0.16 ? M.ROCK : 0 });
+    if (h < 30) r.cyl([4, 3, 2.8], [10, 7, 2.8], 2.8, M.RUIN);   // the fallen top drum
+  }, [40, 64, 20, 52]),
   palisade: (yaw) => propSprite('palisade' + Math.round(yaw * 8), r => {
     // sharpened logs side by side, bound by a rope
     for (let k = -2; k <= 2; k++) {
@@ -527,6 +560,10 @@ function buildOutdoor(back) {
       const sp = d.kind === 'rock' ? OUT.rock(d.seed) : d.kind === 'stump' ? OUT.stump() : d.kind === 'hay' ? OUT.hay() : OUT.menhir(d.seed);
       props.push({ depth: d.i + d.j + 1, sp, wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
       shadows.push([x + 3, y + 2, 10, 5]);
+    } else if (d.kind === 'ruinwall' || d.kind === 'column') {
+      const [x, y] = iso(d.i + 0.5, d.j + 0.5);
+      props.push({ depth: d.i + d.j + 1, sp: d.kind === 'column' ? OUT.column(d.seed) : OUT.ruinwall(d.a, d.seed), wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
+      shadows.push([x + 4, y + 3, 12, 6]);
     } else if (d.kind === 'palisade') {
       const [x, y] = iso(d.i + 0.5, d.j + 0.5);
       props.push({ depth: d.i + d.j + 1, sp: OUT.palisade(d.a), wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
