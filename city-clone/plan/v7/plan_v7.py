@@ -48,8 +48,7 @@ ROADS = [
     # south band: Dave's street off Banks (a loop with a cul-de-sac) + the east neighbourhood
     ("", curve([(XBANKS, -40), (-215, -60), (-250, -95), (-262, -120)]), 9, "loc"),
     ("", curve([(XBANKS, -110), (-150, -150), (-120, -175)]), 9, "loc"),
-    ("", curve([(XLYONS, -60), (70, -40), (140, -80), (220, -50), (XPOWER, -80)]), 9, "loc"),
-    ("", curve([(XLYONS, -150), (90, -170), (180, -140), (260, -170), (XPOWER, -150)]), 9, "loc"),
+    ("", curve([(XLYONS, -100), (60, -100), (120, -70), (200, -110), (260, -80), (XPOWER, -100)]), 9, "loc"),          # rec centre park drive (Lyons <-> Powerline)
     # trails (bike fits, cars barely)
     ("", curve([(160, Y["copans"] + 12), (190, 250), (250, 235), (290, 280), (318, Y["sample"] - 12)]), 4, "trail"),   # Tradewinds / Butterfly World
     ("", curve([(-92, -95), (-130, -120), (-180, -128), (-235, -112)]), 4, "trail"),                                 # lake path to Dave's street
@@ -70,6 +69,7 @@ ZONES = [  # (label, polygon, fill, text colour) drawn in order
     ("WYNMOORE\n(gated golf)", R(14, 100, 316, 186), "#e9d8a6", "#5a4310"),
     ("", R(14, 14, 316, 92), "#86b86a", "#1f4d12"),                                                                      # user: Coconut Creek High School = the south half, on the Pkwy
     ("BUTTERFLY WORLD\n+ TRADEWINDS PARK", R(150, 214, 316, 306), "#7cc05a", "#1f4d12"),
+    ("", R(14, -206, 316, -8), "#7cc05a", "#1f4d12"),                                                                    # rec centre grounds (green)
     ("SABAL PINES\nPARK", R(212, 444, 316, 512), "#7cc05a", "#1f4d12"),                                               # user: Wiles, east of Lyons: homes | Coconut Creek Elementary | Sabal Pines Park
     ("SEMINOLE\nCASINO", R(-316, 334, -250, 416), "#c8901e", "#3a2405"),
 ]
@@ -82,19 +82,23 @@ LOTS = [
     (R(14, 216, 66, 306), [(22, 280, 52, 300, "#d22d24", "McD")], 7, "h"),
     (R(-72, 212, -14, 308), [(-66, 262, -20, 300, "#2f6fb3", "CITY\nHALL"), (-66, 218, -20, 248, "#1d3f8a", "POLICE")], 8, "h"),       # user: City Hall + police on the WEST side of Lyons
     (R(112, 444, 204, 470), [(118, 484, 198, 508, "#b8865a", "COCONUT CREEK\nELEMENTARY")], 8, "v"),
+    (R(14, 662, 74, 700), [(20, 676, 66, 696, "#b8322a", "FIRE\nSTATION")], 7, "h"),                                     # user: on Lyons just north of Sawgrass, east side (where Johnson would be)
+    (R(-316, 12, -14, 50), [(-306, 30, -262, 48, "#c8102e", "WALGREENS"), (-250, 30, -214, 48, "#d6a24a", "PIZZA"), (-200, 30, -164, 48, "#c56a4a", "DELI"),
+                           (-74, 30, -20, 48, "#7a9ac8", "CLEANERS")], 7, "v"),                                                  # user: shops along the Pkwy (Walgreens, pizza...), homes behind
+    (R(20, -82, 116, -12), [(30, -58, 106, -20, "#5b8fc9", "REC\nCENTER")], 9, "v"), (R(222, -82, 312, -12), [(232, -58, 304, -20, "#5b8fc9", "POOL")], 9, "v"),          # user: rec centre fills the band south of the Pkwy, east of Lyons
     (R(20, 20, 150, 88), [(28, 54, 112, 84, "#b8865a", "COCONUT CREEK\nHIGH SCHOOL")], 8, "v"),                                                      # McDonald's on the corner of Sample & Lyons
 ]
-LAKES = [[(268, 450), (296, 448), (304, 462), (274, 466)], [(-300, 40), (-255, 30), (-215, 60), (-230, 82), (-290, 78)], [(170, 340), (250, 335), (262, 352), (190, 358)], [(60, 655), (120, 650), (128, 668), (70, 670)],
+LAKES = [[(268, 450), (296, 448), (304, 462), (274, 466)], [(170, 340), (250, 335), (262, 352), (190, 358)], 
          [(200, 152), (240, 150), (246, 162), (206, 164)], [(-280, 640), (-230, 632), (-225, 668), (-275, 670)], [(-140, -80), (-75, -88), (-60, -125), (-110, -140), (-150, -115)],
-         [(150, -110), (230, -115), (240, -95), (160, -88)]]
+         [(250, -170), (290, -172), (296, -150), (256, -148)]]
 SPOTS = [("GATE", 22, 145, "#d0582a", 1), ("DAVE", -262, -132, "#e33b3b", 1)]
-JUMPS = [(-84, 262), (-90, 125), (XW + 28, 310), (220, 705), (230, 118), (-130, 360), (300, 30)]          # canal banks x2, Walmart loading dock, construction site, golf mound, car-carrier ramp at the dealers
+JUMPS = [(-84, 262), (-90, 125), (XW + 28, 310), (220, 705), (230, 118), (-130, 360), (300, 30), (110, -168), (210, -168)]          # canal banks x2, Walmart loading dock, construction site, golf mound, car-carrier ramp at the dealers
 BREAKERS = [(XPOWER + 45, 430), (X441 - 50, 180), (-160, 460), (-60, 380), (-62, 568), (20, 145), (232, 86), (155, 300), (205, 690)]   # gas x2, plaza fountain, dealer cars, cart corral, Wynmoore gate arm, Butterfly World sign, scaffolding
 HIDES = [(X441 - 50, 470), (-230, 489), (0, 600), (XW + 40, 212)]                                # car wash, Promenade garage, under the overpass, Walmart garden centre
-STARS = [(-283, 400), (240, 262), (-43, 304), (40, 170), (XW + 43, 296), (-160, 500), (37, 306)]   # casino tower, Butterfly World dome, City Hall clock, Wynmoore water tower, Walmart sign, Promenade sign, golden arches
+STARS = [(84, 690), (-283, 400), (240, 262), (-43, 304), (40, 170), (XW + 43, 296), (-160, 500), (37, 306)]   # casino tower, Butterfly World dome, City Hall clock, Wynmoore water tower, Walmart sign, Promenade sign, golden arches
 BRIDGES = [(-85, Y["pkwy"]), (-82, Y["copans"]), (-85, Y["sample"])]
-TXT = [("homes + lake", -240, 150), ("townhomes", -230, 290), ("homes", 165, 410), ("homes", 60, 505), ("?", 100, 260), ("homes", -240, 610), ("construction site", 230, 680), ("offices", 170, 590),
-       ("Dave's street", -232, -70), ("homes + lake", 200, -20), ("homes", -280, -170), ("homes", 90, 610)]
+TXT = [("homes", -240, 150), ("homes", -150, 160), ("townhomes", -230, 290), ("homes", 165, 410), ("homes", 60, 505), ("?", 100, 260), ("homes", -240, 610), ("construction site", 230, 680), ("offices", 170, 590),
+       ("Dave's street", -232, -70), ("homes", -280, -170), ("homes", 90, 610), ("homes", 200, 660)]
 DAVE = (-262, -132); PUBLIX = (-58, 549)
 ROUTES = [
     ("A  fast: Lyons straight down, Pkwy, Banks", "#4fa3ff", [PUBLIX, (-10, 534), (-6, 6), (-176, 6), (-176, -38), (-215, -60), (-250, -95), DAVE]),
@@ -133,6 +137,13 @@ pa, pb = P(-316, 519); d.text((pa + 4, pb), "THE PROMENADE  -  shops, restaurant
 tx, ty = P(232, 52); d.ellipse([tx - 70, ty - 32, tx + 70, ty + 32], fill="#b5533c"); d.rectangle([tx - 44, ty - 20, tx + 44, ty + 20], fill="#4f9a3a", outline="white")   # running track + football field
 d.line([(tx, ty - 20), (tx, ty + 20)], fill="white", width=1)
 ex, ey = P(158, 476); d.rectangle([ex - 44, ey - 6, ex + 44, ey + 6], fill="#4f9a3a")   # elementary playfield strip
+def court(x0, y0, x1, y1, col, lines="white"):
+    d.rectangle([P(x0, y1), P(x1, y0)], fill=col, outline=lines, width=2); d.line([P((x0 + x1) / 2, y0), P((x0 + x1) / 2, y1)], fill=lines, width=1)
+for i in range(3): court(120 + i * 34, -60, 148 + i * 34, -22, "#b5533c")            # basketball
+for i in range(3): court(30 + i * 30, -190, 56 + i * 30, -130, "#4b8bbf")            # tennis
+sk = P(160, -165); d.ellipse([sk[0] - 40, sk[1] - 24, sk[0] + 40, sk[1] + 24], fill="#c9c9c9", outline="#8a8a8a", width=3); d.ellipse([sk[0] - 18, sk[1] - 10, sk[0] + 18, sk[1] + 10], fill="#a8a8a8")
+d.text(sk, "SKATE PARK", fill="#1b1b1b", font=font(9), anchor="mm")
+bf = P(240, -170); d.pieslice([bf[0] - 40, bf[1] - 40, bf[0] + 40, bf[1] + 40], 225, 315, fill="#4f9a3a")   # ball field
 for L in LAKES: d.polygon([P(*p) for p in curve(L + L[:1], 6)], fill="#2d78b8")
 d.line([P(*p) for p in curve(CANAL)], fill="#2d78b8", width=int(10 * S))
 for (lab, x, y) in TXT: d.text(P(x, y), lab, fill="#d6ecc2", font=font(11, False), anchor="mm")
