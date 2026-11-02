@@ -187,6 +187,15 @@ function deathTip(rig, B, f, dir = -1, side = 1) {
   tipRig(rig, [dir * 2, 0, 0], dir * 1.5 * k, side * 0.55 * k, [0, 0, 0.5, 1.5, 2.2, 2.6][f] * B.hipH / 18);
 }
 
+// chibi heads (round 13): scale every part added since index `from` about the head center
+function bigHead(r, from, hd, HK) {
+  const sc = q => V.add(hd, V.mul(V.sub(q, hd), HK));
+  for (const q of r.p.slice(from)) {
+    if (q.c) q.c = sc(q.c); if (q.a) { q.a = sc(q.a); q.b = sc(q.b); q.ra *= HK; q.rb *= HK; }
+    if (q.r) q.r *= HK; if (q.rad) q.rad = V.mul(q.rad, HK); if (q.half) q.half = V.mul(q.half, HK);
+    if (q.mf) { const f0 = q.mf; q.mf = (p, n) => f0(V.add(hd, V.mul(V.sub(p, hd), 1 / HK)), n); }
+  }
+}
 // ---------------------------------------------------------------- the hero (knight)
 // chibi proportions (round 13, the user's style references): short legs and body, the head drawn
 // HERO_HK times bigger (about 40% of the height), body parts slimmed by HERO_BK

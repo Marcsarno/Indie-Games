@@ -3,7 +3,7 @@
 // spider (eight legs). Each takes a `look` (the variant) and a pose state {clip, f, key, prev}.
 
 // ---------------------------------------------------------------- skeleton
-const SKEL_B = { hipH: 16, thigh: 8, shin: 7.5, ankle: 1.2, spine: 8, shW: 6, shZ: 3, neck: 10.5, upper: 6, fore: 5.5, hipW: 2.6, stride: 5.5, lift: 2.5, duty: 0.55, bob: 0.6, sway: 0.5, runLean: 0.1, counter: 0.14 };
+const SKEL_B = { hipH: 12.5, thigh: 6.4, shin: 5.8, ankle: 1.2, spine: 7, shW: 5.6, shZ: 3, neck: 10, upper: 6, fore: 5.5, hipW: 2.6, stride: 5.5, lift: 2.5, duty: 0.55, bob: 0.6, sway: 0.5, runLean: 0.1, counter: 0.14 };
 function skullAt(r, hd, fwd, sideR, up, bone, eye, jawOpen = 0, k = 1) {
   r.sph(hd, 4.1 * k, bone, { mf: p => {
     const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up);
@@ -122,8 +122,10 @@ function skeletonRig(look, st) {
       r.cone(V.add(V.mad(nk, fwd, 1.8), V.mul(sideR, -3.8)), V.add(V.add(V.mad(nk, fwd, 2.4), V.mul(sideR, -4.6)), V.mul(up, -5)), 1.5, 0.7, M.CLOTH_RED);
     });
   }
+  const sk0 = r.p.length;
   skullAt(r, look.armored ? V.mad(J.head, up, 0.6) : J.head, fwd, sideR, up, bone, eye, st.clip === 'attack' && sw.hit ? 0.8 : 0, look.armored ? 1.15 : 1);
   if (look.helm) r.ell(V.mad(J.head, up, 1.8), [4.5, 4.5, 3.2], M.IRON);
+  bigHead(r, sk0, J.head, 1.4);   // chibi skull
   if (look.scale || 1.1) scaleRig(r, look.scale || 1.1);
   if (st.clip === 'death') {   // collapses in a heap: tip forward and drop hard
     tipRig(r, [2, 0, 0], [0, 0.25, 0.7, 1.2, 1.45, 1.55][st.f], -0.4 * st.f / 5, [0, 1, 1.6, 2, 2.2, 2.3][st.f]);
@@ -164,15 +166,18 @@ function fallenRig(look, st) {
     r.cone(V.mad(g, bd, -6), V.mad(g, bd, 9), 0.6, 0.6, M.WOOD);
     r.cone(V.mad(g, bd, 9), V.mad(g, bd, 12.5), 1.1, 0.25, M.IRON);
   }
-  // head: big, with horns, yellow eyes, a dark mouth
-  const hd = J.head;
+  // head: big, with horns (or a goblin's long ears), yellow eyes, a dark mouth
+  const hd = J.head, hf0 = r.p.length;
   r.ell(hd, [3.8, 3.6, 3.4], skin, frameAlong(fwd, up), { mf: p => { const q = V.sub(p, hd); return V.dot(q, fwd) > 2.4 && Math.abs(V.dot(q, up) + 1.5) < 0.5 && Math.abs(V.dot(q, sideR)) < 1.6 ? M.DARK : 0; } });
   for (const s of [-1, 1]) {
     r.sph(V.add(V.add(V.mad(hd, fwd, 3.2), V.mul(sideR, s * 1.4)), V.mul(up, 0.6)), 0.6, M.EYE_YEL, { noShadow: true });
+    if (look.goblin) { const a = V.add(V.mad(hd, up, 0.8), V.mul(sideR, s * 3.0)); r.cone(a, V.add(V.add(a, V.mul(sideR, s * 4.6)), V.add(V.mul(up, 1.6), V.mul(fwd, -1))), 1.3, 0.25, skin); continue; }
     const a = V.add(V.mad(hd, up, 2.4), V.mul(sideR, s * 2.2)), b = V.add(V.add(V.mad(hd, up, 4.6), V.mul(sideR, s * 3.8)), V.mul(fwd, -2.5));
     r.cone(a, b, 1.0, 0.3, M.HORN);
   }
   if (look.hood) r.ell(V.add(V.mad(hd, up, 0.8), V.mul(fwd, -0.8)), [4.2, 4.2, 3.8], M.CLOTH_PURPLE, frameAlong(fwd, up));
+  if (look.goblin) r.ell(V.mad(hd, up, 2.2), [3.6, 3.4, 1.8], M.LEATHER, frameAlong(fwd, up));   // a leather cap
+  bigHead(r, hf0, hd, 1.3);
   if (st.clip === 'death') deathTip(r, B, st.f, -1, -1);
   return r;
 }
@@ -195,19 +200,21 @@ function houndRig(look, st) {
     r.ell(V.lerp(back, front, 0.5), [5.6, 5.2, 4.6], skin);
     r.ell(front, [5.8, 6.2, 5.8], skin);
   });
-  // bone ribs over the barrel of the body and a spiked spine
-  for (let i = 0; i < 4; i++) {
+  // bone ribs over the barrel of the body and a spiked spine (a wolf has fur instead)
+  const fur = !!look.wolf;
+  for (let i = 0; i < (fur ? 0 : 4); i++) {
     const x = front[0] - 1.5 - i * 2.2, z = H + 1.8 + bob - i * 0.3;
     for (const s of [-1, 1]) r.group(() => {
       r.cone([x, 0, z + 4.4], [x - 0.6, s * 5.0, z + 0.8], 0.8, 0.75, bone);
       r.cone([x - 0.6, s * 5.0, z + 0.8], [x + 0.4, s * 4.4, z - 2.6], 0.75, 0.6, bone);
     });
   }
-  r.cone(V.add(back, [-3, 0, 4.2]), V.add(front, [0, 0, 5]), 1.1, 1.2, bone);   // spine
-  for (let i = 0; i < 5; i++) { const b = V.lerp(back, front, 0.05 + i * 0.22); const base = V.add(b, [0, 0, 4.6]); r.cone(base, V.add(base, [-2.4, 0, 3.6 - Math.abs(i - 2) * 0.6]), 1.1, 0.25, bone); }
+  if (!fur) r.cone(V.add(back, [-3, 0, 4.2]), V.add(front, [0, 0, 5]), 1.1, 1.2, bone);   // spine
+  for (let i = 0; i < (fur ? 0 : 5); i++) { const b = V.lerp(back, front, 0.05 + i * 0.22); const base = V.add(b, [0, 0, 4.6]); r.cone(base, V.add(base, [-2.4, 0, 3.6 - Math.abs(i - 2) * 0.6]), 1.1, 0.25, bone); }
   // tail: bony and spiked
   const t0 = V.add(back, [-5, 0, 1.5]), t1 = V.add(t0, [-4, 0, 2 + Math.sin(ph) * 1.5]), t2 = V.add(t1, [-3, Math.cos(ph) * 1.2, -1]);
-  r.group(() => { r.cone(t0, t1, 1.4, 1.0, skin); r.cone(t1, t2, 1.0, 0.5, bone); });
+  if (fur) r.group(() => { r.cone(t0, t1, 1.8, 2.2, skin); r.cone(t1, t2, 2.2, 0.6, skin, { mf: p => V.dot(V.sub(p, t1), V.sub(t2, t1)) > 6 ? M.CLOTH_WHITE : 0 }); });
+  else r.group(() => { r.cone(t0, t1, 1.4, 1.0, skin); r.cone(t1, t2, 1.0, 0.5, bone); });
   // legs (trot: diagonal pairs move together); bone caps at the joints and bone claws
   const legs = [[front, -3.6, 0, 1], [front, 3.6, Math.PI, 1], [back, -3.4, Math.PI, -1], [back, 3.4, 0, -1]];
   for (const [root, y, off, fr] of legs) {
@@ -217,7 +224,7 @@ function houndRig(look, st) {
     if (clip === 'attack' && fr > 0) foot = [hip[0] + 2, y * 1.15, 0];
     const L = ik(hip, V.add(foot, [0, 0, 1]), 5.8, 5.8, [-fr, 0, 0]);
     r.cone(hip, L.joint, 2.7, 2.0, skin); r.cone(L.joint, L.end, 2.0, 1.7, skin);
-    r.sph(L.joint, 1.8, bone);
+    if (!fur) r.sph(L.joint, 1.8, bone);
     r.ell(V.add(L.end, [1.2, 0, -0.4]), [2.6, 2.0, 1.1], skin);
     for (const c of [-1, 0, 1]) r.cone(V.add(L.end, [3, c * 1.1, -0.5]), V.add(L.end, [4.8, c * 1.4, -1]), 0.55, 0.15, bone, { noShadow: true });
   }
@@ -227,23 +234,26 @@ function houndRig(look, st) {
   const hr0 = r.p.length;   // head parts are scaled up about the head center below
   r.cone(neck, hd, 3.4, 2.8, skin);
   const cc = V.lerp(neck, hd, 0.35);
-  r.ell(cc, [1.6, 4.4, 4.0], M.LEATHER, frameAlong(V.sub(hd, neck)));
-  for (const a of [-0.9, 0, 0.9]) r.sph(V.add(cc, [0.9, Math.sin(a) * 4.3, -Math.cos(a) * 3.6]), 0.9, M.GOLD, { noShadow: true });
-  r.group(() => {
+  if (!fur) r.ell(cc, [1.6, 4.4, 4.0], M.LEATHER, frameAlong(V.sub(hd, neck)));
+  if (!fur) for (const a of [-0.9, 0, 0.9]) r.sph(V.add(cc, [0.9, Math.sin(a) * 4.3, -Math.cos(a) * 3.6]), 0.9, M.GOLD, { noShadow: true });
+  if (fur) r.ell(V.add(front, [3.5, 0, 3]), [3.4, 5.4, 3.6], skin, null, { mf: p => p[2] < front[2] + 1 ? M.CLOTH_WHITE : 0 });   // a ruff of fur
+  else r.group(() => {
     r.ell(V.add(front, [3.2, 0, 3.6]), [2.8, 5.0, 2.6], M.CLOTH_RED);
     for (const s of [-1, 1]) r.box(V.add(front, [2.6, s * 5.0, -0.4]), [1.4, 0.5, 2.6], M.CLOTH_RED, frameAlong([1, 0, 0], [0, -s * 0.25, 1]), { mf: p => p[2] < front[2] - 4 && hash(Math.round(p[0] * 1.5), 3, 1) < 0.5 ? M.MARK : 0 });
   });
   // skull head: bone cranium and snout, dark socket with a red eye, jaw with teeth
-  r.ell(hd, [3.8, 3.3, 3.1], bone, null, { mf: p => { const q = V.sub(p, hd); return q[0] > 1.2 && (Math.abs(q[1]) - 1.8) ** 2 + (q[2] - 0.7) ** 2 < 1.4 ? M.DARK : 0; } });
+  const hb = fur ? skin : bone;
+  r.ell(hd, [3.8, 3.3, 3.1], hb, null, { mf: p => { const q = V.sub(p, hd); return q[0] > 1.2 && (Math.abs(q[1]) - 1.8) ** 2 + (q[2] - 0.7) ** 2 < 1.4 ? M.DARK : 0; } });
   const snoutEnd = V.add(hd, [5.8, 0, -0.9]);
-  r.cone(V.add(hd, [1.5, 0, -0.3]), snoutEnd, 2.3, 1.5, bone, { mf: p => p[0] > snoutEnd[0] - 1 && Math.abs(p[1]) < 0.7 && p[2] > snoutEnd[2] ? M.DARK : 0 });
+  r.cone(V.add(hd, [1.5, 0, -0.3]), snoutEnd, 2.3, 1.5, hb, { mf: p => p[0] > snoutEnd[0] - 1 && Math.abs(p[1]) < 0.7 && p[2] > snoutEnd[2] ? M.DARK : 0 });
   const jd = V.norm([Math.cos(jaw), 0, -Math.sin(jaw)]), j0 = V.add(hd, [0.8, 0, -2.2]);
-  r.cone(j0, V.mad(j0, jd, 6), 1.6, 1.0, bone, { bias: -1 });
+  r.cone(j0, V.mad(j0, jd, 6), 1.6, 1.0, hb, { bias: -1 });
   r.box(V.lerp(j0, V.mad(j0, jd, 6), 0.55), [2.2, 1.1, 0.5], M.DARK, frameAlong(jd), { noShadow: true });
   for (let t = 0; t < 3; t++) for (const s of [-1, 1]) r.cone(V.add(hd, [2.4 + t * 1.3, s * 1.2, -2]), V.add(hd, [2.4 + t * 1.3, s * 1.1, -3]), 0.4, 0.15, M.BONE, { noShadow: true });
   for (const s of [-1, 1]) {
     r.sph(V.add(hd, [2.7, s * 1.9, 0.8]), 0.65, look.eye || M.EYE_RED, { noShadow: true });
     // horns sweep back, then up and forward like a bull's
+    if (fur) { r.cone(V.add(hd, [-0.8, s * 1.8, 2.2]), V.add(hd, [-1.6, s * 2.6, 6.4]), 1.6, 0.3, skin); continue; }   // pointed ears
     const a = V.add(hd, [-0.6, s * 2.2, 2]), b = V.add(hd, [-1.8, s * 4.8, 4.2]), c = V.add(hd, [0.6, s * 6.2, 6.8]), e = V.add(hd, [3.8, s * 5.6, 7.6]);
     r.group(() => { r.cone(a, b, 1.5, 1.3, bone); r.cone(b, c, 1.3, 0.9, bone); r.cone(c, e, 0.9, 0.3, bone); });
   }
@@ -340,6 +350,8 @@ const MONSTERS = {
   fallen: { family: 'fallen', name: 'FALLEN ONE', look: {}, hp: 7, dmg: [1, 3], speed: 40, reach: 1.15, xp: 6, chest: 12, shadow: 5, pack: true },
   shaman: { family: 'fallen', name: 'FALLEN SHAMAN', look: { staff: true, hood: true, skin: M.SKIN }, hp: 9, dmg: [3, 6], speed: 28, reach: 6, ranged: 'firebolt', xp: 16, chest: 12, shadow: 5 },
   hound: { family: 'hound', name: 'BONE HOUND', look: {}, hp: 16, dmg: [3, 6], speed: 52, reach: 1.35, xp: 18, chest: 12, shadow: 10 },
+  wolf: { family: 'hound', name: 'WOLF', look: { skin: M.FUR, eye: M.EYE_YEL, wolf: true }, hp: 14, dmg: [2, 5], speed: 54, reach: 1.35, xp: 15, chest: 12, shadow: 10, pack: true, where: 'out' },
+  goblin: { family: 'fallen', name: 'GOBLIN', look: { skin: M.GOBLIN, goblin: true }, hp: 9, dmg: [2, 4], speed: 38, reach: 1.15, xp: 8, chest: 12, shadow: 5, pack: true, where: 'out' },
   ghoulhound: { family: 'hound', name: 'HELL HOUND', look: { skin: M.FLESH, bone: M.OLDBONE, eye: M.FIREM, scale: 1.15 }, hp: 28, dmg: [5, 9], speed: 50, reach: 1.45, xp: 34, chest: 13, shadow: 11, minLevel: 2 },
   spider: { family: 'spider', name: 'CAVE SPIDER', look: { scale: 0.8 }, hp: 10, dmg: [2, 4], speed: 46, reach: 1.3, xp: 10, chest: 8, shadow: 11, pack: true },
   broodmother: { family: 'spider', name: 'BROODMOTHER', look: { brood: true, scale: 1.15, size: [128, 84, 64, 60] }, hp: 60, dmg: [6, 12], speed: 34, reach: 1.9, xp: 90, chest: 12, shadow: 17, minLevel: 3, unique: true },

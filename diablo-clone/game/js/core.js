@@ -34,6 +34,7 @@ const PAL_HEX = [
   '5a1f0c', '9a3d12', 'd0661c', 'f29a3a', 'ffc77a',                     // 109-113 orange (hair, pumpkins)
   '142a44', '1e4566', '2f6a8a', '5b9cb4', 'a8d8e0',                     // 114-118 water
   '4a1a14', '7a2c1a', 'a8461e', 'cf6e2a',                               // 119-122 autumn leaves
+  '3fae3a', '8af06a',                                                   // 123-124 lime (markers, emissive only)
 ];
 const NPAL = PAL_HEX.length;
 const PR = new Uint8Array(NPAL), PG = new Uint8Array(NPAL), PB = new Uint8Array(NPAL);

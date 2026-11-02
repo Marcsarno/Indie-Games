@@ -55,6 +55,7 @@ function genOutdoor(level, seed, A) {
   const R = rng(seed);
   LV.map.fill(FLOOR); LV.solid.fill(0); LV.tall.fill(0); LV.roomOf.fill(-1); LV.seen.fill(1); LV.vis.fill(1);
   LV.decor = []; LV.spawns = []; LV.paths = []; LV.rooms = []; LV.npcs = [];
+  bakeCanopy(A.cyc % 2 === 1);   // before the floor bake, which samples it past the map edge
   if (A.kind === 'town') genTown(R, A); else genForest(R, A);
   bakePathField();
 }
@@ -149,7 +150,9 @@ function genForest(R, A) {
   // flowers are painted into the ground; barrels by camps
   LV.decor.push({ kind: 'meadow', seed: R.int(1, 1e6) });
   // monsters: a pack per clearing (more in camps), plus a few on the paths
-  const pool = Object.keys(MONSTERS).filter(id => !MONSTERS[id].unique && (MONSTERS[id].minLevel || 1) <= A.diff && MONSTERS[id].outdoor !== false);
+  // the forest's own (goblins, wolves) come often; dungeon dwellers wander out now and then
+  const pool = Object.keys(MONSTERS).filter(id => !MONSTERS[id].unique && (MONSTERS[id].minLevel || 1) <= A.diff && !['spider', 'shaman', 'burning'].includes(id));
+  for (const id of ['goblin', 'goblin', 'wolf', 'wolf']) pool.push(id);
   const free = (x, y, rad) => { for (let t = 0; t < 30; t++) { const fi = x + (R() - 0.5) * rad * 2, fj = y + (R() - 0.5) * rad * 2; if (!blocked(fi, fj)) return [fi, fj]; } return null; };
   LV.rooms.forEach((r, n) => {
     if (n === 0) return;
@@ -245,17 +248,18 @@ const CANOPY = new Uint8Array(96 * 64);
 function bakeCanopy(autumn) {
   for (let y = 0; y < 64; y++) for (let x = 0; x < 96; x++) {
     // overlapping leaf clumps, each lit from the upper left
-    let v = 0;
+    // the top clump (drawn last) wins; each clump is green or, in autumn, sometimes orange
+    let v = 0, top = -1;
     for (let k = 0; k < 14; k++) {
       const cx = hash(k, 1, 61) * 96, cy = hash(k, 2, 61) * 64, r = 9 + hash(k, 3, 61) * 8;
       for (const ox of [-96, 0, 96]) for (const oy of [-64, 0, 64]) {
         const dx = (x - cx - ox) / r, dy = (y - cy - oy) / r, d = dx * dx + dy * dy;
-        if (d < 1) v = Math.max(v, 1.4 + (1 - d) * 1.2 - (dx + dy) * 0.9);
+        if (d < 1) { v = 1.2 + (1 - d) * 1.2 - (dx + dy) * 0.9; top = k; }
       }
     }
     if (hash(x, y, 62) < 0.06) v += 0.6;
-    const ramp = autumn && hash(Math.floor(x / 20), Math.floor(y / 16), 63) < 0.4 ? [119, 119, 120, 121] : LEAF;
-    CANOPY[y * 96 + x] = ramp[clamp(Math.floor(v), 0, ramp === LEAF ? 3 : 3)];
+    const ramp = autumn && top >= 0 && hash(top, 4, 63) < 0.35 ? [119, 120, 121, 122] : LEAF;
+    CANOPY[y * 96 + x] = ramp[clamp(Math.floor(v), 0, 3)];
   }
 }
 const canopyAt = (x, y) => CANOPY[(((y % 64) + 64) % 64) * 96 + (((x % 96) + 96) % 96)];
@@ -461,7 +465,6 @@ const BUILD = {
 
 // ---------------------------------------------------------------- building the outdoor world
 function buildOutdoor(back) {
-  bakeCanopy(LV.autumn);
   const shadows = [];
   for (const d of LV.decor) {
     if (d.kind === 'tree') {
@@ -579,17 +582,17 @@ function drawNpcLabels() {
     const near = Math.hypot(n.fi - hero.fi, n.fj - hero.fj) < 1.6;
     textC(near ? TRADER_ROLES[n.role] : n.name, sx, sy, near ? 51 : 27);
     const by = sy + 9 + Math.round(Math.sin(G.t * 4) * 1.5);
-    for (let r = 0; r < 4; r++) for (let c = -3 + r; c <= 3 - r; c++) { const xx = sx + c, yy = by + r; if (xx >= 0 && yy >= 0 && xx < W && yy < H) out32[yy * W + xx] = PAL32[r === 0 || Math.abs(c) === 3 - r ? 53 : 55]; }
+    for (let r = 0; r < 4; r++) for (let c = -3 + r; c <= 3 - r; c++) { const xx = sx + c, yy = by + r; if (xx >= 0 && yy >= 0 && xx < W && yy < H) out32[yy * W + xx] = PAL32[r === 0 || Math.abs(c) === 3 - r ? 123 : 124]; }
   }
 }
 // the green ring under the hero (the references' readability marker)
 function heroRing(wx, wy) {
-  const cx = wx - camX, cy = wy - camY, rx = 9, ry = 4.2;
+  const cx = wx - camX, cy = wy - camY, rx = 11.5, ry = 5.4;
   for (let a = 0; a < 64; a++) {
     const t = a / 64 * Math.PI * 2, x = Math.round(cx + Math.cos(t) * rx), y = Math.round(cy + Math.sin(t) * ry);
     if (x < 0 || y < 0 || x >= W || y >= H) continue;
     const o = y * W + x; if (zbuf[o] > 1) continue;
-    scr[o] = (Math.sin(t) > 0 ? 55 : 54) | EMIS;
+    scr[o] = (Math.sin(t) > 0 ? 124 : 123) | EMIS;
   }
 }
 // where the way on is: the road out of town, the stone ring of the dungeon entrance

@@ -198,7 +198,7 @@ function placeDecor(R, level) {
 }
 function placeSpawns(R, level) {
   const S = LV.spawns = [];
-  const pool = Object.keys(MONSTERS).filter(id => !MONSTERS[id].unique && (MONSTERS[id].minLevel || 1) <= level);
+  const pool = Object.keys(MONSTERS).filter(id => !MONSTERS[id].unique && MONSTERS[id].where !== 'out' && (MONSTERS[id].minLevel || 1) <= level);
   const free = r => { for (let t = 0; t < 40; t++) { const fi = r.x + 0.5 + R() * (r.w - 1), fj = r.y + 0.5 + R() * (r.h - 1); if (!blocked(fi, fj)) return [fi, fj]; } return null; };
   LV.rooms.forEach((r, n) => {
     if (n === 0) return;
