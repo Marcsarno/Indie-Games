@@ -19,4 +19,4 @@ for e in G['edges']:
                             if abs(u) < o['w'] / 2 + .3 and abs(v) < o['d'] / 2 + .3: bad[(round(o['x']), round(o['y']), o['w'], o['d'])] = (round(x), round(y), e.get('road', ''))
                         elif math.hypot(x - o['x'], y - o['y']) < o['r'] + .3: bad[('c', round(o['x']), round(o['y']))] = (round(x), round(y), e.get('road', ''))
 print(len(bad), 'colliders on road centre-lines')
-for k, v in list(bad.items())[:25]: print(k, '@', v)
+for k, v in list(bad.items()): print(k, "@", v)
