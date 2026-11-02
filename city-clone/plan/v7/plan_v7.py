@@ -58,6 +58,18 @@ ROADS = [
 ROADS += [("", [(X441, 235), (-320, 235)], 8, "loc"), ("", [(X441, 285), (-320, 285)], 8, "loc"), ("", [(-290, Y["sample"]), (-290, 310)], 8, "loc")]   # Walmart lot entrances (two off 441, one off Sample)
 ROUNDABOUTS = []
 CULS = [(XBANKS, 178, 11)]
+# ---- draft 4 (research: what makes driving maps fun) ----
+ROADS += [("", curve([(XPOWER, 140), (316, 138), (300, 130)]), 5, "trail")]          # golf-cart back gate into Wynmoore off Powerline (narrow: bikes easy, cars squeeze)
+JUMPS = [(-82, 100), (-86, 255), (-182, 300), (-220, 378), (220, 705), (150, 60)]   # canal banks x2, Walmart loading dock, farm hay-bale ramp, construction site, golf mound
+BREAKERS = [(XPOWER + 45, 430), (X441 - 45, 200), (-300, 400), (205, 690), (155, 300), (-62, 560)]   # gas pumps x2, fruit stand, scaffolding, Butterfly World sign, Publix cart corral
+HIDES = [(X441 - 45, 470), (180, 600), (0, 600), (-192, 214)]                       # car wash, parking garage, under the Sawgrass overpass, Walmart garden centre
+STARS = [(-300, 362), (240, 262), (60, 258), (40, 170), (-205, 300)]                 # casino tower, Butterfly World dome, City Hall clock, Wynmoore water tower, Walmart sign
+BRIDGES = [(-85, Y["pkwy"]), (-82, Y["copans"]), (-80, Y["sample"])]
+ROUTES = [  # Publix -> Dave: three real choices (label, colour, polyline)
+    ("A  fast: straight down Lyons (roadblocks, most cops)", "#4fa3ff", [(-40, 548), (0, 530), (0, 95), (40, 95), (90, 120), (140, 95), (190, 125), (240, 90), (270, 50), (230, 30)]),
+    ("B  sneaky: 441, Walmart lot, wade the canal", "#ffb03a", [(-40, 548), (-150, 545), (-330, 545), (-330, 285), (-250, 262), (-250, 210), (-86, 200), (-90, 120), (-84, 4), (0, 4), (0, 95), (40, 95)]),
+    ("C  bike: Powerline, park trail, golf back gate", "#d070ff", [(-40, 548), (0, 521), (330, 521), (330, 310), (318, 308), (290, 280), (250, 235), (190, 250), (160, 212), (330, 200), (330, 140), (300, 130), (280, 165), (220, 160), (190, 125), (240, 90), (270, 50), (230, 30)]),
+]
 # canal (L8): runs north-south between Banks and Lyons from Pkwy to Sample, crossed by bridges on each arterial; you can wade it or jump it on the bike
 CANAL = [(-85, Y["pkwy"] - 60), (-80, 60), (-95, 130), (-82, 200), (-88, 260), (-80, Y["sample"])]
 ZONES = [  # label, polygon, fill, text colour
@@ -78,13 +90,13 @@ SPOTS = [  # label, x, y, colour, side
 ]
 TAGS = [("L1", X441 - 52, 600), ("L1", XPOWER + 52, 600), ("L2", -150, 372), ("L3", -60, 80), ("L3", 130, 470), ("L4", XBANKS, 178), ("L5", 250, 235),
         ("L6", 190, 125), ("L7", -40, 560), ("L8", -95, 130)]
-RES = [("homes + lakes", -230, 480), ("homes", 165, 410), ("homes", -60, 380), ("homes", -250, 60), ("homes", -40, 40), ("homes", 165, 700), ("offices", 170, 590), ("homes", -165, 160)]
+RES = [("homes + lakes", -230, 480), ("homes", 165, 410), ("homes", -60, 380), ("homes", -250, 60), ("homes", -40, 40), ("construction site", 230, 680), ("offices", 170, 590), ("homes", -165, 160)]
 LEGEND = ["L1  service lane behind the shop strips", "L2  dirt track across the farm fields", "L3  curvy neighbourhood streets (shortcuts)", "L4  (cut) Banks Rd: dead end, only from the Pkwy",
           "L5  park trail (bike fits, cars barely)", "L6  Wynmoore: one gate, winding streets, Dave", "L7  Sawgrass raised, on/off ramps at Lyons", "L8  canal with bridges (wade / jump)", "red bars = edge roadblocks"]
 
 S = 1.15; PAD = 50
 X0, X1, Y0, Y1 = XW - 30, XE + 30, YS - 30, YN + 30
-W, H = int((X1 - X0) * S) + 2 * PAD + 330, int((Y1 - Y0) * S) + 2 * PAD + 30
+W, H = int((X1 - X0) * S) + 2 * PAD + 380, int((Y1 - Y0) * S) + 2 * PAD + 30
 P = lambda x, y: (PAD + (x - X0) * S, PAD + 30 + (Y1 - y) * S)
 def font(sz, bold=True): return ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", sz)
 im = Image.new("RGB", (W, H), "#2b3a26"); d = ImageDraw.Draw(im)
@@ -126,12 +138,34 @@ for name, pts, w, kind in ROADS:
         t = Image.new("RGBA", (360, 36), (0, 0, 0, 0)); ImageDraw.Draw(t).text((180, 18), name, fill="white", font=font(15), anchor="mm", stroke_width=3, stroke_fill="#1b1b1b")
         t = t.rotate(90, expand=True); cx, cy = P(pts[0][0], 120 if name != "Banks Rd" else 100); im.paste(t, (int(cx - t.width / 2 - w * S / 2 - 13), int(cy - t.height / 2)), t)
     else: OUT(name, P(X441 + 8, (pts[0][1] if kind != "art" or "Winston" not in name else Y["winston"] + 20) + (13 if kind != "hwy" else 21)), 14 if kind != "col" else 12, anchor="ls")
+for (lab, col, pts) in ROUTES:                                 # chase routes, dashed
+    q = [P(*p) for p in pts]
+    for i in range(len(q) - 1):
+        (ax, ay), (bx, by) = q[i], q[i + 1]; L = math.hypot(bx - ax, by - ay); n = max(1, int(L / 14))
+        for k in range(0, n, 2): d.line([(ax + (bx - ax) * k / n, ay + (by - ay) * k / n), (ax + (bx - ax) * min(n, k + 1) / n, ay + (by - ay) * min(n, k + 1) / n)], fill=col, width=5)
+def badge(x, y, txt, fill, fg="#1b1b1b", r=10):
+    cx, cy = P(x, y); d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=fill, outline="#1b1b1b", width=2); d.text((cx, cy), txt, fill=fg, font=font(12), anchor="mm")
+for x, y in BRIDGES: cx, cy = P(x, y); d.rectangle([cx - 9, cy - 14, cx + 9, cy + 14], outline="#e9e2c8", width=3)
+for x, y in JUMPS: badge(x, y, "J", "#ffe14a")
+for x, y in BREAKERS: badge(x, y, "P", "#ff5a4a", "white")
+for x, y in HIDES: badge(x, y, "H", "#9a6bff", "white")
+for x, y in STARS:
+    cx, cy = P(x, y); pts_ = [(cx + (12 if k % 2 == 0 else 5) * math.sin(k * math.pi / 5), cy - (12 if k % 2 == 0 else 5) * math.cos(k * math.pi / 5)) for k in range(10)]; d.polygon(pts_, fill="#fff2a8", outline="#1b1b1b")
 for (lab, x, y, col, side) in SPOTS:
     cx, cy = P(x, y); d.ellipse([cx - 8, cy - 8, cx + 8, cy + 8], fill=col, outline="white", width=2); OUT(lab, (cx + 12 * side, cy), 12, anchor="lm" if side > 0 else "rm")
-for (t, x, y) in TAGS:
-    cx, cy = P(x, y); d.rounded_rectangle([cx - 15, cy - 10, cx + 15, cy + 10], 5, fill="#ff8c1a", outline="#1b1b1b", width=2); d.text((cx, cy), t, fill="#1b1b1b", font=font(12), anchor="mm")
-OUT("COCONUT CREEK  -  PLAN v7 (draft 3)", (PAD, 16), 20)
-lx = int(P(XE, 0)[0]) + 50; ly = PAD + 60; OUT("LIBERTIES (keep / cut each)", (lx, ly), 15)
-for i, t in enumerate(LEGEND): d.text((lx, ly + 34 + i * 26), t, fill="#ffd9a8" if not t.startswith("red") else "#ff8a80", font=font(13))
+OUT("COCONUT CREEK  -  PLAN v7 (draft 4: built to be fun)", (PAD, 16), 20)
+lx = int(P(XE, 0)[0]) + 40; ly = PAD + 50
+def leg(i, draw, text):
+    y = ly + i * 30; draw(lx + 10, y); d.text((lx + 30, y), text, fill="#f0ead6", font=font(13), anchor="lm")
+OUT("KEY", (lx, ly - 30), 15)
+for i, (txt, fill, fg, lab) in enumerate([("J", "#ffe14a", "#1b1b1b", "jump ramp (bike + cars)"), ("P", "#ff5a4a", "white", "smashable: wrecks cops behind you"), ("H", "#9a6bff", "white", "hiding spot: lose the cops")]):
+    def dr(x, y, t=txt, f=fill, g=fg): d.ellipse([x - 10, y - 10, x + 10, y + 10], fill=f, outline="#1b1b1b", width=2); d.text((x, y), t, fill=g, font=font(12), anchor="mm")
+    leg(i, dr, lab)
+leg(3, lambda x, y: d.polygon([(x + (11 if k % 2 == 0 else 5) * math.sin(k * math.pi / 5), y - (11 if k % 2 == 0 else 5) * math.cos(k * math.pi / 5)) for k in range(10)], fill="#fff2a8", outline="#1b1b1b"), "landmark you can see from far")
+leg(4, lambda x, y: d.rectangle([x - 8, y - 12, x + 8, y + 12], outline="#e9e2c8", width=3), "canal bridge (choke point)")
+leg(5, lambda x, y: d.line([(x - 10, y), (x + 10, y)], fill="#e8312a", width=7), "edge roadblock")
+OUT("PUBLIX TO DAVE: 3 WAYS", (lx, ly + 7 * 30), 15)
+for i, (lab, col, pts) in enumerate(ROUTES):
+    y = ly + 8 * 30 + i * 26; d.line([(lx, y), (lx + 22, y)], fill=col, width=5); d.text((lx + 30, y), lab, fill="#f0ead6", font=font(12), anchor="lm")
 sx, sy = P(XW, YS - 20); d.line([(sx, sy), (sx + 100 * S, sy)], fill="white", width=4); OUT("100 m", (sx + 50 * S, sy - 11), 11, anchor="mm")
 im.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), "plan_v7.png")); print(W, H)
