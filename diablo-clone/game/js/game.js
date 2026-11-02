@@ -366,6 +366,7 @@ function update(dt) {
   for (const e of enemies) updateEnemy(e, dt);
   if (boss && !boss.introduced && boss.state !== 'sleep' && alive(boss)) { boss.introduced = true; G.bossIntro = 2.8; sfx('cry'); }   // the title card
   updateNpcs(dt); updateShrines();
+  for (const g of groundItems) if (g.item && g.item.rarity === 'legend' && !g.announced) { g.announced = true; say('A LEGENDARY ITEM HAS FALLEN', 112, 3); sfx('levelUp'); }   // never miss one
   if (hero.frenzy > 0) hero.frenzy -= dt; if (hero.stoneskin > 0) hero.stoneskin -= dt;
   separate();
   updateProjectiles(dt);
