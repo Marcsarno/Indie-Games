@@ -36,7 +36,7 @@ SIGNS = {
     "ford": ("FORD", "#133a7c", "#ffffff", "#133a7c"), "toyota": ("TOYOTA", "#ffffff", "#eb0a1e", "#eb0a1e"), "honda": ("HONDA", "#ffffff", "#cc0000", "#cc0000"),
     "kia": ("KIA", "#05141f", "#ffffff", "#05141f"), "chevrolet": ("CHEVROLET", "#ffffff", "#c8a02a", "#1d1d1d"), "nissan": ("NISSAN", "#ffffff", "#c3002f", "#3c3c3c"),
     "bodyshop": ("COLLISION CENTER", "#ffffff", "#1d3b6e", "#1d3b6e"), "service": ("SERVICE", "#ffffff", "#1d3b6e", "#1d3b6e"),
-    "coopershawk": ("Cooper's Hawk", "#1f1f1f", "#d9b56a", "#3a2a1a"), "cinema": ("CINEMARK", "#1d1d1d", "#ffffff", "#b02a2a"), "promenade": ("THE PROMENADE", "#f2e6c8", "#5a3a20", "#5a3a20"),
+    "worldofbeer": ("World of Beer", "#1d1d1d", "#f2b632", "#5a3a1a"), "coopershawk": ("Cooper's Hawk", "#1f1f1f", "#d9b56a", "#3a2a1a"), "cinema": ("CINEMARK", "#1d1d1d", "#ffffff", "#b02a2a"), "promenade": ("THE PROMENADE", "#f2e6c8", "#5a3a20", "#5a3a20"),
     "cchs": ("COCONUT CREEK HIGH", "#ffffff", "#7a1f1f", "#7a1f1f"), "ccel": ("COCONUT CREEK ELEMENTARY", "#ffffff", "#1d4f8c", "#1d4f8c"), "fire": ("FIRE RESCUE 50", "#ffffff", "#b8322a", "#b8322a"),
     "rec": ("COMMUNITY CENTER", "#ffffff", "#1d6f8c", "#1d6f8c"), "aquatic": ("AQUATIC CENTER", "#ffffff", "#1d6f8c", "#1d6f8c"), "offices": ("CORPORATE PARK", "#ffffff", "#2a3a4a", "#2a3a4a"),
     "butterfly": ("BUTTERFLY WORLD", "#2e7d32", "#ffe14a", "#2e7d32"), "wynmoor": ("WYNMOOR", "#f2ead6", "#2f4f2f", "#2f4f2f"), "hammocks": ("THE HAMMOCKS", "#f2ead6", "#3a5a2a", "#3a5a2a"),
