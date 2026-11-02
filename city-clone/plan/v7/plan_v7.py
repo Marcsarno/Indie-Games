@@ -70,6 +70,10 @@ def boulevard(x0, y0, x1, y1, entry_x):
     sw = [(cx + 16, cy + 16)] + arc(cx + 136, cy + 16, 120, 180, 90)[1:] + [(x1 - 20, cy + 136)]; st(sw)
     houses_along((x0 + 10, cy - 35), (cx - 35, cy - 35)); houses_along((x0 + 10, cy + 35), (cx - 35, cy + 35)); houses_along((cx + 35, cy - 35), (x1 - 10, cy - 35))
     houses_along((cx - 35, y0 + 10), (cx - 35, cy - 40), 17, 13); houses_along((cx + 35, y0 + 10), (cx + 35, cy - 40), 17, 13)
+    for xc in (x0 + 75, x0 + 165, x1 - 140, x1 - 60):                    # round 39: cul-de-sacs into the four quadrants (homes fill along them)
+        for sgn_ in (-1, 1):
+            if xc > cx - 40 and xc < cx + 40: continue
+            yA = cy + sgn_ * 4; yB = cy + sgn_ * 80; st([(xc, yA), (xc, yB)]); CULS.append((xc, yB, 11))
 
 st([(-625, 980), (XLYONS - 12, 980)], 8, "loc")                                 # dealer service road (body shops behind)
 # ---- residential blocks (designed) ----
@@ -96,7 +100,7 @@ for p in [(-480 - 26 * i, -120) for i in range(1, 6)]: HOUSES += [(p[0], -100), 
 houses_along((-700, -215), (-700, -290), 17, 18)
 grid(-420, -470, -260, -40, step=80, join=("n",)); st([(-260, -255), (XBANKS, -255)])     # pocket east of Banks
 CULS.append((XBANKS, -420, 12)); st([(XBANKS, -330), (-620, -330)]); CULS.append((-620, -330, 11)); houses_along((XBANKS, -330), (-620, -330))
-LAKES.append((-140, -300, 95, 70)); st([(-232, -230), (-330, -180), (-560, -150), (-625, -128)], 4, "trail")   # canal ends in this lake; lake path to Dave's street (bike)
+LAKES.append((-140, -300, 95, 70)); LAKES.append((420, -270, 75, 32)); st([(-232, -230), (-330, -180), (-560, -150), (-625, -128)], 4, "trail")   # canal ends in this lake; lake path to Dave's street (bike)
 # Wynmoore (north half of its block): gate on Lyons, a ring drive round the golf lake
 LAKES.append((470, 360, 120, 45)); RINGS.append((470, 360, 230, 85)); st([(XLYONS + 12, 360), (240, 360)]); st([(XPOWER - 12, 350), (700, 350)], 5, "trail")
 
@@ -115,7 +119,7 @@ LOTS = [] + [  # (polygon, buildings (x0, y0, x1, y1, colour, label), aisle step
     (R_(-608 + i * 190, 995, -425 + i * 190, 1045), [(-600 + i * 190, 1008, -555 + i * 190, 1040, "#b9b2a4", "BODY SHOP"), (-500 + i * 190, 1008, -455 + i * 190, 1040, "#b9b2a4", "SERVICE")], 6, "h") for i in range(3)
 ] + [
     (R_(-790, 1110, -35, 1282), [(-780, 1215, -680, 1275, "#c56a4a", "CINEMA"), (-660, 1170, -540, 1275, "#7d8086", "GARAGE"), (-520, 1182, -200, 1238, "#e4d9c2", "PLAZA"),
-                                  (-520, 1240, -200, 1276, "#d6a24a", "SHOPS"), (-440, 1150, -200, 1180, "#d6a24a", "SHOPS_N"), (-160, 1115, -45, 1165, "#9a3b52", "COOPER'S HAWK"), (-185, 1236, -60, 1276, "#d6a24a", "SHOPS")], 10, "v"),
+                                  (-520, 1240, -200, 1276, "#d6a24a", "SHOPS"), (-440, 1150, -200, 1180, "#d6a24a", "SHOPS_N"), (-160, 1115, -45, 1165, "#9a3b52", "COOPER'S HAWK"), (-180, 1236, -60, 1276, "#d6a24a", "SHOPS")], 10, "v"),
     (R_(-790, 1345, -35, 1395), [(-780, 1355, -600, 1390, "#d6a24a", ""), (-560, 1355, -380, 1390, "#c56a4a", "")], 10, "v"),
     (R_(-260, 1340, -35, 1430), [(-240, 1380, -55, 1425, "#2e8b3e", "PUBLIX")], 10, "v"),
     (R_(35, 680, 170, 785), [(50, 715, 110, 765, "#d22d24", "McD")], 8, "h"),
@@ -151,7 +155,7 @@ CUTS = [  # (label, colour, polyline): the detours, each through a landmark
     ("A3", AARON, [(390, 790), (430, 700), (560, 650), (560, 548)]),                            # through Butterfly World (service gate, past the dome)
     ("A4", AARON, [(40, 360), (250, 325), (230, 240)]),                                         # smash the Wynmoore gate, across the golf course
     ("A5", AARON, [(225, 232), (200, 130), (230, 40), (230, 14)]),                              # across the football field, out the bus loop
-    ("C1", CHRIS, [(-150, 1345), (-150, 1282), (-400, 1215), (-470, 1150)]),                    # Publix lot, median gap, Promenade plaza: jump the fountain
+    ("C1", CHRIS, [(-150, 1345), (-150, 1293), (-191, 1293), (-191, 1206), (-360, 1206), (-470, 1150)]),         # through the paseo, under the arch, jump the fountain                    # Publix lot, median gap, Promenade plaza: jump the fountain
     ("C2", CHRIS, [(-600, 1282), (-600, 1230), (-600, 1170), (-600, 1095)]),                    # up the parking garage, jump off the top deck onto Wiles
     ("C3", CHRIS, [(-700, 1062), (-780, 1000), (-712, 925), (-665, 920), (-700, 870), (-700, 813)]),   # casino valet loop, out through the lot
     ("C4", CHRIS, [(XW + 120, 760), (XW + 32, 780), (XW + 15, 760)]),                            # Walmart loading-dock ramp onto the back lane
@@ -171,7 +175,7 @@ ROUTES = [
      [PUBLIX, (-14, 1330), (400, 1312), (400, 1250), (330, 1180), (400, 1092), (60, 1075), (60, 960), (60, 848), (390, 800), (430, 700), (560, 650), (560, 548), (300, 515), (40, 470), (40, 360), (250, 325), (230, 240), (200, 130), (230, 14),
       (100, -8), (XBANKS + 8, -14), (XBANKS + 8, -120), (-610, -120), DAVE]),
     ("CHRIS (bike): the jumps: fountain, garage roof, casino loop, loading dock, the Hammocks, canal path", CHRIS,
-     [PUBLIX, (-150, 1345), (-150, 1282), (-400, 1215), (-470, 1150), (-600, 1170), (-600, 1095), (-700, 1062), (-780, 1000), (-712, 925), (-665, 920), (-700, 870), (-700, 813), (X441, 806), (XW + 120, 780), (XW + 32, 780), (XW + 15, 760),
+     [PUBLIX, (-150, 1345), (-150, 1293), (-191, 1293), (-191, 1206), (-360, 1206), (-470, 1150), (-600, 1170), (-600, 1095), (-700, 1062), (-780, 1000), (-712, 925), (-665, 920), (-700, 870), (-700, 813), (X441, 806), (XW + 120, 780), (XW + 32, 780), (XW + 15, 760),
       (XW + 15, 330), (-740, 320), (-470, 320), (-470, 200), (-470, 140), (XCANAL + 14, 140), (XCANAL + 14, 14), (XCANAL + 14, -200), (-330, -180), (-560, -150), (-625, -128), DAVE]),
 ]
 CT_TXT = [("M1 round Cooper's Hawk, Wiles, back to Lyons", MARC), ("M2 McDonald's drive-thru", MARC), ("M3 across Lyons through the police lot", MARC), ("M4 shop alley, Walgreens drive-thru", MARC),

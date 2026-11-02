@@ -12,6 +12,17 @@ VCACHE = {}
 def sgn(key): return M("ccsign_" + key, "#ffffff", tex="sign_cc_" + key, fit=True, rough=.6)
 def acc(key): return SG[key]["accent"]
 FACE = {"s": 0, "e": 90, "n": 180, "w": -90}
+CUTSEG = [(a, b) for c in LP["cuts"] for a, b in zip(c["pts"], c["pts"][1:])]
+def on_cut(x, y, r):
+    """True when (x, y) is within r of one of the planned detour routes (they must stay drivable: no houses, palms or walls on them)."""
+    for a, b in CUTSEG:
+        dx, dy = b[0] - a[0], b[1] - a[1]; L2 = dx * dx + dy * dy or 1; t = max(0, min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / L2))
+        if math.hypot(a[0] + dx * t - x, a[1] + dy * t - y) < r: return True
+    return False
+_prop0 = prop
+def prop(kind, x, y, s=None, col=True):
+    if on_cut(x, y, 3.0): return
+    _prop0(kind, x, y, s, col)
 def place(o, cx, cy, face="s", sx=1.0, sy=1.0, sz=1.0, rz=None):
     o.location = (cx, cy, 0); o.rotation_euler = (0, 0, math.radians(FACE[face] if rz is None else rz)); o.scale = (sx, sy, sz); STATIC.append(o); return o
 def linked(key, maker):
@@ -118,6 +129,17 @@ def school(name, w, d, key, wall="#d9b48a"):
     return bldg(name, w, d, 8.0, wall=wall, key=key, accent="#7a1f1f" if key == "cchs" else "#1d4f8c", floors=2, sign_h=2.2, extra=ex, canopy=False)
 
 # ------------------------------------------------------------------ lot buildings: the plan's rectangles become real models ------------------------------------------------------------------
+def shop_run(L, cx, cy, face, seed=0):
+    """A run of Promenade shop units L metres long, built from linked 4-unit modules (36 x 13 m, 3 variants) stretched to fit: one mesh per variant in the file."""
+    k = max(1, round(L / 36.0)); sx = L / (k * 36.0)
+    for i in range(k):
+        v = (seed + i) % 3; o = linked(f"shopmod_{v}", lambda nm, v=v: LMP.shop_row(nm, 4, 9.0, 13.0, 41 + v * 7))
+        t = -L / 2 + (i + .5) * L / k
+        if face == "s": place(o, cx + t, cy, "s", sx)
+        elif face == "n": place(o, cx - t, cy, "n", sx)
+        elif face == "e": place(o, cx, cy + t, "e", sx)
+        else: place(o, cx, cy - t, "w", sx)
+    ww, dd = world_dims(face, L, 13); cbox(cx, cy, ww, dd)
 def best_face(bx0, by0, bx1, by1, lot):
     x0, x1, y0, y1 = lot; m = {"s": by0 - y0, "n": y1 - by1, "w": bx0 - x0, "e": x1 - bx1}; return max(m, key=m.get)
 def paver(x0, y0, x1, y1, col="#cfc6b4"): BB.box(flat(col), x0, x1, y0, y1, 0, .045)
@@ -149,11 +171,11 @@ def SITE(b_, lot):
     if lab == "PUBLIX":                                                                      # the real Publix kit model (46 x 28) at 1.45x + inline shops either side
         k = 1.45; pw = 46 * k; place(LMR.supermarket("publix"), cx + lw / 2 - pw / 2 - 2, cy, face, k, k, k); col(pw, 28 * k, cx + lw / 2 - pw / 2 - 2)
         rest = lw - pw - 6; n = int(rest / 9); ys_ = cy - 28 * k / 2 + 6.5
-        if n >= 2: o = LMP.shop_row("publix_shops", n, 9.0, 13.0, 39); place(o, x0 + n * 4.5 + 1, ys_, face); cbox(x0 + n * 4.5 + 1, ys_, n * 9, 13)
+        if n >= 2: shop_run(n * 9, x0 + n * 4.5 + 1, ys_, face, 1)
         return
     if lab == "SEMINOLE CASINO":
-        k = min(lw / 56, ld / 36, 2.0); place(LMC.casino("casino"), cx, cy, face, k, k, k); col(56 * k, 36 * k)
-        o = bldg("casino_hotel", 40, 22, 46.0, wall="#e2c58a", key=None, floors=12, canopy=False, roof="flat"); place(o, cx + 20, y1 - 13, face)
+        k = 1.6; px, py = x1 - 56 * k / 2 + 9, y0 + 36 * k / 2; place(LMC.casino("casino"), px, py, face, k, k, k); cbox(px, py, 56 * k, 36 * k)
+        o = bldg("casino_hotel", 40, 22, 46.0, wall="#e2c58a", key=None, floors=12, canopy=False, roof="flat"); place(o, px + 18, py + 36 * k / 2 - 8, face)
         return
     if lab == "CITY HALL":
         k = min(lw / 34, ld / 20, 1.7); place(LMC.city_hall("city_hall"), cx, cy, face, k, k, k); col(34 * k, 20 * k)
@@ -161,9 +183,11 @@ def SITE(b_, lot):
         for i in range(-3, 4): px, py = front_pt(-3); prop("palm_tall", px + (i * 9 if face in "sn" else 0), py + (i * 9 if face in "ew" else 0), 1.0)
         return
     if lab == "POLICE":
-        k = min(lw / 30, ld / 20, 1.6); place(LMR.police_station("police"), cx, cy, face, k, k, k); col(30 * k, 20 * k); return
+        k = min(lw / 30, ld / 20, 1.4); px = x0 + 20 * k / 2 + 1; place(LMR.police_station("police"), px, cy, face, k, k, k); col(30 * k, 20 * k, px); return
     if lab in ("COCONUT CREEK HIGH", "COCONUT CREEK ELEMENTARY"):
-        key = "cchs" if "HIGH" in lab else "ccel"; lawn(x0, y0, x1, y1, trees=False); place(school(f"school_{key}", min(lw, 120), min(ld, 34), key), cx, cy, face); col(min(lw, 120), min(ld, 34))
+        key = "cchs" if "HIGH" in lab else "ccel"; lawn(x0, y0, x1, y1, trees=False)
+        if key == "ccel": sw_ = 60; px, py = x0 + sw_ / 2 + 2, y1 - 17 - 2; place(school("school_ccel", sw_, 34, key), px, py, face); cbox(px, py, sw_, 34); return
+        place(school(f"school_{key}", min(lw, 120), min(ld, 34), key), cx, cy, face); col(min(lw, 120), min(ld, 34))
         if ld > 50: o = bldg(f"{key}_gym", min(lw * .5, 50), 24, 11.0, wall="#c9a27a", canopy=False); bx, by = (cx, cy + ld / 2 - 14) if face == "s" else (cx, cy); place(o, bx, by, face); cbox(bx, by, *world_dims(face, min(lw * .5, 50), 24))
         return
     if lab == "FIRE STATION":
@@ -188,7 +212,7 @@ def SITE(b_, lot):
     if lab == "CINEMA":
         k = min(lw / 30, ld / 22, 1.8); place(LMP.cinema("cinema"), cx, cy, face, k, k, k); col(30 * k, 22 * k); return
     if lab == "COOPER'S HAWK":
-        place(bldg("coopershawk", min(lw, 48), min(ld, 30), 9.0, wall="#b9a58a", key="coopershawk", accent="#3a2a1a", roof="hip", roof_hex="#5a4a3a", sign_h=2.2), cx, cy, face); col(min(lw, 48), min(ld, 30)); return
+        px = x0 + 15; place(bldg("coopershawk", min(lw, 44), 28, 9.0, wall="#b9a58a", key="coopershawk", accent="#3a2a1a", roof="hip", roof_hex="#5a4a3a", sign_h=2.2), px, cy, face); cbox(px, cy, 28, min(lw, 44)); return
     if lab == "PLAZA":                                                                       # the Promenade's fountain plaza: pavers, fountain, cafe tables, a shop row along the back
         paver(x0, y0, x1, y1, "#d9cbb0"); place(LMP.fountain("prom_fountain"), cx, cy, "s"); ccir(cx, cy, 3.4)                # the main street: pavers, fountain, cafe tables, palms, arch at the Lyons end
         for i in range(12): place(LMP.cafe_set(f"cafe_{i}"), x0 + 20 + i * ((x1 - x0 - 40) / 11), cy + (12 if i % 2 else -12), "s")
@@ -202,22 +226,21 @@ def SITE(b_, lot):
         place(LMP.entry_arch("prom_arch"), x1 - 2, cy, "e"); place(pylon("prom_sign", "promenade", 7.0, 7.0), x1 + 40, y1 + 30, "s")
         return
     if lab in ("SHOPS", "", "SHOPS_N"):                                                                 # shop rows, back to back when the rectangle is deep
-        n = max(2, int(lw / 9)); rows = 2 if ld > 30 else 1
+        rows = 2 if ld > 30 else 1
         for r in range(rows):
-            o = LMP.shop_row(f"shops_{int(cx)}_{int(cy)}_{r}", n, lw / n, 13.0, int(cx + cy + r) % 97)
-            if face in "sn": py = (y0 + 6.5 if r == 0 else y1 - 6.5) if rows == 2 else cy; place(o, cx, py, ("s" if face == "s" else "n") if rows == 1 else ("s" if r == 0 else "n")); cbox(cx, py, lw, 13)
-            else: px = (x0 + 6.5 if r == 0 else x1 - 6.5) if rows == 2 else cx; place(o, px, cy, "w" if (rows == 1 and face == "w") or (rows == 2 and r == 0) else "e"); cbox(px, cy, 13, lw)
+            if face in "sn": py = (y0 + 6.5 if r == 0 else y1 - 6.5) if rows == 2 else cy; shop_run(lw, cx, py, ("s" if face == "s" else "n") if rows == 1 else ("s" if r == 0 else "n"), int(cx + r))
+            else: px = (x0 + 6.5 if r == 0 else x1 - 6.5) if rows == 2 else cx; shop_run(lw, px, cy, "w" if (rows == 1 and face == "w") or (rows == 2 and r == 0) else "e", int(cy + r))
         return
     if lab == "McD":
         place(fastfood("mcd", "mcd"), cx, cy, face); col(17, 12); place(pylon("mcd_pylon", "mcd", 9.0), *front_pt(14), face); return
     if lab in ("WALGREENS", "PIZZA", "DELI", "CLEANERS"):
         key = lab.lower(); w_ = min(lw, 40 if lab == "WALGREENS" else 30); d_ = min(ld, 24 if lab == "WALGREENS" else 18)
-        place(bldg(f"{key}_{int(cx)}", w_, d_, 7.0, wall=RF.choice(["#efe6d2", "#e8d7b8", "#f2efe8"]), key=key, accent=acc(key), sign_h=1.8), cx, cy, face); col(w_, d_)
+        px = x0 + w_ / 2 + 2; place(bldg(f"{key}_{int(cx)}", w_, d_, 7.0, wall=RF.choice(["#efe6d2", "#e8d7b8", "#f2efe8"]), key=key, accent=acc(key), sign_h=1.8), px, cy, face); col(w_, d_, px)
         if lab == "WALGREENS": place(pylon("walgreens_pylon", "walgreens"), *front_pt(30), face)
         return
     if lab == "GAS + SHOPS ?":
         gx, gy = x0 + 14, cy; place(gas("wawa_sample", "wawa"), gx, gy, face); cbox(gx, gy + 7.5, 13, 6)
-        n = int((lw - 40) / 9); o = LMP.shop_row("sample_shops", n, 9.0, 13.0, 43); place(o, x1 - n * 4.5 - 2, cy, face); col(n * 9, 13, x1 - n * 4.5 - 2)
+        n = int((lw - 40) / 9); shop_run(n * 9, x1 - n * 4.5 - 2, cy, face, 2)
         return
     h = 7; BB.box(flat(b_["color"]), x0, x1, y0, y1, 0, h); cbox(cx, cy, x1 - x0, y1 - y0)       # anything unknown keeps the M1 block
 def lot_island(a, b0, b1, vert, blds):
@@ -379,7 +402,7 @@ def extra_houses(placed_xy):
                 if hx < X441 - 12 or hx > XP + 12: continue
                 if 35 < hx < 790 and 250 < hy < 465: continue                                   # Wynmoor gets condos
                 if any(f[0] - 4 < hx < f[2] + 4 and f[1] - 4 < hy < f[3] + 4 for f in FOOT): continue
-                if in_water(hx, hy, 14) or hnear(hx, hy, 14.5): continue
+                if in_water(hx, hy, 14) or hnear(hx, hy, 14.5) or on_cut(hx, hy, 9): continue
                 rr = near_road(hx, hy, 8.0)
                 if rr is not None and rr is not r: continue
                 if rr is r and r.nearest(hx, hy)[0] < r.hw + 8: continue
@@ -414,7 +437,7 @@ def walls(all_houses):
                 for i in range(0, len(run), 10): prop("palm_medium", run[i][0] + run[i][3] * 1.2, run[i][1] + run[i][4] * 1.2, col=True)
             while s < r.L - 4:
                 x, y = r.off(s, off); bx, by = r.off(s, side * (r.hw + rd.CURB + rd.SWK + 30))
-                ok = hnear(bx, by, 30) and not in_water(x, y, 2) and not any(f[0] - 2 < x < f[2] + 2 and f[1] - 2 < y < f[3] + 2 for f in FOOT)
+                ok = hnear(bx, by, 30) and not in_water(x, y, 2) and not on_cut(x, y, 5) and not any(f[0] - 2 < x < f[2] + 2 and f[1] - 2 < y < f[3] + 2 for f in FOOT)
                 if ok:
                     rr = near_road(x, y, 3.0); ok = rr is None or rr is r
                 since_gap -= 3
@@ -443,7 +466,7 @@ def parks():
     cm = CV.civic_mats(); Bp = Builder("parks_a"); Bq = Builder("parks_b"); Br = Builder("parks_c")
     nop = lambda *a, **k: None
     # Butterfly World (the dome conservatory + sculpture + gardens + a lot), Tradewinds Park
-    o = DK.dome("butterfly_dome"); place(o, 600, 655, "s", 2.2, 2.2, 2.2); ccir(600, 655, 16)
+    o = DK.dome("butterfly_dome"); place(o, 600, 655, "s", 3.6, 3.6, 3.0); ccir(600, 655, 26)
     place(LMC.butterfly("bw_sculpture"), 600, 600, "s", 1.6, 1.6, 1.6); place(pylon("bw_sign", "butterfly", 7.0, 6.0), 470, 548, "s")
     for i in range(10):
         for j in range(3):
@@ -463,6 +486,12 @@ def parks():
         sk.prism(C2, (x - 6 if d > 0 else x, x if d > 0 else x + 6, y - 15, y + 15), (x - 6 if d > 0 else x + 5.7, x - 5.7 if d > 0 else x + 6, y - 15, y + 15), 0, 2.4)
     sk.box(C2, 390, 410, -420, -380, 0, .9); STATIC.append(sk.build(vc=True))
     Br.box(flat("#b8865a"), 560, 700, -480, -380, 0, .05); Br.box(flat("#58a84e"), 600, 700, -470, -390, 0, .055)
+    CV.field(Br, cm, 225, -420, 50, 95, 10, True)
+    for i in range(3): CV.picnic(Br, cm, nop, 560 + i * 12, -300) if hasattr(CV, "picnic") else None
+    CV.playground(Br, cm, nop, nop, 610, -330, 16, 12); CV.pavilion(Br, cm, nop, nop, 660, -320)
+    for _ in range(40):
+        x, y = RF.uniform(60, 770), RF.uniform(-500, -250)
+        if not (290 < x < 510 and -460 < y < -340) and not (100 < x < 260 and -475 < y < -365) and not (550 < x < 710 and -490 < y < -370) and not in_water(x, y, 4) and not near_road(x, y, 3): prop(RF.choice(["oak", "palm_tall", "oak"]), x, y)
     # high school football field + track by Lyons
     trk = Builder("hs_track")
     for k_ in range(48):
@@ -473,20 +502,23 @@ def parks():
             trk.poly(mt, [(*q0, .04), (*p0, .04), (*p1, .04), (*q1, .04)])
     CV.field(CV.SwapB(trk), cm, 130, 200, 40, 100, 10, True); STATIC.append(trk.build(vc=True))
     for B_ in (Bp, Bq, Br): STATIC.append(B_.build(vc=True))
+WYN = []
 def wynmoor():
     """Wynmoor: mid-rise condo blocks round the golf course, a clubhouse, greens + sand traps, and the guard gate on Lyons."""
     cx, cy = 470, 360; n = 0
     for (yy, face) in ((470, "s"), (254, "n")):                                                   # condo rows outside the ring drive, facing the course
         for xx in range(110, 770, 48):
             if near_road(xx, yy, 9) or in_water(xx, yy, 10) or near_road(xx - 17, yy, 7) or near_road(xx + 17, yy, 7): continue
-            o = linked(f"wyn_condo_{(xx // 48) % 3}", lambda nm, k=xx // 48: DK.condo(nm, 34, 14, 4, 80 + k % 3)); place(o, xx, yy, face); cbox(xx, yy, 34, 14); n += 1
+            o = linked(f"wyn_condo_{(xx // 48) % 3}", lambda nm, k=xx // 48: DK.condo(nm, 34, 14, 4, 80 + k % 3)); place(o, xx, yy, face); cbox(xx, yy, 34, 14); n += 1; WYN.append((xx, yy))
     g = Builder("wyn_golf")
     for (x, y, rr) in ((330, 330, 14), (610, 395, 16), (470, 300, 12), (560, 318, 10)): g.poly(flat("#9fd36b"), [(x + rr * math.cos(2 * math.pi * i / 16), y + rr * .7 * math.sin(2 * math.pi * i / 16), .06) for i in range(16)])
     for (x, y, rr) in ((350, 345, 6), (590, 380, 7), (500, 292, 5)): g.poly(flat("#e8d9a8"), [(x + rr * math.cos(2 * math.pi * i / 12), y + rr * .6 * math.sin(2 * math.pi * i / 12), .07) for i in range(12)])
     STATIC.append(g.build(vc=True))
     o = bldg("wyn_club", 40, 22, 7.0, wall="#f2ead6", key="wynmoor", accent="#2f4f2f", roof="hip", roof_hex="#bcb6aa", sign_h=1.8); place(o, 300, 420, "s"); cbox(300, 420, 40, 22)
     gt = LP["gate"]; o = DK.gate("wyn_gate", 14); place(o, gt[0] + 8, gt[1], "e"); place(pylon("wyn_sign", "wynmoor", 3.2, 6.0), gt[0] + 6, gt[1] + 16, "e")
-    print("wynmoor condos", n)
+    for yy in range(262, 462, 20): WYN.append((45, yy)); WYN.append((780, yy))
+    for xx in range(45, 780, 20): WYN.append((xx, 470)); WYN.append((xx, 254))
+    print("wynmoor condos", n); return WYN
 def offices_and_site():
     for i, (x, y) in enumerate(((640, 1420), (730, 1420))):
         o = DK.condo(f"corp_{i}", 46, 22, 5 + i, 70 + i); place(o, x, y, "s"); cbox(x, y, 46, 22)
@@ -496,7 +528,7 @@ def offices_and_site():
     for i in range(3): o = DK.truck(f"site_truck_{i}", i); place(o, 560 + i * 30, 1760, rz=RF.uniform(0, 360)); cbox(560 + i * 30, 1760, 3, 9)
 def fill_after(placed_xy):
     added = extra_houses(placed_xy); tick_("extra houses")
-    walls(placed_xy + added); tick_("walls")
-    lights(); parks(); wynmoor(); offices_and_site(); tick_("parks")
+    wyn = wynmoor(); walls(placed_xy + added + wyn); tick_("walls")
+    lights(); parks(); offices_and_site(); tick_("parks")
     STATIC.extend(WL.build(vc=True, recalc=False)); STATIC.extend(FIX.build(vc=True, recalc=False))
     return added

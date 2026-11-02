@@ -178,7 +178,7 @@ VAR = [make_house(f"house_v{i}", 11 if i % 2 == 0 else 10, 8.5, 1 + (i % 3 == 0)
 for o in VAR: o.location = (0, 0, -60)
 placed = 0; PLACED_XY = []
 for (hx, hy) in LP["houses"]:
-    if any(f[0] - 3 < hx < f[2] + 3 and f[1] - 3 < hy < f[3] + 3 for f in FOOT): continue
+    if any(f[0] - 3 < hx < f[2] + 3 and f[1] - 3 < hy < f[3] + 3 for f in FOOT) or on_cut(hx, hy, 9): continue
     if any(rd_.closed is False and rd_.nearest(hx, hy)[0] < rd_.hw + 4.5 for rd_ in net if rd_.bb[0] - 30 < hx < rd_.bb[2] + 30 and rd_.bb[1] - 30 < hy < rd_.bb[3] + 30): continue
     if any(r.closed and r.nearest(hx, hy)[0] < r.hw + 4.5 for r in net if r.bb[0] - 30 < hx < r.bb[2] + 30 and r.bb[1] - 30 < hy < r.bb[3] + 30): continue
     best = None
