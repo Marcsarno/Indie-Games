@@ -228,6 +228,11 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false) {
     gainXp(e.def.xp * (1 + (LV.diff - 1) * 0.3) * (e.champ ? 3 : 1) * (1 + Math.max(0, streak - 2) * 0.1));
     dropLoot(e.fi, e.fj, e.def.unique ? 4 : e.champ || e.def.elite ? 3 : 1, e.def.unique || !!e.champ || !!e.def.elite);
     if (e.def.unique || (e.champ && Math.random() < 0.08)) groundItems.push({ item: rollLegendary(rng((Math.random() * 1e9) | 0)), fi: e.fi, fj: e.fj, t: 0 });
+    if (e.def.treasure) {   // the sack bursts: a spray of gold and gems, often a legendary
+      for (let k = 0; k < 10; k++) { const a = k / 10 * 6.283, p = [e.fi + Math.cos(a) * 0.9, e.fj + Math.sin(a) * 0.9]; if (blocked(p[0], p[1])) continue; groundItems.push(k % 3 ? { gold: Math.round((6 + Math.random() * 10) * LV.diff), fi: p[0], fj: p[1], t: 0 } : { gem: GEMS[Math.floor(Math.random() * 4)], fi: p[0], fj: p[1], t: 0 }); }
+      if (Math.random() < 0.35) groundItems.push({ item: rollLegendary(rng((Math.random() * 1e9) | 0)), fi: e.fi, fj: e.fj, t: 0 });
+      say('THE SACK BURSTS!', 51, 2);
+    }
     // Emberbrand: the kill erupts in fire that scorches everything close by (no chain reactions)
     if (STAT.fireburst && !G.bursting) {
       G.bursting = true; burst(2, ex, ey, e.def.chest * 0.6, 26, 110, 16); burst(3, ex, ey, 6, 14, 40, 17); sfx('fireball');
@@ -497,19 +502,30 @@ function updateEnemy(e, dt) {
     return;
   }
   if (hero.dead) { e.clip = 'idle'; return; }
+  if (m.flee) {   // the treasure goblin never fights: it runs, and escapes if not caught in time
+    e.fleeT = (e.fleeT ?? 20) - dt;
+    if (e.fleeT <= 0) {
+      const [x, y] = screenOf(e); burst(4, x, y, 10, 24, 50, 51); sfx('stairs');
+      e.hp = 0; e.dying = 0; e.corpse = true; say('THE TREASURE GOBLIN ESCAPED', 26, 2); return;
+    }
+  }
   const see = d < 10 && los(e.fi, e.fj, hero.fi, hero.fj);
   if (m.ranged && see && d < m.reach && d > 2.2) {
     e.dir = dirFrom(dx, dy); e.clip = 'idle';
     if (e.cool <= 0) { e.atk = 0; e.hitDone = false; }
     return;
   }
-  if (!m.ranged && d < m.reach) {
+  if (!m.ranged && !m.flee && d < m.reach) {
     e.dir = dirFrom(dx, dy); e.clip = 'idle';
     if (e.cool <= 0) { e.atk = 0; e.hitDone = false; }
     return;
   }
   // move: ranged enemies back off when the hero is close, everyone else closes in
   let mv = null;
+  if (m.flee) {   // away from the hero, swerving so it does not stick on walls
+    const l = d || 1, sw = Math.sin(G.t * 2 + e.seed) * 0.6;
+    mv = [-dx / l - dy / l * sw, -dy / l + dx / l * sw];
+  } else
   if (m.ranged && d <= 2.2) mv = [-dx / d, -dy / d];
   else if (see && d < 3) mv = [dx / d, dy / d];
   else mv = flowDir(e.fi, e.fj);

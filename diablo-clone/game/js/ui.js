@@ -165,11 +165,11 @@ function drawHud() {
     for (let x = 0; x < bw; x++) for (let y = 0; y < 4; y++) put(bx + x, by + y, x < bw * f ? (y === 0 ? 23 : y === 3 ? 20 : 22) : 3);
   }
   // champion names over their heads
-  const champs = enemies.filter(e => e.champ && alive(e) && LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] >= 0.5 && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 7)
+  const champs = enemies.filter(e => (e.champ || e.def.treasure || e.def.elite) && alive(e) && LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] >= 0.5 && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 7)
     .sort((a, b) => Math.hypot(a.fi - hero.fi, a.fj - hero.fj) - Math.hypot(b.fi - hero.fi, b.fj - hero.fj)).slice(0, 2);   // the two nearest, so labels never pile up
   for (const e of champs) {
     const [x, y] = iso(e.fi, e.fj);
-    textC(e.name, Math.round(x - camX), Math.round(y - camY) - e.def.chest * 1.6 - 20, { red: 23, grey: 31, green: 55, purple: 59 }[e.champ.tint]);
+    textC(e.champ ? e.name : e.def.name, Math.round(x - camX), Math.round(y - camY) - e.def.chest * 1.6 - 20, e.champ ? { red: 23, grey: 31, green: 55, purple: 59 }[e.champ.tint] : 51);
   }
   drawButton(UI.bag, [33, 34, 35], false, glyphBag);
   drawButton(UI.map, [4, 5, 6, 7], showMap, glyphMap);

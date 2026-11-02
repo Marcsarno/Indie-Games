@@ -235,6 +235,7 @@ function genForest(R, A) {
       budget -= m.pack ? 2 : 1;
     }
   });
+  if (R() < 0.7) { const r = LV.rooms[R.int(1, LV.rooms.length - 1)]; if (r !== LV.rooms[far]) LV.spawns.push({ id: 'treasure', fi: r.clr.x, fj: r.clr.y + 1 }); }   // a treasure goblin
   // a cap so deeper forests stay playable on a phone: drop random extras, never a boss or chieftain
   while (LV.spawns.length > 72) {
     const k = R.int(0, LV.spawns.length - 1), id = LV.spawns[k].id;

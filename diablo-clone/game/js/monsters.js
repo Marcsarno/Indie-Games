@@ -169,7 +169,13 @@ function fallenRig(look, st) {
   for (const [sh, a] of [[J.shR, aR], [J.shL, aL]]) { r.cone(sh, a.el, 1.4, 1.1, skin); r.cone(a.el, a.hand, 1.1, 0.9, skin); r.sph(a.hand, 1.3, skin); }
   // weapon: spear (warrior) or a staff with a glowing head (shaman)
   const g = aR.hand;
-  if (look.staff) {
+  if (look.sack) {   // a bulging sack on its back with coins spilling over the top
+    const sc = V.add(V.mad(J.chest, up, 1), V.mul(fwd, -4.2));
+    r.ell(sc, [3.4, 4, 4.6], M.CLOTH_TAN, frameAlong(fwd, up), { mf: p => V.dot(V.sub(p, sc), up) > 3.6 ? M.LEATHER : 0 });
+    for (const [a, b, c] of [[0.6, 1, 4.6], [-0.4, -1.2, 4.9], [0.2, 0, 5.4]]) r.sph(V.add(V.add(V.mad(sc, fwd, a), V.mul(sideR, b)), V.mul(up, c)), 1.1, M.GOLD);
+  }
+  if (look.unarmed) { /* both hands free to clutch the sack */ }
+  else if (look.staff) {
     r.cone(V.mad(g, bd, -7), V.mad(g, bd, 7), 0.65, 0.65, M.WOOD);
     r.sph(V.mad(g, bd, 8.2), 1.5, M.MAGIC, { noShadow: true });
   } else {
@@ -556,6 +562,7 @@ const MONSTERS = {
   slime: { family: 'slime', name: 'SLIME', look: {}, hp: 8, dmg: [1, 3], speed: 30, reach: 1.15, xp: 6, chest: 9, shadow: 7, pack: true, where: 'out' },
   blueslime: { family: 'slime', name: 'BIG BLUE SLIME', look: { blue: true, big: true }, hp: 30, dmg: [3, 7], speed: 24, reach: 1.4, xp: 30, chest: 14, shadow: 10, where: 'out', minLevel: 2 },
   boar: { family: 'hound', name: 'BOAR', look: { skin: M.BOAR, eye: M.EYE_RED, wolf: true, boar: true }, hp: 20, dmg: [3, 6], speed: 48, reach: 1.35, xp: 18, chest: 12, shadow: 10, where: 'out' },
+  treasure: { family: 'fallen', name: 'TREASURE GOBLIN', look: { skin: M.GOBLIN, goblin: true, sack: true, unarmed: true, scale: 1.1 }, hp: 34, dmg: [0, 0], speed: 46, reach: 1, xp: 45, chest: 16, shadow: 6, flee: true, treasure: true, minLevel: 99 },
   gchief: { family: 'fallen', name: 'GOBLIN CHIEFTAIN', look: { skin: M.GOBLIN, goblin: true, chief: true, scale: 1.45, size: [76, 70, 38, 58] }, hp: 60, dmg: [5, 10], speed: 32, reach: 1.5, xp: 70, chest: 22, shadow: 7, where: 'out', elite: true },
   gshaman: { family: 'fallen', name: 'GOBLIN SHAMAN', look: { skin: M.GOBLIN, goblin: true, staff: true }, hp: 9, dmg: [3, 6], speed: 30, reach: 6, ranged: 'firebolt', xp: 16, chest: 12, shadow: 5, where: 'out' },
   brigand: { family: 'hero', name: 'BRIGAND', look: { team: 'tan', helm: 'cap', chest: 'chain', weapon: 'axe', shield: 'none', hair: 'brown', cape: 'red' }, hp: 22, dmg: [3, 7], speed: 30, reach: 1.35, xp: 24, chest: 18, shadow: 7, where: 'out' },

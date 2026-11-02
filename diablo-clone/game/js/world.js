@@ -220,6 +220,7 @@ function placeSpawns(R, level) {
       budget -= m.pack ? 2 : 1;
     }
   });
+  if (R() < 0.25) { const r = LV.rooms[R.int(1, LV.rooms.length - 1)], p = free(r); if (p) S.push({ id: 'treasure', fi: p[0], fj: p[1] }); }   // now and then a treasure goblin
   if (isBossFloor(LV.depth)) {   // the broodmother's lair: she waits in the stairs room among egg sacs
     const n = LV.stairs.room, r = LV.rooms[n];
     for (let k = S.length - 1; k >= 0; k--) if (LV.roomOf[tIdx(Math.floor(S[k].fi), Math.floor(S[k].fj))] === n) S.splice(k, 1);
