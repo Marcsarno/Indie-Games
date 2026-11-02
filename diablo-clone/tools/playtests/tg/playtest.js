@@ -1,0 +1,14 @@
+Math.random = (() => { let s = 9; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+const log = [], shots = {};
+const step = n => { for (let i = 0; i < n; i++) { update(1 / 60); warmStep(80); } };
+newHero(); G.mode = 'play'; startLevel(2, 4242);
+for (const e of enemies) e.state = 'sleep';
+const t = makeEnemy('treasure', hero.fi + 2, hero.fj + 0.5, 500); enemies.push(t); wake(t);
+const d0 = Math.hypot(t.fi - hero.fi, t.fj - hero.fj); step(40);
+log.push({ fled: Math.hypot(t.fi - hero.fi, t.fj - hero.fj) > d0 + 0.5 });
+hero.fi = t.fi - 1.5; hero.fj = t.fj; step(2); render(); shots.tg = cvs.toDataURL();
+const n0 = groundItems.length; damageEnemy(t, 999, hero.fi, hero.fj, false); step(30);
+log.push({ drops: groundItems.length - n0 });
+render(); shots.burst = cvs.toDataURL();
+hero.hp = STAT.maxHp = 99999; log.push({ dead: !!hero.dead }); hero.dead = 0; const t2 = makeEnemy('treasure', hero.fi + 3, hero.fj, 501); enemies.push(t2); wake(t2); step(60 * 21); log.push({ escaped: !!t2.corpse && t2.hp <= 0 });
+window.__out = { log, shots };

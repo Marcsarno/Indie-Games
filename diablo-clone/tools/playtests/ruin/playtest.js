@@ -1,0 +1,10 @@
+Math.random = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+const log = [], shots = {};
+const step = n => { for (let i = 0; i < n; i++) { update(1 / 60); warmStep(80); } };
+newHero(); G.mode = 'play'; startLevel(2, 778);
+const ruins = LV.rooms.filter(r => r.clr && r.clr.ruin);
+log.push({ ruins: ruins.length, walls: LV.decor.filter(d => d.kind === 'ruinwall').length, cols: LV.decor.filter(d => d.kind === 'column').length });
+for (const e of enemies) e.state = 'sleep';
+const r = ruins[0]; hero.fi = r.clr.x + 0.6; hero.fj = r.clr.y + 1.8; step(20); render(); shots.ruin = cvs.toDataURL();
+showMap = true; render(); shots.map = cvs.toDataURL(); showMap = false;
+window.__out = { log, shots };

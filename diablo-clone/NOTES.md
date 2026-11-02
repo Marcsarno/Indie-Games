@@ -176,6 +176,9 @@ Full detail: `reports/Better code generated pixel art.md` and
 - Trying the game on a real phone (offered to publish it as a page). Throttled desktop is
   only a stand-in.
 
+## Test and capture tools (saved from the session scratchpad)
+- `tools/journey.cjs` (levels 1-12), `tools/bench-game.cjs` (LEVEL=n), `tools/playtests/` (per-feature tests: boss, treant, king, loot, river, farm, night, ...), `tools/capture/` (sheets, GIFs, profiling), `tools/pages/` (Artifact page sources: game https://claude.ai/artifact/7EX2mEMH4cSGuKC2c3K29g, style compare https://claude.ai/artifact/RV971QGVpko9NfmvhqUgpG, animation compare https://claude.ai/artifact/CWEuhANoypjpDmiFEifuer).
+
 ## Next steps for the game build
 - After round 16: the gathering plan (chop trees that fall and drop logs, mine stone/ore veins, auto tools) and smith crafting from those materials; forest frame cost is mostly the full-screen light pass (2 ms of 3.25 ms at 1x) shared with dungeons, a daytime fast path could help phones; forest load is 2.3–2.8 s at 4x (floor bake), a chunked or lazy bake would cut it further. Run `node tools/journey.cjs` after any world or boss change.
 - After round 13: night/day (lanterns and lit windows are ready for it), more town services (smith upgrades, stash), NPC chatter bubbles, water/streams and bridges in forests, building interiors (tavern, refs 'Choose heroes'), forest performance (cull the per-frame prop list by screen rect).

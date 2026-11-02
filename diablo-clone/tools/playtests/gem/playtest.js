@@ -1,0 +1,13 @@
+Math.random = (() => { let s = 5; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+const log = [], shots = {};
+const step = n => { for (let i = 0; i < n; i++) { update(1 / 60); warmStep(80); } };
+newHero(); G.mode = 'play'; startLevel(2, 4242);
+for (const e of enemies) e.state = 'sleep';
+const R = rng(3);
+GEMS.forEach((gm, k) => groundItems.push({ gem: gm, fi: hero.fi + 0.8 + k * 0.5, fj: hero.fj - 1.2, t: 1 }));
+groundItems.push({ item: rollLegendary(R), fi: hero.fi - 1.2, fj: hero.fj - 0.6, t: 1 });
+groundItems.push({ item: rollItem(R, 3, 'long_sword'), fi: hero.fi - 0.4, fj: hero.fj - 1.6, t: 1 });
+step(3); render(); shots.loot = cvs.toDataURL();
+const g0 = hero.gold; hero.fi = groundItems[0].fi; hero.fj = groundItems[0].fj; step(5);
+log.push({ goldGain: hero.gold - g0, left: groundItems.filter(g => g.gem).length });
+window.__out = { log, shots };

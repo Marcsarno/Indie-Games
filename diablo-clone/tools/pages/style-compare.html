@@ -1,0 +1,182 @@
+<title>New Art Direction</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* layout: one column of captioned before/after pairs; the game's own dark frame (single dark look) */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b; --leaf: #8af06a;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 760px; margin: 0 auto; display: grid; gap: 36px; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0 0 8px; letter-spacing: 0.05em; }
+  p, li { max-width: 64ch; }
+  p { margin: 0; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 10px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; overflow-x: auto; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+  .pair > div { min-width: 0; display: grid; gap: 6px; }
+  .tag { font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ember); }
+  .tag.new { color: var(--leaf); }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; }
+</style>
+<main>
+  <header>
+    <h1>Dungeon of Bones: New Art Direction</h1>
+    <p class="lede">Round 13. Chibi characters and bright outdoor areas based on your screenshots. The dungeon keeps its look.</p>
+  </header>
+
+  <section>
+    <h2>Round 16: bigger forests, a boss, new monsters, legendary loot</h2>
+    <figure>
+      <div class="frame"><img src="r16-monsters.png" alt="New monsters: green slime, big blue slime, boar, goblin shaman, brigand, and the Ogre Warlord standing and raising his club" width="2100" height="360"></div>
+      <figcaption>From left: slime (squashes and stretches as it hops), big blue slime, boar, goblin shaman (throws firebolts), brigand, and the Ogre Warlord.</figcaption>
+    </figure>
+    <div class="pair">
+      <div><span class="tag new">The Ogre Warlord</span><div class="frame"><img src="r16-boss.png" alt="The Ogre Warlord at the dungeon entrance with a red warning ring on the ground around the hero" width="540" height="840"></div></div>
+      <div><span class="tag new">A forest 2.5 times bigger, with ponds</span><div class="frame"><img src="r16-forest.png" alt="The larger forest with a pond, paths and monsters" width="540" height="840"></div></div>
+    </div>
+    <figure>
+      <div class="pair">
+        <div><span class="tag new">Legendary loot</span><div class="frame"><img src="r16-loot.png" alt="Inventory with the legendary sword Emberbrand selected, its name in orange" width="540" height="840"></div></div>
+        <div><ul>
+          <li>The warlord holds every forest's dungeon entrance. Every few seconds he slams the ground where you stood: a red ring warns you first. At half life he calls goblins. The way down opens when he falls.</li>
+          <li>Six legendaries with orange beams and their own powers: Emberbrand (kills explode in fire), Crown of the Oak King (life regeneration), Gravewarden (returns damage), Stormhide (attack and move speed), Blooddrinker (life steal), Warlord's Maul (critical hits). Bosses always drop one; champions sometimes do.</li>
+          <li>New affixes on ordinary loot: critical chance, thorns, attack speed, life regeneration.</li>
+        </ul></div>
+      </div>
+    </figure>
+  </section>
+
+  <section>
+    <h2>Round 16, last stretch: night, sets, shrines</h2>
+    <div class="pair">
+      <div><span class="tag new">Greymarsh at night</span><div class="frame"><img src="r16-night-town.png" alt="The town at night lit by its campfire, lanterns and windows" width="540" height="840"></div></div>
+      <div><span class="tag new">Thornwood at night</span><div class="frame"><img src="r16-night-forest.png" alt="A night forest with a goblin camp glowing around its fire" width="540" height="840"></div></div>
+    </div>
+    <div class="pair">
+      <div><span class="tag new">Set items</span><div class="frame"><img src="r16-set.png" alt="Inventory showing Warden's Plate in green with its set bonuses, all three pieces worn" width="540" height="840"></div></div>
+      <div><span class="tag new">A shrine in the woods</span><div class="frame"><img src="r16-shrine.png" alt="A stone pedestal with a floating red crystal near the hero" width="540" height="840"></div></div>
+    </div>
+    <figure>
+      <div class="frame"><img src="r16-bear.png" alt="The dire bear walking, standing and attacking, next to a wolf for scale" width="1080" height="270"></div>
+      <figcaption>Dire bear (from the autumn woods on), next to a wolf for scale.</figcaption>
+    </figure>
+    <ul>
+      <li>Every third town and forest is at night: dim moonlight, the hero carries a light, and lanterns, campfires and cabin windows glow.</li>
+      <li>Two item sets in green, Warden's (visor, plate, wall) and Ranger's (hood, jerkin, targe): two pieces give a bonus, all three a bigger one.</li>
+      <li>Shrines of Frenzy (attack speed), Stone (half damage) and Fortune (a shower of gold) in the forests; each works once.</li>
+      <li>Mana potions (blue) drop with healing potions and are drunk on pickup.</li>
+      <li>A new test plays levels 1 to 12 (every area and boss) and checks exits, bosses and saves: all pass.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Round 16, continued: two more bosses, ruins, a river, a farm, treasure goblins</h2>
+    <figure>
+      <div class="frame"><img src="r16-mons2.png" alt="Skeleton King, Treant Elder, Goblin Chieftain, Treasure Goblin, Wraith, Shroomling" width="1980" height="390"></div>
+      <figcaption>From left: Skeleton King (boss of every sixth dungeon floor), Treant Elder (boss of the autumn forests), Goblin Chieftain (leads one camp per forest), Treasure Goblin, Wraith (deeper dungeons), Shroomling.</figcaption>
+    </figure>
+    <div class="pair">
+      <div><span class="tag new">Skeleton King raising his dead</span><div class="frame"><img src="r16-king.png" alt="The Skeleton King with a gold crown raising three skeletons in a hell dungeon" width="540" height="840"></div></div>
+      <div><span class="tag new">Treant Elder in Emberwood</span><div class="frame"><img src="r16-treant.png" alt="The Treant Elder at the autumn forest's dungeon entrance with a red warning ring" width="540" height="840"></div></div>
+    </div>
+    <div class="pair">
+      <div><span class="tag new">A river with plank bridges</span><div class="frame"><img src="r16-river.png" alt="A river crossing the forest with a plank bridge on the path" width="540" height="840"></div></div>
+      <div><span class="tag new">Ruins in the woods</span><div class="frame"><img src="r16-ruin.png" alt="A ring of pale broken walls and columns around a statue and a chest, guarded by brigands" width="540" height="840"></div></div>
+    </div>
+    <div class="pair">
+      <div><span class="tag new">The farm outside town</span><div class="frame"><img src="r16-farm.png" alt="A plowed cabbage field, a fenced pen with sheep and pigs, and a windmill" width="540" height="840"></div></div>
+      <div><span class="tag new">Boss title card</span><div class="frame"><img src="r16-intro.png" alt="A dark band across the screen reading OGRE WARLORD, TYRANT OF THE DEEP WOODS" width="540" height="840"></div></div>
+    </div>
+    <div class="pair">
+      <div><span class="tag new">Treasure goblin</span><div class="frame"><img src="r16-treasure.png" alt="A goblin with a sack of coins running from the hero, labeled TREASURE GOBLIN" width="540" height="840"></div></div>
+      <div><span class="tag new">Compare before you equip</span><div class="frame"><img src="r16-compare.png" alt="Inventory showing green upgrade arrows on bag items and a war axe compared against the worn sword" width="540" height="840"></div></div>
+    </div>
+    <figure>
+      <div class="frame"><img src="r16-legendlooks.png" alt="The hero wearing legendaries: a glowing ember sword, a crown with oak leaves, a bone-trimmed shield, a red greatsword, a gold axe" width="1120" height="280"></div>
+      <figcaption>Legendaries change how the hero looks: Emberbrand's blade glows, the Oak King's crown sprouts leaves, Gravewarden is dark hide and bone, Blooddrinker is red, the Warlord's Maul is gold.</figcaption>
+    </figure>
+    <ul>
+      <li>Gems (ruby, sapphire, emerald, amethyst) drop on the ground and turn into gold when picked up.</li>
+      <li>Bosses kill in slow motion; the minimap (M) now works outdoors, with paths, water and the boss marked.</li>
+      <li>The big forest loads in about 2.3 s at 4x CPU throttle, down from 5.4 s; at most 72 monsters per forest.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Where you start</h2>
+    <figure>
+      <div class="pair">
+        <div><span class="tag">Before: the crypt</span><div class="frame"><img src="old-start.png" alt="Old start: the hero in a dark crypt" width="540" height="840"></div></div>
+        <div><span class="tag new">Now: Oakhollow</span><div class="frame"><img src="new-town.png" alt="New start: a walled town with a log cabin, thatched hut, market stalls, villagers and chickens" width="540" height="840"></div></div>
+      </div>
+      <figcaption>A walled camp with a log cabin, forge, thatched hut, market stalls, well, villagers and chickens. The road out leads to the forest.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>Outdoors</h2>
+    <figure>
+      <div class="pair">
+        <div><span class="tag new">Deepwood</span><div class="frame"><img src="new-forest.png" alt="A forest of pines and oaks with dirt paths, logs and monsters" width="540" height="840"></div></div>
+        <div><span class="tag new">Emberwood (autumn)</span><div class="frame"><img src="new-autumn.png" alt="An autumn forest with orange trees and a pack of monsters" width="540" height="840"></div></div>
+      </div>
+      <figcaption>Each forest is generated: clearings joined by winding dirt paths, a ring of dense trees, camps with a fire and tent, chests, and a ring of standing stones around the dungeon entrance.</figcaption>
+    </figure>
+    <figure>
+      <div class="pair">
+        <div><span class="tag new">The smithy and the gate</span><div class="frame"><img src="new-town2.png" alt="The town's forge with the smith, hay bales and the palisade" width="540" height="840"></div></div>
+        <div><span class="tag">The dungeon, unchanged</span><div class="frame"><img src="new-dungeon.png" alt="The crypt as before, with the new chibi hero" width="540" height="840"></div></div>
+      </div>
+    </figure>
+  </section>
+
+  <section>
+    <h2>The hero's face, second pass</h2>
+    <figure>
+      <div class="frame"><img src="hero-face-ab.png" alt="Top: the first chibi hero with dark round eyes and hair spiking out. Bottom: light skin, small dark eyes, a fringe and a tidy spiky crown" width="980" height="886"></div>
+      <figcaption>Top: first pass. Bottom: now. The big dark eyes read as empty sockets, so they are now small dark eyes, two pixels tall, in light, almost flat skin. The hair is one shape with a fringe over the forehead and points only on the crown and back.</figcaption>
+      <div class="frame"><img src="townsfolk.png" alt="Townsfolk with the new faces: helmeted hero, bald bearded smith, white-haired merchant, blond and brown-haired villagers" width="1500" height="336"></div>
+      <figcaption>The townsfolk share the new face. Old folk keep smooth hair.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>The hero</h2>
+    <figure>
+      <div class="frame"><img src="hero-old.png" alt="Old hero in four outfits and five directions" width="980" height="884"></div>
+      <span class="tag">Before</span>
+      <div class="frame"><img src="hero-new.png" alt="New chibi hero in the same outfits and directions" width="980" height="884"></div>
+      <span class="tag new">Now</span>
+      <figcaption>Chibi build: a big head with eyes, brows and spiky orange hair, and short legs. Armor and helmets still change on pickup. A green ring under him and markers over townsfolk, as in your screenshots.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>Monsters</h2>
+    <figure>
+      <div class="frame"><img src="mons-old.png" alt="Old monsters" width="1400" height="280"></div>
+      <span class="tag">Before</span>
+      <div class="frame"><img src="mons-new.png" alt="Monsters with bigger heads" width="1400" height="280"></div>
+      <span class="tag new">Now</span>
+      <div class="frame"><img src="mons-forest.png" alt="New forest monsters: goblins and wolves" width="1120" height="280"></div>
+      <span class="tag new">New in the forest: goblins and wolves</span>
+    </figure>
+  </section>
+
+  <section>
+    <h2>How it plays</h2>
+    <ul>
+      <li>Town, forest, then three dungeon floors with the broodmother at the bottom. After her, a new town and an autumn forest, and so on.</li>
+      <li>In town, tap attack next to the merchant to buy a potion for 25 gold, or next to the smith to sell everything in your bag that you are not wearing.</li>
+      <li>Outdoors it is daylight and there is no fog. Trees go see-through when you walk behind them.</li>
+    </ul>
+  </section>
+</main>

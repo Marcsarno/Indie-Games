@@ -1,0 +1,11 @@
+Math.random = (() => { let s = 9; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+const log = [], shots = {};
+const step = n => { for (let i = 0; i < n; i++) { update(1 / 60); warmStep(80); } };
+newHero(); G.mode = 'play'; startLevel(2, 4242); hero.hp = STAT.maxHp = 9999;
+for (const e of enemies) e.state = 'sleep';
+const sh = LV.decor.filter(d => d.kind === 'shrine'); log.push({ shrines: sh.map(d => d.type) });
+const s0 = sh[0]; hero.fi = s0.i + 0.5; hero.fj = s0.j + 2.2; step(10); render(); shots.before = cvs.toDataURL();
+const g0 = groundItems.length; hero.fj = s0.j + 1.6; step(10);
+log.push({ used: s0.used, frenzy: +(hero.frenzy || 0).toFixed(1), stone: +(hero.stoneskin || 0).toFixed(1), drops: groundItems.length - g0 });
+render(); shots.after = cvs.toDataURL();
+window.__out = { log, shots };

@@ -1,0 +1,14 @@
+Math.random = (() => { let s = 11; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+const log = [], shots = {};
+const step = n => { for (let i = 0; i < n; i++) { update(1 / 60); warmStep(60); } };
+const t0 = performance.now();
+newHero(); G.mode = 'play'; startLevel(1, 777);
+log.push({ town: LV.area, ms: Math.round(performance.now() - t0), props: props.length, decor: LV.decor.length });
+step(30); render(); shots.town = cvs.toDataURL();
+hero.fi += 4; hero.fj -= 3; step(20); render(); shots.town2 = cvs.toDataURL();
+const t1 = performance.now(); startLevel(2, 778);
+log.push({ forest: LV.area, ms: Math.round(performance.now() - t1), props: props.length, enemies: enemies.length });
+step(30); render(); shots.forest = cvs.toDataURL();
+const r = LV.rooms[2]; hero.fi = r.cx + 0.5; hero.fj = r.cy + 0.5; step(30); render(); shots.forest2 = cvs.toDataURL();
+startLevel(3, 779); log.push({ dungeon: LV.area, depth: LV.depth, theme: LV.theme }); step(20); render(); shots.dungeon = cvs.toDataURL();
+window.__out = { log, shots };
