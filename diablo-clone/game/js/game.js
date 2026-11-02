@@ -165,8 +165,13 @@ function floater(text, fi, fj, z, col, size = 1) { const [x, y] = iso(fi, fj); f
 const roll = r => r[0] + Math.floor(Math.random() * (r[1] - r[0] + 1));
 
 // ---------------------------------------------------------------- hero actions
+// past the held follow-through, the next swing may start (its last recovery key is skipped)
+const canChain = () => !FEEL_OLD && hero.atk >= 0 && hero.hitDone && hero.cast < 0 && !(hero.dash > 0) && !(hero.whirl > 0) && hero.atk >= weaponSwing(hero.look, hero.combo).chain;
 function heroAttack() {
-  if (G.mode !== 'play' || hero.dead || heroBusy()) return;
+  if (G.mode !== 'play' || hero.dead) return;
+  if (heroBusy() && !canChain()) { if (!FEEL_OLD) hero.buf = G.t + 0.45; return; }   // a tap mid-swing is kept until the swing can chain (a heavy one takes longest)
+  hero.buf = 0;
+  if (hero.atk >= 0) hero.swingEnd = G.t;   // chained: the combo carries on
   // beside a trader in town, a tap trades instead of swinging
   const tr = LV.outdoor && nearTrader();
   if (tr) { if (G.t > (hero.tradeT || 0)) { hero.tradeT = G.t + 0.6; trade(tr); } return; }
@@ -176,8 +181,11 @@ function heroAttack() {
   if (best) {
     hero.dir = dirFrom(best.fi - hero.fi, best.fj - hero.fj);
     // out of reach: walk to it first (one tap is enough on a phone), then swing
-    if (bd > heroReach() + (best.def.unique ? 0.4 : 0.1)) { hero.approach = best; hero.approachT = 1.5; return; }
-  }
+    const reach = heroReach() + (best.def.unique ? 0.4 : 0.1);
+    if (bd > reach + (FEEL_OLD ? 0 : 0.45)) { if (hero.atk >= 0) return; hero.approach = best; hero.approachT = 1.5; return; }
+    // close the last bit during the wind-up (a knocked-back enemy stays in the string)
+    hero.mag = FEEL_OLD ? 0 : Math.min(0.55, Math.max(0, bd - (reach - 0.25)));
+  } else hero.mag = 0;
   // a swing that follows the last one quickly comes back the other way (forehand, backhand, ...)
   hero.combo = G.t - (hero.swingEnd ?? -9) < 0.3 ? ((hero.combo || 0) + 1) % 3 : 0;
   hero.approach = null; hero.atk = 0; hero.hitDone = false;
@@ -213,8 +221,10 @@ function drinkPotion() {
   hero.potions--; hero.hp = Math.min(STAT.maxHp, hero.hp + 30 + hero.lvl * 3); sfx('potion');
   const [x, y] = screenOf(hero); burst(4, x, y, 20, 10, 30, 22);
 }
-function damageEnemy(e, dmg, fromFi, fromFj, crit = false) {
-  e.hp -= dmg; e.flash = crit ? 0.09 : 0.05;
+// pow: 0 = light blow (sword swings, spells), 1 = heavy (two-handers), 2 = combo finisher
+const HITSTOP = [0.045, 0.08, 0.11], KNOCK = [5, 7.7, 11];   // knock speed: tiles/s, ~1/14 of it is the slide
+function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0) {
+  e.hp -= dmg; e.flash = FEEL_OLD ? (crit ? 0.09 : 0.05) : (crit ? 0.1 : 0.065); if (!FEEL_OLD) e.tint = 0.08;
   if (crit) floater(dmg + '!', e.fi, e.fj, e.def.chest + 18, 51, 2); else floater(String(dmg), e.fi, e.fj, e.def.chest + 14, 27);
   if (STAT.leech) hero.hp = Math.min(STAT.maxHp, hero.hp + Math.max(1, Math.round(dmg * STAT.leech / 100)));
   const [ex, ey] = screenOf(e), d = Math.hypot(e.fi - fromFi, e.fj - fromFj) || 1;
@@ -224,7 +234,9 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false) {
   if (crit) { sfx('crit'); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.2); }
   if (e.state === 'sleep') wake(e);
   if (e.hp <= 0) {
-    e.dying = 0; e.atk = -1; e.clip = 'death'; e.stop = crit ? 0.2 : 0.15; hero.stop = Math.max(hero.stop, e.stop);
+    e.dying = 0; e.atk = -1; e.clip = 'death'; e.tint = 0;
+    if (FEEL_OLD) { e.stop = crit ? 0.2 : 0.15; hero.stop = Math.max(hero.stop, e.stop); }
+    else { e.stop = crit ? 0.15 : 0.12; hero.stop = Math.max(hero.stop, e.stop * 0.65); }
     if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.5);
     sfx('kill');
     if (bony) shatter(e, fromFi, fromFj);   // skeletons burst apart into a heap of bones
@@ -248,10 +260,24 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false) {
     if (e === boss) { say(`THE ${e.def.name} IS SLAIN`, 51, 4); say('THE WAY DOWN IS OPEN', 26, 4); sfx('levelUp'); G.slowmo = 0.9; G.bossIntro = 0; }
     G.kills++;
   } else {
-    e.stop = crit ? 0.11 : 0.07; hero.stop = Math.max(hero.stop, e.stop); sfx('hit');
-    e.kb = [(e.fi - fromFi) / d * 3, (e.fj - fromFj) / d * 3];
-    // hit recovery interrupts an attack in progress if the hit was big enough (Diablo's rule)
-    if (dmg >= e.maxHp * 0.18 && !e.def.unique) { e.atk = -1; e.hurt = 0.18; }
+    sfx('hit');
+    if (FEEL_OLD) {
+      e.stop = crit ? 0.11 : 0.07; hero.stop = Math.max(hero.stop, e.stop);
+      e.kb = [(e.fi - fromFi) / d * 3, (e.fj - fromFj) / d * 3];
+      if (dmg >= e.maxHp * 0.18 && !e.def.unique) { e.atk = -1; e.hurt = 0.18; }
+    } else {
+      // the freeze scales with the blow; the hero's is shorter than the target's, so control stays snappy
+      e.stop = HITSTOP[pow] + (crit ? 0.03 : 0); hero.stop = Math.max(hero.stop, e.stop * 0.6);
+      // every hit shoves: heavier blows further, bosses barely, elites and champions half
+      const mass = e.def.unique ? 0.15 : e.def.elite || e.champ ? 0.5 : 1, v = KNOCK[pow] * mass * (crit ? 1.25 : 1);
+      e.kb = [(e.fi - fromFi) / d * v, (e.fj - fromFj) / d * v];
+      // every hit flinches an enemy that isn't mid-attack; a big hit, a heavy blow or a finisher also
+      // interrupts its attack (Diablo's hit recovery). Bosses never flinch; elites only to finishers.
+      const big = dmg >= e.maxHp * 0.18 || pow >= 1;
+      if (e.def.unique) {}
+      else if ((e.def.elite || e.champ) ? pow === 2 : big) { e.atk = -1; e.hurt = Math.max(e.hurt, pow === 2 ? 0.34 : 0.22); }
+      else if (e.atk < 0) e.hurt = Math.max(e.hurt, 0.13);
+    }
   }
 }
 const CRIT_CHANCE = 0.12;
@@ -274,7 +300,7 @@ function killStreak() {
 }
 function wake(e) { if (e.state !== 'sleep') return; e.state = 'hunt'; for (const o of enemies) if (o.state === 'sleep' && Math.hypot(o.fi - e.fi, o.fj - e.fj) < 4) o.state = 'hunt'; }
 // all = the heavy slam: hits everything in reach around the hero, not just in front
-function heroHitResolve(all = false) {
+function heroHitResolve(all = false, pow = 0) {
   const [fx, fy] = dirVec(hero.dir), reach = heroReach() + 0.1;
   let any = false;
   for (const e of enemies) {
@@ -282,7 +308,7 @@ function heroHitResolve(all = false) {
     const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy), rr = reach + (e.def.unique ? 0.5 : 0.2);
     if (d > rr || (!all && d > 0.3 && (dx * fx + dy * fy) / d < 0.35)) continue;
     const crit = Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100;
-    damageEnemy(e, heroDmg(crit ? 2 : 1), hero.fi, hero.fj, crit); any = true;
+    damageEnemy(e, heroDmg(crit ? 2 : 1), hero.fi, hero.fj, crit, pow); any = true;
   }
   for (const p of dynProps) {
     if (p.broken || (p.kind !== 'barrel' && p.kind !== 'egg')) continue;
@@ -382,7 +408,7 @@ function updateHero(dt) {
   hero.flash = Math.max(0, hero.flash - dt); hero.hurtT = Math.max(0, hero.hurtT - dt);
   hero.hp = Math.min(STAT.maxHp, hero.hp + dt * 0.25); hero.mana = Math.min(STAT.maxMana, hero.mana + dt * 1.2);
   updateSkills(dt);
-  if (input.attack) heroAttack();
+  if (input.attack || (hero.buf > G.t && (!heroBusy() || canChain()))) heroAttack();
   let vx = input.mx, vy = input.my;
   const K = input.keys;
   if (K.has('a') || K.has('arrowleft')) vx -= 1; if (K.has('d') || K.has('arrowright')) vx += 1;
@@ -395,6 +421,10 @@ function updateHero(dt) {
     else { const g = flowDir(hero.fi, hero.fj); vx = (dx - dy) / d; vy = (dx + dy) / d; void g; }
   } else if (Math.hypot(vx, vy) >= 0.18) hero.approach = null;
   const l = Math.hypot(vx, vy);
+  // once the blow has landed, pushing the stick cancels the rest of the swing
+  if (!FEEL_OLD && l > 0.18 && hero.atk >= 0 && hero.hitDone && hero.stop <= 0 && hero.atk >= weaponSwing(hero.look, hero.combo).free) {
+    hero.atk = -1; hero.swingEnd = G.t; hero.buf = 0;
+  }
   const busy = hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0;
   const moving = l > 0.18 && !busy;
   if (moving) {
@@ -433,8 +463,9 @@ function updateHero(dt) {
     hero.atk += dt * 1000 * (1 + ((STAT.atkSpeed || 0) + (hero.frenzy > 0 ? 50 : 0)) / 100);
     const sw = weaponSwing(hero.look, hero.combo), ki = swingKey(sw, hero.atk);
     if (ki >= 0 && sw[ki].mv) lungeHero(sw[ki].mv * dt * 1000 / sw[ki].ms);
+    if (!hero.hitDone && hero.mag > 0) { const st = Math.min(hero.mag, dt * 4.5); lungeHero(st); hero.mag -= st; }
     if (ki >= 0 && sw[ki].hit && !hero.hitDone) {
-      hero.hitDone = true; heroHitResolve(!!sw[ki].slam);
+      hero.hitDone = true; heroHitResolve(!!sw[ki].slam, hero.combo === 2 ? 2 : STAT.slow ? 1 : 0);
       if (sw[ki].slam) {   // the ground slam: extra shake and a ring of dust
         if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.35);
         const [x, y] = screenOf(hero), [fx, fy] = dirVec(hero.dir), cx = x + (fx - fy) * 12, cy = y + (fx + fy) * 6;
@@ -475,7 +506,7 @@ function updateEnemy(e, dt) {
     }
     return;
   }
-  e.flash = Math.max(0, e.flash - dt);
+  e.flash = Math.max(0, e.flash - dt); if (e.tint > 0 && e.flash <= 0) e.tint -= dt;
   if (e.stop > 0) { e.stop -= dt; return; }
   e.clock += dt; e.cool -= dt;
   if (Math.abs(e.kb[0]) + Math.abs(e.kb[1]) > 0.01) {
@@ -624,6 +655,12 @@ function frameOf(e) {
   if (e.clip === 'death') return Math.min(5, Math.floor((e === hero ? hero.dead : e.dying) / 0.1));
   return 0;
 }
+// hurt tint: each palette color mapped onto the red ramp by its brightness, so the shape still reads
+const HURT_TINT = new Uint8Array(128);
+for (let v = 0; v < 128; v++) {
+  const n = parseInt(PAL_HEX[v] || '000000', 16), L = (0.3 * (n >> 16) + 0.59 * ((n >> 8) & 255) + 0.11 * (n & 255)) / 255;
+  HURT_TINT[v] = v <= 1 ? v : RED[Math.min(4, Math.floor(L * 6 + 0.5))];
+}
 function blit(sp, wx, wy, flash, cidx, tile, dissolve = 0) {
   const sx0 = Math.round(wx - camX) - sp.ax, sy0 = Math.round(wy - camY) - sp.ay;
   for (let y = 0; y < sp.h; y++) {
@@ -634,7 +671,7 @@ function blit(sp, wx, wy, flash, cidx, tile, dissolve = 0) {
       if (!v) continue;
       if (dissolve > 0 && BAYER[((yy & 3) << 2) | (xx & 3)] < dissolve) continue;
       const o = yy * W + xx;
-      scr[o] = flash ? (v === BLK ? BLK : (27 | EMIS)) : v;
+      scr[o] = !flash || v === BLK ? v : flash === 2 ? HURT_TINT[v & 127] : flash === 3 ? ((xx + yy) & 1 ? HURT_TINT[v & 127] : v) : (27 | EMIS);
       zbuf[o] = sp.z ? sp.z[k] : Math.max(0, sp.ay - y);
       shd[o] = 0; cid[o] = cidx; if (tile >= 0) tbuf[o] = tile;
     }
@@ -718,7 +755,8 @@ function render() {
     list.push({ depth: c.fi + c.fj, draw: () => {
       const sp = getSprite(c.fam, c.look, c.dir, c.clip, frameOf(c), c);
       const jit = c.stop > 0 && c !== hero && c.dying < 0 ? (Math.floor(t * 33) % 2 ? 1 : -1) : 0;
-      blit(sp, x + jit, y, c.flash > 0, n + 1, tIdx(Math.floor(c.fi), Math.floor(c.fj)));
+      const fl = c.flash > 0 ? 1 : c.tint > 0 ? 3 : 0;   // white, then a brief dithered red
+      blit(sp, x + jit, y, fl, n + 1, tIdx(Math.floor(c.fi), Math.floor(c.fj)));
     } });
   });
   for (const p of projectiles) list.push({ depth: p.fi + p.fj, draw: () => drawProjectile(p) });

@@ -1,0 +1,102 @@
+<title>Combat Feel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 640px; margin: 0 auto; display: grid; gap: 32px; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0 0 8px; letter-spacing: 0.05em; }
+  p { margin: 0; max-width: 62ch; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 10px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .toggle { display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: 600 0.85rem var(--body); color: var(--bone); background: var(--panel); border: 1px solid var(--rule); padding: 6px 12px; cursor: pointer; }
+  button[aria-pressed="true"] { border-color: var(--ember); color: var(--ember); }
+  button:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--rule); }
+  th { color: var(--ember); font-weight: 600; }
+  td:nth-child(n+2), th:nth-child(n+2) { text-align: right; white-space: nowrap; }
+  ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; }
+  .note { background: var(--panel); border-left: 3px solid var(--ember); padding: 10px 14px; }
+</style>
+<main>
+  <header>
+    <h1>Combat Feel, Before and After</h1>
+    <p class="lede">Dungeon of Bones, round 17, steps A and B: faster response, and enemies that react to every hit.</p>
+  </header>
+
+  <p class="note">Try it on your phone: the title screen now has a <strong>COMBAT: NEW / OLD</strong> button. Switch it, tap Continue, and fight the same enemies both ways. The setting is remembered.</p>
+
+  <section>
+    <h2>Sword against a pack</h2>
+    <figure>
+      <div class="toggle" role="group" aria-label="Sword playback speed"><button id="s-real" aria-pressed="true">Game speed</button><button id="s-slow" aria-pressed="false">Slow</button></div>
+      <div class="frame"><img id="sword" src="fight-sword.gif" alt="Hero holding attack with a sword against two skeletons and two fallen, old combat on the left, new on the right" width="584" height="270"></div>
+      <figcaption>Attack held for about three seconds. Left: before. Right: now. Each hit flashes white, then flickers red; enemies flinch and slide back.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>War axe against a pack</h2>
+    <figure>
+      <div class="toggle" role="group" aria-label="Axe playback speed"><button id="a-real" aria-pressed="true">Game speed</button><button id="a-slow" aria-pressed="false">Slow</button></div>
+      <div class="frame"><img id="axe" src="fight-axe.gif" alt="Hero holding attack with a war axe against the same pack, old on the left, new on the right" width="584" height="270"></div>
+      <figcaption>Heavy blows freeze longer, shove further and knock enemies out of their attacks.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>Measured in the game</h2>
+    <table>
+      <thead><tr><th>Sword / war axe</th><th>Before</th><th>Now</th></tr></thead>
+      <tbody>
+        <tr><td>Tap to hit</td><td>0.20 / 0.35 s</td><td>0.12 / 0.22 s</td></tr>
+        <tr><td>Stuck after the hit before you can run</td><td>0.33 / 0.47 s</td><td>0.10 / 0.12 s</td></tr>
+        <tr><td>Hits in 3 s, attack held</td><td>6 / 4</td><td>9 / 6</td></tr>
+        <tr><td>Second tap during a swing</td><td>lost</td><td>kept</td></tr>
+        <tr><td>Hero's freeze on a hit</td><td>5 frames</td><td>2 / 3 frames</td></tr>
+        <tr><td>Enemy flinch from one hit</td><td>none</td><td>0.13 / 0.22 s</td></tr>
+        <tr><td>Enemy pushed back</td><td>0.24 tile</td><td>0.40 / 0.62 tile</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>What changed</h2>
+    <ul>
+      <li>The wind-up before the blow is shorter, so the hit lands close to your tap. The swings use the same poses; only the hold times changed. Enemies keep their slower wind-ups, so you can still see their attacks coming.</li>
+      <li>After the blow lands, pushing the stick cancels the rest of the swing. Holding attack (or tapping again) starts the next swing after the follow-through instead of waiting for the full recovery.</li>
+      <li>A tap during a swing is remembered for a moment and plays as soon as he's free, so a combo never drops a tap.</li>
+      <li>If the target is slightly out of reach (for example, after being knocked back), he steps in during the wind-up instead of walking over first.</li>
+      <li>Every hit makes the enemy flinch, unless it's already attacking. Axe blows, combo finishers and big hits also interrupt its attack. Elites only flinch from finishers, and bosses don't flinch at all.</li>
+      <li>The freeze on a hit scales with the blow: short for a sword, longer for an axe or a finisher, longest for a kill. The hero's freeze is shorter than the enemy's, so the controls stay snappy.</li>
+      <li>Each hit shoves harder: the sword about 0.4 tile, the axe about 0.6, finishers about 0.8. Elites are pushed half as far and bosses hardly at all.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Side effect</h2>
+    <p>Holding attack now does about 50% more damage per second, and enemies interrupted by heavy blows hit back less often, so fights are easier. Step F of the plan (enemy health and pack sizes) is where that gets rebalanced.</p>
+  </section>
+</main>
+<script>
+  const pair = (img, base, real, slow) => {
+    const go = s => { document.getElementById(img).src = base + (s ? '-slow.gif' : '.gif');
+      document.getElementById(slow).setAttribute('aria-pressed', String(s)); document.getElementById(real).setAttribute('aria-pressed', String(!s)); };
+    document.getElementById(real).addEventListener('click', () => go(false));
+    document.getElementById(slow).addEventListener('click', () => go(true));
+  };
+  pair('sword', 'fight-sword', 's-real', 's-slow');
+  pair('axe', 'fight-axe', 'a-real', 'a-slow');
+</script>

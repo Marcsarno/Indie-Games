@@ -250,7 +250,27 @@ const hasFx = (eq, k) => !!eq.lgd && eq.lgd.split('|').includes(k);
 // a quick string of swings: forehand, backhand, then a finisher (sword thrust or heavy slam)
 const ATTACK_CLIPS = ['attack', 'attack2', 'attack3'];
 const atkIndex = clip => ATTACK_CLIPS.indexOf(clip);
-function weaponSwing(eq, combo = 0) { return (eq.weapon === 'sword' ? [SWINGS.light, SWINGS.light2, SWINGS.thrust] : [SWINGS.heavy, SWINGS.heavy2, SWINGS.slam])[combo] || SWINGS.light; }
+// Hero swing timing (combat feel pass): the same poses, but the wind-up before the contact key is
+// cut so a tap lands its hit at ~0.11 s (sword) / ~0.2 s (two-handers) instead of 0.19 / 0.34 s.
+// Enemies keep SWINGS' slower, readable timing. `chain` = ms after which the next swing may start
+// (the end of the held follow-through: only the last recovery key is skipped); `free` = ms after
+// which moving cancels the swing (the end of the contact key). ?feel=old restores the old timing.
+// (the title screen also toggles it, remembered on this device, so the two can be compared on a phone)
+let FEEL_OLD = typeof location !== 'undefined' && new URLSearchParams(location.search).get('feel') === 'old';
+try { if (localStorage.getItem('dcg-feel') === 'old') FEEL_OLD = true; } catch (e) { /* storage blocked */ }
+function setFeelOld(v) { FEEL_OLD = v; try { localStorage.setItem('dcg-feel', v ? 'old' : 'new'); } catch (e) { /* ignore */ } }
+const HERO_PRE = { light: [45, 35, 35], light2: [45, 35, 35], thrust: [70, 40], heavy: [110, 45, 45], heavy2: [100, 45, 45], slam: [140, 45, 45] };
+const HERO_SWINGS = {};
+for (const name in HERO_PRE) {
+  const sw = SWINGS[name], hi = sw.findIndex(k => k.hit), pre = HERO_PRE[name];
+  const keys = sw.map((k, i) => Object.assign({}, k, i < hi ? { ms: pre[i] } : {}));
+  let t = 0; for (let i = 0; i <= hi; i++) t += keys[i].ms;
+  HERO_SWINGS[name] = withTilt(keys, sw.tilt, { twoHand: sw.twoHand, free: t, chain: t + keys[hi + 1].ms });
+}
+function weaponSwing(eq, combo = 0) {
+  const S = FEEL_OLD ? SWINGS : HERO_SWINGS;
+  return (eq.weapon === 'sword' ? [S.light, S.light2, S.thrust] : [S.heavy, S.heavy2, S.slam])[combo] || S.light;
+}
 // how far the weapon's tip is from the swing pivot (smears and reach)
 const WEAPON_LEN = { sword: 21, axe: 16, mace: 16, flail: 17, greatsword: 27 };
 

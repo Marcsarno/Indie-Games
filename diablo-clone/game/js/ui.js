@@ -253,6 +253,7 @@ function drawTitle() {
   const btn = (label, y, on) => { const w = 120, x = W / 2 - w / 2; fillRect(x, y, w, 20, 5); frame(x, y, w, 20, 8, 2); textC(label, W / 2, y + 7, 27); UI.titleBtns.push({ x, y, w, h: 20, on }); };
   if (save) btn(`CONTINUE (LEVEL ${save.level})`, H * 0.52, () => beginGame(true));
   btn('NEW GAME', H * 0.52 + 28, () => beginGame(false));
+  btn(FEEL_OLD ? 'COMBAT: OLD' : 'COMBAT: NEW', H * 0.52 + 56, () => setFeelOld(!FEEL_OLD));
   textC('LEFT THUMB MOVES. RIGHT BUTTONS FIGHT.', W / 2, H * 0.78, 25);
   textC('ALL ART IS DRAWN IN CODE', W / 2, H * 0.78 + 8, 24);
 }
