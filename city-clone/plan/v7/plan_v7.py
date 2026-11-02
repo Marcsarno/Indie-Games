@@ -37,7 +37,7 @@ ROADS = [  # name, polyline, width m, kind
 ]
 HOUSES = []; CULS = []; RINGS = [(-712, 912, 46, 20)]; LAKES = []; RBTS = []
 def st(pts, w=9, kind="loc"): ROADS.append(("", pts, w, kind))
-def houses_along(a, b, gap=26, off=16):
+def houses_along(a, b, gap=17, off=17):
     L = math.dist(a, b); n = int(L / gap); ux, uy = (b[0] - a[0]) / (L or 1), (b[1] - a[1]) / (L or 1)
     for i in range(1, n):
         for s_ in (-1, 1): HOUSES.append((a[0] + ux * i * gap - uy * off * s_, a[1] + uy * i * gap + ux * off * s_))
@@ -53,9 +53,13 @@ def lake_loop(cx, cy, rx, ry, links, culs=()):
     LAKES.append((cx, cy, rx, ry)); R = (rx + 40, ry + 40); RINGS.append((cx, cy, R[0], R[1]))
     for p in links:
         a = math.atan2((p[1] - cy) / R[1], (p[0] - cx) / R[0]); st([(cx + R[0] * math.cos(a), cy + R[1] * math.sin(a)), p])
-    for t in range(0, 360, 14):
-        a = math.radians(t)
-        for k in (-1, 1): HOUSES.append((cx + (R[0] + 22 * k) * math.cos(a), cy + (R[1] + 22 * k) * math.sin(a)))
+    for k in (-1, 1):                                                    # houses both sides of the ring drive, ~17 m apart along it
+        ex, ey = R[0] + 22 * k, R[1] + 22 * k; acc = 0; prev = None
+        for i in range(1440):
+            a = 2 * math.pi * i / 1440; q = (cx + ex * math.cos(a), cy + ey * math.sin(a))
+            if prev: acc += math.dist(prev, q)
+            prev = q
+            if acc >= 17: HOUSES.append(q); acc = 0
     for t in culs:
         a = math.radians(t); p0 = (cx + R[0] * math.cos(a), cy + R[1] * math.sin(a)); p1 = (cx + (R[0] + 75) * math.cos(a), cy + (R[1] + 75) * math.sin(a))
         st([p0, p1]); CULS.append((p1[0], p1[1], 11)); houses_along(p0, p1)
@@ -65,8 +69,9 @@ def boulevard(x0, y0, x1, y1, entry_x):
     st([(cx + 22, cy), (x1 + 25, cy)]); st([(cx - 22, cy), (x0 - 25, cy)]); st([(cx, cy + 22), (cx, y1 + 30)])
     sw = [(cx + 16, cy + 16)] + arc(cx + 136, cy + 16, 120, 180, 90)[1:] + [(x1 - 20, cy + 136)]; st(sw)
     houses_along((x0 + 10, cy - 35), (cx - 35, cy - 35)); houses_along((x0 + 10, cy + 35), (cx - 35, cy + 35)); houses_along((cx + 35, cy - 35), (x1 - 10, cy - 35))
-    houses_along((cx - 35, y0 + 10), (cx - 35, cy - 40), 26, 12); houses_along((cx + 35, y0 + 10), (cx + 35, cy - 40), 26, 12)
+    houses_along((cx - 35, y0 + 10), (cx - 35, cy - 40), 17, 13); houses_along((cx + 35, y0 + 10), (cx + 35, cy - 40), 17, 13)
 
+st([(-625, 980), (XLYONS - 12, 980)], 8, "loc")                                 # dealer service road (body shops behind)
 # ---- residential blocks (designed) ----
 # The Hammocks (user): a community shaped like a rounded rectangle across Lyons from Wynmoore, backing onto the Pkwy shops; gates on Lyons and 441
 def rrect(x0, y0, x1, y1, r):
@@ -74,11 +79,11 @@ def rrect(x0, y0, x1, y1, r):
             + arc(x0 + r, y1 - r, r, 90, 180)[1:] + [(x0, y0 + r)] + arc(x0 + r, y0 + r, r, 180, 270)[1:])
 HAM = rrect(-740, 200, -90, 440, 80); st(HAM + HAM[:1])
 for a_, b_ in ((( -660, 200), (-170, 200)), ((-660, 440), (-170, 440)), ((-740, 280), (-740, 360)), ((-90, 280), (-90, 360))):
-    houses_along(a_, b_, 26, 18)
+    houses_along(a_, b_, 17, 18)
 st([(X441, 320), (XLYONS, 320)])                                             # cross street gate to gate (bridges the canal)
 for x in (-560, -380):
-    st([(x, 440), (x, 372)]); CULS.append((x, 372, 11)); st([(x, 200), (x, 268)]); CULS.append((x, 268, 11)); houses_along((x, 440), (x, 380), 22, 14); houses_along((x, 200), (x, 260), 22, 14)
-houses_along((-700, 320), (-240, 320), 30, 16); houses_along((-180, 320), (-110, 320), 30, 16)
+    st([(x, 440), (x, 372)]); CULS.append((x, 372, 11)); st([(x, 200), (x, 268)]); CULS.append((x, 268, 11)); houses_along((x, 440), (x, 380), 16, 15); houses_along((x, 200), (x, 260), 16, 15)
+houses_along((-700, 320), (-240, 320), 17, 17); houses_along((-180, 320), (-110, 320), 17, 17)
 boulevard(-790, 535, -250, 765, -520)                                        # townhomes, Copans -> Sample
 st([(60, Y["wiles"] - 12), (60, Y["sample"] + 13)], 7, "loc")                     # user: Trash Mountain fills E of Lyons, Sample -> Wiles (landmark, not drivable); a gated landfill service road runs down its west side
 grid(35, 1110, 265, 1290, step=76)                                           # homes by Lyons on Wiles (first third)
@@ -88,7 +93,7 @@ grid(210, 1640, 430, 1790, step=72, join=("n",))                             # N
 # Dave's neighbourhood off Banks (south of the Pkwy): a straight street west off Banks, a 90 m bend down to his cul-de-sac
 st([(XBANKS, -120), (-610, -120)] + arc(-610, -210, 90, 90, 180)[1:] + [(-700, -300)]); CULS.append((-700, -300, 12))
 for p in [(-480 - 26 * i, -120) for i in range(1, 6)]: HOUSES += [(p[0], -100), (p[0], -140)]
-houses_along((-700, -215), (-700, -290), 24, 18)
+houses_along((-700, -215), (-700, -290), 17, 18)
 grid(-420, -470, -260, -40, step=80, join=("n",)); st([(-260, -255), (XBANKS, -255)])     # pocket east of Banks
 CULS.append((XBANKS, -420, 12)); st([(XBANKS, -330), (-620, -330)]); CULS.append((-620, -330, 11)); houses_along((XBANKS, -330), (-620, -330))
 LAKES.append((-140, -300, 95, 70)); st([(-232, -230), (-330, -180), (-560, -150), (-625, -128)], 4, "trail")   # canal ends in this lake; lake path to Dave's street (bike)
@@ -97,15 +102,20 @@ LAKES.append((470, 360, 120, 45)); RINGS.append((470, 360, 230, 85)); st([(XLYON
 
 # ---- zones / lots ----
 def R_(x0, y0, x1, y1): return [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
-ZONES = [("THE HAMMOCKS", R_(-790, 160, -35, 465), "#6fa84e", "#173a0a"), ("SHOPS  GAS  FAST FOOD", R_(XW, YS, X441 - 15, YN), "#c7a98a", "#4a2e1a"), ("SHOPS  GAS  FAST FOOD", R_(XPOWER + 15, YS, XE, YN), "#c7a98a", "#4a2e1a"),
-         ("WYNMOORE (gated golf)", R_(35, 250, 790, 465), "#cfe0a8", "#3d4d10"), ("", R_(35, 35, 790, 232), "#86b86a", ""),
+ZONES = [("THE HAMMOCKS", R_(-790, 160, -35, 465), "#6fa84e", "#173a0a"), ("SHOPS  GAS  FAST FOOD", R_(XW, YS, X441 - 15, YN), "#6a9a45", "#4a2e1a"), ("SHOPS  GAS  FAST FOOD", R_(XPOWER + 15, YS, XE, YN), "#6a9a45", "#4a2e1a"),
+         ("WYNMOORE (gated golf)", R_(35, 250, 790, 465), "#86c25e", "#3d4d10"), ("", R_(35, 35, 790, 232), "#86b86a", ""),
          ("BUTTERFLY WORLD + TRADEWINDS PARK", R_(375, 535, 790, 765), "#7cc05a", "#1f4d12"), ("SABAL PINES PARK", R_(530, 1110, 790, 1290), "#7cc05a", "#1f4d12"),
          ("TRASH MOUNTAIN", R_(80, 835, 790, 1040), "#8a7a52", "#2e2410"), ("", R_(35, -505, 790, -35), "#7cc05a", ""), ("construction site", R_(470, 1650, 790, 1790), "#b9a37a", "#4a3a1a"),
          ("offices", R_(35, 1345, 790, 1490), "#9db58a", "#2a3a1a")]
-LOTS = [  # (polygon, buildings (x0, y0, x1, y1, colour, label), aisle step, direction)
-    (R_(XW + 25, 520, X441 - 20, 790), [(XW + 28, 560, XW + 100, 760, "#2f64ad", "WALMART")], 10, "v"),
-    (R_(-610, 835, -35, 1045), [(-600, 985, -470, 1038, "#9aa3ad", "FORD"), (-455, 985, -325, 1038, "#c9ccd1", "TOYOTA"), (-310, 985, -180, 1038, "#9aa3ad", "HONDA"), (-165, 985, -40, 1038, "#c9ccd1", "KIA")], 10, "h"),
-    (R_(-790, 1110, -35, 1282), [(-780, 1215, -680, 1275, "#c56a4a", ""), (-660, 1170, -540, 1275, "#7d8086", "GARAGE"), (-450, 1150, -350, 1215, "#e4d9c2", "PLAZA"), (-300, 1215, -190, 1275, "#d6a24a", ""), (-160, 1115, -45, 1165, "#9a3b52", "COOPER'S HAWK")], 10, "v"),
+LOTS = [] + [  # (polygon, buildings (x0, y0, x1, y1, colour, label), aisle step, direction)
+    (R_(XW + 25, 520, X441 - 20, 790), [(XW + 28, 570, XW + 118, 735, "#2f64ad", "WALMART")], 10, "v"),
+] + [  # round 39 (M2): six real-size dealerships on Sample instead of one 575 x 210 m lot: display lot + showroom (45 x 28 m) each, palm strips between
+    (R_(-608 + i * 95, 835, -520 + i * 95, 965), [(-589 + i * 95, 930, -539 + i * 95, 958, c, lab)], 6, "h") for i, (lab, c) in enumerate((("FORD", "#e9ecef"), ("TOYOTA", "#e9ecef"), ("HONDA", "#e9ecef"), ("KIA", "#e9ecef"), ("CHEVROLET", "#e9ecef"), ("NISSAN", "#e9ecef")))
+] + [  # body shops + service lots behind the dealers, on a service road off Lyons
+    (R_(-608 + i * 190, 995, -425 + i * 190, 1045), [(-600 + i * 190, 1008, -555 + i * 190, 1040, "#b9b2a4", "BODY SHOP"), (-500 + i * 190, 1008, -455 + i * 190, 1040, "#b9b2a4", "SERVICE")], 6, "h") for i in range(3)
+] + [
+    (R_(-790, 1110, -35, 1282), [(-780, 1215, -680, 1275, "#c56a4a", "CINEMA"), (-660, 1170, -540, 1275, "#7d8086", "GARAGE"), (-520, 1182, -200, 1238, "#e4d9c2", "PLAZA"),
+                                  (-520, 1240, -200, 1276, "#d6a24a", "SHOPS"), (-440, 1150, -200, 1180, "#d6a24a", "SHOPS_N"), (-160, 1115, -45, 1165, "#9a3b52", "COOPER'S HAWK"), (-185, 1236, -60, 1276, "#d6a24a", "SHOPS")], 10, "v"),
     (R_(-790, 1345, -35, 1395), [(-780, 1355, -600, 1390, "#d6a24a", ""), (-560, 1355, -380, 1390, "#c56a4a", "")], 10, "v"),
     (R_(-260, 1340, -35, 1430), [(-240, 1380, -55, 1425, "#2e8b3e", "PUBLIX")], 10, "v"),
     (R_(35, 680, 170, 785), [(50, 715, 110, 765, "#d22d24", "McD")], 8, "h"),
