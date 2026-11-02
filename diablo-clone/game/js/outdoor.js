@@ -757,7 +757,7 @@ function trade(n) {
     const items = hero.bag.filter(it => !Object.values(hero.equip).includes(it));
     if (!items.length) { say('NOTHING TO SELL', 26, 1.5); return; }
     let g = 0;
-    for (const it of items) g += Math.max(3, Math.round((it.lvl || 1) * ({ normal: 4, magic: 10, rare: 25, legend: 80 }[it.rarity] || 4)));
+    for (const it of items) g += Math.max(3, Math.round((it.lvl || 1) * ({ normal: 4, magic: 10, rare: 25, legend: 80, set: 45 }[it.rarity] || 4)));
     hero.bag = hero.bag.filter(it => !items.includes(it)); hero.gold += g; sfx('gold'); say(`SOLD ${items.length} FOR ${g} GOLD`, 51, 2);
   }
   saveGame();

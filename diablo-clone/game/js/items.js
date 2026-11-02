@@ -49,11 +49,22 @@ const LEGENDARIES = [
   { fx: 'blood', base: 'greatsword', name: 'BLOODDRINKER', mods: { dmgPct: 40, leech: 12 }, lore: 'IT IS NEVER FULL' },
   { fx: 'maul', base: 'war_axe', name: "WARLORD'S MAUL", mods: { dmgPct: 50, crit: 15 }, lore: 'TAKEN FROM THE OGRE' },
 ];
+// sets (round 16): three named pieces each; wearing two gives a bonus, all three a bigger one
+const SETS = {
+  warden: { name: "WARDEN'S", pieces: [['great_helm', "WARDEN'S VISOR"], ['plate_mail', "WARDEN'S PLATE"], ['kite_shield', "WARDEN'S WALL"]],
+    bonus: [{ armorFlat: 10 }, { regen: 2, thorns: 30 }], lines: ['2: +10 ARMOR', '3: +2 LIFE/S, 30% RETURNED'] },
+  ranger: { name: "RANGER'S", pieces: [['cap', "RANGER'S HOOD"], ['brigandine', "RANGER'S JERKIN"], ['buckler', "RANGER'S TARGE"]],
+    bonus: [{ speed: 12 }, { atkSpeed: 20, crit: 8 }], lines: ['2: +12% MOVE SPEED', '3: +20% ATTACK SPEED, +8% CRIT'] },
+};
+function rollSetItem(R) {
+  const k = R.pick(Object.keys(SETS)), [base, name] = R.pick(SETS[k].pieces);
+  return { id: itemSerial++, base, rarity: 'set', set: k, name, mods: { [ITEM_BASES[base].slot === 'weapon' ? 'dmgPct' : 'armorFlat']: R.int(3, 6), hp: R.int(8, 16) } };
+}
 function rollLegendary(R) {
   const L = R.pick(LEGENDARIES);
   return { id: itemSerial++, base: L.base, rarity: 'legend', name: L.name, lore: L.lore, fx: L.fx, mods: { ...L.mods } };
 }
-const RARITY_COL = { normal: 26, magic: 40, rare: 51, legend: 112 };
+const RARITY_COL = { normal: 26, magic: 40, rare: 51, legend: 112, set: 55 };
 let itemSerial = 1;
 function rollItem(R, level, forceBase) {
   const bases = Object.keys(ITEM_BASES).filter(k => ITEM_BASES[k].lvl <= level + 1 && ITEM_BASES[k].slot !== 'potion');
@@ -61,6 +72,7 @@ function rollItem(R, level, forceBase) {
   const it = { id: itemSerial++, base: baseId, rarity: 'normal', mods: {} };
   if (base.slot === 'potion') return it;
   if (!forceBase && R() < 0.008 + level * 0.002) return rollLegendary(R);
+  if (!forceBase && R() < 0.015 + level * 0.002) return rollSetItem(R);
   const q = R();
   it.rarity = q < 0.06 + level * 0.01 ? 'rare' : q < 0.34 ? 'magic' : 'normal';
   const n = it.rarity === 'rare' ? R.int(2, 3) : it.rarity === 'magic' ? 1 : 0;
@@ -97,16 +109,18 @@ function compareLines(it, cur) {
   out.push([s > 0.5 ? 'BETTER THAN WORN' : s < -0.5 ? 'WORSE THAN WORN' : 'ABOUT THE SAME', s > 0.5 ? 55 : s < -0.5 ? 23 : 25]);
   return out;
 }
+// how many pieces of a set the hero wears now
+function setCount(k) { return typeof hero === 'undefined' ? 0 : Object.values(hero.equip).filter(it => it && it.set === k).length; }
 function itemName(it) {
   const b = ITEM_BASES[it.base];
-  if (it.rarity === 'legend') return it.name;
+  if (it.rarity === 'legend' || it.rarity === 'set') return it.name;
   if (it.rarity === 'rare' && it.title) return it.title;
   return [it.prefix, b.name, it.suffix].filter(Boolean).join(' ');
 }
 function itemLines(it) {
   const b = ITEM_BASES[it.base], m = it.mods, L = [];
   if (b.slot === 'potion') return ['RESTORES ' + b.heal + ' LIFE'];
-  if (it.rarity === 'rare' || it.rarity === 'legend') L.push(b.name);
+  if (it.rarity === 'rare' || it.rarity === 'legend' || it.rarity === 'set') L.push(b.name);
   if (b.dmg) L.push(`DAMAGE ${b.dmg[0]}-${b.dmg[1]}${b.slow ? ' (SLOW)' : ''}`);
   if (b.armor) L.push(`ARMOR ${b.armor}`);
   if (b.block) L.push(`BLOCK ${b.block}%`);
@@ -123,6 +137,7 @@ function itemLines(it) {
   if (m.regen) L.push(`+${m.regen} LIFE PER SECOND`);
   if (m.fireburst) L.push('KILLS EXPLODE IN FIRE');
   if (it.lore) L.push(it.lore);
+  if (it.set) { const S = SETS[it.set]; L.push(`${S.name} SET (${setCount(it.set)}/3 WORN)`); L.push(...S.lines); }
   return L;
 }
 

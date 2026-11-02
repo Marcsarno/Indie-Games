@@ -30,6 +30,10 @@ const STAT = {};   // derived hero stats, recomputed on equip
 function recalcHero() {
   const e = hero.equip, it = s => e[s] ? ITEM_BASES[e[s].base] : null, mods = {};
   for (const s in e) if (e[s]) for (const k in e[s].mods) mods[k] = (mods[k] || 0) + e[s].mods[k];
+  for (const k in SETS) {   // set bonuses: two pieces, then all three
+    const n = Object.values(e).filter(it => it && it.set === k).length;
+    SETS[k].bonus.forEach((bn, i) => { if (n >= i + 2) for (const m in bn) mods[m] = (mods[m] || 0) + bn[m]; });
+  }
   const w = it('weapon');
   const base = w ? w.dmg : [1, 3];
   const pct = 1 + (mods.dmgPct || 0) / 100 + hero.lvl * 0.03;
@@ -228,6 +232,7 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false) {
     gainXp(e.def.xp * (1 + (LV.diff - 1) * 0.3) * (e.champ ? 3 : 1) * (1 + Math.max(0, streak - 2) * 0.1));
     dropLoot(e.fi, e.fj, e.def.unique ? 4 : e.champ || e.def.elite ? 3 : 1, e.def.unique || !!e.champ || !!e.def.elite);
     if (e.def.unique || (e.champ && Math.random() < 0.08)) groundItems.push({ item: rollLegendary(rng((Math.random() * 1e9) | 0)), fi: e.fi, fj: e.fj, t: 0 });
+    if ((e.champ || e.def.elite) && Math.random() < 0.12) groundItems.push({ item: rollSetItem(rng((Math.random() * 1e9) | 0)), fi: e.fi + 0.4, fj: e.fj, t: 0 });
     if (e.def.treasure) {   // the sack bursts: a spray of gold and gems, often a legendary
       for (let k = 0; k < 10; k++) { const a = k / 10 * 6.283, p = [e.fi + Math.cos(a) * 0.9, e.fj + Math.sin(a) * 0.9]; if (blocked(p[0], p[1])) continue; groundItems.push(k % 3 ? { gold: Math.round((6 + Math.random() * 10) * LV.diff), fi: p[0], fj: p[1], t: 0 } : { gem: GEMS[Math.floor(Math.random() * 4)], fi: p[0], fj: p[1], t: 0 }); }
       if (Math.random() < 0.35) groundItems.push({ item: rollLegendary(rng((Math.random() * 1e9) | 0)), fi: e.fi, fj: e.fj, t: 0 });
@@ -322,7 +327,7 @@ function pickup(g) {
   const b = ITEM_BASES[g.item.base];
   if (b.slot === 'potion') { if (hero.potions >= 8) return false; hero.potions++; sfx('pickup'); say('HEALING POTION', 22, 1.2); return true; }
   if (hero.bag.length >= BAG_SIZE) { if (!g.warned) say('YOUR BAG IS FULL', 22, 1.5); g.warned = true; return false; }
-  hero.bag.push(g.item); say((g.item.rarity === 'legend' ? 'LEGENDARY: ' : '') + itemName(g.item), RARITY_COL[g.item.rarity], g.item.rarity === 'legend' ? 3.5 : 2); sfx(g.item.rarity === 'legend' ? 'levelUp' : 'pickup');
+  hero.bag.push(g.item); say((g.item.rarity === 'legend' ? 'LEGENDARY: ' : g.item.rarity === 'set' ? 'SET ITEM: ' : '') + itemName(g.item), RARITY_COL[g.item.rarity], g.item.rarity === 'legend' ? 3.5 : 2); sfx(g.item.rarity === 'legend' ? 'levelUp' : 'pickup');
   // an empty slot is filled right away so the new look shows immediately
   if (!hero.equip[b.slot]) equipItem(g.item);
   return true;
