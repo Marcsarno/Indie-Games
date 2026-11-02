@@ -42,16 +42,16 @@ const AFFIXES = [
 ];
 // legendaries (round 16): fixed names and powers, an orange beam; bosses always drop one
 const LEGENDARIES = [
-  { base: 'long_sword', name: 'EMBERBRAND', mods: { dmgPct: 60, fireburst: 1 }, lore: "FORGED IN A DRAGON'S THROAT" },
-  { base: 'crown_helm', name: 'CROWN OF THE OAK KING', mods: { hp: 25, regen: 3 }, lore: 'THE FOREST MENDS YOU' },
-  { base: 'tower_shield', name: 'GRAVEWARDEN', mods: { armorFlat: 8, thorns: 60 }, lore: 'WHAT STRIKES YOU BLEEDS' },
-  { base: 'brigandine', name: 'STORMHIDE', mods: { speed: 18, atkSpeed: 25 }, lore: 'LIGHTNING IN YOUR STEP' },
-  { base: 'greatsword', name: 'BLOODDRINKER', mods: { dmgPct: 40, leech: 12 }, lore: 'IT IS NEVER FULL' },
-  { base: 'war_axe', name: "WARLORD'S MAUL", mods: { dmgPct: 50, crit: 15 }, lore: 'TAKEN FROM THE OGRE' },
+  { fx: 'ember', base: 'long_sword', name: 'EMBERBRAND', mods: { dmgPct: 60, fireburst: 1 }, lore: "FORGED IN A DRAGON'S THROAT" },
+  { fx: 'oak', base: 'crown_helm', name: 'CROWN OF THE OAK KING', mods: { hp: 25, regen: 3 }, lore: 'THE FOREST MENDS YOU' },
+  { fx: 'grave', base: 'tower_shield', name: 'GRAVEWARDEN', mods: { armorFlat: 8, thorns: 60 }, lore: 'WHAT STRIKES YOU BLEEDS' },
+  { fx: 'storm', base: 'brigandine', name: 'STORMHIDE', mods: { speed: 18, atkSpeed: 25 }, lore: 'LIGHTNING IN YOUR STEP' },
+  { fx: 'blood', base: 'greatsword', name: 'BLOODDRINKER', mods: { dmgPct: 40, leech: 12 }, lore: 'IT IS NEVER FULL' },
+  { fx: 'maul', base: 'war_axe', name: "WARLORD'S MAUL", mods: { dmgPct: 50, crit: 15 }, lore: 'TAKEN FROM THE OGRE' },
 ];
 function rollLegendary(R) {
   const L = R.pick(LEGENDARIES);
-  return { id: itemSerial++, base: L.base, rarity: 'legend', name: L.name, lore: L.lore, mods: { ...L.mods } };
+  return { id: itemSerial++, base: L.base, rarity: 'legend', name: L.name, lore: L.lore, fx: L.fx, mods: { ...L.mods } };
 }
 const RARITY_COL = { normal: 26, magic: 40, rare: 51, legend: 112 };
 let itemSerial = 1;

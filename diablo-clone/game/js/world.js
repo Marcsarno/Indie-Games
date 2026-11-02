@@ -438,6 +438,7 @@ const dynProps = []; // barrels and chests: drawn every frame
 const fires = [];    // flames {wx, wy, h, w, seed}
 const lights = [];   // {x, y (ground point, world px), z, r, i, seed}
 function genFloor() {
+  if (LV.outdoor) bakeGrassNoise();
   for (let y = 0; y < WH; y++) for (let x = 0; x < WW; x++) {
     const A = (x - WX0) + 2 * (y - WY0), B = 2 * (y - WY0) - (x - WX0);
     const ti = Math.floor(A / 32), tj = Math.floor(B / 32), t = tileAt(ti, tj), k = y * WW + x;

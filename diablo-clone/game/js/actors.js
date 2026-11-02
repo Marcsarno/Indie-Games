@@ -244,7 +244,8 @@ const GEAR_LOOKS = {
   weapon: ['sword', 'axe', 'mace', 'flail', 'greatsword'],
   shield: ['none', 'buckler', 'round', 'kite', 'tower'],
 };
-const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}.${eq.cape || ''}`;
+const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}.${eq.cape || ''}.${eq.lgd || ''}`;
+const hasFx = (eq, k) => !!eq.lgd && eq.lgd.split('|').includes(k);
 // combo 1 = the second swing of a quick pair (a backhand)
 // a quick string of swings: forehand, backhand, then a finisher (sword thrust or heavy slam)
 const ATTACK_CLIPS = ['attack', 'attack2', 'attack3'];
@@ -292,7 +293,7 @@ function heroRig(eq, st) {
   r.ell(V.mad(J.chest, up, 0.8), [3.8 + bulk * 1.4, 5.0 + bulk * 1.8, 4.6 + bulk * 1.6], torsoM, tf, {
     mf: brig ? (p => {   // brigandine: cloth over plates, rows of gold rivets
       const q = V.sub(p, J.chest), u = V.dot(q, sideR) * 0.62, v = V.dot(q, up) * 0.62;
-      return Math.abs(u - Math.round(u)) < 0.22 && Math.abs(v - Math.round(v)) < 0.22 ? M.GOLD : 0;
+      return Math.abs(u - Math.round(u)) < 0.22 && Math.abs(v - Math.round(v)) < 0.22 ? (hasFx(eq, 'storm') ? M.FUNGUS2 : M.GOLD) : 0;   // Stormhide's studs crackle
     }) : chain ? (p => {   // a tabard panel over the mail
       const q = V.sub(p, J.chest);
       return V.dot(q, fwd) > 2.5 && Math.abs(V.dot(q, sideR)) < 3.2 && V.dot(q, up) < 3 ? team : 0;
@@ -439,8 +440,9 @@ function heroRig(eq, st) {
       for (const sd of [-1, 1]) r.sph(V.add(V.add(V.mad(hd, fwd, 3.2), V.mul(sideR, sd * 4.4)), V.mul(up, 0.4)), 1.0, M.STEEL);   // visor rivets
       if (eq.helm === 'crown') {   // a gold circlet with points and a red stone
         r.cyl(V.mad(hc, up, 3.2), V.mad(hc, up, 4.6), 5.0, M.GOLD);
-        for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2, b = V.add(V.mad(hc, up, 4.4), V.add(V.mul(fwd, Math.cos(a) * 4.6), V.mul(sideR, Math.sin(a) * 4.6))); r.cone(b, V.mad(b, up, 2.6), 0.9, 0.2, M.GOLD); }
-        r.sph(V.add(V.mad(hc, up, 3.9), V.mul(fwd, 5.1)), 0.8, M.EYE_RED, { noShadow: true });
+        const oak = hasFx(eq, 'oak');   // the Oak King's crown sprouts leaves and a green stone
+        for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2, b = V.add(V.mad(hc, up, 4.4), V.add(V.mul(fwd, Math.cos(a) * 4.6), V.mul(sideR, Math.sin(a) * 4.6))); r.cone(b, V.mad(b, up, 2.6), oak ? 1.3 : 0.9, 0.2, oak ? M.LEAFM : M.GOLD); }
+        r.sph(V.add(V.mad(hc, up, 3.9), V.mul(fwd, 5.1)), 0.8, oak ? M.EYE_GRN : M.EYE_RED, { noShadow: true });
       }
     } else {
     r.ell(hd, [5.9, 5.7, 6.7], M.STEEL, helmF, { mf: p => {
@@ -473,7 +475,8 @@ function heroRig(eq, st) {
     const big = eq.shield === 'kite';
     if (eq.shield === 'tower') {   // tall rectangle: team field, iron rim, gold stripe
       const tc = V.mad(c, up, 0.8);
-      r.box(tc, [0.8, 4.4, 8.2], team, ax, { mf: p => { const q = V.sub(p, tc), u = Math.abs(V.dot(q, ax[1])), v = Math.abs(V.dot(q, ax[2])); return u > 3.5 || v > 7.3 ? M.IRON : u < 0.8 ? M.GOLD : 0; } });
+      const grave = hasFx(eq, 'grave');   // Gravewarden: dark hide, bone rim and stripe
+      r.box(tc, [0.8, 4.4, 8.2], grave ? M.HIDE : team, ax, { mf: p => { const q = V.sub(p, tc), u = Math.abs(V.dot(q, ax[1])), v = Math.abs(V.dot(q, ax[2])); return u > 3.5 || v > 7.3 ? (grave ? M.BONE : M.IRON) : u < 0.8 ? (grave ? M.BONE : M.GOLD) : 0; } });
     } else if (eq.shield === 'round') {   // wooden round shield, iron rim and boss
       r.ell(c, [1.1, 5.3, 5.3], M.WOOD, ax, { mf: p => { const q = V.sub(p, c), d2 = (V.dot(q, ax[1]) ** 2 + V.dot(q, ax[2]) ** 2) / 28; return d2 > 0.74 || d2 < 0.06 ? M.IRON : 0; } });
     } else {
@@ -496,11 +499,11 @@ function heroRig(eq, st) {
   r.sph(V.mad(g, bd, -3.2), 1.2, M.GOLD);
   if (eq.weapon === 'sword') {
     r.box(V.mad(g, bd, 1.8), [0.7, 3.4, 0.8], M.GOLD, wf);
-    r.box(V.mad(g, bd, 11.4), [9.2, 1.15, 0.4], M.BLADE, wf);
+    r.box(V.mad(g, bd, 11.4), [9.2, 1.15, 0.4], hasFx(eq, 'ember') ? M.FIREM : M.BLADE, wf);   // Emberbrand glows
     r.cone(V.mad(g, bd, 20.4), V.mad(g, bd, 21.8), 0.9, 0.3, M.BLADE);
   } else if (eq.weapon === 'greatsword') {   // two-handed: long grip, wide guard, long broad blade
     r.box(V.mad(g, bd, 2), [0.8, 4.6, 0.9], M.IRON, wf);
-    r.box(V.mad(g, bd, 14.2), [11.6, 1.5, 0.45], M.BLADE, wf);
+    r.box(V.mad(g, bd, 14.2), [11.6, 1.5, 0.45], hasFx(eq, 'blood') ? M.BLOODY : M.BLADE, wf);   // Blooddrinker is red
     r.cone(V.mad(g, bd, 25.6), V.mad(g, bd, 27.4), 1.2, 0.3, M.BLADE);
   } else if (eq.weapon === 'flail') {   // short haft, three chain links, spiked ball
     r.cone(V.mad(g, bd, 1.2), V.mad(g, bd, 7), 0.9, 0.9, M.WOOD);
@@ -512,7 +515,7 @@ function heroRig(eq, st) {
   } else {
     r.cone(V.mad(g, bd, 1.2), V.mad(g, bd, 13), 0.9, 0.9, M.WOOD);
     if (eq.weapon === 'axe') {
-      r.box(V.add(V.mad(g, bd, 11.5), V.mul(wide, 3.2)), [2.8, 3.0, 0.5], M.BLADE, wf);
+      r.box(V.add(V.mad(g, bd, 11.5), V.mul(wide, 3.2)), [2.8, 3.0, 0.5], hasFx(eq, 'maul') ? M.GOLD : M.BLADE, wf);
     } else {
       r.sph(V.mad(g, bd, 13.5), 3.0, M.IRON);
       for (const s of [-1, 1]) r.cone(V.mad(g, bd, 13.5), V.add(V.mad(g, bd, 13.5), V.mul(wide, s * 4.2)), 1.2, 0.4, M.IRON);

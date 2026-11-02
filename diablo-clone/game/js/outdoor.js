@@ -197,8 +197,8 @@ function genForest(R, A) {
   }
   // monsters: a pack per clearing (more in camps), plus a few on the paths
   // the forest's own (goblins, wolves) come often; dungeon dwellers wander out now and then
-  const pool = Object.keys(MONSTERS).filter(id => !MONSTERS[id].unique && (MONSTERS[id].minLevel || 1) <= A.diff && !['spider', 'shaman', 'burning'].includes(id));
-  for (const id of ['goblin', 'goblin', 'wolf', 'wolf', 'slime', 'slime', 'boar', 'gshaman', 'brigand']) pool.push(id);
+  const pool = Object.keys(MONSTERS).filter(id => !MONSTERS[id].unique && (MONSTERS[id].minLevel || 1) <= A.diff && !['spider', 'shaman', 'burning', 'wraith'].includes(id));
+  for (const id of ['goblin', 'goblin', 'wolf', 'wolf', 'slime', 'slime', 'boar', 'gshaman', 'brigand', 'shroom', 'shroom', 'sporecap']) pool.push(id);
   const free = (x, y, rad) => { for (let t = 0; t < 30; t++) { const fi = x + (R() - 0.5) * rad * 2, fj = y + (R() - 0.5) * rad * 2; if (!blocked(fi, fj)) return [fi, fj]; } return null; };
   LV.rooms.forEach((r, n) => {
     if (n === 0 || n === far) return;
@@ -271,8 +271,22 @@ function genTown(R, A) {
 // ---------------------------------------------------------------- ground
 // grass from layered noise in the olive ramp, small tufts and flower clusters; dirt paths with a
 // dithered edge and pebbles; the canopy texture fills everything past the map
+// the two broad noise layers of the grass change slowly, so they are sampled every 4 px and
+// blended (the floor bake of a big forest was spending most of its time here)
+let grassGrid = null, GGW = 0;
+function bakeGrassNoise() {
+  GGW = (WW >> 2) + 2; const gh = (WH >> 2) + 2; grassGrid = new Float32Array(GGW * gh);
+  for (let gy = 0; gy < gh; gy++) for (let gx = 0; gx < GGW; gx++) {
+    const x = gx * 4, y = gy * 4, A = (x - WX0) + 2 * (y - WY0), B = 2 * (y - WY0) - (x - WX0);
+    grassGrid[gy * GGW + gx] = 1.7 + vnoise(A, B, 70, 21) * 2.2 + vnoise(A, B, 19, 22) * 1.0;
+  }
+}
+function grassBase(x, y) {
+  const gx = x >> 2, gy = y >> 2, fx = (x & 3) / 4, fy = (y & 3) / 4, k = gy * GGW + gx;
+  return (grassGrid[k] * (1 - fx) + grassGrid[k + 1] * fx) * (1 - fy) + (grassGrid[k + GGW] * (1 - fx) + grassGrid[k + GGW + 1] * fx) * fy;
+}
 function grassAt(x, y, A, B) {
-  let t = 1.7 + vnoise(A, B, 70, 21) * 2.2 + vnoise(A, B, 19, 22) * 1.0 + vnoise(A, B, 6, 23) * 0.5;
+  let t = (grassGrid ? grassBase(x, y) : 1.7 + vnoise(A, B, 70, 21) * 2.2 + vnoise(A, B, 19, 22) * 1.0) + vnoise(A, B, 6, 23) * 0.5;
   // tufts: one per 7x5 cell, a light blade pair over a dark root
   const cx = Math.floor(x / 7), cy = Math.floor(y / 5), h = hash(cx, cy, 41);
   if (h < 0.55) {

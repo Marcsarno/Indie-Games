@@ -339,6 +339,47 @@ function ogreRig(look, st) {
   if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
   return r;
 }
+// ---------------------------------------------------------------- shroomling and wraith (round 16)
+// a walking mushroom: stubby legs and arms, a huge spotted cap for a head, small dark eyes
+const SHROOM_B = { hipH: 6, thigh: 3.4, shin: 3, ankle: 0.8, spine: 4, shW: 3.4, shZ: 1, neck: 6.5, upper: 3, fore: 2.8, hipW: 1.8, stride: 3.2, lift: 2, duty: 0.45, bob: 0.6, sway: 0.3, runLean: 0.05, counter: 0.15 };
+function shroomRig(look, st) {
+  const B = SHROOM_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J, stem = M.CLOTH_WHITE, cap = look.purple ? M.CLOTH_PURPLE : M.CLOTH_RED;
+  for (const [hip, knee, ank] of [[J.hipL, J.kneeL, J.ankL], [J.hipR, J.kneeR, J.ankR]]) { r.cone(hip, knee, 1.4, 1.3, stem); r.cone(knee, ank, 1.3, 1.2, stem); r.ell(V.add(ank, [1, 0, -0.3]), [1.8, 1.3, 0.8], M.WAX); }
+  r.group(() => { r.ell(J.pelvis, [2.8, 3, 2.6], stem); r.cone(J.pelvis, V.mad(J.chest, up, 3), 3.0, 2.6, stem); });
+  const sw = st.key || null, ext = st.clip === 'attack' && sw ? (sw.hit ? 1 : sw.a > 0.8 ? -0.5 : 0.3) : 0;
+  for (const [sh, s] of [[J.shR, 1], [J.shL, -1]]) {
+    const hand = V.add(V.add(sh, V.mul(fwd, 2 + ext * 3 + s * J.swingArm)), V.add(V.mul(up, -3 + ext * 1.5), V.mul(sideR, s * 1.2)));
+    const a = armTo(J, sh, hand, B, s); r.cone(sh, a.el, 1.0, 0.9, stem); r.cone(a.el, a.hand, 0.9, 0.8, stem); r.sph(a.hand, 1.1, stem);
+  }
+  const hd = J.head, h0 = r.p.length;
+  r.ell(V.mad(hd, up, -1.6), [3, 3, 2.4], stem, frameAlong(fwd, up), { mf: p => { const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = Math.abs(V.dot(q, sideR)), z2 = V.dot(q, up); return f2 > 1.6 && Math.abs(s2 - 1.1) < 0.45 && Math.abs(z2 + 1.4) < 0.6 ? M.EYE : 0; } });
+  r.ell(V.mad(hd, up, 0.8), [5.4, 5.4, 3.2], cap, frameAlong(fwd, up), { mf: p => { const q = V.sub(p, hd); return V.dot(q, up) > 0.2 && hash(Math.floor(V.dot(q, fwd) * 0.8 + 9), Math.floor(V.dot(q, sideR) * 0.8 + 9), 41) < 0.22 ? M.CLOTH_WHITE : 0; } });
+  bigHead(r, h0, hd, 1.25);
+  if (st.clip === 'death') deathTip(r, B, st.f, -1);
+  return r;
+}
+// a wraith: a hooded, legless robe that floats and sways, glowing eyes in the dark of the hood,
+// long clawed hands reaching out on the strike
+function wraithRig(look, st) {
+  const r = new Rig(), { clip, f } = st, robe = M.CLOTH_PURPLE;
+  const bob = clip === 'walk' ? Math.sin(f / 8 * Math.PI * 2) * 1.2 : clip === 'idle' ? Math.sin(f * Math.PI / 2) * 0.8 : 0;
+  const sw = st.key || null, reach = clip === 'attack' && sw ? (sw.hit ? 1 : sw.a > 0.8 ? -0.6 : 0.4) : 0;
+  const lean = clip === 'walk' ? 0.25 : reach * 0.2, top = [lean * 4, 0, 22 + bob], base = [-2 - lean * 3, 0, 5 + bob];
+  r.group(() => { r.cone(base, top, 6.2, 3.4, robe, { mf: p => (p[2] - base[2]) < 2 && hash(Math.floor(Math.atan2(p[1], p[0]) * 5), 1, 3) < 0.5 ? M.CLOTH_DARK : 0 }); });
+  for (const s of [-1, 1]) {   // tattered hem points
+    const a = [base[0] - 1, s * 4, base[2] + 1]; r.cone(a, [a[0] - 2, s * 5, a[2] - 4.5], 1.4, 0.2, robe);
+  }
+  const hd = V.add(top, [1.2, 0, 3.6]);
+  r.ell(hd, [4.4, 4.2, 4.6], robe, null, { mf: p => { const q = V.sub(p, hd); if (q[0] > 2.4 && Math.abs(q[2] + 0.3) < 2.4 && Math.abs(q[1]) < 2.6) return (Math.abs(Math.abs(q[1]) - 1.2) < 0.5 && Math.abs(q[2] - 0.2) < 0.5) ? M.FUNGUS2 : M.DARK; return 0; } });
+  r.cone(V.add(hd, [-2, 0, 3]), V.add(hd, [-6, 0, 5.5]), 2, 0.3, robe);   // hood tip
+  for (const s of [-1, 1]) {
+    const sh = V.add(top, [0, s * 4, -2]), hand = V.add(sh, [3 + reach * 6, s * 2, -5 + reach * 3]);
+    r.cone(sh, hand, 1.4, 1.0, robe);
+    for (let k = -1; k <= 1; k++) r.cone(hand, V.add(hand, [2.4, s * 0.5 + k * 0.7, -1 + k * 0.4]), 0.45, 0.1, M.OLDBONE, { noShadow: true });
+  }
+  if (clip === 'death') tipRig(r, [0, 0, 0], 0, 0, [0, 3, 7, 11, 14, 16][f]);   // sinks into the floor
+  return r;
+}
 // a slime: one glossy jelly body that squashes on landing and stretches as it hops, with big eyes
 function slimeRig(look, st) {
   const r = new Rig(), { clip, f } = st, mat = look.blue ? M.SLIME_B : M.SLIME, R0 = 6 * (look.big ? 1.5 : 1);
@@ -430,6 +471,8 @@ const FAMILIES = {
   spider: { size: [80, 60, 40, 46], rig: spiderRig, swing: () => SWINGS.bite },
   chicken: { size: [28, 28, 14, 22], rig: chickenRig, swing: () => SWINGS.bite },
   slime: { size: [48, 44, 24, 32], gait: 0.13, rig: slimeRig, swing: () => SWINGS.bite },
+  shroom: { size: [44, 48, 22, 36], gait: gaitFrameTiles(SHROOM_B), rig: shroomRig, swing: () => SWINGS.claw },
+  wraith: { size: [56, 60, 28, 46], gait: 0.2, rig: wraithRig, swing: () => SWINGS.claw },
   ogre: { size: [140, 140, 70, 112], gait: gaitFrameTiles(OGRE_B, 1.5), rig: ogreRig, swing: () => SWINGS.heavy },
 };
 // Variants: same family, different look and stats. `kind` is what the roster ledger counts.
@@ -442,6 +485,9 @@ const MONSTERS = {
   hound: { family: 'hound', name: 'BONE HOUND', look: {}, hp: 16, dmg: [3, 6], speed: 52, reach: 1.35, xp: 18, chest: 12, shadow: 10 },
   skelking: { family: 'skeleton', name: 'SKELETON KING', look: { weapon: 'sword', shield: false, armored: true, crown: true, eye: M.FIREM, scale: 1.6, size: [124, 132, 62, 104] }, hp: 170, dmg: [9, 16], speed: 24, reach: 1.9, xp: 200, chest: 42, shadow: 11, unique: true, boss: 'king', minLevel: 99 },
   warlord: { family: 'ogre', name: 'OGRE WARLORD', minLevel: 99, look: { scale: 1.5 }, hp: 140, dmg: [8, 14], speed: 22, reach: 2.1, xp: 160, chest: 46, shadow: 13, unique: true, boss: 'slam' },
+  shroom: { family: 'shroom', name: 'SHROOMLING', look: {}, hp: 10, dmg: [2, 4], speed: 26, reach: 1.1, xp: 9, chest: 14, shadow: 5, pack: true, where: 'out' },
+  sporecap: { family: 'shroom', name: 'SPORECAP', look: { purple: true }, hp: 16, dmg: [3, 6], speed: 24, reach: 1.15, xp: 16, chest: 14, shadow: 5, where: 'out', minLevel: 2 },
+  wraith: { family: 'wraith', name: 'WRAITH', look: {}, hp: 18, dmg: [4, 8], speed: 34, reach: 1.3, xp: 26, chest: 26, shadow: 6, minLevel: 2 },
   slime: { family: 'slime', name: 'SLIME', look: {}, hp: 8, dmg: [1, 3], speed: 30, reach: 1.15, xp: 6, chest: 9, shadow: 7, pack: true, where: 'out' },
   blueslime: { family: 'slime', name: 'BIG BLUE SLIME', look: { blue: true, big: true }, hp: 30, dmg: [3, 7], speed: 24, reach: 1.4, xp: 30, chest: 14, shadow: 10, where: 'out', minLevel: 2 },
   boar: { family: 'hound', name: 'BOAR', look: { skin: M.BOAR, eye: M.EYE_RED, wolf: true, boar: true }, hp: 20, dmg: [3, 6], speed: 48, reach: 1.35, xp: 18, chest: 12, shadow: 10, where: 'out' },

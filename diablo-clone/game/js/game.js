@@ -42,7 +42,9 @@ function recalcHero() {
   STAT.crit = mods.crit || 0; STAT.thorns = mods.thorns || 0; STAT.atkSpeed = mods.atkSpeed || 0; STAT.regen = mods.regen || 0; STAT.fireburst = mods.fireburst || 0;
   STAT.speed = 4.2 * (1 + (mods.speed || 0) / 100);
   STAT.slow = !!w?.slow;
-  hero.look = { team: hero.team, helm: it('helm')?.look || 'none', chest: it('chest')?.look || 'tunic', weapon: w?.look || 'sword', shield: it('shield')?.look || 'none' };
+  // legendaries change how their piece looks (glowing ember blade, oak-leaf crown, ...)
+  const lgd = ['weapon', 'helm', 'chest', 'shield'].map(s => e[s] && e[s].rarity === 'legend' ? (e[s].fx || (LEGENDARIES.find(L => L.name === e[s].name) || {}).fx) : null).filter(Boolean).join('|');
+  hero.look = { team: hero.team, helm: it('helm')?.look || 'none', chest: it('chest')?.look || 'tunic', weapon: w?.look || 'sword', shield: it('shield')?.look || 'none', lgd };
   hero.hp = Math.min(hero.hp, STAT.maxHp); hero.mana = Math.min(hero.mana, STAT.maxMana);
 }
 const xpFor = l => Math.round(60 * Math.pow(l, 1.6));
@@ -78,16 +80,20 @@ function makeEnemy(id, fi, fj, n) {
 let warmQueue = [];
 function prewarm() {
   warmQueue = [];
-  const fams = new Map();
+  // families with a monster near the start are built during the load; the rest (in a big forest,
+  // the ogre at the far end among them) build in the background a few per frame
+  const fams = new Map(), near = new Set();
   fams.set('hero', hero.look);
-  for (const e of enemies) fams.set(e.fam + lookKey(e.look), [e.fam, e.look]);
-  for (const [k, v] of fams) {
-    const [fam, look] = k === 'hero' ? ['hero', v] : v;
-    for (let d = 0; d < 8; d++) warmQueue.push([fam, look, d, 'idle', 0]);
+  for (const e of enemies) {
+    const k = e.fam + lookKey(e.look); fams.set(k, [e.fam, e.look]);
+    if (Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 14) near.add(k);
   }
+  for (let d = 0; d < 8; d++) warmQueue.push(['hero', hero.look, d, 'idle', 0]);
+  for (const [k, v] of fams) if (near.has(k)) for (let d = 0; d < 8; d++) warmQueue.push([v[0], v[1], d, 'idle', 0]);
   // the hero's walk is needed at once; monsters' walks fill in during play
   for (let d = 0; d < 8; d++) for (let f = 0; f < 8; f++) warmQueue.push(['hero', hero.look, d, 'walk', f]);
   const now = warmQueue.length;
+  for (const [k, v] of fams) if (k !== 'hero' && !near.has(k)) for (let d = 0; d < 8; d++) warmQueue.push([v[0], v[1], d, 'idle', 0]);
   for (const [k, v] of fams) if (k !== 'hero') for (let d = 0; d < 8; d++) for (let f = 0; f < 8; f++) warmQueue.push([v[0], v[1], d, 'walk', f]);
   return now;
 }
