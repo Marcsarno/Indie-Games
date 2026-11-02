@@ -10,7 +10,7 @@ const KINDS = ['sedan', 'sedan', 'taxi', 'hatchback', 'coupe', 'suv', 'suv', 'mi
 const COLS = ['#d64545', '#3d6fd6', '#f2f2f2', '#2b2b2b', '#e0b43a', '#4e9a5a', '#9aa3ad', '#7a4bd0', '#e07a2e', '#1f8fa8', '#c8c2b0', '#8b1e2b'];
 
 export function createTraffic(G, deps) {
-  const { THREE, makeCar, carPoly, colliders, placeOnGround, scene, camera } = deps;
+  const { THREE, makeCar, carPoly, colliders, placeOnGround, scene, camera, signalPoles } = deps;
   // ---------- graph ----------
   const N = G.nodes.map(n => ({ x: n.x, z: -n.y, r: n.r, sig: n.sig, dead: n.dead, roads: n.roads, riro: new Set(n.riro || []), occ: new Set(), inc: [], out: [] }));
   const E = G.edges.map((e, i) => {
@@ -69,7 +69,7 @@ export function createTraffic(G, deps) {
     q4.setFromAxisAngle(up, ang); m4.compose(v3.set(tmp.x, 5.5, tmp.z), q4, s3.set(1, 1, 1)); boxMesh.setMatrixAt(i, m4);
     m4.compose(v3.set(tmp.x - tmp.fx * .2, 5.5, tmp.z - tmp.fz * .2), q4, s3.set(1, 1, 1)); lampMesh.setMatrixAt(i, m4); lampMesh.setColorAt(i, C_G);
   });
-  for (const M of [poleMesh, armMesh, boxMesh, lampMesh]) { M.instanceMatrix.needsUpdate = true; M.frustumCulled = false; scene.add(M); }
+  if (signalPoles) for (const M of [poleMesh, armMesh, boxMesh, lampMesh]) { M.instanceMatrix.needsUpdate = true; M.frustumCulled = false; scene.add(M); }   // only cc: the old city has signal poles built in Blender
   function updateBars() {
     let ch = false;
     for (let i = 0; i < bars.length; i++) { const L = light(bars[i].n, bars[i].e); if (L !== bars[i].last) { bars[i].last = L; const C = L === 'g' ? C_G : L === 'y' ? C_Y : C_R; barMesh.setColorAt(i, C); lampMesh.setColorAt(i, C); ch = true; } }
