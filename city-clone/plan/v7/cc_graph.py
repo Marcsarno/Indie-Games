@@ -105,7 +105,7 @@ def build():
     for n in nodes:
         big = [k for k in n["roads"] if R[k]["kind"] in ("art", "hwy")]
         n["sig"] = -1
-        if len(big) >= 2: n["sig"] = sig; sig += 1
+        if len(big) >= 2 or (big and any(k in ("Promenade Blvd", "Aruba Way", "NW 15th St") for k in n["roads"])): n["sig"] = sig; sig += 1   # round 44: main entrances get lights
     def rect(x0, y0, x1, y1): return [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]
     areas = []
     NAMES = {"THE HAMMOCKS": "The Hammocks", "WYNMOORE (gated golf)": "Wynmoor", "BUTTERFLY WORLD + TRADEWINDS PARK": "Butterfly World", "SABAL PINES PARK": "Sabal Pines Park", "TRASH MOUNTAIN": "Trash Mountain",

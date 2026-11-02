@@ -609,6 +609,15 @@ def lot_drives(x0, x1, y0, y1, blds, label=""):
         sx, sy = px + nx * max(0, d - rd.CURB - rd.SWK - .6), py + ny * max(0, d - rd.CURB - rd.SWK - .6)   # sidewalk back edge
         if nx: RB.box(m["asphalt"], min(px, sx), max(px, sx), py - hw, py + hw, 0, .03); RB.box(m["asphalt"], min(sx, ex), max(sx, ex), py - hw, py + hw, 0, .175)
         else: RB.box(m["asphalt"], px - hw, px + hw, min(py, sy), max(py, sy), 0, .03); RB.box(m["asphalt"], px - hw, px + hw, min(sy, ey), max(sy, ey), 0, .175)
+        tx_, ty_ = abs(ny), abs(nx)                                                                     # unit along the road edge
+        for sd in (1, -1):                                                                              # flared curb returns: the apron widens to 16 m at the curb
+            c0 = (px + tx_ * sd * hw + nx * (d - rd.CURB - rd.SWK - .6), py + ty_ * sd * hw + ny * (d - rd.CURB - rd.SWK - .6))
+            c1 = (px + tx_ * sd * hw + nx * (d - .2), py + ty_ * sd * hw + ny * (d - .2)); c2 = (px + tx_ * sd * (hw + 4) + nx * (d - .2), py + ty_ * sd * (hw + 4) + ny * (d - .2))
+            tri = [c0, c1, c2]; ar = (tri[1][0] - tri[0][0]) * (tri[2][1] - tri[0][1]) - (tri[1][1] - tri[0][1]) * (tri[2][0] - tri[0][0])
+            RB.poly(m["asphalt"], [(x_, y_, .176) for x_, y_ in (tri if ar > 0 else tri[::-1])])
+        bx, by = px + nx * max(0, d - rd.CURB - rd.SWK - 1.6), py + ny * max(0, d - rd.CURB - rd.SWK - 1.6)   # stop bar for cars leaving the lot
+        if nx: RB.box(m["white"], bx - .2, bx + .2, by - hw + .3, by + hw - .3, .03, .036)
+        else: RB.box(m["white"], bx - hw + .3, bx + hw - .3, by - .2, by + .2, .03, .036)
         ix, iy = px - nx * 8, py - ny * 8
         DRV_RECTS.append((min(ix, ex) - (hw if not nx else 0), min(iy, ey) - (hw if nx else 0), max(ix, ex) + (hw if not nx else 0), max(iy, ey) + (hw if nx else 0)))
         for w in (-2.5, 0, 2.5): CUTSEG.append(((ix + ny * w, iy + nx * w), (qx + ny * w, qy + nx * w)))

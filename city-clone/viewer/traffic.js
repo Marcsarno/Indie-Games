@@ -54,10 +54,26 @@ export function createTraffic(G, deps) {
     q4.setFromAxisAngle(up, ang); v3.set(tmp.x, .045, tmp.z); s3.set(b.e.main ? 9.6 : 3.2, 1, .55); m4.compose(v3, q4, s3); barMesh.setMatrixAt(i, m4); barMesh.setColorAt(i, C_G); b.last = '';
   });
   barMesh.instanceMatrix.needsUpdate = true; scene.add(barMesh);
+  // round 44 (user: "Intersections. Lights."): a mast-arm signal per signalled approach: pole on the right curb, arm over the lane, a head lit like the stop bar
+  const NB = Math.max(1, bars.length), metal = new THREE.MeshLambertMaterial({ color: 0x4a4e54 });
+  const poleMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(.13, .16, 6.4, 6).translate(0, 3.2, 0), metal, NB);
+  const armMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, .14, .14).translate(.5, 0, 0), metal, NB);
+  const boxMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(.42, 1.15, .36), new THREE.MeshLambertMaterial({ color: 0x23262a }), NB);
+  const lampMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(.3, .3, .06), new THREE.MeshBasicMaterial({ toneMapped: false }), NB);
+  bars.forEach((b, i) => {
+    const [, s1] = trims(b.e, b.dir); lanePos(b.e, b.dir, s1, tmp);
+    const rx = -tmp.fz, rz = tmp.fx, off = Math.max(2.2, (b.e.hw || 4) - (b.e.lane || 2) + 1.4);     // right of travel, out past the curb
+    const px = tmp.x + rx * off, pz = tmp.z + rz * off, ang = Math.atan2(-tmp.fx, -tmp.fz);
+    q4.setFromAxisAngle(up, ang); m4.compose(v3.set(px, 0, pz), q4, s3.set(1, 1, 1)); poleMesh.setMatrixAt(i, m4);
+    const armAng = Math.atan2(rz, -rx); q4.setFromAxisAngle(up, armAng); m4.compose(v3.set(px, 6.1, pz), q4, s3.set(off, 1, 1)); armMesh.setMatrixAt(i, m4);
+    q4.setFromAxisAngle(up, ang); m4.compose(v3.set(tmp.x, 5.5, tmp.z), q4, s3.set(1, 1, 1)); boxMesh.setMatrixAt(i, m4);
+    m4.compose(v3.set(tmp.x - tmp.fx * .2, 5.5, tmp.z - tmp.fz * .2), q4, s3.set(1, 1, 1)); lampMesh.setMatrixAt(i, m4); lampMesh.setColorAt(i, C_G);
+  });
+  for (const M of [poleMesh, armMesh, boxMesh, lampMesh]) { M.instanceMatrix.needsUpdate = true; M.frustumCulled = false; scene.add(M); }
   function updateBars() {
     let ch = false;
-    for (let i = 0; i < bars.length; i++) { const L = light(bars[i].n, bars[i].e); if (L !== bars[i].last) { bars[i].last = L; barMesh.setColorAt(i, L === 'g' ? C_G : L === 'y' ? C_Y : C_R); ch = true; } }
-    if (ch) barMesh.instanceColor.needsUpdate = true;
+    for (let i = 0; i < bars.length; i++) { const L = light(bars[i].n, bars[i].e); if (L !== bars[i].last) { bars[i].last = L; const C = L === 'g' ? C_G : L === 'y' ? C_Y : C_R; barMesh.setColorAt(i, C); lampMesh.setColorAt(i, C); ch = true; } }
+    if (ch) { barMesh.instanceColor.needsUpdate = true; lampMesh.instanceColor.needsUpdate = true; }
   }
   // ---------- cars (pool, made once) ----------
   const cars = [];

@@ -16,7 +16,8 @@ class Tiled:                                                                    
     def box(self, mt, x0, x1, y0, y1, z0, z1):
         """Big boxes are cut on the tile grid: every tile mesh stays ~128 m across, so the meshopt position quantization keeps millimetres (a 575 m lot in one mesh lost
         its 3 cm lift above the grass and flickered green on the phone)."""
-        S = self.size; xs = [x0] + [g * S for g in range(int(math.floor(x0 / S)) + 1, int(math.ceil(x1 / S)))] + [x1]; ys = [y0] + [g * S for g in range(int(math.floor(y0 / S)) + 1, int(math.ceil(y1 / S)))] + [y1]
+        S = self.size; C_ = 32 if z1 - z0 < .45 and self.name in ("roads", "drives", "gap43", "ground") else S          # round 44: flat lot surfaces in <= 32 m cells (big triangles dropped out on some GPUs)
+        xs = [x0] + [g * C_ for g in range(int(math.floor(x0 / C_)) + 1, int(math.ceil(x1 / C_)))] + [x1]; ys = [y0] + [g * C_ for g in range(int(math.floor(y0 / C_)) + 1, int(math.ceil(y1 / C_)))] + [y1]
         for a, b in zip(xs, xs[1:]):
             for c, d in zip(ys, ys[1:]):
                 if b - a < 1e-3 or d - c < 1e-3: continue
@@ -65,7 +66,7 @@ for d in LP["roads"]:
     kw = dict(hw=hw, rank=RANK[k], flare=6.5 if k == "art" else 4.5 if k in ("col", "blvd", "loc") else 3.0 if k in ("drive", "driven") else 2.5, closed=closed)
     if d["name"] == "Lyons Rd": kw.update(mh=2.0, rank=12, flare=7.0)
     if k == "art" and abs(pts[0][1] - pts[-1][1]) < abs(pts[0][0] - pts[-1][0]): kw.update(rank=9)          # east-west arterials meet the north-south ones as children (no overlapping curbs)
-    if k == "art": kw.update(xwalk=True)
+    if k in ("art", "drive", "driven"): kw.update(xwalk=True)                                   # round 44: crosswalks on the Promenade / campus streets too
     if k == "hwy": kw.update(mh=1.6, sw=(0, 0), xwalk=False)
     if k == "blvd": kw.update(mh=1.2)
     if k in ("alley", "ramp"): kw.update(sw=(0, 0), mark=k == "ramp")

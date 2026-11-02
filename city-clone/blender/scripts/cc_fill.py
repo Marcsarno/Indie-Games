@@ -155,6 +155,9 @@ def SITE(b_, lot):
     def col(w, d, x=cx, y=cy): ww, dd = world_dims(face, w, d); cbox(x, y, ww, dd); APRONS.append((x, y, ww, dd, face))
     def front_pt(dist):                                                                      # a point `dist` in front of the rect's front edge, centred
         return {"s": (cx, y0 - dist), "n": (cx, y1 + dist), "w": (x0 - dist, cy), "e": (x1 + dist, cy)}[face]
+    if lab.startswith("GASSTN:"):                                                              # round 44: full-size gas station (canopy + 6 pumps + store), facing the arterial
+        key = lab.split(":")[1]; place(gas(f"gas_{key}_{int(cx)}", key), cx, cy, "s", 1.3, 1.3, 1.15); cbox(cx, cy + 9.8, 17, 8); [ccir(cx + x * 1.3, cy + y * 1.3, .3) for (x, y) in ((-8, -7), (8, -7), (-8, 0), (8, 0))]
+        place(pylon(f"gas_pylon_{int(cx)}", key, 7.0), x1 - 4, y0 + 2, "s"); return
     if lab.startswith("P:"):                                                                   # round 44: generic real-business building filling its rectangle, P:<sign key>:<face>:<height>
         _, key, f_, h_ = lab.split(":"); ww, dd = world_dims(f_, x1 - x0, y1 - y0)
         place(bldg(f"pb_{key}", ww, dd, float(h_), wall=RF.choice(["#efe6d2", "#e8d7b8", "#d9c9a8", "#f2efe8"]), key=key, accent=acc(key), roof="flat", sign_h=min(2.6, float(h_) * .28), glass_front=ww > 30), cx, cy, f_)
@@ -484,16 +487,17 @@ def lights():
     """Cobra-head street lights along the arterials every ~48 m, both sides (merged per tile)."""
     pole = flat("#7d8288"); head = M("lamp_head", "#fff1c8", emit=.6)
     for r in net:
-        if r.rank < 9 or r.closed: continue
+        small = r.name.startswith("Promenade") or r.name in ("NW 15th St", "Aruba Way", "Cougar Way")            # round 44: lamps on the internal streets too
+        if (r.rank < 9 and not small) or r.closed: continue
         s = 20.0
         while s < r.L - 20:
-            for side in (1, -1):
+            for side in ((1, -1) if not small else ((1,) if int(s / 36) % 2 else (-1,))):
                 x, y = r.off(s, side * (r.hw + rd.CURB + .5))
                 if near_road(x, y, -1.0) is not None and near_road(x, y, -1.0) is not r: continue
                 if in_drive(x, y, 1.5): continue                                                  # round 44: never on a driveway
                 ax, ay = r.off(s, side * (r.hw + rd.CURB - 2.2)); k = FIX._k([(x, y)]); B_ = FIX.b.setdefault(k, Builder(f"fixtures_{k[0]}_{k[1]}"))
                 B_.box(pole, x - .12, x + .12, y - .12, y + .12, 0, 8.6); seg_box(FIX, pole, (x, y), (ax, ay), .14, 8.4, 8.6); B_.box(head, ax - .35, ax + .35, ay - .35, ay + .35, 8.2, 8.45)
-            s += 48.0
+            s += 48.0 if not small else 36.0
 def parks():
     cm = CV.civic_mats(); Bp = Builder("parks_a"); Bq = Builder("parks_b"); Br = Builder("parks_c")
     nop = lambda *a, **k: None
@@ -550,7 +554,7 @@ def wynmoor():
     for (x, y, rr) in ((330, 330, 14), (610, 395, 16), (470, 300, 12), (560, 318, 10)): g.poly(flat("#9fd36b"), [(x + rr * math.cos(2 * math.pi * i / 16), y + rr * .7 * math.sin(2 * math.pi * i / 16), .06) for i in range(16)])
     for (x, y, rr) in ((350, 345, 6), (590, 380, 7), (500, 292, 5)): g.poly(flat("#e8d9a8"), [(x + rr * math.cos(2 * math.pi * i / 12), y + rr * .6 * math.sin(2 * math.pi * i / 12), .07) for i in range(12)])
     STATIC.append(g.build(vc=True))
-    o = bldg("wyn_club", 40, 22, 7.0, wall="#f2ead6", key="wynmoor", accent="#2f4f2f", roof="hip", roof_hex="#bcb6aa", sign_h=1.8); place(o, 300, 420, "s"); cbox(300, 420, 40, 22)
+    o = bldg("wyn_club", 40, 22, 7.0, wall="#f2ead6", key="wynmoor", accent="#2f4f2f", roof="hip", roof_hex="#bcb6aa", sign_h=1.8); place(o, 300, 446, "s"); cbox(300, 446, 40, 22)
     gt = LP["gate"]; o = DK.gate("wyn_gate", 14); place(o, gt[0] + 8, gt[1], "e"); place(pylon("wyn_sign", "wynmoor", 3.2, 6.0), gt[0] + 6, gt[1] + 16, "e")
     for yy in range(262, 462, 20): WYN.append((45, yy)); WYN.append((780, yy))
     for xx in range(45, 780, 20): WYN.append((xx, 470)); WYN.append((xx, 254))

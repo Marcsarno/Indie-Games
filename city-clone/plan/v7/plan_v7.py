@@ -33,7 +33,7 @@ ROADS = [  # name, polyline, width m, kind
     ("Wiles Rd", [(XW, Y["wiles"]), (XE, Y["wiles"])], 18, "art"), ("Winston Park Blvd", WINSTON, 18, "art"), ("Sawgrass Expressway", SAW, 28, "hwy"),
     ("Johnson Rd", [(X441, Y["johnson"]), (XLYONS, Y["johnson"])], 12, "col"), ("Hillsboro Blvd", [(XW, Y["hillsboro"]), (XE, Y["hillsboro"])], 24, "art"),
     ("", [(XW + 15, 0), (XW + 15, Y["hillsboro"])], 8, "loc"), ("", [(XE - 15, YS + 30), (XE - 15, Y["hillsboro"])], 8, "loc"),           # back lanes behind the shop strips
-    ("", [(-200, 1440), (-100, 1400), (-20, 1350)], 9, "ramp"), ("", [(20, 1545), (100, 1575), (225, 1545)], 9, "ramp"),                  # Sawgrass ramps at Lyons
+    ("", [(-200, 1479), (-110, 1470), (0, 1458)], 9, "ramp"), ("", [(20, 1545), (100, 1575), (225, 1545)], 9, "ramp"),                  # Sawgrass ramps at Lyons
 ]
 HOUSES = []; CULS = []; RINGS = [(-712, 912, 46, 20)]; LAKES = []; RBTS = []
 def st(pts, w=9, kind="loc"): ROADS.append(("", pts, w, kind))
@@ -126,7 +126,9 @@ ZONES = [("THE HAMMOCKS", R_(-790, 160, -35, 465), "#6fa84e", "#173a0a"), ("SHOP
 LOTS = [] + [  # (polygon, buildings (x0, y0, x1, y1, colour, label), aisle step, direction)
     (R_(XW + 25, 520, X441 - 20, 790), [(XW + 28, 570, XW + 118, 735, "#2f64ad", "WALMART")], 10, "v"),
 ] + [  # round 39 (M2): six real-size dealerships on Sample instead of one 575 x 210 m lot: display lot + showroom (45 x 28 m) each, palm strips between
-    (R_(-608 + i * 95, 835, -520 + i * 95, 965), [(-589 + i * 95, 930, -539 + i * 95, 958, c, lab)], 6, "h") for i, (lab, c) in enumerate((("FORD", "#e9ecef"), ("TOYOTA", "#e9ecef"), ("HONDA", "#e9ecef"), ("KIA", "#e9ecef"), ("CHEVROLET", "#e9ecef"), ("NISSAN", "#e9ecef")))
+    (R_(-608 + i * 95, 835, -520 + i * 95, 965), [(-589 + i * 95, 930, -539 + i * 95, 958, c, lab)], 6, "h") for i, (lab, c) in enumerate((("FORD", "#e9ecef"), ("TOYOTA", "#e9ecef"), ("HONDA", "#e9ecef"), ("KIA", "#e9ecef"), ("CHEVROLET", "#e9ecef")))
+] + [  # round 44 (user): the dealer closest to Lyons became a gas station
+    (R_(-120, 818, -30, 885), [(-110, 828, -40, 878, "#c8102e", "GASSTN:wawa")], 6, "h"),
 ] + [  # body shops + service lots behind the dealers, on a service road off Lyons
     (R_(-608 + i * 190, 995, -425 + i * 190, 1045), [(-600 + i * 190, 1008, -555 + i * 190, 1040, "#b9b2a4", "BODY SHOP"), (-500 + i * 190, 1008, -455 + i * 190, 1040, "#b9b2a4", "SERVICE")], 6, "h") for i in range(3)
 ] + [
@@ -140,7 +142,7 @@ LOTS = [] + [  # (polygon, buildings (x0, y0, x1, y1, colour, label), aisle step
     (R_(-323, 1092, -182, 1185), [(-321, 1094, -262, 1150, "#c56a4a", "CINEMA"), (-321, 1156, -262, 1183, "#7a1f1f", "P:kobe:e:7"), (-198, 1094, -184, 1183, "#d6a24a", "SHOPS_E")], 10, "v"),                 # SW: Silverspot + Kobe, lot
     (R_(-783, 1092, -337, 1318), [(-660, 1170, -540, 1275, "#7d8086", "GARAGE"), (-781, 1100, -690, 1300, "#d9d2c4", "P:promenade:e:10"),
                                  (-352, 1100, -339, 1224, "#d6a24a", "SHOPS_E"), (-352, 1266, -339, 1310, "#d6a24a", "SHOPS_E"), (-520, 1278, -370, 1314, "#d9d2c4", "P:tjmaxx:s:8"), (-530, 1094, -380, 1128, "#d9d2c4", "P:marshalls:n:8")], 10, "v"),             # west: garage (C2 jump) + anchor, lot
-    (R_(-790, 1345, -35, 1395), [(-780, 1355, -600, 1390, "#d6a24a", ""), (-560, 1355, -380, 1390, "#c56a4a", "")], 10, "v"),
+    (R_(-560, 1376, -270, 1418), [(-556, 1400, -390, 1416, "#d6a24a", ""), (-380, 1400, -276, 1416, "#c56a4a", "")], 10, "h"),      # round 44: was sitting on the Winston curve
     (R_(-260, 1340, -35, 1430), [(-240, 1380, -55, 1425, "#2e8b3e", "PUBLIX")], 10, "v"),
     (R_(18, 728, 76, 785), [(43, 743, 57, 765, "#d22d24", "McD")], 8, "h"),                 # round 44 sample: real-size McDonald's on a tight lot (was 135 x 105 m)
     (R_(-180, 530, -35, 785), [(-170, 650, -50, 770, "#2f6fb3", "CITY HALL"), (-170, 545, -50, 625, "#1d3f8a", "POLICE")], 9, "h"),
