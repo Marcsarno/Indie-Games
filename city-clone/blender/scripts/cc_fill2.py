@@ -53,18 +53,18 @@ def street_furniture():
                 c = r.off(s, side * (r.hw + rd.CURB + rd.SWK - .9)); nrm = ((c[0] - x), (c[1] - y)); nl = math.hypot(*nrm) or 1; nrm = (nrm[0] / nl, nrm[1] / nl)
                 clear = (near_road(c[0], c[1], -1.0) in (None, r)) and not any(f[0] - 1 < c[0] < f[2] + 1 and f[1] - 1 < c[1] < f[3] + 1 for f in FOOT[:0])
                 other = near_road(*r.off(s, side * (r.hw + 14)), 2.0)
-                if clear and other in (None, r) and not on_cut(c[0], c[1], 6): bus_stop(c, u, nrm); nb += 1
+                if clear and other in (None, r) and not on_cut(c[0], c[1], 6) and not in_drive(c[0], c[1], 4): bus_stop(c, u, nrm); nb += 1
                 s += 360.0
             s = hyd
             while s < r.L - 10:                                                                     # hydrants at the curb, speed signs, utility boxes behind the walk
                 h_ = r.off(s, side * (r.hw + rd.CURB + .5))
-                if near_road(h_[0], h_[1], -.5) in (None, r): HYDRANTS.append((h_[0], h_[1]))           # round 42: drawn + broken in the page (hydrant.js)
+                if near_road(h_[0], h_[1], -.5) in (None, r) and not in_drive(h_[0], h_[1], 1): HYDRANTS.append((h_[0], h_[1]))           # round 42: drawn + broken in the page (hydrant.js)
                 if int(s / 95) % 3 == 1:
                     g = r.off(s + 12, side * (r.hw + rd.CURB + rd.SWK + .9))
-                    if near_road(g[0], g[1], .5) is None: tbox(FUR, GRN, g[0] - .5, g[0] + .5, g[1] - .35, g[1] + .35, 0, 1.2)
+                    if near_road(g[0], g[1], .5) is None and not in_drive(g[0], g[1], 1): tbox(FUR, GRN, g[0] - .5, g[0] + .5, g[1] - .35, g[1] + .35, 0, 1.2)
                 if int(s / 95) % 4 == 2:
                     p_ = r.off(s + 30, side * (r.hw + rd.CURB + .7)); x_, y_, tx, ty = r.at(s + 30); tl = math.hypot(tx, ty) or 1
-                    if near_road(p_[0], p_[1], -.5) in (None, r): tbox(FUR, POLE, p_[0] - .05, p_[0] + .05, p_[1] - .05, p_[1] + .05, 0, 2.9); obox(FUR, WHT, p_, (tx / tl, ty / tl), .1, .62, 2.0, 2.85)
+                    if near_road(p_[0], p_[1], -.5) in (None, r) and not in_drive(p_[0], p_[1], 1): tbox(FUR, POLE, p_[0] - .05, p_[0] + .05, p_[1] - .05, p_[1] + .05, 0, 2.9); obox(FUR, WHT, p_, (tx / tl, ty / tl), .1, .62, 2.0, 2.85)
                 s += 95.0
     print("bus stops", nb)
 
@@ -144,7 +144,7 @@ def local_hydrants():
         s = 40.0
         while s < r.L - 10:
             h_ = r.off(s, (1 if int(s / 110) % 2 else -1) * (r.hw + rd.CURB + .5))
-            if near_road(h_[0], h_[1], -.5) in (None, r) and not hnear(h_[0], h_[1], 3): HYDRANTS.append((h_[0], h_[1]))
+            if near_road(h_[0], h_[1], -.5) in (None, r) and not hnear(h_[0], h_[1], 3) and not in_drive(h_[0], h_[1], 1): HYDRANTS.append((h_[0], h_[1]))
             s += 110.0
 def believability():
     local_hydrants(); driveways(); tick_("driveways"); street_furniture(); power_line(); verge_trees(); tree_clusters(); tick_("furniture")

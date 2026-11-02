@@ -133,6 +133,7 @@ for lot in LP["lots"]:
     xs = [p[0] for p in lot["poly"]]; ys_ = [p[1] for p in lot["poly"]]; x0, x1, y0, y1 = min(xs), max(xs), min(ys_), max(ys_)
     RB.box(m["asphalt"], x0, x1, y0, y1, 0, .028); FOOT.append((x0, y0, x1, y1)); MAP.append([round(x0, 1), round(y0, 1), round(x1, 1), round(y1, 1), "#5a5c60"])
     blds = lot["buildings"]; vert = lot["dir"] == "v"
+    if lot["dir"] != "n" and not (blds and blds[0]["label"] == "McD"): lot_drives(x0, x1, y0, y1, blds, "/".join(b_["label"] for b_ in blds) or "lot")   # round 44: real driveways
     if blds and blds[0]["label"] == "McD": mcd_site((x0, x1, y0, y1)); continue                # round 44: tight lot + drive-thru loop (cc_fill3)
     if blds and blds[0]["label"] in BRAND_DEALERS:                                            # dealer display lot: rows of new cars instead of stalls
         dealer_cars((x0, x1, y0, y1), blds)
@@ -147,7 +148,7 @@ for lot in LP["lots"]:
         for s in range(int(b0 + 2), int(b1 - 3), 3):
             ax = (s, a) if vert else (a, s)                                                    # stall corner
             cxs, cys = (s + 1.5, a + 2.6) if vert else (a + 2.6, s + 1.5)
-            if in_bld(cxs, cys, blds, 2.0): continue
+            if in_bld(cxs, cys, blds, 2.0) or in_drive(cxs, cys, 1.0): continue
             if vert: RB.box(m["white"], s - .05, s + .05, a, a + 5.2, .028, .034)
             else: RB.box(m["white"], a, a + 5.2, s - .05, s + .05, .028, .034)
             if math.hypot(cxs - PUBLIX[0], cys - PUBLIX[1]) > 25 and R_.random() < .05 and ncar < 320: addcar(R_.choice(PASSENGER), cxs, cys, (0 if row % 2 else 180) + (0 if vert else 90))

@@ -190,6 +190,7 @@ def hs_athletics():
     for x in range(272, 400, 6): c.box(flat("#d0c8b8"), x - .15, x + .15, 196.5, 196.8, 0, 3.6)
     c.box(flat("#e9e3d6"), 268, 402, 196.3, 200, 3.6, 4.0); c.box(flat("#e9e3d6"), 268, 402, 68, 71.5, 3.6, 4.0)
     RB.box(ASPH, 410, 434, 72, 196, 0, .028); FOOT.append((408, 70, 436, 198))                                      # bus loop along Cougar Way
+    for y in (66, 200): RB.box(ASPH, 410, 437, y - 6, y + 6, 0, .175); RB.box(ASPH, 410, 434, min(y, 72) if y < 72 else 196, max(y + 6, 72) if y < 72 else y + 6, 0, .028); DRV_RECTS.append((405, y - 6, 437, y + 6))   # in + out onto Cougar Way
     for i in range(9):
         y = 82 + i * 13
         RB.box(m["white"], 410, 433, y - 6.5 - .05, y - 6.5 + .05, .028, .034)
@@ -569,6 +570,49 @@ def mcd_site(lot):
     w.box(flat("#5d9a3a"), 18, 30, 695, 722, 0, .14); w.box(HED, 18.2, 19.6, 696, 721, 0, 1.0); prop("palm_medium", 22, 702); prop("palm_medium", 22, 716)
     place(pylon("dunkin_pylon", "dunkin", 6.5), 22, 726, "w")
     put(w, 0, 0, 0)
+
+DRV_RECTS = []                                                                                  # round 44: (x0, y0, x1, y1) of every driveway, incl. 8 m into its lot
+def in_drive(x, y, pad=0.0): return any(r[0] - pad < x < r[2] + pad and r[1] - pad < y < r[3] + pad for r in DRV_RECTS)
+def lot_drives(x0, x1, y0, y1, blds, label=""):
+    """Round 44 (user: "Do parking lots have roads that connect and drive into them? If not they are useless"). Find where each lot side faces a street within 40 m,
+    pick the best spot (short, not at a junction, not into a building, side streets preferred) and lay an 8 m driveway: asphalt across the grass, an apron over the
+    sidewalk + curb, the aisle kept clear inside the lot. Big lots get two. The driveways join CUTSEG so palms, hedges, walls, lamps and trees keep off them."""
+    sides = [((0, -1), lambda t: (t, y0), x0, x1), ((0, 1), lambda t: (t, y1), x0, x1), ((-1, 0), lambda t: (x0, t), y0, y1), ((1, 0), lambda t: (x1, t), y0, y1)]
+    cands = []
+    for (nx, ny), edge, t0, t1 in sides:
+        if t1 - t0 < 20: continue
+        t = t0 + 9.0
+        while t <= t1 - 9.0:
+            px, py = edge(t); hit = None
+            for d in range(1, 41):
+                qx, qy = px + nx * d, py + ny * d; r = near_road(qx, qy, -.3)
+                if r is not None: hit = (d, r, qx, qy); break
+                if in_water(qx, qy, 1): break
+            t += 6.0
+            if not hit: continue
+            d, r, qx, qy = hit
+            if r.rank >= 13 or r.name.startswith(("ramp", "rbt")): continue
+            if os.environ.get("DRVDBG") and 250 < x0 < 300 and ny == 1: print("   cand", round(px), round(py), d, r.name, [o.name for o in net if o is not r and o.bb[0] - 40 < qx < o.bb[2] + 40 and o.bb[1] - 40 < qy < o.bb[3] + 40 and o.nearest(qx, qy)[0] < o.hw + 16])
+            if sum(1 for o in net if o is not r and o.bb[0] - 40 < qx < o.bb[2] + 40 and o.bb[1] - 40 < qy < o.bb[3] + 40 and o.nearest(qx, qy)[0] < o.hw + 16) > 0: continue   # too close to a junction
+            ix, iy = px - nx * 8, py - ny * 8
+            if any(in_bld(px - nx * k + ny * w, py - ny * k + nx * w, blds, 1.0) for k in (1, 4, 8) for w in (-4, 0, 4)): continue
+            score = d + .08 * abs(t - (t0 + t1) / 2) + (6 if r.rank >= 9 else 0)
+            cands.append((score, t - 6.0, (nx, ny), (px, py), d, (qx, qy), r))
+    if not cands: print("  lot with NO driveway:", label, (x0, y0, x1, y1)); return 0
+    cands.sort(key=lambda c: c[0]); pick = [cands[0]]
+    if max(x1 - x0, y1 - y0) > 90:
+        for c in cands[1:]:
+            if all(c[2] != p[2] or abs(c[1] - p[1]) > 45 for p in pick): pick.append(c); break
+    if os.environ.get("DRVDBG") and 250 < x0 < 300: print("  DRV", label, (x0, y0, x1, y1), [(c[2], round(c[0], 1), c[6].name) for c in cands[:8]], "picked", [(p[2], p[6].name) for p in pick])
+    for (_, _, (nx, ny), (px, py), d, (qx, qy), r) in pick:
+        hw = 4.0; ex, ey = px + nx * (d - .2), py + ny * (d - .2)                                    # road edge
+        sx, sy = px + nx * max(0, d - rd.CURB - rd.SWK - .6), py + ny * max(0, d - rd.CURB - rd.SWK - .6)   # sidewalk back edge
+        if nx: RB.box(m["asphalt"], min(px, sx), max(px, sx), py - hw, py + hw, 0, .03); RB.box(m["asphalt"], min(sx, ex), max(sx, ex), py - hw, py + hw, 0, .175)
+        else: RB.box(m["asphalt"], px - hw, px + hw, min(py, sy), max(py, sy), 0, .03); RB.box(m["asphalt"], px - hw, px + hw, min(sy, ey), max(sy, ey), 0, .175)
+        ix, iy = px - nx * 8, py - ny * 8
+        DRV_RECTS.append((min(ix, ex) - (hw if not nx else 0), min(iy, ey) - (hw if nx else 0), max(ix, ex) + (hw if not nx else 0), max(iy, ey) + (hw if nx else 0)))
+        for w in (-2.5, 0, 2.5): CUTSEG.append(((ix + ny * w, iy + nx * w), (qx + ny * w, qy + nx * w)))
+    return len(pick)
 
 def gap_fill():
     for fn in (hs_athletics, golf, golf_trees, construction, offices_more, butterfly_garden, skate_dress, rec_park_more, sabal_more, lake_parks, storage, townhomes, church):

@@ -270,7 +270,11 @@ def lot_island(a, b0, b1, vert, blds):
                 t += 16
         seg0 = seg1 + 8
 def lot_edge(a0, a1, b, vert, blds):
-    """Hedge-and-palm strip along a lot edge (stops at buildings)."""
+    """Hedge-and-palm strip along a lot edge (stops at buildings; round 44: split where a driveway crosses)."""
+    for r in DRV_RECTS:
+        rx0, rx1 = (r[1], r[3]) if vert else (r[0], r[2]); ry0, ry1 = (r[0], r[2]) if vert else (r[1], r[3])
+        if ry0 - 1 < b < ry1 + 1 and rx0 < a1 and rx1 > a0:
+            lot_edge(a0, rx0 - 1.5, b, vert, blds); lot_edge(rx1 + 1.5, a1, b, vert, blds); return
     x0, x1, y0, y1 = (b - .8, b + .8, a0, a1) if vert else (a0, a1, b - .8, b + .8)
     if a1 - a0 < 10: return
     BB.box(flat("#cfc8b8"), x0 - .15, x1 + .15, y0 - .15, y1 + .15, 0, .12); BB.box(flat("#5f9a3c"), x0, x1, y0, y1, 0, .16)
@@ -486,6 +490,7 @@ def lights():
             for side in (1, -1):
                 x, y = r.off(s, side * (r.hw + rd.CURB + .5))
                 if near_road(x, y, -1.0) is not None and near_road(x, y, -1.0) is not r: continue
+                if in_drive(x, y, 1.5): continue                                                  # round 44: never on a driveway
                 ax, ay = r.off(s, side * (r.hw + rd.CURB - 2.2)); k = FIX._k([(x, y)]); B_ = FIX.b.setdefault(k, Builder(f"fixtures_{k[0]}_{k[1]}"))
                 B_.box(pole, x - .12, x + .12, y - .12, y + .12, 0, 8.6); seg_box(FIX, pole, (x, y), (ax, ay), .14, 8.4, 8.6); B_.box(head, ax - .35, ax + .35, ay - .35, ay + .35, 8.2, 8.45)
             s += 48.0
