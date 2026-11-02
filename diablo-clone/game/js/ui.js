@@ -157,6 +157,8 @@ function drawHud() {
     if (locked) textC(`LV${sk.lvl}`, c[0], c[1] - 2, 25);
   });
   if (hero.buff > 0) textC(`WAR CRY ${Math.ceil(hero.buff)}`, W / 2, H - 46, 51);
+  if (hero.frenzy > 0) textC(`FRENZY ${Math.ceil(hero.frenzy)}`, W / 2, H - 54, 23);
+  if (hero.stoneskin > 0) textC(`STONESKIN ${Math.ceil(hero.stoneskin)}`, W / 2, H - 62, 39);
   // the boss's health bar, once she is awake
   if (bossAlive() && boss.state !== 'sleep') {
     const bw = 150, bx = Math.round(W / 2 - bw / 2), by = 24, f = boss.hp / boss.maxHp;

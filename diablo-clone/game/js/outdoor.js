@@ -206,6 +206,13 @@ function genForest(R, A) {
     for (let b = 0; b < 2; b++) LV.spawns.push({ id: 'brigand', fi: c.x - 1 + b * 2, fj: c.y + 1.2 });
     c.ruin = true;
   }
+  // shrines: a stone pedestal under a floating crystal; touching one grants a blessing once
+  const shrineRooms = LV.rooms.map((r, n) => n).filter(n => n && n !== far && !camps.includes(n) && !C[n].ruin).sort(() => R() - 0.5).slice(0, 3);
+  shrineRooms.forEach((n, k) => {
+    const c = C[n], i = Math.floor(c.x - 1), j = Math.floor(c.y + 1);
+    if (solidAt(i, j)) return;
+    LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'shrine', i, j, type: ['frenzy', 'stone', 'fortune'][k % 3] });
+  });
   // a chest or two at the edge of a clearing
   for (let c = 0; c < 2; c++) {
     const r = LV.rooms[R.int(1, LV.rooms.length - 1)], a = R() * 6.28, i = Math.floor(r.clr.x + Math.cos(a) * (r.clr.r - 0.3)), j = Math.floor(r.clr.y + Math.sin(a) * (r.clr.r - 0.3));
@@ -523,6 +530,11 @@ const OUT = {
     for (const y of [-11, 0, 11]) r.cyl([0, y, 0], [0, y, 11], 1, M.WOOD);
     for (const z of [5, 9.5]) r.cyl([0, -11.5, z], [0, 11.5, z], 0.8, M.PLANK);
   }, [40, 34, 20, 26], along ? Math.PI / 2 : 0),
+  pedestal: () => propSprite('pedestal', r => {
+    r.box([0, 0, 1.4], [6, 6, 1.4], M.RUIN);
+    r.cyl([0, 0, 2.8], [0, 0, 11], 3.4, M.RUIN, { mf: p => Math.abs(p[2] - 7) < 0.6 ? M.GOLD : 0 });
+    r.cyl([0, 0, 11], [0, 0, 12.4], 4.6, M.RUIN);
+  }, [36, 36, 18, 26]),
   palisade: (yaw) => propSprite('palisade' + Math.round(yaw * 8), r => {
     // sharpened logs side by side, bound by a rope
     for (let k = -2; k <= 2; k++) {
@@ -672,6 +684,10 @@ function buildOutdoor(back) {
     } else if (d.kind === 'fence') {
       const [x, y] = iso(d.i + 0.5, d.j + 0.5);
       props.push({ depth: d.i + d.j + 1, sp: OUT.fence(d.along), wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
+    } else if (d.kind === 'shrine') {
+      const [x, y] = iso(d.i + 0.5, d.j + 0.5);
+      props.push({ depth: d.i + d.j + 1, sp: OUT.pedestal(), wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
+      shadows.push([x + 3, y + 3, 10, 5]);
     } else if (d.kind === 'palisade') {
       const [x, y] = iso(d.i + 0.5, d.j + 0.5);
       props.push({ depth: d.i + d.j + 1, sp: OUT.palisade(d.a), wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
@@ -792,4 +808,41 @@ function drawExitLabel() {
   const [x, y] = iso(s.i + 0.5, s.j + 0.5), sx = Math.round(x - camX), sy = Math.round(y - camY) - (s.road ? 40 : 30);
   if (sx < -60 || sx > W + 60 || sy < 0 || sy > H) return;
   textC(s.road ? 'TO ' + AREA_NAMES.forest[LV.cyc % 3] : 'DUNGEON ENTRANCE', sx, sy, 51);
+}
+
+// ---------------------------------------------------------------- shrines
+const SHRINES = {
+  frenzy: { name: 'SHRINE OF FRENZY', msg: 'ATTACK SPEED UP', cols: [21, 22, 23] },
+  stone: { name: 'SHRINE OF STONE', msg: 'DAMAGE TAKEN HALVED', cols: [38, 39, 40] },
+  fortune: { name: 'SHRINE OF FORTUNE', msg: 'A SHOWER OF GOLD', cols: [49, 50, 51] },
+};
+function updateShrines() {
+  if (!LV.outdoor) return;
+  for (const d of LV.decor) {
+    if (d.kind !== 'shrine' || d.used || Math.hypot(d.i + 0.5 - hero.fi, d.j + 0.5 - hero.fj) > 1.35) continue;
+    d.used = true; const S = SHRINES[d.type];
+    say(S.name, S.cols[2], 2.5); say(S.msg, 26, 2.5); sfx('levelUp');
+    const [x, y] = iso(d.i + 0.5, d.j + 0.5); burst(4, x, y, 18, 30, 60, S.cols[2]);
+    if (d.type === 'frenzy') hero.frenzy = 20;
+    else if (d.type === 'stone') hero.stoneskin = 20;
+    else for (let k = 0; k < 9; k++) { const a = k / 9 * 6.283, p = [d.i + 0.5 + Math.cos(a) * 1.3, d.j + 0.5 + Math.sin(a) * 1.3]; if (!blocked(p[0], p[1])) groundItems.push(k % 3 ? { gold: Math.round((5 + Math.random() * 8) * LV.diff), fi: p[0], fj: p[1], t: 0 } : { gem: GEMS[k % 4], fi: p[0], fj: p[1], t: 0 }); }
+  }
+}
+// the crystal floats and turns above an unused shrine (dark once used)
+function shrineCrystals(list) {
+  if (!LV.outdoor) return;
+  for (const d of LV.decor) {
+    if (d.kind !== 'shrine') continue;
+    const [x, y] = iso(d.i + 0.5, d.j + 0.5), tile = tIdx(d.i, d.j), cols = d.used ? [3, 66, 67] : SHRINES[d.type].cols;
+    list.push({ depth: d.i + d.j + 1.05, draw: () => {
+      const sx = Math.round(x - camX), sy = Math.round(y - camY - 22 + (d.used ? 0 : Math.sin(G.t * 2.5 + d.i) * 2)), w = Math.floor(G.t * 4) % 2;
+      for (let b = -5; b <= 5; b++) for (let a = -3; a <= 3; a++) {
+        if (Math.abs(a) * 5 / 3 + Math.abs(b) > 5) continue;
+        const xx = sx + a, yy = sy + b; if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+        const edge = Math.abs(a) * 5 / 3 + Math.abs(b) > 4, c = edge ? BLK : (a < 0 && b < 0 ? cols[2] : a > 0 ? cols[0] : cols[1]);
+        scr[yy * W + xx] = (d.used || edge ? c : c | EMIS); zbuf[yy * W + xx] = 30; tbuf[yy * W + xx] = tile; cid[yy * W + xx] = 0;
+      }
+      if (!d.used && w) { const xx = sx - 1, yy = sy - 3; if (xx >= 0 && yy >= 0 && xx < W && yy < H) scr[yy * W + xx] = 27 | EMIS; }
+    } });
+  }
 }

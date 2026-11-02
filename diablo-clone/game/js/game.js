@@ -363,7 +363,8 @@ function update(dt) {
   flowT -= dt; if (flowT <= 0) { flowT = 0.4; computeFlow(); }
   for (const e of enemies) updateEnemy(e, dt);
   if (boss && !boss.introduced && boss.state !== 'sleep' && alive(boss)) { boss.introduced = true; G.bossIntro = 2.8; sfx('cry'); }   // the title card
-  updateNpcs(dt);
+  updateNpcs(dt); updateShrines();
+  if (hero.frenzy > 0) hero.frenzy -= dt; if (hero.stoneskin > 0) hero.stoneskin -= dt;
   separate();
   updateProjectiles(dt);
   updateParticles(dt);
@@ -426,7 +427,7 @@ function updateHero(dt) {
   if (hero.cast >= 0) { hero.cast -= dt; hero.clip = 'channel'; if (hero.cast < 0) { hero.cast = -1; hero.clip = 'idle'; } }
   if (hero.atk >= 0) {
     hero.clip = ATTACK_CLIPS[hero.combo] || 'attack';
-    hero.atk += dt * 1000 * (1 + (STAT.atkSpeed || 0) / 100);
+    hero.atk += dt * 1000 * (1 + ((STAT.atkSpeed || 0) + (hero.frenzy > 0 ? 50 : 0)) / 100);
     const sw = weaponSwing(hero.look, hero.combo), ki = swingKey(sw, hero.atk);
     if (ki >= 0 && sw[ki].mv) lungeHero(sw[ki].mv * dt * 1000 / sw[ki].ms);
     if (ki >= 0 && sw[ki].hit && !hero.hitDone) {
@@ -544,7 +545,7 @@ function updateEnemy(e, dt) {
 function hurtHero(dmg, src) {
   if (hero.dead) return;
   if (Math.random() * 100 < STAT.block) { floater('BLOCK', hero.fi, hero.fj, 44, 31); sfx('block'); return; }
-  dmg = Math.max(1, Math.round(dmg * 40 / (40 + STAT.armor * (hero.buff > 0 ? 1.5 : 1) * 2.5)));
+  dmg = Math.max(1, Math.round(dmg * 40 / (40 + STAT.armor * (hero.buff > 0 ? 1.5 : 1) * 2.5) * (hero.stoneskin > 0 ? 0.5 : 1)));
   hero.hp -= dmg; hero.flash = 0.06; hero.hurtT = 0.15; sfx('hurt');
   floater(String(dmg), hero.fi, hero.fj, 46, 23);
   const [x, y] = screenOf(hero); burst(1, x, y, 24, 6, 40, 22);
@@ -715,6 +716,7 @@ function render() {
     } });
   });
   for (const p of projectiles) list.push({ depth: p.fi + p.fj, draw: () => drawProjectile(p) });
+  shrineCrystals(list);
   // flames sort with everything else, so a character in front of a brazier hides its fire
   for (const f of fires) if (LV.vis[f.tile] > 0.1 || LV.seen[f.tile]) list.push({ depth: (f.tile % MW) + Math.floor(f.tile / MW) + (f.depthAdd ?? 1.2), draw: () => flame(f.wx, f.wy, f.h, f.w, t, f.seed) });
   heroRing(kx, ky + 1);
