@@ -198,6 +198,7 @@ import { createDave } from './dave.js';
 import { createMusic } from './music.js';
 import { createLauncher } from './rocket.js';
 import { stepLightbars } from './lightbar.js';
+import { initHydrants } from './hydrant.js';
 import { createTrack, PAD } from './track.js';
 
 const $ = id => document.getElementById(id);
@@ -344,6 +345,7 @@ for (const im of instances) im.material = Array.isArray(im.material) ? im.materi
 city.scene.updateMatrixWorld(true); city.scene.traverse(o => { o.matrixAutoUpdate = false; o.matrixWorldAutoUpdate = false; });
 for (const im of instances) { im.updateMatrix(); im.updateMatrixWorld(true); im.matrixAutoUpdate = false; im.matrixWorldAutoUpdate = false; }
 window.__perf = STATS;
+const HYD = initHydrants(THREE, scene, world.hydrants || [], b2t);          // round 42: knock-over fire hydrants with a water jet (hydrant.js)
 
 /* ---------- async helpers: scripted sequences await frames, so they pause and resume with the loop ---------- */
 let frameWaiters = [];
@@ -1584,6 +1586,7 @@ function update(dt, draw = true) {
   upd.speedZoom += ((playView && hmode === 'driving' ? Math.min(speed, 28) / 28 * TUNE.camZoom : 0) - upd.speedZoom) * (1 - Math.exp(-2 * dt));
   { const ext = track.active ? 1e5 : world.extent; rig.tx = clamp(rig.tx, -ext, ext); rig.tz = clamp(rig.tz, -ext, ext); }
   if (rig.mode === 'drive') cullStep(dt); else for (const c of cullables) c.o.visible = true;
+  HYD.step(dt, Object.values(vehs));
   if (!SW.on && !CINE.shots && !CAMHOLD.on) { let ty = 0; const dv = hmode === 'driving' && drive;           // camera yaw: turns with the car while driving (eases, holds when nearly stopped, reversing or handbraking), back to north-up on foot
     if (playView && rig.mode === 'drive' && dv && TUNE.camYaw) {
       const th = drive.th, vfw = drive.vx * -Math.sin(th) + drive.vz * -Math.cos(th); ty = rig.yaw;

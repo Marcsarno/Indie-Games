@@ -236,7 +236,7 @@ LMK.append(["Trash Mountain", round(tcx, 1), round(tcy, 1), "#7a5a2a", "^"]); LM
 WORLD = {"name": "cc", "title": "Coconut Creek", "glb": "scene.glb", "mapbg": "#4d7a34", "extent": 2000, "sky": "#8fc3f5", "fog": ["#c4dcf2", 120, 330], "hemi": ["#cfe4ff", "#6f8a4a", 1.55],
          "sun": {"color": "#fff0d6", "intensity": 3.7, "dir": [-0.5, -0.74, 0.45]}, "heights": [], "exposure": 1.0, "tone": "AgX", "lamps": [], "ground": "#5d9a3a", "start": start, "money": 1250,
          "traffic": [], "walk": [], "walkers": 0, "fight": None, "demo": None, "landmarks": LMK,
-         "views": {"drive": {"label": "Play", "mode": "drive", "pitch": 45, "dist": 44}, "over": {"label": "Overview", "tx": 0, "ty": 700, "pitch": 55, "dist": 1500}}, "map": MAP, "roads": ROADLINES, "layout": "plan/v7/layout.json"}
+         "views": {"drive": {"label": "Play", "mode": "drive", "pitch": 45, "dist": 44}, "over": {"label": "Overview", "tx": 0, "ty": 700, "pitch": 55, "dist": 1500}}, "map": MAP, "roads": ROADLINES, "layout": "plan/v7/layout.json", "hydrants": [[round(x, 1), round(y, 1)] for x, y in HYDRANTS]}
 OUTD = OUT
 json.dump(COL, open(os.path.join(OUTD, "colliders_cc.json"), "w")); json.dump(PROPS, open(os.path.join(OUTD, "props_cc.json"), "w")); json.dump(CARS, open(os.path.join(OUTD, "cars_cc.json"), "w")); json.dump(WORLD, open(os.path.join(OUTD, "world_cc.json"), "w"))
 print("CC colliders", len(COL), "props", len(PROPS), "cars", len(CARS), "roads", len(net))
