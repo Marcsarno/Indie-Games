@@ -21,6 +21,12 @@ Tune panel for the car handling. Controls are touch (stick/pads) with keyboard f
 5. Test in headless Chromium with Playwright (software GL): load `?`/`#chinatown`, `window.__city.setManual(true)`, `tick(dt, draw=false)` for logic tests (drawing each frame is ~1 s), `step(dt)` = physics only. Scripted tests live only in the session scratchpad; rewrite from the hooks.
 6. Show the user before/after or concept-vs-ours sheets and animated GIFs captured with the stepped sim; commit and push to `main` after each round.
 
+## ROUND 45: PLAZA TEMPLATE ON THE BIG LOTS (user: "Continue")
+- New SITE labels in cc_fill.py: `STRIP:<face>:<seed>` = Florida strip plaza (BF.make_plaza) filling its rect (random shop bays from the building_fl sign set, anchor + tower), `PAD:<fastfood|bank>:<sign key>:<face>` = outparcel with drive-thru + pylon. Everything stays a plan lot, so driveways, stalls and parked cars come from the normal lot code.
+- plan_v7.py: the Pkwy strip was ONE 755 m lot running over the canal -> 4 pods (strip at the back, pads on the Pkwy, grass between; Aldi, CVS, Shell, Wendy's, Wells Fargo, Taco Bell, Pollo; gap at x -470 for Marc's M4); GAS + SHOPS -> RaceTrac + strip + Chick-fil-A + Chase; City Hall lawn shrunk + strip on Sample + TD Bank on Lyons; casino gets Popeyes + BofA on Sample and a strip on 441; Walmart gets Wendy's + Citi outparcels; Promenade west gets a strip across the big lot + a Chipotle pad. cuts_check: only C1/C2 jumps; roadcheck: only Lyons palms; both worlds load clean. glb 23.2 MB.
+- Shots: .work/r45/ba_final.jpg (top-down before/after), drive.jpg.
+- Next: Publix plaza + dealer block, then the map shrink + pop-in fix (fog vs 140 m cull), perf pass.
+
 ## ROUND 44: TIGHTER SCALE - samples from the user's satellite shots (in progress)
 - User: map too big, "everywhere you look it's a parking lot", pop-in. Agreed plan: buildings stay real size, lots shrink (plaza density = the template), big places get internal one-lane streets WITH traffic, then shrink the map (~1.5x) + match haze to the 140 m cull (cc fog 120..330 is why things pop).
 - McDonald's sample (Lyons & Sample): 22 x 15 m McD on a 58 x 57 m lot (was 135 x 105), one stall row, drive-thru loop (curbs, bollards, menu board), M2 through the lane; old lot -> Florida strip plaza (BF.make_plaza L round one shared lot) + Dunkin' pad + Chase on Sample (`mcd_site` in cc_fill3; cc_scene skips the generic lot code for label McD). User: "this is the density for sure".

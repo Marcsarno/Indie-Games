@@ -162,6 +162,21 @@ def SITE(b_, lot):
         _, key, f_, h_ = lab.split(":"); ww, dd = world_dims(f_, x1 - x0, y1 - y0)
         place(bldg(f"pb_{key}", ww, dd, float(h_), wall=RF.choice(["#efe6d2", "#e8d7b8", "#d9c9a8", "#f2efe8"]), key=key, accent=acc(key), roof="flat", sign_h=min(2.6, float(h_) * .28), glass_front=ww > 30), cx, cy, f_)
         cbox(cx, cy, x1 - x0, y1 - y0); APRONS.append((cx, cy, x1 - x0, y1 - y0, f_)); return
+    if lab.startswith("STRIP:"):                                                               # round 45: Florida strip plaza filling its rectangle (inline shops + anchor + tower), STRIP:<face>:<seed>
+        _, f_, sd = lab.split(":"); sd = int(sd); ww, dd = world_dims(f_, x1 - x0, y1 - y0); rs = random.Random(sd)
+        pool = [("restaurant_fl", 7, "#8c1c1c"), ("nails", 5, "#7a2f6a"), ("coffee", 6, "#21453a"), ("pizza", 6, "#b8321f"), ("cleaners", 6, "#2f5e8c"), ("liquor", 6, "#5a2a1a"),
+                ("seafood", 7, "#1f5f7a"), ("dumpling", 6, "#a3221b"), ("restaurant", 7, "#3f5a2a"), ("lp_shop0", 6, "#7a5a2a"), ("lp_shop1", 6, "#2a4a6a"), ("lp_shop2", 6, "#6a2a4a")]
+        shops = []; used = 4.0
+        while used < ww * (.62 if ww > 60 else .9):
+            s = rs.choice(pool); shops.append(s); used += s[1]
+        o = BF.make_plaza(f"strip_{sd}_{int(cx)}_{int(cy)}", ww, dd, rs.choice([6.6, 7.0, 7.6]), shops=tuple(shops), tower_x=(ww / 2 - 12 if ww > 60 else -ww / 2 + 8 + rs.random() * (ww - 16)), seed=sd,
+                          wall=rs.choice(["cream", "peach", "white", "sand", "stone"]))
+        place(o, cx, cy, f_); cbox(cx, cy, x1 - x0, y1 - y0); APRONS.append((cx, cy, x1 - x0, y1 - y0, f_)); return
+    if lab.startswith("PAD:"):                                                                 # round 45: outparcel pad (fast food with drive-thru / bank with drive-thru canopy) + pylon, PAD:<kind>:<key>:<face>
+        _, kind, key, f_ = lab.split(":"); o = (fastfood if kind == "fastfood" else bank)(f"pad_{key}_{int(cx)}_{int(cy)}", key); place(o, cx, cy, f_)
+        ww, dd = world_dims(f_, 17 if kind == "fastfood" else 18, 12 if kind == "fastfood" else 14); cbox(cx, cy, ww, dd); APRONS.append((cx, cy, ww, dd, f_))
+        px, py = {"s": (x1 - 2, y0 + 1.5), "n": (x0 + 2, y1 - 1.5), "e": (x1 - 1.5, y1 - 2), "w": (x0 + 1.5, y0 + 2)}[f_]; place(pylon(f"pad_pylon_{key}_{int(cx)}", key, 6.5), px, py, f_); ccir(px, py, .4)
+        return
     nm = lab.lower().replace(" ", "_").replace("'", "") or "bldg"
     if lab in BRAND_DEALERS:
         key = lab.lower(); place(showroom(f"dealer_{key}", key), cx, cy, face); col(48, 28)

@@ -124,7 +124,8 @@ ZONES = [("THE HAMMOCKS", R_(-790, 160, -35, 465), "#6fa84e", "#173a0a"), ("SHOP
          ("TRASH MOUNTAIN", R_(80, 835, 790, 1040), "#8a7a52", "#2e2410"), ("", R_(35, -505, 790, -35), "#7cc05a", ""), ("construction site", R_(470, 1650, 790, 1790), "#b9a37a", "#4a3a1a"),
          ("offices", R_(35, 1345, 790, 1490), "#7cae5e", "#2a3a1a")]
 LOTS = [] + [  # (polygon, buildings (x0, y0, x1, y1, colour, label), aisle step, direction)
-    (R_(XW + 25, 520, X441 - 20, 790), [(XW + 28, 570, XW + 118, 735, "#2f64ad", "WALMART")], 10, "v"),
+    (R_(XW + 25, 520, X441 - 20, 790), [(XW + 28, 570, XW + 118, 735, "#2f64ad", "WALMART"),
+                                        (XW + 30, 523, XW + 62, 548, "#d6a24a", "PAD:fastfood:wendys:s"), (XW + 76, 523, XW + 106, 548, "#d6a24a", "PAD:bank:citi:s")], 10, "v"),   # round 45: Walmart outparcels
 ] + [  # round 39 (M2): six real-size dealerships on Sample instead of one 575 x 210 m lot: display lot + showroom (45 x 28 m) each, palm strips between
     (R_(-608 + i * 95, 835, -520 + i * 95, 965), [(-589 + i * 95, 930, -539 + i * 95, 958, c, lab)], 6, "h") for i, (lab, c) in enumerate((("FORD", "#e9ecef"), ("TOYOTA", "#e9ecef"), ("HONDA", "#e9ecef"), ("KIA", "#e9ecef"), ("CHEVROLET", "#e9ecef")))
 ] + [  # round 44 (user): the dealer closest to Lyons became a gas station
@@ -141,22 +142,29 @@ LOTS = [] + [  # (polygon, buildings (x0, y0, x1, y1, colour, label), aisle step
     (R_(-168, 1092, -20, 1125), [(-166, 1094, -92, 1123, "#3a3a3a", "P:dsw:n:8"), (-88, 1094, -24, 1123, "#d6a24a", "SHOPS_N")], 10, "n"),                      # SE south: DSW + shops on Wiles
     (R_(-323, 1092, -182, 1185), [(-321, 1094, -262, 1150, "#c56a4a", "CINEMA"), (-321, 1156, -262, 1183, "#7a1f1f", "P:kobe:e:7"), (-198, 1094, -184, 1183, "#d6a24a", "SHOPS_E")], 10, "v"),                 # SW: Silverspot + Kobe, lot
     (R_(-783, 1092, -337, 1318), [(-660, 1170, -540, 1275, "#7d8086", "GARAGE"), (-781, 1100, -690, 1300, "#d9d2c4", "P:promenade:e:10"),
-                                 (-352, 1100, -339, 1224, "#d6a24a", "SHOPS_E"), (-352, 1266, -339, 1310, "#d6a24a", "SHOPS_E"), (-520, 1278, -370, 1314, "#d9d2c4", "P:tjmaxx:s:8"), (-530, 1094, -380, 1128, "#d9d2c4", "P:marshalls:n:8")], 10, "v"),             # west: garage (C2 jump) + anchor, lot
+                                 (-352, 1100, -339, 1224, "#d6a24a", "SHOPS_E"), (-352, 1266, -339, 1310, "#d6a24a", "SHOPS_E"), (-520, 1278, -370, 1314, "#d9d2c4", "P:tjmaxx:s:8"), (-530, 1094, -380, 1128, "#d9d2c4", "P:marshalls:n:8"),
+                                 (-530, 1234, -385, 1250, "#e9dcb8", "STRIP:s:21"), (-684, 1136, -652, 1160, "#d6a24a", "PAD:fastfood:chipotle:n")], 10, "v"),             # west: garage (C2 jump) + anchor, lot
     (R_(-560, 1376, -270, 1418), [(-556, 1400, -390, 1416, "#d6a24a", ""), (-380, 1400, -276, 1416, "#c56a4a", "")], 10, "h"),      # round 44: was sitting on the Winston curve
     (R_(-260, 1340, -35, 1430), [(-240, 1380, -55, 1425, "#2e8b3e", "PUBLIX")], 10, "v"),
     (R_(18, 728, 76, 785), [(43, 743, 57, 765, "#d22d24", "McD")], 8, "h"),                 # round 44 sample: real-size McDonald's on a tight lot (was 135 x 105 m)
-    (R_(-180, 530, -35, 785), [(-170, 650, -50, 770, "#2f6fb3", "CITY HALL"), (-170, 545, -50, 625, "#1d3f8a", "POLICE")], 9, "h"),
+    (R_(-180, 530, -35, 785), [(-170, 668, -92, 752, "#2f6fb3", "CITY HALL"), (-170, 545, -50, 625, "#1d3f8a", "POLICE"),
+                               (-165, 766, -62, 782, "#e9dcb8", "STRIP:n:31"), (-74, 690, -40, 722, "#d6a24a", "PAD:bank:tdbank:e")], 9, "h"),   # round 45: lawn shrunk, plaza on Sample, bank on Lyons
     (R_(280, 1110, 510, 1290), [(290, 1190, 500, 1280, "#b8865a", "COCONUT CREEK ELEMENTARY")], 10, "v"),
     # round 44 (user's satellite shot of Coconut Creek High): campus west of Cougar Way - track north on NW 15th St, ball fields south-west inside an L-shaped lake,
     # the school one big block east of Aruba Way with a lot north + a lot south; BRGR STOP plaza + Antigua Terrace condos east of Cougar Way
     (R_(262, 205, 432, 229), [], 8, "h"), (R_(262, 20, 432, 62), [], 8, "h"),
     (R_(460, 15, 600, 46), [(462, 48, 598, 64, "#c56a4a", "P:brgrstop:s:6")], 8, "h"),
-    (R_(-790, 845, -630, 1040), [(-775, 950, -650, 1032, "#c8901e", "SEMINOLE CASINO")], 10, "h"),                     # casino + valet loop + lot (a way through)
+    (R_(-790, 845, -630, 1040), [(-775, 950, -650, 1032, "#c8901e", "SEMINOLE CASINO"),
+                                 (-786, 849, -754, 874, "#d6a24a", "PAD:fastfood:popeyes:s"), (-666, 849, -636, 874, "#d6a24a", "PAD:bank:bofa:s"), (-789, 884, -773, 942, "#e9dcb8", "STRIP:e:61")], 10, "h"),                     # casino + valet loop + lot (a way through)
     (R_(35, 1600, 190, 1700), [(45, 1640, 150, 1695, "#b8322a", "FIRE STATION")], 8, "h"),
-    (R_(-790, 30, -35, 125), [(-780, 75, -650, 120, "#c8102e", "WALGREENS"), (-630, 75, -540, 120, "#d6a24a", "PIZZA"), (-520, 75, -430, 120, "#c56a4a", "DELI"), (-190, 75, -50, 120, "#7a9ac8", "CLEANERS")], 9, "v"),
+    # round 45: the Pkwy strip was ONE 755 m lot that even ran over the canal -> four plaza pods (inline shops at the back, outparcels on the Pkwy, grass between)
+    (R_(-790, 30, -612, 118), [(-786, 78, -746, 116, "#c8102e", "WALGREENS"), (-736, 96, -616, 112, "#e9dcb8", "STRIP:s:41"), (-722, 33, -690, 56, "#d6a24a", "PAD:fastfood:wendys:s")], 9, "v"),
+    (R_(-592, 30, -412, 118), [(-588, 96, -486, 112, "#e9dcb8", "STRIP:s:42"), (-454, 96, -416, 112, "#e9dcb8", "STRIP:s:45"), (-580, 33, -548, 56, "#d6a24a", "PAD:bank:wellsfargo:s"), (-448, 33, -416, 56, "#d6a24a", "PAD:fastfood:tacobell:s")], 9, "v"),
+    (R_(-392, 30, -234, 118), [(-386, 96, -298, 112, "#e9dcb8", "STRIP:s:43"), (-290, 80, -238, 116, "#5a7a3a", "P:aldi:s:7"), (-384, 34, -348, 68, "#d6a24a", "GASSTN:shell")], 9, "v"),
+    (R_(-190, 30, -38, 118), [(-186, 96, -110, 112, "#e9dcb8", "STRIP:s:44"), (-100, 80, -46, 116, "#c8102e", "P:cvs:s:7"), (-180, 33, -148, 56, "#d6a24a", "PAD:fastfood:pollo:s")], 9, "v"),
     (R_(35, -230, 290, -50), [(50, -150, 250, -60, "#5b8fc9", "REC CENTER")], 10, "v"), (R_(560, -230, 790, -50), [(580, -150, 770, -60, "#5b8fc9", "POOL")], 10, "v"),
     (R_(180, 1360, 560, 1470), [(200, 1400, 330, 1465, "#7d8086", "OFFICE GARAGE"), (380, 1400, 540, 1465, "#9aa3ad", "OFFICES")], 10, "v"),
-    (R_(190, 535, 360, 660), [(205, 590, 340, 650, "#d6a24a", "GAS + SHOPS ?")], 9, "h"),
+    (R_(190, 535, 360, 655), [(196, 540, 232, 576, "#c8102e", "GASSTN:racetrac"), (204, 632, 346, 648, "#e9dcb8", "STRIP:s:51"), (304, 539, 336, 562, "#d6a24a", "PAD:fastfood:chickfila:s"), (250, 578, 282, 602, "#d6a24a", "PAD:bank:chase:s")], 9, "h"),   # round 45
 ]
 DAVE = (-700, -320); PUBLIX = (-150, 1405)
 SPOTS = [("GATE", 50, 360, "#d0582a", 1), ("DAVE", DAVE[0], DAVE[1], "#e33b3b", 1)]
