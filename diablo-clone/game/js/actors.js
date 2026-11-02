@@ -58,6 +58,24 @@ const SWINGS = {
     K(1.4, 190, { ck: 0.4, r: 6, tw: 0.45, ln: 0.08, bob: -1.4, fl: 5.5, fr: -4 }),
     K(0.5, 130, { ck: 0.2, r: 5.6, tw: 0.15, ln: 0.06, bob: -0.6, fl: 3.5, fr: -3 }),
   ], 0.65, { twoHand: true }),
+  // sword combo finisher: draws back coiled, then a long lunging thrust held at full stretch
+  thrust: withTilt([
+    K(0.25, 110, { ck: 0.05, r: 3.6, tw: 0.5, ln: -0.05, bob: -0.8, fl: 2.5, fr: -4 }),
+    K(0.1, 45, { smear: true, ck: 0, r: 6, tw: 0.1, ln: 0.15, bob: -1.2, fl: 5, fr: -4, mv: 0.06 }),
+    K(0.0, 50, { smear: true, hit: true, ck: 0, r: 8.6, tw: -0.35, ln: 0.3, bob: -2.0, fl: 7, fr: -5, mv: 0.07 }),
+    K(0.0, 130, { ck: 0, r: 8.4, tw: -0.4, ln: 0.3, bob: -2.0, fl: 7, fr: -5 }),
+    K(0.4, 110, { ck: 0.3, r: 5.5, tw: -0.1, ln: 0.1, bob: -0.8, fl: 4, fr: -3 }),
+  ], 0.65),
+  // heavy combo finisher: a leap with the weapon raised high, slammed into the ground in a deep
+  // crouch (the hit lands all around, with extra shake and dust)
+  slam: withTilt([
+    K(2.2, 200, { ck: 0.4, r: 4.5, tw: 0.1, ln: -0.15, bob: 2.4, fl: 2, fr: -2, jump: 2.6 }),
+    K(1.4, 60, { smear: true, ck: 0.4, r: 6.5, tw: 0, ln: 0.1, bob: 1.6, fl: 4, fr: -3, jump: 1.8, mv: 0.08 }),
+    K(0.2, 60, { smear: true, ck: 0.1, r: 7.6, tw: 0, ln: 0.3, bob: -1, fl: 6, fr: -4, mv: 0.06 }),
+    K(-0.7, 60, { smear: true, hit: true, slam: true, ck: -0.1, r: 7.4, tw: 0, ln: 0.42, bob: -3.2, fl: 6.5, fr: -4.5 }),
+    K(-0.75, 220, { ck: -0.1, r: 7.2, tw: 0, ln: 0.4, bob: -3.2, fl: 6.5, fr: -4.5 }),
+    K(0.4, 140, { ck: 0.3, r: 5.5, tw: 0, ln: 0.1, bob: -1, fl: 4, fr: -3 }),
+  ], 0.15, { twoHand: true }),
   claw: [{ a: 1.6, ms: 160 }, { a: 0.6, ms: 50, smear: true }, { a: -0.3, ms: 60, hit: true }, { a: -0.5, ms: 140 }, { a: 0, ms: 90 }],
   bite: [{ a: 1, ms: 180 }, { a: 0.3, ms: 60 }, { a: -0.2, ms: 70, hit: true }, { a: -0.1, ms: 160 }, { a: 0.5, ms: 90 }],
   bow: [{ a: 0, ms: 140 }, { a: 1, ms: 260 }, { a: 1, ms: 60, hit: true }, { a: 0.4, ms: 200 }],
@@ -142,18 +160,27 @@ function bipedJoints(B, st) {
     footL = [B.stride * 0.55, -B.hipW, B.lift * 0.8]; footR = [-B.stride * 0.8, B.hipW, 0];
     bob = -0.8; lean = (B.runLean || 0.12) + 0.14; swingArm = 0.7; twist = -0.12; hipF = 0.6;
   }
+  if (clip === 'bash') {   // shield bash: driving forward behind the shield, left shoulder leading
+    footL = [B.stride * 0.8, -B.hipW - 0.4, 0]; footR = [-B.stride * 0.7, B.hipW + 0.4, B.lift * 0.3];
+    bob = -1.6; lean = 0.38; twist = 0.42;
+  }
+  if (clip === 'channel') {   // casting: weight back, off hand thrust toward the target
+    footL = [B.stride * 0.45, -B.hipW - 0.4, 0]; footR = [-B.stride * 0.45, B.hipW + 0.4, 0];
+    bob = -0.6; lean = -0.06; twist = 0.36;
+  }
   if (clip === 'stop') {   // planting the front foot and sitting back onto it
     footL = [B.stride * 0.7, -B.hipW - 0.3, 0]; footR = [-B.stride * 0.45, B.hipW + 0.3, B.lift * 0.25];
     bob = -1.4; lean = -0.04; swingArm = -0.5; twist = 0.08; hipF = -0.4;
   }
   if (clip === 'hit') { lean = -0.28; bob = -0.6; footL = [1.5, -B.hipW, 0]; footR = [-1.5, B.hipW, 0]; }
-  if (clip === 'attack' || clip === 'attack2' || clip === 'shoot' || clip === 'cast') {
+  if (atkIndex(clip) >= 0 || clip === 'shoot' || clip === 'cast') {
     const k = st.key, sc = B.stride / 8;
     if (k.tw !== undefined) {   // a posed key: shoulder turn, lean, hip drop and a step in
       twist = k.tw; lean = k.ln; bob = k.bob;
       footL = [k.fl * sc, -B.hipW - 0.5, 0]; footR = [k.fr * sc, B.hipW + 0.5, 0];
       // the front foot is in the air while it steps forward
       if (st.prev && st.prev.fl !== undefined && k.fl > st.prev.fl + 0.8) footL[2] = B.lift * 0.4;
+      if (k.jump) { footL[2] += k.jump; footR[2] += k.jump; }   // airborne
     } else {
       // right shoulder back while the weapon is raised, forward through the strike
       twist = clamp(k.a * 0.2, -0.35, 0.42); lean = clamp(-k.a * 0.06 + 0.08, -0.1, 0.2);
@@ -216,7 +243,10 @@ const GEAR_LOOKS = {
 };
 const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}`;
 // combo 1 = the second swing of a quick pair (a backhand)
-function weaponSwing(eq, combo = 0) { return eq.weapon === 'sword' ? (combo ? SWINGS.light2 : SWINGS.light) : (combo ? SWINGS.heavy2 : SWINGS.heavy); }
+// a quick string of swings: forehand, backhand, then a finisher (sword thrust or heavy slam)
+const ATTACK_CLIPS = ['attack', 'attack2', 'attack3'];
+const atkIndex = clip => ATTACK_CLIPS.indexOf(clip);
+function weaponSwing(eq, combo = 0) { return (eq.weapon === 'sword' ? [SWINGS.light, SWINGS.light2, SWINGS.thrust] : [SWINGS.heavy, SWINGS.heavy2, SWINGS.slam])[combo] || SWINGS.light; }
 // how far the weapon's tip is from the swing pivot (smears and reach)
 const WEAPON_LEN = { sword: 21, axe: 16, mace: 16, flail: 17, greatsword: 27 };
 
@@ -274,8 +304,8 @@ function heroRig(eq, st) {
     }),
   });
   // arms: right hand holds the weapon, left the shield
-  const atk = st.clip === 'attack' || st.clip === 'attack2';
-  const sw = atk ? st.key : null, list = atk ? weaponSwing(eq, st.clip === 'attack2' ? 1 : 0) : null;
+  const atk = atkIndex(st.clip) >= 0;
+  const sw = atk ? st.key : null, list = atk ? weaponSwing(eq, atkIndex(st.clip)) : null;
   const pivot = V.add(V.add(J.chest, V.mul(sideR, 2.5)), V.add(V.mul(up, 4), V.mul(fwd, 1)));
   const tilt = list && list.tilt !== undefined ? list.tilt : 0.65;
   const F = fwd, U = V.norm(V.add(V.mul(up, Math.cos(tilt)), V.mul(sideR, Math.sin(tilt))));
@@ -284,6 +314,9 @@ function heroRig(eq, st) {
   let handR, bd;
   if (sw) {
     handR = V.mad(pivot, inPlane(sw.a), sw.r || 6.5); bd = inPlane(bladeA(sw));
+  } else if (st.clip === 'bash' || st.clip === 'channel') {   // weapon held back and low, out of the way
+    handR = V.add(V.add(J.shR, V.mul(fwd, -1.5)), V.add(V.mul(up, -7), V.mul(sideR, 2.2)));
+    bd = V.norm(V.add(V.add(V.mul(fwd, -0.6), V.mul(up, -0.5)), V.mul(sideR, 0.5)));
   } else if (st.clip === 'death') {
     handR = V.add(J.shR, [3, 2, -10]); bd = V.norm([1, 0.4, -0.6]);
   } else {
@@ -304,6 +337,8 @@ function heroRig(eq, st) {
   const offSw = -J.swingArm * (eq.shield === 'none' ? 3.6 : 1.6);
   let handL = V.add(V.add(J.shL, V.mul(fwd, 5.5 + offSw)), V.add(V.mul(up, -7.5 + Math.max(0, offSw) * (eq.shield === 'none' ? 0.7 : 0.3)), V.mul(sideR, -0.5)));
   if (st.clip === 'death') handL = V.add(J.shL, [2, -3, -9]);
+  if (st.clip === 'bash') handL = V.add(V.add(J.shL, V.mul(fwd, 7.5)), V.add(V.mul(up, -3), V.mul(sideR, 1.5)));   // shield driven forward
+  if (st.clip === 'channel') handL = V.add(V.add(J.shL, V.mul(fwd, 8)), V.add(V.mul(up, -0.5), V.mul(sideR, 1.2)));   // open hand at the target
   if (sw) {
     if (list.twoHand && (eq.shield === 'none' || eq.weapon === 'greatsword')) handL = V.mad(handR, bd, -2.6);   // lower on the haft
     else {   // counterbalance: the off arm reaches toward the target in the wind-up, pulls back on the strike
@@ -314,6 +349,7 @@ function heroRig(eq, st) {
   const aL = armTo(J, J.shL, handL, B, -1);
   r.cone(J.shL, aL.el, ar[0], ar[1], sleeve); r.cone(aL.el, aL.hand, ar[1], ar[2], foreM);
   r.sph(aL.hand, ar[3], handM);
+  if (st.clip === 'channel') r.sph(V.mad(aL.hand, fwd, 2.2), 1.6, M.HOLY, { noShadow: true });
   if (plate) for (const a of [aR, aL]) r.sph(a.el, 2.2, PL);   // elbow cops
   // pauldrons: big rounded plates with a bright lower rim and a rivet (plate); pads otherwise
   if (eq.chest !== 'tunic') for (const [sh, sd] of [[J.shL, -1], [J.shR, 1]]) {
@@ -357,6 +393,49 @@ function heroRig(eq, st) {
           r.cone(base, V.add(at(4.1, sd * 1.25, 1.7), V.mul(sideR, sd * 0.2)), 1.25, 0.35, hairM, { noShadow: true });
         }
       });
+    }
+  } else {
+    if (eq.helm === 'barbute') {
+      // barbute: close round helm with a T-shaped face opening
+      const hc = V.mad(hd, up, 0.4);
+      r.ell(hc, [5.4, 5.3, 6.4], M.STEEL, helmF, { mf: p => {
+        const q = V.sub(p, hc), f2 = V.dot(q, fwd), s2 = Math.abs(V.dot(q, sideR)), z2 = V.dot(q, up);
+        if (f2 < 1.6) return 0;
+        return (Math.abs(z2 - 1.8) < 1.1 && s2 < 3.8) || (s2 < 1.2 && z2 < 1.8 && z2 > -3.4) ? M.DARK : 0;   // set high and wide so it reads from above
+      } });
+      r.box(V.mad(hc, up, 5.8), [4.6, 0.6, 0.9], M.STEEL, helmF);
+    } else if (eq.helm === 'great' || eq.helm === 'crown') {
+      // great helm: tall dome with a raised crest ridge and a barred visor plate on the front
+      const hc = V.mad(hd, up, 0.6);
+      r.ell(hc, [5.6, 5.4, 7.2], PL, helmF);
+      r.box(V.mad(hc, up, 6.3), [4.4, 0.7, 1.0], PL, helmF);
+      const vc = V.add(V.mad(hd, fwd, 4.9), V.mul(up, 0.2));
+      const vf = frameAlong(V.norm(V.add(fwd, V.mul(up, 0.45))), up);   // tipped up toward the light so the plate reads bright
+      r.box(vc, [1.1, 3.4, 2.5], PL, vf, { bias: 1, mf: p => {
+        const q = V.sub(p, vc), s2 = V.dot(q, sideR), z2 = V.dot(q, vf[2]);
+        if (V.dot(q, vf[0]) < 0.8 || Math.abs(z2) > 1.8) return 0;
+        for (const c of [-1.9, 0, 1.9]) if (Math.abs(s2 - c) < 0.5) return M.DARK;   // three bars, each a full pixel
+        return 0;
+      } });
+      for (const sd of [-1, 1]) r.sph(V.add(V.add(V.mad(hd, fwd, 3.2), V.mul(sideR, sd * 4.4)), V.mul(up, 0.4)), 1.0, M.STEEL);   // visor rivets
+      if (eq.helm === 'crown') {   // a gold circlet with points and a red stone
+        r.cyl(V.mad(hc, up, 3.2), V.mad(hc, up, 4.6), 5.0, M.GOLD);
+        for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2, b = V.add(V.mad(hc, up, 4.4), V.add(V.mul(fwd, Math.cos(a) * 4.6), V.mul(sideR, Math.sin(a) * 4.6))); r.cone(b, V.mad(b, up, 2.6), 0.9, 0.2, M.GOLD); }
+        r.sph(V.add(V.mad(hc, up, 3.9), V.mul(fwd, 5.1)), 0.8, M.EYE_RED, { noShadow: true });
+      }
+    } else {
+    r.ell(hd, [5.9, 5.7, 6.7], M.STEEL, helmF, { mf: p => {
+      const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up);
+      if (Math.abs(z2 - 2.4) < 0.8) return M.GOLD;
+      if (f2 > 2.6 && Math.abs(z2 - 0.4) < 0.75 && Math.abs(s2) < 4.2) return M.DARK;            // eye slit
+      if (f2 > 3.4 && Math.abs(s2) < 0.6 && z2 < 0 && z2 > -4.5) return M.DARK;                  // breath slit
+      return 0;
+    } });
+    r.box(V.mad(hd, up, 6.4), [3.6, 0.6, 1.0], M.GOLD, helmF);
+      for (const s of [-1, 1]) {
+        const a = V.add(V.mad(hd, up, 3), V.mul(sideR, s * 5)), b = V.add(V.mad(hd, up, 6), V.mul(sideR, s * 8.5)), c = V.add(V.add(V.mad(hd, up, 10), V.mul(sideR, s * 8.5)), V.mul(fwd, 1.5));
+        r.group(() => { r.cone(a, b, 1.6, 1.2, M.HORN); r.cone(b, c, 1.2, 0.5, M.HORN); });
+      }
     }
   }
   {   // the head (skin, hair, helm) drawn big about its center

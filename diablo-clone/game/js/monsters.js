@@ -335,7 +335,7 @@ function spiderRig(look, st) {
 // ---------------------------------------------------------------- family table
 // size: sprite canvas; swing: attack timing; looks: variants (materials, size, gear) of one body
 const FAMILIES = {
-  hero: { size: [72, 72, 36, 60], rig: heroRig, swing: e => weaponSwing(e.look), swing2: e => weaponSwing(e.look, 1) },
+  hero: { size: [72, 72, 36, 60], rig: heroRig, swing: e => weaponSwing(e.look), combo: (e, k) => weaponSwing(e.look, k) },
   skeleton: { size: [72, 78, 36, 55], gait: gaitFrameTiles(SKEL_B, 1.1), rig: skeletonRig, swing: e => e.look.weapon === 'bow' ? SWINGS.bow : SWINGS.light },
   fallen: { size: [52, 48, 26, 40], gait: gaitFrameTiles(FALLEN_B), rig: fallenRig, swing: e => e.look.staff ? SWINGS.cast : SWINGS.claw },
   hound: { size: [80, 64, 38, 50], rig: houndRig, swing: () => SWINGS.bite },
@@ -363,13 +363,14 @@ const spriteCache = new Map();
 let spriteBuilds = 0;
 function poseState(fam, ent, clip, f) {
   const st = { clip, f };
-  if (clip === 'attack' || clip === 'attack2' || clip === 'shoot' || clip === 'cast') { const sw = clip === 'attack2' ? FAMILIES[fam].swing2(ent) : FAMILIES[fam].swing(ent); st.key = sw[f]; st.prev = sw[f - 1]; }
+  const ai = atkIndex(clip);
+  if (ai >= 0 || clip === 'shoot' || clip === 'cast') { const sw = ai > 0 ? FAMILIES[fam].combo(ent, ai) : FAMILIES[fam].swing(ent); st.key = sw[f]; st.prev = sw[f - 1]; }
   return st;
 }
 // Builds are budgeted per frame: past the budget, a missing pose falls back to the nearest cached
 // frame (same direction) and is queued, so a crowd turning at once never stalls a frame.
 const buildBudget = { ms: Infinity, used: 0 };
-const fallbackOrder = { walk: ['walk', 'idle'], idle: ['idle'], attack: ['attack', 'idle'], attack2: ['attack2', 'attack', 'idle'], shoot: ['shoot', 'idle'], cast: ['cast', 'idle'], hit: ['hit', 'idle'], death: ['death'], go: ['go', 'walk', 'idle'], stop: ['stop', 'idle'] };
+const fallbackOrder = { walk: ['walk', 'idle'], idle: ['idle'], attack: ['attack', 'idle'], attack2: ['attack2', 'attack', 'idle'], attack3: ['attack3', 'attack', 'idle'], bash: ['bash', 'idle'], channel: ['channel', 'idle'], shoot: ['shoot', 'idle'], cast: ['cast', 'idle'], hit: ['hit', 'idle'], death: ['death'], go: ['go', 'walk', 'idle'], stop: ['stop', 'idle'] };
 function getSprite(fam, look, dir, clip, f, ent) {
   const lk = fam === 'hero' ? heroKey(look) : lookKey(look);
   const k = `${fam}|${lk}|${dir}|${clip}|${f}`;

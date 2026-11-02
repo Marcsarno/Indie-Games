@@ -165,7 +165,7 @@ function heroAttack() {
     if (bd > heroReach() + (best.def.unique ? 0.4 : 0.1)) { hero.approach = best; hero.approachT = 1.5; return; }
   }
   // a swing that follows the last one quickly comes back the other way (forehand, backhand, ...)
-  hero.combo = G.t - (hero.swingEnd ?? -9) < 0.3 ? 1 - (hero.combo || 0) : 0;
+  hero.combo = G.t - (hero.swingEnd ?? -9) < 0.3 ? ((hero.combo || 0) + 1) % 3 : 0;
   hero.approach = null; hero.atk = 0; hero.hitDone = false;
   sfx(STAT.slow ? 'heavySwing' : 'swing');
 }
@@ -246,13 +246,14 @@ function killStreak() {
   return G.streak;
 }
 function wake(e) { if (e.state !== 'sleep') return; e.state = 'hunt'; for (const o of enemies) if (o.state === 'sleep' && Math.hypot(o.fi - e.fi, o.fj - e.fj) < 4) o.state = 'hunt'; }
-function heroHitResolve() {
+// all = the heavy slam: hits everything in reach around the hero, not just in front
+function heroHitResolve(all = false) {
   const [fx, fy] = dirVec(hero.dir), reach = heroReach() + 0.1;
   let any = false;
   for (const e of enemies) {
     if (!alive(e)) continue;
     const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy), rr = reach + (e.def.unique ? 0.5 : 0.2);
-    if (d > rr || (d > 0.3 && (dx * fx + dy * fy) / d < 0.35)) continue;
+    if (d > rr || (!all && d > 0.3 && (dx * fx + dy * fy) / d < 0.35)) continue;
     const crit = Math.random() < CRIT_CHANCE;
     damageEnemy(e, heroDmg(crit ? 2 : 1), hero.fi, hero.fj, crit); any = true;
   }
@@ -370,7 +371,11 @@ function updateHero(dt) {
     if (hero.runT === 0) { hero.walk = 0; hero.goT = 0.08; }
     hero.runT += dt; hero.stopT = 0;
     hero.walk += moved / HERO_GAIT;   // frames advance with distance, so the planted foot stays put
-    hero.dir = dirFrom(gi, gj);
+    // turn through the in-between facings instead of snapping (a reversal takes ~0.1 s)
+    // from a standstill he faces the new way at once
+    const want = dirFrom(gi, gj);
+    if (hero.runT <= dt) hero.dir = want;
+    else if (want !== hero.dir && (hero.turnT = (hero.turnT || 0) - dt) <= 0) { hero.dir = (hero.dir + (((want - hero.dir + 8) % 8) <= 4 ? 1 : 7)) % 8; hero.turnT = 0.028; }
     hero.clip = hero.goT > 0 ? 'go' : 'walk'; hero.goT -= dt;
   } else {
     // stopping after a real run plants the front foot for a beat before standing
@@ -380,16 +385,25 @@ function updateHero(dt) {
     hero.stopT -= dt;
   }
   if (hero.whirl > 0) { hero.clip = 'attack'; hero.dir = Math.floor(G.t / 0.05) % 8; }   // spin through all 8 facings
-  if (hero.dash > 0) hero.clip = 'attack';
+  if (hero.dash > 0) hero.clip = 'bash';
   if (hero.stop > 0) { hero.stop -= dt; return; }
   hero.clock += dt;
-  if (hero.cast >= 0) { hero.cast -= dt; hero.clip = 'idle'; if (hero.cast < 0) hero.cast = -1; }
+  if (hero.cast >= 0) { hero.cast -= dt; hero.clip = 'channel'; if (hero.cast < 0) { hero.cast = -1; hero.clip = 'idle'; } }
   if (hero.atk >= 0) {
-    hero.clip = hero.combo ? 'attack2' : 'attack';
+    hero.clip = ATTACK_CLIPS[hero.combo] || 'attack';
     hero.atk += dt * 1000;
     const sw = weaponSwing(hero.look, hero.combo), ki = swingKey(sw, hero.atk);
     if (ki >= 0 && sw[ki].mv) lungeHero(sw[ki].mv * dt * 1000 / sw[ki].ms);
-    if (ki >= 0 && sw[ki].hit && !hero.hitDone) { hero.hitDone = true; heroHitResolve(); }
+    if (ki >= 0 && sw[ki].hit && !hero.hitDone) {
+      hero.hitDone = true; heroHitResolve(!!sw[ki].slam);
+      if (sw[ki].slam) {   // the ground slam: extra shake and a ring of dust
+        if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.35);
+        const [x, y] = screenOf(hero), [fx, fy] = dirVec(hero.dir), cx = x + (fx - fy) * 12, cy = y + (fx + fy) * 6;
+        const dust = LV.outdoor ? DIRT[3] : S[5];
+        for (let k = 0; k < 22; k++) { const a = k / 22 * 6.283; pspawn(5, cx, cy, 1, Math.cos(a) * 55, Math.sin(a) * 27, 40 + Math.random() * 30, 1, k % 3 ? dust : DIRT[4]); }
+        sfx('crit');
+      }
+    }
     if (ki < 0) { hero.atk = -1; hero.clip = 'idle'; hero.swingEnd = G.t; if (hero.castQueued) heroCast(); }
   }
   // pick up what we walk over; open chests by walking into them
@@ -547,10 +561,10 @@ function updateParticles(dt) {
 function frameOf(e) {
   const pt = e.clock;
   if (e === hero && hero.whirl > 0) return 3;   // the sword held out level, smeared
-  if (e === hero && hero.dash > 0) return 4;
+  if (e === hero && hero.dash > 0) return 0;
   if (e.clip === 'idle') return Math.floor(pt / 0.2) % 4;
   if (e.clip === 'walk') return Math.floor(e.walk) % 8;
-  if (e.clip === 'attack2') return Math.max(0, swingKey(FAMILIES[e.fam].swing2(e), e.atk));
+  if (e.clip === 'attack2' || e.clip === 'attack3') return Math.max(0, swingKey(FAMILIES[e.fam].combo(e, atkIndex(e.clip)), e.atk));
   if (e.clip === 'attack' || e.clip === 'shoot' || e.clip === 'cast') return Math.max(0, swingKey(FAMILIES[e.fam].swing(e), e.atk));
   if (e.clip === 'death') return Math.min(5, Math.floor((e === hero ? hero.dead : e.dying) / 0.1));
   return 0;
