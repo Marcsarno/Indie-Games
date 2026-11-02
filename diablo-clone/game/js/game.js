@@ -517,6 +517,7 @@ function updateEnemy(e, dt) {
       e.hp = 0; e.dying = 0; e.corpse = true; say('THE TREASURE GOBLIN ESCAPED', 26, 2); return;
     }
   }
+  if (d > 20 && !m.flee) { e.clip = 'idle'; return; }   // too far to matter: skip sight and pathing (big forests)
   const see = d < 10 && los(e.fi, e.fj, hero.fi, hero.fj);
   if (m.ranged && see && d < m.reach && d > 2.2) {
     e.dir = dirFrom(dx, dy); e.clip = 'idle';
