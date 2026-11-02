@@ -2,7 +2,7 @@
 Exec'd at the end of cc_fill.fill_after (shares cc_scene + cc_fill globals). Adds: driveways + parked cars + mailboxes + front-yard trees for every house,
 street furniture on the arterials (bus shelters, benches, trash cans, hydrants, speed-limit signs, utility boxes), the FPL power line along Powerline Rd,
 sidewalk aprons round the commercial buildings, cart corrals, and tree clusters in the leftover grass."""
-DRV = Tiled("drives"); FUR = Tiled("furniture")
+DRV = Tiled("drives"); FUR = Tiled("furniture"); HYDRANTS = []
 CONC = flat("#cfcac0"); CONC2 = flat("#bdb8ad"); POLE = flat("#6b7078"); DARK = flat("#2e3236"); RED = flat("#c8362a"); GRN = flat("#3d6b45"); WHT = flat("#f2f2ee"); BLU = flat("#2a64b8")
 def obox(T, mt, c, u, L, t, z0, z1, side=0.0, n=None):
     """Box centred at c (+ side along the normal n), length L along unit u, thickness t."""
@@ -58,7 +58,7 @@ def street_furniture():
             s = hyd
             while s < r.L - 10:                                                                     # hydrants at the curb, speed signs, utility boxes behind the walk
                 h_ = r.off(s, side * (r.hw + rd.CURB + .5))
-                if near_road(h_[0], h_[1], -.5) in (None, r): tbox(FUR, RED, h_[0] - .18, h_[0] + .18, h_[1] - .18, h_[1] + .18, 0, .75); tbox(FUR, RED, h_[0] - .1, h_[0] + .1, h_[1] - .1, h_[1] + .1, .75, .9)
+                if near_road(h_[0], h_[1], -.5) in (None, r): HYDRANTS.append((h_[0], h_[1]))           # round 42: drawn + broken in the page (hydrant.js)
                 if int(s / 95) % 3 == 1:
                     g = r.off(s + 12, side * (r.hw + rd.CURB + rd.SWK + .9))
                     if near_road(g[0], g[1], .5) is None: tbox(FUR, GRN, g[0] - .5, g[0] + .5, g[1] - .35, g[1] + .35, 0, 1.2)
@@ -137,8 +137,17 @@ def lot_fill(x, y, x0, x1, y0, y1, blds):
     if not blds: return .15
     d = min(math.hypot(x - min(max(x, b_["x0"]), b_["x1"]), y - min(max(y, b_["y0"]), b_["y1"])) for b_ in blds)
     return max(.06, .55 - d / 140)
+def local_hydrants():
+    """Hydrants on the neighbourhood streets too, every ~110 m, at the curb."""
+    for r in net:
+        if r.rank not in (4, 5) or r.hw < 3.5 or r.name.startswith(("alley", "ramp", "rbt")): continue
+        s = 40.0
+        while s < r.L - 10:
+            h_ = r.off(s, (1 if int(s / 110) % 2 else -1) * (r.hw + rd.CURB + .5))
+            if near_road(h_[0], h_[1], -.5) in (None, r) and not hnear(h_[0], h_[1], 3): HYDRANTS.append((h_[0], h_[1]))
+            s += 110.0
 def believability():
-    driveways(); tick_("driveways"); street_furniture(); power_line(); verge_trees(); tree_clusters(); tick_("furniture")
+    local_hydrants(); driveways(); tick_("driveways"); street_furniture(); power_line(); verge_trees(); tree_clusters(); tick_("furniture")
     for (cx, cy, ww, dd, face) in APRONS: apron(cx, cy, ww, dd, face=face)
     for rect in CORRALS: cart_corrals(*rect)
     STATIC.extend(DRV.build(vc=True, recalc=False)); STATIC.extend(FUR.build(vc=True, recalc=False))
