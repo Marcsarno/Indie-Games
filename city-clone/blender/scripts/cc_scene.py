@@ -114,6 +114,7 @@ for (a, b_) in zip([s[1] for s in segs], [s[0] for s in segs[1:]]):             
     for x_ in (cx0 - 1.2, cx1 + .8): RB.box(m["curb"], x_, x_ + .4, a, b_, 0, .9)
 tick_("water")
 
+exec(open(os.path.join(HERE, "cc_fill.py")).read())                                            # round 39 (M2): real models, pads, walls, yards, parks (cc_fill.py)
 # ================================================================  LOTS, PARKED CARS, BLOCKS  ================================================================
 FOOT = []                                                                                      # (x0, y0, x1, y1) footprints houses must avoid
 HEIGHT = {"WALMART": 9, "PUBLIX": 8, "SEMINOLE CASINO": 34, "CITY HALL": 13, "POLICE": 9, "COCONUT CREEK HIGH": 10, "COCONUT CREEK ELEMENTARY": 8, "FIRE STATION": 9, "GARAGE": 12,
@@ -129,6 +130,10 @@ for lot in LP["lots"]:
     xs = [p[0] for p in lot["poly"]]; ys_ = [p[1] for p in lot["poly"]]; x0, x1, y0, y1 = min(xs), max(xs), min(ys_), max(ys_)
     RB.box(m["asphalt"], x0, x1, y0, y1, 0, .028); FOOT.append((x0, y0, x1, y1)); MAP.append([round(x0, 1), round(y0, 1), round(x1, 1), round(y1, 1), "#5a5c60"])
     blds = lot["buildings"]; vert = lot["dir"] == "v"
+    if blds and blds[0]["label"] in BRAND_DEALERS:                                            # dealer display lot: rows of new cars instead of stalls
+        dealer_cars((x0, x1, y0, y1), blds)
+        for b_ in blds: SITE(b_, (x0, x1, y0, y1))
+        continue
     a0, a1, b0, b1 = (y0, y1, x0, x1) if vert else (x0, x1, y0, y1)                            # rows run along b; stalls step along b, rows stack along a
     a = a0 + 3.0; row = 0
     while a + 5.2 < a1 - 2:
@@ -139,13 +144,11 @@ for lot in LP["lots"]:
             if vert: RB.box(m["white"], s - .05, s + .05, a, a + 5.2, .028, .034)
             else: RB.box(m["white"], a, a + 5.2, s - .05, s + .05, .028, .034)
             if math.hypot(cxs - PUBLIX[0], cys - PUBLIX[1]) > 25 and R_.random() < .05 and ncar < 320: addcar(R_.choice(PASSENGER), cxs, cys, (0 if row % 2 else 180) + (0 if vert else 90))
+        if row % 2 == 0 and (row // 2) % 2 == 1 and a + 6.2 < a1 - 2: lot_island(a + 5.2, b0 + 3, b1 - 4, vert, blds)       # round 39: planted islands between double rows (real FL lots)
         a += 5.2 if row % 2 == 0 else 5.2 + 7.0; row += 1
-    for b_ in blds:
-        h = HEIGHT.get(b_["label"], 7 if b_["label"] else 6.5); col = b_["color"]
-        BB.box(flat(col), b_["x0"], b_["x1"], b_["y0"], b_["y1"], 0, h); BB.box(flat(shade(col, .72)), b_["x0"] + .4, b_["x1"] - .4, b_["y0"] + .4, b_["y1"] - .4, h, h + .25)
-        cbox((b_["x0"] + b_["x1"]) / 2, (b_["y0"] + b_["y1"]) / 2, b_["x1"] - b_["x0"], b_["y1"] - b_["y0"])
-        if b_["label"] == "SEMINOLE CASINO":                                                   # hotel tower over the casino block
-            BB.box(flat("#d9b25a"), b_["x0"] + 30, b_["x0"] + 70, b_["y0"] + 20, b_["y1"] - 8, h, h + 40)
+    for bb_ in (b0 + 1.0, b1 - 2.0):                                                           # end-cap islands along both lot edges
+        lot_edge(a0 + 3, min(a, a1 - 2), bb_, vert, blds)
+    for b_ in blds: SITE(b_, (x0, x1, y0, y1))                                                 # round 39: real models (cc_fill.py)
 tick_("lots")
 # Trash Mountain: a stepped grassy mound (not drivable); Wynmoore golf greens; the HS football field + track; rec courts (flat)
 TM = [z for z in LP["zones"] if z["label"] == "TRASH MOUNTAIN"][0]["poly"]; tx0, tx1 = min(p[0] for p in TM), max(p[0] for p in TM); ty0, ty1 = min(p[1] for p in TM), max(p[1] for p in TM)
@@ -168,13 +171,14 @@ for z in LP["zones"]:                                                           
         FOOT.append((min(xs), min(ys_), max(xs), max(ys_)))
 tick_("landmarks")
 
+fill_pads(); tick_("pads")
 # ================================================================  HOUSES (linked duplicates of 6 variants)  ================================================================
 WALLS = ["cream", "peach", "butter", "sand", "white"]
 VAR = [make_house(f"house_v{i}", 11 if i % 2 == 0 else 10, 8.5, 1 + (i % 3 == 0), WALLS[i % 5], 300 + i, garage=i % 2 == 0, balcony=False) for i in range(6)]
 for o in VAR: o.location = (0, 0, -60)
-placed = 0
+placed = 0; PLACED_XY = []
 for (hx, hy) in LP["houses"]:
-    if any(f[0] - 3 < hx < f[2] + 3 and f[1] - 3 < hy < f[3] + 3 for f in FOOT): continue
+    if any(f[0] - 3 < hx < f[2] + 3 and f[1] - 3 < hy < f[3] + 3 for f in FOOT) or on_cut(hx, hy, 9): continue
     if any(rd_.closed is False and rd_.nearest(hx, hy)[0] < rd_.hw + 4.5 for rd_ in net if rd_.bb[0] - 30 < hx < rd_.bb[2] + 30 and rd_.bb[1] - 30 < hy < rd_.bb[3] + 30): continue
     if any(r.closed and r.nearest(hx, hy)[0] < r.hw + 4.5 for r in net if r.bb[0] - 30 < hx < r.bb[2] + 30 and r.bb[1] - 30 < hy < r.bb[3] + 30): continue
     best = None
@@ -185,10 +189,12 @@ for (hx, hy) in LP["houses"]:
     if not best or best[0] > 40: continue
     px, py, _, _ = best[1].at(best[2]); rz = math.degrees(math.atan2(px - hx, -(py - hy)))
     v = VAR[placed % len(VAR)]; o = bpy.data.objects.new(f"house_{placed}", v.data); bpy.context.scene.collection.objects.link(o)
-    o.location = (hx, hy, 0); o.rotation_euler = (0, 0, math.radians(rz)); STATIC.append(o); cbox(hx, hy, 11.2, 8.8, rz); placed += 1
+    o.location = (hx, hy, 0); o.rotation_euler = (0, 0, math.radians(rz)); STATIC.append(o); cbox(hx, hy, 11.2, 8.8, rz); placed += 1; PLACED_XY.append((hx, hy))
+    y_ = linked(f"yard_{placed % 4}", lambda nm, v=placed: yard(nm, v % 4 < 2)); place(y_, hx, hy, rz=rz)
     if R_.random() < .5: prop("palm_small" if R_.random() < .6 else "shrub_a", hx + R_.uniform(-6, 6), hy + R_.uniform(-6, 6))
 print("houses placed", placed)
 tick_("houses")
+fill_after(PLACED_XY)
 
 # ================================================================  TREES  ================================================================
 for r in net:                                                                                   # palms in the Lyons median, along the arterial sidewalks
