@@ -499,6 +499,46 @@ def grove_fill():
             G.setdefault((int(x // 20), int(y // 20)), []).append((x, y)); n += 1
     STATIC.extend(T.build(vc=True, recalc=False)); print("groves", n)
 
+def mcd_site(lot):
+    """Round 44 sample (user: "keep the buildings mostly to scale and shrink the parking lot... it doesn't feel like a sneaky short cut when the lot can fit 50 cars").
+    McDonald's at Lyons & Sample on a 58 x 57 m lot: a 22 x 15 m building facing Lyons, ONE row of 12 stalls along Sample, a one-lane drive-thru that wraps the east and
+    south sides (menu board, pickup window, curbs + bollards), hedge + palm strips on both street edges with two driveways. Marc's M2 shortcut = in off Lyons at the top,
+    down the drive-thru lane past the window, out onto Lyons at the bottom."""
+    x0, x1, y0, y1 = lot; CURB = flat("#d2cec4"); HED = flat("#3f6f3a"); PAINT = m["white"]; YL = flat("#f2c030")
+    cx, cy = 50, 754
+    o = fastfood("mcd_big", "mcd"); place(o, cx, cy, "w", 1.3, 1.25, 1.15); cbox(cx, cy, 15, 22); APRONS.append((cx, cy, 15, 22, "w"))
+    place(pylon("mcd_pylon", "mcd", 9.0), 24, 788, "w"); ccir(24, 788, .4)
+    b = TB(T43)
+    # drive-thru lane: east side (x 60..66, y 734..772) + south side (x 20..66, y 733..739); raised curb islands keep it one lane
+    b.box(CURB, 57.5, 59.5, 741, 766, 0, .16); b.box(CURB, 30, 57.5, 739.5, 741, 0, .16)                # inner curb hugging the building
+    b.box(CURB, 66.5, 68.5, 731, 772, 0, .16); b.box(flat("#5d9a3a"), 67, 68, 732, 771, .16, .18)        # outer curb with a grass strip
+    b.box(CURB, 24, 66.5, 730.2, 731.8, 0, .16)
+    for y in range(744, 772, 5): b.box(PAINT, 62.9, 63.1, y, y + 2.5, .028, .034)                       # lane dashes + arrows
+    for x in range(26, 60, 5): b.box(PAINT, x, x + 2.5, 735.9, 736.1, .028, .034)
+    for (x, y) in ((63, 760), (63, 748), (45, 736)): b.box(PAINT, x - .5, x + .5, y - 1, y + 1, .028, .034)
+    b.box(flat("#2a2a2a"), 68.6, 69.2, 752, 756, 0, 2.4); b.box(sgn("mcd"), 68.5, 68.6, 752.2, 755.8, 1.2, 2.3)                        # menu board facing the lane
+    for (x, y) in ((66, 772.5), (66, 730.5), (59, 766.5), (20, 731)):                                                              # yellow bollards at the lane ends
+        b.cyl(YL, (x, y, .5), .14, 1.0, "z", 8); ccir(x, y, .15)
+    # one row of stalls along Sample (north), facing south; aisle between it and the building
+    for i in range(12):
+        sx = 24 + i * 2.8; b.box(PAINT, sx - .05, sx + .05, 777, 782.2, .028, .034)
+        if R3.random() < .45 and not on_cut(sx + 1.4, 779.6, 3):
+            c_ = CARCOL[R3.randrange(len(CARCOL))]; oc = linked(f"dcar_{c_[1:]}", lambda nm, c_=c_: display_car(nm, c_)); place(oc, sx + 1.4, 779.6, rz=R3.uniform(-4, 4)); cbox(sx + 1.4, 779.6, 1.9, 4.5)
+    b.box(PAINT, 24 + 12 * 2.8 - .05, 24 + 12 * 2.8 + .05, 777, 782.2, .028, .034)
+    # hedges + palms on the street edges, gaps for the driveways (Lyons top + bottom, Sample east)
+    for (a0, a1) in ((741, 769),): b.box(HED, 18.2, 19.6, a0, a1, 0, 1.0)
+    for (a0, a1) in ((19, 60),): b.box(HED, a0, a1, 783.6, 785, 0, 1.0)
+    for y in (745, 753, 761): prop("palm_medium", 21.5, y)
+    for x in (30, 42, 54): prop("palm_small", x, 786.5, col=False)
+    b.box(flat("#5d9a3a"), 20, 41.5, 742, 765, 0, .14)                                                                             # lawn + patio in front of the doors
+    b.box(PAVE, 34, 41.5, 748, 760, .14, .18)
+    for (x, y) in ((36, 751), (36, 757), (39.5, 751), (39.5, 757)): CV.picnic(b, CV.civic_mats(), lambda *a, **k: None, x, y)
+    put(b, 0, 0, 0)
+    # the freed land east of the lot: a Chase pad with its own small lot (shows the density we get back when lots shrink)
+    surface_lot(86, 150, 768, 783, .4, drive=(108, 116, 783, 790))
+    o = bank("chase_sample", "chase"); place(o, 118, 752, "n"); cbox(118, 752, 18, 14); FOOT.append((100, 740, 136, 762))
+    place(pylon("chase_pylon", "chase", 6.0), 146, 788, "n")
+
 def gap_fill():
     for fn in (hs_athletics, golf, golf_trees, construction, offices_more, butterfly_garden, skate_dress, rec_park_more, sabal_more, lake_parks, storage, townhomes, church):
         fn(); tick_(fn.__name__)

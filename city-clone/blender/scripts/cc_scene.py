@@ -133,6 +133,7 @@ for lot in LP["lots"]:
     xs = [p[0] for p in lot["poly"]]; ys_ = [p[1] for p in lot["poly"]]; x0, x1, y0, y1 = min(xs), max(xs), min(ys_), max(ys_)
     RB.box(m["asphalt"], x0, x1, y0, y1, 0, .028); FOOT.append((x0, y0, x1, y1)); MAP.append([round(x0, 1), round(y0, 1), round(x1, 1), round(y1, 1), "#5a5c60"])
     blds = lot["buildings"]; vert = lot["dir"] == "v"
+    if blds and blds[0]["label"] == "McD": mcd_site((x0, x1, y0, y1)); continue                # round 44: tight lot + drive-thru loop (cc_fill3)
     if blds and blds[0]["label"] in BRAND_DEALERS:                                            # dealer display lot: rows of new cars instead of stalls
         dealer_cars((x0, x1, y0, y1), blds)
         for b_ in blds: SITE(b_, (x0, x1, y0, y1))

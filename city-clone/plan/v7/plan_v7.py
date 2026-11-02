@@ -123,7 +123,7 @@ LOTS = [] + [  # (polygon, buildings (x0, y0, x1, y1, colour, label), aisle step
                                   (-440, 1150, -246, 1180, "#d6a24a", "SHOPS_N"), (-244, 1150, -200, 1180, "#00704a", "STARBUCKS"), (-160, 1115, -45, 1165, "#9a3b52", "COOPER'S HAWK"), (-180, 1236, -60, 1276, "#d6a24a", "SHOPS")], 10, "v"),
     (R_(-790, 1345, -35, 1395), [(-780, 1355, -600, 1390, "#d6a24a", ""), (-560, 1355, -380, 1390, "#c56a4a", "")], 10, "v"),
     (R_(-260, 1340, -35, 1430), [(-240, 1380, -55, 1425, "#2e8b3e", "PUBLIX")], 10, "v"),
-    (R_(35, 680, 170, 785), [(50, 715, 110, 765, "#d22d24", "McD")], 8, "h"),
+    (R_(18, 728, 76, 785), [(43, 743, 57, 765, "#d22d24", "McD")], 8, "h"),                 # round 44 sample: real-size McDonald's on a tight lot (was 135 x 105 m)
     (R_(-180, 530, -35, 785), [(-170, 650, -50, 770, "#2f6fb3", "CITY HALL"), (-170, 545, -50, 625, "#1d3f8a", "POLICE")], 9, "h"),
     (R_(280, 1110, 510, 1290), [(290, 1190, 500, 1280, "#b8865a", "COCONUT CREEK ELEMENTARY")], 10, "v"),
     (R_(400, 50, 780, 220), [(470, 125, 765, 210, "#b8865a", "COCONUT CREEK HIGH")], 10, "v"),                         # user: the football field is by Lyons, the school behind it
@@ -148,7 +148,7 @@ st([(X441 + 14, 140), (XCANAL - 10, 140)], 6, "alley"); st([(XCANAL + 10, 140), 
 MARC, AARON, CHRIS = "#4fa3ff", "#ffb03a", "#e07bff"
 CUTS = [  # (label, colour, polyline): the detours, each through a landmark
     ("M1", MARC, [(-14, 1200), (-60, 1195), (-100, 1150), (-100, 1092), (-14, 1088)]),           # round Cooper's Hawk (valet lane), onto Wiles, back to Lyons
-    ("M2", MARC, [(12, 790), (60, 770), (130, 730), (90, 690), (14, 680)]),                       # McDonald's drive-thru, back onto Lyons
+    ("M2", MARC, [(12, 776), (40, 774), (64, 768), (64, 738), (34, 736), (12, 736)]),                       # McDonald's drive-thru, back onto Lyons
     ("M3", MARC, [(-14, 640), (-60, 640), (-110, 585), (-110, 515)]),                            # swerve across Lyons through the police station lot (past the cruisers) to Copans
     ("M4", MARC, [(-14, 150), (-200, 140), (-450, 140), (-470, 110), (-470, 14)]),                # shop alley, out the Walgreens drive-thru, Banks is right there
     ("A1", AARON, [(400, 1300), (400, 1250), (330, 1180), (400, 1092)]),                        # elementary drop-off loop: Winston -> Wiles
@@ -170,7 +170,7 @@ BLOCKS = [  # (x, y, along: 'ns' road runs north-south, colour): that chapter's 
 ]
 ROUTES = [
     ("MARC (Jeep): Lyons, hopping off through Cooper's Hawk, McDonald's, the police station, Walgreens", MARC,
-     [PUBLIX, (-14, 1330), (-14, 1200), (-60, 1195), (-100, 1150), (-100, 1092), (-14, 1088), (-14, 800), (60, 770), (130, 730), (90, 690), (14, 680), (-14, 640), (-60, 640), (-110, 585), (-110, 515), (-14, 508),
+     [PUBLIX, (-14, 1330), (-14, 1200), (-60, 1195), (-100, 1150), (-100, 1092), (-14, 1088), (-14, 800), (12, 776), (40, 774), (64, 768), (64, 738), (34, 736), (12, 736), (-14, 640), (-60, 640), (-110, 585), (-110, 515), (-14, 508),
       (-14, 150), (-200, 140), (-450, 140), (-470, 110), (-470, 14), (XBANKS + 8, -8), (XBANKS + 8, -112), (-610, -112), DAVE]),
     ("AARON (Tesla): the east side: school loop, Trash Mountain, Butterfly World, golf course, football field", AARON,
      [PUBLIX, (-14, 1330), (400, 1312), (400, 1250), (330, 1180), (400, 1092), (60, 1075), (60, 960), (60, 848), (390, 800), (430, 700), (560, 650), (560, 548), (300, 515), (40, 470), (40, 360), (250, 325), (230, 240), (200, 130), (230, 14),
