@@ -13,7 +13,14 @@ class Tiled:                                                                    
     def __init__(self, name, size=128): self.name, self.size, self.b = name, size, {}
     def _k(self, pts): return (int(math.floor(sum(p[0] for p in pts) / len(pts) / self.size)), int(math.floor(sum(p[1] for p in pts) / len(pts) / self.size)))
     def poly(self, mt, pts): k = self._k(pts); self.b.setdefault(k, Builder(f"{self.name}_{k[0]}_{k[1]}")).poly(mt, pts)
-    def box(self, mt, x0, x1, y0, y1, z0, z1): k = self._k([(x0, y0), (x1, y1)]); self.b.setdefault(k, Builder(f"{self.name}_{k[0]}_{k[1]}")).box(mt, x0, x1, y0, y1, z0, z1)
+    def box(self, mt, x0, x1, y0, y1, z0, z1):
+        """Big boxes are cut on the tile grid: every tile mesh stays ~128 m across, so the meshopt position quantization keeps millimetres (a 575 m lot in one mesh lost
+        its 3 cm lift above the grass and flickered green on the phone)."""
+        S = self.size; xs = [x0] + [g * S for g in range(int(math.floor(x0 / S)) + 1, int(math.ceil(x1 / S)))] + [x1]; ys = [y0] + [g * S for g in range(int(math.floor(y0 / S)) + 1, int(math.ceil(y1 / S)))] + [y1]
+        for a, b in zip(xs, xs[1:]):
+            for c, d in zip(ys, ys[1:]):
+                if b - a < 1e-3 or d - c < 1e-3: continue
+                k = self._k([(a, c), (b, d)]); self.b.setdefault(k, Builder(f"{self.name}_{k[0]}_{k[1]}")).box(mt, a, b, c, d, z0, z1)
     def build(self, **kw): return [b.build(**kw) for b in self.b.values()]
 RB, GB, BB = Tiled("roads"), Tiled("ground"), Tiled("blocks")
 COL, PROPS, CARS, STATIC, MAP = [], [], [], [], []
@@ -33,14 +40,13 @@ def shade(hexs, k):
 
 # ================================================================  GROUND + ZONES  ================================================================
 MARGIN = 160
-GB.box(flat("#557f3a"), XW - MARGIN, XE + MARGIN, YS - MARGIN, YN + MARGIN, -.3, -.02)          # beyond the edge (darker)
+GB.box(flat("#557f3a"), XW - MARGIN, XE + MARGIN, YS - MARGIN, YN + MARGIN, -.4, -.12)          # beyond the edge (darker)
 for x0 in range(int(XW), int(XE), 128):                                                        # playable ground in tiles
     for y0 in range(int(YS), int(YN), 128): GB.box(m["grass"], x0, min(x0 + 128, XE), y0, min(y0 + 128, YN), -.3, 0)
 for z in LP["zones"]:
     pts = z["poly"]; col = z["color"]
     if z["label"] == "TRASH MOUNTAIN": col = "#7a8a4a"
-    tris = rd.triangulate([tuple(p) for p in pts])
-    for (a, b_, c) in tris: GB.poly(flat(col), [(*a, .012), (*b_, .012), (*c, .012)])
+    xs_, ys_ = [p[0] for p in pts], [p[1] for p in pts]; GB.box(flat(col), min(xs_), max(xs_), min(ys_), max(ys_), -.05, .015)      # every zone is a rectangle
     MAP.append([0, 0, 0, 0, col, "poly", [[round(p[0], 1), round(p[1], 1)] for p in pts]])
 tick_("ground")
 
