@@ -40,6 +40,8 @@ SIGNS = {
     "cchs": ("COCONUT CREEK HIGH", "#ffffff", "#7a1f1f", "#7a1f1f"), "ccel": ("COCONUT CREEK ELEMENTARY", "#ffffff", "#1d4f8c", "#1d4f8c"), "fire": ("FIRE RESCUE 50", "#ffffff", "#b8322a", "#b8322a"),
     "rec": ("COMMUNITY CENTER", "#ffffff", "#1d6f8c", "#1d6f8c"), "aquatic": ("AQUATIC CENTER", "#ffffff", "#1d6f8c", "#1d6f8c"), "offices": ("CORPORATE PARK", "#ffffff", "#2a3a4a", "#2a3a4a"),
     "butterfly": ("BUTTERFLY WORLD", "#2e7d32", "#ffe14a", "#2e7d32"), "wynmoor": ("WYNMOOR", "#f2ead6", "#2f4f2f", "#2f4f2f"), "hammocks": ("THE HAMMOCKS", "#f2ead6", "#3a5a2a", "#3a5a2a"),
+    "storage": ("PUBLIC STORAGE", "#f37021", "#ffffff", "#f37021"), "church": ("COMMUNITY CHURCH", "#f2eee4", "#3a4a6a", "#3a4a6a"), "stables": ("TRADEWINDS STABLES", "#5a3a20", "#ffffff", "#9e3a2a"),
+    "comingsoon": ("COMING SOON", "#1d3b6e", "#ffffff", "#1d3b6e"),
     "sabal": ("SABAL PINES PARK", "#5a3a20", "#ffffff", "#5a3a20"), "tradewinds": ("TRADEWINDS PARK", "#5a3a20", "#ffffff", "#5a3a20"), "plaza": ("COCONUT CREEK PLAZA", "#f2e6c8", "#5a3a20", "#5a3a20"),
 }
 def make(key, text, bg, fg, w=512, h=128):
@@ -50,7 +52,14 @@ def make(key, text, bg, fg, w=512, h=128):
     bb = d.textbbox((0, 0), text, font=f); d.text(((w - (bb[2] - bb[0])) / 2 - bb[0], (h - (bb[3] - bb[1])) / 2 - bb[1]), text, font=f, fill=fg)
     d.rectangle([2, 2, w - 3, h - 3], outline=fg if bg.lower() in ("#ffffff", "#f2e6c8", "#f2ead6", "#fdf3d7", "#f5ebdc") else bg, width=4)
     im.save(os.path.join(OUT, f"sign_cc_{key}.png"), optimize=True)
+GRASS_TINTS = ["#64a345", "#619f43", "#66a446", "#69a948", "#66a548", "#629c41"]       # round 43: zone lawns get the grass texture, tinted (flat colour read as fake)
+def grass_tints():
+    src = Image.open(os.path.join(OUT, "grass.png")).convert("RGB"); px = list(src.getdata()); mr, mg, mb = (sum(p[i] for p in px) / len(px) for i in range(3))
+    for h in GRASS_TINTS:
+        r, g, b = (int(h[i:i + 2], 16) for i in (1, 3, 5)); k = (r / mr, g / mg, b / mb)
+        im = Image.new("RGB", src.size); im.putdata([tuple(min(255, int(p[i] * k[i])) for i in range(3)) for p in px]); im.save(os.path.join(OUT, f"grass_{h[1:]}.png"), optimize=True)
 if __name__ == "__main__":
+    grass_tints()
     for k, (t, bg, fg, acc) in SIGNS.items(): make(k, t, bg, fg)
     json.dump({k: dict(text=t, bg=bg, fg=fg, accent=acc) for k, (t, bg, fg, acc) in SIGNS.items()}, open(os.path.join(OUT, "cc_signs.json"), "w"))
     print(len(SIGNS), "signs")
