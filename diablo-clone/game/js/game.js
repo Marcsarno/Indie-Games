@@ -618,10 +618,12 @@ function render() {
   }
   const visAt = (fi, fj) => LV.vis[tIdx(clamp(Math.floor(fi), 0, MW - 1), clamp(Math.floor(fj), 0, MH - 1))];
   const chars = [hero, ...enemies.filter(e => !e.corpse && visAt(e.fi, e.fj) > 0.25), ...npcs];
-  const boxes = chars.map(c => { const [x, y] = screenOf(c); return [x - 40, y - 64, x + 40, y + 8]; });
+  const boxes = chars.map(c => { const [x, y] = screenOf(c); return [x - 40, y - 64, x + 40, y + 8, c.fi + c.fj]; });
+  // a baked prop only needs drawing again if it should cover a character it overlaps (it is in
+  // front of it); props behind every character are already right in the baked world
   const list = props.filter(p => {
     const x0 = p.wx - p.sp.ax, y0 = p.wy - p.sp.ay, x1 = x0 + p.sp.w, y1 = y0 + p.sp.h;
-    return boxes.some(b => x0 < b[2] && x1 > b[0] && y0 < b[3] && y1 > b[1]);
+    return boxes.some(b => p.depth > b[4] && x0 < b[2] && x1 > b[0] && y0 < b[3] && y1 > b[1]);
   }).map(p => {
     // tall scenery in front of the hero is redrawn dithered so the hero shows through (Diablo's trick)
     const hd = hero.fi + hero.fj, hb = boxes[0];
