@@ -45,6 +45,8 @@ def wy(x):                                                                      
 # to Winston (north), a main entrance off Lyons through the middle and a south entrance; blocks between them: Cooper's Hawk (NE), World of Beer main street (NW),
 # Cheesecake Factory + DSW (SE), Silverspot cinema + Kobe (SW)
 PX_W, PX_M, PY_MAIN, PY_S = -330, -175, 1192, 1132
+ROADS.append(("NW 15th St", [(XLYONS, 236), (440, 236)], 7, "drive")); ROADS.append(("Aruba Way", [(250, Y["pkwy"]), (250, 236)], 7, "driven")); ROADS.append(("Cougar Way", [(440, Y["pkwy"]), (440, 236)], 7, "driven"))   # round 44: high school streets
+LAKES.append((35, 122, 13, 94)); LAKES.append((128, 32, 100, 12))                                        # round 44: the L-shaped lake along Lyons + the Pkwy
 ROADS.append(("Promenade West Dr", [(PX_W, Y["wiles"]), (PX_W, round(wy(PX_W), 1))], 7, "driven")); ROADS.append(("Promenade Dr", [(PX_M, Y["wiles"]), (PX_M, round(wy(PX_M), 1))], 7, "driven"))
 ROADS.append(("Promenade Blvd", [(XLYONS, PY_MAIN), (PX_W, PY_MAIN)], 7, "drive")); ROADS.append(("Promenade South Dr", [(XLYONS, PY_S), (PX_M, PY_S)], 7, "drive"))
 def houses_along(a, b, gap=17, off=17):
@@ -143,7 +145,10 @@ LOTS = [] + [  # (polygon, buildings (x0, y0, x1, y1, colour, label), aisle step
     (R_(18, 728, 76, 785), [(43, 743, 57, 765, "#d22d24", "McD")], 8, "h"),                 # round 44 sample: real-size McDonald's on a tight lot (was 135 x 105 m)
     (R_(-180, 530, -35, 785), [(-170, 650, -50, 770, "#2f6fb3", "CITY HALL"), (-170, 545, -50, 625, "#1d3f8a", "POLICE")], 9, "h"),
     (R_(280, 1110, 510, 1290), [(290, 1190, 500, 1280, "#b8865a", "COCONUT CREEK ELEMENTARY")], 10, "v"),
-    (R_(400, 50, 780, 220), [(470, 125, 765, 210, "#b8865a", "COCONUT CREEK HIGH")], 10, "v"),                         # user: the football field is by Lyons, the school behind it
+    # round 44 (user's satellite shot of Coconut Creek High): campus west of Cougar Way - track north on NW 15th St, ball fields south-west inside an L-shaped lake,
+    # the school one big block east of Aruba Way with a lot north + a lot south; BRGR STOP plaza + Antigua Terrace condos east of Cougar Way
+    (R_(262, 205, 432, 229), [], 8, "h"), (R_(262, 20, 432, 62), [], 8, "h"),
+    (R_(460, 15, 600, 46), [(462, 48, 598, 64, "#c56a4a", "P:brgrstop:s:6")], 8, "h"),
     (R_(-790, 845, -630, 1040), [(-775, 950, -650, 1032, "#c8901e", "SEMINOLE CASINO")], 10, "h"),                     # casino + valet loop + lot (a way through)
     (R_(35, 1600, 190, 1700), [(45, 1640, 150, 1695, "#b8322a", "FIRE STATION")], 8, "h"),
     (R_(-790, 30, -35, 125), [(-780, 75, -650, 120, "#c8102e", "WALGREENS"), (-630, 75, -540, 120, "#d6a24a", "PIZZA"), (-520, 75, -430, 120, "#c56a4a", "DELI"), (-190, 75, -50, 120, "#7a9ac8", "CLEANERS")], 9, "v"),
@@ -172,7 +177,7 @@ CUTS = [  # (label, colour, polyline): the detours, each through a landmark
     ("A2", AARON, [(60, 1062), (60, 960), (60, 848)]),                                         # landfill road past Trash Mountain
     ("A3", AARON, [(390, 790), (430, 700), (560, 650), (560, 548)]),                            # through Butterfly World (service gate, past the dome)
     ("A4", AARON, [(40, 360), (250, 325), (230, 240)]),                                         # smash the Wynmoore gate, across the golf course
-    ("A5", AARON, [(225, 232), (200, 130), (230, 40), (230, 14)]),                              # across the football field, out the bus loop
+    ("A5", AARON, [(230, 236), (180, 180), (162, 140), (162, 116), (230, 118), (250, 100), (250, 14)]),                              # across the football field, out the bus loop
     ("C1", CHRIS, [(-150, 1345), (-160, 1316), (-175, 1300), (-175, 1246), (-253, 1246), (-330, 1246), (-350, 1244), (-400, 1205), (-470, 1150)]),         # through the paseo, under the arch, jump the fountain                    # Publix lot, median gap, Promenade plaza: jump the fountain
     ("C2", CHRIS, [(-600, 1282), (-600, 1230), (-600, 1170), (-600, 1095)]),                    # up the parking garage, jump off the top deck onto Wiles
     ("C3", CHRIS, [(-700, 1062), (-780, 1000), (-712, 925), (-665, 920), (-700, 870), (-700, 813)]),   # casino valet loop, out through the lot
@@ -190,7 +195,7 @@ ROUTES = [
      [PUBLIX, (-14, 1330), (-14, 1132), (-175, 1132), (-175, 1192), (-14, 1192), (-14, 800), (12, 776), (40, 774), (64, 768), (64, 738), (34, 736), (12, 736), (-14, 640), (-60, 640), (-110, 585), (-110, 515), (-14, 508),
       (-14, 150), (-200, 140), (-450, 140), (-470, 110), (-470, 14), (XBANKS + 8, -8), (XBANKS + 8, -112), (-610, -112), DAVE]),
     ("AARON (Tesla): the east side: school loop, Trash Mountain, Butterfly World, golf course, football field", AARON,
-     [PUBLIX, (-14, 1330), (400, 1312), (400, 1250), (330, 1180), (400, 1092), (60, 1075), (60, 960), (60, 848), (390, 800), (430, 700), (560, 650), (560, 548), (300, 515), (40, 470), (40, 360), (250, 325), (230, 240), (200, 130), (230, 14),
+     [PUBLIX, (-14, 1330), (400, 1312), (400, 1250), (330, 1180), (400, 1092), (60, 1075), (60, 960), (60, 848), (390, 800), (430, 700), (560, 650), (560, 548), (300, 515), (40, 470), (40, 360), (250, 325), (230, 240), (180, 180), (162, 140), (162, 116), (230, 118), (250, 100), (250, 14),
       (100, -8), (XBANKS + 8, -14), (XBANKS + 8, -120), (-610, -120), DAVE]),
     ("CHRIS (bike): the jumps: fountain, garage roof, casino loop, loading dock, the Hammocks, canal path", CHRIS,
      [PUBLIX, (-150, 1345), (-160, 1316), (-175, 1300), (-175, 1246), (-253, 1246), (-330, 1246), (-350, 1244), (-400, 1205), (-470, 1150), (-600, 1170), (-600, 1095), (-700, 1062), (-780, 1000), (-712, 925), (-665, 920), (-700, 870), (-700, 813), (X441, 806), (XW + 120, 780), (XW + 32, 780), (XW + 15, 760),
@@ -229,7 +234,7 @@ for (poly, blds, step, dirn) in LOTS:
         if lab: d.text(P((a + c) / 2, (b + e) / 2), lab, fill="white", font=font(8), anchor="mm", stroke_width=2, stroke_fill="#1b1b1b")
 for yy in range(850, 970, 14):                                       # dealer car rows
     for xx in range(-600, -40, 8): d.rectangle([P(xx, yy + 3), P(xx + 5, yy - 3)], fill=["#d33", "#eee", "#36c", "#222", "#c9a227"][(xx // 8 + yy) % 5])
-tx, ty = P(200, 130); d.ellipse([tx - 70 * S * 2.2, ty - 32 * S * 2.2, tx + 70 * S * 2.2, ty + 32 * S * 2.2], fill="#b5533c"); d.rectangle([tx - 44 * S * 2.2, ty - 20 * S * 2.2, tx + 44 * S * 2.2, ty + 20 * S * 2.2], fill="#4f9a3a", outline="white")
+tx, ty = P(150, 180); d.ellipse([tx - 70 * S * 2.2, ty - 32 * S * 2.2, tx + 70 * S * 2.2, ty + 32 * S * 2.2], fill="#b5533c"); d.rectangle([tx - 44 * S * 2.2, ty - 20 * S * 2.2, tx + 44 * S * 2.2, ty + 20 * S * 2.2], fill="#4f9a3a", outline="white")
 def court(x0, y0, x1, y1, col): d.rectangle([P(x0, y1), P(x1, y0)], fill=col, outline="white")
 for i in range(4): court(320 + i * 50, -150, 360 + i * 50, -70, "#b5533c")
 for i in range(4): court(60 + i * 45, -480, 95 + i * 45, -330, "#4b8bbf")

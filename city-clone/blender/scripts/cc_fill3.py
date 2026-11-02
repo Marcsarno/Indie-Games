@@ -164,30 +164,46 @@ def golf_cart(name):
 
 # ------------------------------------------------------------------ the fills ------------------------------------------------------------------
 def hs_athletics():
-    """Coconut Creek High: the bare grass round the track gets home + visitor stands (aisles left for Aaron's A5 run), press box, four light towers,
-    scoreboard, concession stand, a baseball and a softball diamond, four tennis courts."""
-    f = frame(200, 130, 0); b = TB(T43, 200, 130)
-    for (x0, x1) in ((-70, -2), (26, 75)): bleachers(b, x0, x1, 45.5, 9, 1); wbox(f, 0, (x0 + x1) / 2, 49, x1 - x0, 7.5)
-    for (x0, x1) in ((-60, 2), (28, 62)): bleachers(b, x0, x1, -45.5, 6, -1); wbox(f, 0, (x0 + x1) / 2, -48, x1 - x0, 5)
-    b.box(flat("#e8e2d2"), -46, -24, 49, 53.5, 4.2, 7.6); b.box(GL, -45, -25, 48.92, 49.0, 5.2, 7.0); b.box(flat("#7a1f1f"), -46.4, -23.6, 48.6, 53.9, 7.6, 8.0)
-    b.box(sgn("cchs"), -42, -28, 48.5, 48.6, 8.0, 9.6)
-    for (u, v) in ((-84, 48), (84, 48), (-84, -48), (84, -48)): light_tower(b, u, v, 24.0, math.degrees(math.atan2(-v, -u)) - 90); wcir(f, u, v, .4)
+    """Coconut Creek High (round 44, from the user's satellite shot): track + football on NW 15th St (home stands south with press box, visitor stands north, aisles
+    kept for Aaron's A5), baseball + softball inside the L-shaped lake, the school as one big connected block east of Aruba Way (classroom wings, gym, cafeteria,
+    covered walks), a bus loop along Cougar Way, Antigua Terrace condos east of Cougar Way (BRGR STOP is a plan building on the Pkwy)."""
+    cx_, cy_ = TRK; f = frame(cx_, cy_, 0); b = TB(T43, cx_, cy_)
+    for (x0, x1) in ((-70, -2), (26, 75)): bleachers(b, x0, x1, -45.5, 9, -1); wbox(f, 0, (x0 + x1) / 2, -49, x1 - x0, 7.5)
+    for (x0, x1) in ((-60, 2), (28, 62)): bleachers(b, x0, x1, 45.5, 4, 1); wbox(f, 0, (x0 + x1) / 2, 47.5, x1 - x0, 3.5)
+    b.box(flat("#e8e2d2"), -46, -24, -53.5, -49, 4.2, 7.6); b.box(GL, -45, -25, -49.0, -48.92, 5.2, 7.0); b.box(flat("#7a1f1f"), -46.4, -23.6, -53.9, -48.6, 7.6, 8.0)
+    for (u, v) in ((-84, 42), (84, 42), (-84, -50), (84, -50)): light_tower(b, u, v, 24.0, math.degrees(math.atan2(-v, -u)) - 90); wcir(f, u, v, .4)
+    ps = Builder(uname("hs_pressign")); ps.box(sgn("cchs"), -7, 7, -.05, .05, 0, 1.6); put(ps, cx_ - 35, cy_ - 48.5, 180)
     sb = Builder(uname("hs_scoreboard")); sb.box(ALU, -5, -4.6, -.15, .15, 0, 8); sb.box(ALU, 4.6, 5, -.15, .15, 0, 8)
     sb.box(flat("#1d2a22"), -7, 7, -.3, .3, 5, 10.5); sb.box(sgn("cchs"), -6.6, 6.6, -.38, -.3, 9.0, 10.2); sb.box(flat("#f2c030"), -5, 5, -.36, -.3, 5.8, 6.6)
-    put(sb, 98, 130, 90); ccir(98, 125.2, .3); ccir(98, 134.8, .3)
-    restroom(b, 42, 72, 12, 7); wbox(f, 0, 42, 72, 12, 7)
-    put(b, 200, 130, 0); FOOT.append((115, 80, 285, 185))
-    diamond(292, 42, -45, 78, lights=True, key="cchs"); diamond(47, 42, -45, 58)
-    if clear_ok(292, 168, 396, 228, "hs bus lot"):                                              # bus lot: two rows of yellow school buses
-        RB.box(ASPH, 292, 396, 168, 228, 0, .028); RB.box(ASPH, 396, 402, 192, 204, 0, .027); FOOT.append((290, 166, 398, 230)); MAP.append([292, 168, 396, 228, "#5a5c60"])
-        for row, (yy, rz) in enumerate(((182, 0), (214, 180))):
-            for i in range(11):
-                x = 298 + i * 8.6
-                RB.box(m["white"], x - 4.3 - .05, x - 4.3 + .05, yy - 6, yy + 6, .028, .034)
-                if R3.random() < .85: o = linked("school_bus", lambda nm: CV.make_bus(nm)); place(o, x, yy, rz=rz); cbox(x, yy, 2.6, 10, rz)
-    t = Builder(uname("hs_tennis")); cm = CV.civic_mats(); nop = lambda *a, **k: None
-    for i in range(4): CV.tennis_court(t, cm, nop, 55 + i * 16, 202)
-    STATIC.append(t.build(vc=True)); FOOT.append((46, 186, 112, 218))
+    put(sb, cx_ + 98, cy_, -90); ccir(cx_ + 98, cy_ - 4.8, .3); ccir(cx_ + 98, cy_ + 4.8, .3)
+    restroom(b, 92, -28, 7, 12); wbox(f, 0, 92, -28, 7, 12)
+    FOOT.append((cx_ - 88, cy_ - 60, cx_ + 104, cy_ + 50))
+    diamond(60, 52, -45, 68, lights=True, key="cchs"); diamond(205, 52, 45, 56)
+    # the school: one big connected block (x 265..405, y 70..198)
+    W1 = "#d9b48a"; parts = [("cchs_n", 335, 182, 140, 30, 9.0, "n", "cchs", 2), ("cchs_gym", 292, 132, 52, 68, 12.0, "w", None, 1), ("cchs_mid", 330, 132, 24, 68, 7.0, "e", None, 1), ("cchs_s", 373, 132, 64, 68, 9.0, "e", None, 2),
+                             ("cchs_caf", 335, 84, 140, 24, 6.5, "s", "cchs", 1)]
+    for (nm, x, y, w, d, h, face, key, fl) in parts:
+        ww, dd = world_dims(face, w, d)
+        o = bldg(nm, ww, dd, h, wall=W1, key=key, accent="#7a1f1f", floors=fl, sign_h=2.0, canopy=False); place(o, x, y, face); cbox(x, y, w, d)
+    FOOT.append((262, 68, 408, 200))
+    c = TB(T43)
+    for x in range(272, 400, 6): c.box(flat("#d0c8b8"), x - .15, x + .15, 196.5, 196.8, 0, 3.6)
+    c.box(flat("#e9e3d6"), 268, 402, 196.3, 200, 3.6, 4.0); c.box(flat("#e9e3d6"), 268, 402, 68, 71.5, 3.6, 4.0)
+    RB.box(ASPH, 410, 434, 72, 196, 0, .028); FOOT.append((408, 70, 436, 198))                                      # bus loop along Cougar Way
+    for i in range(9):
+        y = 82 + i * 13
+        RB.box(m["white"], 410, 433, y - 6.5 - .05, y - 6.5 + .05, .028, .034)
+        if R3.random() < .85: o = linked("school_bus", lambda nm: CV.make_bus(nm)); place(o, 421, y, rz=90); cbox(421, y, 10, 2.6)
+    place(pylon("cchs_sign", "cchs", 5.0, 8.0), 246, 30, "e")
+    # Antigua Terrace condos east of Cougar Way: two rows round a parking court, a pool
+    for (yy, face) in ((212, "s"), (110, "n")):
+        for xx in range(490, 790, 70):
+            if near_road(xx, yy, 9): continue
+            o = linked(f"ant_condo_{(xx // 70) % 2}", lambda nm, k=xx // 70: DK.condo(nm, 46, 14, 3, 90 + k % 2)); place(o, xx, yy, face); cbox(xx, yy, 46, 14); FOOT.append((xx - 23, yy - 7, xx + 23, yy + 7))
+    surface_lot(462, 790, 130, 190, .35, drive=(447, 462, 156, 164))
+    pb = Builder(uname("ant_pool")); pb.box(PAVE, -12, 12, -8, 8, 0, .08); pb.box(flat("#3fb7d8"), -8, 8, -4.5, 4.5, .08, .1); chainlink(pb, [(-12, -8), (12, -8), (12, 8), (-12, 8), (-12, -8)], 1.3, flat("#2e3236"))
+    put(pb, 560, 82, 0); FOOT.append((546, 72, 574, 92))
+    place(pylon("ant_sign", "antigua", 3.2, 6.0), 452, 214, "e")
 
 def golf():
     """Wynmoor golf course: striped fairways, flags on the greens, more sand traps, a cart path round the course, golf carts, a pond hole at the west end."""

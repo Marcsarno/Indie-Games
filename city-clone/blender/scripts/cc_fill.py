@@ -421,7 +421,7 @@ def extra_houses(placed_xy):
     X441, XP = LP["arterials"]["x441"], LP["arterials"]["xpower"]; n = 0; added = []
     for r in net:
         if r.rank not in (4, 5) or r.hw < 3.5: continue
-        if r.name.startswith(("ramp", "alley", "rbt", "Promenade")): continue
+        if r.name.startswith(("ramp", "alley", "rbt", "Promenade")) or r.name in ("Aruba Way", "Cougar Way", "NW 15th St"): continue
         s = 9.0
         while s < r.L - 9:
             for side in (1, -1):
@@ -527,12 +527,13 @@ def parks():
     for k_ in range(48):
         a0, a1 = 2 * math.pi * k_ / 48, 2 * math.pi * (k_ + 1) / 48
         for (R0, R1, mt) in ((44, 52, cm["track"]),):
-            p0 = (200 + R1 * 1.6 * math.cos(a0), 130 + R1 * .8 * math.sin(a0)); p1 = (200 + R1 * 1.6 * math.cos(a1), 130 + R1 * .8 * math.sin(a1))
-            q0 = (200 + R0 * 1.6 * math.cos(a0), 130 + R0 * .8 * math.sin(a0)); q1 = (200 + R0 * 1.6 * math.cos(a1), 130 + R0 * .8 * math.sin(a1))
+            p0 = (TRK[0] + R1 * 1.6 * math.cos(a0), TRK[1] + R1 * .8 * math.sin(a0)); p1 = (TRK[0] + R1 * 1.6 * math.cos(a1), TRK[1] + R1 * .8 * math.sin(a1))
+            q0 = (TRK[0] + R0 * 1.6 * math.cos(a0), TRK[1] + R0 * .8 * math.sin(a0)); q1 = (TRK[0] + R0 * 1.6 * math.cos(a1), TRK[1] + R0 * .8 * math.sin(a1))
             trk.poly(mt, [(*q0, .04), (*p0, .04), (*p1, .04), (*q1, .04)])
-    CV.field(CV.SwapB(trk), cm, 130, 200, 40, 100, 10, True); STATIC.append(trk.build(vc=True))
+    CV.field(CV.SwapB(trk), cm, TRK[1], TRK[0], 40, 100, 10, True); STATIC.append(trk.build(vc=True))
     for B_ in (Bp, Bq, Br): STATIC.append(B_.build(vc=True))
 WYN = []
+TRK = (150, 180)                                                                                # round 44: track centre (north end of the campus, on NW 15th St)
 def wynmoor():
     """Wynmoor: mid-rise condo blocks round the golf course, a clubhouse, greens + sand traps, and the guard gate on Lyons."""
     cx, cy = 470, 360; n = 0
