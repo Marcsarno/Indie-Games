@@ -232,6 +232,7 @@ function genForest(R, A) {
   // the forest's own (goblins, wolves) come often; dungeon dwellers wander out now and then
   const pool = Object.keys(MONSTERS).filter(id => !MONSTERS[id].unique && (MONSTERS[id].minLevel || 1) <= A.diff && !['spider', 'shaman', 'burning', 'wraith'].includes(id));
   for (const id of ['goblin', 'goblin', 'wolf', 'wolf', 'slime', 'slime', 'boar', 'gshaman', 'brigand', 'shroom', 'shroom', 'sporecap']) pool.push(id);
+  if (A.diff >= 4) pool.push('bear');   // dire bears from the autumn woods on
   const free = (x, y, rad) => { for (let t = 0; t < 30; t++) { const fi = x + (R() - 0.5) * rad * 2, fj = y + (R() - 0.5) * rad * 2; if (!blocked(fi, fj)) return [fi, fj]; } return null; };
   LV.rooms.forEach((r, n) => {
     if (n === 0 || n === far) return;

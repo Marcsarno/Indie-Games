@@ -25,6 +25,7 @@ const ITEM_BASES = {
   round_shield: { slot: 'shield', look: 'round', name: 'ROUND SHIELD', armor: 4, block: 15, lvl: 1 },
   tower_shield: { slot: 'shield', look: 'tower', name: 'TOWER SHIELD', armor: 10, block: 28, lvl: 3 },
   heal: { slot: 'potion', name: 'HEALING POTION', heal: 30, lvl: 1 },
+  mana: { slot: 'potion', name: 'MANA POTION', mana: 25, lvl: 1 },   // drunk on pickup
 };
 const AFFIXES = [
   { pre: 'SHARP', stat: 'dmgPct', roll: [15, 40], slots: ['weapon'] },
@@ -119,7 +120,7 @@ function itemName(it) {
 }
 function itemLines(it) {
   const b = ITEM_BASES[it.base], m = it.mods, L = [];
-  if (b.slot === 'potion') return ['RESTORES ' + b.heal + ' LIFE'];
+  if (b.slot === 'potion') return [b.mana ? 'RESTORES ' + b.mana + ' MANA' : 'RESTORES ' + b.heal + ' LIFE'];
   if (it.rarity === 'rare' || it.rarity === 'legend' || it.rarity === 'set') L.push(b.name);
   if (b.dmg) L.push(`DAMAGE ${b.dmg[0]}-${b.dmg[1]}${b.slow ? ' (SLOW)' : ''}`);
   if (b.armor) L.push(`ARMOR ${b.armor}`);
@@ -180,7 +181,8 @@ function itemIcon(it) {
     const big = b.look === 'kite', rad = big ? [1, 5, 7] : [1, 4.4, 4.4], ax = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
     r.ell([0, 0, 4], rad, team, ax, { mf: p => { const u = p[1] / rad[1], v = (p[2] - 4) / rad[2]; return u * u + v * v > 0.62 ? M.GOLD : (big && (Math.abs(u) < 0.14 || Math.abs(v - 0.15) < 0.11)) ? M.GOLD : 0; } });
   } else {   // potion
-    r.cyl([0, 0, -1], [0, 0, 6], 3.4, M.CLOTH_RED); r.sph([0, 0, 6], 3.6, M.CLOTH_RED);
+    const liquid = b.mana ? M.CLOTH_BLUE : M.CLOTH_RED;
+    r.cyl([0, 0, -1], [0, 0, 6], 3.4, liquid); r.sph([0, 0, 6], 3.6, liquid);
     r.cyl([0, 0, 9], [0, 0, 11.5], 1.3, M.BONE); r.cyl([0, 0, 11.5], [0, 0, 12.5], 1.6, M.WOOD);
   }
   return (iconCache[k] = renderRig(r, b.slot === 'shield' ? Math.PI / 4 : b.slot === 'helm' || b.slot === 'chest' ? Math.PI / 4 : 0, 26, 26, 13, 17));

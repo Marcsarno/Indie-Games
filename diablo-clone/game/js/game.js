@@ -316,7 +316,7 @@ function dropLoot(fi, fj, n, rich) {
     if (blocked(p[0], p[1])) p = [fi, fj];
     const q = Math.random();
     if (q < 0.45 || rich && k === 0) groundItems.push({ gold: Math.round((2 + Math.random() * 6) * LV.diff * (rich ? 3 : 1)), fi: p[0], fj: p[1], t: 0 });
-    else if (q < 0.6) groundItems.push({ item: rollItem(R, LV.diff, 'heal'), fi: p[0], fj: p[1], t: 0 });
+    else if (q < 0.6) groundItems.push({ item: rollItem(R, LV.diff, Math.random() < 0.35 ? 'mana' : 'heal'), fi: p[0], fj: p[1], t: 0 });
     else if (q < 0.66 || (rich && k === 1)) groundItems.push({ gem: GEMS[Math.min(3, Math.floor(Math.random() * (1.5 + LV.diff * 0.5)))], fi: p[0], fj: p[1], t: 0 });   // gems: rarer kinds deeper in
     else if (q < (rich ? 1 : 0.8)) groundItems.push({ item: rollItem(R, LV.diff), fi: p[0], fj: p[1], t: 0 });
   }
@@ -325,6 +325,7 @@ function pickup(g) {
   if (g.gem) { const v = Math.round(g.gem.worth * (1 + LV.diff * 0.25)); hero.gold += v; sfx('gold'); floater(`${g.gem.name} +${v}`, g.fi, g.fj, 12, g.gem.cols[2]); return true; }
   if (g.gold) { sfx('gold'); hero.gold += g.gold; floater(g.gold + ' GOLD', g.fi, g.fj, 10, 50); return true; }
   const b = ITEM_BASES[g.item.base];
+  if (b.mana) { hero.mana = Math.min(STAT.maxMana, hero.mana + b.mana); sfx('potion'); floater('+' + b.mana + ' MANA', g.fi, g.fj, 12, 39); const [x, y] = screenOf(hero); burst(4, x, y, 20, 10, 30, 40); return true; }
   if (b.slot === 'potion') { if (hero.potions >= 8) return false; hero.potions++; sfx('pickup'); say('HEALING POTION', 22, 1.2); return true; }
   if (hero.bag.length >= BAG_SIZE) { if (!g.warned) say('YOUR BAG IS FULL', 22, 1.5); g.warned = true; return false; }
   hero.bag.push(g.item); say((g.item.rarity === 'legend' ? 'LEGENDARY: ' : g.item.rarity === 'set' ? 'SET ITEM: ' : '') + itemName(g.item), RARITY_COL[g.item.rarity], g.item.rarity === 'legend' ? 3.5 : 2); sfx(g.item.rarity === 'legend' ? 'levelUp' : 'pickup');
