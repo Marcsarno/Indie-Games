@@ -386,6 +386,40 @@ function wraithRig(look, st) {
   if (clip === 'death') tipRig(r, [0, 0, 0], 0, 0, [0, 3, 7, 11, 14, 16][f]);   // sinks into the floor
   return r;
 }
+// ---------------------------------------------------------------- the treant elder (autumn boss)
+// A walking tree: a thick bark trunk for a body, root legs, branch arms with twig claws, a knot-hole
+// face with glowing eyes, and a crown of autumn leaves. Swings its branch like a club.
+const TREANT_B = { hipH: 10, thigh: 5.5, shin: 5, ankle: 1.2, spine: 12, shW: 7.5, shZ: 4, neck: 9, upper: 7.5, fore: 7, hipW: 3.6, stride: 4, lift: 2, duty: 0.6, bob: 0.6, sway: 0.5, runLean: 0.05, counter: 0.1 };
+function treantRig(look, st) {
+  const B = TREANT_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J, bark = M.BARK;
+  for (const [hip, knee, ank] of [[J.hipL, J.kneeL, J.ankL], [J.hipR, J.kneeR, J.ankR]]) {
+    r.cone(hip, knee, 3.2, 2.8, bark); r.cone(knee, ank, 2.8, 2.6, bark);
+    for (const a of [-0.7, 0, 0.7]) r.cone(ank, V.add(ank, [Math.cos(a) * 4, Math.sin(a) * 3, -1]), 1.4, 0.4, bark);   // root toes
+  }
+  r.group(() => { r.cone(J.pelvis, V.mad(J.chest, up, 6), 6.5, 5.5, bark, { mf: p => Math.abs(Math.sin(Math.atan2(V.dot(V.sub(p, J.pelvis), sideR), V.dot(V.sub(p, J.pelvis), fwd)) * 7 + V.dot(V.sub(p, J.pelvis), up) * 0.3)) < 0.15 ? M.HAIR : 0 }); });
+  const sw = atkIndex(st.clip) >= 0 ? st.key : null;
+  const pivot = V.add(V.add(J.chest, V.mul(sideR, 3.5)), V.add(V.mul(up, 4), V.mul(fwd, 1)));
+  const U = V.norm(V.add(V.mul(up, Math.cos(0.4)), V.mul(sideR, Math.sin(0.4)))), inPlane = a => V.norm(V.add(V.mul(fwd, Math.cos(a)), V.mul(U, Math.sin(a))));
+  let handR = sw ? V.mad(pivot, inPlane(sw.a), (sw.r || 6.5) * 1.5) : V.add(V.add(J.shR, V.mul(fwd, 4 + J.swingArm * 2)), V.add(V.mul(up, -9), V.mul(sideR, 3)));
+  const handL = V.add(V.add(J.shL, V.mul(fwd, 4 - J.swingArm * 2)), V.add(V.mul(up, -9), V.mul(sideR, -3)));
+  if (st.clip === 'death') handR = V.add(J.shR, [3, 3, -11]);
+  for (const [sh, hand, s] of [[J.shR, handR, 1], [J.shL, handL, -1]]) {
+    const a = armTo(J, sh, hand, B, s);
+    r.cone(sh, a.el, 2.6, 2.2, bark); r.cone(a.el, a.hand, 2.2, 1.6, bark);
+    for (const k of [-1, 0, 1]) r.cone(a.hand, V.add(a.hand, V.add(V.mul(V.norm(V.sub(a.hand, a.el)), 3.5), V.mul(sideR, k * 1.4 * s))), 0.8, 0.2, bark);   // twig claws
+  }
+  if (sw && sw.smear && st.prev) smearArc(r, pivot, fwd, U, st.prev.a + (st.prev.ck || 0), sw.a + (sw.ck || 0), 8, 18);
+  // face: two glowing eyes and a dark mouth in a knot on the upper trunk
+  const face = V.add(V.mad(J.chest, up, 2.5), V.mul(fwd, 5.2));
+  for (const s of [-1, 1]) r.sph(V.add(face, V.mul(sideR, s * 1.8)), 0.9, M.EYE_GRN, { noShadow: true });
+  r.ell(V.add(V.mad(face, up, -2.6), V.mul(fwd, 0.3)), [0.6, 1.8, 0.9], M.DARK, frameAlong(fwd, up), { noShadow: true });
+  // crown of leaves: separate clumps, autumn colors
+  const top = V.mad(J.chest, up, 9), leaf = look.green ? M.LEAFM : M.AUTUMNM;
+  for (const [f, s, z, rr] of [[0, 0, 3, 7], [-3, 4, 0, 5.5], [-3, -4, 0.5, 5.5], [3, 3, -1, 5], [2, -4, 1, 5], [-1, 0, 7, 5]]) r.sph(V.add(V.add(V.mad(top, fwd, f), V.mul(sideR, s)), V.mul(up, z)), rr, leaf);
+  if (st.clip === 'death') deathTip(r, B, st.f, -1);
+  if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
+  return r;
+}
 // a slime: one glossy jelly body that squashes on landing and stretches as it hops, with big eyes
 function slimeRig(look, st) {
   const r = new Rig(), { clip, f } = st, mat = look.blue ? M.SLIME_B : M.SLIME, R0 = 6 * (look.big ? 1.5 : 1);
@@ -403,6 +437,27 @@ function slimeRig(look, st) {
   } });
   if (clip !== 'death') r.ell([lean * 0.7, 0, R0 * 0.35 + lift], [R0 * 0.55, R0 * 0.55, R0 * 0.3], mat, null, { noShadow: true });   // the denser core shows through low down
   if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
+  return r;
+}
+// farm animals (round 16): a woolly sheep with a dark face, and a round pink pig with a snout
+function sheepRig(look, st) {
+  const r = new Rig(), { clip, f } = st, walk = clip === 'walk', bob = walk && f % 2 ? 0.5 : 0, graze = clip === 'idle' && f % 4 >= 2;
+  for (const [x, y] of [[3, 2], [3, -2], [-3, 2], [-3, -2]]) { const ph = walk ? Math.sin(f / 8 * Math.PI * 2 + (x * y > 0 ? 0 : Math.PI)) * 1.4 : 0; r.cone([x, y, 4], [x + ph, y, 0.3], 0.8, 0.7, M.DARK); }
+  r.group(() => { for (const [x, y, z, rr] of [[0, 0, 7, 5], [3, 1.5, 7.5, 3.5], [-3, -1.5, 7.5, 3.5], [1, -2, 9, 3.2], [-2, 2, 9, 3.2]]) r.sph([x, y, z + bob], rr, M.CLOTH_WHITE); });
+  const hd = graze ? [7, 0, 3.5] : [6.5, 0, 9 + bob];
+  r.ell(hd, [2.6, 1.9, 2], M.HIDE, null, { mf: p => p[0] - hd[0] > 1.2 && Math.abs(Math.abs(p[1] - hd[1]) - 0.8) < 0.4 && Math.abs(p[2] - hd[2] - 0.5) < 0.4 ? M.DARK : 0 });
+  for (const s of [-1, 1]) r.cone(V.add(hd, [-0.5, s * 1.6, 0.8]), V.add(hd, [-1.2, s * 3.2, 0.2]), 0.8, 0.3, M.HIDE);
+  return r;
+}
+function pigRig(look, st) {
+  const r = new Rig(), { clip, f } = st, walk = clip === 'walk', bob = walk && f % 2 ? 0.5 : 0;
+  for (const [x, y] of [[3, 2], [3, -2], [-3, 2], [-3, -2]]) { const ph = walk ? Math.sin(f / 8 * Math.PI * 2 + (x * y > 0 ? 0 : Math.PI)) * 1.2 : 0; r.cone([x, y, 3], [x + ph, y, 0.3], 1.1, 0.9, M.FACE); }
+  r.ell([0, 0, 5.5 + bob], [6, 4.2, 4], M.FACE, null, { bias: 1 });
+  const hd = [6, 0, 6.5 + bob];
+  r.sph(hd, 3, M.FACE, { bias: 1, mf: p => p[0] - hd[0] > 1.5 && Math.abs(Math.abs(p[1]) - 1) < 0.4 && p[2] - hd[2] > 0.6 ? M.DARK : 0 });
+  r.cyl(V.add(hd, [2.4, 0, -0.6]), V.add(hd, [3.6, 0, -0.6]), 1.4, M.FACE, { mf: p => p[0] > hd[0] + 3.4 && Math.abs(Math.abs(p[1]) - 0.5) < 0.3 ? M.MOUTH : 0 });
+  for (const s of [-1, 1]) r.cone(V.add(hd, [0, s * 1.8, 2.2]), V.add(hd, [1, s * 2.6, 3.8]), 1, 0.3, M.FACE);
+  r.cone([-6, 0, 6 + bob], [-7.5, 0.8, 7.5 + bob], 0.5, 0.4, M.FACE);   // tail
   return r;
 }
 // a town chicken: white body, red comb, pecks while idle and trots on two thin legs
@@ -476,9 +531,12 @@ const FAMILIES = {
   hound: { size: [80, 64, 38, 50], rig: houndRig, swing: () => SWINGS.bite },
   spider: { size: [80, 60, 40, 46], rig: spiderRig, swing: () => SWINGS.bite },
   chicken: { size: [28, 28, 14, 22], rig: chickenRig, swing: () => SWINGS.bite },
+  sheep: { size: [36, 32, 18, 22], rig: sheepRig, swing: () => SWINGS.bite },
+  pig: { size: [36, 30, 18, 20], rig: pigRig, swing: () => SWINGS.bite },
   slime: { size: [48, 44, 24, 32], gait: 0.13, rig: slimeRig, swing: () => SWINGS.bite },
   shroom: { size: [44, 48, 22, 36], gait: gaitFrameTiles(SHROOM_B), rig: shroomRig, swing: () => SWINGS.claw },
   wraith: { size: [56, 60, 28, 46], gait: 0.2, rig: wraithRig, swing: () => SWINGS.claw },
+  treant: { size: [150, 160, 75, 132], gait: gaitFrameTiles(TREANT_B, 1.4), rig: treantRig, swing: () => SWINGS.heavy },
   ogre: { size: [140, 140, 70, 112], gait: gaitFrameTiles(OGRE_B, 1.5), rig: ogreRig, swing: () => SWINGS.heavy },
 };
 // Variants: same family, different look and stats. `kind` is what the roster ledger counts.
@@ -490,6 +548,7 @@ const MONSTERS = {
   shaman: { family: 'fallen', name: 'FALLEN SHAMAN', look: { staff: true, hood: true, skin: M.SKIN }, hp: 9, dmg: [3, 6], speed: 28, reach: 6, ranged: 'firebolt', xp: 16, chest: 12, shadow: 5 },
   hound: { family: 'hound', name: 'BONE HOUND', look: {}, hp: 16, dmg: [3, 6], speed: 52, reach: 1.35, xp: 18, chest: 12, shadow: 10 },
   skelking: { family: 'skeleton', name: 'SKELETON KING', title: 'LORD OF THE RESTLESS DEAD', look: { weapon: 'sword', shield: false, armored: true, crown: true, eye: M.FIREM, scale: 1.6, size: [124, 132, 62, 104] }, hp: 170, dmg: [9, 16], speed: 24, reach: 1.9, xp: 200, chest: 42, shadow: 11, unique: true, boss: 'king', minLevel: 99 },
+  treant: { family: 'treant', name: 'TREANT ELDER', title: 'THE WOOD THAT WALKS', minLevel: 99, look: { scale: 1.4 }, hp: 170, dmg: [8, 14], speed: 18, reach: 2.3, xp: 190, chest: 54, shadow: 14, unique: true, boss: 'slam', minions: ['shroom', 'sporecap'], calls: 'THE ELDER WAKES THE MUSHROOMS' },
   warlord: { family: 'ogre', name: 'OGRE WARLORD', title: 'TYRANT OF THE DEEP WOODS', minLevel: 99, look: { scale: 1.5 }, hp: 140, dmg: [8, 14], speed: 22, reach: 2.1, xp: 160, chest: 46, shadow: 13, unique: true, boss: 'slam' },
   shroom: { family: 'shroom', name: 'SHROOMLING', look: {}, hp: 10, dmg: [2, 4], speed: 26, reach: 1.1, xp: 9, chest: 14, shadow: 5, pack: true, where: 'out' },
   sporecap: { family: 'shroom', name: 'SPORECAP', look: { purple: true }, hp: 16, dmg: [3, 6], speed: 24, reach: 1.15, xp: 16, chest: 14, shadow: 5, where: 'out', minLevel: 2 },

@@ -65,7 +65,7 @@ function startLevel(level, seed) {
   G.msg = [];
   say(LV.outdoor ? areaName() : `${TH().name} LEVEL ${LV.depth}`, 51, 3);
   if (!LV.outdoor && isBossFloor(LV.depth)) say('SOMETHING VAST STIRS IN THE DARK', 22, 4);
-  if (LV.area === 'forest') say('AN OGRE WARLORD HOLDS THE WAY DOWN', 22, 4);
+  if (LV.area === 'forest') say(LV.autumn ? 'A TREANT ELDER HOLDS THE WAY DOWN' : 'AN OGRE WARLORD HOLDS THE WAY DOWN', 22, 4);
 }
 function makeEnemy(id, fi, fj, n) {
   const m = MONSTERS[id], lv = LV.diff;

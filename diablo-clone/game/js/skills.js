@@ -163,8 +163,9 @@ function updateBoss(e, dt, d, dx, dy) {
 function updateWarlord(e, dt, d) {
   e.special -= dt;
   if (!e.called && e.hp < e.maxHp * 0.5) {
-    e.called = true; say('THE WARLORD CALLS HIS GOBLINS', 22, 2.5); sfx('cry');
-    for (let k = 0; k < 4; k++) { const a = k / 4 * 6.283; const g = makeEnemy(k % 2 ? 'goblin' : 'gshaman', e.fi + Math.cos(a) * 2.5, e.fj + Math.sin(a) * 2.5, enemies.length); if (!blocked(g.fi, g.fj)) { g.state = 'hunt'; enemies.push(g); } }
+    const mins = e.def.minions || ['gshaman', 'goblin'];
+    e.called = true; say(e.def.calls || 'THE WARLORD CALLS HIS GOBLINS', 22, 2.5); sfx('cry');
+    for (let k = 0; k < 4; k++) { const a = k / 4 * 6.283; const g = makeEnemy(mins[k % 2], e.fi + Math.cos(a) * 2.5, e.fj + Math.sin(a) * 2.5, enemies.length); if (!blocked(g.fi, g.fj)) { g.state = 'hunt'; enemies.push(g); } }
   }
   if (e.slamT > 0) {
     e.slamT -= dt; e.clip = 'attack'; e.atk = 0; e.dir = dirFrom(e.lx - e.fi, e.ly - e.fj);

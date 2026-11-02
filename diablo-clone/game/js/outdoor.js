@@ -217,7 +217,7 @@ function genForest(R, A) {
   // sealed until he falls
   {
     const r = LV.rooms[far], c = C[far];
-    LV.spawns.push({ id: 'warlord', fi: c.x + 1.2, fj: c.y - 1.2 });
+    LV.spawns.push({ id: autumn ? 'treant' : 'warlord', fi: c.x + 1.2, fj: c.y - 1.2 });   // autumn woods have a treant elder
     for (const [dx, dy] of [[-2.4, -1.6], [2.2, 1.8]]) { const i = Math.floor(c.x + dx), j = Math.floor(c.y + dy); if (!solidAt(i, j) && Math.hypot(i - S.i, j - S.j) > 1.5) { LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'tent', i, j }); } }
     void r;
   }
@@ -235,6 +235,12 @@ function genForest(R, A) {
       budget -= m.pack ? 2 : 1;
     }
   });
+  // a cap so deeper forests stay playable on a phone: drop random extras, never a boss or chieftain
+  while (LV.spawns.length > 72) {
+    const k = R.int(0, LV.spawns.length - 1), id = LV.spawns[k].id;
+    if (MONSTERS[id].unique || MONSTERS[id].elite) continue;
+    LV.spawns.splice(k, 1);
+  }
 }
 
 function genTown(R, A) {
@@ -279,6 +285,18 @@ function genTown(R, A) {
     if (R() < 0.12 && canTree(i, j)) { LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'tree', i, j, ...treeKind(R, autumn), jx: (R() - 0.5) * 0.4, jy: (R() - 0.5) * 0.4 }); }
     else if (R() < 0.08) LV.decor.push({ kind: 'bush', fi: i + R(), fj: j + R(), seed: R.int(0, 5), autumn: autumn && R() < 0.5 });
   }
+  // the farm outside the walls: a plowed field of cabbages, a pen of sheep and pigs, a windmill
+  LV.fields = [{ x0: 4.5, y0: 26.5, x1: 12.5, y1: 33.5 }];
+  for (let j = 27; j <= 33; j++) for (let i = 5; i <= 12; i++) if (j % 2 === 1 && R() < 0.8) LV.decor.push({ kind: 'crop', fi: i + 0.5 + (R() - 0.5) * 0.3, fj: j + 0.4, seed: R.int(0, 3) });
+  const pen = { i0: 14, j0: 28, i1: 20, j1: 33 };
+  for (let j = pen.j0; j <= pen.j1; j++) for (let i = pen.i0; i <= pen.i1; i++) {
+    const edge = i === pen.i0 || i === pen.i1 || j === pen.j0 || j === pen.j1;
+    if (!edge || (i === pen.i0 + 3 && j === pen.j0)) continue;   // a gap for the gate
+    LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'fence', i, j, along: (j === pen.j0 || j === pen.j1) ? 1 : 0 });
+  }
+  for (let n = 0; n < 6; n++) LV.critters.push({ kind: n % 2 ? 'pig' : 'sheep', fi: pen.i0 + 1.5 + R() * 4, fj: pen.j0 + 1.5 + R() * 3 });
+  for (const [i, j] of [[8, 22], [9, 22], [8, 23], [9, 23]]) LV.solid[tIdx(i, j)] = 1;
+  LV.decor.push({ kind: 'windmill', i: 8, j: 22, w: 2, h: 2 });
   LV.decor.push({ kind: 'meadow', seed: R.int(1, 1e6) });
   LV.rooms = [{ x: Math.floor(cx - 2), y: Math.floor(cy - 2), w: 4, h: 4, cx: Math.floor(cx), cy: Math.floor(cy + 1.5) }];
   LV.start = LV.rooms[0];
@@ -290,7 +308,6 @@ function genTown(R, A) {
     { role: 'merchant', name: 'MERCHANT', fi: cx + 4.6, fj: cy + 2.2 },
     { role: 'villager', fi: cx - 2, fj: cy + 2 }, { role: 'villager', fi: cx - 4.4, fj: cy - 1.2 }, { role: 'farmer', fi: cx - 5.5, fj: cy + 5.5 },
   ];
-  LV.critters = [];
   for (let n = 0; n < 5; n++) LV.critters.push({ kind: 'chicken', fi: cx - 4 + R() * 6, fj: cy + 2 + R() * 3 });
 }
 
@@ -382,6 +399,10 @@ function outdoorFloor(x, y, A, B, ti, tj) {
   }
   let pd = pathD(fi, fj);
   if (LV.plaza) pd = Math.min(pd, Math.hypot(fi - LV.plaza.x, fj - LV.plaza.y) - LV.plaza.r);
+  for (const f of LV.fields || []) if (fi > f.x0 && fi < f.x1 && fj > f.y0 && fj < f.y1) {   // plowed furrows
+    const row = (fj * 2) % 2;
+    return DIRT[row < 0.35 ? 1 : row < 0.6 ? 2 : (hash(x, y, 95) < 0.1 ? 4 : 3)];
+  }
   if (pd < 0.6) pd += (vnoise(A, B, 9, 71) - 0.5) * 0.35;   // edge wobble only matters near a path
   if (pd < -0.05) return dirtAt(x, y, A, B);
   if (pd < 0.12) return BAYER[((y & 3) << 2) | (x & 3)] < (0.12 - pd) / 0.17 ? dirtAt(x, y, A, B) : GRASS[1];
@@ -492,6 +513,15 @@ const OUT = {
     r.cyl([0, 0, 2.8], [0, 0, h], 3.8, M.RUIN, { mf: p => p[2] > h - 1.2 ? M.LEAFM : Math.abs(Math.sin(Math.atan2(p[1], p[0]) * 6)) < 0.16 ? M.ROCK : 0 });
     if (h < 30) r.cyl([4, 3, 2.8], [10, 7, 2.8], 2.8, M.RUIN);   // the fallen top drum
   }, [40, 64, 20, 52]),
+  crop: (seed) => propSprite('crop' + seed, r => {   // a cabbage
+    const R = rng(seed + 71);
+    for (let k = 0; k < 5; k++) { const a = k * 1.3 + R(); r.ell([Math.cos(a) * 1.6, Math.sin(a) * 1.6, 2.2], [2.4, 2.4, 1.8], k ? M.LEAFM : M.GRASSM); }
+    r.sph([0, 0, 3.4], 2, M.GRASSM);
+  }, [18, 16, 9, 11]),
+  fence: (along) => propSprite('fence' + along, r => {   // a split-rail fence section
+    for (const y of [-11, 0, 11]) r.cyl([0, y, 0], [0, y, 11], 1, M.WOOD);
+    for (const z of [5, 9.5]) r.cyl([0, -11.5, z], [0, 11.5, z], 0.8, M.PLANK);
+  }, [40, 34, 20, 26], along ? Math.PI / 2 : 0),
   palisade: (yaw) => propSprite('palisade' + Math.round(yaw * 8), r => {
     // sharpened logs side by side, bound by a rope
     for (let k = -2; k <= 2; k++) {
@@ -552,6 +582,20 @@ function gableRoof(r, hx, hy, z0, rise, mat, stripe) {
   }
 }
 const BUILD = {
+  windmill: () => propSprite('windmill', r => {
+    // a round stone mill with a thatched cap and four lattice sails
+    r.cyl([0, 0, 0], [0, 0, 34], 13, M.STONE, { mf: p => Math.floor(p[2] / 4 + Math.atan2(p[1], p[0]) * 2) % 2 ? M.ROCK : 0 });
+    r.cone([0, 0, 33], [0, 0, 50], 16, 1.5, M.STRAWM, { mf: p => Math.abs(p[2] - 40) < 0.7 ? M.WOOD : 0 });
+    r.box([13.2, 0, 7], [0.6, 3.2, 6.5], M.WOOD, null, { mf: p => p[2] > 12.5 ? M.BARK : 0 });
+    const hub = [15, 0, 38];
+    r.sph(hub, 2, M.WOOD);
+    for (let k = 0; k < 4; k++) {
+      const a = k * Math.PI / 2 + 0.3, d = [0, Math.cos(a), Math.sin(a)], n = [0, -Math.sin(a), Math.cos(a)];
+      r.cyl(hub, V.mad(hub, d, 22), 0.6, M.WOOD);   // the spar
+      const c = V.mad(V.mad(hub, d, 12), n, 3.2);
+      r.box(c, [0.4, 10, 3.6], M.CLOTH_WHITE, [[1, 0, 0], d, n], { mf: p => { const q = V.sub(p, c), u = V.dot(q, d), v = V.dot(q, n); return (Math.abs(((u + 20) % 3.3) - 1.65) < 0.35 || Math.abs(v) > 1.9) ? M.WOOD : 0; } });
+    }
+  }, [96, 136, 48, 100]),
   cabin: () => propSprite('cabin', r => {
     const hx = 26, hy = 26, wallH = 20;
     r.box([0, 0, 1], [hx + 2, hy + 2, 1.2], M.ROCK);   // stone footing
@@ -621,6 +665,12 @@ function buildOutdoor(back) {
       const [x, y] = iso(d.i + 0.5, d.j + 0.5);
       props.push({ depth: d.i + d.j + 1, sp: d.kind === 'column' ? OUT.column(d.seed) : OUT.ruinwall(d.a, d.seed), wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
       shadows.push([x + 4, y + 3, 12, 6]);
+    } else if (d.kind === 'crop') {
+      const [x, y] = iso(d.fi, d.fj);
+      props.push({ depth: d.fi + d.fj, sp: OUT.crop(d.seed), wx: x, wy: y + 1, tile: tIdx(Math.floor(d.fi), Math.floor(d.fj)) });
+    } else if (d.kind === 'fence') {
+      const [x, y] = iso(d.i + 0.5, d.j + 0.5);
+      props.push({ depth: d.i + d.j + 1, sp: OUT.fence(d.along), wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
     } else if (d.kind === 'palisade') {
       const [x, y] = iso(d.i + 0.5, d.j + 0.5);
       props.push({ depth: d.i + d.j + 1, sp: OUT.palisade(d.a), wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
@@ -668,7 +718,7 @@ function makeNpcs() {
     const L = NPC_LOOKS[n.role], look = Array.isArray(L) ? L[k % L.length] : L;
     return { ...n, fam: n.role === 'chicken' ? 'chicken' : 'hero', look, home: [n.fi, n.fj], dir: 1 + (k % 3), clip: 'idle', clock: k * 0.37, walk: 0, wait: 1 + k, target: null, npc: true };
   });
-  for (const c of LV.critters || []) npcs.push({ ...c, role: 'chicken', fam: 'chicken', look: { scale: 1 }, home: [c.fi, c.fj], dir: 0, clip: 'idle', clock: Math.random(), walk: 0, wait: Math.random() * 2, target: null, npc: true });
+  for (const c of LV.critters || []) npcs.push({ ...c, role: 'chicken', fam: c.kind || 'chicken', look: { scale: 1 }, home: [c.fi, c.fj], dir: 0, clip: 'idle', clock: Math.random(), walk: 0, wait: Math.random() * 2, target: null, npc: true });
 }
 function updateNpcs(dt) {
   for (const n of npcs) {
@@ -686,7 +736,7 @@ function updateNpcs(dt) {
       if (moved < sp * 0.2) { n.target = null; n.clip = 'idle'; n.wait = 1; continue; }
       n.walk += moved / (n.fam === 'chicken' ? 0.06 : HERO_GAIT); n.dir = dirFrom(dx, dy); n.clip = 'walk';
     } else if ((n.wait -= dt) < 0) {
-      const R = n.role === 'chicken' ? 1.6 : 2.4, a = Math.random() * 6.28, r = Math.random() * R;
+      const R = n.role === 'chicken' ? (n.fam === 'chicken' ? 1.6 : 1.8) : 2.4, a = Math.random() * 6.28, r = Math.random() * R;
       n.target = [n.home[0] + Math.cos(a) * r, n.home[1] + Math.sin(a) * r];
     }
   }
