@@ -1581,6 +1581,8 @@ function update(dt, draw = true) {
   if (hmode === 'foot') { fx = foot.x; fz = foot.z; fvx = foot.vx; fvz = foot.vz; la = .3; } else if (drive) { fx = drive.rx ?? drive.x; fz = drive.rz ?? drive.z; fvx = drive.vx; fvz = drive.vz; } else { fx = pilot.root.position.x; fz = pilot.root.position.z; }
   placeStep(dt, fx, -fz);
   roamStep(dta); switchStep(dt); if (CINE.shots) cineStep(dt); else if (CAMHOLD.on) { rig.tx = CAMHOLD.x; rig.tz = CAMHOLD.z; rig.yaw = CAMHOLD.yaw; rig.pitch = CAMHOLD.pitch; rig.dist = CAMHOLD.dist; }
+  const CAM_AHEAD = WN === 'cc' && hmode === 'driving' && drive ? 16 : 0;         // round 44 (user: on the new map the camera doesn't show enough of where you're going): aim 16 m ahead of the car
+  if (CAM_AHEAD) { fx += -Math.sin(drive.th) * CAM_AHEAD; fz += -Math.cos(drive.th) * CAM_AHEAD; }
   if (playView && !SW.on && !CINE.shots && !CAMHOLD.on) { const ck = 1 - Math.exp(-TUNE.camFollow * dt); rig.tx += (fx + fvx * la - rig.tx) * ck; rig.tz += (fz + fvz * la - rig.tz) * ck; }
   if (upd.bench) { rig.tx = upd.bench.x; rig.tz = upd.bench.z; }                 // ?bench=1 drives the camera on a fixed path
   upd.speedZoom += ((playView && hmode === 'driving' ? Math.min(speed, 28) / 28 * TUNE.camZoom : 0) - upd.speedZoom) * (1 - Math.exp(-2 * dt));
@@ -1595,7 +1597,7 @@ function update(dt, draw = true) {
       else if (speed > 1.5 && TUNE.camRev > 0 && !input.hand) { ty = th; upd.yawK = TUNE.camRev; }      // backing up: the camera stays behind the car too (slower), so the view never ends up sideways
     } else rig.ySnap = 0;
     const yk = upd.yawK || 1; upd.yawK = 1; const cap = rad(TUNE.yawCap) * yk * dt; rig.yaw = wrapA(rig.yaw + clamp(wrapA(ty - rig.yaw) * (1 - Math.exp(-TUNE.yawRate * yk * dt)), -cap, cap)); }
-  const p = rig.pitch * Math.PI / 180, dist = rig.dist * (1 + upd.speedZoom);
+  const p = (rig.pitch - (WN === 'cc' && rig.mode === 'drive' && playView && !CINE.shots && !SW.on ? 7 : 0)) * Math.PI / 180, dist = rig.dist * (1 + upd.speedZoom);   // new map: a little flatter so you see further up the road
   rig.shake = Math.max(0, rig.shake - dt * 2.2); const sh = rig.shake * rig.shake * 1.1;
   upd.gy = (upd.gy || 0) + (groundH(rig.tx, rig.tz) - (upd.gy || 0)) * Math.min(1, dt * 4);
   camera.position.set(rig.tx + Math.sin(rig.yaw) * Math.cos(p) * dist + (Math.random() - .5) * sh, upd.gy + Math.sin(p) * dist + (Math.random() - .5) * sh * .5, rig.tz + Math.cos(rig.yaw) * Math.cos(p) * dist + (Math.random() - .5) * sh); camera.lookAt(rig.tx, upd.gy, rig.tz);
