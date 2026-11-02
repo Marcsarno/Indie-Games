@@ -8,7 +8,7 @@ SG = json.load(open(os.path.join(OUT, "tex", "cc_signs.json")))
 RF = random.Random(39)
 GL = M("cc_glass", "#2c4f60", rough=.2); ROOFT = M("roof_tar", "#6a6a6c", tex="roof", tile=3.0); TRIM = flat("#f4efe2")
 WL = Tiled("walls"); FIX = Tiled("fixtures")                                                   # walls + hedges, lamps + courts + pads (merged per 128 m tile)
-VCACHE = {}
+VCACHE = {}; HOUSE_T = []; APRONS = []; CORRALS = []                                  # round 40: house transforms (driveways), building aprons, cart corrals
 def sgn(key): return M("ccsign_" + key, "#ffffff", tex="sign_cc_" + key, fit=True, rough=.6)
 def acc(key): return SG[key]["accent"]
 FACE = {"s": 0, "e": 90, "n": 180, "w": -90}
@@ -139,7 +139,7 @@ def shop_run(L, cx, cy, face, seed=0):
         elif face == "n": place(o, cx - t, cy, "n", sx)
         elif face == "e": place(o, cx, cy + t, "e", sx)
         else: place(o, cx, cy - t, "w", sx)
-    ww, dd = world_dims(face, L, 13); cbox(cx, cy, ww, dd)
+    ww, dd = world_dims(face, L, 13); cbox(cx, cy, ww, dd); APRONS.append((cx, cy, ww, dd, face))
 def best_face(bx0, by0, bx1, by1, lot):
     x0, x1, y0, y1 = lot; m = {"s": by0 - y0, "n": y1 - by1, "w": bx0 - x0, "e": x1 - bx1}; return max(m, key=m.get)
 def paver(x0, y0, x1, y1, col="#cfc6b4"): BB.box(flat(col), x0, x1, y0, y1, 0, .045)
@@ -152,7 +152,7 @@ def SITE(b_, lot):
     lab = b_["label"]; x0, y0, x1, y1 = b_["x0"], b_["y0"], b_["x1"], b_["y1"]; cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
     face = {"WALMART": "e", "CITY HALL": "e", "POLICE": "e", "McD": "w", "COOPER'S HAWK": "e", "SHOPS": "s", "": "s", "SHOPS_N": "n", "WORLD OF BEER": "s", "STARBUCKS": "n"}.get(lab) or best_face(x0, y0, x1, y1, lot)
     lw, ld = world_dims(face, x1 - x0, y1 - y0)                                               # rect size in the model's frame (width along the front)
-    def col(w, d, x=cx, y=cy): ww, dd = world_dims(face, w, d); cbox(x, y, ww, dd)
+    def col(w, d, x=cx, y=cy): ww, dd = world_dims(face, w, d); cbox(x, y, ww, dd); APRONS.append((x, y, ww, dd, face))
     def front_pt(dist):                                                                      # a point `dist` in front of the rect's front edge, centred
         return {"s": (cx, y0 - dist), "n": (cx, y1 + dist), "w": (x0 - dist, cy), "e": (x1 + dist, cy)}[face]
     nm = lab.lower().replace(" ", "_").replace("'", "") or "bldg"
@@ -167,7 +167,7 @@ def SITE(b_, lot):
         def ex(b, hx, hy, h):
             for x in (-hx * .45, hx * .45): b.box(flat("#0071ce"), x - 7, x + 7, -hy - 1.2, -hy, 0, h + 1.8); b.box(GL, x - 4, x + 4, -hy - 1.3, -hy - 1.2, .5, 3.6)
             b.box(flat("#ffc220"), -hx, hx, -hy - .2, -hy - .1, h - .6, h - .3)
-        place(bldg("walmart", lw, ld, 10.0, wall="#8a96a3", key="walmart", accent="#0071ce", canopy=False, sign_h=5.0, extra=ex, back_doors=6), cx, cy, face); col(lw, ld); return
+        CORRALS.append((x1 + 18, y0 + 20, x1 + 22, y1 - 20)); place(bldg("walmart", lw, ld, 10.0, wall="#8a96a3", key="walmart", accent="#0071ce", canopy=False, sign_h=5.0, extra=ex, back_doors=6), cx, cy, face); col(lw, ld); return
     if lab == "PUBLIX":                                                                      # the real Publix kit model (46 x 28) at 1.45x + inline shops either side
         k = 1.45; pw = 46 * k; place(LMR.supermarket("publix"), cx + lw / 2 - pw / 2 - 2, cy, face, k, k, k); col(pw, 28 * k, cx + lw / 2 - pw / 2 - 2)
         rest = lw - pw - 6; n = int(rest / 9); ys_ = cy - 28 * k / 2 + 6.5
@@ -322,6 +322,7 @@ def pad(kind, frame, u, D=46, W=52):
     elif kind == "bank": key = nxt(BANK_K, "bank"); o = bank(f"bank_{key}_{int(u)}", key); bx, by = P(u + 4, D - 11); place(o, bx, by, face); cbox(bx, by, *world_dims(face, 18, 14))
     elif kind == "store": key = nxt(STORE_K, "store"); o = bldg(f"st_{key}_{int(u)}", 34, 22, 7.0, wall="#efe9dc", key=key, accent=acc(key), sign_h=2.0); bx, by = P(u, D - 13); place(o, bx, by, face); cbox(bx, by, *world_dims(face, 34, 22))
     else: key = "carwash"; o = carwash(f"cw_{int(u)}", key); bx, by = P(u, D - 8); place(o, bx, by, face); cbox(bx, by, *world_dims(face, 30, 9))
+    if kind != "gas": APRONS.append((bx, by, *world_dims(face, *{"food": (17, 12), "bank": (18, 14), "store": (34, 22)}.get(kind, (30, 9))), face))
     place(pylon(f"py_{key}_{int(u)}", key, 7.5 if kind != "gas" else 8.5), *P(u + W / 2 - 4, 4), face)
     for i in range(RF.randint(1, 4)):
         cx_, cy_ = P(u - W / 2 + 5 + i * 3.1, 9 + 0 * i)
@@ -336,7 +337,8 @@ def bigbox(frame, u0, u1, v0, v1, key, wall="#d9d2c4", h=10.0, plaza=None):
     if plaza:
         o = BF.make_plaza(f"plaza_{int(u0)}", bw, bd * .5, 7.2, shops=plaza, tower_x=0, tower_sign="cc_plaza", seed=int(u0) % 50); bd = bd * .5; bx, by = P((u0 + u1) / 2, v1 - bd / 2 - 3)
     else: o = bldg(f"big_{key}", bw, bd, h, wall=wall, key=key, accent=acc(key), canopy=True, sign_h=4.0, back_doors=3)
-    place(o, bx, by, face); cbox(bx, by, *world_dims(face, bw, bd))
+    place(o, bx, by, face); cbox(bx, by, *world_dims(face, bw, bd)); APRONS.append((bx, by, *world_dims(face, bw, bd), face))
+    c0, c1 = P(u0 + 10, v0 + 12), P(u1 - 10, v0 + 14); CORRALS.append((min(c0[0], c1[0]), min(c0[1], c1[1]), max(c0[0], c1[0]), max(c0[1], c1[1])))
     for s in range(int(u0 + 4), int(u1 - 4), 3):                                             # stall stripes, rows facing the store
         for v in (v0 + 4, v0 + 15.4, v0 + 20.6):
             if v + 5.2 < v1 - bd - 4:
@@ -417,7 +419,7 @@ def extra_houses(placed_xy):
                 if bad is not None: continue
                 px, py, _, _ = r.at(s); rz = math.degrees(math.atan2(px - hx, -(py - hy)))
                 v = (n * 7 + int(s)) % 12; o = linked(f"house_m{v}", lambda nm, v=v: BF.make_house(nm, 11 if v % 2 == 0 else 10, 8.5, 1 + (v % 3 == 0), HWALL[v % 6], 500 + v, garage=v % 2 == 0, balcony=False, tile_hex=ROOFS[v % 5]))
-                place(o, hx, hy, rz=rz); cbox(hx, hy, 11.2, 8.8, rz)
+                place(o, hx, hy, rz=rz); cbox(hx, hy, 11.2, 8.8, rz); HOUSE_T.append((hx, hy, rz))
                 y_ = linked(f"yard_{v % 4}", lambda nm, v=v: yard(nm, v % 4 < 2)); place(y_, hx, hy, rz=rz)
                 hadd(hx, hy); added.append((hx, hy)); n += 1
                 if RF.random() < .35: prop("palm_small" if RF.random() < .6 else "shrub_a", *r.off(s + RF.uniform(-5, 5), side * (r.hw + 4.5)))
@@ -541,5 +543,7 @@ def fill_after(placed_xy):
     added = extra_houses(placed_xy); tick_("extra houses")
     wyn = wynmoor(); walls(placed_xy + added + wyn); tick_("walls")
     lights(); parks(); offices_and_site(); tick_("parks")
+    believability()            # round 40: driveways, street furniture, power line, aprons, tree clusters
     STATIC.extend(WL.build(vc=True, recalc=False)); STATIC.extend(FIX.build(vc=True, recalc=False))
     return added
+exec(open(os.path.join(HERE, "cc_fill2.py")).read())                                            # round 40: driveways, street furniture, power line, aprons, tree clusters, lot cars
