@@ -473,6 +473,10 @@ def parks():
             x, y = 470 + i * 28, 700 + j * 18
             if math.hypot(x - 600, y - 655) > 35: Bp.box(flat(["#d63a4a", "#f2a23a", "#f08cb0", "#e8e8f0", "#c84ab8"][(i + j) % 5]), x - 8, x + 8, y - 3, y + 3, 0, .35)
     Bp.box(m["asphalt"], 420, 560, 560, 600, 0, .028)
+    for yy in (562, 588):                                                                         # visitor lot: two rows of stalls, a few cars
+        for xx in range(424, 556, 3):
+            Bp.box(m["white"], xx - .05, xx + .05, yy, yy + 5.2, .028, .034)
+            if RF.random() < .25 and ncar < 470: addcar(RF.choice(PASSENGER), xx + 1.5, yy + 2.6, 0 if yy > 570 else 180)
     # Sabal Pines Park: tennis, basketball, playground, pavilion, ball field
     for i in range(3): CV.tennis_court(Bq, cm, nop, 560 + i * 16, 1150)
     CV.basketball(Bq, cm, nop, 720, 1140); CV.playground(Bq, cm, nop, nop, 700, 1200, 14, 14); CV.pavilion(Bq, cm, nop, nop, 650, 1230)
