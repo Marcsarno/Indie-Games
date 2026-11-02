@@ -100,17 +100,17 @@ for p in [(-480 - 26 * i, -120) for i in range(1, 6)]: HOUSES += [(p[0], -100), 
 houses_along((-700, -215), (-700, -290), 17, 18)
 grid(-420, -470, -260, -40, step=80, join=("n",)); st([(-260, -255), (XBANKS, -255)])     # pocket east of Banks
 CULS.append((XBANKS, -420, 12)); st([(XBANKS, -330), (-620, -330)]); CULS.append((-620, -330, 11)); houses_along((XBANKS, -330), (-620, -330))
-LAKES.append((-140, -300, 95, 70)); LAKES.append((420, -270, 75, 32)); st([(-232, -230), (-330, -180), (-560, -150), (-625, -128)], 4, "trail")   # canal ends in this lake; lake path to Dave's street (bike)
+LAKES.append((-140, -300, 95, 70)); LAKES.append((420, -270, 75, 32)); LAKES.append((-545, -228, 55, 30)); LAKES.append((115, 300, 40, 18)); LAKES.append((690, 1492, 66, 22)); st([(-232, -230), (-330, -180), (-560, -150), (-625, -128)], 4, "trail")   # canal ends in this lake; lake path to Dave's street (bike); round 43: subdivision lake, Wynmoor golf pond, office pond
 # Wynmoore (north half of its block): gate on Lyons, a ring drive round the golf lake
 LAKES.append((470, 360, 120, 45)); RINGS.append((470, 360, 230, 85)); st([(XLYONS + 12, 360), (240, 360)]); st([(XPOWER - 12, 350), (700, 350)], 5, "trail")
 
 # ---- zones / lots ----
 def R_(x0, y0, x1, y1): return [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
 ZONES = [("THE HAMMOCKS", R_(-790, 160, -35, 465), "#6fa84e", "#173a0a"), ("SHOPS  GAS  FAST FOOD", R_(XW, YS, X441 - 15, YN), "#6a9a45", "#4a2e1a"), ("SHOPS  GAS  FAST FOOD", R_(XPOWER + 15, YS, XE, YN), "#6a9a45", "#4a2e1a"),
-         ("WYNMOORE (gated golf)", R_(35, 250, 790, 465), "#86c25e", "#3d4d10"), ("", R_(35, 35, 790, 232), "#86b86a", ""),
+         ("WYNMOORE (gated golf)", R_(35, 250, 790, 465), "#6aa548", "#3d4d10"), ("", R_(35, 35, 790, 232), "#78ad5a", ""),
          ("BUTTERFLY WORLD + TRADEWINDS PARK", R_(375, 535, 790, 765), "#7cc05a", "#1f4d12"), ("SABAL PINES PARK", R_(530, 1110, 790, 1290), "#7cc05a", "#1f4d12"),
          ("TRASH MOUNTAIN", R_(80, 835, 790, 1040), "#8a7a52", "#2e2410"), ("", R_(35, -505, 790, -35), "#7cc05a", ""), ("construction site", R_(470, 1650, 790, 1790), "#b9a37a", "#4a3a1a"),
-         ("offices", R_(35, 1345, 790, 1490), "#9db58a", "#2a3a1a")]
+         ("offices", R_(35, 1345, 790, 1490), "#7cae5e", "#2a3a1a")]
 LOTS = [] + [  # (polygon, buildings (x0, y0, x1, y1, colour, label), aisle step, direction)
     (R_(XW + 25, 520, X441 - 20, 790), [(XW + 28, 570, XW + 118, 735, "#2f64ad", "WALMART")], 10, "v"),
 ] + [  # round 39 (M2): six real-size dealerships on Sample instead of one 575 x 210 m lot: display lot + showroom (45 x 28 m) each, palm strips between

@@ -46,7 +46,10 @@ for x0 in range(int(XW), int(XE), 128):                                         
 for z in LP["zones"]:
     pts = z["poly"]; col = z["color"]
     if z["label"] == "TRASH MOUNTAIN": col = "#7a8a4a"
-    xs_, ys_ = [p[0] for p in pts], [p[1] for p in pts]; GB.box(flat(col), min(xs_), max(xs_), min(ys_), max(ys_), -.05, .015)      # every zone is a rectangle
+    xs_, ys_ = [p[0] for p in pts], [p[1] for p in pts]
+    tint = {"#6fa84e": "#64a345", "#6aa548": "#619f43", "#78ad5a": "#66a446", "#7cc05a": "#69a948", "#7cae5e": "#66a548", "#6a9a45": "#629c41"}.get(col)      # round 43: textured lawns, tints kept
+    zm = M("zgrass_" + tint[1:], tint, tex="grass_" + tint[1:], tile=4.0) if tint and os.path.exists(os.path.join(OUT, "tex", "grass_" + tint[1:] + ".png")) else flat(col)  # near the base grass
+    GB.box(zm, min(xs_), max(xs_), min(ys_), max(ys_), -.05, .015)      # every zone is a rectangle
     MAP.append([0, 0, 0, 0, col, "poly", [[round(p[0], 1), round(p[1], 1)] for p in pts]])
 tick_("ground")
 
@@ -238,7 +241,7 @@ WORLD = {"name": "cc", "title": "Coconut Creek", "glb": "scene.glb", "mapbg": "#
          "traffic": [], "walk": [], "walkers": 0, "fight": None, "demo": None, "landmarks": LMK,
          "views": {"drive": {"label": "Play", "mode": "drive", "pitch": 45, "dist": 44}, "over": {"label": "Overview", "tx": 0, "ty": 700, "pitch": 55, "dist": 1500}}, "map": MAP, "roads": ROADLINES, "layout": "plan/v7/layout.json", "hydrants": [[round(x, 1), round(y, 1)] for x, y in HYDRANTS]}
 OUTD = OUT
-json.dump(COL, open(os.path.join(OUTD, "colliders_cc.json"), "w")); json.dump(PROPS, open(os.path.join(OUTD, "props_cc.json"), "w")); json.dump(CARS, open(os.path.join(OUTD, "cars_cc.json"), "w")); json.dump(WORLD, open(os.path.join(OUTD, "world_cc.json"), "w"))
+json.dump(FOOT, open(os.path.join(OUTD, "foot_cc.json"), "w")); json.dump(COL, open(os.path.join(OUTD, "colliders_cc.json"), "w")); json.dump(PROPS, open(os.path.join(OUTD, "props_cc.json"), "w")); json.dump(CARS, open(os.path.join(OUTD, "cars_cc.json"), "w")); json.dump(WORLD, open(os.path.join(OUTD, "world_cc.json"), "w"))
 print("CC colliders", len(COL), "props", len(PROPS), "cars", len(CARS), "roads", len(net))
 STATIC.extend(GB.build(vc=True, recalc=False)); STATIC.extend(RB.build(vc=True, recalc=False)); STATIC.extend(BB.build(vc=True)); tick_("built")
 if not os.environ.get("NORENDER"):

@@ -151,3 +151,4 @@ def believability():
     for (cx, cy, ww, dd, face) in APRONS: apron(cx, cy, ww, dd, face=face)
     for rect in CORRALS: cart_corrals(*rect)
     STATIC.extend(DRV.build(vc=True, recalc=False)); STATIC.extend(FUR.build(vc=True, recalc=False))
+exec(open(os.path.join(HERE, "cc_fill3.py")).read())                                            # round 43: gap fill (stadium, fields, golf, site, parks, storage, townhomes, church, groves)

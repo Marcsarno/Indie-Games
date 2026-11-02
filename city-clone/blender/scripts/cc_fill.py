@@ -502,7 +502,7 @@ def parks():
     # Sabal Pines Park: tennis, basketball, playground, pavilion, ball field
     for i in range(3): CV.tennis_court(Bq, cm, nop, 560 + i * 16, 1150)
     CV.basketball(Bq, cm, nop, 720, 1140); CV.playground(Bq, cm, nop, nop, 700, 1200, 14, 14); CV.pavilion(Bq, cm, nop, nop, 650, 1230)
-    Bq.box(flat("#b8865a"), 600, 680, 1240, 1285, 0, .05); place(pylon("sabal_sign", "sabal", 5.0, 5.0), 560, 1105, "s")
+    place(pylon("sabal_sign", "sabal", 5.0, 5.0), 560, 1105, "s")
     # Rec center south of the Pkwy: tennis row, basketball, skate park (bowls you can launch off), soccer fields, a ball diamond
     for i in range(4): CV.tennis_court(Br, cm, nop, 330 + i * 16, -110)
     for i in range(2): CV.basketball(Br, cm, nop, 120 + i * 20, -300)
@@ -511,7 +511,6 @@ def parks():
     for (x, y, d) in ((330, -400, 1), (470, -400, -1)):                                      # two quarter-pipe ramps (jumps)
         sk.prism(C2, (x - 6 if d > 0 else x, x if d > 0 else x + 6, y - 15, y + 15), (x - 6 if d > 0 else x + 5.7, x - 5.7 if d > 0 else x + 6, y - 15, y + 15), 0, 2.4)
     sk.box(C2, 390, 410, -420, -380, 0, .9); STATIC.append(sk.build(vc=True))
-    Br.box(flat("#b8865a"), 560, 700, -480, -380, 0, .05); Br.box(flat("#58a84e"), 600, 700, -470, -390, 0, .055)
     CV.field(Br, cm, 225, -420, 50, 95, 10, True)
     for i in range(3): CV.picnic(Br, cm, nop, 560 + i * 12, -300) if hasattr(CV, "picnic") else None
     CV.playground(Br, cm, nop, nop, 610, -330, 16, 12); CV.pavilion(Br, cm, nop, nop, 660, -320)
@@ -550,13 +549,14 @@ def offices_and_site():
         o = DK.condo(f"corp_{i}", 46, 22, 5 + i, 70 + i); place(o, x, y, "s"); cbox(x, y, 46, 22)
     place(pylon("corp_sign", "offices", 5.0, 6.0), 600, 1355, "s")
     for i in range(3): o = DK.containers(f"site_cont_{i}", 3, 2, 1 + i % 2, 90 + i); place(o, 520 + i * 40, 1690, "s"); cbox(520 + i * 40, 1690, 9, 6)
-    o = DK.warehouse("site_frame", 44, 26, 5); place(o, 700, 1730, "s"); cbox(700, 1730, 44, 26)
-    for i in range(3): o = DK.truck(f"site_truck_{i}", i); place(o, 560 + i * 30, 1760, rz=RF.uniform(0, 360)); cbox(560 + i * 30, 1760, 3, 9)
+    # round 43: the warehouse + trucks became a real construction site (cc_fill3.construction)
 def fill_after(placed_xy):
     added = extra_houses(placed_xy); tick_("extra houses")
     wyn = wynmoor(); walls(placed_xy + added + wyn); tick_("walls")
     lights(); parks(); offices_and_site(); tick_("parks")
+    gap_fill()                 # round 43: stadium, ball fields, golf, construction site, offices, gardens/stables, lake parks, storage, townhomes, church
     believability()            # round 40: driveways, street furniture, power line, aprons, tree clusters
+    grove_fill(); tick_("groves")   # round 43: tree islands in whatever grass is still bare
     STATIC.extend(WL.build(vc=True, recalc=False)); STATIC.extend(FIX.build(vc=True, recalc=False))
     return added
 exec(open(os.path.join(HERE, "cc_fill2.py")).read())                                            # round 40: driveways, street furniture, power line, aprons, tree clusters, lot cars
