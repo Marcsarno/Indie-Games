@@ -144,6 +144,9 @@ for lot in LP["lots"]:
             if vert: RB.box(m["white"], s - .05, s + .05, a, a + 5.2, .028, .034)
             else: RB.box(m["white"], a, a + 5.2, s - .05, s + .05, .028, .034)
             if math.hypot(cxs - PUBLIX[0], cys - PUBLIX[1]) > 25 and R_.random() < .05 and ncar < 320: addcar(R_.choice(PASSENGER), cxs, cys, (0 if row % 2 else 180) + (0 if vert else 90))
+            elif math.hypot(cxs - PUBLIX[0], cys - PUBLIX[1]) > 25 and not on_cut(cxs, cys, 4) and R_.random() < lot_fill(cxs, cys, x0, x1, y0, y1, blds):          # round 40: static parked cars, denser near the doors
+                c_ = CARCOL[R_.randrange(len(CARCOL))]; o_ = linked(f"dcar_{c_[1:]}", lambda nm, c_=c_: display_car(nm, c_)); rz_ = (0 if row % 2 else 180) + (0 if vert else 90)
+                place(o_, cxs, cys, rz=rz_ + R_.uniform(-4, 4)); cbox(cxs, cys, 1.9, 4.5, rz_)
         if row % 2 == 0 and (row // 2) % 2 == 1 and a + 6.2 < a1 - 2: lot_island(a + 5.2, b0 + 3, b1 - 4, vert, blds)       # round 39: planted islands between double rows (real FL lots)
         a += 5.2 if row % 2 == 0 else 5.2 + 7.0; row += 1
     for bb_ in (b0 + 1.0, b1 - 2.0):                                                           # end-cap islands along both lot edges
@@ -189,7 +192,7 @@ for (hx, hy) in LP["houses"]:
     if not best or best[0] > 40: continue
     px, py, _, _ = best[1].at(best[2]); rz = math.degrees(math.atan2(px - hx, -(py - hy)))
     v = VAR[placed % len(VAR)]; o = bpy.data.objects.new(f"house_{placed}", v.data); bpy.context.scene.collection.objects.link(o)
-    o.location = (hx, hy, 0); o.rotation_euler = (0, 0, math.radians(rz)); STATIC.append(o); cbox(hx, hy, 11.2, 8.8, rz); placed += 1; PLACED_XY.append((hx, hy))
+    o.location = (hx, hy, 0); o.rotation_euler = (0, 0, math.radians(rz)); STATIC.append(o); cbox(hx, hy, 11.2, 8.8, rz); placed += 1; PLACED_XY.append((hx, hy)); HOUSE_T.append((hx, hy, rz))
     y_ = linked(f"yard_{placed % 4}", lambda nm, v=placed: yard(nm, v % 4 < 2)); place(y_, hx, hy, rz=rz)
     if R_.random() < .5: prop("palm_small" if R_.random() < .6 else "shrub_a", hx + R_.uniform(-6, 6), hy + R_.uniform(-6, 6))
 print("houses placed", placed)
