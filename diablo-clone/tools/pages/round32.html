@@ -1,0 +1,67 @@
+<title>New Button Layout</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  /* layout: one narrow column, one section per part with its picture first */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul { margin: 0; max-width: 64ch; }
+  ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .frame img.smooth { image-rendering: auto; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .tw { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+</style>
+<main>
+  <header>
+    <h1>New Button Layout</h1>
+    <p class="lede">Dungeon of Bones, round 32: the health and mana orbs become two thin bars at the bottom left. The attack button takes the bottom-right corner, with the skills fanned round it the way Diablo Immortal does it.</p>
+  </header>
+  <section>
+    <h2>Warrior</h2>
+    <figure>
+      <div class="frame"><img src="warrior-before-after.png" alt="Left, before: big red and blue orbs fill both bottom corners, the sword button sits above the blue orb and the skills are scattered up the right side. Right, after: thin red and orange bars with numbers along the bottom left, the sword button in the bottom-right corner, four skills on an arc around it, the ultimate above them and the potion at the arc's foot" width="1088" height="840"></div>
+      <figcaption>Left: before. Right: now.</figcaption>
+    </figure>
+  </section>
+  <section>
+    <h2>Mage</h2>
+    <figure>
+      <div class="frame"><img src="mage-before-after.png" alt="The same change for the mage: blue missile button in the bottom-right corner, spells on the arc, red and blue bars at the bottom left" width="1088" height="840"></div>
+      <figcaption>Left: before. Right: now. The missile button sits where your right thumb already rests.</figcaption>
+    </figure>
+  </section>
+  <section>
+    <h2>What changed</h2>
+    <ul>
+      <li><strong>Attack</strong> is in the bottom-right corner and slightly bigger. Tapping anywhere on the lower right still attacks, as before.</li>
+      <li><strong>The four skills</strong> sit on one arc around it, evenly spaced from its left round to straight above it. <strong>The ultimate</strong> sits just outside the arc, between the second and third skills. <strong>The potion</strong> sits at the arc's foot.</li>
+      <li><strong>Health and mana</strong> are thin bars at the bottom left with the numbers at their ends. They're red and blue, or red and orange for the warrior's fury, with your level above them. The XP bar is a hairline along the very bottom.</li>
+      <li>The movement stick's resting spot moved down into the space the health orb left.</li>
+      <li>Buff timers (war cry and the rest) now show above the buttons instead of over the bars.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Low health</h2>
+    <figure>
+      <div class="frame"><img src="low-health.png" alt="The warrior at low health: a red glow pulses around the edge of the whole screen and the short health bar flickers" width="540" height="840"></div>
+      <figcaption>Below 30% health, the screen's edge glows red with a heartbeat and the health bar pulses, so you notice without looking down.</figcaption>
+    </figure>
+  </section>
+</main>

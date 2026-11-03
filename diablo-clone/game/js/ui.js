@@ -50,13 +50,46 @@ function drawUltButton() {
   if (full && Math.floor(G.t * 4) % 2 === 0) for (let a = 0; a < 80; a++) { const t = a / 80 * 6.283; put(c[0] + Math.cos(t) * (c[2] + 3), c[1] + Math.sin(t) * (c[2] + 3), 27); }
   if (fx.deny > 0) for (let a = 0; a < 64; a++) { const t = a / 64 * 6.283; put(c[0] + Math.cos(t) * (c[2] + 1), c[1] + Math.sin(t) * (c[2] + 1), 22); }
 }
+// round 32: health and mana (fury for the warrior) as two thin bars at the bottom left, the
+// numbers at their ends, the level above, a hairline of xp along the very bottom. Below 30% health
+// the health bar pulses and the screen's edge glows red.
+function vitalBar(x, y, w, f, ramp, label, pulse) {
+  fillRect(x - 1, y - 1, w + 2, 7, BLK);
+  for (let xx = 0; xx < w; xx++) for (let yy = 0; yy < 5; yy++) {
+    const on = xx < Math.round(w * Math.max(0, Math.min(1, f)));
+    put(x + xx, y + yy, on ? (yy === 0 ? ramp[3] : yy === 4 ? ramp[0] : pulse && ((xx + yy) & 1) ? ramp[3] : ramp[yy === 1 ? 2 : 1]) : yy === 0 ? 4 : 3);
+  }
+  for (let k = 1; k < 4; k++) put(x + Math.round(w * k / 4), y + 4, BLK);   // quarter ticks
+  text(label, x + w + 4, y, 27);
+}
+function drawVitals(t) {
+  const B = UI.bars, hf = hero.hp / STAT.maxHp, low = hf < 0.3, beat = low && Math.sin(t * 9) > 0;
+  text(`LV ${hero.lvl}`, B.x, B.yH - 9, 25);
+  vitalBar(B.x, B.yH, B.w, hf, [20, 21, 22, 23], `${Math.ceil(hero.hp)}`, beat);
+  vitalBar(B.x, B.yM, B.w, hero.mana / STAT.maxMana, hero.cls === 'mage' ? [37, 38, 39, 40] : [14, 15, 16, 17], `${Math.floor(hero.mana)}`, false);
+  const f = hero.xp / xpFor(hero.lvl), yb = H - 3;
+  for (let x = 0; x < W; x++) { put(x, yb, x < W * f ? 50 : BLK); put(x, yb + 1, BLK); }
+  if (low && !hero.dead) {   // the edge of the screen glows red with the heartbeat
+    const a = 0.6 + 0.3 * Math.sin(t * 9);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const e = Math.min(x, y, W - 1 - x, H - 1 - y); if (e > 14) { x = Math.max(x, W - 16); continue; }
+      if (BAYER[((y & 3) << 2) | (x & 3)] < a * (1 - e / 15) ** 1.5) put(x, y, e < 3 ? 23 : 22);
+    }
+  }
+}
 // ---------------------------------------------------------------- layout
 const UI = {};
 function uiResize() {
-  UI.orbL = [34, H - 34]; UI.orbR = [W - 34, H - 34]; UI.orbR0 = 24;
-  UI.attack = [W - 48, H - 100, 21]; UI.skills = [[W - 96, H - 70, 12], [W - 104, H - 110, 12], [W - 88, H - 146, 12], [W - 50, H - 158, 12]]; UI.potion = [W / 2, H - 22, 12]; UI.ult = [W - 140, H - 60, 13];
+  // round 32: Diablo Immortal-style thumbs. The attack sits in the bottom-right corner, the four
+  // skills fan round it on one arc (left to straight up), the ultimate on an outer ring between
+  // them, the potion at the arc's foot; health and mana are thin bars along the bottom left
+  UI.attack = [W - 38, H - 44, 23];
+  const ARC = 60; UI.skills = [180, 210, 240, 270].map(a => [Math.round(UI.attack[0] + Math.cos(a * Math.PI / 180) * ARC), Math.round(UI.attack[1] + Math.sin(a * Math.PI / 180) * ARC), 12]);
+  UI.ult = [Math.round(UI.attack[0] + Math.cos(225 * Math.PI / 180) * 98), Math.round(UI.attack[1] + Math.sin(225 * Math.PI / 180) * 98), 13];
+  UI.potion = [UI.skills[0][0] - 36, H - 44, 11];
+  UI.bars = { x: 8, w: 96, yH: H - 24, yM: H - 16 };
   UI.bag = [W - 15, 15, 11]; UI.map = [W - 40, 15, 11]; UI.sound = [W - 65, 15, 11]; UI.portal = [W - 90, 15, 11];
-  UI.stickHome = [52, H - 104];
+  UI.stickHome = [56, H - 100];
 }
 const stick = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
 const press = { attack: null, skill: -1 };
@@ -184,14 +217,7 @@ function drawHud() {
   if (G.mode === 'title') return drawTitle();
   // minimap (automap of explored tiles)
   if (showMap) drawAutomap();
-  drawOrb(UI.orbL[0], UI.orbL[1], UI.orbR0, [19, 20, 22, 23], hero.hp / STAT.maxHp, t);
-  drawOrb(UI.orbR[0], UI.orbR[1], UI.orbR0, [37, 38, 39, 40], hero.mana / STAT.maxMana, t + 1);
-  textC(`${Math.ceil(hero.hp)}`, UI.orbL[0], UI.orbL[1] - 2, 27);
-  textC(`${Math.floor(hero.mana)}`, UI.orbR[0], UI.orbR[1] - 2, 27);
-  // xp bar between the orbs
-  const x0 = 66, x1 = W - 66, yb = H - 6, f = hero.xp / xpFor(hero.lvl);
-  for (let x = x0; x <= x1; x++) { put(x, yb - 1, BLK); put(x, yb + 1, BLK); put(x, yb, x - x0 < (x1 - x0) * f ? 50 : 3); }
-  textC(`LV ${hero.lvl}`, W / 2, yb - 8, 25);
+  drawVitals(t);
   drawButton(UI.potion, [19, 20, 21, 22], false, (cx, cy) => { sprite(itemIcon({ base: 'heal' }), cx, cy + 4, 1, 4); });
   text(`${hero.potions}`, UI.potion[0] + 9, UI.potion[1] + 4, 27);
   if (hero.cls === 'mage') drawButton(UI.attack, [37, 38, 39, 40], !!press.attack, glyphMissile);   // magic missiles
@@ -217,9 +243,9 @@ function drawHud() {
     if (rim && (fx.deny > 0 || fx.press > 0 || Math.floor(fx.ready * 20) % 2 === 0)) for (let a = 0; a < 64; a++) { const t = a / 64 * 6.283; put(c[0] + Math.cos(t) * (c[2] + 1), c[1] + Math.sin(t) * (c[2] + 1), rim); }
   });
   drawUltButton();
-  if (hero.buff > 0) textC(`WAR CRY ${Math.ceil(hero.buff)}`, W / 2, H - 46, 51);
-  if (hero.frenzy > 0) textC(`FRENZY ${Math.ceil(hero.frenzy)}`, W / 2, H - 54, 23);
-  if (hero.stoneskin > 0) textC(`STONESKIN ${Math.ceil(hero.stoneskin)}`, W / 2, H - 62, 39);
+  if (hero.buff > 0) textC(`WAR CRY ${Math.ceil(hero.buff)}`, W / 2, H - 150, 51);
+  if (hero.frenzy > 0) textC(`FRENZY ${Math.ceil(hero.frenzy)}`, W / 2, H - 158, 23);
+  if (hero.stoneskin > 0) textC(`STONESKIN ${Math.ceil(hero.stoneskin)}`, W / 2, H - 166, 39);
   // the boss's health bar, once she is awake
   if (bossAlive() && boss.state !== 'sleep') {
     const bw = 150, bx = Math.round(W / 2 - bw / 2), by = 24, f = boss.hp / boss.maxHp;
