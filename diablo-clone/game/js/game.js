@@ -9,7 +9,7 @@
 // and merged on top as blocks. One upload per frame. The camera moves in frame pixels: the world is
 // shifted by (hx, hy) frame pixels when the camera sits on a half pixel, so scrolling judders half as much.
 let W = 270, H = 480;
-let scr, zbuf, shd, cid, lbuf, tbuf, levB, out32, outImg, base32, OW, OH, ov32, ovImg, hud32, hudImg;
+let scr, zbuf, shd, cid, lbuf, tbuf, levB, frame2, out32, outImg, base32, OW, OH, ov32, ovImg, hud32, hudImg;
 const cvs = document.getElementById('c');
 const ctx = cvs.getContext('2d');
 function allocBuffers(w, h) {
@@ -18,7 +18,7 @@ function allocBuffers(w, h) {
   scr = new Uint8Array(W * H); zbuf = new Uint8Array(W * H); shd = new Uint8Array(W * H); cid = new Uint8Array(W * H);
   lbuf = new Float32Array(W * H); tbuf = new Int16Array(W * H); levB = new Uint8Array(W * H);
   base32 = out32 = new Uint32Array(W * H); hud32 = new Uint32Array(W * H);
-  ovImg = ctx.createImageData(OW, OH); ov32 = new Uint32Array(ovImg.data.buffer);
+  ovImg = ctx.createImageData(OW, OH); ov32 = new Uint32Array(ovImg.data.buffer); frame2 = new Uint32Array(OW * OH);
   if (typeof uiResize === 'function') uiResize();
 }
 let camX = 0, camY = 0, cam2x = 0, cam2y = 0, hx = 0, hy = 0;
@@ -930,7 +930,7 @@ function render() {
     if (p.broken) continue;
     const sp = p.kind === 'barrel' ? PROPS.barrel() : p.kind === 'egg' ? PROPS.egg() : PROPS.chest(p.open);
     if (p.flash > 0) p.flash -= 1 / 60;
-    if (WORLD2X && sp.sp2) { ov.push({ depth: p.depth, draw: () => ovBlit(sp.sp2, p.wx, p.wy, -1, p.flash > 0 ? 1 : 0, 0, p.tile) }); continue; }   // barrels and chests at full detail, depth-sorted with the bodies
+    if (WORLD2X && sp.sp2) { ov.push({ depth: p.depth, draw: () => ovBlit(sp.sp2d, p.wx, p.wy, -1, p.flash > 0 ? 1 : 0, 0, p.tile) }); continue; }   // barrels and chests at full detail, depth-sorted with the bodies
     base.push({ depth: p.depth, draw: () => blit(sp, p.wx, p.wy, p.flash > 0, 0, p.tile) });
     const clip = inFront(p.depth, p.wx - sp.ax, p.wy - sp.ay, sp.w, sp.h);
     if (clip) ov.push({ depth: p.depth, draw: () => ovBlit(sp, p.wx, p.wy, -1, p.flash > 0 ? 1 : 0, 0, p.tile, clip) });
@@ -984,15 +984,18 @@ function render() {
       const y = Math.min(H - 1, (yy + hy) >> 1), r0 = y * W, d = yy * OW, row2 = wy2 * W2, wrow = (camY + y) * WW + camX;
       for (let k = 0; k < runs.length; k += 2) {
         const xa = Math.max(runs[k], cam2x), xb = Math.min(runs[k + 1], cam2x + OW);
+        let lastX = -1, L = -1;   // two detail columns share one world pixel: check it once
         for (let wx2 = xa; wx2 < xb; wx2++) {
           const X = wx2 - cam2x, x = (X + hx) >> 1; if (x >= W) break;
-          const o = r0 + x, lv = levB[o]; if (lv === 255 || scr[o] !== wIdx[wrow + x]) continue;
+          if (x !== lastX) { lastX = x; const o = r0 + x, lv = levB[o]; L = (lv === 255 || scr[o] !== wIdx[wrow + x]) ? -1 : lv * NPAL; }
+          if (L < 0) continue;
           const v2 = wIdx2[row2 + wx2];
-          ov32[d + X] = (v2 & EMIS) ? PAL32[CYCLE[v2 & 127]] : v2 === BLK ? black : LCOL[lv * NPAL + v2];
+          ov32[d + X] = (v2 & EMIS) ? PAL32[CYCLE[v2 & 127]] : v2 === BLK ? black : LCOL[L + v2];
         }
       }
     }
   }
+  if (WORLD2X) frame2.set(ov32);   // the finished world frame, for 2x props redrawn over bodies
   ov.sort((a, b) => a.depth - b.depth);
   for (const d of ov) d.draw();
   for (const g of G.ghosts) ovBlit(g.sp, g.x, g.y, L_ID, 6, 1 - g.t / g.t0, -1);   // blink afterimage, dissolving
@@ -1065,7 +1068,7 @@ function ovBlit(sp, wx, wy, level, flash, dissolve, tile, clip = null) {
       if (flash && v !== BLK) v = flash === 4 ? ICE_TINT[v & 127] : flash === 6 ? ARC_TINT[v & 127] : flash === 5 ? ((xx + yy) & 2 ? ICE_TINT[v & 127] : v) : flash === 2 ? HURT_TINT[v & 127] : flash === 3 ? ((xx + yy) & 2 ? HURT_TINT[v & 127] : v) : (27 | EMIS);
       // a world sprite redrawn over a character is already drawn and lit in the world layer at this
       // very pixel: copy it (cheaper than lighting it again, and identical)
-      const c = !fine && !flash && LV0 < 0 ? base32[(Y0 + hy) / SPX * W + y * W + (X0 + hx) / SPX + x] : (v & EMIS) ? PAL32[CYCLE[v & 127]] : v === BLK ? PAL32[BLK] : LV0 >= 0 ? LCOL[LV0 + v] : envCol((xx + hx) >> 1, (yy + hy) >> 1, v, tile);
+      const c = !flash && LV0 < 0 && (!fine || sp.world2) ? (fine ? frame2[yy * OW + xx] : base32[(Y0 + hy) / SPX * W + y * W + (X0 + hx) / SPX + x]) : (v & EMIS) ? PAL32[CYCLE[v & 127]] : v === BLK ? PAL32[BLK] : LV0 >= 0 ? LCOL[LV0 + v] : envCol((xx + hx) >> 1, (yy + hy) >> 1, v, tile);
       if (!c) continue;
       if (k === 1) ov32[yy * OW + xx] = c;
       else for (let b = 0; b < k && yy + b < OH; b++) for (let a = 0; a < k && xx + a < OW; a++) ov32[(yy + b) * OW + xx + a] = c;
