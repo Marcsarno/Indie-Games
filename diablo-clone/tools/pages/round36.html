@@ -1,0 +1,64 @@
+<title>Monsters at Home</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  /* layout: one narrow column, one section per part with its picture first */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul { margin: 0; max-width: 64ch; }
+  ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .frame img.smooth { image-rendering: auto; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .tw { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+</style>
+<main>
+  <header>
+    <h1>Monsters at Home</h1>
+    <p class="lede">Dungeon of Bones, round 36. Before they notice you, monsters go about their business: some wander, some walk a patrol route through several rooms, packs move together behind a leader, and some guard a spot. They also only notice you when you're in front of them, or very close.</p>
+  </header>
+  <section>
+    <h2>What they do over 30 seconds</h2>
+    <figure>
+      <div class="frame"><img src="routes.png" alt="Two level maps from above with each monster's path drawn over 30 seconds: gold lines run between rooms along corridors (patrols), green lines loop around inside rooms (wanderers and their packs), grey marks barely move (guards); the hero, a blue square, waits at the start" width="1130" height="560"></div>
+      <figcaption>Crypt 2 and Caves 1, with the hero (blue) waiting at the start. Gold: patrols. Green: wanderers. Grey: guards. Bright lines are leaders and dim ones are their pack. Red squares are where each monster ended up. Monsters more than about 26 tiles from you don't move (nobody would see it), which is why the far rooms on the right stay still.</figcaption>
+    </figure>
+  </section>
+  <section>
+    <h2>The routines</h2>
+    <ul>
+      <li><strong>Packs:</strong> monsters of one kind standing together form a pack with a leader. The rest keep a loose formation beside and behind it, and catch up if they fall behind.</li>
+      <li><strong>Wander:</strong> strolls between spots near home (within about 3.5 tiles) and pauses at each to look around.</li>
+      <li><strong>Patrol:</strong> walks a loop through two or three rooms (or clearings outdoors) along the corridors, pausing at each stop. Skeletons and archers patrol most.</li>
+      <li><strong>Guard:</strong> stays put, looks around, shifts about. Monsters around a campfire always guard.</li>
+      <li>Each family has its own leaning: spiders mostly wander, hounds and wolves roam as packs, skeletons patrol, and fallen do a bit of everything.</li>
+      <li>No route ends near the level's start, and nothing wanders within 13 tiles of the Oakhollow camp.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Being noticed</h2>
+    <p>Before, any monster saw you all around out to 7 tiles. Now each one sees out to 7.5 tiles in front, in a wide arc (about 150 degrees), but only 3 tiles behind. A patrol walking away from you won't turn round, and a guard looking about might spot you. You can slip past, or pick your moment.</p>
+  </section>
+  <section>
+    <h2>Also in this update</h2>
+    <ul>
+      <li><strong>Ultimates unlock at level 4</strong> for testing, as you asked. This needs to go back to level 10 before release; it's noted in the code and the notes.</li>
+    </ul>
+  </section>
+</main>

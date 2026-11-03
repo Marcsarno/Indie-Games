@@ -17,7 +17,7 @@ function snap(name) { for (let i = 0; i < 200; i++) warmStep(30); render(); shot
 arena('warrior'); hero.ult = 0; let kills = 0;
 while (hero.ult < 100 && kills < 200) { const e = mk(2, 0, 'fallen', 30); while (alive(e)) damageEnemy(e, 7, hero.fi, hero.fj); kills++; enemies.length = 0; }
 L.push({ killsToCharge: kills });
-arena('warrior', 9); hero.ult = 0; { const e = mk(2, 0, 'fallen', 30); damageEnemy(e, 40, hero.fi, hero.fj); } L.push({ chargeBelow10: hero.ult }); useUlt(); L.push({ firedBelow10: !!hero.ultOn });
+arena('warrior', ULT_LVL - 1); hero.ult = 0; { const e = mk(2, 0, 'fallen', 30); damageEnemy(e, 40, hero.fi, hero.fj); } L.push({ chargeBelow10: hero.ult }); useUlt(); L.push({ firedBelow10: !!hero.ultOn });
 arena('warrior'); hero.ult = 50; useUlt(); L.push({ firedHalf: !!hero.ultOn });
 // Wrath of the Mountain
 arena('warrior'); hero.ult = 100; snap('hud-full');

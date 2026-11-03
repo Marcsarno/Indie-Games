@@ -1322,7 +1322,7 @@ function drawMods30() {
 // A fifth button from level 10. It charges from fighting, not a cooldown: dealing a monster's
 // worth of damage gives 4%, each kill 1% more (champions and elites 6%, bosses 20%), so it fills
 // in about one or two big fights. Damage the ultimate itself deals doesn't charge it.
-const ULT_LVL = 10;
+const ULT_LVL = 4;   // TESTING (the user restarts each test): put back to 10 for release
 const ULTS = {
   warrior: { id: 'wrath', name: 'WRATH OF THE MOUNTAIN' },
   mage: { id: 'storm', name: 'ARCANE STORM' },

@@ -74,7 +74,7 @@ function startLevel(level, seed, side = null) {
   { const R = rng(seed ^ 0x5bd1);   // dungeon floors plan their champions (placeSpawns); other areas roll them per monster
     if (LV.champsPlanned) LV.spawns.forEach((sp, n) => { if (sp.champ) makeChampion(enemies[n], R); });
     else for (const e of enemies) if (!e.def.unique && R() < champChance(LV.diff)) makeChampion(e, R); }
-  makeNpcs(); resetSkills(); setupBoss();
+  makeNpcs(); resetSkills(); setupBoss(); setupRoutines(seed);
   groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
   updateFov(hero.fi, hero.fj);
   flowT = 0; computeFlow();
@@ -673,8 +673,8 @@ function updateEnemy(e, dt) {
   if (e === boss && e.state !== 'sleep' && !hero.dead && updateBoss(e, dt * (e.slowT > 0 ? 0.6 : 1), d, dx, dy)) return;   // slowed bosses wind up their specials slower too
   if (e.state === 'sleep') {
     e.clip = 'idle';
-    if (!hero.dead && d < 7 && los(e.fi, e.fj, hero.fi, hero.fj)) { wake(e, true); return; }
-    idleLife(e, dt);
+    if (!hero.dead && notices(e, d, dx, dy)) { wake(e, true); return; }
+    if (e.routine && !FEEL_OLD) routineStep(e, dt, d); else idleLife(e, dt);
     return;
   }
   if (e.alertT > 0) {   // noticing: a startled hop and a turn toward the hero
@@ -880,6 +880,101 @@ function pace(e, d, dt) {
   if (d < 2.2) return 1.1;
   if (e.paceT <= 0) { e.paceOn = !e.paceOn; e.paceT = e.paceOn ? 0.35 + Math.random() * 0.35 : 0.5 + Math.random() * 0.6; }
   return e.paceOn ? 1.55 : 0.6;
+}
+// ---------------------------------------------------------------- routines (round 36)
+// Before they notice the hero, monsters go about their business. Sleeping monsters of one kind
+// standing together form a group with a leader, and each group gets a routine: GUARD (stays put,
+// looks around, shuffles), WANDER (strolls between random spots near home, pausing), or PATROL
+// (walks a loop through two or three rooms or clearings, pausing at each). Followers keep a loose
+// formation on the leader. Routes are walked on breadth-first distance fields from each waypoint, so
+// they go round walls; none ends near the level's start or the Oakhollow camp.
+function setupRoutines(seed) {
+  if (FEEL_OLD) return;
+  const R = rng((seed ^ 0x7071) >>> 0), free = enemies.filter(e => !e.def.unique && !e.def.flee && e.state === 'sleep');
+  const used = new Set(), fromStart = LV.start ? bfs(Math.floor(LV.start.cx), Math.floor(LV.start.cy)) : null;
+  G.routineStart = fromStart;   // (outdoor areas have no LV.dist of their own, so the start's distances are worked out here)
+  const okSpot = k => k >= 0 && LV.map[k] === FLOOR && !LV.solid[k] && (!fromStart || fromStart[k] < 0 || fromStart[k] >= 12) &&
+    !(LV.hub && Math.hypot(k % MW + 0.5 - HUB.camp[0], ((k / MW) | 0) + 0.5 - HUB.camp[1]) < 13);
+  for (const e of free) {
+    if (used.has(e)) continue;
+    const members = free.filter(o => !used.has(o) && o.id === e.id && Math.hypot(o.fi - e.fi, o.fj - e.fj) < 2.6);
+    members.forEach(o => used.add(o));
+    const fam = e.fam, ranged = !!e.def.ranged, byFire = (LV.decor || []).some(dc => dc.kind === 'campfire' && Math.hypot(dc.i + 0.5 - e.fi, dc.j + 0.5 - e.fj) < 3.5);
+    const w = byFire ? { guard: 1 } : ranged ? { patrol: 0.4, guard: 0.6 } : fam === 'skeleton' ? { patrol: 0.55, wander: 0.2, guard: 0.25 } : fam === 'spider' ? { wander: 0.7, guard: 0.3 }
+      : fam === 'hound' ? { wander: 0.6, patrol: 0.3, guard: 0.1 } : fam === 'fallen' ? { wander: 0.45, patrol: 0.3, guard: 0.25 } : { wander: 0.5, guard: 0.5 };
+    let p = R(), kind = 'guard'; for (const k in w) { if (p < w[k]) { kind = k; break; } p -= w[k]; }
+    const home = [e.fi, e.fj], g = { kind, leader: e, members, home, wp: [], at: 0, waitT: 0.5 + R() * 3, R };
+    if (kind === 'patrol') {   // two or three stops 6-22 steps apart, starting from home
+      const d0 = bfs(Math.floor(home[0]), Math.floor(home[1])), cand = [];
+      if (LV.rooms && !LV.outdoor) LV.rooms.forEach(r => { const k = tIdx(r.cx, r.cy); if (d0[k] >= 6 && d0[k] <= 22 && okSpot(k)) cand.push(k); });
+      for (let t = 0; t < 60 && cand.length < 6; t++) { const a = R() * 6.283, rr = 4 + R() * 5, k = tIdx(Math.floor(home[0] + Math.cos(a) * rr), Math.floor(home[1] + Math.sin(a) * rr)); if (k >= 0 && k < MW * MH && d0[k] >= 5 && d0[k] <= 16 && okSpot(k)) cand.push(k); }
+      const stops = cand.sort(() => R() - 0.5).slice(0, 1 + (R() < 0.5 ? 1 : 0));
+      if (!stops.length) g.kind = 'wander';
+      else g.wp = [tIdx(Math.floor(home[0]), Math.floor(home[1])), ...stops].map(k => ({ k, field: null }));
+    }
+    members.forEach((o, n) => { o.routine = g; o.slot = n; });
+  }
+}
+// the field leading to a stop (worked out once, the first time it is needed)
+function fieldTo(stop) { if (!stop.field) stop.field = bfs(stop.k % MW, (stop.k / MW) | 0); return stop.field; }
+// a fresh wander spot: a reachable floor tile within 3.5 tiles of home, 3-8 steps away
+function wanderStop(g) {
+  const h = g.home, d0 = bfs(Math.floor(h[0]), Math.floor(h[1]));
+  for (let t = 0; t < 30; t++) { const a = g.R() * 6.283, rr = 1.5 + g.R() * 2, k = tIdx(Math.floor(h[0] + Math.cos(a) * rr), Math.floor(h[1] + Math.sin(a) * rr)); const fs = G.routineStart; if (k >= 0 && k < MW * MH && d0[k] >= 2 && d0[k] <= 8 && (!fs || fs[k] < 0 || fs[k] >= 10)) return { k, field: null }; }
+  return null;
+}
+// sight: straight ahead to 7.5 tiles (about 150 degrees wide), all round only up close
+function notices(e, d, dx, dy) {
+  if (d > 7.5) return false;
+  if (FEEL_OLD) return d < 7 && los(e.fi, e.fj, hero.fi, hero.fj);
+  if (d >= 3.2) { const [fx, fy] = dirVec(e.dir), l = Math.hypot(fx, fy) || 1; if ((dx * fx + dy * fy) / (l * (d || 1)) < 0.25) return false; }
+  return los(e.fi, e.fj, hero.fi, hero.fj);
+}
+function walkToward(e, ti, tj, sp, dt) {
+  const dx = ti - e.fi, dy = tj - e.fj, l = Math.hypot(dx, dy); if (l < 0.02) return 0;
+  const st = Math.min(l, e.def.speed / 16 * sp * dt), f0 = e.fi, j0 = e.fj;
+  tryMove(e, dx / l * st, dy / l * st, 0.25);
+  const moved = Math.hypot(e.fi - f0, e.fj - j0);
+  e.walk += moved / (FAMILIES[e.fam].gait || 0.32); e.clip = moved > 0.001 ? 'walk' : 'idle'; if (moved > 0.001) e.dir = dirFrom(dx, dy);
+  return moved;
+}
+function routineStep(e, dt, d) {
+  const g = e.routine;
+  if (d > 26) return;   // far from the hero: nobody is watching, nothing moves
+  if (g.kind === 'guard') return idleLife(e, dt);
+  const L = g.leader;
+  if (e !== L) {   // a follower: a loose spot beside and behind the leader, catching up if it falls behind
+    if (!alive(L) || L.state !== 'sleep') { e.routine = null; return idleLife(e, dt); }
+    const [fx, fy] = g.heading || dirVec(L.dir), side = (e.slot % 2 ? 1 : -1) * (0.8 + Math.floor(e.slot / 2) * 0.5), back = 0.9 + Math.floor((e.slot - 1) / 2) * 0.6;
+    let ti = L.fi - fx * back - fy * side * 0.7, tj = L.fj - fy * back + fx * side * 0.7;
+    if (blocked(ti, tj)) { ti = L.fi - fx * 0.9; tj = L.fj - fy * 0.9; }   // its spot is in a wall: just behind the leader
+    const gap = Math.hypot(ti - e.fi, tj - e.fj), near = Math.hypot(L.fi - e.fi, L.fj - e.fj);
+    if (e.folStuck > 0.8 && near < 2.5) { e.folStuck -= dt * 0.5; e.clip = 'idle'; return; }   // couldn't get there: stand about a while
+    if (gap < (L.clip === 'idle' ? 1.1 : 0.25) || (L.clip === 'idle' && near < 1.6)) { e.clip = 'idle'; if (L.clip === 'idle' && Math.random() < dt * 0.4) e.dir = (e.dir + (Math.random() < 0.5 ? 1 : 7)) % 8; return; }   // close enough: stand about (looser while the leader waits)
+    const mv = walkToward(e, ti, tj, gap > 2 ? 0.7 : 0.42, dt);
+    e.folStuck = mv < e.def.speed / 16 * 0.42 * dt * 0.4 ? (e.folStuck || 0) + dt : 0;
+    return;
+  }
+  if (g.waitT > 0) {   // pausing at a stop: looking about
+    g.waitT -= dt; e.clip = 'idle';
+    if (Math.random() < dt * 0.6) e.dir = (e.dir + (Math.random() < 0.5 ? 1 : 7)) % 8;
+    return;
+  }
+  if (!g.cur) { g.cur = g.kind === 'patrol' ? g.wp[g.at = (g.at + 1) % g.wp.length] : wanderStop(g); if (!g.cur) { g.waitT = 2; return; } }
+  const field = fieldTo(g.cur), i = Math.floor(e.fi), j = Math.floor(e.fj), here = field[tIdx(i, j)];
+  if (here <= 0) {   // arrived (or the stop can't be reached from here): pause, then the next one
+    g.cur = null; g.waitT = g.kind === 'patrol' ? 1.5 + g.R() * 2.5 : 1.5 + g.R() * 4; e.clip = 'idle'; return;
+  }
+  let best = null, bv = here;   // step to the neighbouring tile nearest the stop (diagonals when both sides are open)
+  for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    const k = tIdx(i + a, j + b); if (k < 0 || k >= MW * MH) continue; const v = field[k];
+    if (v < 0 || v >= bv) continue;
+    if (a && b && (field[tIdx(i + a, j)] < 0 || field[tIdx(i, j + b)] < 0)) continue;
+    best = [i + a + 0.5, j + b + 0.5]; bv = v;
+  }
+  if (!best) { g.cur = null; g.waitT = 1; return; }
+  { const hx = best[0] - e.fi, hy = best[1] - e.fj, hl = Math.hypot(hx, hy) || 1, h0 = g.heading || [hx / hl, hy / hl]; g.heading = [h0[0] * 0.9 + hx / hl * 0.1, h0[1] * 0.9 + hy / hl * 0.1]; const n = Math.hypot(...g.heading) || 1; g.heading = [g.heading[0] / n, g.heading[1] / n]; }   // smoothed, so the formation doesn't jerk at corners
+  if (!walkToward(e, best[0], best[1], g.kind === 'patrol' ? 0.45 : 0.36, dt) && (g.stuck = (g.stuck || 0) + dt) > 1.5) { g.stuck = 0; g.cur = null; g.waitT = 1; }   // blocked by something: give up on this stop
 }
 // round 35: monsters that haven't noticed the hero look around and shift about near where they stand
 function idleLife(e, dt) {
