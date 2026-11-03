@@ -186,6 +186,15 @@ Full detail: `reports/Better code generated pixel art.md` and
 - **Top priority, gameplay feel:** the ability animations, how they look and feel, and how monsters respond to them all need to be better.
 - **Skill modifiers** like Diablo's runes: pick a modifier for a skill (e.g. fireball) to change how it plays.
 - **Magic missile:** the user doesn't like it. It should look and work better, and it's a little too fast.
+- **Round 29 result:** the user said the new feel (missile, reactions, modifiers) "feels much better actually." The user is now open to building out Acts II and III with bosses, and wants an **ultimate ability per class** and a **ranger class**.
+
+## Agreed plan (after round 29; the user said "this is awesome")
+1. **Finish skill modifiers** for the remaining skills (3 each, same system as fireball/slam): magic missile (e.g. three seekers / piercing bolt), cone, meteor (e.g. meteor shower), blink, hook (e.g. pull everything in a line), whirlwind, leap (e.g. burning ground on landing).
+2. **Ultimates:** a 5th button that charges from hits and kills (about one or two big fights; default unless the user picks a cooldown instead), unlocked at level 10. Warrior: WRATH OF THE MOUNTAIN (leaps high, a huge ring of ground shatters, rocks rain, everything knocked down). Mage: ARCANE STORM (4 s of arcane bolts on every enemy on screen). Ranger: RAIN OF ARROWS (a wide volley that pins enemies).
+3. **Ranger class:** its own save slot; hero rig with a hood, leather and a bow (the skeleton archer already has the draw pose). Attack: a quick arrow with a short draw. Skills: L1 MULTISHOT (fan of arrows), L2 SNARE TRAP (roots), L3 EVASIVE ROLL (dodge back, firing as it rolls), L4 HUNTER'S MARK (extra damage taken, shown through walls). Ranger gear (bows, quivers, leather), modifiers and the ultimate. Open question for the user: a pet companion (wolf or hawk) instead of one of those skills?
+4. **Elites with affixes:** fire trail, frozen orbs, teleporting, shielded, vampiric, summoner; capped per category, banned pairs, names over heads.
+5. **Acts II and III built the Oakhollow way**, one act at a time: Act II ASHFORD (a mining town on a smoking mountain), Act III GREYMARSH (a drowned village at night, lanterns and candles). The side-area leaders become real bosses with mechanics (the Alpha calls its pack, the Bandit Chief throws bombs), plus one or two new bosses per act. Forest set pieces become landmarks in each act's wilderness.
+Order: 1, 2, 3, 4, 5. Republish and commit after each; art through the pixel-sprite skill with before/after images.
 
 ## Waiting on the user
 - **Round 29**: does the new magic missile feel right (speed, look, hit)? Do the reactions (burning, knockdowns, ash/shatter/thrown deaths) read? Try the fireball and slam modifiers: fun? Then the remaining skills get theirs (missile too: e.g. three seekers or a piercing bolt).
