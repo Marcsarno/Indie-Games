@@ -864,6 +864,43 @@ function shadowBlob(wx, wy, rx) {
 }
 // flames cycle through the fire ramp; they are emissive and never lit
 const COLD_FIRE = { [FIRE[1]]: 114, [FIRE[2]]: 116, [FIRE[3]]: 117, [FIRE[4]]: 118, [FIRE[5]]: 27 };   // the lich's braziers burn blue
+// round 28, glow: a stepped, dithered halo in the air around flames, lit windows and lanterns at
+// night, spells in flight and explosions, added over the finished frame (bodies included), so
+// bright things seem to spill light. Toggled with the warm light (LIGHT: NEW / OLD on the title)
+let GLOW = HUE_LIGHT;
+const GLOW_WARM = [255, 150, 60], GLOW_BLUE = [90, 150, 255], GLOW_ARC = [120, 170, 255], GLOW_GOLD = [255, 220, 120];
+function glowAt(wx, wy, R, k, col) {
+  const X0 = Math.round(wx * SPX) - cam2x, Y0 = Math.round(wy * SPX) - cam2y;
+  if (X0 < -R || Y0 < -R || X0 > OW + R || Y0 > OH + R) return;
+  const R2 = R * R;
+  for (let y = Math.max(0, Y0 - R); y < Math.min(OH, Y0 + R); y++) {
+    const dy = y - Y0, by = (y & 3) << 2, row = y * OW;
+    for (let x = Math.max(0, X0 - R); x < Math.min(OW, X0 + R); x++) {
+      const dx = x - X0, d2 = dx * dx + dy * dy; if (d2 >= R2) continue;
+      const f = 1 - Math.sqrt(d2) / R, q = Math.floor((f * f * k * 10 + BAYER[by | (x & 3)]) ) / 10;   // banded, not smooth
+      if (q <= 0) continue;
+      const c = ov32[row + x], r = c & 255, g = (c >> 8) & 255, b = (c >> 16) & 255;
+      ov32[row + x] = (255 << 24) | (Math.min(255, b + col[2] * q) << 16) | (Math.min(255, g + col[1] * q) << 8) | Math.min(255, r + col[0] * q);
+    }
+  }
+}
+function drawGlows() {
+  const day = LV.outdoor && !LV.night, fl = 0.9 + 0.1 * Math.sin(G.t * 13);
+  for (const f of fires) {
+    if (!(LV.vis[f.tile] > 0.15) && !LV.outdoor) continue;
+    const big = f.h >= 10, R = big ? 26 : 12, k = (day ? 0.18 : big ? 0.5 : 0.35) * fl;
+    glowAt(f.wx, f.wy - f.h * 0.45, R, k, f.blue ? GLOW_BLUE : GLOW_WARM);
+  }
+  if (LV.night) for (const d of LV.decor) if (d.kind === 'lantern') { const [x, y] = iso(d.fi, d.fj); glowAt(x + 4, y - 20, 14, 0.4 * fl, GLOW_GOLD); }
+  for (const p of projectiles) {
+    if (p.kind === 'arrow') continue;
+    const [x, y] = iso(p.fi, p.fj), col = p.kind === 'missile' || p.kind === 'frostbolt' ? GLOW_ARC : p.kind === 'holy' ? GLOW_GOLD : GLOW_WARM;
+    glowAt(x, y - p.z, p.kind === 'hfire' ? 22 : 14, 0.45, col);
+  }
+  for (const f of G.flashes) { const [x, y] = iso(f.fi, f.fj); glowAt(x, y - 12, Math.round(f.r * 0.4), 0.7 * f.t / f.t0, GLOW_WARM); }
+  if (G.tp) { const [x, y] = iso(G.tp.fi, G.tp.fj); glowAt(x, y - 16, 30, 0.35 * Math.min(1, G.tp.t / 0.45), GLOW_BLUE); }
+}
+function setLightNew(v) { HUE_LIGHT = GLOW = v; buildLcol(); try { localStorage.setItem('dcg-light', v ? 'new' : 'old'); } catch (e) { /* ignore */ } }
 function flame(wx, wy, hgt, wid, t, seed, blue = false) {
   const bx = wx - camX, by = Math.round(wy - camY);
   for (let r = 0; r < hgt; r++) {
@@ -1011,6 +1048,7 @@ function render() {
     for (let b = 0; b < s && Y + b < OH; b++) for (let a = 0; a < s && X + a < OW; a++) ov32[(Y + b) * OW + X + a] = b >= (kind === 7 ? 2 : 2) && (kind !== 7 || a > 0) ? c2 : c32;
   }
   drawImpactFlashes();
+  if (GLOW) drawGlows();
   // the HUD, drawn at the world's scale into its own buffer, merged on top as blocks
   hud32.fill(0); out32 = hud32;
   drawHud();

@@ -301,6 +301,7 @@ function drawTitle() {
   });
   btn(FEEL_OLD ? 'COMBAT: OLD' : 'COMBAT: NEW', W / 2 - 124, H * 0.52 + 62, 120, () => setFeelOld(!FEEL_OLD), 25);
   btn(WORLD2X ? 'DETAIL: SHARP' : 'DETAIL: CLASSIC', W / 2 + 4, H * 0.52 + 62, 120, () => setWorld2x(!WORLD2X), 25);
+  btn(HUE_LIGHT ? 'LIGHT: NEW' : 'LIGHT: OLD', W / 2 - 60, H * 0.52 + 88, 120, () => setLightNew(!HUE_LIGHT), 25);
   textC('LEFT THUMB MOVES. RIGHT BUTTONS FIGHT.', W / 2, H * 0.78, 25);
   textC('ALL ART IS DRAWN IN CODE', W / 2, H * 0.78 + 8, 24);
 }

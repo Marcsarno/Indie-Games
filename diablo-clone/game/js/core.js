@@ -89,9 +89,26 @@ for (let i = 1; i < NPAL; i++) {
     LTAB[L][i] = pos === 0 ? 0 : chain[clamp(np, 1, chain.length - 1)];
   }
 }
-// flat lit-color table: LCOL[level * NPAL + index] = RGBA of that index at that light level
+// flat lit-color table: LCOL[level * NPAL + index] = RGBA of that index at that light level.
+// Round 28, warm light and cool shadow (the painter's trick): above the identity level (torch-lit)
+// colors lean warm, below it (falling into the dark) they lean blue; the identity level and pure
+// black stay as drawn, so daylight and outlines are untouched. A table built once, per level.
 const LCOL = new Uint32Array(LEVELS * NPAL);
-for (let L = 0; L < LEVELS; L++) for (let i = 0; i < NPAL; i++) LCOL[L * NPAL + i] = PAL32[LTAB[L][i]];
+let HUE_LIGHT = true;
+function buildLcol() {
+  for (let L = 0; L < LEVELS; L++) {
+    const t = !HUE_LIGHT ? 0 : L > L_ID ? (L - L_ID) / (LEVELS - 1 - L_ID) : -(L_ID - L) / L_ID;
+    for (let i = 0; i < NPAL; i++) {
+      const j = LTAB[L][i]; let r = PR[j], g = PG[j], b = PB[j];
+      if (t > 0) { r = r * (1 + 0.16 * t) + 6 * t; g = g * (1 + 0.04 * t); b = b * (1 - 0.24 * t); }
+      else if (t < 0 && j > 1) { const c = -t; r = r * (1 - 0.2 * c); g = g * (1 - 0.08 * c); b = b * (1 + 0.1 * c) + 7 * c; }
+      r = clamp(Math.round(r), 0, 255); g = clamp(Math.round(g), 0, 255); b = clamp(Math.round(b), 0, 255);
+      LCOL[L * NPAL + i] = (255 << 24) | (b << 16) | (g << 8) | r;
+    }
+  }
+}
+try { const q = new URLSearchParams(location.search).get('hue'); HUE_LIGHT = q !== null ? q !== '0' : localStorage.getItem('dcg-light') !== 'old'; } catch (e) { /* storage blocked */ }
+buildLcol();
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => v / 16);
 
 // ---------------------------------------------------------------- random

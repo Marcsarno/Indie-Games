@@ -1,0 +1,52 @@
+<title>Warm Light and Glow</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  /* layout: one narrow column, each change a section with its picture first */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul { margin: 0; max-width: 64ch; }
+  ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .num { font-variant-numeric: tabular-nums; }
+  table { border-collapse: collapse; font-size: 0.95rem; }
+  .tw { overflow-x: auto; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+</style>
+<main>
+  <header>
+    <h1>Warm Light and Glow</h1>
+    <p class="lede">Dungeon of Bones, round 28: torchlight leans warm, shadows lean cool, and bright things glow.</p>
+  </header>
+  <section>
+    <h2>What changed</h2>
+    <ul>
+      <li><strong>Warm light, cool shadows.</strong> Wherever torches, braziers or your own light brighten a spot, the colors lean warm orange. As the light falls off into the dark, they lean blue. Black outlines and plain daylight stay exactly as drawn.</li>
+      <li><strong>Glow.</strong> A soft, stepped halo hangs in the air around flames, braziers, campfires, night lanterns, spells in flight, explosions and the town portal. It spills over walls and characters, so bright things feel bright.</li>
+      <li><strong>Cost:</strong> none worth measuring (a dungeon at 4x slower CPU runs 34.9 ms per frame vs 34.0 before).</li>
+      <li>It's on by default. LIGHT: OLD on the title screen turns both off.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Blind test</h2>
+    <figure>
+      <div class="frame"><img src="light-blind.png" alt="Five pairs of game scenes labelled A and B: a crypt room with a brazier, a crypt with wall torches and the stairs, a cave, a hell room with lava, and a town. One side of each pair has the new lighting, in random order" width="940" height="2500"></div>
+      <figcaption>For each row, which looks better: A, B, or can't tell? The order is random and I haven't looked at the key.</figcaption>
+    </figure>
+  </section>
+</main>
