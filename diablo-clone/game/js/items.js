@@ -84,9 +84,7 @@ function rollLegendary(R) {
 }
 const RARITY_COL = { normal: 26, magic: 40, rare: 51, legend: 112, set: 55 };
 let itemSerial = 1;
-// noNormal (round 25, drops): plain items never drop; the roll is magic or better, with the rare
-// chance raised so rares per kill stay about where they were while item drops became rarer
-function rollItem(R, level, forceBase, noNormal) {
+function rollItem(R, level, forceBase) {
   const bases = Object.keys(ITEM_BASES).filter(k => ITEM_BASES[k].lvl <= level + 1 && ITEM_BASES[k].slot !== 'potion' && forCls(ITEM_BASES[k]));
   const baseId = forceBase || R.pick(bases), base = ITEM_BASES[baseId];
   const it = { id: itemSerial++, base: baseId, rarity: 'normal', mods: {} };
@@ -94,8 +92,7 @@ function rollItem(R, level, forceBase, noNormal) {
   if (!forceBase && R() < 0.008 + level * 0.002) return rollLegendary(R);
   if (!forceBase && R() < 0.015 + level * 0.002) return rollSetItem(R);
   const q = R();
-  const rareP = (0.06 + level * 0.01) * (noNormal ? 1.9 : 1);
-  it.rarity = q < rareP ? 'rare' : (noNormal || q < 0.34) ? 'magic' : 'normal';
+  it.rarity = q < 0.06 + level * 0.01 ? 'rare' : q < 0.34 ? 'magic' : 'normal';
   const n = it.rarity === 'rare' ? R.int(2, 3) : it.rarity === 'magic' ? 1 : 0;
   const pool = AFFIXES.filter(a => a.slots.includes(base.slot));
   const used = [];
