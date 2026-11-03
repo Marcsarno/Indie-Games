@@ -161,7 +161,7 @@ function castMeteor() {
 function blink() {
   let [dx, dy] = dirVec(hero.dir);
   const vx = input.mx, vy = input.my;
-  if (Math.hypot(vx, vy) > 0.2) { const gi = (vx + vy) * Math.SQRT1_2, gj = (vy - vx) * Math.SQRT1_2, l = Math.hypot(gi, gj); dx = gi / l; dy = gj / l; }
+  if (Math.hypot(vx, vy) > 0.2) [dx, dy] = stickToGround(vx, vy);
   let dist = 0;
   for (let s = 0.25; s <= 4.5; s += 0.25) { if (blocked(hero.fi + dx * s, hero.fj + dy * s)) break; dist = s; }
   if (dist < 0.5) { CD.blink = 0; hero.mana += 8; return; }   // nowhere to go: refund

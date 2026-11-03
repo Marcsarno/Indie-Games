@@ -158,6 +158,17 @@ const alive = e => e.dying < 0 && e.hp > 0;
 const screenOf = e => iso(e.fi, e.fj);
 function dirFrom(dfi, dfj) { return ((Math.round(Math.atan2(dfj, dfi) / (Math.PI / 4)) % 8) + 8) % 8; }
 const dirVec = d => [Math.cos(d * Math.PI / 4), Math.sin(d * Math.PI / 4)];
+// The stick is in screen space. Round 20: the hero now moves exactly where the stick points on
+// screen (the old isotropic mapping flattened diagonals: a 45 degree push went 27 degrees), and
+// up/down is sped up on the ground so the on-screen speed is closer to even: a tile is 22.6 px
+// wide but only 11.3 px tall, so the same ground speed looked half as fast going up or down.
+// m = (screen px per ground tile ratio)^0.65: 1 sideways, 1.57 up/down, so screen speed varies by
+// 1.27x instead of 2x (fully even would make the legs race when going up the screen).
+function stickToGround(vx, vy) {
+  const l = Math.hypot(vx, vy) || 1, ux = vx / l, uy = vy / l;
+  const gi = ux / 16 + uy / 8, gj = uy / 8 - ux / 16, n = Math.hypot(gi, gj) || 1;
+  return [gi / n, gj / n, Math.pow(Math.hypot(ux, 2 * uy), 0.65)];
+}
 function tryMove(e, dfi, dfj, r = 0.28) {
   const ok = (ni, nj) => !(blocked(ni - r, nj - r) || blocked(ni + r, nj - r) || blocked(ni - r, nj + r) || blocked(ni + r, nj + r));
   let moved = false;
@@ -446,10 +457,9 @@ function updateHero(dt) {
   const moving = l > 0.18 && !busy;
   if (moving) {
     if (l > 1) { vx /= l; vy /= l; }
-    // screen direction -> ground direction (isotropic): right = +i-j, down = +i+j
     // a quick ramp up to full speed (0.1 s) gives the start some weight
     const ramp = Math.min(1, 0.45 + (hero.runT || 0) / 0.1);
-    const gi = (vx + vy) * Math.SQRT1_2, gj = (vy - vx) * Math.SQRT1_2, sp = STAT.speed * (hero.whirl > 0 ? 0.6 : 1) * Math.min(1, l) * ramp * dt;
+    const [gi, gj, m] = stickToGround(vx, vy), sp = STAT.speed * m * (hero.whirl > 0 ? 0.6 : 1) * Math.min(1, l) * ramp * dt;
     const f0 = hero.fi, j0 = hero.fj;
     tryMove(hero, gi * sp, gj * sp);
     const moved = Math.hypot(hero.fi - f0, hero.fj - j0);
