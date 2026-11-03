@@ -14,7 +14,9 @@ class TB:
     def poly(s, mt, pts3):
         P_ = [(*W(p[0] + s.ox, p[1] + s.oy), p[2]) for p in pts3]; return s._b(sum(p[0] for p in P_) / len(P_), sum(p[1] for p in P_) / len(P_)).poly(mt, P_)
     def box(s, mt, x0, x1, y0, y1, z0, z1):
-        x0, x1, y0, y1 = Wbox(x0 + s.ox, x1 + s.ox, y0 + s.oy, y1 + s.oy); return s._b((x0 + x1) / 2, (y0 + y1) / 2).box(mt, x0, x1, y0, y1, z0, z1)
+        x0, x1, y0, y1 = Wbox(x0 + s.ox, x1 + s.ox, y0 + s.oy, y1 + s.oy); B_ = s._b((x0 + x1) / 2, (y0 + y1) / 2)
+        if z1 - z0 < .061: return B_.poly(mt, [(x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1)])
+        return B_.box(mt, x0, x1, y0, y1, z0, z1)
     def prism(s, mt, b_, t_, z0, z1, mat_fn=None):
         o = (s.ox, s.ox, s.oy, s.oy); b2 = tuple(a + c for a, c in zip(b_, o)); t2 = tuple(a + c for a, c in zip(t_, o))
         if WARP[0]:                                                                            # top rect follows the bottom rect's squeeze

@@ -44,6 +44,7 @@ class WList(list):
             v = type(v)(t) if isinstance(v, tuple) else t
         super().append(v)
 reset(); mood.florida(); mood._transform(); R_ = random.Random(38); m = mats(); m["dirt"] = M("dirt_track", "#a58a62")
+def TOPONLY(name, z0, z1): return z1 - z0 < .061 or name == "ground"
 class Tiled:                                                                    # flat surfaces split into 128 m tiles so the page can frustum-cull them
     def __init__(self, name, size=128): self.name, self.size, self.b = name, size, {}
     def _k(self, pts): return (int(math.floor(sum(p[0] for p in pts) / len(pts) / self.size)), int(math.floor(sum(p[1] for p in pts) / len(pts) / self.size)))
@@ -59,7 +60,9 @@ class Tiled:                                                                    
         for a, b in zip(xs, xs[1:]):
             for c, d in zip(ys, ys[1:]):
                 if b - a < 1e-3 or d - c < 1e-3: continue
-                k = self._k([(a, c), (b, d)]); self.b.setdefault(k, Builder(f"{self.name}_{k[0]}_{k[1]}")).box(mt, a, b, c, d, z0, z1)
+                k = self._k([(a, c), (b, d)]); B_ = self.b.setdefault(k, Builder(f"{self.name}_{k[0]}_{k[1]}"))
+                if TOPONLY(self.name, z0, z1): B_.poly(mt, [(a, c, z1), (b, c, z1), (b, d, z1), (a, d, z1)])      # round 48: flat pieces = top face only (sides/bottom never seen)
+                else: B_.box(mt, a, b, c, d, z0, z1)
     def build(self, **kw): return [b.build(**kw) for b in self.b.values()]
 RB, GB, BB = Tiled("roads"), Tiled("ground"), Tiled("blocks")
 COL, PROPS, CARS, STATIC, MAP = [], [], [], [], WList("map")
@@ -286,14 +289,14 @@ for lot in LP["lots"]:
         nm = {"SEMINOLE CASINO": ("Casino", "#c8901e", "$"), "CITY HALL": ("City Hall", "#2f6fb3", "H"), "POLICE": ("Police", "#1d3f8a", "*"), "WALMART": ("Walmart", "#2f64ad", "W"), "McD": ("McDonald's", "#d22d24", "M")}.get(b_["label"])
         if nm: LMK.append([nm[0], round((b_["x0"] + b_["x1"]) / 2, 1), round((b_["y0"] + b_["y1"]) / 2, 1), nm[1], nm[2]])
 LMK.append(["Trash Mountain", round(tcx, 1), round(tcy, 1), "#7a5a2a", "^"]); LMK.append(["Butterfly World", *[round(v, 1) for v in SHK.M(640, 640)], "#5a9d3a", "B"]); LMK.append(["Dave", LP["dave"][0], LP["dave"][1], "#e33b3b", "D"])
-WORLD = {"name": "cc", "title": "Coconut Creek", "glb": "scene.glb", "mapbg": "#4d7a34", "extent": 2000, "sky": "#8fc3f5", "fog": ["#c4dcf2", 120, 330], "hemi": ["#cfe4ff", "#6f8a4a", 1.55],
+WORLD = {"name": "cc", "title": "Coconut Creek", "glb": "scene.glb", "mapbg": "#4d7a34", "extent": 2000, "sky": "#8fc3f5", "fog": ["#c4dcf2", 70, 165], "hemi": ["#cfe4ff", "#6f8a4a", 1.55],
          "sun": {"color": "#fff0d6", "intensity": 3.7, "dir": [-0.5, -0.74, 0.45]}, "heights": [], "exposure": 1.0, "tone": "AgX", "lamps": [], "ground": "#5d9a3a", "start": start, "money": 1250,
          "traffic": [], "walk": [], "walkers": 0, "fight": None, "demo": None, "landmarks": LMK,
          "views": {"drive": {"label": "Play", "mode": "drive", "pitch": 45, "dist": 38}, "over": {"label": "Overview", "tx": 0, "ty": 700, "pitch": 55, "dist": 1500}}, "map": MAP, "roads": ROADLINES, "layout": "plan/v7/layout.json", "hydrants": [[round(x, 1), round(y, 1)] for x, y in HYDRANTS]}
 OUTD = OUT
 json.dump(FOOT, open(os.path.join(OUTD, "foot_cc.json"), "w")); json.dump(COL, open(os.path.join(OUTD, "colliders_cc.json"), "w")); json.dump(PROPS, open(os.path.join(OUTD, "props_cc.json"), "w")); json.dump(CARS, open(os.path.join(OUTD, "cars_cc.json"), "w")); json.dump(WORLD, open(os.path.join(OUTD, "world_cc.json"), "w"))
 print("CC colliders", len(COL), "props", len(PROPS), "cars", len(CARS), "roads", len(net))
-STATIC.extend(GB.build(vc=True, recalc=False)); STATIC.extend(RB.build(vc=True, recalc=False)); STATIC.extend(BB.build(vc=True)); tick_("built")
+STATIC.extend(GB.build(vc=True, recalc=False)); STATIC.extend(RB.build(vc=True, recalc=False)); STATIC.extend(BB.build(vc=True, recalc=False)); tick_("built")
 if not os.environ.get("NORENDER"):
     for o in VAR: o.hide_render = True
     SH = {"cc_over": ((0, 690, 0), 89, 2700, 1100, 1400), "cc_publix": ((PUBLIX[0], PUBLIX[1] - 60, 0), 50, 160, 1000, 700), "cc_hammocks": ((-415, 320, 0), 60, 420, 1000, 700)}

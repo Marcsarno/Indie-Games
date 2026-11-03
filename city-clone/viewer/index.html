@@ -318,7 +318,7 @@ function deq(g) {                               // compressed (quantized int) at
   window.__merge = { groups: groups.size, merged: victims.length };
 })();
 /* Vegetation is instanced: one InstancedMesh per sub-mesh of each kit piece (palms, shrubs, hedges, oaks), placed from props.json. */
-const instances = []; { const byKind = {};
+const instances = []; const VEGLOD = []; if (WN !== 'cc') { const byKind = {};
   for (const p of propList) (byKind[p.k] = byKind[p.k] || []).push(p);
   for (const [kind, all] of Object.entries(byKind)) {
     const node = vegG.scene.getObjectByName(kind); if (!node) continue; node.updateWorldMatrix(true, true); const dummy = new THREE.Object3D();
@@ -327,6 +327,42 @@ const instances = []; { const byKind = {};
       list.forEach((p, i) => { dummy.position.copy(b2t(p.x, p.y, 0)); dummy.rotation.set(0, rad(p.rz), 0); dummy.scale.setScalar(kind === 'hedge' ? 1 : p.s); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); (p.inst = p.inst || []).push([im, i]); });
       im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); im.boundingSphere.radius += 6; scene.add(im); instances.push(im); });
   } }
+
+/* Round 48 (phone pass, new map only): every tree kind becomes ONE merged mesh (its flat-coloured parts baked into vertex colours: 1 draw call per tile instead of
+   4-6), and tiles past VEG_LOD m swap to a 20-40 triangle stand-in (canopy bicone + trunk prism, averaged colours) that the haze hides anyway. */
+const VEG_LOD = 85, VEG_TILE = 80;
+if (WN === 'cc') { const byKind = {}; const vmat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  for (const p of propList) (byKind[p.k] = byKind[p.k] || []).push(p);
+  const colGeo = (g, c) => { const n = g.attributes.position.count, a = new Float32Array(n * 3); for (let k = 0; k < n; k++) { a[k * 3] = c.r; a[k * 3 + 1] = c.g; a[k * 3 + 2] = c.b; } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g; };
+  function kindGeos(node) {
+    const parts = [], fol = [], bark = []; const box = new THREE.Box3();
+    node.traverse(o => { if (!o.isMesh) return; let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); const k = new THREE.BufferGeometry();
+      k.setAttribute('position', g.attributes.position); if (!g.attributes.normal) g.computeVertexNormals(); k.setAttribute('normal', g.attributes.normal);
+      const c = (o.material && o.material.color) ? o.material.color.clone() : new THREE.Color(1, 1, 1); parts.push(colGeo(k, c));
+      k.computeBoundingBox(); (c.g > c.r * 1.2 ? fol : bark).push([k.boundingBox.clone(), c, k.attributes.position.count]); });
+    const hi = mergeGeometries(parts);
+    const avg = L => { const c = new THREE.Color(0, 0, 0); let n = 0; for (const [, cc, w] of L) { c.r += cc.r * w; c.g += cc.g * w; c.b += cc.b * w; n += w; } return n ? c.multiplyScalar(1 / n) : new THREE.Color(.1, .25, .05); };
+    const un = L => { const b = new THREE.Box3(); for (const [bb] of L) b.union(bb); return b; };
+    const lo = [];
+    if (fol.length) { const b = un(fol), cx = (b.min.x + b.max.x) / 2, cz = (b.min.z + b.max.z) / 2, r = Math.max(b.max.x - b.min.x, b.max.z - b.min.z) / 2 * .85, y0 = b.min.y, y1 = b.max.y, ym = y0 + (y1 - y0) * .45;
+      const v = []; const N = 6; for (let k = 0; k < N; k++) { const a0 = k / N * Math.PI * 2, a1 = (k + 1) / N * Math.PI * 2, p0 = [cx + r * Math.cos(a0), ym, cz + r * Math.sin(a0)], p1 = [cx + r * Math.cos(a1), ym, cz + r * Math.sin(a1)];
+        v.push(cx, y1, cz, ...p1, ...p0, cx, y0, cz, ...p0, ...p1); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); g.computeVertexNormals(); lo.push(colGeo(g, avg(fol))); }
+    if (bark.length) { const b = un(bark), cx = (b.min.x + b.max.x) / 2, cz = (b.min.z + b.max.z) / 2, w = Math.min(.35, Math.max(.12, (b.max.x - b.min.x) / 6)), y1 = b.max.y; const v = [];
+      const q = [[-w, -w], [w, -w], [w, w], [-w, w]]; for (let k = 0; k < 4; k++) { const [ax, az] = q[k], [bx, bz] = q[(k + 1) % 4]; v.push(cx + ax, 0, cz + az, cx + bx, 0, cz + bz, cx + bx, y1, cz + bz, cx + ax, 0, cz + az, cx + bx, y1, cz + bz, cx + ax, y1, cz + az); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); g.computeVertexNormals(); lo.push(colGeo(g, avg(bark))); }
+    return [hi, lo.length ? mergeGeometries(lo) : null];
+  }
+  for (const [kind, all] of Object.entries(byKind)) {
+    const node = vegG.scene.getObjectByName(kind); if (!node) continue; const [hiG, loG] = kindGeos(node); const dummy = new THREE.Object3D();
+    const tiles = {}; for (const p of all) { const k = Math.floor(p.x / VEG_TILE) + ',' + Math.floor(p.y / VEG_TILE); (tiles[k] = tiles[k] || []).push(p); }
+    for (const [key, list] of Object.entries(tiles)) {
+      const mk = (g, shadow) => { const im = new THREE.InstancedMesh(g, vmat, list.length); im.castShadow = shadow; im.receiveShadow = shadow;
+        list.forEach((p, i) => { dummy.position.copy(b2t(p.x, p.y, 0)); dummy.rotation.set(0, rad(p.rz), 0); dummy.scale.setScalar(kind === 'hedge' ? 1 : p.s); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); (p.inst = p.inst || []).push([im, i]); });
+        im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); im.boundingSphere.radius += 6; scene.add(im); instances.push(im); return im; };
+      const hi = mk(hiG, true), lo = (loG && kind !== 'hedge') ? mk(loG, false) : null; const [tx, ty] = key.split(',').map(Number);
+      VEGLOD.push({ x: (tx + .5) * VEG_TILE, z: -(ty + .5) * VEG_TILE, hi, lo });
+    } } }
 
 /* Phone-cost pass on the static city: Lambert instead of Standard (cheaper per pixel; the scenery is matte anyway), flat pieces (roads, ground, paint)
    cast no shadow, and static matrices are frozen. Cars keep their Standard materials. */
@@ -1506,6 +1542,7 @@ function collectCullables() {
 function cullStep(dt) {
   cullT += dt; if (cullT < .2) return; cullT = 0; if (!cullables.length) collectCullables();
   const R = 140 + (CINE.shots ? Math.max(0, rig.dist - 30) : 0); for (const c of cullables) c.o.visible = Math.hypot(c.x - rig.tx, c.z - rig.tz) - c.r < R;
+  for (const v of VEGLOD) { const d = Math.hypot(v.x - rig.tx, v.z - rig.tz) - VEG_TILE * .71; if (!v.lo) { v.hi.visible = d < R + 40; continue; } const near = d < VEG_LOD && !CINE.shots; v.hi.visible = near; v.lo.visible = !near && d < R + 60; }
 }
 
 function update(dt, draw = true) {

@@ -21,6 +21,15 @@ Tune panel for the car handling. Controls are touch (stick/pads) with keyboard f
 5. Test in headless Chromium with Playwright (software GL): load `?`/`#chinatown`, `window.__city.setManual(true)`, `tick(dt, draw=false)` for logic tests (drawing each frame is ~1 s), `step(dt)` = physics only. Scripted tests live only in the session scratchpad; rewrite from the hooks.
 6. Show the user before/after or concept-vs-ours sheets and animated GIFs captured with the stepped sim; commit and push to `main` after each round.
 
+## ROUND 48: PHONE PERFORMANCE PASS (user: "make it feel smoother on phones... do 1 through 5")
+- Measured (out/cc_scene.glb): roads/paint/lots were ~47 % of all triangles, ground 14 %, back-yard fences 9 %, parked cars 6 %, walls 4 %; trees = 5.2k props x 300-800 tris, 4-6 draw calls each per tile.
+- 1 Flat pieces = top face only: Tiled.box (TOPONLY: < 6 cm tall or the ground tiles), TB.box, tbox (cc_fill2). BB + BOH now build with recalc=False so the single faces keep pointing up.
+- 2 Straight road samples every 24 m instead of 5 m (roads._samples; curves still split at 2.5 deg).
+- 3 Back-yard fences: corner posts only (panels stay). Arterial walls: straight 3 m pieces merged into runs (<= 30 m).
+- 4 Haze: cc fog 120..330 -> 70..165 (things fade out before the 140 m draw distance instead of popping).
+- 5 Trees (viewer, new map only): each kind merged into one vertex-coloured mesh (1 draw call per 80 m tile), tiles past VEG_LOD = 85 m use a 20-40 tri stand-in (canopy bicone + trunk prism, average colours, no shadow). Knocked-over trees still work (p.inst holds both).
+- Result: scene.glb 17.6 -> 11.65 MB; drive views 262-361 calls / 157-282k tris -> 215-258 calls / 113-152k tris (-45 % triangles, -15-30 % draw calls). Shots: .work/r48/ba_perf.jpg. Checks clean, both worlds load.
+
 ## ROUND 47: BACK OF HOUSE + FASTER CAR (user: shops "then there's grass behind it, and then there's residential homes... no smooth separation"; "don't want to overdo it"; "the car's a little bit slow")
 - `blender/scripts/cc_fill4.py` (exec'd at the end of cc_fill3) `back_of_house()` runs in fill_after right after gap_fill: every APRONS building >= 26 m wide looks out its back: a street/alley within 40 m -> the service lane is paved right up to it, and if homes are across it a buffer wall (stucco 2.8 m + cap) + hedge + oaks/palms goes just past that street; homes within 60 m -> lane up to 16 m then the wall; nothing -> short lane only. Lane = merged 2 m cells (RB, z .029), roll-up doors on the back wall, docks (concrete, collider), dumpsters (colliders), 30 % a box truck. Wall runs merge per line (gaps < 40 m bridged, +10 m past each building) and break at streets / detours / houses / water. Own tile set `boh`. Result: 56 buildings, 6 wall runs, 668 m of wall.
 - Car: `CC_TOP = 1.15` on the new map only (top speed x1.15, acceleration unchanged) in index.html. Cars are real size (Jeep 4.6 x 2.0 m); user felt they looked small -> new map play camera 44 -> 38 m (`PLAYD` in index.html, world.json drive view).

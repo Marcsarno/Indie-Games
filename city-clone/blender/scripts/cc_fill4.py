@@ -113,5 +113,5 @@ def back_of_house():
                     FOOT.append((min(p[0], q[0]) - 3, min(p[1], q[1]) - 3, max(p[0], q[0]) + 3, max(p[1], q[1]) + 3)); BOH_N[1] += 1; BOH_N[2] += L_
                 if not ok: pts = []
                 t += 2
-    STATIC.extend(BOH.build(vc=True))
+    STATIC.extend(BOH.build(vc=True, recalc=False))
     print("back of house: %d buildings, %d wall runs, %.0f m of wall" % tuple(BOH_N))

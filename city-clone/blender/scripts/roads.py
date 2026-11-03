@@ -121,7 +121,7 @@ def _samples(road, s0, s1, forced=()):
     xs = sorted(set(round(x, 3) for x in xs)); out = [xs[0]]; last = road.at(xs[0])
     for x in xs[1:-1]:
         t = road.at(x); ang = math.degrees(math.acos(max(-1, min(1, t[2] * last[2] + t[3] * last[3]))))
-        if ang > 2.5 or x - out[-1] > 5 or any(abs(x - f) < .26 for f in forced): out.append(x); last = t
+        if ang > 2.5 or x - out[-1] > 24 or any(abs(x - f) < .26 for f in forced): out.append(x); last = t
     out.append(xs[-1]); return out
 
 def strip(b, mat, road, s0, s1, o0, o1, z, forced=(), gaps=(), solid=None, hwf=None):

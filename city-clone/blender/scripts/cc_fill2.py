@@ -9,7 +9,9 @@ def obox(T, mt, c, u, L, t, z0, z1, side=0.0, n=None):
     cx, cy = c[0] + (n[0] * side if n else 0), c[1] + (n[1] * side if n else 0)
     seg_box(T, mt, (cx - u[0] * L / 2, cy - u[1] * L / 2), (cx + u[0] * L / 2, cy + u[1] * L / 2), t, z0, z1)
 def tbox(T, mt, x0, x1, y0, y1, z0, z1):
-    k = T._k([(x0, y0), (x1, y1)]); T.b.setdefault(k, Builder(f"{T.name}_{k[0]}_{k[1]}")).box(mt, x0, x1, y0, y1, z0, z1)
+    k = T._k([(x0, y0), (x1, y1)]); B_ = T.b.setdefault(k, Builder(f"{T.name}_{k[0]}_{k[1]}"))
+    if z1 - z0 < .061: B_.poly(mt, [(x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1)])
+    else: B_.box(mt, x0, x1, y0, y1, z0, z1)
 
 def driveways():
     n_car = 0

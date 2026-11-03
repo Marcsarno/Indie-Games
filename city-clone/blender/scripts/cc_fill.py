@@ -437,7 +437,7 @@ def yard(name, pool):
     for (p, q) in (((x0, y0), (x0, y1)), ((x0, y1), (x1, y1)), ((x1, y1), (x1, y0))):
         L = math.dist(p, q); n = int(L / 2.4)
         b.box(F, min(p[0], q[0]) - .04, max(p[0], q[0]) + .04, min(p[1], q[1]) - .04, max(p[1], q[1]) + .04, .1, 1.8)
-        for i in range(n + 1): t = i / max(1, n); x, y = p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t; b.box(P_, x - .07, x + .07, y - .07, y + .07, 0, 1.95)
+        for t in (0, 1): x, y = p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t; b.box(P_, x - .07, x + .07, y - .07, y + .07, 0, 1.95)      # round 48: corner posts only
     if pool:
         b.box(flat("#e8e2d4"), -4.2, 4.2, y0 + 1.0, y0 + 9.0, 0, .09); b.box(flat("#3fb6e0"), -3.2, 3.2, y0 + 2.6, y0 + 7.6, 0, .11)
     else: b.box(flat("#d8cfc0"), -3, 3, y0 + .2, y0 + 3.2, 0, .07); b.box(flat("#c9c3b8"), 3.2, 5.6, y1 - 3.2, y1 - .6, 0, 2.3)     # patio + shed
@@ -482,7 +482,12 @@ def walls(all_houses):
             def flush(run):
                 nonlocal nseg
                 if len(run) < 4: return
-                for p, q in zip(run, run[1:]):
+                keep = [run[0]]                                                                  # round 48: merge straight 3 m pieces into long runs
+                for k_ in range(1, len(run) - 1):
+                    a_, b_, c_ = keep[-1], run[k_], run[k_ + 1]; h1 = math.atan2(b_[1] - a_[1], b_[0] - a_[0]); h2 = math.atan2(c_[1] - b_[1], c_[0] - b_[0])
+                    if abs((h2 - h1 + math.pi) % (2 * math.pi) - math.pi) > .03 or math.dist(a_[:2], b_[:2]) > 30: keep.append(b_)
+                keep.append(run[-1])
+                for p, q in zip(keep, keep[1:]):
                     seg_box(WL, STU, p, q, .35, 0, 2.3); seg_box(WL, CAP, p, q, .5, 2.3, 2.45)
                     seg_box(WL, HED, (p[0] + p[3] * 1.0, p[1] + p[4] * 1.0), (q[0] + q[3] * 1.0, q[1] + q[4] * 1.0), 1.1, 0, 1.05); seg_box(WL, HTOP, (p[0] + p[3] * 1.0, p[1] + p[4] * 1.0), (q[0] + q[3] * 1.0, q[1] + q[4] * 1.0), .95, 1.05, 1.2); nseg += 1
                 for i in range(0, len(run) - 2, 6):
