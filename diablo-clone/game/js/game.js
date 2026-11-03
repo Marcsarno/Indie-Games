@@ -26,7 +26,7 @@ const params = new URLSearchParams(location.search);
 const SHAKE = params.get('shake') !== '0';
 
 // ---------------------------------------------------------------- state
-const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0, meteors: [], flashes: [], blasts: [], cones: [], ghosts: [], sparks: [] };
+const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0, meteors: [], flashes: [], blasts: [], cones: [], ghosts: [], sparks: [], rings: [], walls: [] };
 const hero = {
   fam: 'hero', fi: 0, fj: 0, dir: 1, clip: 'idle', clock: 0, walk: 0, runT: 0, goT: 0, stopT: 0, atk: -1, combo: 0, swingEnd: -9, hitDone: false, stop: 0, flash: 0,
   hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, hurtT: 0, cast: -1,
@@ -73,7 +73,7 @@ function startLevel(level, seed) {
   enemies = LV.spawns.map((s, n) => makeEnemy(s.id, s.fi, s.fj, n));
   { const R = rng(seed ^ 0x5bd1); for (const e of enemies) if (!e.def.unique && R() < champChance(LV.diff)) makeChampion(e, R); }
   makeNpcs(); resetSkills(); setupBoss();
-  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = [];
+  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; hero.chillT = 0;
   updateFov(hero.fi, hero.fj);
   flowT = 0; computeFlow();
   warmStep(1e9, prewarm());   // idle poses + the hero's walk now, behind the level fade; the rest during play
@@ -459,7 +459,7 @@ function update(dt) {
   for (const g of groundItems) if (g.item && g.item.rarity === 'legend' && !g.announced) { g.announced = true; say('A LEGENDARY ITEM HAS FALLEN', 112, 3); sfx('levelUp'); }   // never miss one
   if (hero.frenzy > 0) hero.frenzy -= dt; if (hero.stoneskin > 0) hero.stoneskin -= dt;
   separate();
-  updateProjectiles(dt); updateMeteors(dt);
+  updateProjectiles(dt); updateMeteors(dt); updateLichFx(dt);
   updateParticles(dt);
   ambience(dt);
   for (const f of floaters) { f.t -= dt; f.y -= dt * 18; }
@@ -496,7 +496,7 @@ function updateHero(dt) {
     if (l > 1) { vx /= l; vy /= l; }
     // a quick ramp up to full speed (0.1 s) gives the start some weight
     const ramp = Math.min(1, 0.45 + (hero.runT || 0) / 0.1);
-    const [gi, gj, m] = stickToGround(vx, vy), sp = STAT.speed * m * (hero.whirl > 0 ? 0.6 : 1) * Math.min(1, l) * ramp * dt;
+    const [gi, gj, m] = stickToGround(vx, vy), sp = STAT.speed * m * (hero.chillT > 0 ? 0.6 : 1) * (hero.whirl > 0 ? 0.6 : 1) * Math.min(1, l) * ramp * dt;
     const f0 = hero.fi, j0 = hero.fj;
     tryMove(hero, gi * sp, gj * sp);
     const moved = Math.hypot(hero.fi - f0, hero.fj - j0);
@@ -609,7 +609,7 @@ function updateEnemy(e, dt) {
       e.hitDone = true;
       if (m.ranged) {
         const l = d || 1, sp = m.ranged === 'arrow' ? 9 : 5.5;
-        sfx(m.ranged === 'arrow' ? 'arrow' : 'fireball');
+        sfx(m.ranged === 'arrow' ? 'arrow' : m.ranged === 'frostbolt' ? 'frost' : 'fireball');
         projectiles.push({ kind: m.ranged, fi: e.fi + dx / l * 0.5, fj: e.fj + dy / l * 0.5, vx: dx / l * sp, vy: dy / l * sp, z: m.ranged === 'arrow' ? 18 : 14, life: 2, owner: 'enemy', dmg: e.dmg });
       } else if (!hero.dead && d < m.reach + 0.35) hurtHero(roll(e.dmg), e);
     }
@@ -748,7 +748,7 @@ function updateProjectiles(dt) {
       p.fi += p.vx * dt / n; p.fj += p.vy * dt / n;
       if (blocked(p.fi, p.fj) && tileAt(Math.floor(p.fi), Math.floor(p.fj)) !== FLOOR) { p.life = 0; break; }
       if (p.owner === 'enemy') {
-        if (!hero.dead && Math.hypot(hero.fi - p.fi, hero.fj - p.fj) < 0.45) { hurtHero(roll(p.dmg), null); p.life = 0; }
+        if (!hero.dead && Math.hypot(hero.fi - p.fi, hero.fj - p.fj) < 0.45) { hurtHero(roll(p.dmg), null); p.life = 0; if (p.kind === 'frostbolt') hero.chillT = 1.5; }
       } else {
         for (const e of enemies) if (alive(e) && Math.hypot(e.fi - p.fi, e.fj - p.fj) < 0.5 + (e.def.unique ? 0.4 : 0)) {
           if (p.boom) { p.life = 0; break; }   // a fireball bursts on whatever it touches (below)
@@ -759,7 +759,7 @@ function updateProjectiles(dt) {
       }
     }
     const [x, y] = iso(p.fi, p.fj);
-    if (p.kind !== 'arrow' && Math.random() < 0.7) pspawn(3, x, y, p.z, (Math.random() - 0.5) * 8, 0, 4 + Math.random() * 8, 0.35, p.kind === 'holy' ? 50 : p.kind === 'missile' ? 39 : 16);
+    if (p.kind !== 'arrow' && Math.random() < 0.7) pspawn(3, x, y, p.z, (Math.random() - 0.5) * 8, 0, 4 + Math.random() * 8, 0.35, p.kind === 'holy' ? 50 : p.kind === 'missile' ? 39 : p.kind === 'frostbolt' ? 118 : 16);
     if (p.kind === 'hfire' && Math.random() < 0.6) pspawn(3, x + (Math.random() - 0.5) * 6, y, p.z + 2, (Math.random() - 0.5) * 6, 0, 10 + Math.random() * 8, 0.5, Math.random() < 0.5 ? 4 : 5);   // smoke
     if (p.kind === 'missile' && p.life <= 0) for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283; pspawn(4, x, y, p.z, Math.cos(a) * 45, Math.sin(a) * 22, 0, 0.16, k % 2 ? 40 : 27); }   // a ring of sparks on impact
     if (p.life <= 0 && p.kind === 'holy') sfx('boltHit');
@@ -834,7 +834,8 @@ function shadowBlob(wx, wy, rx) {
   }
 }
 // flames cycle through the fire ramp; they are emissive and never lit
-function flame(wx, wy, hgt, wid, t, seed) {
+const COLD_FIRE = { [FIRE[1]]: 114, [FIRE[2]]: 116, [FIRE[3]]: 117, [FIRE[4]]: 118, [FIRE[5]]: 27 };   // the lich's braziers burn blue
+function flame(wx, wy, hgt, wid, t, seed, blue = false) {
   const bx = wx - camX, by = Math.round(wy - camY);
   for (let r = 0; r < hgt; r++) {
     const p = r / hgt;
@@ -847,6 +848,7 @@ function flame(wx, wy, hgt, wid, t, seed) {
       let c = d < 0.75 && p < 0.8 ? FIRE[3] : FIRE[2];
       if (p < 0.55 && d < 0.45) c = p < 0.3 ? FIRE[5] : FIRE[4];
       if (p > 0.85) c = FIRE[1];
+      if (blue) c = COLD_FIRE[c] || c;
       scr[y * W + x] = c | EMIS;
     }
   }
@@ -915,17 +917,17 @@ function render() {
       const sp = getSprite(c.fam, c.look, c.dir, c.clip, frameOf(c), c);
       const jit = c.stop > 0 && c !== hero && c.dying < 0 ? (Math.floor(t * 33) % 2 ? 1 : -1) : 0;
       // white flash, then a brief dithered red; ice blue while frozen, half ice while slowed
-      const fl = c.flash > 0 ? 1 : c.frozen > 0 ? 4 : c.tint > 0 ? 3 : c.slowT > 0 ? 5 : 0;
+      const fl = c.flash > 0 ? 1 : c.frozen > 0 ? 4 : c.tint > 0 ? 3 : c.slowT > 0 || c.chillT > 0 ? 5 : 0;
       ovBlit(sp, x + jit, y, charLevel[n], fl, 0, tIdx(Math.floor(c.fi), Math.floor(c.fj)));
     } });
   });
   for (const p of projectiles) ov.push({ depth: p.fi + p.fj, draw: () => drawProjectile(p) });
   shrineCrystals(base);
-  for (const f of fires) if (LV.vis[f.tile] > 0.1 || LV.seen[f.tile]) base.push({ depth: (f.tile % MW) + Math.floor(f.tile / MW) + (f.depthAdd ?? 1.2), draw: () => flame(f.wx, f.wy, f.h, f.w, t, f.seed) });
+  for (const f of fires) if (LV.vis[f.tile] > 0.1 || LV.seen[f.tile]) base.push({ depth: (f.tile % MW) + Math.floor(f.tile / MW) + (f.depthAdd ?? 1.2), draw: () => flame(f.wx, f.wy, f.h, f.w, t, f.seed, f.blue) });
   heroRing(kx, ky + 1);
   base.sort((a, b) => a.depth - b.depth);
   for (const d of base) d.draw();
-  drawTelegraph(); drawMeteors();
+  drawTelegraph(); drawMeteors(); drawLichFx();
   const charLevel = lightPass(chars, kx, ky);
   // the frame: the lit world doubled (shifted by the camera's half pixel), then the detail layer over it
   for (let y = 0; y < H; y++) {
@@ -1086,8 +1088,8 @@ function drawProjectile(p) {
     }
     return;
   }
-  const hot = p.kind === 'holy' ? [49, 50, 51] : [15, 16, 17], R = p.kind === 'hfire' ? 3 : 2;   // the hero's fireball is bigger
-  for (let b = -R; b <= R; b++) for (let a = -R; a <= R; a++) { const d = (a * a + b * b) / (R * R) * 4; if (d <= 4) put(a, b, (d <= 1 ? (p.kind === 'holy' ? 27 : 18) : d <= 2.2 ? hot[2] : hot[1]) | EMIS); }
+  const hot = p.kind === 'holy' ? [49, 50, 51] : p.kind === 'frostbolt' ? [116, 117, 118] : [15, 16, 17], R = p.kind === 'hfire' || p.kind === 'frostbolt' ? 3 : 2;   // the hero's fireball is bigger
+  for (let b = -R; b <= R; b++) for (let a = -R; a <= R; a++) { const d = (a * a + b * b) / (R * R) * 4; if (d <= 4) put(a, b, (d <= 1 ? (p.kind === 'holy' || p.kind === 'frostbolt' ? 27 : 18) : d <= 2.2 ? hot[2] : hot[1]) | EMIS); }
 }
 
 // lighting: static torch maps (scaled by flicker) + dynamic lights (hero, bolts), then fog of war,

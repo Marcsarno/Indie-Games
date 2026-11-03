@@ -356,6 +356,7 @@ function setupBoss() {
 }
 function bossAlive() { return boss && alive(boss); }
 function updateBoss(e, dt, d, dx, dy) {
+  if (e.def.boss === 'lich') return updateLich(e, dt, d);
   if (e.def.boss === 'slam') return updateWarlord(e, dt, d);
   if (e.def.boss === 'king') return updateKing(e, dt, d);
   // returns true when the lunge state machine owns this frame
@@ -429,6 +430,153 @@ function updateKing(e, dt, d) {
   }
   if (e.special <= 0 && d < 9) { e.raiseT = 0.7; say('THE KING RAISES HIS DEAD', 22, 2); return true; }
   return false;
+}
+// ---------------------------------------------------------------- the lich (round 23)
+// Phase 1: rings of frost spread from him with gaps to slip through; walls of bone erupt across the
+// floor (they hurt to stand in, then block the way for a while); frost bolts chill. Phase 2 (half
+// life): the braziers turn blue, wraiths rise, he teleports about the ritual floor, the rings come
+// faster, in pairs, with narrower gaps.
+const RING_SPEED = 3.4, RING_MAX = 10, RING_W = 0.38;
+function updateLich(e, dt, d) {
+  if (!e.phase) { e.home = [e.fi, e.fj]; e.special = 2.5; e.phase = 1; }   // (every enemy has a home; the lich's is the ritual floor's center)
+  const p2 = e.phase === 2;
+  if (e.phase === 1 && e.hp < e.maxHp * 0.5) {   // phase 2
+    e.phase = 2; e.special = 1.2; say('THE LICH ASCENDS', 59, 3); sfx('cry');
+    if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.5);
+    for (const f of fires) if (Math.hypot(f.wx - iso(e.home[0], e.home[1])[0], (f.wy - iso(e.home[0], e.home[1])[1]) * 2) < 260) f.blue = true;   // the braziers burn cold
+    for (let k = 0; k < 3; k++) {
+      const a = k / 3 * 6.283 + 0.5, fi = e.home[0] + Math.cos(a) * 4, fj = e.home[1] + Math.sin(a) * 4;
+      if (blocked(fi, fj)) continue;
+      const w = makeEnemy('wraith', fi, fj, enemies.length); w.state = 'hunt'; enemies.push(w);
+      const [x, y] = iso(fi, fj); burst(4, x, y, 10, 16, 40, 59);
+    }
+  }
+  e.special -= dt;
+  if (e.blinkT > 0) {   // teleporting: fade, then reappear elsewhere on the ritual floor
+    e.blinkT -= dt; e.clip = 'cast'; e.atk = 0;
+    if (e.blinkT <= 0) {
+      const [x0, y0] = screenOf(e);
+      G.ghosts.push({ sp: getSprite(e.fam, e.look, e.dir, 'idle', 0, e), x: x0, y: y0, t: 0.4, t0: 0.4 });
+      for (let t = 0; t < 30; t++) {
+        const a = Math.random() * 6.283, r = 2 + Math.random() * 4.5, fi = e.home[0] + Math.cos(a) * r, fj = e.home[1] + Math.sin(a) * r;
+        if (blocked(fi, fj) || Math.hypot(fi - hero.fi, fj - hero.fj) < 3.5) continue;
+        e.fi = fi; e.fj = fj; break;
+      }
+      const [x1, y1] = screenOf(e);
+      for (const [x, y] of [[x0, y0], [x1, y1]]) for (let k = 0; k < 18; k++) { const a = k / 18 * 6.283; pspawn(4, x, y, 30, Math.cos(a) * 60, Math.sin(a) * 30, 0, 0.3, k % 2 ? 59 : 118); }
+      sfx('blink'); e.atk = -1; e.cool = 0.6;
+    }
+    return true;
+  }
+  if (e.castT > 0) {   // staff raised: the pattern goes off when the wind-up ends
+    e.castT -= dt; e.clip = 'cast'; e.atk = 0; e.dir = dirFrom(hero.fi - e.fi, hero.fj - e.fj);
+    if (e.castT <= 0) {
+      e.atk = -1; e.cool = 0.7;
+      if (e.pattern === 'ring') lichRing(e, p2);
+      else lichWall(e);
+    }
+    return true;
+  }
+  if (e.special <= 0 && d < 12) {
+    const r = Math.random();
+    if (p2 && r < 0.3) { e.blinkT = 0.35; e.special = 1.2; return true; }
+    e.pattern = r < (p2 ? 0.65 : 0.55) ? 'ring' : 'wall';
+    e.castT = 0.55; e.special = p2 ? 2.6 + Math.random() : 3.6 + Math.random() * 1.2;
+    if (e.pattern === 'wall') say('BONES RISE FROM THE FLOOR', 26, 1.4);
+    return true;
+  }
+  return false;   // otherwise a ranged caster: keeps its distance and throws frost bolts
+}
+// a ring of frost from the lich, with gaps (1 or 2 in phase 2, narrower) at random angles
+function lichRing(e, p2) {
+  const n = p2 ? 1 + (Math.random() < 0.5 ? 1 : 0) : 2, base = Math.random() * 6.283;
+  const gaps = Array.from({ length: n }, (_, k) => base + k * 6.283 / n + (Math.random() - 0.5) * 0.6);
+  G.rings.push({ fi: e.fi, fj: e.fj, r: 0.6, gaps, gapW: p2 ? 0.5 : 0.7, dmg: e.dmg, hit: false, delay: 0 });
+  if (p2) G.rings.push({ fi: e.fi, fj: e.fj, r: 0.6, gaps: gaps.map(g => g + 3.14 / n + 0.5), gapW: 0.5, dmg: e.dmg, hit: false, delay: 0.65 });   // a second ring, gaps turned
+  sfx('frost');
+}
+// a wall of bone across the floor through the hero, at right angles to the lich: cracks first
+// (0.7 s), then spikes erupt (hurting anyone on them) and block the way for 6 s
+function lichWall(e) {
+  const dx = hero.fi - e.fi, dy = hero.fj - e.fj, l = Math.hypot(dx, dy) || 1, px = -dy / l, py = dx / l, tiles = [];
+  for (let s = -3.5; s <= 3.5; s += 0.5) {
+    const i = Math.floor(hero.fi + px * s), j = Math.floor(hero.fj + py * s), k = tIdx(i, j);
+    if (tileAt(i, j) !== FLOOR || LV.solid[k] || tiles.includes(k) || Math.hypot(i + 0.5 - e.fi, j + 0.5 - e.fj) < 1.5) continue;
+    if (LV.stairs && Math.abs(i - LV.stairs.i) <= 1 && Math.abs(j - LV.stairs.j) <= 1) continue;
+    tiles.push(k);
+  }
+  G.walls.push({ tiles, warn: 0.7, life: 6, dmg: e.dmg, up: 0 });
+}
+function updateLichFx(dt) {
+  for (const R of G.rings) {
+    if (R.delay > 0) { R.delay -= dt; continue; }
+    R.r += RING_SPEED * dt;
+    if (!R.hit && !hero.dead) {
+      const hd = Math.hypot(hero.fi - R.fi, hero.fj - R.fj);
+      if (Math.abs(hd - R.r) < RING_W) {
+        const a = Math.atan2(hero.fj - R.fj, hero.fi - R.fi);
+        const inGap = R.gaps.some(g => Math.abs(((a - g + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < R.gapW / 2 * Math.min(1.6, 3 / Math.max(1, R.r)) + 0.08);
+        if (!inGap) { R.hit = true; hurtHero(roll(R.dmg), null); hero.chillT = 1.5; const [x, y] = screenOf(hero); burst(4, x, y, 20, 14, 50, 118); }
+      }
+    }
+  }
+  G.rings = G.rings.filter(R => R.r < RING_MAX);
+  for (const Wl of G.walls) {
+    if (Wl.warn > 0) {
+      Wl.warn -= dt;
+      if (Math.random() < 0.5) { const k = Wl.tiles[Math.floor(Math.random() * Wl.tiles.length)]; if (k !== undefined) { const [x, y] = iso(k % MW + 0.5, Math.floor(k / MW) + 0.5); pspawn(5, x, y, 1, (Math.random() - 0.5) * 20, -10, 20, 1, BONE[0]); } }
+      if (Wl.warn <= 0) {   // erupt
+        for (const k of Wl.tiles) {
+          const i = k % MW, j = Math.floor(k / MW);
+          if (!hero.dead && Math.floor(hero.fi) === i && Math.floor(hero.fj) === j) { hurtHero(Math.round(roll(Wl.dmg) * 1.3), null); tryMove(hero, 0.6, 0.6); }
+          for (const o of enemies) if (alive(o) && !o.def.unique && Math.floor(o.fi) === i && Math.floor(o.fj) === j) { o.fi += 0.6; }
+          LV.solid[k] = 1;
+          const [x, y] = iso(i + 0.5, j + 0.5); burst(5, x, y, 4, 6, 60, BONE[1]);
+        }
+        if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.3);
+        sfx('barrel');
+      }
+      continue;
+    }
+    Wl.up = Math.min(1, Wl.up + dt * 7); Wl.life -= dt;
+    if (Wl.life <= 0) { for (const k of Wl.tiles) LV.solid[k] = 0; const k = Wl.tiles[0]; if (k !== undefined) { const [x, y] = iso(k % MW + 0.5, Math.floor(k / MW) + 0.5); burst(5, x, y, 6, 10, 50, BONE[0]); } }
+  }
+  G.walls = G.walls.filter(Wl => Wl.warn > 0 || Wl.life > 0);
+  if (hero.chillT > 0) hero.chillT -= dt;
+}
+// drawing (world layer): the frost rings as rings of ice shards with dark gaps, cracks and spikes
+function drawLichFx() {
+  for (const R of G.rings) {
+    if (R.delay > 0) continue;
+    const [cx0, cy0] = iso(R.fi, R.fj), n = Math.ceil(R.r * 26);
+    for (let s = 0; s < n; s++) {
+      const a = s / n * 6.283;
+      if (R.gaps.some(g => Math.abs(((a - g + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < R.gapW / 2 * Math.min(1.6, 3 / Math.max(1, R.r)))) continue;
+      const gi = R.fi + Math.cos(a) * R.r, gj = R.fj + Math.sin(a) * R.r, [x0, y0] = iso(gi, gj), x = Math.round(x0 - camX), y = Math.round(y0 - camY);
+      const tall = (s * 7 + Math.floor(R.r * 4)) % 3 + 2;   // jagged shards of different heights
+      for (let h = 0; h < tall; h++) { const yy = y - h; if (x < 0 || yy < 0 || x >= W || yy >= H) continue; scr[yy * W + x] = (h === tall - 1 ? 27 : h > 0 ? 118 : 117) | EMIS; }
+      void cx0; void cy0;
+    }
+  }
+  for (const Wl of G.walls) for (const k of Wl.tiles) {
+    const i = k % MW, j = Math.floor(k / MW), [x0, y0] = iso(i + 0.5, j + 0.5), cx = Math.round(x0 - camX), cy = Math.round(y0 - camY);
+    if (Wl.warn > 0) {   // cracks: a dark jagged line across the tile
+      for (let s = -6; s <= 6; s++) { const x = cx + s, y = cy + Math.round(Math.sin(s * 1.7 + k) * 1.5); if (x >= 0 && y >= 0 && x < W && y < H && (s + Math.floor(G.t * 10)) % 4) scr[y * W + x] = BLK; }
+      continue;
+    }
+    for (let sp = 0; sp < 3; sp++) {   // three bone spikes per tile, rising
+      const ox = (sp - 1) * 5 + ((k * 3 + sp) % 3) - 1, hgt = Math.round((10 + ((k + sp * 5) % 7)) * Wl.up), w0 = 2.4;
+      for (let h = 0; h < hgt; h++) {
+        const hw = w0 * (1 - h / Math.max(1, hgt)), y = cy - h + (sp % 2);
+        for (let a = -Math.ceil(hw) - 1; a <= Math.ceil(hw) + 1; a++) {
+          const x = cx + ox + a; if (x < 0 || y < 0 || x >= W || y >= H) continue;
+          const edge = Math.abs(a) > hw;
+          if (edge && Math.abs(a) > hw + 1) continue;
+          scr[y * W + x] = edge ? BLK : BONE[a < 0 ? 3 : a > 0.5 ? 1 : 2];
+        }
+      }
+    }
+  }
 }
 // the warning ring: a blinking red ellipse on the ground where the slam will land
 function drawSlamRing() {

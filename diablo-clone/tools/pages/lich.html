@@ -1,0 +1,67 @@
+<title>The Lich</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 640px; margin: 0 auto; display: grid; gap: 32px; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0 0 8px; letter-spacing: 0.05em; }
+  p { margin: 0; max-width: 62ch; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 10px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .narrow { max-width: 470px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .toggle { display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: 600 0.85rem var(--body); color: var(--bone); background: var(--panel); border: 1px solid var(--rule); padding: 6px 12px; cursor: pointer; }
+  button[aria-pressed="true"] { border-color: var(--ember); color: var(--ember); }
+  button:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+  dl { margin: 0; display: grid; gap: 14px; }
+  dt { font-weight: 600; color: var(--ember); }
+  dd { margin: 4px 0 0; }
+</style>
+<main>
+  <header>
+    <h1>The Lich</h1>
+    <p class="lede">Dungeon of Bones, round 23, step 4 of the plan: the boss of Act III, in the Sanctum. The first boss built around patterns to dodge.</p>
+  </header>
+  <section>
+    <figure>
+      <div class="toggle" role="group" aria-label="Playback speed"><button id="real" aria-pressed="true">Game speed</button><button id="slow" aria-pressed="false">Slow</button></div>
+      <div class="frame narrow"><img id="g" src="lich.gif" alt="The mage fighting the lich in the Sanctum: a ring of frost shards spreading across the floor, a wall of bone spikes erupting, then phase two with blue braziers, wraiths, teleports and a meteor" width="450" height="443"></div>
+      <figcaption>The mage against the lich: a frost ring, a bone wall, then phase 2.</figcaption>
+    </figure>
+  </section>
+  <section>
+    <h2>Look</h2>
+    <figure>
+      <div class="frame"><img src="lich-sheet.png" alt="The lich in eight directions: a skeleton sorcerer in a dark tattered robe with purple trim, bone spikes on the shoulders, an iron circlet with a frost stone, green eyes, and a bone staff with a frost orb" width="1600" height="266"></div>
+      <figcaption>Eight directions. Three review passes: the first had a big purple hood that hid the skull and a robe too bright for a villain.</figcaption>
+    </figure>
+    <p>A skeleton sorcerer, 1.6 times the hero's size, floating a hand's breadth off the floor and bobbing slowly. Dark tattered robe with purple trim, bone spikes jutting from the shoulders, an iron circlet with a frost stone, green eyes, and a jointed bone staff caging a frost orb. Built on the same skeleton body as the other undead.</p>
+  </section>
+  <section>
+    <h2>The fight</h2>
+    <dl>
+      <div><dt>Frost bolts</dt><dd>Between patterns he keeps his distance and throws frost bolts. A hit chills you: 40% slower for 1.5 seconds, with an ice tint.</dd></div>
+      <div><dt>Rings of frost</dt><dd>He raises his staff, then a ring of ice shards spreads across the floor from him, with two gaps in it. Stand in a gap, or let it pass while you're in one; anywhere else on the ring, it hits and chills you.</dd></div>
+      <div><dt>Walls of bone</dt><dd>BONES RISE FROM THE FLOOR: a cracked line appears across the floor through where you stand, at right angles to him. After 0.7 seconds bone spikes erupt along it. Anyone on it gets hurt and shoved, and the wall blocks the way for 6 seconds, so you have to go around.</dd></div>
+      <div><dt>Phase 2, at half life</dt><dd>THE LICH ASCENDS: the braziers burn blue and three wraiths rise. He starts teleporting about the ritual floor, leaving a fading afterimage. Rings come sooner, with only one or two narrower gaps, and in pairs, the second with its gaps turned.</dd></div>
+    </dl>
+    <p>He has 260 base life (the Skeleton King has 170), drops a legendary, and his death plays in slow motion like the other bosses. Frozen spells only slow him.</p>
+  </section>
+</main>
+<script>
+  const go = s => { document.getElementById('g').src = s ? 'lich-slow.gif' : 'lich.gif';
+    document.getElementById('slow').setAttribute('aria-pressed', String(s)); document.getElementById('real').setAttribute('aria-pressed', String(!s)); };
+  document.getElementById('real').addEventListener('click', () => go(false));
+  document.getElementById('slow').addEventListener('click', () => go(true));
+</script>

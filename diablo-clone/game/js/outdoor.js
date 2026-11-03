@@ -11,7 +11,7 @@ const AREA_CYCLE = 5;
 const ACTS = [
   { name: 'THE BLIGHTED WOOD', theme: 'crypt', arena: 'king', boss: 'skelking', hall: "THE KING'S HALL" },
   { name: 'THE BURNING DEEP', theme: 'caves', arena: 'nest', boss: 'broodmother', hall: 'THE BROOD NEST' },
-  { name: 'THE PIT', theme: 'hell', arena: 'sanctum', boss: 'skelking', hall: 'THE SANCTUM' },   // the lich takes this throne next
+  { name: 'THE PIT', theme: 'hell', arena: 'sanctum', boss: 'lich', hall: 'THE SANCTUM' },
 ];
 const LOOP_NAMES = ['', 'NIGHTMARE', 'HELL', 'TORMENT'];
 function areaOf(level) {

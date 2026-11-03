@@ -20,7 +20,7 @@ function skullAt(r, hd, fwd, sideR, up, bone, eye, jawOpen = 0, k = 1) {
 function skeletonRig(look, st) {
   const B = SKEL_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J;
   const bone = look.bone || M.BONE, eye = look.eye || M.EYE_RED;
-  for (const [hip, knee, ank] of [[J.hipL, J.kneeL, J.ankL], [J.hipR, J.kneeR, J.ankR]]) {
+  if (!look.lich) for (const [hip, knee, ank] of [[J.hipL, J.kneeL, J.ankL], [J.hipR, J.kneeR, J.ankR]]) {
     r.cone(hip, knee, 1.3, 1.0, bone); r.cone(knee, ank, 1.1, 0.9, bone);
     r.sph(knee, 1.4, bone); r.ell(V.add(ank, [1.4, 0, -0.6]), [2.4, 1.2, 0.8], bone);
   }
@@ -52,6 +52,13 @@ function skeletonRig(look, st) {
     handL = V.add(V.add(J.shL, V.mul(fwd, 9.5)), V.mul(up, -1));
     handR = V.add(V.add(J.shR, V.mul(fwd, 9.5 - draw * 7)), V.add(V.mul(up, -1), V.mul(sideR, -2.5)));
     if (st.clip !== 'shoot') { handL = V.add(V.add(J.shL, V.mul(fwd, 4)), V.mul(up, -8)); handR = V.add(V.add(J.shR, V.mul(fwd, 2)), V.mul(up, -9)); }
+  } else if (look.lich) {
+    // the lich: staff upright in the right hand, raised high to cast (the cast swing's a: 0 -> 1.2);
+    // the off hand claws forward, open, as the spell is loosed
+    const a = st.clip === 'cast' && sw ? sw.a : 0;
+    handR = V.add(V.add(J.shR, V.mul(fwd, 3 + a * 2.5)), V.add(V.mul(up, -6 + a * 7), V.mul(sideR, 2.5)));
+    bd = V.norm(V.add(V.mul(fwd, 0.1 + a * 0.25), up));
+    handL = a > 0.6 ? V.add(V.add(J.shL, V.mul(fwd, 8)), V.mul(up, -1)) : V.add(V.add(J.shL, V.mul(fwd, 4 + J.swingArm)), V.add(V.mul(up, -6), V.mul(sideR, -1)));
   } else if (st.clip === 'attack') {
     const F = fwd, U = V.norm(V.add(V.mul(up, 0.8), V.mul(sideR, 0.6))), piv = V.add(V.mad(J.chest, sideR, 2), V.mul(up, 4));
     const ba = sw.a + (sw.ck || 0);   // blade cocked past the arm, as the hero's
@@ -83,6 +90,12 @@ function skeletonRig(look, st) {
     r.cone(top, pull, 0.3, 0.3, M.BONE, { noShadow: true }); r.cone(pull, bot, 0.3, 0.3, M.BONE, { noShadow: true });
     if (st.clip === 'shoot' && sw.a > 0.5) r.cone(aR.hand, V.mad(aR.hand, fwd, 11), 0.35, 0.35, M.WOOD);
     void ax;
+  } else if (look.lich) {   // a long staff of black wood with a bone cage around a frost orb
+    const g = aR.hand;
+    r.cone(V.mad(g, bd, -9), V.mad(g, bd, 14), 0.8, 0.9, bone, { mf: p => (Math.round(V.dot(V.sub(p, g), bd) * 0.5) % 3 === 0) ? M.OLDBONE : 0 });   // a staff of bone, jointed
+    const top = V.mad(g, bd, 17);
+    for (let k = 0; k < 4; k++) { const a = k / 4 * Math.PI * 2, o = V.add(V.mul(fwd, Math.cos(a) * 2.4), V.mul(sideR, Math.sin(a) * 2.4)); r.cone(V.mad(g, bd, 13.5), V.add(V.mad(g, bd, 19.5), V.mul(o, 0.4)), 0.5, 0.3, bone, { noShadow: true }); r.sph(V.add(top, o), 0.5, bone, { noShadow: true }); }
+    r.sph(top, 2.2, M.ICE, { noShadow: true });
   } else {
     const g = aR.hand, wide = V.norm(V.cross(bd, V.len(V.cross(bd, up)) > 0.3 ? up : fwd)), wf = [bd, wide, V.cross(bd, wide)];
     r.cone(V.mad(g, bd, -1.6), V.mad(g, bd, 1), 0.7, 0.7, M.LEATHER);
@@ -122,9 +135,37 @@ function skeletonRig(look, st) {
       r.cone(V.add(V.mad(nk, fwd, 1.8), V.mul(sideR, -3.8)), V.add(V.add(V.mad(nk, fwd, 2.4), V.mul(sideR, -4.6)), V.mul(up, -5)), 1.5, 0.7, M.CLOTH_RED);
     });
   }
+  if (look.lich) {
+    // a tattered robe from the waist to the floor (it floats: no feet), hem ragged and glowing
+    // faintly; a high mantle over the shoulders; the ribcage shows through the open front
+    const RM = M.CLOTH_DARK, TRIM = M.CLOTH_PURPLE, top = V.mad(J.pelvis, up, 2), hem = [J.pelvis[0] - (st.clip === 'walk' ? 1.6 : 0.3), J.pelvis[1], 1.2], ax = V.norm(V.sub(hem, top)), Lh = V.len(V.sub(hem, top));
+    r.cone(top, hem, 4.0, 8.2, RM, { mf: p => {
+      const q = V.sub(p, top), t = V.dot(q, ax);
+      if (t > Lh - 1.4 && hash(Math.round(V.dot(q, sideR) * 1.3 + V.dot(q, fwd) * 1.1), 3, 7) < 0.45) return M.DARK;   // ragged, tattered hem
+      if (Math.abs(t - (Lh - 2.6)) < 0.5) return TRIM;   // a purple band above the hem
+      return V.dot(q, fwd) > 2.6 && Math.abs(V.dot(q, sideR)) < 1.0 ? TRIM : 0;   // and down the front
+    } });
+    const mc = V.mad(J.chest, up, 3.6);
+    r.group(() => {   // mantle: wide over the shoulders with a stiff collar behind the neck
+      r.ell(mc, [3.8, 7.6, 2.6], RM, frameAlong(fwd, up), { mf: p => V.dot(V.sub(p, mc), up) < -1.4 ? TRIM : 0 });
+      r.ell(V.add(V.mad(mc, up, 1.8), V.mul(fwd, -2.8)), [1.0, 4.2, 2.8], TRIM, frameAlong(fwd, up));
+    });
+    for (const sd of [-1, 1]) {   // bone spikes jutting up from the shoulders
+      const b0 = V.add(V.mad(mc, up, 0.8), V.mul(sideR, sd * 5.6));
+      r.cone(b0, V.add(V.add(V.mad(b0, up, 6.5), V.mul(sideR, sd * 2.6)), V.mul(fwd, -0.8)), 1.3, 0.2, bone);
+      r.cone(V.add(b0, V.mul(fwd, -1.8)), V.add(V.add(V.mad(b0, up, 4.4), V.mul(sideR, sd * 3.4)), V.mul(fwd, -2.8)), 1.1, 0.2, bone);
+    }
+    for (const a of [aR, aL]) r.cone(V.lerp(a.el, a.hand, 0.15), V.lerp(a.el, a.hand, 0.75), 1.5, 2.3, RM);   // ragged sleeves
+  }
   const sk0 = r.p.length;
   skullAt(r, look.armored ? V.mad(J.head, up, 0.6) : J.head, fwd, sideR, up, bone, eye, st.clip === 'attack' && sw.hit ? 0.8 : 0, look.armored ? 1.15 : 1);
   if (look.helm) r.ell(V.mad(J.head, up, 1.8), [4.5, 4.5, 3.2], M.IRON);
+  if (look.lich) {   // a dark iron circlet with tall points and a frost stone
+    const cc = V.mad(J.head, up, 2.6);
+    r.cyl(V.mad(cc, up, 0.2), V.mad(cc, up, 0.75), 3.75, M.IRON);
+    for (let k = 0; k < 5; k++) { const a = (k / 4 - 0.5) * 2.2, b = V.add(V.mad(cc, up, 0.6), V.add(V.mul(fwd, Math.cos(a) * 3.6), V.mul(sideR, Math.sin(a) * 3.6))); r.cone(b, V.mad(b, up, k === 2 ? 3.4 : 2.2), 0.55, 0.12, M.IRON); }
+    r.sph(V.add(V.mad(cc, up, 0.5), V.mul(fwd, 3.8)), 0.75, M.ICE, { noShadow: true });
+  }
   if (look.crown) {   // the Skeleton King: a gold crown with points and red stones
     const cc = V.mad(J.head, up, 3.2);
     r.cyl(cc, V.mad(cc, up, 1.6), 4.2, M.GOLD);
@@ -135,6 +176,10 @@ function skeletonRig(look, st) {
   if (look.crown) {   // and a royal cloak
     const top = V.add(V.mad(J.chest, up, 3.4), V.mul(fwd, -2.4)), dn = V.norm(V.add(V.mul(up, -1), V.mul(fwd, -0.25))), a1 = V.norm(V.sub(sideR, V.mul(dn, V.dot(sideR, dn))));
     r.box(V.mad(top, dn, 6.5), [0.5, 5.5, 6.5], M.CLOTH_RED, [V.cross(a1, dn), a1, dn], { mf: p => V.dot(V.sub(p, top), dn) > 11.5 ? M.GOLD : 0 });
+  }
+  if (look.lich && st.clip !== 'death') {   // floats a hand's breadth off the floor, bobbing slowly
+    const lift = 2.2 + (st.clip === 'idle' ? [0, 0.6, 1, 0.6][st.f % 4] : 0.5);
+    for (const q of r.p) { if (q.c) q.c = [q.c[0], q.c[1], q.c[2] + lift]; if (q.a) { q.a = [q.a[0], q.a[1], q.a[2] + lift]; q.b = [q.b[0], q.b[1], q.b[2] + lift]; } if (q.mf) { const f0 = q.mf; q.mf = (p, n) => f0([p[0], p[1], p[2] - lift], n); } }
   }
   if (look.scale || 1.1) scaleRig(r, look.scale || 1.1);
   if (st.clip === 'death') {   // collapses in a heap: tip forward and drop hard
@@ -534,7 +579,7 @@ function spiderRig(look, st) {
 // size: sprite canvas; swing: attack timing; looks: variants (materials, size, gear) of one body
 const FAMILIES = {
   hero: { size: [72, 72, 36, 60], rig: heroRig, swing: e => weaponSwing(e.look), combo: (e, k) => weaponSwing(e.look, k) },
-  skeleton: { size: [72, 78, 36, 55], gait: gaitFrameTiles(SKEL_B, 1.1), rig: skeletonRig, swing: e => e.look.weapon === 'bow' ? SWINGS.bow : SWINGS.light },
+  skeleton: { size: [72, 78, 36, 55], gait: gaitFrameTiles(SKEL_B, 1.1), rig: skeletonRig, swing: e => e.look.weapon === 'bow' ? SWINGS.bow : e.look.lich ? SWINGS.cast : SWINGS.light },
   fallen: { size: [52, 48, 26, 40], gait: gaitFrameTiles(FALLEN_B), rig: fallenRig, swing: e => e.look.staff ? SWINGS.cast : SWINGS.claw },
   hound: { size: [80, 64, 38, 50], rig: houndRig, swing: () => SWINGS.bite },
   spider: { size: [80, 60, 40, 46], rig: spiderRig, swing: () => SWINGS.bite },
@@ -555,6 +600,7 @@ const MONSTERS = {
   fallen: { family: 'fallen', name: 'FALLEN ONE', look: {}, hp: 7, dmg: [1, 3], speed: 40, reach: 1.15, xp: 6, chest: 12, shadow: 5, pack: true },
   shaman: { family: 'fallen', name: 'FALLEN SHAMAN', look: { staff: true, hood: true, skin: M.SKIN }, hp: 9, dmg: [3, 6], speed: 28, reach: 6, ranged: 'firebolt', leader: true, xp: 16, chest: 12, shadow: 5 },
   hound: { family: 'hound', name: 'BONE HOUND', look: {}, hp: 16, dmg: [3, 6], speed: 52, reach: 1.35, xp: 18, chest: 12, shadow: 10 },
+  lich: { family: 'skeleton', name: 'THE LICH', title: 'WHO DIED AND WOULD NOT STAY DEAD', look: { lich: true, eye: M.EYE_GRN, bone: M.OLDBONE, scale: 1.6, size: [124, 140, 62, 112] }, hp: 260, dmg: [8, 14], speed: 22, reach: 7, ranged: 'frostbolt', xp: 400, chest: 46, shadow: 11, unique: true, boss: 'lich', minLevel: 99 },
   skelking: { family: 'skeleton', name: 'SKELETON KING', title: 'LORD OF THE RESTLESS DEAD', look: { weapon: 'sword', shield: false, armored: true, crown: true, eye: M.FIREM, scale: 1.6, size: [124, 132, 62, 104] }, hp: 170, dmg: [9, 16], speed: 24, reach: 1.9, xp: 200, chest: 42, shadow: 11, unique: true, boss: 'king', minLevel: 99 },
   treant: { family: 'treant', name: 'TREANT ELDER', title: 'THE WOOD THAT WALKS', minLevel: 99, look: { scale: 1.4 }, hp: 170, dmg: [8, 14], speed: 18, reach: 2.3, xp: 190, chest: 54, shadow: 14, unique: true, boss: 'slam', minions: ['shroom', 'sporecap'], calls: 'THE ELDER WAKES THE MUSHROOMS' },
   warlord: { family: 'ogre', name: 'OGRE WARLORD', title: 'TYRANT OF THE DEEP WOODS', minLevel: 99, look: { scale: 1.5 }, hp: 140, dmg: [8, 14], speed: 22, reach: 2.1, xp: 160, chest: 46, shadow: 13, unique: true, boss: 'slam' },
