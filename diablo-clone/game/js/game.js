@@ -83,6 +83,8 @@ function startLevel(level, seed) {
   else if (LV.area === 'town') say(areaName(), 51, 3);
   else say(areaName(), 51, 3);
   if (LV.arena) say('SOMETHING VAST STIRS IN THE DARK', 22, 4);
+  G.tp = null;
+  if (LV.area === 'town') { G.town = { level, seed }; if (G.portal) openPortalNear(hero.fi + 1.4, hero.fj + 0.4, true); }
   if (LV.area === 'forest') say(LV.autumn ? 'A TREANT ELDER HOLDS THE WAY DOWN' : 'AN OGRE WARLORD HOLDS THE WAY DOWN', 22, 4);
 }
 function makeEnemy(id, fi, fj, n) {
@@ -561,9 +563,10 @@ function updateHero(dt) {
     if (!(G.sealT > 0)) { say(`THE ${boss.def.name} GUARDS THE WAY DOWN`, 22, 2); G.sealT = 3; }
   } else if (!G.fadeTo && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55) {
     sfx('stairs');
-    G.fadeTo = () => { startLevel(LV.level + 1, (LV.seed * 31 + 17) >>> 0); saveGame(); };
+    G.fadeTo = () => { G.portal = null; startLevel(LV.level + 1, (LV.seed * 31 + 17) >>> 0); saveGame(); };
   }
   G.sealT = (G.sealT || 0) - dt;
+  updatePortal(dt);
   hatchEggs(dt);
   updateFov(hero.fi, hero.fj);
 }
@@ -927,6 +930,7 @@ function render() {
     } });
   });
   for (const p of projectiles) ov.push({ depth: p.fi + p.fj, draw: () => drawProjectile(p) });
+  if (G.tp) ov.push({ depth: G.tp.fi + G.tp.fj, draw: drawPortal });
   shrineCrystals(base);
   for (const f of fires) if (LV.vis[f.tile] > 0.1 || LV.seen[f.tile]) base.push({ depth: (f.tile % MW) + Math.floor(f.tile / MW) + (f.depthAdd ?? 1.2), draw: () => flame(f.wx, f.wy, f.h, f.w, t, f.seed, f.blue) });
   heroRing(kx, ky + 1);
@@ -1109,6 +1113,7 @@ function lightPass(chars, kx, ky) {
   const amb = LV.outdoor ? (LV.night ? 0.3 : 0.6) : 0;
   const dyn = LV.outdoor && !LV.night ? [] : [{ x: kx, y: ky, z: 34, r: LV.night ? 120 : 145, i: LV.night ? 0.42 : 0.62 }];
   for (const p of projectiles) if (p.kind !== 'arrow' && dyn.length < 5) { const [x, y] = iso(p.fi, p.fj); dyn.push({ x, y, z: p.z, r: p.kind === 'missile' ? 45 : 70, i: 0.8 }); }
+  if (G.tp) { const [x, y] = iso(G.tp.fi, G.tp.fj); dyn.push({ x, y, z: 20, r: 80, i: 0.7 * Math.min(1, G.tp.t / 0.45) }); }   // the portal's blue glow (brightness only)
   for (const f of G.flashes) if (dyn.length < 7) { const [x, y] = iso(f.fi, f.fj); dyn.push({ x, y, z: 24, r: f.r, i: 1.1 * f.t / f.t0 }); }   // explosions light the room
   const fl = g => 1 + 0.07 * Math.sin(t * 11 + g * 2.3) + 0.05 * Math.sin(t * 23.7 + g * 5.1) + 0.04 * Math.sin(t * 37 + g);
   const f0 = fl(0), f1 = fl(1), A = staticLight[0], B = staticLight[1];
@@ -1162,9 +1167,81 @@ function lightPass(chars, kx, ky) {
 const SAVE_KEY = 'dcg-save', SAVE_V = 1;
 // one save per class: the warrior keeps the original key, so older saves still load
 const saveKey = cls => cls === 'mage' ? SAVE_KEY + '-mage' : SAVE_KEY;
+// ---------------------------------------------------------------- town portal (round 25)
+// The portal button opens a blue gate beside the hero. Walking into it from a dungeon or forest
+// goes to the act's town and leaves a gate there; that one leads back to the same spot, with the
+// dead still dead, chests still open, the loot still lying and the map still explored. Free to use.
+function usePortal() {
+  if (G.mode !== 'play' || hero.dead || G.fadeTo) return;
+  if (LV.area === 'town') { say(G.portal ? 'WALK INTO THE PORTAL TO GO BACK' : 'YOU ARE IN TOWN', 26, 1.6); return; }
+  if (heroBusy()) return;
+  sfx('portal');
+  const [fx, fy] = dirVec(hero.dir);
+  startCast('portal', 0.5, null, () => openPortalNear(hero.fi + fx * 1.3, hero.fj + fy * 1.3, false));
+}
+function openPortalNear(fi, fj, back) {
+  // the wanted spot, or the nearest open floor around the hero
+  let best = null;
+  for (let r = 0; r <= 2 && !best; r += 0.5) for (let a = 0; a < 8 && !best; a++) {
+    const p = [fi + Math.cos(a * 0.785) * r, fj + Math.sin(a * 0.785) * r];
+    if (!blocked(p[0], p[1]) && Math.hypot(p[0] - hero.fi, p[1] - hero.fj) > 0.9) best = p;
+  }
+  if (!best) best = [hero.fi, hero.fj];
+  G.tp = { fi: best[0], fj: best[1], t: 0, back, armed: Math.hypot(best[0] - hero.fi, best[1] - hero.fj) > 0.7 };
+}
+function updatePortal(dt) {
+  const P = G.tp; if (!P) return;
+  P.t += dt;
+  const d = Math.hypot(P.fi - hero.fi, P.fj - hero.fj);
+  if (d > 0.9) P.armed = true;   // one has to step away before the gate will take you
+  if (G.fadeTo || !P.armed || P.t < 0.5 || d > 0.5) return;
+  sfx('portal');
+  if (!P.back) {
+    // remember this level as it stands, then go to town
+    G.portal = { level: LV.level, seed: LV.seed, fi: P.fi, fj: P.fj, snap: {
+      enemies, boss, groundItems, seen: LV.seen.slice(), props: dynProps.map(p => ({ open: p.open, broken: p.broken, hp: p.hp, hatch: p.hatch })) } };
+    const T = G.town && G.town.level === LV.level - ((LV.level - 1) % AREA_CYCLE) ? G.town : { level: LV.level - ((LV.level - 1) % AREA_CYCLE), seed: (LV.seed ^ 0x70a1) >>> 0 };
+    G.fadeTo = () => { startLevel(T.level, T.seed); saveGame(); };
+  } else {
+    const R = G.portal;
+    G.fadeTo = () => {
+      startLevel(R.level, R.seed);
+      const S = R.snap;
+      if (S) {   // (a save loaded in town has no snapshot: the level comes back fresh)
+        enemies = S.enemies; boss = S.boss; groundItems = S.groundItems; LV.seen.set(S.seen);
+        S.props.forEach((q, n) => { if (dynProps[n]) Object.assign(dynProps[n], q); });
+      }
+      hero.fi = R.fi; hero.fj = R.fj; G.portal = null;
+      updateFov(hero.fi, hero.fj); say('BACK THROUGH THE PORTAL', 39, 2); saveGame();
+    };
+  }
+}
+// the gate: an upright oval of swirling blue on the detail layer, opening from a slit
+function drawPortal() {
+  const P = G.tp; if (!P) return;
+  const [x, y] = iso(P.fi, P.fj), open = Math.min(1, P.t / 0.45), t = G.t;
+  const X0 = Math.round(x * SPX - cam2x), Y0 = Math.round(y * SPX - cam2y);
+  const rx = 16 * (0.35 + 0.65 * open), ry = 29 * open, cy = Y0 - 4 - ry;
+  if (ry < 1) return;
+  const put = (X, Y, v) => { if (X >= 0 && Y >= 0 && X < OW && Y < OH) ov32[Y * OW + X] = PAL32[v]; };
+  for (let Y = Math.floor(cy - ry - 2); Y <= cy + ry + 2; Y++) for (let X = Math.floor(X0 - rx - 2); X <= X0 + rx + 2; X++) {
+    const u = (X - X0) / rx, v = (Y - cy) / ry, d = Math.sqrt(u * u + v * v);
+    if (d > 1.08) continue;
+    if (d > 0.9) { put(X, Y, d > 1.0 ? BLUE[1] : BLUE[4]); continue; }   // a bright rim, a dark edge
+    const a = Math.atan2(v, u), sw = Math.sin(a * 3 + d * 9 - t * 7) * 0.5 + 0.5, dz = BAYER[((Y & 3) << 2) | (X & 3)];
+    const lvl = (1 - d) * 1.6 + sw * 1.2 + dz * 0.8;   // a bright core, swirling arms
+    put(X, Y, lvl > 2.5 ? 27 : BLUE[clamp(Math.floor(lvl * 1.4), 0, BLUE.length - 1)]);
+  }
+  // motes drifting up off the gate
+  for (let k = 0; k < 6; k++) {
+    const ph = (t * 0.6 + k / 6) % 1, mx = Math.round(X0 + Math.sin(k * 2.4 + t * 2) * rx * 0.9), my = Math.round(cy + ry * 0.8 - ph * ry * 2.4);
+    put(mx, my, ph < 0.5 ? BLUE[4] : BLUE[3]);
+  }
+}
 function saveGame() {
   if (G.mode !== 'play' || hero.dead) return;
-  const data = { v: SAVE_V, level: LV.level, seed: LV.seed, hero: { cls: hero.cls, hp: Math.ceil(hero.hp), mana: Math.ceil(hero.mana), gold: hero.gold, xp: hero.xp, lvl: hero.lvl, potions: hero.potions, team: hero.team, equip: hero.equip, bag: hero.bag }, serial: itemSerial };
+  const data = { v: SAVE_V, level: LV.level, seed: LV.seed, hero: { cls: hero.cls, hp: Math.ceil(hero.hp), mana: Math.ceil(hero.mana), gold: hero.gold, xp: hero.xp, lvl: hero.lvl, potions: hero.potions, team: hero.team, equip: hero.equip, bag: hero.bag }, serial: itemSerial,
+    town: G.town || null, portal: G.portal ? { level: G.portal.level, seed: G.portal.seed, fi: G.portal.fi, fj: G.portal.fj } : null };
   try { localStorage.setItem(saveKey(hero.cls), JSON.stringify(data)); } catch (e) { /* storage can be unavailable; the game still runs */ }
 }
 function loadSave(cls = 'warrior') {
@@ -1187,8 +1264,9 @@ function beginGame(fromSave, cls = 'warrior') {
   const d = fromSave ? loadSave(cls) : null;
   if (d) {
     newHero(cls); Object.assign(hero, d.hero); hero.cls = cls; itemSerial = d.serial || 100; recalcHero();
-    G.mode = 'play'; startLevel(d.level, d.seed);
+    G.mode = 'play'; G.town = d.town || null; G.portal = d.portal || null; startLevel(d.level, d.seed);
   } else {
+    G.town = null; G.portal = null;
     newHero(cls); G.mode = 'play'; startLevel(1, (Math.random() * 1e9) >>> 0);
   }
 }

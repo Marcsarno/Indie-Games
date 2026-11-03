@@ -35,7 +35,7 @@ const UI = {};
 function uiResize() {
   UI.orbL = [34, H - 34]; UI.orbR = [W - 34, H - 34]; UI.orbR0 = 24;
   UI.attack = [W - 48, H - 100, 21]; UI.skills = [[W - 96, H - 70, 12], [W - 104, H - 110, 12], [W - 88, H - 146, 12], [W - 50, H - 158, 12]]; UI.potion = [W / 2, H - 22, 12];
-  UI.bag = [W - 15, 15, 11]; UI.map = [W - 40, 15, 11]; UI.sound = [W - 65, 15, 11];
+  UI.bag = [W - 15, 15, 11]; UI.map = [W - 40, 15, 11]; UI.sound = [W - 65, 15, 11]; UI.portal = [W - 90, 15, 11];
   UI.stickHome = [52, H - 104];
 }
 const stick = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
@@ -143,6 +143,8 @@ const glyphSound = (cx, cy) => {
   if (SFX.muted) { line(cx + 3, cy - 3, cx + 7, cy + 3, 22); line(cx + 7, cy - 3, cx + 3, cy + 3, 22); }
   else { line(cx + 4, cy - 2, cx + 4, cy + 2, 25); line(cx + 6, cy - 4, cx + 6, cy + 4, 24); }
 };
+// a small upright blue oval: the town portal
+const glyphPortal = (cx, cy) => { for (let y = -7; y <= 7; y++) for (let x = -5; x <= 5; x++) { const d = (x / 4.6) ** 2 + (y / 6.6) ** 2; if (d <= 1) put(cx + x, cy + y, d > 0.6 ? 40 : d > 0.25 ? 39 : 27); } };
 const glyphMap = (cx, cy) => { fillRect(cx - 6, cy - 5, 13, 11, 26); frame(cx - 6, cy - 5, 13, 11, 27, 24); line(cx - 4, cy + 3, cx - 1, cy - 1, 22); line(cx - 1, cy - 1, cx + 4, cy + 2, 22); put(cx + 4, cy - 3, 22); };
 
 function drawHud() {
@@ -207,6 +209,7 @@ function drawHud() {
   drawButton(UI.bag, [33, 34, 35], false, glyphBag);
   drawButton(UI.map, [4, 5, 6, 7], showMap, glyphMap);
   drawButton(UI.sound, [4, 5, 6, 7], false, glyphSound);
+  drawButton(UI.portal, LV.area === 'town' && !G.portal ? [4, 5, 6, 7] : [37, 38, 39], !!G.tp, glyphPortal);
   // movement stick: floating where the thumb lands, ghosted at home otherwise
   const [sx, sy] = stick.id !== null ? [stick.ox, stick.oy] : UI.stickHome;
   for (let a = 0; a < 48; a++) { const t2 = a / 48 * 6.283; put(sx + Math.cos(t2) * 20, sy + Math.sin(t2) * 20, a % 2 ? 30 : 29); }
@@ -385,6 +388,7 @@ cvs.addEventListener('pointerdown', e => {
   if (hitCircle(p, UI.bag)) { G.mode = 'inv'; clearInput(); return; }
   if (hitCircle(p, UI.sound)) { setMuted(!SFX.muted); sfx('tap'); return; }
   if (hitCircle(p, UI.map)) { showMap = !showMap; return; }
+  if (hitCircle(p, UI.portal)) { usePortal(); return; }
   if (hitCircle(p, UI.potion)) { drinkPotion(); return; }
   for (let i = 0; i < UI.skills.length; i++) if (hitCircle(p, UI.skills[i], 5)) { press.skill = i; useSkill(i); return; }
   if (hitCircle(p, UI.attack, 10) || (p[0] > W * 0.55 && p[1] > H * 0.3)) { press.attack = e.pointerId; input.attack = true; heroAttack(); capture(e); return; }
