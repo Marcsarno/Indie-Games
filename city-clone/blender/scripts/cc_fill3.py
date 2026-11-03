@@ -12,15 +12,21 @@ class TB:
     def __init__(s, T, ox=0.0, oy=0.0): s.T, s.ox, s.oy = T, ox, oy
     def _b(s, x, y): k = s.T._k([(x, y)]); return s.T.b.setdefault(k, Builder(f"{s.T.name}_{k[0]}_{k[1]}"))
     def poly(s, mt, pts3):
-        P_ = [(p[0] + s.ox, p[1] + s.oy, p[2]) for p in pts3]; return s._b(sum(p[0] for p in P_) / len(P_), sum(p[1] for p in P_) / len(P_)).poly(mt, P_)
-    def box(s, mt, x0, x1, y0, y1, z0, z1): return s._b((x0 + x1) / 2 + s.ox, (y0 + y1) / 2 + s.oy).box(mt, x0 + s.ox, x1 + s.ox, y0 + s.oy, y1 + s.oy, z0, z1)
+        P_ = [(*W(p[0] + s.ox, p[1] + s.oy), p[2]) for p in pts3]; return s._b(sum(p[0] for p in P_) / len(P_), sum(p[1] for p in P_) / len(P_)).poly(mt, P_)
+    def box(s, mt, x0, x1, y0, y1, z0, z1):
+        x0, x1, y0, y1 = Wbox(x0 + s.ox, x1 + s.ox, y0 + s.oy, y1 + s.oy); return s._b((x0 + x1) / 2, (y0 + y1) / 2).box(mt, x0, x1, y0, y1, z0, z1)
     def prism(s, mt, b_, t_, z0, z1, mat_fn=None):
         o = (s.ox, s.ox, s.oy, s.oy); b2 = tuple(a + c for a, c in zip(b_, o)); t2 = tuple(a + c for a, c in zip(t_, o))
+        if WARP[0]:                                                                            # top rect follows the bottom rect's squeeze
+            B2 = Wbox(*b2); ax = lambda v, a0, a1, A0, A1: A0 + (v - a0) * (A1 - A0) / (a1 - a0) if a1 - a0 > 1e-6 else v + A0 - a0
+            t2 = (ax(t2[0], b2[0], b2[1], B2[0], B2[1]), ax(t2[1], b2[0], b2[1], B2[0], B2[1]), ax(t2[2], b2[2], b2[3], B2[2], B2[3]), ax(t2[3], b2[2], b2[3], B2[2], B2[3])); b2 = B2
         return s._b((b2[0] + b2[1]) / 2, (b2[2] + b2[3]) / 2).prism(mt, b2, t2, z0, z1, mat_fn)
-    def cyl(s, mt, center, *a, **k): c = (center[0] + s.ox, center[1] + s.oy, center[2]); return s._b(c[0], c[1]).cyl(mt, c, *a, **k)
+    def cyl(s, mt, center, *a, **k): c = (*W(center[0] + s.ox, center[1] + s.oy), center[2]); return s._b(c[0], c[1]).cyl(mt, c, *a, **k)
 T43 = Tiled("gap43")
 def frame(cx, cy, ang):
     a = math.radians(ang); ca, sa = math.cos(a), math.sin(a)
+    if WARP[0]:                                                                                # rigid builder: its colliders/footprints move with its (squeezed) centre
+        mx, my = SHK.M(cx, cy); return lambda u, v: SHK.Minv(mx + u * ca - v * sa, my + u * sa + v * ca)
     return lambda u, v: (cx + u * ca - v * sa, cy + u * sa + v * ca)
 def uname(k): NF[0] += 1; return f"g43_{k}_{NF[0]}"
 def bpoly(b, mt, pts, z):
@@ -123,7 +129,7 @@ def soccer(cx, cy, ang, w=46.0, d=80.0, stands=True):
         for k in range(4): b.box(ALU, hw + 3 + k * .75, hw + 3.75 + k * .75, -10, 10, 0, .5 + k * .42)
         wbox(f, ang, hw + 4.5, 0, 3.0, 20.0)
     put(b, cx, cy, ang); ffoot(f, -hw - 2, hw + 7, -hd - 2, hd + 2)
-def surface_lot(x0, x1, y0, y1, p_full=.35, drive=None, name="lot43"):
+def surface_lot(x0, x1, y0, y1, p_full=.2, drive=None, name="lot43"):
     """Small parking lot (rows along x): asphalt, stall lines, static parked cars, end islands with palms; drive = (x0, x1, y0, y1) asphalt link to a road."""
     RB.box(ASPH, x0, x1, y0, y1, 0, .028); FOOT.append((x0, y0, x1, y1)); MAP.append([round(x0, 1), round(y0, 1), round(x1, 1), round(y1, 1), "#5a5c60"])
     if drive: RB.box(ASPH, drive[0], drive[1], drive[2], drive[3], 0, .027); FOOT.append((drive[0], drive[2], drive[1], drive[3]))
@@ -572,6 +578,7 @@ def mcd_site(lot):
     put(w, 0, 0, 0)
 
 DRV_RECTS = []                                                                                  # round 44: (x0, y0, x1, y1) of every driveway, incl. 8 m into its lot
+@wq("pt")
 def in_drive(x, y, pad=0.0): return any(r[0] - pad < x < r[2] + pad and r[1] - pad < y < r[3] + pad for r in DRV_RECTS)
 def lot_drives(x0, x1, y0, y1, blds, label=""):
     """Round 44 (user: "Do parking lots have roads that connect and drive into them? If not they are useless"). Find where each lot side faces a street within 40 m,
@@ -625,5 +632,6 @@ def lot_drives(x0, x1, y0, y1, blds, label=""):
 
 def gap_fill():
     for fn in (hs_athletics, golf, golf_trees, construction, offices_more, butterfly_garden, skate_dress, rec_park_more, sabal_more, lake_parks, storage, townhomes, church):
-        fn(); tick_(fn.__name__)
+        with warp(): fn()
+        tick_(fn.__name__)
     STATIC.extend(T43.build(vc=True, recalc=False))

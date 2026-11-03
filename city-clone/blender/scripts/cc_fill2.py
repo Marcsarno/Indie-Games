@@ -2,7 +2,7 @@
 Exec'd at the end of cc_fill.fill_after (shares cc_scene + cc_fill globals). Adds: driveways + parked cars + mailboxes + front-yard trees for every house,
 street furniture on the arterials (bus shelters, benches, trash cans, hydrants, speed-limit signs, utility boxes), the FPL power line along Powerline Rd,
 sidewalk aprons round the commercial buildings, cart corrals, and tree clusters in the leftover grass."""
-DRV = Tiled("drives"); FUR = Tiled("furniture"); HYDRANTS = []
+DRV = Tiled("drives"); FUR = Tiled("furniture"); HYDRANTS = WList("pt")
 CONC = flat("#cfcac0"); CONC2 = flat("#bdb8ad"); POLE = flat("#6b7078"); DARK = flat("#2e3236"); RED = flat("#c8362a"); GRN = flat("#3d6b45"); WHT = flat("#f2f2ee"); BLU = flat("#2a64b8")
 def obox(T, mt, c, u, L, t, z0, z1, side=0.0, n=None):
     """Box centred at c (+ side along the normal n), length L along unit u, thickness t."""
@@ -134,9 +134,9 @@ def verge_trees():
     print("verge trees", n)
 def lot_fill(x, y, x0, x1, y0, y1, blds):
     """Chance a stall is taken: busy near the buildings' doors, thinning out to the far corners (Florida lots are never full at the edges)."""
-    if not blds: return .15
+    if not blds: return .08                                                                   # round 46 (user: far fewer parked cars)
     d = min(math.hypot(x - min(max(x, b_["x0"]), b_["x1"]), y - min(max(y, b_["y0"]), b_["y1"])) for b_ in blds)
-    return max(.06, .55 - d / 140)
+    return max(.03, .32 - d / 110)
 def local_hydrants():
     """Hydrants on the neighbourhood streets too, every ~110 m, at the curb."""
     for r in net:

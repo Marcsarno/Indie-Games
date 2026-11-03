@@ -8,14 +8,52 @@ T0 = _t.time()
 def tick_(n): print('T', n, round(_t.time() - T0, 1))
 HERE = os.path.dirname(os.path.abspath(__file__)); LP = json.load(open(os.path.join(HERE, "..", "..", "plan", "v7", "layout.json")))
 B = LP["bounds"]; XW, XE, YS, YN = B["xw"], B["xe"], B["ys"], B["yn"]
+sys.path.insert(0, os.path.join(HERE, "..", "..", "plan", "v7")); import shrink as SHK      # round 46: the squeeze (plan/v7/shrink.py)
+WARP = [False]                                                                               # True while a HAND-PLACED site runs: its old-map coordinates are squeezed on the way in
+def W(x, y): return SHK.M(x, y) if WARP[0] else (x, y)
+def Wbox(x0, x1, y0, y1):
+    if not WARP[0]: return x0, x1, y0, y1
+    X0, X1 = SHK.span(x0, x1, SHK.fx); Y0, Y1 = SHK.span(y0, y1, SHK.fy); return X0, X1, Y0, Y1
+class warp:
+    def __enter__(s): s.o = WARP[0]; WARP[0] = True
+    def __exit__(s, *a): WARP[0] = s.o
+def wq(kind):
+    """Query helpers (near_road, on_cut, ...) see squeezed coordinates: map the arguments once, then run with the squeeze off (no double mapping)."""
+    def deco(fn):
+        def g(*a, **k):
+            if not WARP[0]: return fn(*a, **k)
+            a = list(a)
+            if kind == "pt": a[0], a[1] = SHK.M(a[0], a[1])
+            else: a[0], a[1], a[2], a[3] = SHK.rect(a[0], a[1], a[2], a[3])
+            WARP[0] = False
+            try: return fn(*a, **k)
+            finally: WARP[0] = True
+        return g
+    return deco
+class WList(list):
+    """List whose appends are squeezed while a hand-placed site runs. kind: rect (x0, y0, x1, y1, ...), pt (x, y, ...), map (MAP entries)."""
+    def __init__(s, kind, *a): super().__init__(*a); s.kind = kind
+    def append(s, v):
+        if WARP[0]:
+            t = list(v)
+            if s.kind == "rect": t[0], t[1], t[2], t[3] = SHK.rect(*t[:4])
+            elif s.kind == "pt": t[0], t[1] = SHK.M(t[0], t[1])
+            elif s.kind == "map":
+                if len(t) > 5 and t[5] == "poly": t[6] = [list(SHK.M(*q)) for q in t[6]]
+                else: t[0], t[1], t[2], t[3] = [round(v_, 1) for v_ in SHK.rect(*t[:4])]
+            v = type(v)(t) if isinstance(v, tuple) else t
+        super().append(v)
 reset(); mood.florida(); mood._transform(); R_ = random.Random(38); m = mats(); m["dirt"] = M("dirt_track", "#a58a62")
 class Tiled:                                                                    # flat surfaces split into 128 m tiles so the page can frustum-cull them
     def __init__(self, name, size=128): self.name, self.size, self.b = name, size, {}
     def _k(self, pts): return (int(math.floor(sum(p[0] for p in pts) / len(pts) / self.size)), int(math.floor(sum(p[1] for p in pts) / len(pts) / self.size)))
-    def poly(self, mt, pts): k = self._k(pts); self.b.setdefault(k, Builder(f"{self.name}_{k[0]}_{k[1]}")).poly(mt, pts)
+    def poly(self, mt, pts):
+        if WARP[0]: pts = [(*SHK.M(p[0], p[1]), *p[2:]) for p in pts]
+        k = self._k(pts); self.b.setdefault(k, Builder(f"{self.name}_{k[0]}_{k[1]}")).poly(mt, pts)
     def box(self, mt, x0, x1, y0, y1, z0, z1):
         """Big boxes are cut on the tile grid: every tile mesh stays ~128 m across, so the meshopt position quantization keeps millimetres (a 575 m lot in one mesh lost
         its 3 cm lift above the grass and flickered green on the phone)."""
+        x0, x1, y0, y1 = Wbox(x0, x1, y0, y1)
         S = self.size; C_ = 32 if z1 - z0 < .45 and self.name in ("roads", "drives", "gap43", "ground") else S          # round 44: flat lot surfaces in <= 32 m cells (big triangles dropped out on some GPUs)
         xs = [x0] + [g * C_ for g in range(int(math.floor(x0 / C_)) + 1, int(math.ceil(x1 / C_)))] + [x1]; ys = [y0] + [g * C_ for g in range(int(math.floor(y0 / C_)) + 1, int(math.ceil(y1 / C_)))] + [y1]
         for a, b in zip(xs, xs[1:]):
@@ -24,14 +62,17 @@ class Tiled:                                                                    
                 k = self._k([(a, c), (b, d)]); self.b.setdefault(k, Builder(f"{self.name}_{k[0]}_{k[1]}")).box(mt, a, b, c, d, z0, z1)
     def build(self, **kw): return [b.build(**kw) for b in self.b.values()]
 RB, GB, BB = Tiled("roads"), Tiled("ground"), Tiled("blocks")
-COL, PROPS, CARS, STATIC, MAP = [], [], [], [], []
-def cbox(x, y, w, d, rz=0, **kw): COL.append(dict({"t": "box", "x": round(x, 2), "y": round(y, 2), "w": round(w, 2), "d": round(d, 2), "rz": round(rz, 1)}, **kw)); return COL[-1]
+COL, PROPS, CARS, STATIC, MAP = [], [], [], [], WList("map")
+def cbox(x, y, w, d, rz=0, **kw): x, y = W(x, y); COL.append(dict({"t": "box", "x": round(x, 2), "y": round(y, 2), "w": round(w, 2), "d": round(d, 2), "rz": round(rz, 1)}, **kw)); return COL[-1]
 def ccir(x, y, r, soft=None):
+    x, y = W(x, y)
     COL.append({"t": "circle", "x": round(x, 2), "y": round(y, 2), "r": r})
     if soft: COL[-1]["soft"] = soft
 def prop(kind, x, y, s=None, col=True):
+    x, y = W(x, y); o_ = WARP[0]; WARP[0] = False
     s = s or R_.uniform(.9, 1.15); PROPS.append({"k": kind, "x": round(x, 2), "y": round(y, 2), "rz": round(R_.uniform(0, 360)), "s": round(s, 2)})
     if col: ccir(x, y, .5 * s, "bush") if kind.startswith("shrub") else ccir(x, y, {"palm_tall": .2, "palm_medium": .19, "palm_small": .16, "oak": .4}.get(kind, .3))
+    WARP[0] = o_
 MATC = {}
 def flat(hexs):
     if hexs not in MATC: MATC[hexs] = M("cc_" + hexs.lstrip("#"), hexs)
@@ -86,6 +127,7 @@ for name, pts, hw in TRAILS:
     pts = [q for i, q in enumerate(pts) if i == 0 or math.dist(q, pts[i - 1]) > .3]                                                                   # dirt / paver trails: no curbs, not in the network
     tr = rd.Road(name, pts, hw=hw, rank=0, sw=(0, 0), mark=False); rd.strip(RB, m["dirt"], tr, 0, tr.L, -hw, hw, .026)
 tick_("roads drawn")
+@wq("pt")
 def near_road(x, y, pad):
     for r in net:
         if r.bb[0] - 40 > x or x > r.bb[2] + 40 or r.bb[1] - 40 > y or y > r.bb[3] + 40: continue
@@ -120,22 +162,24 @@ tick_("water")
 
 exec(open(os.path.join(HERE, "cc_fill.py")).read())                                            # round 39 (M2): real models, pads, walls, yards, parks (cc_fill.py)
 # ================================================================  LOTS, PARKED CARS, BLOCKS  ================================================================
-FOOT = []                                                                                      # (x0, y0, x1, y1) footprints houses must avoid
+FOOT = WList("rect")                                                                            # (x0, y0, x1, y1) footprints houses must avoid
 HEIGHT = {"WALMART": 9, "PUBLIX": 8, "SEMINOLE CASINO": 34, "CITY HALL": 13, "POLICE": 9, "COCONUT CREEK HIGH": 10, "COCONUT CREEK ELEMENTARY": 8, "FIRE STATION": 9, "GARAGE": 12,
           "OFFICE GARAGE": 12, "OFFICES": 20, "CINEMA": 13, "COOPER'S HAWK": 8, "PLAZA": 2, "REC CENTER": 8, "POOL": 4, "McD": 6, "WALGREENS": 7}
 PAL = ["#e6e6e2", "#2b2d33", "#9aa0a8", "#2e5fa3", "#c8201c", "#3d7a52", "#d8b04a", "#7a3a2a", "#1fb3a8", "#7a9cc4"]
 PASSENGER = ["sedan"] * 4 + ["hatchback"] * 3 + ["suv"] * 3 + ["minivan"] * 2 + ["pickup"] * 2 + ["coupe"]
 ncar = 0; PUBLIX = LP["publix"]
 def addcar(kind, x, y, rz, color=None):
-    global ncar; color = color or R_.choice(PAL); nm = f"parked{ncar}"; ncar += 1
-    CARS.append({"name": nm, "kind": kind, "color": color, "x": round(x, 2), "y": round(y, 2), "rz": round(rz, 1)}); cbox(x, y, 1.8, 4.5, rz, car=nm)
+    global ncar; x, y = W(x, y); o_ = WARP[0]; WARP[0] = False; color = color or R_.choice(PAL); nm = f"parked{ncar}"; ncar += 1
+    CARS.append({"name": nm, "kind": kind, "color": color, "x": round(x, 2), "y": round(y, 2), "rz": round(rz, 1)}); cbox(x, y, 1.8, 4.5, rz, car=nm); WARP[0] = o_
 def in_bld(x, y, blds, pad=1.0): return any(b_["x0"] - pad < x < b_["x1"] + pad and b_["y0"] - pad < y < b_["y1"] + pad for b_ in blds)
 for lot in LP["lots"]:
     xs = [p[0] for p in lot["poly"]]; ys_ = [p[1] for p in lot["poly"]]; x0, x1, y0, y1 = min(xs), max(xs), min(ys_), max(ys_)
     RB.box(m["asphalt"], x0, x1, y0, y1, 0, .028); FOOT.append((x0, y0, x1, y1)); MAP.append([round(x0, 1), round(y0, 1), round(x1, 1), round(y1, 1), "#5a5c60"])
     blds = lot["buildings"]; vert = lot["dir"] == "v"
     if lot["dir"] != "n" and not (blds and blds[0]["label"] == "McD"): lot_drives(x0, x1, y0, y1, blds, "/".join(b_["label"] for b_ in blds) or "lot")   # round 44: real driveways
-    if blds and blds[0]["label"] == "McD": mcd_site((x0, x1, y0, y1)); continue                # round 44: tight lot + drive-thru loop (cc_fill3)
+    if blds and blds[0]["label"] == "McD":
+        with warp(): mcd_site((x0, x1, y0, y1))
+        continue                # round 44: tight lot + drive-thru loop (cc_fill3)
     if blds and blds[0]["label"] in BRAND_DEALERS:                                            # dealer display lot: rows of new cars instead of stalls
         dealer_cars((x0, x1, y0, y1), blds)
         for b_ in blds: SITE(b_, (x0, x1, y0, y1))
@@ -152,7 +196,7 @@ for lot in LP["lots"]:
             if in_bld(cxs, cys, blds, 2.0) or in_drive(cxs, cys, 1.0): continue
             if vert: RB.box(m["white"], s - .05, s + .05, a, a + 5.2, .028, .034)
             else: RB.box(m["white"], a, a + 5.2, s - .05, s + .05, .028, .034)
-            if math.hypot(cxs - PUBLIX[0], cys - PUBLIX[1]) > 25 and R_.random() < .05 and ncar < 320: addcar(R_.choice(PASSENGER), cxs, cys, (0 if row % 2 else 180) + (0 if vert else 90))
+            if math.hypot(cxs - PUBLIX[0], cys - PUBLIX[1]) > 25 and R_.random() < .025 and ncar < 200: addcar(R_.choice(PASSENGER), cxs, cys, (0 if row % 2 else 180) + (0 if vert else 90))
             elif math.hypot(cxs - PUBLIX[0], cys - PUBLIX[1]) > 25 and not on_cut(cxs, cys, 4) and R_.random() < lot_fill(cxs, cys, x0, x1, y0, y1, blds):          # round 40: static parked cars, denser near the doors
                 c_ = CARCOL[R_.randrange(len(CARCOL))]; o_ = linked(f"dcar_{c_[1:]}", lambda nm, c_=c_: display_car(nm, c_)); rz_ = (0 if row % 2 else 180) + (0 if vert else 90)
                 place(o_, cxs, cys, rz=rz_ + R_.uniform(-4, 4)); cbox(cxs, cys, 1.9, 4.5, rz_)
@@ -241,7 +285,7 @@ for lot in LP["lots"]:
     for b_ in lot["buildings"]:
         nm = {"SEMINOLE CASINO": ("Casino", "#c8901e", "$"), "CITY HALL": ("City Hall", "#2f6fb3", "H"), "POLICE": ("Police", "#1d3f8a", "*"), "WALMART": ("Walmart", "#2f64ad", "W"), "McD": ("McDonald's", "#d22d24", "M")}.get(b_["label"])
         if nm: LMK.append([nm[0], round((b_["x0"] + b_["x1"]) / 2, 1), round((b_["y0"] + b_["y1"]) / 2, 1), nm[1], nm[2]])
-LMK.append(["Trash Mountain", round(tcx, 1), round(tcy, 1), "#7a5a2a", "^"]); LMK.append(["Butterfly World", 600, 655, "#5a9d3a", "B"]); LMK.append(["Dave", LP["dave"][0], LP["dave"][1], "#e33b3b", "D"])
+LMK.append(["Trash Mountain", round(tcx, 1), round(tcy, 1), "#7a5a2a", "^"]); LMK.append(["Butterfly World", *[round(v, 1) for v in SHK.M(640, 640)], "#5a9d3a", "B"]); LMK.append(["Dave", LP["dave"][0], LP["dave"][1], "#e33b3b", "D"])
 WORLD = {"name": "cc", "title": "Coconut Creek", "glb": "scene.glb", "mapbg": "#4d7a34", "extent": 2000, "sky": "#8fc3f5", "fog": ["#c4dcf2", 120, 330], "hemi": ["#cfe4ff", "#6f8a4a", 1.55],
          "sun": {"color": "#fff0d6", "intensity": 3.7, "dir": [-0.5, -0.74, 0.45]}, "heights": [], "exposure": 1.0, "tone": "AgX", "lamps": [], "ground": "#5d9a3a", "start": start, "money": 1250,
          "traffic": [], "walk": [], "walkers": 0, "fight": None, "demo": None, "landmarks": LMK,

@@ -35,6 +35,7 @@ ROADS = [  # name, polyline, width m, kind
     ("", [(XW + 15, 0), (XW + 15, Y["hillsboro"])], 8, "loc"), ("", [(XE - 15, YS + 30), (XE - 15, Y["hillsboro"])], 8, "loc"),           # back lanes behind the shop strips
     ("", [(-200, 1479), (-110, 1470), (0, 1458)], 9, "ramp"), ("", [(20, 1545), (100, 1575), (225, 1545)], 9, "ramp"),                  # Sawgrass ramps at Lyons
 ]
+HB = {}                                                                             # round 46: house -> the street point it fronts (the squeeze keeps the setback)
 HOUSES = []; CULS = []; RINGS = [(-712, 912, 46, 20)]; LAKES = []; RBTS = []
 def st(pts, w=9, kind="loc"): ROADS.append(("", pts, w, kind))
 def wy(x):                                                                        # Winston Park Blvd centre-line y at x (it curves west of Lyons)
@@ -52,7 +53,7 @@ ROADS.append(("Promenade Blvd", [(XLYONS, PY_MAIN), (PX_W, PY_MAIN)], 7, "drive"
 def houses_along(a, b, gap=17, off=17):
     L = math.dist(a, b); n = int(L / gap); ux, uy = (b[0] - a[0]) / (L or 1), (b[1] - a[1]) / (L or 1)
     for i in range(1, n):
-        for s_ in (-1, 1): HOUSES.append((a[0] + ux * i * gap - uy * off * s_, a[1] + uy * i * gap + ux * off * s_))
+        for s_ in (-1, 1): h_ = (a[0] + ux * i * gap - uy * off * s_, a[1] + uy * i * gap + ux * off * s_); HOUSES.append(h_); HB[h_] = (a[0] + ux * i * gap, a[1] + uy * i * gap)
 def grid(x0, y0, x1, y1, step=80, alley=True, join=("s", "n")):
     """Grid pocket: straight north-south streets every `step` m tied into the arterials, one cross street, alleys between, houses along."""
     xs = [x0 + step / 2 + i * step for i in range(int((x1 - x0) / step))]; ym = (y0 + y1) / 2
@@ -71,7 +72,7 @@ def lake_loop(cx, cy, rx, ry, links, culs=()):
             a = 2 * math.pi * i / 1440; q = (cx + ex * math.cos(a), cy + ey * math.sin(a))
             if prev: acc += math.dist(prev, q)
             prev = q
-            if acc >= 17: HOUSES.append(q); acc = 0
+            if acc >= 17: HOUSES.append(q); HB[q] = (cx + R[0] * math.cos(a), cy + R[1] * math.sin(a)); acc = 0
     for t in culs:
         a = math.radians(t); p0 = (cx + R[0] * math.cos(a), cy + R[1] * math.sin(a)); p1 = (cx + (R[0] + 75) * math.cos(a), cy + (R[1] + 75) * math.sin(a))
         st([p0, p1]); CULS.append((p1[0], p1[1], 11)); houses_along(p0, p1)
@@ -87,7 +88,7 @@ def boulevard(x0, y0, x1, y1, entry_x):
             if xc > cx - 40 and xc < cx + 40: continue
             yA = cy + sgn_ * 4; yB = cy + sgn_ * 80; st([(xc, yA), (xc, yB)]); CULS.append((xc, yB, 11))
 
-st([(-625, 980), (XLYONS - 12, 980)], 8, "loc")                                 # dealer service road (body shops behind)
+st([(-560, 980), (XLYONS - 12, 980)], 8, "loc")                                 # dealer service road (body shops behind)
 # ---- residential blocks (designed) ----
 # The Hammocks (user): a community shaped like a rounded rectangle across Lyons from Wynmoore, backing onto the Pkwy shops; gates on Lyons and 441
 def rrect(x0, y0, x1, y1, r):
@@ -108,7 +109,7 @@ lake_loop(-410, 1725, 260, 35, [(X441 + 13, 1725), (XLYONS - 12, 1725), (-410, Y
 grid(210, 1640, 430, 1790, step=72, join=("n",))                             # NE homes beside the fire station
 # Dave's neighbourhood off Banks (south of the Pkwy): a straight street west off Banks, a 90 m bend down to his cul-de-sac
 st([(XBANKS, -120), (-610, -120)] + arc(-610, -210, 90, 90, 180)[1:] + [(-700, -300)]); CULS.append((-700, -300, 12))
-for p in [(-480 - 26 * i, -120) for i in range(1, 6)]: HOUSES += [(p[0], -100), (p[0], -140)]
+for p in [(-480 - 26 * i, -120) for i in range(1, 6)]: HOUSES += [(p[0], -100), (p[0], -140)]; HB[(p[0], -100)] = HB[(p[0], -140)] = (p[0], -120)
 houses_along((-700, -215), (-700, -290), 17, 18)
 grid(-420, -470, -260, -40, step=80, join=("n",)); st([(-260, -255), (XBANKS, -255)])     # pocket east of Banks
 CULS.append((XBANKS, -420, 12)); st([(XBANKS, -330), (-620, -330)]); CULS.append((-620, -330, 11)); houses_along((XBANKS, -330), (-620, -330))
@@ -215,6 +216,71 @@ CT_TXT = [("M1 round Cooper's Hawk, Wiles, back to Lyons", MARC), ("M2 McDonald'
           ("A1 elementary drop-off loop", AARON), ("A2 landfill road past Trash Mountain", AARON), ("A3 through Butterfly World", AARON), ("A4 Wynmoore gate, golf course", AARON), ("A5 football field, bus loop", AARON),
           ("C1 Publix lot, plaza fountain jump", CHRIS), ("C2 garage roof jump", CHRIS), ("C3 casino valet loop", CHRIS), ("C4 Walmart loading dock jump", CHRIS), ("C5 the Hammocks, out the back fence", CHRIS), ("C6 canal path to Dave's back yard", CHRIS)]
 
+# ---- round 46: THE SQUEEZE (user: "we scale it down, we fill in the gaps"). Everything above is laid out in the old 2.5x metres; shrink.py maps positions,
+# keeps road widths and building sizes. Lots shrink round their buildings; houses keep their setback from the street and are thinned so none overlap.
+import sys as _sys; _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import shrink as SHK
+_M = SHK.M
+def _mp(pts): return [_M(*p) for p in SHK.densify(list(pts), 10.0)]
+_rb_old = list(RBTS)
+ROADS = [(n_, _mp(p_), w_, k_) for (n_, p_, w_, k_) in ROADS]
+RBTS = [(*_M(x, y), r) for x, y, r in RBTS]
+for i, (n_, p_, w_, k_) in enumerate(ROADS):                                       # roads that end on a roundabout ring land on the (unshrunk) ring again
+    for j in (0, -1):
+        for (ox, oy, r), (nx_, ny_, _) in zip(_rb_old, RBTS):
+            q = p_[j]; mx, my = _M(ox, oy)
+            if abs(math.dist(q, (mx, my)) - 0) < r * 1.2 and math.dist(q, (mx, my)) > .5:
+                L_ = math.dist(q, (mx, my)); p_[j] = (mx + (q[0] - mx) / L_ * r, my + (q[1] - my) / L_ * r)
+CULS = [(*_M(x, y), r) for x, y, r in CULS]
+_RINGP = [[_M(cx + rx * math.cos(2 * math.pi * i / 96), cy + ry * math.sin(2 * math.pi * i / 96)) for i in range(96)] for cx, cy, rx, ry in RINGS]   # rings = mapped polylines
+LAKES = [SHK.ellipse(*l) for l in LAKES]
+_H = []
+for h_ in HOUSES:
+    b_ = HB.get(h_, h_); bx, by = _M(*b_); _H.append((bx + h_[0] - b_[0], by + h_[1] - b_[1]))
+HOUSES = []
+for h_ in _H:                                                                        # thin: no two houses closer than 13.5 m
+    if all(math.dist(h_, q) >= 13.5 for q in HOUSES[-60:]) and all(math.dist(h_, q) >= 13.5 for q in HOUSES): HOUSES.append(h_)
+ZONES = [(lab, [_M(*p) for p in poly], col, tc) for lab, poly, col, tc in ZONES]
+def _lot(item):
+    poly, blds, step, dirn = item[:4]
+    xs = [p[0] for p in poly]; ys = [p[1] for p in poly]; X0, Y0, X1, Y1 = SHK.rect(min(xs), min(ys), max(xs), max(ys)); nb = []
+    for (a, b, c, e, col, lab) in blds:
+        A, B, C, E = SHK.keep_rect(a, b, c, e); w, h = min(C - A, X1 - X0 - 2), min(E - B, Y1 - Y0 - 2); cx, cy = (A + C) / 2, (B + E) / 2
+        cx = min(max(cx, X0 + 1 + w / 2), X1 - 1 - w / 2); cy = min(max(cy, Y0 + 1 + h / 2), Y1 - 1 - h / 2); nb.append((cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2, col, lab))
+    return (R_(X0, Y0, X1, Y1), nb, step, dirn)
+LOTS = [_lot(l) for l in LOTS]
+# round 46: blocks that no longer fit after the squeeze, laid out again by hand in the NEW coordinates
+_DROP = {"PUBLIX", "WALMART", "GARAGE", "", "CITY HALL", "SEMINOLE CASINO", "FORD", "TOYOTA", "HONDA", "KIA", "CHEVROLET", "BODY SHOP", "WALGREENS", "STRIP:s:42", "STRIP:s:43"}
+LOTS = [l for l in LOTS if not (l[1] and l[1][0][5] in _DROP) and not (not l[1] and l[0][0][1] > 1000)]
+_D = "#e9ecef"
+LOTS += [
+    (R_(-763, 396, -638, 599), [(-760, 415, -670, 580, "#2f64ad", "WALMART")], 10, "v"),                                                     # Walmart: no outparcels (no room)
+    (R_(-586, 826, -337, 1052), [(-584, 836, -526, 1040, "#d9d2c4", "P:promenade:e:10"), (-515, 900, -455, 1005, "#7d8086", "GARAGE"),
+                                 (-445, 1012, -360, 1048, "#d9d2c4", "P:tjmaxx:s:8"), (-445, 830, -360, 864, "#d9d2c4", "P:marshalls:n:8"),
+                                 (-352, 834, -339, 958, "#d6a24a", "SHOPS_E"), (-352, 1000, -339, 1044, "#d6a24a", "SHOPS_E")], 10, "v"),                 # Promenade west: anchor, garage (C2), TJ Maxx, Marshalls
+    (R_(-260, 1058, -35, 1138), [(-240, 1092, -55, 1136, "#2e8b3e", "PUBLIX")], 10, "v"),                                                     # Publix: store at the back, one deep lot
+    (R_(-180, 402, -35, 594), [(-170, 405, -50, 465, "#1d3f8a", "POLICE"), (-170, 472, -92, 548, "#2f6fb3", "CITY HALL"),
+                               (-165, 576, -62, 592, "#e9dcb8", "STRIP:n:31"), (-74, 492, -40, 524, "#d6a24a", "PAD:bank:tdbank:e")], 9, "h"),             # City Hall + police + plaza + bank
+    (R_(-604, 628, -478, 765), [(-600, 718, -482, 763, "#c8901e", "SEMINOLE CASINO"), (-602, 631, -570, 656, "#d6a24a", "PAD:fastfood:popeyes:s"),
+                                (-510, 631, -480, 656, "#d6a24a", "PAD:bank:bofa:s")], 10, "h"),                                                # casino + valet loop + 2 pads on Sample
+] + [(R_(-470 + i * 86, 623, -392 + i * 86, 714), [(-455 + i * 86, 685, -407 + i * 86, 713, _D, lab)], 6, "h") for i, lab in enumerate(("TOYOTA", "HONDA", "KIA", "CHEVROLET"))] + [
+    (R_(-470, 750, -306, 786), [(-466, 760, -421, 784, "#b9b2a4", "BODY SHOP"), (-366, 760, -321, 784, "#b9b2a4", "SERVICE")], 6, "h"),
+    (R_(-298, 750, -134, 786), [(-294, 760, -249, 784, "#b9b2a4", "BODY SHOP"), (-194, 760, -149, 784, "#b9b2a4", "SERVICE")], 6, "h"),
+    (R_(-590, 30, -492, 118), [(-588, 78, -548, 116, "#c8102e", "WALGREENS"), (-544, 96, -494, 112, "#e9dcb8", "STRIP:s:41"), (-540, 33, -508, 56, "#d6a24a", "PAD:fastfood:wendys:s")], 9, "v"),
+    (R_(-481, 30, -382, 118), [(-478, 96, -424, 112, "#e9dcb8", "STRIP:s:42"), (-478, 33, -446, 56, "#d6a24a", "PAD:bank:wellsfargo:s")], 9, "v"),      # gap at x -414 for Marc's M4
+    (R_(-371, 30, -234, 118), [(-366, 96, -290, 112, "#e9dcb8", "STRIP:s:43"), (-286, 80, -238, 116, "#5a7a3a", "P:aldi:s:7"), (-366, 34, -330, 68, "#d6a24a", "GASSTN:shell")], 9, "v"),
+]
+for (poly, blds, step, dirn) in LOTS:                                                  # report buildings that now overlap inside a lot (fixed by hand below if any)
+    for i, b1 in enumerate(blds):
+        for b2 in blds[i + 1:]:
+            if b1[0] < b2[2] - .5 and b2[0] < b1[2] - .5 and b1[1] < b2[3] - .5 and b2[1] < b1[3] - .5: print("  OVERLAP", b1[5], b2[5], [round(v) for v in b1[:4]], [round(v) for v in b2[:4]])
+DAVE = _M(*DAVE); PUBLIX = _M(*PUBLIX); SPOTS = [(l, *_M(x, y), c, s_) for l, x, y, c, s_ in SPOTS]
+JUMPS, BREAKERS, HIDES, STARS, BRIDGES = ([_M(*p) for p in L_] for L_ in (JUMPS, BREAKERS, HIDES, STARS, BRIDGES))
+CUTS = [(l, c, [_M(*p) for p in pts]) for l, c, pts in CUTS]; ROUTES = [(l, c, [_M(*p) for p in pts]) for l, c, pts in ROUTES]
+BLOCKS = [(*_M(x, y), al, c) for x, y, al, c in BLOCKS]
+_CAN = (SHK.fx(XCANAL), SHK.fy(-230), SHK.fy(Y["sample"]))
+X441, XBANKS, XLYONS, XPOWER = (SHK.fx(v) for v in (X441, XBANKS, XLYONS, XPOWER)); Y = {k: SHK.fy(v) for k, v in Y.items()}; XCANAL = _CAN[0]
+XW, XE, YS, YN = SHK.fx(XW), SHK.fx(XE), SHK.fy(YS), SHK.fy(YN); _GATE = list(_M(50, 360))
+
 # ---- draw ----
 S = .44; PAD = 40
 X0, X1, Y0, Y1 = XW - 20, XE + 20, YS - 50, YN + 20
@@ -231,8 +297,8 @@ for side, x in ((-1, X441 - 92), (1, XPOWER + 52)):
     t = Image.new("RGBA", (700, 24), (0, 0, 0, 0)); ImageDraw.Draw(t).text((350, 12), "SHOPS   GAS   FAST FOOD   CAR WASH", fill="#4a2e1a", font=font(11), anchor="mm"); t = t.rotate(90, expand=True)
     a, b = P(x, 1650); im.paste(t, (int(a - 12), int(b - 350)), t)
 for k, (rx, ry, col) in enumerate([(330, 95, "#7d6d48"), (270, 75, "#6f7a45"), (200, 55, "#7f8a52"), (120, 34, "#93a060")]):      # Trash Mountain: a big grassy mound
-    c = P(440, 945); d.ellipse([c[0] - rx * S, c[1] - ry * S, c[0] + rx * S, c[1] + ry * S], fill=col)
-d.text(P(440, 945), "TRASH MOUNTAIN", fill="white", font=font(13), anchor="mm", stroke_width=3, stroke_fill="#2e2410")
+    c = P(*_M(440, 945)); d.ellipse([c[0] - rx * S, c[1] - ry * S, c[0] + rx * S, c[1] + ry * S], fill=col)
+d.text(P(*_M(440, 945)), "TRASH MOUNTAIN", fill="white", font=font(13), anchor="mm", stroke_width=3, stroke_fill="#2e2410")
 for (poly, blds, step, dirn) in LOTS:
     d.polygon([P(*p) for p in poly], fill="#7d8086"); xs = [p[0] for p in poly]; ys = [p[1] for p in poly]; x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
     if dirn == "v":
@@ -242,19 +308,17 @@ for (poly, blds, step, dirn) in LOTS:
     for (a, b, c, e, col, lab) in blds:
         d.rectangle([P(a, e), P(c, b)], fill=col, outline="#2b2b2b")
         if lab: d.text(P((a + c) / 2, (b + e) / 2), lab, fill="white", font=font(8), anchor="mm", stroke_width=2, stroke_fill="#1b1b1b")
-for yy in range(850, 970, 14):                                       # dealer car rows
+for yy in range(0):                                       # dealer car rows
     for xx in range(-600, -40, 8): d.rectangle([P(xx, yy + 3), P(xx + 5, yy - 3)], fill=["#d33", "#eee", "#36c", "#222", "#c9a227"][(xx // 8 + yy) % 5])
-tx, ty = P(150, 180); d.ellipse([tx - 70 * S * 2.2, ty - 32 * S * 2.2, tx + 70 * S * 2.2, ty + 32 * S * 2.2], fill="#b5533c"); d.rectangle([tx - 44 * S * 2.2, ty - 20 * S * 2.2, tx + 44 * S * 2.2, ty + 20 * S * 2.2], fill="#4f9a3a", outline="white")
+tx, ty = P(*_M(150, 180)); d.ellipse([tx - 70 * S * 2.2, ty - 32 * S * 2.2, tx + 70 * S * 2.2, ty + 32 * S * 2.2], fill="#b5533c"); d.rectangle([tx - 44 * S * 2.2, ty - 20 * S * 2.2, tx + 44 * S * 2.2, ty + 20 * S * 2.2], fill="#4f9a3a", outline="white")
 def court(x0, y0, x1, y1, col): d.rectangle([P(x0, y1), P(x1, y0)], fill=col, outline="white")
-for i in range(4): court(320 + i * 50, -150, 360 + i * 50, -70, "#b5533c")
-for i in range(4): court(60 + i * 45, -480, 95 + i * 45, -330, "#4b8bbf")
-sk = P(400, -400); d.ellipse([sk[0] - 150 * S, sk[1] - 80 * S, sk[0] + 150 * S, sk[1] + 80 * S], fill="#c9c9c9", outline="#8a8a8a", width=2); d.text(sk, "SKATE PARK", fill="#1b1b1b", font=font(8), anchor="mm")
-bf = P(650, -460); d.pieslice([bf[0] - 120 * S, bf[1] - 120 * S, bf[0] + 120 * S, bf[1] + 120 * S], 225, 315, fill="#4f9a3a")
+sk = P(*_M(400, -400)); d.ellipse([sk[0] - 150 * S, sk[1] - 80 * S, sk[0] + 150 * S, sk[1] + 80 * S], fill="#c9c9c9", outline="#8a8a8a", width=2); d.text(sk, "SKATE PARK", fill="#1b1b1b", font=font(8), anchor="mm")
+bf = P(*_M(650, -460)); d.pieslice([bf[0] - 120 * S, bf[1] - 120 * S, bf[0] + 120 * S, bf[1] + 120 * S], 225, 315, fill="#4f9a3a")
 for (cx, cy, rx, ry) in LAKES: d.ellipse([P(cx - rx, cy + ry), P(cx + rx, cy - ry)], fill="#2d78b8")
-d.line([P(XCANAL, Y["sample"]), P(XCANAL, -230)], fill="#2d78b8", width=max(3, int(14 * S)))
+d.line([P(XCANAL, _CAN[2]), P(XCANAL, _CAN[1])], fill="#2d78b8", width=max(3, int(14 * S)))
 for (x, y) in HOUSES: a, b = P(x, y); d.rectangle([a - 3, b - 3, a + 3, b + 3], fill="#e0c9a6", outline="#a8865a")
 STY = {"art": ("#3a3c40", "#e8c34a"), "col": ("#3a3c40", "#e8c34a"), "hwy": ("#8a7a50", "#f4f0e0"), "loc": ("#55585e", None), "blvd": ("#55585e", "#9fd36b"), "alley": ("#8a8a8a", None), "trail": ("#d9c9a0", None), "ramp": ("#8a7a50", None), "drive": ("#6a6d72", None), "driven": ("#6a6d72", None)}
-for (cx, cy, rx, ry) in RINGS: d.ellipse([P(cx - rx, cy + ry), P(cx + rx, cy - ry)], outline="#55585e", width=max(3, int(9 * S)))
+for rp_ in _RINGP: d.line([P(*q) for q in rp_ + rp_[:1]], fill="#55585e", width=max(3, int(9 * S)))
 for kind_pass in (("alley", "trail", "loc", "blvd", "drive", "driven"), ("col", "art"), ("ramp", "hwy")):
     for name, pts, w, kind in ROADS:
         if kind not in kind_pass: continue
@@ -327,15 +391,15 @@ _roads, _nloc = [], 0
 for name, pts, w, kind in ROADS:
     if not name: _nloc += 1; name = f"{kind}_{_nloc}"
     _roads.append(dict(name=name, kind=kind, w=w, pts=_rp(pts), closed=False))
-for i, (cx, cy, rx, ry) in enumerate(RINGS): _roads.append(dict(name=f"ring_{i}", kind="loc", w=9 if rx > 60 else 7, pts=_rp(_ell(cx, cy, rx, ry)), closed=True))
+for i, ((cx, cy, rx, ry), rp_) in enumerate(zip(RINGS, _RINGP)): _roads.append(dict(name=f"ring_{i}", kind="loc", w=9 if rx > 60 else 7, pts=_rp(rp_), closed=True))
 LAYOUT = dict(
-    bounds=dict(xw=XW, xe=XE, ys=YS, yn=YN), arterials=dict(x441=X441, xbanks=XBANKS, xlyons=XLYONS, xpower=XPOWER, **Y), canal=dict(x=XCANAL, y0=-230, y1=Y["sample"], w=14),
+    bounds=dict(xw=XW, xe=XE, ys=YS, yn=YN), arterials=dict(x441=X441, xbanks=XBANKS, xlyons=XLYONS, xpower=XPOWER, **Y), canal=dict(x=XCANAL, y0=_CAN[1], y1=_CAN[2], w=14),
     roads=_roads, culs=[dict(x=x, y=y, r=r) for x, y, r in CULS], roundabouts=[dict(x=x, y=y, r=r) for x, y, r in RBTS],
     lakes=[dict(x=cx, y=cy, rx=rx, ry=ry) for cx, cy, rx, ry in LAKES], houses=_rp(HOUSES),
     zones=[dict(label=lab, poly=_rp(poly), color=col) for lab, poly, col, tc in ZONES],
     lots=[dict(poly=_rp(poly), dir=dirn, step=step, buildings=[dict(x0=a, y0=b, x1=c, y1=e, color=col, label=lab) for a, b, c, e, col, lab in blds]) for poly, blds, step, dirn in LOTS],
     jumps=_rp(JUMPS), breakers=_rp(BREAKERS), hides=_rp(HIDES), stars=_rp(STARS), bridges=_rp(BRIDGES),
     cuts=[dict(label=lab, color=col, pts=_rp(pts)) for lab, col, pts in CUTS], blocks=[dict(x=x, y=y, along=al, color=col) for x, y, al, col in BLOCKS],
-    routes=[dict(label=lab, color=col, pts=_rp(pts)) for lab, col, pts in ROUTES], dave=list(DAVE), publix=list(PUBLIX), gate=[50, 360])
+    routes=[dict(label=lab, color=col, pts=_rp(pts)) for lab, col, pts in ROUTES], dave=list(DAVE), publix=list(PUBLIX), gate=_GATE)
 json.dump(LAYOUT, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "layout.json"), "w"), separators=(",", ":"))
 print("layout.json", len(_roads), "roads", len(HOUSES), "houses")
