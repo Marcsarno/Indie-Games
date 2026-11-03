@@ -2,13 +2,23 @@
 // Hero skills, champions and the broodmother's lair. Skills unlock with hero level so there is
 // always a next thing to reach; each has a mana cost and a cooldown.
 
-const SKILLS = [
-  { id: 'bolt', name: 'HOLY BOLT', lvl: 1, mana: 6, cd: 0.5 },
-  { id: 'bash', name: 'SHIELD BASH', lvl: 2, mana: 6, cd: 3 },
-  { id: 'whirl', name: 'WHIRLWIND', lvl: 3, mana: 10, cd: 4 },
-  { id: 'cry', name: 'WAR CRY', lvl: 4, mana: 8, cd: 12 },
-];
-const CD = { bolt: 0, bash: 0, whirl: 0, cry: 0 };
+const SKILLSETS = {
+  warrior: [
+    { id: 'bolt', name: 'HOLY BOLT', lvl: 1, mana: 6, cd: 0.5 },
+    { id: 'bash', name: 'SHIELD BASH', lvl: 2, mana: 6, cd: 3 },
+    { id: 'whirl', name: 'WHIRLWIND', lvl: 3, mana: 10, cd: 4 },
+    { id: 'cry', name: 'WAR CRY', lvl: 4, mana: 8, cd: 12 },
+  ],
+  // the mage's attack button fires magic missiles (no mana); these are its three buttons
+  mage: [
+    { id: 'fireball', name: 'FIREBALL', lvl: 1, mana: 9, cd: 0.7 },
+    { id: 'frost', name: 'FROST NOVA', lvl: 2, mana: 14, cd: 7 },
+    { id: 'meteor', name: 'METEOR', lvl: 3, mana: 22, cd: 9 },
+  ],
+};
+let SKILLS = SKILLSETS.warrior;
+function setSkillsFor(cls) { SKILLS = SKILLSETS[cls] || SKILLSETS.warrior; }
+const CD = { bolt: 0, bash: 0, whirl: 0, cry: 0, fireball: 0, frost: 0, meteor: 0 };
 function resetSkills() { for (const k in CD) CD[k] = 0; hero.whirl = 0; hero.dash = 0; hero.buff = 0; }
 const heroBusy = () => hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0;
 // one hit's damage, with the war cry bonus
@@ -20,12 +30,157 @@ function useSkill(i) {
   if (hero.lvl < s.lvl) { say(`${s.name} UNLOCKS AT LEVEL ${s.lvl}`, 25, 1.4); return; }
   if (CD[s.id] > 0) return;
   if (s.id === 'bolt') { heroCast(); if (hero.cast >= 0) CD.bolt = s.cd; return; }
-  if (heroBusy()) return;
+  // a spell may cut a magic-missile cast short; anything else waits for the hero to be free
+  if (heroBusy() && !(hero.castKind === 'missile' && hero.cast >= 0 && hero.atk < 0 && !(hero.dash > 0) && !(hero.whirl > 0))) return;
   if (hero.mana < s.mana) { say('NOT ENOUGH MANA', 40, 1.2); return; }
   hero.mana -= s.mana; CD[s.id] = s.cd;
   if (s.id === 'whirl') { hero.whirl = 0.8; hero.whirlTick = 0; sfx('heavySwing'); }
   if (s.id === 'bash') startBash();
   if (s.id === 'cry') warCry();
+  if (s.id === 'fireball') castFireball();
+  if (s.id === 'frost') frostNova();
+  if (s.id === 'meteor') castMeteor();
+}
+
+// ---------------------------------------------------------------- mage spells
+// Every spell's damage comes from the staff (STAT.dmg), so a better staff makes all of them hit
+// harder. Casting holds the 'channel' pose; once the spell is out, the stick cancels the rest.
+const spellDmg = k => Math.max(1, Math.round(roll(STAT.dmg) * k * (hero.buff > 0 ? 1.4 : 1)));
+const spellCrit = () => Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100;
+function startCast(kind, dur, target) {
+  if (target) hero.dir = dirFrom(target[0] - hero.fi, target[1] - hero.fj);
+  hero.cast = dur; hero.castKind = kind; hero.castAge = 0; hero.clip = 'channel'; hero.approach = null;
+}
+// where a spell leaves the staff: in front of the hero, at the orb's height
+function staffTip() { const [fx, fy] = dirVec(hero.dir); return [hero.fi + fx * 0.45 + fy * 0.25, hero.fj + fy * 0.45 - fx * 0.25]; }
+function aimAt(range) {
+  const t = nearestEnemy(range, true);
+  if (t) return [t, [t.fi, t.fj]];
+  const [fx, fy] = dirVec(hero.dir); return [null, [hero.fi + fx * 4, hero.fj + fy * 4]];
+}
+// magic missiles (the attack button): two homing darts fanned out, three from level 5
+function castMissiles() {
+  const [t, at] = aimAt(8);
+  startCast('missile', 0.3 / (1 + ((STAT.atkSpeed || 0) + (hero.frenzy > 0 ? 50 : 0)) / 100), at);   // attack speed and frenzy cast faster
+  const [ox, oy] = staffTip(), a0 = Math.atan2(at[1] - hero.fj, at[0] - hero.fi);
+  const spread = hero.lvl >= 5 ? [-0.45, 0, 0.45] : [-0.32, 0.32];
+  for (const da of spread) {
+    const a = a0 + da;
+    projectiles.push({ kind: 'missile', fi: ox, fj: oy, vx: Math.cos(a) * 7.5, vy: Math.sin(a) * 7.5, z: 22, life: 1.3, owner: 'hero', home: t, spell: true, dmgK: 0.45 });
+  }
+  sfx('missile');
+}
+function castFireball() {
+  const [, at] = aimAt(9);
+  startCast('fireball', 0.32, at);
+  const [ox, oy] = staffTip(), dx = at[0] - ox, dy = at[1] - oy, l = Math.hypot(dx, dy) || 1;
+  projectiles.push({ kind: 'hfire', fi: ox, fj: oy, vx: dx / l * 7, vy: dy / l * 7, z: 20, life: 1.6, owner: 'hero', spell: true, boom: { r: 1.7, k: 1.6, pow: 1 } });
+  sfx('fireball');
+}
+// fire explosion shared by the fireball and the meteor: everything in radius r takes k x staff damage
+function explodeAt(fi, fj, r, k, pow, big = false) {
+  for (const e of enemies) {
+    if (!alive(e)) continue;
+    const d = Math.hypot(e.fi - fi, e.fj - fj);
+    if (d < r + (e.def.unique ? 0.4 : 0)) { const c = spellCrit(); damageEnemy(e, spellDmg(c ? k * 2 : k), fi, fj, c, pow, true); }
+  }
+  for (const p of dynProps) if (!p.broken && (p.kind === 'barrel' || p.kind === 'egg') && Math.hypot(p.i + 0.5 - fi, p.j + 0.5 - fj) < r + 0.3) hitProp(p);
+  const [x, y] = iso(fi, fj);
+  // a ring of flame rolls out across the ground to the edge of the blast
+  const ringN = big ? 56 : 30, sp = r * 22.6 / 0.32;
+  for (let k = 0; k < ringN; k++) { const a = k / ringN * 6.283; pspawn(4, x, y, 3, Math.cos(a) * sp, Math.sin(a) * sp * 0.5, 0, 0.32, k % 3 ? 16 : 17); }
+  for (let k = 0; k < (big ? 30 : 12); k++) { const a = Math.random() * 6.283, d = Math.random() * r * 18; pspawn(3, x + Math.cos(a) * d, y + Math.sin(a) * d * 0.5, 2, 0, 0, 20 + Math.random() * 40, 0.5, Math.random() < 0.5 ? 15 : 16); }   // flames licking up
+  burst(2, x, y, 8, big ? 40 : 22, big ? 150 : 100, 17); burst(2, x, y, 6, big ? 30 : 14, big ? 110 : 70, 16); burst(3, x, y, 4, big ? 18 : 8, 40, 15);
+  stampBlood(Math.round(x), Math.round(y), big ? 7 : 4, (Math.random() * 1e6) | 0, [2, 3, 3, 4, 5]);   // a scorch mark
+  G.flashes.push({ fi, fj, t: big ? 0.45 : 0.25, t0: big ? 0.45 : 0.25, r: big ? 150 : 100 });
+  G.blasts.push({ fi, fj, r, t: big ? 0.32 : 0.22, t0: big ? 0.32 : 0.22 });
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + (big ? 0.6 : 0.28));
+  sfx('boom');
+}
+// frost nova: a ring of frost bursts from the hero and freezes everything close by solid (frozen
+// enemies can't move or attack, and take 40% more damage); bosses only for a moment
+function frostNova() {
+  startCast('nova', 0.3, null);
+  const [x, y] = screenOf(hero);
+  for (let k = 0; k < 40; k++) { const a = k / 40 * 6.283; pspawn(4, x, y, 6, Math.cos(a) * 120, Math.sin(a) * 60, 0, 0.36, k % 2 ? 118 : 117); }
+  for (let k = 0; k < 20; k++) { const a = Math.random() * 6.283, s = 30 + Math.random() * 60; pspawn(5, x, y, 4, Math.cos(a) * s, Math.sin(a) * s * 0.5, 30 + Math.random() * 40, 1, 118); }
+  for (const e of enemies) {
+    if (!alive(e) || Math.hypot(e.fi - hero.fi, e.fj - hero.fj) > 3.3) continue;
+    wake(e); damageEnemy(e, spellDmg(0.5), hero.fi, hero.fj, false, 0, true);
+    if (alive(e)) { e.frozen = e.def.unique ? 1.0 : e.def.elite || e.champ ? 2.0 : 3.2; e.atk = -1; e.hurt = 0; e.kb = [0, 0]; }
+  }
+  G.flashes.push({ fi: hero.fi, fj: hero.fj, t: 0.25, t0: 0.25, r: 120 });
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.2);
+  sfx('frost');
+}
+// meteor: called down on the thickest group in sight; a ring warns where it will land, then it
+// streaks in from the sky and crashes for heavy damage over a wide area
+function castMeteor() {
+  let best = null, bn = -1;
+  for (const e of enemies) {
+    if (!alive(e) || LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] < 0.3 || Math.hypot(e.fi - hero.fi, e.fj - hero.fj) > 8) continue;
+    let n = 0; for (const o of enemies) if (alive(o) && Math.hypot(o.fi - e.fi, o.fj - e.fj) < 2.2) n++;
+    if (n > bn) { bn = n; best = e; }
+  }
+  const [fx, fy] = dirVec(hero.dir), at = best ? [best.fi, best.fj] : [hero.fi + fx * 3, hero.fj + fy * 3];
+  startCast('meteor', 0.4, best ? at : null);
+  G.meteors.push({ fi: at[0], fj: at[1], t: 0.95, t0: 0.95 });
+  sfx('meteor');
+}
+function updateMeteors(dt) {
+  for (const m of G.meteors) {
+    m.t -= dt;
+    if (m.t < 0.45 && Math.random() < 0.9) {   // the falling rock trails fire
+      const [x, y] = iso(m.fi, m.fj), k = Math.max(0, m.t) / 0.45;
+      pspawn(3, x - k * 50 + (Math.random() - 0.5) * 6, y, k * 150, 0, 0, 0, 0.3, Math.random() < 0.5 ? 16 : 17);
+    }
+    if (m.t <= 0 && !m.done) {
+      m.done = true; explodeAt(m.fi, m.fj, 2.4, 3.2, 2, true);
+      const [x, y] = iso(m.fi, m.fj), dust = LV.outdoor ? DIRT[3] : S[5];
+      for (let k = 0; k < 28; k++) { const a = k / 28 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 75, Math.sin(a) * 37, 40 + Math.random() * 30, 1, k % 3 ? dust : 15); }
+      sfx('crit');
+    }
+  }
+  G.meteors = G.meteors.filter(m => !m.done);
+  for (const f of G.flashes) f.t -= dt;
+  for (const bl of G.blasts) bl.t -= dt; G.blasts = G.blasts.filter(bl => bl.t > 0);
+  G.flashes = G.flashes.filter(f => f.t > 0);
+}
+// the warning ring (closing in as the meteor nears) and the falling rock itself; explosions are a
+// disk of fire that swells to the blast's edge and burns out from the middle (dithered)
+function drawMeteors() {
+  for (const bl of G.blasts) {
+    const [cx0, cy0] = iso(bl.fi, bl.fj), cx = cx0 - camX, cy = cy0 - camY, p = 1 - bl.t / bl.t0;
+    const R = bl.r * 22.6 * (0.45 + 0.55 * Math.min(1, p * 2.2)), hole = Math.max(0, p - 0.35) / 0.65;
+    for (let y = Math.floor(cy - R / 2); y <= cy + R / 2; y++) for (let x = Math.floor(cx - R); x <= cx + R; x++) {
+      if (x < 0 || y < 0 || x >= W || y >= H) continue;
+      const d = Math.hypot((x - cx) / R, (y - cy) * 2 / R); if (d > 1 || d < hole) continue;
+      if (p > 0.3 && cid[y * W + x]) continue;   // after the first flash the fire stays on the ground, under the bodies
+      const th = BAYER[((y & 3) << 2) | (x & 3)];
+      if (th > 1.1 - p) continue;   // thins out as it burns away
+      const heat = (1 - d) * (1 - p * 0.6);
+      scr[y * W + x] = (heat > 0.6 ? 18 : heat > 0.4 ? 17 : heat > 0.2 ? 16 : 15) | EMIS;
+    }
+  }
+  for (const m of G.meteors) {
+    const [cx0, cy0] = iso(m.fi, m.fj), cx = cx0 - camX, cy = cy0 - camY, rx = 2.4 * 22.6, ry = rx / 2, blink = Math.floor(G.t * 14) % 2, fill = 1 - m.t / m.t0;
+    for (let a = 0; a < 170; a++) {
+      const t = a / 170 * Math.PI * 2;
+      for (const k of [1, fill]) {
+        const x = Math.round(cx + Math.cos(t) * rx * k), y = Math.round(cy + Math.sin(t) * ry * k);
+        if (x < 0 || y < 0 || x >= W || y >= H || ((a + blink) & 1 && k === 1)) continue;
+        scr[y * W + x] = (k === 1 ? 16 : 15) | EMIS;
+      }
+    }
+    if (m.t < 0.45) {   // the rock: a glowing ball coming in from the upper left
+      const k = Math.max(0, m.t) / 0.45, rx0 = Math.round(cx - k * 50), ry0 = Math.round(cy - k * 150);
+      for (let b = -7; b <= 7; b++) for (let a = -7; a <= 7; a++) {
+        const d = a * a + b * b, x = rx0 + a, y = ry0 + b;
+        if (d > 45 || x < 0 || y < 0 || x >= W || y >= H) continue;
+        scr[y * W + x] = (d <= 6 ? 18 : d <= 18 ? 17 : d <= 32 ? 16 : 14) | EMIS;
+      }
+    }
+  }
 }
 function nearestEnemy(range, needLos = false) {
   let best = null, bd = range;

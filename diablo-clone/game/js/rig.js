@@ -85,6 +85,8 @@ defMat('CLOTH_TAN', [33, 99, 100, 101, 102], 2, { span: 0.6 });
 defMat('CLOTH_WHITE', [24, 25, 26, 27], 2, { span: 0.6 });
 defMat('LAMP', [17], 0, { flat: true, emis: true });
 defMat('HOLY', [51], 0, { flat: true, emis: true });
+defMat('ARCANE', [40], 0, { flat: true, emis: true });   // mage: staff orb, magic missiles
+defMat('ICE', [118], 0, { flat: true, emis: true });     // frost staff orb, frozen enemies
 defMat('SLIME', [52, 53, 54, 55, 97], 3, { span: 0.8, spec: [0.93, 91] });   // glossy jelly
 defMat('SLIME_B', [37, 38, 39, 40, 117], 3, { span: 0.8, spec: [0.93, 118] });
 defMat('OGRE', [2, 64, 87, 88, 89, 90], 3, { span: 0.9 });   // grey-green hide

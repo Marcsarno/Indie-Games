@@ -3,27 +3,36 @@
 // only change numbers, so many rolled items share one look (handoff: equipment contract).
 
 const ITEM_BASES = {
-  short_sword: { slot: 'weapon', look: 'sword', name: 'SHORT SWORD', dmg: [2, 6], lvl: 1 },
-  long_sword: { slot: 'weapon', look: 'sword', name: 'LONG SWORD', dmg: [4, 9], lvl: 2 },
-  hand_axe: { slot: 'weapon', look: 'axe', name: 'HAND AXE', dmg: [3, 10], lvl: 1, slow: true },
-  war_axe: { slot: 'weapon', look: 'axe', name: 'WAR AXE', dmg: [6, 15], lvl: 3, slow: true },
-  mace: { slot: 'weapon', look: 'mace', name: 'MACE', dmg: [3, 11], lvl: 1, slow: true },
-  cap: { slot: 'helm', look: 'cap', name: 'CAP', armor: 2, lvl: 1 },
-  great_helm: { slot: 'helm', look: 'great', name: 'GREAT HELM', armor: 5, lvl: 2 },
-  horned_helm: { slot: 'helm', look: 'horned', name: 'HORNED HELM', armor: 4, lvl: 1 },
-  tunic: { slot: 'chest', look: 'tunic', name: 'TUNIC', armor: 1, lvl: 1 },
-  chain_mail: { slot: 'chest', look: 'chain', name: 'CHAIN MAIL', armor: 6, lvl: 1 },
-  plate_mail: { slot: 'chest', look: 'plate', name: 'PLATE MAIL', armor: 11, lvl: 2 },
-  buckler: { slot: 'shield', look: 'buckler', name: 'BUCKLER', armor: 3, block: 10, lvl: 1 },
-  kite_shield: { slot: 'shield', look: 'kite', name: 'KITE SHIELD', armor: 6, block: 20, lvl: 2 },
-  flail: { slot: 'weapon', look: 'flail', name: 'FLAIL', dmg: [5, 13], lvl: 2, slow: true },
-  greatsword: { slot: 'weapon', look: 'greatsword', name: 'GREATSWORD', dmg: [8, 18], lvl: 3, slow: true },
-  barbute: { slot: 'helm', look: 'barbute', name: 'BARBUTE', armor: 4, lvl: 2 },
-  crown_helm: { slot: 'helm', look: 'crown', name: 'CROWNED HELM', armor: 7, lvl: 4 },
-  brigandine: { slot: 'chest', look: 'brigandine', name: 'BRIGANDINE', armor: 8, lvl: 2 },
-  dark_plate: { slot: 'chest', look: 'darkplate', name: 'DARK PLATE', armor: 15, lvl: 4 },
-  round_shield: { slot: 'shield', look: 'round', name: 'ROUND SHIELD', armor: 4, block: 15, lvl: 1 },
-  tower_shield: { slot: 'shield', look: 'tower', name: 'TOWER SHIELD', armor: 10, block: 28, lvl: 3 },
+  short_sword: { slot: 'weapon', look: 'sword', name: 'SHORT SWORD', dmg: [2, 6], cls: 'warrior', lvl: 1 },
+  long_sword: { slot: 'weapon', look: 'sword', name: 'LONG SWORD', dmg: [4, 9], cls: 'warrior', lvl: 2 },
+  hand_axe: { slot: 'weapon', look: 'axe', name: 'HAND AXE', dmg: [3, 10], cls: 'warrior', lvl: 1, slow: true },
+  war_axe: { slot: 'weapon', look: 'axe', name: 'WAR AXE', dmg: [6, 15], cls: 'warrior', lvl: 3, slow: true },
+  mace: { slot: 'weapon', look: 'mace', name: 'MACE', dmg: [3, 11], cls: 'warrior', lvl: 1, slow: true },
+  cap: { slot: 'helm', look: 'cap', name: 'CAP', armor: 2, cls: 'warrior', lvl: 1 },
+  great_helm: { slot: 'helm', look: 'great', name: 'GREAT HELM', armor: 5, cls: 'warrior', lvl: 2 },
+  horned_helm: { slot: 'helm', look: 'horned', name: 'HORNED HELM', armor: 4, cls: 'warrior', lvl: 1 },
+  tunic: { slot: 'chest', look: 'tunic', name: 'TUNIC', armor: 1, cls: 'warrior', lvl: 1 },
+  chain_mail: { slot: 'chest', look: 'chain', name: 'CHAIN MAIL', armor: 6, cls: 'warrior', lvl: 1 },
+  plate_mail: { slot: 'chest', look: 'plate', name: 'PLATE MAIL', armor: 11, cls: 'warrior', lvl: 2 },
+  buckler: { slot: 'shield', look: 'buckler', name: 'BUCKLER', armor: 3, block: 10, cls: 'warrior', lvl: 1 },
+  kite_shield: { slot: 'shield', look: 'kite', name: 'KITE SHIELD', armor: 6, block: 20, cls: 'warrior', lvl: 2 },
+  flail: { slot: 'weapon', look: 'flail', name: 'FLAIL', dmg: [5, 13], cls: 'warrior', lvl: 2, slow: true },
+  greatsword: { slot: 'weapon', look: 'greatsword', name: 'GREATSWORD', dmg: [8, 18], cls: 'warrior', lvl: 3, slow: true },
+  barbute: { slot: 'helm', look: 'barbute', name: 'BARBUTE', armor: 4, cls: 'warrior', lvl: 2 },
+  crown_helm: { slot: 'helm', look: 'crown', name: 'CROWNED HELM', armor: 7, cls: 'warrior', lvl: 4 },
+  brigandine: { slot: 'chest', look: 'brigandine', name: 'BRIGANDINE', armor: 8, cls: 'warrior', lvl: 2 },
+  dark_plate: { slot: 'chest', look: 'darkplate', name: 'DARK PLATE', armor: 15, cls: 'warrior', lvl: 4 },
+  round_shield: { slot: 'shield', look: 'round', name: 'ROUND SHIELD', armor: 4, block: 15, cls: 'warrior', lvl: 1 },
+  tower_shield: { slot: 'shield', look: 'tower', name: 'TOWER SHIELD', armor: 10, block: 28, cls: 'warrior', lvl: 3 },
+  // mage gear (round 18): robes are one design in three colors; staves differ by the orb's color
+  oak_staff: { slot: 'weapon', look: 'staff', name: 'OAK STAFF', dmg: [3, 7], cls: 'mage', lvl: 1 },
+  ember_staff: { slot: 'weapon', look: 'staff_fire', name: 'EMBER STAFF', dmg: [5, 11], cls: 'mage', lvl: 2 },
+  frost_staff: { slot: 'weapon', look: 'staff_ice', name: 'FROST STAFF', dmg: [8, 15], cls: 'mage', lvl: 3 },
+  apprentice_robe: { slot: 'chest', look: 'robe_blue', name: 'APPRENTICE ROBE', armor: 2, cls: 'mage', lvl: 1 },
+  mystic_robe: { slot: 'chest', look: 'robe_purple', name: 'MYSTIC ROBE', armor: 5, cls: 'mage', lvl: 2 },
+  archmage_robe: { slot: 'chest', look: 'robe_red', name: 'ARCHMAGE ROBE', armor: 8, cls: 'mage', lvl: 3 },
+  wizard_hat: { slot: 'helm', look: 'hat', name: 'WIZARD HAT', armor: 1, cls: 'mage', lvl: 1 },
+  hood: { slot: 'helm', look: 'hood', name: 'DEEP HOOD', armor: 3, cls: 'mage', lvl: 1 },
   heal: { slot: 'potion', name: 'HEALING POTION', heal: 30, lvl: 1 },
   mana: { slot: 'potion', name: 'MANA POTION', mana: 25, lvl: 1 },   // drunk on pickup
 };
@@ -48,27 +57,35 @@ const LEGENDARIES = [
   { fx: 'grave', base: 'tower_shield', name: 'GRAVEWARDEN', mods: { armorFlat: 8, thorns: 60 }, lore: 'WHAT STRIKES YOU BLEEDS' },
   { fx: 'storm', base: 'brigandine', name: 'STORMHIDE', mods: { speed: 18, atkSpeed: 25 }, lore: 'LIGHTNING IN YOUR STEP' },
   { fx: 'blood', base: 'greatsword', name: 'BLOODDRINKER', mods: { dmgPct: 40, leech: 12 }, lore: 'IT IS NEVER FULL' },
+  { fx: 'cinder', base: 'ember_staff', name: 'STAFF OF CINDERS', cls: 'mage', mods: { dmgPct: 60, fireburst: 1 }, lore: 'EVERY DEATH CATCHES FIRE' },
+  { fx: 'magi', base: 'archmage_robe', name: 'MANTLE OF THE MAGI', cls: 'mage', mods: { mana: 40, hp: 20, regen: 2 }, lore: 'WOVEN FROM STARLIGHT' },
+  { fx: 'seer', base: 'wizard_hat', name: "SEER'S PEAK", cls: 'mage', mods: { crit: 15, mana: 20 }, lore: 'IT SEES WHERE TO STRIKE' },
   { fx: 'maul', base: 'war_axe', name: "WARLORD'S MAUL", mods: { dmgPct: 50, crit: 15 }, lore: 'TAKEN FROM THE OGRE' },
 ];
 // sets (round 16): three named pieces each; wearing two gives a bonus, all three a bigger one
 const SETS = {
+  magus: { name: 'MAGUS', cls: 'mage', pieces: [['wizard_hat', 'MAGUS CAP'], ['mystic_robe', 'MAGUS VESTMENT'], ['oak_staff', 'MAGUS ROD']],
+    bonus: [{ mana: 25 }, { dmgPct: 25, crit: 8 }], lines: ['2: +25 MANA', '3: +25% DAMAGE, +8% CRIT'] },
   warden: { name: "WARDEN'S", pieces: [['great_helm', "WARDEN'S VISOR"], ['plate_mail', "WARDEN'S PLATE"], ['kite_shield', "WARDEN'S WALL"]],
     bonus: [{ armorFlat: 10 }, { regen: 2, thorns: 30 }], lines: ['2: +10 ARMOR', '3: +2 LIFE/S, 30% RETURNED'] },
   ranger: { name: "RANGER'S", pieces: [['cap', "RANGER'S HOOD"], ['brigandine', "RANGER'S JERKIN"], ['buckler', "RANGER'S TARGE"]],
     bonus: [{ speed: 12 }, { atkSpeed: 20, crit: 8 }], lines: ['2: +12% MOVE SPEED', '3: +20% ATTACK SPEED, +8% CRIT'] },
 };
+// the hero's class decides which gear drops (game.js sets hero.cls; warrior when unset)
+const heroCls = () => (typeof hero !== 'undefined' && hero.cls) || 'warrior';
+const forCls = o => (o.cls || 'warrior') === heroCls();
 function rollSetItem(R) {
-  const k = R.pick(Object.keys(SETS)), [base, name] = R.pick(SETS[k].pieces);
+  const k = R.pick(Object.keys(SETS).filter(k => forCls(SETS[k]))), [base, name] = R.pick(SETS[k].pieces);
   return { id: itemSerial++, base, rarity: 'set', set: k, name, mods: { [ITEM_BASES[base].slot === 'weapon' ? 'dmgPct' : 'armorFlat']: R.int(3, 6), hp: R.int(8, 16) } };
 }
 function rollLegendary(R) {
-  const L = R.pick(LEGENDARIES);
+  const L = R.pick(LEGENDARIES.filter(forCls));
   return { id: itemSerial++, base: L.base, rarity: 'legend', name: L.name, lore: L.lore, fx: L.fx, mods: { ...L.mods } };
 }
 const RARITY_COL = { normal: 26, magic: 40, rare: 51, legend: 112, set: 55 };
 let itemSerial = 1;
 function rollItem(R, level, forceBase) {
-  const bases = Object.keys(ITEM_BASES).filter(k => ITEM_BASES[k].lvl <= level + 1 && ITEM_BASES[k].slot !== 'potion');
+  const bases = Object.keys(ITEM_BASES).filter(k => ITEM_BASES[k].lvl <= level + 1 && ITEM_BASES[k].slot !== 'potion' && forCls(ITEM_BASES[k]));
   const baseId = forceBase || R.pick(bases), base = ITEM_BASES[baseId];
   const it = { id: itemSerial++, base: baseId, rarity: 'normal', mods: {} };
   if (base.slot === 'potion') return it;
@@ -153,7 +170,11 @@ function itemIcon(it) {
     const bd = V.norm([0.5, -0.5, 0.75]), g = V.mad([0, 0, 3], bd, -7);
     const wide = V.norm(V.cross(bd, [0, 0, 1])), wf = [bd, wide, V.cross(bd, wide)];
     r.cone(V.mad(g, bd, -2.5), V.mad(g, bd, 1.2), 0.9, 0.9, M.LEATHER); r.sph(V.mad(g, bd, -3.1), 1.2, M.GOLD);
-    if (b.look === 'sword') { r.box(V.mad(g, bd, 1.8), [0.7, 3.4, 0.8], M.GOLD, wf); r.box(V.mad(g, bd, 9.6), [7.4, 1.2, 0.4], M.BLADE, wf); }
+    if (b.look.startsWith('staff')) {
+      const orb = b.look === 'staff_fire' ? M.FIREM : b.look === 'staff_ice' ? M.ICE : M.ARCANE;
+      r.cone(V.mad(g, bd, -1), V.mad(g, bd, 14), 0.9, 1.0, M.WOOD); r.sph(V.mad(g, bd, 16), 2.8, orb, { noShadow: true });
+      for (const s of [-1, 1]) r.cone(V.mad(g, bd, 13), V.add(V.mad(g, bd, 16.6), V.mul(wide, s * 2.6)), 0.7, 0.4, M.GOLD);
+    } else if (b.look === 'sword') { r.box(V.mad(g, bd, 1.8), [0.7, 3.4, 0.8], M.GOLD, wf); r.box(V.mad(g, bd, 9.6), [7.4, 1.2, 0.4], M.BLADE, wf); }
     else if (b.look === 'greatsword') { r.box(V.mad(g, bd, 1.8), [0.8, 4.2, 0.9], M.IRON, wf); r.box(V.mad(g, bd, 10.2), [8.4, 1.5, 0.45], M.BLADE, wf); }
     else if (b.look === 'flail') { r.cone(V.mad(g, bd, 1.2), V.mad(g, bd, 7), 0.9, 0.9, M.WOOD); r.sph(V.mad(V.mad(g, bd, 9), [0, 0, -1], 3), 2.6, M.IRON); }
     else {
@@ -164,6 +185,8 @@ function itemIcon(it) {
   } else if (b.slot === 'helm') {
     const hd = [0, 0, 4], fwd = [1, 0, 0], up = [0, 0, 1], sd = [0, 1, 0];
     if (b.look === 'cap') r.ell([0, 0, 3], [5.2, 5.1, 4.0], M.IRON);
+    else if (b.look === 'hat') { r.cyl([0, 0, 0], [0, 0, 0.8], 7, M.CLOTH_PURPLE); r.cone([0, 0, 0.5], [-1.2, 0, 6], 4.6, 2.4, M.CLOTH_PURPLE, { mf: p => p[2] < 2 ? M.GOLD : 0 }); r.cone([-1.2, 0, 6], [-4.5, 0, 10.5], 2.4, 0.5, M.CLOTH_PURPLE); }
+    else if (b.look === 'hood') { r.ell([0, 0, 4], [5.4, 5.6, 5.8], M.CLOTH_BLUE, null, { mf: p => p[0] > 3 && Math.abs(p[1]) < 3 && p[2] < 5 ? M.DARK : 0 }); r.cone([-4, 0, 6], [-8, 0, 2], 2.2, 0.5, M.CLOTH_BLUE); }
     else if (b.look === 'barbute') r.ell(hd, [5.4, 5.3, 6.2], M.STEEL, null, { mf: p => { const q = V.sub(p, hd); return q[0] > 2.4 && ((Math.abs(q[2] - 0.8) < 0.75 && Math.abs(q[1]) < 3.2) || (Math.abs(q[1]) < 0.8 && q[2] < 0.8 && q[2] > -4)) ? M.DARK : 0; } });
     else {
       r.ell(hd, [5.6, 5.4, 6.2], M.STEEL, null, { mf: p => { const q = V.sub(p, hd); if (Math.abs(q[2] - 2.2) < 0.8) return M.GOLD; if (q[0] > 2.6 && Math.abs(q[2] - 0.4) < 0.75 && Math.abs(q[1]) < 4) return M.DARK; return 0; } });
@@ -172,8 +195,9 @@ function itemIcon(it) {
       void fwd; void up; void sd;
     }
   } else if (b.slot === 'chest') {
-    const m = b.look === 'plate' ? M.PLATE : b.look === 'darkplate' ? M.DSTEEL : b.look === 'chain' ? M.CHAIN : team;
-    r.ell([0, 0, 3], [4.6, 6.6, 6.4], m);
+    const m = b.look === 'plate' ? M.PLATE : b.look === 'darkplate' ? M.DSTEEL : b.look === 'chain' ? M.CHAIN : b.look.startsWith('robe') ? (TEAM[b.look.slice(5)] || team) : team;
+    if (b.look.startsWith('robe')) r.cone([0, 0, 2], [0, 0, -7], 4.4, 6.6, m, { mf: p => p[2] < -5.4 ? M.GOLD : 0 });   // the robe's skirt
+    r.ell([0, 0, 3], [4.6, 6.6, 6.4], m, null, b.look.startsWith('robe') ? { mf: p => p[0] > 2 && Math.abs(p[1]) < 0.8 ? M.GOLD : 0 } : undefined);
     for (const s of [-1, 1]) r.ell([0, s * 7, 6.5], [3.6, 3.4, 3], b.look === 'tunic' ? M.LEATHER : m);
   } else if (b.slot === 'shield') {
     if (b.look === 'tower') { r.box([0, 0, 4], [0.8, 4.4, 7.4], team, null, { mf: p => Math.abs(p[1]) > 3.5 || Math.abs(p[2] - 4) > 6.5 ? M.IRON : Math.abs(p[1]) < 0.8 ? M.GOLD : 0 }); return (iconCache[k] = renderRig(r, Math.PI / 4, 26, 26, 13, 17)); }

@@ -1,0 +1,95 @@
+<title>The Mage</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 640px; margin: 0 auto; display: grid; gap: 32px; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0 0 8px; letter-spacing: 0.05em; }
+  p { margin: 0; max-width: 62ch; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 10px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .toggle { display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: 600 0.85rem var(--body); color: var(--bone); background: var(--panel); border: 1px solid var(--rule); padding: 6px 12px; cursor: pointer; }
+  button[aria-pressed="true"] { border-color: var(--ember); color: var(--ember); }
+  button:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { color: var(--ember); font-weight: 600; }
+  td:first-child { white-space: nowrap; color: var(--ember); }
+  ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; }
+  .note { background: var(--panel); border-left: 3px solid var(--ember); padding: 10px 14px; }
+</style>
+<main>
+  <header>
+    <h1>The Mage</h1>
+    <p class="lede">Dungeon of Bones, round 18: a second class with a robe, a wizard hat, a staff and four spells.</p>
+  </header>
+
+  <p class="note">On the title screen, pick <strong>MAGE</strong> and tap New Game. The warrior and the mage keep separate saves, so your warrior's progress is untouched.</p>
+
+  <section>
+    <h2>The spells in a fight</h2>
+    <figure>
+      <div class="toggle" role="group" aria-label="Playback speed"><button id="real" aria-pressed="true">Game speed</button><button id="slow" aria-pressed="false">Slow</button></div>
+      <div class="frame"><img id="fight" src="mage-spells.gif" alt="The mage fighting skeletons and fallen: magic missiles, a fireball, a frost nova that freezes the pack blue, then a meteor that crashes down in a disk of fire" width="400" height="340"></div>
+      <figcaption>Attack held (magic missiles), then fireball, frost nova and meteor, in that order.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>Spells</h2>
+    <table>
+      <thead><tr><th>Button</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td>Attack: Magic Missiles</td><td>Two homing arcane darts per cast (three from level 5). Free to cast; hold to keep firing. Attack speed and the frenzy shrine make it faster.</td></tr>
+        <tr><td>Fireball (level 1)</td><td>A large fireball that explodes on the first thing it touches, hitting everything nearby and knocking enemies back. 9 mana.</td></tr>
+        <tr><td>Frost Nova (level 2)</td><td>A ring of frost bursts from the mage and freezes everything close by for about 3 seconds. Frozen enemies can't move or attack, take 40% more damage, and shatter when killed. Elites stay frozen 2 seconds and bosses 1. 14 mana.</td></tr>
+        <tr><td>Meteor (level 3)</td><td>Called down on the biggest group in sight. A ring marks where it will land, then it streaks in and crashes in a wide disk of fire with a big screen shake. 22 mana.</td></tr>
+      </tbody>
+    </table>
+    <p>All spell damage comes from the staff, so a better staff makes every spell hit harder. Pushing the stick cancels the end of a cast, so you can cast and then run.</p>
+  </section>
+
+  <section>
+    <h2>Look</h2>
+    <figure>
+      <div class="frame"><img src="mage-sheet.png" alt="The mage in eight directions: blue robe with a purple wizard hat and a blue-orb staff; purple robe with a deep hood and a fire staff; red robe bare-headed with a frost staff; then the casting pose and two walk cycles" width="1556" height="1388"></div>
+      <figcaption>Rows 1 to 3: the three robes (one design in blue, purple and red) with the wizard hat, the hood and no hat, and the three staves (blue, fire and frost orbs). Row 4: the casting pose. Rows 5 and 6: walking.</figcaption>
+    </figure>
+    <ul>
+      <li>Built on the warrior's body: the same face, hair, walk and proportions.</li>
+      <li>The robe is a long skirt whose hem follows the feet as he walks, with bell sleeves, a gold stripe and a gold band near the hem. No cloak over the robe.</li>
+      <li>The wizard hat sits high and tipped back so the eyes still show; its point bends backward.</li>
+      <li>The staff is carried upright and leaning out, so it doesn't cross the face. When casting, it's thrust up toward the target.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Screens</h2>
+    <figure>
+      <div class="frame"><img src="screens.png" alt="Title screen with Warrior and Mage columns, the mage's inventory full of staves, robes and hats, and the in-game buttons with fireball, frost and meteor icons" width="826" height="480"></div>
+      <figcaption>Left: the title screen, with a column per class. Middle: the inventory with mage drops. Right: the mage's buttons (blue missile attack, then fireball, frost nova and meteor).</figcaption>
+    </figure>
+    <ul>
+      <li>The mage has less life than the warrior (32 vs 40 at level 1) but more than twice the mana, and mana refills more than 3 times as fast.</li>
+      <li>A mage only finds mage gear: three staves, three robes, the wizard hat and the hood. There are also three mage legendaries (Staff of Cinders, Mantle of the Magi, Seer's Peak) and a three-piece Magus set.</li>
+    </ul>
+  </section>
+</main>
+<script>
+  const go = s => { document.getElementById('fight').src = s ? 'mage-spells-slow.gif' : 'mage-spells.gif';
+    document.getElementById('slow').setAttribute('aria-pressed', String(s)); document.getElementById('real').setAttribute('aria-pressed', String(!s)); };
+  document.getElementById('real').addEventListener('click', () => go(false));
+  document.getElementById('slow').addEventListener('click', () => go(true));
+</script>

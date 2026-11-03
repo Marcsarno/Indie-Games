@@ -111,7 +111,13 @@ const glyphSword = (cx, cy) => { for (let k = -1; k <= 1; k++) line(cx - 8 + k, 
 const glyphBash = (cx, cy) => { for (let y = -5; y <= 5; y++) { const hw = y < 2 ? 4 : 4 - (y - 1) * 1.2; for (let x = -hw; x <= hw; x++) put(cx + x, cy + y, Math.abs(x) > hw - 1.2 || y === -5 ? 50 : 22); } };
 const glyphWhirl = (cx, cy) => { for (let a = 0; a < 40; a++) { const t = a / 40 * Math.PI * 3.2, r = 1.5 + a * 0.16; put(cx + Math.cos(t) * r, cy + Math.sin(t) * r * 0.9, a > 30 ? 27 : 31); } };
 const glyphCry = (cx, cy) => { for (const r of [3, 5.5, 8]) for (let a = -0.7; a <= 0.7; a += 0.12) put(cx - 3 + Math.cos(a) * r, cy + Math.sin(a) * r, r > 6 ? 49 : 51); fillRect(cx - 6, cy - 2, 3, 5, 27); };
+const glyphFire = (cx, cy) => { for (let y = -6; y <= 5; y++) { const hw = y > 1 ? 5 - (y - 1) * 0.9 : (y + 7) * 0.62; for (let x = -hw; x <= hw; x++) put(cx + x, cy + y, Math.abs(x) < hw * 0.45 && y > -2 ? 18 : y < -3 ? 15 : 16); } };
+const glyphFrost = (cx, cy) => { for (let a = 0; a < 6; a++) { const t = a * Math.PI / 3; line(cx, cy, cx + Math.cos(t) * 7, cy + Math.sin(t) * 7, 118); line(cx + Math.cos(t) * 4, cy + Math.sin(t) * 4, cx + Math.cos(t + 0.5) * 5.5, cy + Math.sin(t + 0.5) * 5.5, 117); } put(cx, cy, 27); };
+const glyphMeteor = (cx, cy) => { for (let k = 0; k < 7; k++) line(cx - 8 + k * 0.4, cy - 8 + k, cx + 1, cy + 1, k < 3 ? 15 : 16); for (let b = -3; b <= 3; b++) for (let a = -3; a <= 3; a++) if (a * a + b * b <= 9) put(cx + 2 + a, cy + 2 + b, a * a + b * b <= 2 ? 18 : 17); };
+const glyphMissile = (cx, cy) => { for (const [ox, oy] of [[-5, 4], [0, -1], [5, -6]]) { line(cx + ox - 5, cy + oy + 5, cx + ox, cy + oy, 39); for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) if (a * a + b * b <= 1) put(cx + ox + a, cy + oy + b, a || b ? 40 : 27); } };
 const SKILL_GLYPH = [null, glyphBash, glyphWhirl, glyphCry];
+// per skill: button ramp and glyph (the warrior's by slot, the mage's by spell)
+const SPELL_LOOK = { fireball: [[13, 14, 15, 16], glyphFire], frost: [[114, 115, 116, 117], glyphFrost], meteor: [[19, 20, 21, 22], glyphMeteor] };
 const glyphBolt = (cx, cy) => { for (let a = 0; a < 8; a++) { const t = a * Math.PI / 4; line(cx, cy, cx + Math.cos(t) * 7, cy + Math.sin(t) * 7, a % 2 ? 50 : 51); } put(cx, cy, 27); };
 const glyphBag = (cx, cy) => { fillRect(cx - 5, cy - 3, 11, 9, 35); frame(cx - 5, cy - 3, 11, 9, 36, 33); line(cx - 3, cy - 3, cx - 1, cy - 6, 36); line(cx + 3, cy - 3, cx + 1, cy - 6, 36); fillRect(cx - 1, cy, 3, 2, 50); };
 const glyphSound = (cx, cy) => {
@@ -143,10 +149,12 @@ function drawHud() {
   textC(`LV ${hero.lvl}`, W / 2, yb - 8, 25);
   drawButton(UI.potion, [19, 20, 21, 22], false, (cx, cy) => { sprite(itemIcon({ base: 'heal' }), cx, cy + 4, 1, 4); });
   text(`${hero.potions}`, UI.potion[0] + 9, UI.potion[1] + 4, 27);
-  drawButton(UI.attack, [28, 29, 30, 31], !!press.attack, glyphSword);
+  if (hero.cls === 'mage') drawButton(UI.attack, [37, 38, 39, 40], !!press.attack, glyphMissile);   // magic missiles
+  else drawButton(UI.attack, [28, 29, 30, 31], !!press.attack, glyphSword);
   SKILLS.forEach((sk, i) => {
     const c = UI.skills[i], locked = hero.lvl < sk.lvl;
-    drawButton(c, locked ? [3, 4, 5] : [[48, 49, 50, 51], [19, 20, 21, 22], [28, 29, 30, 31], [33, 34, 35, 36]][i], press.skill === i, i ? SKILL_GLYPH[i] : glyphBolt);
+    const sl = SPELL_LOOK[sk.id];
+    drawButton(c, locked ? [3, 4, 5] : sl ? sl[0] : [[48, 49, 50, 51], [19, 20, 21, 22], [28, 29, 30, 31], [33, 34, 35, 36]][i], press.skill === i, sl ? sl[1] : i ? SKILL_GLYPH[i] : glyphBolt);
     // cooldown: the button darkens from the top and clears as it recharges; locked buttons stay dark
     const f = locked ? 1 : CD[sk.id] / sk.cd, low = !locked && hero.mana < sk.mana;
     if (f > 0 || low) for (let y = c[1] - c[2]; y <= c[1] + c[2]; y++) for (let x = c[0] - c[2]; x <= c[0] + c[2]; x++) {
@@ -248,12 +256,16 @@ function drawTitle() {
   fade(0.55);
   textC('DUNGEON', W / 2, H * 0.2, 22, 4);
   textC('OF BONES', W / 2, H * 0.2 + 26, 26, 2);
-  const save = loadSave();
   UI.titleBtns = [];
-  const btn = (label, y, on) => { const w = 120, x = W / 2 - w / 2; fillRect(x, y, w, 20, 5); frame(x, y, w, 20, 8, 2); textC(label, W / 2, y + 7, 27); UI.titleBtns.push({ x, y, w, h: 20, on }); };
-  if (save) btn(`CONTINUE (LEVEL ${save.level})`, H * 0.52, () => beginGame(true));
-  btn('NEW GAME', H * 0.52 + 28, () => beginGame(false));
-  btn(FEEL_OLD ? 'COMBAT: OLD' : 'COMBAT: NEW', H * 0.52 + 56, () => setFeelOld(!FEEL_OLD));
+  const btn = (label, x, y, w, on, col = 27) => { fillRect(x, y, w, 20, 5); frame(x, y, w, 20, 8, 2); textC(label, x + w / 2, y + 7, col); UI.titleBtns.push({ x, y, w, h: 20, on }); };
+  // one column per class: continue its save (if any) or start a new one
+  [['warrior', 'WARRIOR', 22], ['mage', 'MAGE', 40]].forEach(([cls, name, col], k) => {
+    const x = W / 2 - 124 + k * 128, w = 120, save = loadSave(cls);
+    textC(name, x + w / 2, H * 0.47, col, 2);
+    if (save) btn(`CONTINUE (LEVEL ${save.level})`, x, H * 0.52, w, () => beginGame(true, cls));
+    btn(save ? 'NEW ' + name : 'NEW GAME', x, H * 0.52 + 28, w, () => beginGame(false, cls));
+  });
+  btn(FEEL_OLD ? 'COMBAT: OLD' : 'COMBAT: NEW', W / 2 - 60, H * 0.52 + 62, 120, () => setFeelOld(!FEEL_OLD), 25);
   textC('LEFT THUMB MOVES. RIGHT BUTTONS FIGHT.', W / 2, H * 0.78, 25);
   textC('ALL ART IS DRAWN IN CODE', W / 2, H * 0.78 + 8, 24);
 }

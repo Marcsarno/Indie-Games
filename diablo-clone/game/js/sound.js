@@ -61,6 +61,11 @@ const RECIPES = {
   crit: () => { tone('sine', 120, 40, 0.18, 0.6); noise(0.08, 0.35, 'lowpass', 3000, 500); tone('triangle', 1500, 1200, 0.1, 0.12, 0.02); },
   streak: n => { const f = 440 * Math.pow(2, Math.min(12, (n - 3) * 2) / 12); tone('triangle', f, f, 0.12, 0.16); tone('triangle', f * 1.5, f * 1.5, 0.16, 0.14, 0.07); },
   tap: () => tone('square', 820, 820, 0.04, 0.2),
+  // mage spells (round 18): a blip, a boom, an icy hiss, a falling whistle
+  missile: () => { tone('sine', vary(880), 520, 0.09, 0.16); noise(0.06, 0.1, 'bandpass', 3000, 1500, 2); },
+  boom: () => { tone('sine', vary(110), 35, 0.4, 0.8); noise(0.45, 0.5, 'lowpass', 1400, 120); },
+  frost: () => { noise(0.35, 0.28, 'highpass', 5000, 2000, 0.8); tone('triangle', 1600, 900, 0.25, 0.12); },
+  meteor: () => { tone('sine', 1100, 260, 0.8, 0.12); noise(0.8, 0.14, 'bandpass', 600, 2400, 0.8); },
   crackle: v => noise(0.02 + Math.random() * 0.03, 0.03 * v, 'highpass', 2500, 1500, 0.7),
 };
 function sfx(name, v = 1) {
