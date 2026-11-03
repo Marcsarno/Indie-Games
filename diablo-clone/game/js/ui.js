@@ -132,6 +132,11 @@ const glyphMap = (cx, cy) => { fillRect(cx - 6, cy - 5, 13, 11, 26); frame(cx - 
 function drawHud() {
   drawNpcLabels();
   // a boss's title card when it first wakes: a dark band slides open with its name and epithet
+  if (G.actCard > 0 && G.mode === 'play') {   // entering an act: ACT II / THE BURNING DEEP / the town's name
+    const t = 3.2 - G.actCard, open = Math.min(1, t / 0.3, G.actCard / 0.4), cy = Math.round(H * 0.3), hh = Math.round(30 * open);
+    for (let y = cy - hh; y < cy + hh; y++) for (let x = 0; x < W; x++) if (BAYER[((y & 3) << 2) | (x & 3)] < 0.8) put(x, y, BLK);
+    if (open > 0.8) { textC(actTitle(), W / 2, cy - 20, 26); textC(ACTS[LV.act].name, W / 2, cy - 9, 51, 2); textC(areaName(), W / 2, cy + 12, 25); }
+  }
   if (G.bossIntro > 0 && boss) {
     const t = 2.8 - G.bossIntro, open = Math.min(1, t / 0.25, G.bossIntro / 0.35), cy = Math.round(H * 0.3), hh = Math.round(22 * open);
     for (let y = cy - hh; y < cy + hh; y++) for (let x = 0; x < W; x++) if (BAYER[((y & 3) << 2) | (x & 3)] < 0.75) put(x, y, BLK);

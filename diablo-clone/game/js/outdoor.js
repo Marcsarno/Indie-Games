@@ -6,14 +6,24 @@
 // are rig sprites like everything else, so they share the palette, shading and outlines.
 
 const AREA_CYCLE = 5;
+// Acts (round 22): each act is a town, a wilderness, two dungeon floors and a designed boss arena.
+// After the third act it starts over at a higher difficulty (loop 1 = NIGHTMARE, 2 = HELL, ...).
+const ACTS = [
+  { name: 'THE BLIGHTED WOOD', theme: 'crypt', arena: 'king', boss: 'skelking', hall: "THE KING'S HALL" },
+  { name: 'THE BURNING DEEP', theme: 'caves', arena: 'nest', boss: 'broodmother', hall: 'THE BROOD NEST' },
+  { name: 'THE PIT', theme: 'hell', arena: 'sanctum', boss: 'skelking', hall: 'THE SANCTUM' },   // the lich takes this throne next
+];
+const LOOP_NAMES = ['', 'NIGHTMARE', 'HELL', 'TORMENT'];
 function areaOf(level) {
-  const p = (level - 1) % AREA_CYCLE, cyc = Math.floor((level - 1) / AREA_CYCLE);
-  if (p === 0) return { kind: 'town', cyc, diff: cyc * 3 + 1 };
-  if (p === 1) return { kind: 'forest', cyc, diff: cyc * 3 + 1 };
-  return { kind: 'dungeon', cyc, depth: cyc * 3 + p - 1, diff: cyc * 3 + p - 1 };
+  const p = (level - 1) % AREA_CYCLE, cyc = Math.floor((level - 1) / AREA_CYCLE), act = cyc % ACTS.length, loop = Math.floor(cyc / ACTS.length);
+  if (p === 0) return { kind: 'town', cyc, act, loop, diff: cyc * 3 + 1 };
+  if (p === 1) return { kind: 'forest', cyc, act, loop, diff: cyc * 3 + 1 };
+  const floor = p - 1;   // 1, 2, then the arena
+  return { kind: 'dungeon', cyc, act, loop, floor, arena: floor === 3 ? ACTS[act].arena : null, depth: cyc * 3 + floor, diff: cyc * 3 + floor };
 }
 const AREA_NAMES = { town: ['OAKHOLLOW', 'ASHFORD', 'GREYMARSH'], forest: ['DEEPWOOD', 'EMBERWOOD', 'THORNWOOD'] };
-const areaName = () => LV.outdoor ? AREA_NAMES[LV.area][LV.cyc % 3] : `${TH().name} ${LV.depth}`;
+const areaName = () => LV.outdoor ? AREA_NAMES[LV.area][LV.act % 3] : LV.arena ? ACTS[LV.act].hall : `${TH().name} ${LV.floor}`;
+const actTitle = () => `ACT ${['I', 'II', 'III'][LV.act]}` + (LV.loop ? ' ' + (LOOP_NAMES[LV.loop] || 'LOOP ' + LV.loop) : '');
 
 // ---------------------------------------------------------------- paths
 // paths are polylines in tile space; their distance field is sampled 4x per tile and
@@ -79,7 +89,7 @@ function genOutdoor(level, seed, A) {
   LV.ponds = []; LV.river = []; LV.bridges = [];
   LV.map.fill(FLOOR); LV.solid.fill(0); LV.tall.fill(0); LV.roomOf.fill(-1); LV.seen.fill(1); LV.vis.fill(1);
   LV.decor = []; LV.spawns = []; LV.paths = []; LV.rooms = []; LV.npcs = [];
-  bakeCanopy(A.cyc % 2 === 1);   // before the floor bake, which samples it past the map edge
+  bakeCanopy(A.act === 1);   // before the floor bake, which samples it past the map edge
   if (A.kind === 'town') genTown(R, A); else genForest(R, A);
   bakePathField();
 }
@@ -107,7 +117,7 @@ function treeKind(R, autumn) {
   return { tree: autumn && R() < 0.75 ? 'autumn' : 'oak', seed: R.int(0, 5) };
 }
 function genForest(R, A) {
-  const autumn = A.cyc % 2 === 1;
+  const autumn = A.act === 1;
   // clearings, spread out; the first is the entry from town, the farthest holds the dungeon
   const C = [], area = MW * MH / 1600, nC = Math.round(9 * area);   // the forest scales with the map
   for (let t = 0; t < 3000 && C.length < nC; t++) {
@@ -253,7 +263,7 @@ function genForest(R, A) {
 }
 
 function genTown(R, A) {
-  const autumn = A.cyc % 2 === 1, cx = 19.5, cy = 17.5, RAD = 9.5;
+  const autumn = A.act === 1, cx = 19.5, cy = 17.5, RAD = 9.5;
   // a palisade ring with a gate at the bottom right; the road runs out of the gate to the exit
   const gateA = Math.PI * 0.25;
   plantEdge(R, autumn);
@@ -809,7 +819,7 @@ function drawExitLabel() {
   if (Math.hypot(s.i - hero.fi, s.j - hero.fj) > 9) return;
   const [x, y] = iso(s.i + 0.5, s.j + 0.5), sx = Math.round(x - camX), sy = Math.round(y - camY) - (s.road ? 40 : 30);
   if (sx < -60 || sx > W + 60 || sy < 0 || sy > H) return;
-  textC(s.road ? 'TO ' + AREA_NAMES.forest[LV.cyc % 3] : 'DUNGEON ENTRANCE', sx, sy, 51);
+  textC(s.road ? 'TO ' + AREA_NAMES.forest[LV.act % 3] : 'DUNGEON ENTRANCE', sx, sy, 51);
 }
 
 // ---------------------------------------------------------------- shrines

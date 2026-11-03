@@ -349,7 +349,6 @@ function tintSprite(sp, tint) {
 // ---------------------------------------------------------------- the broodmother's lair
 // Every third floor the stairs room is her lair: egg sacs that hatch spiderlings while she lives,
 // a telegraphed lunge, and the stairs stay sealed until she dies.
-const isBossFloor = level => level % 3 === 0;
 let boss = null;
 function setupBoss() {
   boss = enemies.find(e => e.def.unique) || null;

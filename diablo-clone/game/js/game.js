@@ -79,8 +79,10 @@ function startLevel(level, seed) {
   warmStep(1e9, prewarm());   // idle poses + the hero's walk now, behind the level fade; the rest during play
   G.msg = [];
   if (LV.night) say('NIGHT HAS FALLEN', 39, 3);
-  say(LV.outdoor ? areaName() : `${TH().name} LEVEL ${LV.depth}`, 51, 3);
-  if (!LV.outdoor && isBossFloor(LV.depth)) say('SOMETHING VAST STIRS IN THE DARK', 22, 4);
+  if (LV.area === 'town' && G.actShown !== level) { G.actCard = 3.2; G.actShown = level; }   // a new act: its title card (once per visit)
+  else if (LV.area === 'town') say(areaName(), 51, 3);
+  else say(areaName(), 51, 3);
+  if (LV.arena) say('SOMETHING VAST STIRS IN THE DARK', 22, 4);
   if (LV.area === 'forest') say(LV.autumn ? 'A TREANT ELDER HOLDS THE WAY DOWN' : 'AN OGRE WARLORD HOLDS THE WAY DOWN', 22, 4);
 }
 function makeEnemy(id, fi, fj, n) {
@@ -440,6 +442,7 @@ function update(dt) {
   // a boss's death plays in slow motion for a moment
   if (G.slowmo > 0) { G.slowmo -= dt; dt *= 0.35; }
   if (G.bossIntro > 0) G.bossIntro -= dt;
+  if (G.actCard > 0) G.actCard -= dt;
   if (STAT.regen && !hero.dead && G.mode === 'play') hero.hp = Math.min(STAT.maxHp, hero.hp + STAT.regen * dt);
   G.t += dt;
   for (const m of G.msg) m.t -= dt; G.msg = G.msg.filter(m => m.t > 0);

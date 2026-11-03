@@ -29,7 +29,6 @@ const THEMES = {
   hell: { name: 'HELL', ramp: HELL, torch: 0.24, banners: true },
   town: { name: 'TOWN', ramp: S, torch: 0 }, forest: { name: 'FOREST', ramp: S, torch: 0 },
 };
-const themeOf = level => ['crypt', 'caves', 'hell'][Math.floor((level - 1) / 2) % 3];
 const TH = () => THEMES[LV.theme || 'crypt'];
 // a stone tone on the 0..8 scale, mapped into the current theme's ramp
 const ST = t => { const r = TH().ramp; return r[clamp(Math.round(t * (r.length - 1) / 8), 0, r.length - 1)]; };
@@ -67,9 +66,11 @@ function genLevel(level, seed) {
   // levels cycle town -> forest -> three dungeon floors (outdoor.js); LV.diff drives difficulty
   const A = areaOf(level);
   resizeWorld(A.kind === 'forest' ? 64 : 40, A.kind === 'forest' ? 64 : 40);
-  LV.area = A.kind; LV.cyc = A.cyc; LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.autumn = A.cyc % 2 === 1; LV.night = A.kind !== 'dungeon' && A.cyc % 3 === 2; LV.plaza = null; LV.npcs = []; LV.critters = [];
+  LV.area = A.kind; LV.cyc = A.cyc; LV.act = A.act; LV.loop = A.loop; LV.floor = A.floor || 0; LV.arena = A.arena || null;
+  LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.autumn = A.act === 1; LV.night = A.kind !== 'dungeon' && A.act === 2; LV.plaza = null; LV.npcs = []; LV.critters = [];
   if (LV.outdoor) { LV.theme = A.kind; genOutdoor(level, seed, A); LV.level = level; LV.seed = seed; return; }
-  LV.theme = themeOf(LV.depth);
+  LV.theme = ACTS[A.act].theme;   // each act's dungeon keeps one theme: crypt, caves, hell
+  if (LV.arena) { genArena(LV.arena, seed); LV.level = level; LV.seed = seed; return; }
   for (let attempt = 0; attempt < 20; attempt++) if (tryGen(LV.diff, seed + attempt * 7919)) { LV.level = level; LV.seed = seed; return; }
   throw new Error('level generation failed');
 }
@@ -101,6 +102,21 @@ function tryGen(level, seed) {
     corridor(rooms[best[0]], rooms[best[1]]); inTree.push(best[1]);
   }
   for (let e = 0; e < 2; e++) { const a = R.int(0, rooms.length - 1), b = R.int(0, rooms.length - 1); if (a !== b) corridor(rooms[a], rooms[b]); }
+  buildWalls();
+  LV.rooms = rooms;
+  LV.start = rooms[0];
+  // reachability from the start room; stairs go in the farthest room
+  const dist = bfs(LV.start.cx, LV.start.cy);
+  for (let k = 0; k < MW * MH; k++) if (map[k] === FLOOR && dist[k] < 0) return false;
+  let far = 1, fd = -1;
+  rooms.forEach((r, n) => { const d = dist[tIdx(r.cx, r.cy)]; if (n && d > fd) { fd = d; far = n; } });
+  LV.stairs = { i: rooms[far].cx, j: rooms[far].cy, room: far };
+  placeDecor(R, level, dist);
+  placeSpawns(R, level);
+  return true;
+}
+function buildWalls() {
+  const map = LV.map;
   // walls around every floor tile
   for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
     if (map[tIdx(i, j)] !== VOID) continue;
@@ -120,17 +136,170 @@ function tryGen(level, seed) {
     }
     LV.tall[tIdx(i, j)] = clear ? 1 : 0;
   }
-  LV.rooms = rooms;
-  LV.start = rooms[0];
-  // reachability from the start room; stairs go in the farthest room
-  const dist = bfs(LV.start.cx, LV.start.cy);
-  for (let k = 0; k < MW * MH; k++) if (map[k] === FLOOR && dist[k] < 0) return false;
-  let far = 1, fd = -1;
-  rooms.forEach((r, n) => { const d = dist[tIdx(r.cx, r.cy)]; if (n && d > fd) { fd = d; far = n; } });
-  LV.stairs = { i: rooms[far].cx, j: rooms[far].cy, room: far };
-  placeDecor(R, level, dist);
-  placeSpawns(R, level);
-  return true;
+}
+function placeTorches(D) {
+  // torches on tall walls facing floor, spaced apart
+  const torches = [];
+  for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
+    if (!LV.tall[tIdx(i, j)]) continue;
+    const faceR = tileAt(i + 1, j) === FLOOR, faceL = tileAt(i, j + 1) === FLOOR;
+    if (!faceR && !faceL) continue;
+    if (hash(i, j, LV.seed) > TH().torch || torches.some(t => Math.abs(t.i - i) + Math.abs(t.j - j) < 5)) continue;
+    torches.push({ kind: 'torch', i, j, face: faceL ? 'L' : 'R' });
+  }
+  D.push(...torches);
+}
+// Designed boss arenas (round 22), one per act, drawn as text: each character is a tile. Rows are j,
+// columns are i (so a row runs down-right on screen, and the top-left is the top of the screen).
+//   . floor   S start   X stairs   B boss   C chest   p pillar   b brazier   t statue   c coffin
+//   n candles   g stalagmite   e egg sac   m glowing fungus   l lava crack   o bone pile
+//   x bones   d blood   k skeleton   a archer   (blank = rock)
+const ARENA_MAPS = {
+  king: [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "          ......................",
+    "          .........x........a...",
+    "          ......................",
+    "          ....p...p...p...p...p.",
+    "   .....  .t....................",
+    "   .C...  .....b....k...........",
+    "   ....................x........",
+    "   ..X.......B..dx..............",
+    "   .....  ............d.........",
+    "   .....  .....b....k....x......",
+    "          .t....................",
+    "          ....p...p...p...p...p.",
+    "          ......................",
+    "          ..x...............a...",
+    "          ......................",
+    "                          ..",
+    "                          ..",
+    "                          ..",
+    "                          .d",
+    "                          ..",
+    "                          ..",
+    "                        ........",
+    "                        c......n",
+    "                        ........",
+    "                        ...S....",
+    "                        ........",
+    "                        c......n",
+    "                        ........",
+  ],
+  nest: [
+    "",
+    "",
+    "              .......",
+    "            ...........",
+    "           .g....e....g.",
+    "    ...   ...............",
+    "   .C...  ...b.......x...",
+    "   ..X....................",
+    "   ..............B........",
+    "    ...  ...e.........e...",
+    "         .....m...........",
+    "         ............b....",
+    "          ...e.x....me..g",
+    "          .g.............",
+    "           ......e......",
+    "            .......g....",
+    "              .........",
+    "                    ...m",
+    "                     ...",
+    "                      ...",
+    "                        .m.",
+    "                          ...",
+    "                           ...",
+    "                           ..b",
+    "                          ...",
+    "                            .",
+    "                          m....",
+    "                         .......",
+    "                        ...b.....",
+    "                        .........",
+    "                        ....S....",
+    "                         .....m.",
+    "                          .....",
+    "                            .",
+  ],
+  sanctum: [
+    "",
+    "",
+    "",
+    "                  .",
+    "              .........",
+    "             .....a.....",
+    "           ...............",
+    "           ...b......ob...",
+    "          ....o............",
+    "   ..C.   .................",
+    "   ........................",
+    "   .X.....t..k....B....k..t....",
+    "   ............................",
+    "   ....   .....................",
+    "          ............o.... ...",
+    "           ...bo......b...  ...",
+    "           ...............  ...",
+    "             .....a.....    ...",
+    "              .........     l..",
+    "                  .         ...",
+    "                            ...",
+    "                            ...",
+    "                            ..l",
+    "                            ...",
+    "                            ...",
+    "                            ...",
+    "                            l..",
+    "                            ...",
+    "                          ........",
+    "                          ........",
+    "                          ........",
+    "                          ....S...",
+    "                          ........",
+    "                          ........",
+    "                          ........",
+  ],
+};
+// an act's last floor: the designed arena from ARENA_MAPS, its boss and guards placed where drawn
+function genArena(key, seed) {
+  const R = rng(seed), map = LV.map, rows = ARENA_MAPS[key], act = ACTS[LV.act];
+  map.fill(VOID); LV.solid.fill(0); LV.roomOf.fill(-1); LV.seen.fill(0); LV.vis.fill(0);
+  const feats = [];
+  rows.forEach((row, j) => { for (let i = 0; i < row.length; i++) { const c = row[i]; if (c === ' ' || i < 1 || j < 1 || i >= MW - 1 || j >= MH - 1) continue; map[tIdx(i, j)] = FLOOR; if (c !== '.') feats.push([c, i, j]); } });
+  buildWalls();
+  const at = c => feats.find(f => f[0] === c), box = (c, r, type) => { const [, i, j] = at(c); return { x: i - r, y: j - r, w: r * 2 + 1, h: r * 2 + 1, cx: i, cy: j, type }; };
+  LV.rooms = [box('S', 3, 'crypt'), box('B', 6, 'hall'), box('X', 2, 'store')];
+  LV.rooms.forEach((r, n) => { for (let j = r.y; j < r.y + r.h; j++) for (let i = r.x; i < r.x + r.w; i++) if (tileAt(i, j) === FLOOR && LV.roomOf[tIdx(i, j)] < 0) LV.roomOf[tIdx(i, j)] = n; });
+  LV.start = LV.rooms[0]; LV.stairs = { i: LV.rooms[2].cx, j: LV.rooms[2].cy, room: 2 };
+  const d0 = bfs(LV.start.cx, LV.start.cy);
+  for (let k = 0; k < MW * MH; k++) if (map[k] === FLOOR && d0[k] < 0) throw new Error(`arena ${key}: unreachable floor at ${k % MW},${Math.floor(k / MW)}`);
+  const D = LV.decor = [], S = LV.spawns = [], seed6 = () => R.int(1, 1e6);
+  const solid = (i, j) => { LV.solid[tIdx(i, j)] = 1; return true; };
+  for (const [c, i, j] of feats) {
+    const fi = i + 0.5, fj = j + 0.5;
+    if (c === 'p') solid(i, j) && D.push({ kind: 'pillar', i, j });
+    else if (c === 'b') solid(i, j) && D.push({ kind: 'brazier', i, j });
+    else if (c === 't') solid(i, j) && D.push({ kind: 'statue', i, j, hell: LV.theme === 'hell' });
+    else if (c === 'c') solid(i, j) && D.push({ kind: 'coffin', i, j, yaw: tileAt(i - 1, j) === WALL || tileAt(i + 1, j) === WALL ? Math.PI / 2 : 0 });
+    else if (c === 'n') solid(i, j) && D.push({ kind: 'candles', i, j });
+    else if (c === 'g') solid(i, j) && D.push({ kind: 'stalagmite', i, j, seed: seed6() % 7 });
+    else if (c === 'o') solid(i, j) && D.push({ kind: 'bonepile', i, j, seed: seed6() % 5 });
+    else if (c === 'e') solid(i, j) && D.push({ kind: 'egg', i, j, seed: seed6() });
+    else if (c === 'C') solid(i, j) && D.push({ kind: 'chest', i, j, seed: seed6() });
+    else if (c === 'm') D.push({ kind: 'mushroom', fi, fj, seed: seed6() % 6 });
+    else if (c === 'l') D.push({ kind: 'lava', fi, fj, size: 4, seed: seed6() });
+    else if (c === 'x') D.push({ kind: 'bones', fi, fj, seed: seed6() });
+    else if (c === 'd') D.push({ kind: 'blood', fi, fj, size: 3, seed: seed6() });
+    else if (c === 'B') S.push({ id: act.boss, fi, fj });
+    else if (c === 'k') S.push({ id: 'skeleton', fi, fj });
+    else if (c === 'a') S.push({ id: 'archer', fi, fj });
+  }
+  placeTorches(D);
 }
 function bfs(si, sj) {
   const dist = new Int16Array(MW * MH).fill(-1), q = [tIdx(si, sj)]; dist[q[0]] = 0;
@@ -195,16 +364,7 @@ function placeDecor(R, level) {
     const n = R.int(1, LV.rooms.length - 1), r = LV.rooms[n];
     for (let t = 0; t < 30; t++) { const i = R.int(r.x, r.x + r.w - 1), j = r.y; if (trySolid(i, j)) { D.push({ kind: 'chest', i, j, seed: R.int(1, 1e6) }); break; } }
   }
-  // torches on tall walls facing floor, spaced apart
-  const torches = [];
-  for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
-    if (!LV.tall[tIdx(i, j)]) continue;
-    const faceR = tileAt(i + 1, j) === FLOOR, faceL = tileAt(i, j + 1) === FLOOR;
-    if (!faceR && !faceL) continue;
-    if (hash(i, j, LV.seed) > TH().torch || torches.some(t => Math.abs(t.i - i) + Math.abs(t.j - j) < 5)) continue;
-    torches.push({ kind: 'torch', i, j, face: faceL ? 'L' : 'R' });
-  }
-  D.push(...torches);
+  placeTorches(D);
 }
 function placeSpawns(R, level) {
   const S = LV.spawns = [];
@@ -221,14 +381,6 @@ function placeSpawns(R, level) {
     }
   });
   if (R() < 0.25) { const r = LV.rooms[R.int(1, LV.rooms.length - 1)], p = free(r); if (p) S.push({ id: 'treasure', fi: p[0], fj: p[1] }); }   // now and then a treasure goblin
-  if (isBossFloor(LV.depth)) {   // the broodmother's lair: she waits in the stairs room among egg sacs
-    const n = LV.stairs.room, r = LV.rooms[n];
-    for (let k = S.length - 1; k >= 0; k--) if (LV.roomOf[tIdx(Math.floor(S[k].fi), Math.floor(S[k].fj))] === n) S.splice(k, 1);
-    // every sixth floor the Skeleton King holds court instead of the broodmother
-    const king = LV.depth % 6 === 0;
-    const p = free(r); if (p) S.push({ id: king ? 'skelking' : 'broodmother', fi: p[0], fj: p[1] });
-    for (let t = 0, eggs = 0; t < 60 && eggs < (king ? 0 : 5); t++) { const i = R.int(r.x, r.x + r.w - 1), j = R.int(r.y, r.y + r.h - 1); if (trySolid(i, j)) { LV.decor.push({ kind: 'egg', i, j, seed: R.int(1, 1e6) }); eggs++; } }
-  }
 }
 
 // ---------------------------------------------------------------- textures
