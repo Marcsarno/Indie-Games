@@ -520,6 +520,7 @@ const VSTAT = {                                  // per-vehicle handling (multip
   tesla: { acc: 1.75, top: 1.22, steer: 1.0, grip: 1.35, ram: .8 },    // Aaron: very fast acceleration, good turning, below-average ramming (round 31: calmer steering + more grip, user: "doesn't feel like it controls well")
   moto: { acc: 1.7, top: 1.12, steer: 1.4, grip: 1.5, ram: .2 } };     // Chris: very fast, tightest turns, most grip, no ramming (a car hit stops the bike)
 const VDEF = { acc: 1, top: 1, steer: 1, grip: 1, ram: 1 };
+const CC_TOP = WN === 'cc' ? 1.15 : 1;     // round 47 (user: "the car's a little bit slow"): +15 % top speed on the new map, acceleration unchanged
 function makeVeh(name, car) { const g = car.group; const D_ = car.dims, M_ = 320 * D_[0] * D_[1]; return vehs[name] = { st: VSTAT[car.kind] || VDEF, car, name, mass: M_, perf: ({ coupe: 1.15, police: 1.1, hatchback: .95, suv: .95, minivan: .9, pickup: .95, van: .85, tow: .8, ambulance: .85, boxtruck: .72, flatbed: .75, garbage: .65, bus: .62 })[car.kind] || 1, I: M_ * (D_[0] * D_[0] + D_[1] * D_[1]) / 12, x: g.position.x, z: g.position.z, th: g.rotation.y, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, mode: 'parked', hardest: 0, hits: 0 }; }
 for (const [name, car] of Object.entries(allCars)) makeVeh(name, car);
 let ride = 'player';                              // the hero vehicle's name in vehs ('player' = Marc's Jeep, 'hero_tesla', 'hero_moto')
@@ -930,7 +931,7 @@ function physicsStep(dt) {
   const sn = Math.sin(c.th), cs = Math.cos(c.th), fx = -sn, fz = -cs, rx = cs, rz = -sn;
   let vf = c.vx * fx + c.vz * fz, vl = c.vx * rx + c.vz * rz;
   let tgt = driving ? (input.right ? 1 : 0) - (input.left ? 1 : 0) : 0, gasK = driving && input.gas ? 1 : 0, slow = 0, rev = false;
-  const st = c.st || VDEF, pf = c.perf || 1, TOP = TUNE.top * pf * st.top, G = TUNE.stickGain, DZ = TUNE.dead;
+  const st = c.st || VDEF, pf = c.perf || 1, TOP = TUNE.top * pf * st.top * CC_TOP, G = TUNE.stickGain, DZ = TUNE.dead;
   let brk = driving && input.brake;
   if (driving && TUNE.stickDrive === 2) {                             // stick steers like a wheel: left/right = steering (soft centre), up = gas, pull down = brake, then reverse
     const sx = dstickIn.x, sy = dstickIn.y, ax = Math.abs(sx);

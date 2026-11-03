@@ -590,7 +590,8 @@ def fill_after(placed_xy):
     lights()
     with warp(): parks(); offices_and_site()
     tick_("parks")
-    gap_fill()                 # round 43: stadium, ball fields, golf, construction site, offices, gardens/stables, lake parks, storage, townhomes, church
+    gap_fill(); back_of_house(); tick_("back of house")         # round 47: service lanes, docks, dumpsters, buffer walls
+    # round 43: stadium, ball fields, golf, construction site, offices, gardens/stables, lake parks, storage, townhomes, church
     believability()            # round 40: driveways, street furniture, power line, aprons, tree clusters
     grove_fill(); tick_("groves")   # round 43: tree islands in whatever grass is still bare
     STATIC.extend(WL.build(vc=True, recalc=False)); STATIC.extend(FIX.build(vc=True, recalc=False))
