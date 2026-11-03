@@ -173,3 +173,22 @@ def brk_houses():
                 if near_road(c[0], c[1], 1.0) is not None or in_water(c[0], c[1], .5): continue
                 BRK.append(["fence", round(c[0], 2), round(c[1], 2), round(math.degrees(math.atan2(P1[1] - P0[1], P1[0] - P0[0])), 1), round(L / k, 2)]); n += 1
     print("breakable fence panels", n)
+
+RAMPS = []
+def ramps():
+    """Round 52 (user: shortcuts): concrete kicker ramps any car can launch off (page: world.ramps). (x, y) = the ramp's foot, heading = the way you jump."""
+    b = TB(T43); CON = flat("#b8b2a6"); YEL = flat("#e8b21c"); DK_ = flat("#2a2c30"); DIRT = flat("#9a7a52")
+    for (x, y, h, L, Wd, H, mat) in ((-233.0, 467.75, 0.0, 7.0, 5.0, 1.3, CON),          # dead end on the canal: over the canal onto the trail / the office lot
+                                     (-229.0, 979.75, 180.0, 7.0, 4.6, 1.2, CON),        # the Promenade plaza: over the fountain (C1)
+                                     (322.0, -246.0, 0.0, 6.0, 4.6, 1.2, CON),           # skate park, both ends
+                                     (452.0, -246.0, 180.0, 6.0, 4.6, 1.2, CON),
+                                     (562.0, 1322.0, 180.0, 9.0, 6.0, 1.6, DIRT)):       # construction site: a dirt ramp toward the slab
+        a = math.radians(h); ux, uy = math.cos(a), math.sin(a); vx, vy = -uy, ux; P = lambda u, v, z: (x + ux * u + vx * v, y + uy * u + vy * v, z)
+        hw = Wd / 2
+        b.poly(mat, [P(0, -hw, .02), P(L, -hw, H), P(L, hw, H), P(0, hw, .02)])           # the slope
+        b.poly(DK_, [P(L, -hw, 0), P(L, hw, 0), P(L, hw, H), P(L, -hw, H)])               # the drop at the back
+        b.poly(mat, [P(0, -hw, 0), P(L, -hw, 0), P(L, -hw, H)]); b.poly(mat, [P(0, hw, 0), P(L, hw, H), P(L, hw, 0)])
+        if mat is CON:
+            for k in range(3): u0 = L - 1.2 + k * .0; b.poly(YEL, [P(L - .5, -hw + k * hw * .66, H * (L - .5) / L + .01), P(L, -hw + k * hw * .66 + hw * .33, H + .01), P(L, -hw + k * hw * .66 + hw * .66, H + .01), P(L - .5, -hw + k * hw * .66 + hw * .33, H * (L - .5) / L + .01)])
+        RAMPS.append([round(x, 2), round(y, 2), h, L, Wd]); FOOT.append((min(P(0, -hw, 0)[0], P(L, hw, 0)[0]) - 1, min(P(0, -hw, 0)[1], P(L, hw, 0)[1]) - 1, max(P(0, -hw, 0)[0], P(L, hw, 0)[0]) + 1, max(P(0, -hw, 0)[1], P(L, hw, 0)[1]) + 1))
+    print("ramps", len(RAMPS))
