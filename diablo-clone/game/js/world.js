@@ -59,7 +59,7 @@ function resizeWorld(mw, mh) {
   MW = mw; MH = mh; WX0 = MH * 16 + 24; WW = (MW + MH) * 16 + 48; WH = (MW + MH) * 8 + WY0 + 32;
   const n = MW * MH, p = WW * WH;
   LV.map = new Uint8Array(n); LV.tall = new Uint8Array(n); LV.solid = new Uint8Array(n); LV.roomOf = new Int16Array(n); LV.seen = new Uint8Array(n); LV.vis = new Float32Array(n); LV.reserve = new Uint8Array(n);
-  floorBuf = new Uint8Array(p); wIdx = new Uint8Array(p); wZ = new Uint8Array(p); wFloor = new Uint8Array(p); wTile = new Int16Array(p);
+  floorBuf = new Uint8Array(p); wIdx2 = new Uint8Array(p * 4); wIdx = new Uint8Array(p); wZ = new Uint8Array(p); wFloor = new Uint8Array(p); wTile = new Int16Array(p);
   staticLight[0] = new Float32Array(p); staticLight[1] = new Float32Array(p);
 }
 function genLevel(level, seed, side = null) {
@@ -614,7 +614,10 @@ function makeBox(wi, wj, hgt, tex) {
 const propCache = {};
 function propSprite(name, build, size, yaw = 0) {
   const k = name + '|' + yaw;
-  if (!propCache[k]) { const r = new Rig(); build(r); propCache[k] = renderRig(r, yaw, ...size); }
+  if (!propCache[k]) {
+    const r = new Rig(); build(r); const sp = propCache[k] = renderRig(r, yaw, ...size);
+    if (WORLD2X) { scaleRig(r, SPX); const [w, h, ax, ay] = size; sp.sp2 = renderRig(r, yaw, w * SPX, h * SPX, ax * SPX, ay * SPX, 2); sp.sp2.px = SPX; }   // the same rig at twice the detail
+  }
   return propCache[k];
 }
 // the stairwell: opening half-sizes in rig units (one tile is TILE_U = 22.6); the steps run down
@@ -733,6 +736,11 @@ const PROPS = {
 // ---------------------------------------------------------------- bake
 let floorBuf = new Uint8Array(WW * WH);
 let wIdx = new Uint8Array(WW * WH), wZ = new Uint8Array(WW * WH), wFloor = new Uint8Array(WW * WH);
+// round 27: the 2x world layer. Props are also rendered at twice the detail and baked here, one
+// palette index per detail pixel (0 = nothing: show the doubled 1x world). Floors and walls stay
+// 1x, doubled. Lighting, fog and gameplay keep reading the 1x buffers. Off until measured: ?w2=1 turns it on.
+const WORLD2X = (new URLSearchParams(location.search)).get('w2') === '1';
+let wIdx2 = new Uint8Array(WW * WH * 4);
 let wTile = new Int16Array(WW * WH);
 const props = [];    // static, baked, depth-sorted with characters where they overlap
 const dynProps = []; // barrels and chests: drawn every frame
@@ -807,8 +815,30 @@ function stampBlood(wx, wy, size, seed, ramp = RED) {
     }
   }
 }
+// the 2x layer under one 1x world blit (called before the 1x pixels are written). A sprite with a
+// 2x version writes its detail pixels; where its 1x shape covers but the 2x one doesn't, what was
+// behind is kept (the 2x pixel already there, or the 1x color behind); a 1x-only sprite (a wall)
+// clears the 2x layer it covers so the doubled wall shows
+function blit2(sp, wx, wy, sx0, sy0) {
+  const W2 = WW * 2, H2 = WH * 2, s2 = sp.sp2;
+  for (let y = 0; y < sp.h; y++) {
+    const yy = sy0 + y; if (yy < 0 || yy >= WH) continue;
+    for (let x = 0; x < sp.w; x++) {
+      const xx = sx0 + x; if (xx < 0 || xx >= WW || !sp.data[y * sp.w + x]) continue;
+      const behind = wIdx[yy * WW + xx];
+      for (let b = 0; b < 2; b++) for (let a = 0; a < 2; a++) { const k = (yy * 2 + b) * W2 + xx * 2 + a; if (!s2) wIdx2[k] = 0; else if (!wIdx2[k]) wIdx2[k] = behind; }
+    }
+  }
+  if (!s2) return;
+  const X0 = Math.round(wx * 2) - s2.ax, Y0 = Math.round(wy * 2) - s2.ay;
+  for (let y = 0; y < s2.h; y++) {
+    const yy = Y0 + y; if (yy < 0 || yy >= H2) continue;
+    for (let x = 0; x < s2.w; x++) { const v = s2.data[y * s2.w + x], xx = X0 + x; if (v && xx >= 0 && xx < W2) wIdx2[yy * W2 + xx] = v; }
+  }
+}
 function blitWorld(sp, wx, wy, zBase = 0, tile = -1, asFloor = false) {
   const sx0 = Math.round(wx) - sp.ax, sy0 = Math.round(wy) - sp.ay;
+  if (WORLD2X && !asFloor) blit2(sp, wx, wy, sx0, sy0);
   for (let y = 0; y < sp.h; y++) {
     const yy = sy0 + y; if (yy < 0 || yy >= WH) continue;
     for (let x = 0; x < sp.w; x++) {
@@ -823,7 +853,7 @@ function blitWorld(sp, wx, wy, zBase = 0, tile = -1, asFloor = false) {
   }
 }
 function buildWorld() {
-  genFloor();
+  genFloor(); wIdx2.fill(0);
   props.length = 0; dynProps.length = 0; fires.length = 0; lights.length = 0;
   const back = [];
   if (LV.outdoor) buildOutdoor(back);

@@ -9,14 +9,14 @@
 // and merged on top as blocks. One upload per frame. The camera moves in frame pixels: the world is
 // shifted by (hx, hy) frame pixels when the camera sits on a half pixel, so scrolling judders half as much.
 let W = 270, H = 480;
-let scr, zbuf, shd, cid, lbuf, tbuf, out32, outImg, base32, OW, OH, ov32, ovImg, hud32, hudImg;
+let scr, zbuf, shd, cid, lbuf, tbuf, levB, out32, outImg, base32, OW, OH, ov32, ovImg, hud32, hudImg;
 const cvs = document.getElementById('c');
 const ctx = cvs.getContext('2d');
 function allocBuffers(w, h) {
   W = w; H = h; OW = W * SPX; OH = H * SPX;
   cvs.width = OW; cvs.height = OH;
   scr = new Uint8Array(W * H); zbuf = new Uint8Array(W * H); shd = new Uint8Array(W * H); cid = new Uint8Array(W * H);
-  lbuf = new Float32Array(W * H); tbuf = new Int16Array(W * H);
+  lbuf = new Float32Array(W * H); tbuf = new Int16Array(W * H); levB = new Uint8Array(W * H);
   base32 = out32 = new Uint32Array(W * H); hud32 = new Uint32Array(W * H);
   ovImg = ctx.createImageData(OW, OH); ov32 = new Uint32Array(ovImg.data.buffer);
   if (typeof uiResize === 'function') uiResize();
@@ -924,12 +924,13 @@ function render() {
     // tall scenery in front of the hero is redrawn dithered so the hero shows through (Diablo's trick)
     const hd = hero.fi + hero.fj, hb = boxes[0];
     const x0 = p.wx - p.sp.ax, y0 = p.wy - p.sp.ay, see = p.sp.h > 30 && p.depth > hd + 0.5 && x0 < hb[2] && x0 + p.sp.w > hb[0] && y0 < hb[3] && y0 + p.sp.h > hb[1];
-    ov.push({ depth: p.depth, draw: () => ovBlit(p.sp, p.wx, p.wy, -1, 0, see ? 0.5 : 0, p.tile, clip) });
+    ov.push({ depth: p.depth, draw: () => ovBlit(WORLD2X && p.sp.sp2 ? p.sp.sp2 : p.sp, p.wx, p.wy, -1, 0, see ? 0.5 : 0, p.tile, clip) });
   }
   for (const p of dynProps) {
     if (p.broken) continue;
     const sp = p.kind === 'barrel' ? PROPS.barrel() : p.kind === 'egg' ? PROPS.egg() : PROPS.chest(p.open);
     if (p.flash > 0) p.flash -= 1 / 60;
+    if (WORLD2X && sp.sp2) { ov.push({ depth: p.depth, draw: () => ovBlit(sp.sp2, p.wx, p.wy, -1, p.flash > 0 ? 1 : 0, 0, p.tile) }); continue; }   // barrels and chests at full detail, depth-sorted with the bodies
     base.push({ depth: p.depth, draw: () => blit(sp, p.wx, p.wy, p.flash > 0, 0, p.tile) });
     const clip = inFront(p.depth, p.wx - sp.ax, p.wy - sp.ay, sp.w, sp.h);
     if (clip) ov.push({ depth: p.depth, draw: () => ovBlit(sp, p.wx, p.wy, -1, p.flash > 0 ? 1 : 0, 0, p.tile, clip) });
@@ -960,19 +961,24 @@ function render() {
   for (const d of base) d.draw();
   drawTelegraph(); drawImpactFx(); drawMeteors(); drawLichFx(); drawWarriorFx();
   const charLevel = lightPass(chars, kx, ky);
-  // the frame: the lit world doubled (shifted by the camera's half pixel), then the detail layer over it
-  for (let y = 0; y < H; y++) {
-    const r0 = y * W; let first = -1;
-    for (let b = 0; b < SPX; b++) {
-      const yy = y * SPX - hy + b; if (yy < 0 || yy >= OH) continue;
-      const d = yy * OW;
-      if (first >= 0) { ov32.copyWithin(d, first, first + OW); continue; }   // the second line of a doubled row
-      for (let x = 0, X = -hx; x < W; x++, X += SPX) { const c = base32[r0 + x]; if (X >= 0) ov32[d + X] = c; ov32[d + X + 1] = c; }
-      if (hx) ov32[d + OW - 1] = base32[r0 + W - 1];
-      first = d;
+  // the frame: the lit world doubled (shifted by the camera's half pixel), then the detail layer over it.
+  // Round 27: where the world pixel is still the baked one this frame (nothing drawn over it) and
+  // the 2x layer holds a prop pixel, that detail pixel is the 2x prop, lit at the 1x pixel's level
+  const W2 = WW * 2, H2 = WH * 2, black = PAL32[BLK];
+  for (let yy = 0; yy < OH; yy++) {
+    const y = Math.min(H - 1, (yy + hy) >> 1), r0 = y * W, d = yy * OW, wy2 = cam2y + yy, wy = camY + y;
+    const has2 = WORLD2X && wy2 >= 0 && wy2 < H2 && wy >= 0 && wy < WH, row2 = wy2 * W2, wrow = wy * WW + camX;
+    if (!has2) { for (let X = 0; X < OW; X++) ov32[d + X] = base32[r0 + Math.min(W - 1, (X + hx) >> 1)]; continue; }
+    for (let X = 0; X < OW; X++) {
+      const x = Math.min(W - 1, (X + hx) >> 1), o = r0 + x, wx2 = cam2x + X;
+      let c = base32[o];
+      if (wx2 >= 0 && wx2 < W2) {
+        const v2 = wIdx2[row2 + wx2];
+        if (v2) { const lv = levB[o], wx = camX + x; if (lv !== 255 && wx >= 0 && wx < WW && scr[o] === wIdx[wrow + x]) c = (v2 & EMIS) ? PAL32[CYCLE[v2 & 127]] : v2 === BLK ? black : LCOL[lv * NPAL + v2]; }
+      }
+      ov32[d + X] = c;
     }
   }
-  if (hy) ov32.copyWithin((OH - 1) * OW, (OH - 2) * OW, (OH - 1) * OW);
   ov.sort((a, b) => a.depth - b.depth);
   for (const d of ov) d.draw();
   for (const g of G.ghosts) ovBlit(g.sp, g.x, g.y, L_ID, 6, 1 - g.t / g.t0, -1);   // blink afterimage, dissolving
@@ -1176,17 +1182,19 @@ function lightPass(chars, kx, ky) {
     const by = (y & 3) << 2;
     for (let x = 0; x < W; x++, o++) {
       const v = scr[o];
+      levB[o] = 255;   // the level this pixel was lit at, for the 2x world layer (255: none, show as is)
       if (v === BLK) { out32[o] = black; continue; }
       const tk = tbuf[o];
       if (tk < 0 ? !LV.outdoor : !seen[tk]) { out32[o] = black; continue; }
-      if (v & EMIS) { out32[o] = PAL32[CYCLE[v & 127]]; continue; }
       const ci = cid[o];
-      if (ci) { out32[o] = LCOL[cl[ci - 1] + v]; continue; }
       const vv = tk < 0 ? 1 : vis[tk];
       // remembered areas sit at a dim floor level; visible areas get their real light
       const l = (shd[o] ? lbuf[o] * 0.4 : lbuf[o]) * BANDS * vv + 0.9 * (1 - vv) + BAYER[by | (x & 3)];
-      const L = (l | 0) * NPAL;
-      out32[o] = LCOL[(L < top ? L : top) + v];
+      const L = (l | 0) < LEVELS - 1 ? (l | 0) : LEVELS - 1;
+      if (!ci) levB[o] = L;
+      if (v & EMIS) { out32[o] = PAL32[CYCLE[v & 127]]; continue; }
+      if (ci) { out32[o] = LCOL[cl[ci - 1] + v]; continue; }
+      out32[o] = LCOL[L * NPAL + v];
     }
   }
   return charLevel;
