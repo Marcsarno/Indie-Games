@@ -28,6 +28,7 @@ Tune panel for the car handling. Controls are touch (stick/pads) with keyboard f
 - 3 Back-yard fences: corner posts only (panels stay). Arterial walls: straight 3 m pieces merged into runs (<= 30 m).
 - 4 Haze: cc fog 120..330 -> 70..165 (things fade out before the 140 m draw distance instead of popping).
 - 5 Trees (viewer, new map only): each kind merged into one vertex-coloured mesh (1 draw call per 80 m tile), tiles past VEG_LOD = 85 m use a 20-40 tri stand-in (canopy bicone + trunk prism, average colours, no shadow). Knocked-over trees still work (p.inst holds both).
+- Fixes after the user's phone test (round 48b): Coconut Creek Pkwy east of Lyons was GRASS since round 46 - the Rec Center (now east-facing after the squeeze) laid its lawn with south-face maths, a 200 x 168 m lawn at z .05 over the road (SITE REC/POOL lawn + deck only for face "s" now); canal bridge rails stood ACROSS the lanes (now along the road edges); plan houses skip water (some sat in the canal; houses 312 -> 273). Water slow-down re-tested (`node .work/wet.js`): canal x3 + 5 lakes all slow the car to ~5 m/s, so the user's "water didn't slow me" needs a location.
 - Result: scene.glb 17.6 -> 11.65 MB; drive views 262-361 calls / 157-282k tris -> 215-258 calls / 113-152k tris (-45 % triangles, -15-30 % draw calls). Shots: .work/r48/ba_perf.jpg. Checks clean, both worlds load.
 
 ## ROUND 47: BACK OF HOUSE + FASTER CAR (user: shops "then there's grass behind it, and then there's residential homes... no smooth separation"; "don't want to overdo it"; "the car's a little bit slow")

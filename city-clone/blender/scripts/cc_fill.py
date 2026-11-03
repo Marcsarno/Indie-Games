@@ -221,9 +221,10 @@ def SITE(b_, lot):
         key = "rec" if lab == "REC CENTER" else "aquatic"; w_ = min(lw, 70); d_ = min(ld, 30)
         place(bldg(f"{key}", w_, d_, 8.0, wall="#e9e2d0", key=key, accent="#1d6f8c", roof="hip", roof_hex="#bcb6aa", sign_h=2.0), cx, cy + (ld / 2 - d_ / 2 if face == "s" else 0), face)
         cbox(cx, cy + (ld / 2 - d_ / 2 if face == "s" else 0), *world_dims(face, w_, d_))
-        if lab == "POOL":
-            BB.box(flat("#d8d2c4"), x0, x1, y0, y0 + ld - d_ - 2, 0, .06); BB.box(flat("#3fb6e0"), x0 + 15, x1 - 15, y0 + 8, y0 + ld - d_ - 10, 0, .08)
-        else: lawn(x0, y0, x1, y0 + ld - d_ - 2)
+        if face != "s": pass                                                                    # round 48 fix: the lawn/pool deck assumed a south face (an east-facing rec centre laid lawn across the Pkwy)
+        elif lab == "POOL":
+            BB.box(flat("#d8d2c4"), x0, x1, y0, y1 - d_ - 2, 0, .06); BB.box(flat("#3fb6e0"), x0 + 15, x1 - 15, y0 + 8, y1 - d_ - 10, 0, .08)
+        else: lawn(x0, y0, x1, y1 - d_ - 2)
         return
     if lab in ("GARAGE", "OFFICE GARAGE"):
         w_, d_ = min(lw, 70), min(ld, 50); place(DK.garage(nm, w_, d_, 4, 39), cx, cy, face); col(w_, d_); return

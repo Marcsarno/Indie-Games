@@ -160,7 +160,7 @@ for (a, b_) in segs:
     for (p, q, r__) in (((cx0, a), (cx1, a), (cx1, b_)), ((cx0, a), (cx1, b_), (cx0, b_))): COL.extend(rd.tri_colliders([(p, q, r__)]))
     MAP.append([0, 0, 0, 0, "#2d78b8", "poly", [[round(p[0], 1), round(p[1], 1)] for p in ring]])
 for (a, b_) in zip([s[1] for s in segs], [s[0] for s in segs[1:]]):                           # bridge rails where the roads cross
-    for x_ in (cx0 - 1.2, cx1 + .8): RB.box(m["curb"], x_, x_ + .4, a, b_, 0, .9)
+    for y_ in (a + .4, b_ - .8): RB.box(m["curb"], cx0 - 1.6, cx1 + 1.6, y_, y_ + .4, 0, .9)        # round 48 fix: rails run ALONG the road at its edges (they stood across the lanes)
 tick_("water")
 
 exec(open(os.path.join(HERE, "cc_fill.py")).read())                                            # round 39 (M2): real models, pads, walls, yards, parks (cc_fill.py)
@@ -237,7 +237,7 @@ VAR = [make_house(f"house_v{i}", 11 if i % 2 == 0 else 10, 8.5, 1 + (i % 3 == 0)
 for o in VAR: o.location = (0, 0, -60)
 placed = 0; PLACED_XY = []
 for (hx, hy) in LP["houses"]:
-    if any(f[0] - 3 < hx < f[2] + 3 and f[1] - 3 < hy < f[3] + 3 for f in FOOT) or on_cut(hx, hy, 9): continue
+    if any(f[0] - 3 < hx < f[2] + 3 and f[1] - 3 < hy < f[3] + 3 for f in FOOT) or on_cut(hx, hy, 9) or in_water(hx, hy, 7): continue      # round 48: no houses in the canal
     if any(rd_.closed is False and rd_.nearest(hx, hy)[0] < rd_.hw + 4.5 for rd_ in net if rd_.bb[0] - 30 < hx < rd_.bb[2] + 30 and rd_.bb[1] - 30 < hy < rd_.bb[3] + 30): continue
     if any(r.closed and r.nearest(hx, hy)[0] < r.hw + 4.5 for r in net if r.bb[0] - 30 < hx < r.bb[2] + 30 and r.bb[1] - 30 < hy < r.bb[3] + 30): continue
     best = None
