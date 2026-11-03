@@ -2,18 +2,26 @@
 // Game state, simulation, combat and rendering. UI and input live in ui.js.
 
 // ---------------------------------------------------------------- frame buffers
+// Round 21: the frame is OW x OH = SPX times the world's pixels. The world (floors, walls, scenery)
+// is drawn and lit at W x H as before, then doubled into the frame. Characters, projectiles,
+// particles and whatever stands in front of a character are drawn straight into the frame
+// (characters are rendered with SPX times the detail). The HUD is drawn at W x H into its own buffer
+// and merged on top as blocks. One upload per frame. The camera moves in frame pixels: the world is
+// shifted by (hx, hy) frame pixels when the camera sits on a half pixel, so scrolling judders half as much.
 let W = 270, H = 480;
-let scr, zbuf, shd, cid, lbuf, tbuf, out32, outImg;
+let scr, zbuf, shd, cid, lbuf, tbuf, out32, outImg, base32, OW, OH, ov32, ovImg, hud32, hudImg;
 const cvs = document.getElementById('c');
 const ctx = cvs.getContext('2d');
 function allocBuffers(w, h) {
-  W = w; H = h; cvs.width = W; cvs.height = H;
+  W = w; H = h; OW = W * SPX; OH = H * SPX;
+  cvs.width = OW; cvs.height = OH;
   scr = new Uint8Array(W * H); zbuf = new Uint8Array(W * H); shd = new Uint8Array(W * H); cid = new Uint8Array(W * H);
   lbuf = new Float32Array(W * H); tbuf = new Int16Array(W * H);
-  outImg = ctx.createImageData(W, H); out32 = new Uint32Array(outImg.data.buffer);
+  base32 = out32 = new Uint32Array(W * H); hud32 = new Uint32Array(W * H);
+  ovImg = ctx.createImageData(OW, OH); ov32 = new Uint32Array(ovImg.data.buffer);
   if (typeof uiResize === 'function') uiResize();
 }
-let camX = 0, camY = 0;
+let camX = 0, camY = 0, cam2x = 0, cam2y = 0, hx = 0, hy = 0;
 const params = new URLSearchParams(location.search);
 const SHAKE = params.get('shake') !== '0';
 
@@ -533,7 +541,7 @@ function updateEnemy(e, dt) {
     if (e.dying >= 0.6 && !e.corpse) {   // the last death frame becomes part of the floor
       e.corpse = true;
       const [x, y] = screenOf(e);
-      blitWorld(getSprite(e.fam, e.look, e.dir, 'death', 5, e), x, y, 0, -1, true);
+      blitWorld(getSprite(e.fam, e.look, e.dir, 'death', 5, e, 1), x, y, 0, -1, true);
     }
     return;
   }
@@ -766,7 +774,9 @@ function render() {
   const [kx, ky] = screenOf(hero);
   const sh = G.trauma * G.trauma * 5;
   const shx = Math.round(sh * (Math.sin(t * 61) * 0.6 + Math.sin(t * 97 + 1) * 0.4)), shy = Math.round(sh * (Math.sin(t * 73 + 2) * 0.6 + Math.sin(t * 89 + 3) * 0.4));
-  camX = Math.round(kx - W / 2) + shx; camY = Math.round(ky - H * 0.47) + shy;
+  // the camera in detail pixels; the world layer uses the whole-pixel part and is shifted by the rest
+  cam2x = Math.round((kx - W / 2) * SPX) + shx * SPX; cam2y = Math.round((ky - H * 0.47) * SPX) + shy * SPX;
+  camX = Math.floor(cam2x / SPX); camY = Math.floor(cam2y / SPX); hx = cam2x - camX * SPX; hy = cam2y - camY * SPX;
   shd.fill(0); cid.fill(0);
   for (let y = 0; y < H; y++) {
     const wy = camY + y, row = wy * WW;
@@ -784,58 +794,157 @@ function render() {
   const onScreen = c => { const [x, y] = screenOf(c); return x > camX - 70 && x < camX + W + 70 && y > camY - 30 && y < camY + H + 90; };
   const chars = [hero, ...enemies.filter(e => !e.corpse && visAt(e.fi, e.fj) > 0.25 && onScreen(e)), ...npcs.filter(onScreen)];
   const boxes = chars.map(c => { const [x, y] = screenOf(c); return [x - 40, y - 64, x + 40, y + 8, c.fi + c.fj]; });
-  // a baked prop only needs drawing again if it should cover a character it overlaps (it is in
-  // front of it); props behind every character are already right in the baked world
-  const list = props.filter(p => {
-    const x0 = p.wx - p.sp.ax, y0 = p.wy - p.sp.ay, x1 = x0 + p.sp.w, y1 = y0 + p.sp.h;
-    return boxes.some(b => p.depth > b[4] && x0 < b[2] && x1 > b[0] && y0 < b[3] && y1 > b[1]);
-  }).map(p => {
+  // the part of a sprite in front of characters it overlaps: null if none, else the union of those
+  // characters' boxes (world px), so a redraw only touches what can cover someone
+  const inFront = (depth, x0, y0, w, h) => {
+    let r = null;
+    for (const b of boxes) if (depth > b[4] && x0 < b[2] && x0 + w > b[0] && y0 < b[3] && y0 + h > b[1]) r = r ? [Math.min(r[0], b[0]), Math.min(r[1], b[1]), Math.max(r[2], b[2]), Math.max(r[3], b[3])] : [b[0], b[1], b[2], b[3]];
+    return r;
+  };
+  // world layer: things that lie on the ground or stay put (drawn before lighting)
+  const base = [], ov = [];
+  // a baked prop only needs drawing again (on the detail layer) if it covers a character it overlaps
+  for (const p of props) {
+    const clip = inFront(p.depth, p.wx - p.sp.ax, p.wy - p.sp.ay, p.sp.w, p.sp.h);
+    if (!clip) continue;
     // tall scenery in front of the hero is redrawn dithered so the hero shows through (Diablo's trick)
     const hd = hero.fi + hero.fj, hb = boxes[0];
     const x0 = p.wx - p.sp.ax, y0 = p.wy - p.sp.ay, see = p.sp.h > 30 && p.depth > hd + 0.5 && x0 < hb[2] && x0 + p.sp.w > hb[0] && y0 < hb[3] && y0 + p.sp.h > hb[1];
-    return { depth: p.depth, draw: () => blit(p.sp, p.wx, p.wy, false, 0, p.tile, see ? 0.5 : 0) };
-  });
+    ov.push({ depth: p.depth, draw: () => ovBlit(p.sp, p.wx, p.wy, -1, 0, see ? 0.5 : 0, p.tile, clip) });
+  }
   for (const p of dynProps) {
     if (p.broken) continue;
     const sp = p.kind === 'barrel' ? PROPS.barrel() : p.kind === 'egg' ? PROPS.egg() : PROPS.chest(p.open);
     if (p.flash > 0) p.flash -= 1 / 60;
-    list.push({ depth: p.depth, draw: () => blit(sp, p.wx, p.wy, p.flash > 0, 0, p.tile) });
+    base.push({ depth: p.depth, draw: () => blit(sp, p.wx, p.wy, p.flash > 0, 0, p.tile) });
+    const clip = inFront(p.depth, p.wx - sp.ax, p.wy - sp.ay, sp.w, sp.h);
+    if (clip) ov.push({ depth: p.depth, draw: () => ovBlit(sp, p.wx, p.wy, -1, p.flash > 0 ? 1 : 0, 0, p.tile, clip) });
   }
   for (const g of groundItems) {
     const [x, y] = iso(g.fi, g.fj), bounce = g.t < 0.4 ? Math.round(Math.sin(g.t / 0.4 * Math.PI) * 8) : 0;
     const tile = tIdx(Math.floor(g.fi), Math.floor(g.fj));
-    list.push({ depth: g.fi + g.fj - 0.3, draw: () => { if (g.gold) return drawGold(x, y - bounce, tile); if (g.gem) return drawGem(x, y - bounce, tile, g.gem); if (g.item.rarity !== 'normal' && g.t > 0.4) drawBeam(x, y, RARITY_COL[g.item.rarity], tile, g.item.id, g.item.rarity === 'legend'); blit(itemIcon(g.item), x, y - bounce + 4, false, 0, tile); } });
+    base.push({ depth: g.fi + g.fj - 0.3, draw: () => { if (g.gold) return drawGold(x, y - bounce, tile); if (g.gem) return drawGem(x, y - bounce, tile, g.gem); if (g.item.rarity !== 'normal' && g.t > 0.4) drawBeam(x, y, RARITY_COL[g.item.rarity], tile, g.item.id, g.item.rarity === 'legend'); blit(itemIcon(g.item), x, y - bounce + 4, false, 0, tile); } });
   }
   chars.forEach((c, n) => {
     const [x, y] = screenOf(c);
     if (c.clip !== 'death') shadowBlob(x, y + 1, c === hero || c.role ? (c.fam === 'chicken' ? 4 : 8) : c.def.shadow * (c.look.scale || 1));
-    list.push({ depth: c.fi + c.fj, draw: () => {
+    ov.push({ depth: c.fi + c.fj, draw: () => {
       const sp = getSprite(c.fam, c.look, c.dir, c.clip, frameOf(c), c);
       const jit = c.stop > 0 && c !== hero && c.dying < 0 ? (Math.floor(t * 33) % 2 ? 1 : -1) : 0;
-      const fl = c.flash > 0 ? 1 : c.frozen > 0 ? 4 : c.tint > 0 ? 3 : c.slowT > 0 ? 5 : 0;   // slowed: half ice-dithered   // white, then a brief dithered red; ice blue while frozen
-      blit(sp, x + jit, y, fl, n + 1, tIdx(Math.floor(c.fi), Math.floor(c.fj)));
+      // white flash, then a brief dithered red; ice blue while frozen, half ice while slowed
+      const fl = c.flash > 0 ? 1 : c.frozen > 0 ? 4 : c.tint > 0 ? 3 : c.slowT > 0 ? 5 : 0;
+      ovBlit(sp, x + jit, y, charLevel[n], fl, 0, tIdx(Math.floor(c.fi), Math.floor(c.fj)));
     } });
   });
-  for (const p of projectiles) list.push({ depth: p.fi + p.fj, draw: () => drawProjectile(p) });
-  shrineCrystals(list);
-  // flames sort with everything else, so a character in front of a brazier hides its fire
-  for (const f of fires) if (LV.vis[f.tile] > 0.1 || LV.seen[f.tile]) list.push({ depth: (f.tile % MW) + Math.floor(f.tile / MW) + (f.depthAdd ?? 1.2), draw: () => flame(f.wx, f.wy, f.h, f.w, t, f.seed) });
+  for (const p of projectiles) ov.push({ depth: p.fi + p.fj, draw: () => drawProjectile(p) });
+  shrineCrystals(base);
+  for (const f of fires) if (LV.vis[f.tile] > 0.1 || LV.seen[f.tile]) base.push({ depth: (f.tile % MW) + Math.floor(f.tile / MW) + (f.depthAdd ?? 1.2), draw: () => flame(f.wx, f.wy, f.h, f.w, t, f.seed) });
   heroRing(kx, ky + 1);
-  list.sort((a, b) => a.depth - b.depth);
-  for (const d of list) d.draw();
+  base.sort((a, b) => a.depth - b.depth);
+  for (const d of base) d.draw();
   drawTelegraph(); drawMeteors();
+  const charLevel = lightPass(chars, kx, ky);
+  // the frame: the lit world doubled (shifted by the camera's half pixel), then the detail layer over it
+  for (let y = 0; y < H; y++) {
+    const r0 = y * W; let first = -1;
+    for (let b = 0; b < SPX; b++) {
+      const yy = y * SPX - hy + b; if (yy < 0 || yy >= OH) continue;
+      const d = yy * OW;
+      if (first >= 0) { ov32.copyWithin(d, first, first + OW); continue; }   // the second line of a doubled row
+      for (let x = 0, X = -hx; x < W; x++, X += SPX) { const c = base32[r0 + x]; if (X >= 0) ov32[d + X] = c; ov32[d + X + 1] = c; }
+      if (hx) ov32[d + OW - 1] = base32[r0 + W - 1];
+      first = d;
+    }
+  }
+  if (hy) ov32.copyWithin((OH - 1) * OW, (OH - 2) * OW, (OH - 1) * OW);
+  ov.sort((a, b) => a.depth - b.depth);
+  for (const d of ov) d.draw();
+  for (const g of G.ghosts) ovBlit(g.sp, g.x, g.y, L_ID, 6, 1 - g.t / g.t0, -1);   // blink afterimage, dissolving
   for (let k = 0; k < PN; k++) {
     const kind = pkind[k]; if (!kind) continue;
-    const x = Math.round(px_[k] - camX), y = Math.round(py_[k] - pz_[k] - camY);
-    if (x < 0 || y < 0 || x >= W || y >= H) continue;
+    const X = Math.round(px_[k] * SPX) - cam2x, Y = Math.round((py_[k] - pz_[k]) * SPX) - cam2y;
+    if (X < 0 || Y < 0 || X >= OW - 1 || Y >= OH - 1) continue;
     const col = kind === 1 ? (pcol[k] === 22 ? RED[3] : pcol[k]) : pcol[k];
-    scr[y * W + x] = (kind === 2 || kind === 3 || kind === 4) ? col | EMIS : col;
-    zbuf[y * W + x] = clamp(pz_[k] | 0, 0, 255);
-    if (kind === 6 && x + 1 < W && y + 1 < H) { scr[y * W + x + 1] = col; scr[(y + 1) * W + x] = BONE[0]; scr[(y + 1) * W + x + 1] = BONE[0]; }   // bone chunks are 2x2
+    const emis = kind === 2 || kind === 3 || kind === 4, s = kind === 6 ? 4 : 2;
+    const c32 = emis ? PAL32[CYCLE[col]] : envCol((X + hx) >> 1, (Y + hy) >> 1, col, -2);
+    if (!c32) continue;
+    const c2 = kind === 6 ? envCol((X + hx) >> 1, (Y + hy) >> 1, BONE[0], -2) || c32 : c32;   // bone chunks are bigger, with a shaded underside
+    for (let b = 0; b < s && Y + b < OH; b++) for (let a = 0; a < s && X + a < OW; a++) ov32[(Y + b) * OW + X + a] = b >= 2 ? c2 : c32;
   }
-  lightPass(chars, kx, ky);
+  // the HUD, drawn at the world's scale into its own buffer, merged on top as blocks
+  hud32.fill(0); out32 = hud32;
   drawHud();
-  ctx.putImageData(outImg, 0, 0);
+  out32 = base32;
+  for (let y = 0, o = 0; y < H; y++) for (let x = 0; x < W; x++, o++) {
+    const c = hud32[o]; if (!c) continue;
+    const d = y * SPX * OW + x * SPX;
+    for (let b = 0; b < SPX; b++) for (let a = 0; a < SPX; a++) ov32[d + b * OW + a] = c;
+  }
+  ctx.putImageData(ovImg, 0, 0);
+}
+// the lit color of a palette index at world-layer pixel (x, y), as the world's light pass would
+// light it there (light, fog, dither); 0 where the floor there is unseen. tile -2 = use the pixel's own tile
+function envCol(x, y, v, tile) {
+  if (x < 0 || y < 0 || x >= W || y >= H) return 0;
+  if (v & EMIS) return PAL32[CYCLE[v & 127]];
+  if (v === BLK) return PAL32[BLK];
+  const o = y * W + x, tk = tile === -2 ? tbuf[o] : tile;
+  if (tk < 0 ? !LV.outdoor : !LV.seen[tk]) return 0;
+  const vv = tk < 0 ? 1 : LV.vis[tk], top = (LEVELS - 1) * NPAL;
+  const l = (shd[o] ? lbuf[o] * 0.4 : lbuf[o]) * BANDS * vv + 0.9 * (1 - vv) + BAYER[((y & 3) << 2) | (x & 3)];
+  const L = (l | 0) * NPAL;
+  return LCOL[(L < top ? L : top) + v];
+}
+// draw a sprite on the detail layer. A detail sprite (sp.px === SPX) is placed at sub-pixel
+// precision; a world sprite (px 1) is drawn doubled, exactly over its place in the world layer.
+// level >= 0: one light level for the whole sprite (characters); -1: lit per pixel like the world
+function ovBlit(sp, wx, wy, level, flash, dissolve, tile, clip = null) {
+  const fine = sp.px === SPX, k = fine ? 1 : SPX;
+  const X0 = fine ? Math.round(wx * SPX) - cam2x - sp.ax : (Math.round(wx - camX) - sp.ax) * SPX - hx;
+  const Y0 = fine ? Math.round(wy * SPX) - cam2y - sp.ay : (Math.round(wy - camY) - sp.ay) * SPX - hy;
+  const LV0 = level >= 0 ? level * NPAL : -1;
+  if (fine && !flash && !dissolve && LV0 >= 0 && !clip) {   // the common case (a character, one light level): a tight loop
+    const data = sp.data, w = sp.w, black = PAL32[BLK], xa = Math.max(0, -X0), xb = Math.min(w, OW - X0);
+    for (let y = Math.max(0, -Y0), y1 = Math.min(sp.h, OH - Y0); y < y1; y++) {
+      const row = (Y0 + y) * OW + X0, s = y * w;
+      for (let x = xa; x < xb; x++) { const v = data[s + x]; if (v) ov32[row + x] = (v & EMIS) ? PAL32[CYCLE[v & 127]] : v === BLK ? black : LCOL[LV0 + v]; }
+    }
+    return;
+  }
+  // clip (world px box) -> the sprite's own pixel range
+  let xa = 0, xb = sp.w, ya = 0, yb = sp.h;
+  if (clip) {
+    const sx0 = Math.round(wx) - sp.ax * (fine ? 1 / SPX : 1), sy0 = Math.round(wy) - sp.ay * (fine ? 1 / SPX : 1), u = fine ? SPX : 1;
+    xa = Math.max(0, Math.floor((clip[0] - sx0) * u)); xb = Math.min(sp.w, Math.ceil((clip[2] - sx0) * u));
+    ya = Math.max(0, Math.floor((clip[1] - sy0) * u)); yb = Math.min(sp.h, Math.ceil((clip[3] - sy0) * u));
+  }
+  for (let y = ya; y < yb; y++) {
+    const yy = Y0 + y * k; if (yy < 0 || yy >= OH) continue;
+    for (let x = xa; x < xb; x++) {
+      const xx = X0 + x * k; if (xx < 0 || xx >= OW) continue;
+      let v = sp.data[y * sp.w + x];
+      if (!v) continue;
+      if (dissolve > 0 && BAYER[((yy & 3) << 2) | (xx & 3)] < dissolve) continue;
+      if (flash && v !== BLK) v = flash === 4 ? ICE_TINT[v & 127] : flash === 6 ? ARC_TINT[v & 127] : flash === 5 ? ((xx + yy) & 2 ? ICE_TINT[v & 127] : v) : flash === 2 ? HURT_TINT[v & 127] : flash === 3 ? ((xx + yy) & 2 ? HURT_TINT[v & 127] : v) : (27 | EMIS);
+      // a world sprite redrawn over a character is already drawn and lit in the world layer at this
+      // very pixel: copy it (cheaper than lighting it again, and identical)
+      const c = !fine && !flash && LV0 < 0 ? base32[(Y0 + hy) / SPX * W + y * W + (X0 + hx) / SPX + x] : (v & EMIS) ? PAL32[CYCLE[v & 127]] : v === BLK ? PAL32[BLK] : LV0 >= 0 ? LCOL[LV0 + v] : envCol((xx + hx) >> 1, (yy + hy) >> 1, v, tile);
+      if (!c) continue;
+      if (k === 1) ov32[yy * OW + xx] = c;
+      else for (let b = 0; b < k && yy + b < OH; b++) for (let a = 0; a < k && xx + a < OW; a++) ov32[(yy + b) * OW + xx + a] = c;
+    }
+  }
+}
+// a world-pixel-sized block at detail-layer position (X, Y), lit like the world there
+function ovPutAt(X, Y, v) {
+  const c = envCol((X + hx) >> 1, (Y + hy) >> 1, v, -2); if (!c) return;
+  for (let b = 0; b < SPX; b++) for (let a = 0; a < SPX; a++) { const xx = X + a, yy = Y + b; if (xx >= 0 && yy >= 0 && xx < OW && yy < OH) ov32[yy * OW + xx] = c; }
+}
+// a world-layer pixel drawn on the detail layer as a block, lit like the world
+function ovPut1(x, y, v) {
+  const c = envCol(x, y, v, -2); if (!c) return;
+  const X = x * SPX - hx, Y = y * SPX - hy;
+  for (let b = 0; b < SPX; b++) for (let a = 0; a < SPX; a++) { const xx = X + a, yy = Y + b; if (xx >= 0 && yy >= 0 && xx < OW && yy < OH) ov32[yy * OW + xx] = c; }
 }
 // magic and rare drops send up a thin flickering beam of their color so they're easy to spot
 function drawBeam(x, y, col, tile, seed, legend = false) {
@@ -870,7 +979,9 @@ function drawGold(x, y, tile) {
 }
 function drawProjectile(p) {
   const [x, y] = iso(p.fi, p.fj), sx = Math.round(x - camX), sy = Math.round(y - p.z - camY);
-  const put = (a, b, c) => { const xx = sx + a, yy = sy + b; if (xx >= 0 && yy >= 0 && xx < W && yy < H) { const o = yy * W + xx; scr[o] = c; zbuf[o] = p.z; cid[o] = 0; } };
+  // on the detail layer, over the characters: blocks the size of a world pixel, placed at the finer position
+  const X0 = Math.round(x * SPX) - cam2x, Y0 = Math.round((y - p.z) * SPX) - cam2y;
+  const put = (a, b, c) => ovPutAt(X0 + a * SPX, Y0 + b * SPX, c);
   if (p.kind === 'arrow') {
     const l = Math.hypot(p.vx, p.vy), dx = (p.vx - p.vy) / l * 16 / 22.6, dy = (p.vx + p.vy) / l * 8 / 22.6;
     for (let s = -4; s <= 3; s++) put(Math.round(dx * s * 1.4), Math.round(dy * s * 1.4), s > 2 ? 30 : 25);
@@ -936,6 +1047,7 @@ function lightPass(chars, kx, ky) {
   });
   const vis = LV.vis, seen = LV.seen, black = PAL32[BLK], top = (LEVELS - 1) * NPAL;
   const cl = charLevel.map(L => L * NPAL);
+
   for (let y = 0, o = 0; y < H; y++) {
     const by = (y & 3) << 2;
     for (let x = 0; x < W; x++, o++) {
@@ -953,6 +1065,7 @@ function lightPass(chars, kx, ky) {
       out32[o] = LCOL[(L < top ? L : top) + v];
     }
   }
+  return charLevel;
 }
 
 // ---------------------------------------------------------------- save / load (versioned)

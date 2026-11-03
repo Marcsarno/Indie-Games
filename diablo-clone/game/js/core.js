@@ -1,4 +1,6 @@
 'use strict';
+// characters, projectiles and particles draw at SPX times the world's pixel density (round 21)
+const SPX = 2;
 // Shared foundations: palette, light tables, math, random numbers and the pixel font.
 // Everything the game draws is generated in code; there are no image assets.
 

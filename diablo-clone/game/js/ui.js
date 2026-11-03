@@ -290,7 +290,7 @@ function drawInventory() {
   textC('INVENTORY', W / 2, 8, 26, 2);
   frame(L.close.x, L.close.y, L.close.w, L.close.h, 8, 3); textC('X', L.close.x + 12, L.close.y + 5, 27);
   // paper doll: the real hero sprite at 2x, so gear changes show here too
-  const doll = getSprite('hero', hero.look, 1, 'idle', Math.floor(G.t / 0.2) % 4, hero);
+  const doll = getSprite('hero', hero.look, 1, 'idle', Math.floor(G.t / 0.2) % 4, hero, 1);
   sprite(doll, 150, 148, 2, 4);
   const nm = { helm: 'HEAD', chest: 'BODY', weapon: 'HAND', shield: 'OFF' };
   for (const s of SLOTS) {

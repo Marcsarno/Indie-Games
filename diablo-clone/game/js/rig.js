@@ -223,7 +223,9 @@ function boundOf(p) {
 
 // ---------------------------------------------------------------- render + shade
 // returns a sprite {w, h, ax, ay, data (palette index | EMIS), z (pixel height)}
-function renderRig(rig, yaw, w, h, ax, ay) {
+// step > 1 (detail sprites): cast shadows are tested once per step x step block and shared by the
+// block's pixels of the same part (shadows are big soft shapes; this is most of the cost)
+function renderRig(rig, yaw, w, h, ax, ay, step = 1) {
   const R = V.rotZ(CAM_R, -yaw), D = V.rotZ(CAM_D, -yaw), VD = V.rotZ(CAM_V, -yaw), T = V.mul(VD, -1), LL = V.rotZ(LIGHT_W, -yaw);
   const prims = rig.p, np = prims.length;
   const bx0 = new Float32Array(np), bx1 = new Float32Array(np), by0 = new Float32Array(np), by1 = new Float32Array(np);
@@ -272,6 +274,10 @@ function renderRig(rig, yaw, w, h, ax, ay) {
     m[k] = mat; pid[k] = p.part; zz[k] = clamp(Math.round(P[2]), 0, 255); bias[k] = p.bias || 0;
     nx[k] = n0 * R[0] + n1 * R[1] + n2 * R[2]; ny[k] = n0 * D[0] + n1 * D[1] + n2 * D[2]; nz[k] = n0 * T[0] + n1 * T[1] + n2 * T[2];
     // cast shadow: does anything else sit between this point and the light?
+    if (step > 1 && (px % step || py % step)) {
+      const k0 = (py - py % step) * w + (px - px % step);
+      if (bi[k0] >= 0 && prims[bi[k0]].part === p.part) { shad[k] = shad[k0]; continue; }
+    }
     if (!MATS[mat].flat) {
       const so = [P[0] + n0 * 0.6, P[1] + n1 * 0.6, P[2] + n2 * 0.6];
       for (let i2 = 0; i2 < np; i2++) {

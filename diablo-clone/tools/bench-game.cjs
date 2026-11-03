@@ -5,7 +5,7 @@ const { chromium } = require('playwright');
 const path = require('path');
 // LEVEL=4 (default): dungeon floor 2; LEVEL=2: the forest; LEVEL=1: the town
 const LEVEL = +(process.env.LEVEL || 4);
-const PAGE = 'file://' + path.resolve(__dirname, '../game/index.html');
+const PAGE = 'file://' + path.resolve(process.env.GAME || path.join(__dirname, '../game')) + '/index.html';   // GAME=<dir> benches another copy
 (async () => {
   for (const rate of [1, 4]) {
     const b = await chromium.launch(); const p = await b.newPage();

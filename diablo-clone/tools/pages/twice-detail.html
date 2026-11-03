@@ -1,0 +1,91 @@
+<title>Twice the Detail</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 640px; margin: 0 auto; display: grid; gap: 32px; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0 0 8px; letter-spacing: 0.05em; }
+  p { margin: 0; max-width: 62ch; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 10px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .toggle { display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: 600 0.85rem var(--body); color: var(--bone); background: var(--panel); border: 1px solid var(--rule); padding: 6px 12px; cursor: pointer; }
+  button[aria-pressed="true"] { border-color: var(--ember); color: var(--ember); }
+  button:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--rule); }
+  th { color: var(--ember); font-weight: 600; }
+  td:nth-child(n+2), th:nth-child(n+2) { text-align: right; white-space: nowrap; }
+  ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; }
+</style>
+<main>
+  <header>
+    <h1>Twice the Detail</h1>
+    <p class="lede">Dungeon of Bones, round 21, step 1 of the 2x conversion: characters, spells and effects at twice the detail; the camera moves in half pixels.</p>
+  </header>
+
+  <section>
+    <h2>In the game</h2>
+    <figure>
+      <div class="toggle" role="group" aria-label="Fight playback speed"><button data-g="fight" data-s="0" aria-pressed="true">Game speed</button><button data-g="fight" data-s="1" aria-pressed="false">Slow</button></div>
+      <div class="frame"><img id="fight" src="fight.gif" alt="The warrior fighting skeletons and fallen, before on the left and at twice the detail on the right" width="608" height="273"></div>
+      <figcaption>The warrior against a pack. Left: before. Right: now.</figcaption>
+    </figure>
+    <figure>
+      <div class="toggle" role="group" aria-label="Spells playback speed"><button data-g="spells" data-s="0" aria-pressed="true">Game speed</button><button data-g="spells" data-s="1" aria-pressed="false">Slow</button></div>
+      <div class="frame"><img id="spells" src="spells.gif" alt="The mage casting missiles, fireball, cone of cold, meteor and blink, before and now" width="608" height="268"></div>
+      <figcaption>The mage's spells.</figcaption>
+    </figure>
+    <figure>
+      <div class="toggle" role="group" aria-label="Walk playback speed"><button data-g="walk" data-s="0" aria-pressed="true">Game speed</button><button data-g="walk" data-s="1" aria-pressed="false">Slow</button></div>
+      <div class="frame"><img id="walk" src="walk.gif" alt="The mage walking around the town well, before and now" width="608" height="273"></div>
+      <figcaption>Walking in town. The camera now scrolls in half-pixel steps, so the ground glides more evenly behind him.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>What changed</h2>
+    <ul>
+      <li>The screen is now drawn at 540 by 960 (it was 270 by 480). Every character, the hero, monsters, villagers and animals, is rendered with twice the pixels each way: rounder robes and heads, thinner outlines, cleaner faces.</li>
+      <li>Projectiles, sparks and particles move at the finer resolution, so their motion is smoother.</li>
+      <li>The camera moves in half-pixel steps. Before, the ground jumped a whole pixel at a time in an uneven rhythm (1, 1, 0, 1) as he walked, a small stutter. Those steps are now half the size.</li>
+      <li>The floors, walls, trees and buildings are unchanged for now (still drawn at the old resolution, then doubled). That's step 2: they need to be drawn piece by piece as you explore, or a forest would need about 130 MB of memory.</li>
+      <li>Buttons and text are unchanged.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Speed</h2>
+    <p>Frame time per frame, measured on a desktop with the CPU slowed 4 times to stand in for a slow phone (typical frame, after the first seconds).</p>
+    <table>
+      <thead><tr><th>Area</th><th>Before</th><th>Now</th></tr></thead>
+      <tbody>
+        <tr><td>Dungeon, full speed</td><td>2.7 ms</td><td>4.3 ms</td></tr>
+        <tr><td>Dungeon, 4x slower CPU</td><td>14 ms</td><td>21 ms</td></tr>
+        <tr><td>Forest, 4x slower CPU (no sprite building)</td><td>13 ms</td><td>19 ms</td></tr>
+      </tbody>
+    </table>
+    <ul>
+      <li>A frame at 60 fps has 16.7 ms, so a normal phone has room to spare. On a slow phone the forest is the tightest.</li>
+      <li>New poses take longer to build at twice the detail. To avoid stalls, a pose that isn't built yet shows at the old detail for a moment while the sharp version builds in the background. Cast shadows inside a character are now worked out once per 2 by 2 block, which made building about a quarter faster without a visible difference.</li>
+    </ul>
+  </section>
+</main>
+<script>
+  for (const b of document.querySelectorAll('button[data-g]')) b.addEventListener('click', () => {
+    const g = b.dataset.g, slow = b.dataset.s === '1';
+    document.getElementById(g).src = g + (slow ? '-slow.gif' : '.gif');
+    for (const o of document.querySelectorAll(`button[data-g="${g}"]`)) o.setAttribute('aria-pressed', String(o === b));
+  });
+</script>

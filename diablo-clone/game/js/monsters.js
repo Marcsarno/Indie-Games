@@ -590,28 +590,40 @@ function poseState(fam, ent, clip, f) {
 // frame (same direction) and is queued, so a crowd turning at once never stalls a frame.
 const buildBudget = { ms: Infinity, used: 0 };
 const fallbackOrder = { walk: ['walk', 'idle'], idle: ['idle'], attack: ['attack', 'idle'], attack2: ['attack2', 'attack', 'idle'], attack3: ['attack3', 'attack', 'idle'], bash: ['bash', 'idle'], channel: ['channel', 'idle'], shoot: ['shoot', 'idle'], cast: ['cast', 'idle'], hit: ['hit', 'idle'], death: ['death'], go: ['go', 'walk', 'idle'], stop: ['stop', 'idle'] };
-function getSprite(fam, look, dir, clip, f, ent) {
+// px: detail scale. Characters draw at SPX (2: twice the pixels, round 21); the world, the bag's
+// paper doll and corpses baked into the floor use 1.
+function getSprite(fam, look, dir, clip, f, ent, px = SPX) {
   const lk = fam === 'hero' ? heroKey(look) : lookKey(look);
-  const k = `${fam}|${lk}|${dir}|${clip}|${f}`;
+  const k = `${fam}|${lk}|${dir}|${clip}|${f}|${px}`;
   let sp = spriteCache.get(k);
   if (!sp && buildBudget.used > buildBudget.ms && clip !== 'death') {
+    // out of build time this frame: the same pose at world detail stands in (drawn doubled) while
+    // the detail version builds in the background; it is far cheaper to build when nothing is cached
+    if (px !== 1) {
+      const lo = spriteCache.get(`${fam}|${lk}|${dir}|${clip}|${f}|1`);
+      if (lo) { if (typeof warmQueue !== 'undefined') warmQueue.push([fam, look, dir, clip, f]); return lo; }
+    }
     for (const c of fallbackOrder[clip] || ['idle']) for (let g = 0; g < 8; g++) {
-      const q = spriteCache.get(`${fam}|${lk}|${dir}|${c}|${(f + g) % 8}`) || spriteCache.get(`${fam}|${lk}|${dir}|${c}|0`);
+      const q = spriteCache.get(`${fam}|${lk}|${dir}|${c}|${(f + g) % 8}|${px}`) || spriteCache.get(`${fam}|${lk}|${dir}|${c}|0|${px}`);
       if (q) { if (typeof warmQueue !== 'undefined') warmQueue.push([fam, look, dir, clip, f]); return q; }
     }
+    if (px !== 1) { if (typeof warmQueue !== 'undefined') warmQueue.push([fam, look, dir, clip, f]); return getSprite(fam, look, dir, clip, f, ent, 1); }
   }
   if (!sp && look.tint) {   // a recolored variant: tint the base sprite instead of rendering again
     const { tint, ...base } = look;
-    const b = getSprite(fam, base, dir, clip, f, ent);
-    sp = tintSprite(b, tint); spriteCache.set(k, sp);
+    const b = getSprite(fam, base, dir, clip, f, ent, px);
+    sp = tintSprite(b, tint); sp.px = b.px; spriteCache.set(k, sp);
     return sp;
   }
   if (!sp) {
     const t0 = performance.now();
     const F = FAMILIES[fam], [w, h, ax, ay] = look.size || F.size;
     const ex = ent || { look };
-    sp = renderRig(F.rig(look, poseState(fam, ex, clip, f)), yawOf(dir), w, h, ax, ay);
-    if (spriteCache.size > 3000) spriteCache.clear();
+    const rig = F.rig(look, poseState(fam, ex, clip, f));
+    if (px !== 1) scaleRig(rig, px);
+    sp = renderRig(rig, yawOf(dir), Math.round(w * px), Math.round(h * px), Math.round(ax * px), Math.round(ay * px), px); sp.px = px;
+    if (px !== 1) sp.z = null;   // detail-layer sprites are never lit per pixel, so they don't keep heights
+    if (spriteCache.size > 2400) spriteCache.clear();
     spriteCache.set(k, sp); spriteBuilds++;
     buildBudget.used += performance.now() - t0;
   }
