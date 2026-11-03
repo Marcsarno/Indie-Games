@@ -81,6 +81,36 @@ const SWINGS = {
   bow: [{ a: 0, ms: 140 }, { a: 1, ms: 260 }, { a: 1, ms: 60, hit: true }, { a: 0.4, ms: 200 }],
   cast: [{ a: 0, ms: 120 }, { a: 1, ms: 220 }, { a: 1.2, ms: 60, hit: true }, { a: 0.5, ms: 200 }],
 };
+// round 34: monster attacks in three readable beats. A wind-up held long enough to see (tele marks
+// the moment a glint shows), a strike that covers ground (mv: tiles moved over that key toward
+// where the hero stood when it began; z: a hop in the air), and a recovery where it is open to a
+// punishing hit (open: those hits land 30% harder and stagger it).
+const MON_SWINGS = {
+  // the fallen and its kin: a crouch, a leap with the blade overhead, a stab as it lands
+  pounce: [
+    K(1.6, 230, { tele: true, tw: 0.35, ln: 0.3, bob: -2.6, fl: 2, fr: -3.5 }),
+    K(1.7, 120, { tw: 0.4, ln: 0.34, bob: -2.9, fl: 2, fr: -3.6 }),
+    K(1.3, 150, { mv: 1.3, z: 6, tw: 0.1, ln: 0.18, bob: 0.4, fl: 4.5, fr: -1, jump: 2.5 }),
+    K(0.2, 60, { hit: true, tw: -0.3, ln: 0.4, bob: -1.8, fl: 5.5, fr: -3 }),
+    K(0.1, 300, { open: true, tw: -0.25, ln: 0.32, bob: -2.2, fl: 5.5, fr: -3 }),
+    K(0.8, 120, { tw: 0, ln: 0.1, bob: -0.8, fl: 3, fr: -2.5 }),
+  ],
+  // skeletons: the blade raised high behind the head, a step and a hard chop down, stuck low after
+  chop: withTilt([
+    K(2.4, 280, { tele: true, ck: 0.3, r: 4.4, tw: 0.4, ln: -0.14, bob: 0.4, fl: 1.5, fr: -3.5 }),
+    K(2.5, 130, { ck: 0.35, r: 4.2, tw: 0.45, ln: -0.16, bob: 0.5, fl: 1.5, fr: -3.5 }),
+    K(1.0, 55, { smear: true, mv: 0.45, ck: 0.2, r: 6.4, tw: 0.1, ln: 0.12, bob: -0.6, fl: 4, fr: -3 }),
+    K(-0.7, 60, { smear: true, hit: true, ck: -0.2, r: 7.2, tw: -0.35, ln: 0.3, bob: -1.8, fl: 5.5, fr: -3.4 }),
+    K(-0.85, 330, { open: true, ck: -0.25, r: 7.0, tw: -0.35, ln: 0.3, bob: -1.9, fl: 5.5, fr: -3.4 }),
+    K(0.6, 120, { ck: 0.2, r: 5.6, tw: 0, ln: 0.06, bob: -0.6, fl: 3.5, fr: -3 }),
+  ], 0.55),
+  // hounds and wolves: weight back, a long lunge, the bite, a hop back out of reach
+  lunge: [{ a: 1.3, ms: 250, tele: true }, { a: 1.35, ms: 110 }, { a: 0.2, ms: 120, mv: 1.6 }, { a: 0, ms: 60, hit: true }, { a: 0.4, ms: 220, mv: -0.8, open: true }, { a: 0.7, ms: 110 }],
+  // spiders: rear up with the front legs raised, then drive down onto the target
+  rear: [{ a: 1, ms: 300, tele: true }, { a: 1, ms: 120 }, { a: 0.3, ms: 90, mv: 0.8 }, { a: 0, ms: 60, hit: true }, { a: 0.2, ms: 280, open: true }, { a: 0.6, ms: 100 }],
+};
+// how far the strike carries a monster (the lunge's reach), so it can start from farther out
+const swingReach = sw => sw.reduce((a, k) => a + Math.max(0, k.mv || 0), 0);
 const swingMs = sw => sw.reduce((a, k) => a + k.ms, 0);
 function swingKey(sw, ms) {
   let acc = 0;

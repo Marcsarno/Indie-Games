@@ -1,0 +1,74 @@
+<title>Monster Attacks</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  /* layout: one narrow column, one section per part with its picture first */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul { margin: 0; max-width: 64ch; }
+  ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .frame img.smooth { image-rendering: auto; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .tw { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+</style>
+<main>
+  <header>
+    <h1>Monster Attacks</h1>
+    <p class="lede">Dungeon of Bones, round 34, step 1 of making monsters fun to fight. Every attack now has three beats you can read: a wind-up, a strike that lunges in, and a recovery where they're open.</p>
+  </header>
+  <section>
+    <h2>In the game</h2>
+    <figure>
+      <div class="frame"><img src="attacks.gif" alt="Side by side, before and after: a fallen, a skeleton, a bone hound and a spider each come at a standing hero. Before, they walk up and jab. After, they crouch or rear back with a glint, then leap, lunge or chop in, and stay low for a moment after" width="808" height="318"></div>
+      <figcaption>Left is before, right is now: fallen, skeleton, hound, spider.</figcaption>
+    </figure>
+  </section>
+  <section>
+    <h2>The poses</h2>
+    <figure>
+      <div class="frame"><img src="poses.png" alt="Each family's attack poses from the side, the old ones above the new: the fallen now crouches with its spear raised, leaps and stabs down; the skeleton raises its blade high behind its head and chops down; the hound coils low and stretches out to bite; the spider rears with its front legs up and drives them down" width="781" height="1133"></div>
+      <figcaption>For each family, the old poses (top row) and the new ones (bottom row), with the wind-up, lunge, hit and opening frames labelled.</figcaption>
+    </figure>
+  </section>
+  <section>
+    <h2>How each one attacks</h2>
+    <ul>
+      <li><strong>Fallen, goblins, diggers, bandits:</strong> crouch with the spear raised overhead, leap in about 1.3 tiles, stab down as they land, then stay crouched for a moment.</li>
+      <li><strong>Skeletons:</strong> raise the blade high behind the head, step in, chop down hard. The blade stays low afterwards.</li>
+      <li><strong>Hounds, wolves, bears:</strong> coil low on the haunches, lunge about 1.6 tiles at full stretch, bite, then hop back out of reach.</li>
+      <li><strong>Spiders:</strong> rear up with the front legs raised, then drive down onto you.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>What it changes in a fight</h2>
+    <ul>
+      <li><strong>You can see it coming.</strong> About half a second passes between the wind-up and the blow. A small gold glint and a low growl mark the start.</li>
+      <li><strong>They dart in.</strong> A monster with a lunge starts its attack from farther out (about 2 tiles instead of 1) and covers the gap in the strike, so packs no longer just walk up and stand.</li>
+      <li><strong>Punish the miss.</strong> Hit a monster in its recovery and you see OPEN: the hit does 30% more and knocks it out of the attack.</li>
+      <li><strong>Elites and champions follow up.</strong> About half the time they strike a second time straight away, with no second wind-up.</li>
+      <li>The pause between attacks is a little shorter, so the longer attacks don't make monsters much less dangerous.</li>
+    </ul>
+    <p>Archers, casters and bosses' special moves are unchanged. The COMBAT: OLD setting on the title screen still brings back the old attacks for comparison.</p>
+  </section>
+  <section>
+    <h2>Tested</h2>
+    <p>A new test times every family: about half a second from wind-up to blow, lunges from just over 2 tiles to arm's length, and a hit in the recovery stops the attack. Elites followed up 5 times in 15 seconds. The behavior, warrior, reaction and boss tests all pass, as does the full run through every level for all three classes.</p>
+  </section>
+</main>

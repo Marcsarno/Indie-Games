@@ -201,7 +201,11 @@ function fallenRig(look, st) {
   r.box(V.add(V.mad(J.pelvis, fwd, 2.6), [0, 0, -1.6]), [0.5, 2.4, 2.6], M.LEATHER, frameAlong(fwd, [0, 0, 1]));
   const sw = st.key || null;
   let handR, handL = V.add(V.add(J.shL, V.mul(fwd, 3.5 - J.swingArm * 1.5)), V.mul(up, -5)), bd;
-  if (st.clip === 'attack') {   // a thrust: spear pulled back, then jabbed forward on the hit key
+  if (st.clip === 'attack' && sw.tw !== undefined) {   // round 34, the pounce: spear raised overhead through the crouch and leap, stabbed down on landing
+    if (sw.a > 1.2) { handR = V.add(V.add(J.shR, V.mul(fwd, -0.6)), V.add(V.mul(up, 2.8), V.mul(sideR, 0.6))); bd = V.norm(V.add(V.mul(fwd, 0.75), V.mul(up, 0.45))); handL = V.add(V.add(J.shL, V.mul(fwd, 2.5)), V.mul(up, -1)); }
+    else if (sw.a < 0.5) { handR = V.add(V.add(J.shR, V.mul(fwd, 7)), V.mul(up, -3.2)); bd = V.norm(V.add(fwd, V.mul(up, -0.5))); handL = V.add(V.add(J.shL, V.mul(fwd, 5)), V.mul(up, -3)); }
+    else { handR = V.add(V.add(J.shR, V.mul(fwd, 3.5)), V.mul(up, -2)); bd = V.norm(V.add(fwd, V.mul(up, 0.1))); }
+  } else if (st.clip === 'attack') {   // a thrust: spear pulled back, then jabbed forward on the hit key
     const ext = sw.a < 0.5 ? 1 : sw.a > 1.2 ? -0.6 : 0.2;
     handR = V.add(V.add(J.shR, V.mul(fwd, 3 + ext * 4.5)), V.mul(up, -1.5)); bd = V.norm(V.add(fwd, V.mul(up, -0.1)));
     handL = V.add(V.add(J.shL, V.mul(fwd, 3 + ext * 3)), V.mul(up, -2));
@@ -270,7 +274,11 @@ function houndRig(look, st) {
   let bob = 0, lunge = 0, headDrop = 0, jaw = 0.25, ph = 0, moving = false;
   if (clip === 'idle') bob = [0, -0.3, -0.5, -0.2][f % 4];
   if (clip === 'walk') { ph = f / 8 * Math.PI * 2; moving = true; bob = -0.8 * Math.abs(Math.sin(ph)); }
-  if (clip === 'attack') { const a = st.key.a; lunge = (1 - a) * 3.5; headDrop = a > 0.5 ? -1 : 1; jaw = a > 0.5 ? 0.9 : st.key.hit ? 0.1 : 0.6; bob = a > 0.5 ? -1.2 : 0; }
+  if (clip === 'attack') {
+    const a = st.key.a; lunge = (1 - a) * 3.5; headDrop = a > 0.5 ? -1 : 1; jaw = a > 0.5 ? 0.9 : st.key.hit ? 0.1 : 0.6; bob = a > 0.5 ? -1.2 : 0;
+    if (a > 1.1) { lunge = -2.6; bob = -3; headDrop = -2.2; jaw = 0.45; }   // round 34: coiled low on the haunches, head down, snarling
+    else if (st.key.mv > 0 || st.key.hit) { lunge = 4.6; bob = 1.2; headDrop = 1.6; }   // stretched out at full length, airborne
+  }
   if (clip === 'hit') { lunge = -2; headDrop = -1.5; jaw = 0.6; }
   const H = 11;
   const back = [-4.5 + lunge, 0, H + bob], front = [5 + lunge, 0, H + 2.5 + bob];   // compact, front-heavy
@@ -544,7 +552,8 @@ function spiderRig(look, st) {
   let bob = 0, rear = 0, ph = 0, moving = false, curl = 0;
   if (clip === 'idle') bob = [0, -0.3, -0.4, -0.2][f % 4];
   if (clip === 'walk') { ph = f / 8 * Math.PI * 2; moving = true; bob = -0.4 * Math.abs(Math.sin(ph * 2)); }
-  if (clip === 'attack') { const a = st.key.a; rear = a > 0.5 ? 1 : st.key.hit ? 0.2 : 0.5; }
+  let strike = false;
+  if (clip === 'attack') { const a = st.key.a; rear = a > 0.5 ? 1.6 : st.key.hit ? -0.3 : 0.5; strike = !!st.key.hit || st.key.mv > 0; }   // round 34: reared high, then driven down
   if (clip === 'hit') rear = -0.3;
   if (clip === 'death') curl = [0, 0.25, 0.55, 0.85, 1, 1][f];
   // the broodmother: low heavy body, long sprawling legs, red chevrons down the abdomen
@@ -577,7 +586,9 @@ function spiderRig(look, st) {
     const grp = (i + (s > 0 ? 1 : 0)) % 2, p = ph + grp * Math.PI;
     const reach = (brood ? 24 : 17.5) - Math.abs(i - 1.5) * 1.2;
     let foot = [ceph[0] + Math.cos(a) * reach - 1.5 - (moving ? 2.4 * Math.cos(p) : 0), s * Math.sin(a) * reach, moving ? 1.8 * Math.max(0, Math.sin(p)) : 0];
-    if (rear > 0.4 && i === 0) foot = [ceph[0] + 9, s * 5, 9 * rear];
+    if (rear > 0.4 && i === 0) foot = [ceph[0] + 8, s * 6, 8 * rear];   // front legs raised, fangs bared
+    if (rear > 1.2 && i === 1) foot = [ceph[0] + 11, s * 9, 5];
+    if (strike && i === 0) foot = [ceph[0] + 13, s * 2.5, 0];   // driving the front legs into the target
     if (curl) foot = V.lerp(foot, [ceph[0] - 1, s * 3, H + 5], curl * 0.85);
     const L = brood ? ik(hip, foot, 17, 17, [0, s * 0.25, 1]) : ik(hip, foot, 10, 11, [0, s * 0.3, 1]);
     r.cone(hip, L.joint, brood ? 1.9 : 1.6, brood ? 1.6 : 1.3, ch); r.cone(L.joint, L.end, brood ? 1.6 : 1.3, 0.6, ch);
@@ -591,10 +602,10 @@ function spiderRig(look, st) {
 // size: sprite canvas; swing: attack timing; looks: variants (materials, size, gear) of one body
 const FAMILIES = {
   hero: { size: [72, 72, 36, 60], rig: heroRig, swing: e => weaponSwing(e.look), combo: (e, k) => weaponSwing(e.look, k) },
-  skeleton: { size: [72, 78, 36, 55], gait: gaitFrameTiles(SKEL_B, 1.1), rig: skeletonRig, swing: e => e.look.weapon === 'bow' ? SWINGS.bow : e.look.lich ? SWINGS.cast : SWINGS.light },
-  fallen: { size: [52, 48, 26, 40], gait: gaitFrameTiles(FALLEN_B), rig: fallenRig, swing: e => e.look.staff ? SWINGS.cast : SWINGS.claw },
-  hound: { size: [80, 64, 38, 50], rig: houndRig, swing: () => SWINGS.bite },
-  spider: { size: [80, 60, 40, 46], rig: spiderRig, swing: () => SWINGS.bite },
+  skeleton: { size: [72, 78, 36, 55], gait: gaitFrameTiles(SKEL_B, 1.1), rig: skeletonRig, swing: e => e.look.weapon === 'bow' ? SWINGS.bow : e.look.lich ? SWINGS.cast : FEEL_OLD ? SWINGS.light : MON_SWINGS.chop },
+  fallen: { size: [52, 48, 26, 40], gait: gaitFrameTiles(FALLEN_B), rig: fallenRig, swing: e => e.look.staff ? SWINGS.cast : FEEL_OLD ? SWINGS.claw : MON_SWINGS.pounce },
+  hound: { size: [80, 64, 38, 50], rig: houndRig, swing: () => FEEL_OLD ? SWINGS.bite : MON_SWINGS.lunge },
+  spider: { size: [80, 60, 40, 46], rig: spiderRig, swing: () => FEEL_OLD ? SWINGS.bite : MON_SWINGS.rear },
   chicken: { size: [28, 28, 14, 22], rig: chickenRig, swing: () => SWINGS.bite },
   sheep: { size: [36, 32, 18, 22], rig: sheepRig, swing: () => SWINGS.bite },
   pig: { size: [36, 30, 18, 20], rig: pigRig, swing: () => SWINGS.bite },

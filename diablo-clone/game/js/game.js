@@ -262,6 +262,7 @@ function drinkPotion() {
 const HITSTOP = [0.045, 0.08, 0.11], KNOCK = [5, 7.7, 11];   // knock speed: tiles/s, ~1/14 of it is the slide
 function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = false) {
   if (e.frozen > 0) dmg = Math.round(dmg * 1.4);   // frozen solid: hits land harder
+  if (e.open && e.atk >= 0) { dmg = Math.round(dmg * 1.3); if (!e.def.unique) { e.atk = -1; e.open = false; e.leapZ = 0; e.hurt = Math.max(e.hurt || 0, 0.3); } floater('OPEN', e.fi, e.fj, e.def.chest + 26, 51); }   // round 34: punished in its recovery
   if (e.markT > 0) { dmg = Math.round(dmg * (e.markK || 1.35)); if (e.markLeech) hero.hp = Math.min(STAT.maxHp, hero.hp + dmg * e.markLeech); }   // round 33: Hunter's Mark
   const heroStop = hero.stop;
   // shield-bearers block blows from the front while they aren't swinging. A heavy blow breaks the
@@ -665,8 +666,9 @@ function updateEnemy(e, dt) {
   }
   const atkClip = m.ranged === 'arrow' ? 'shoot' : m.ranged ? 'cast' : 'attack';
   if (e.atk >= 0) {
-    e.clip = atkClip; e.atk += dt * 1000 * (e.slowT > 0 ? 0.55 : 1);
+    e.clip = atkClip; const a0 = e.atk; e.atk += dt * 1000 * (e.slowT > 0 ? 0.55 : 1);
     const sw = FAMILIES[e.fam].swing(e), ki = swingKey(sw, e.atk);
+    if (ki >= 0) monsterStrikeStep(e, sw, ki, a0, d);   // round 34: wind-up glint, lunges, hops, the opening after
     if (ki >= 0 && sw[ki].hit && !e.hitDone) {
       e.hitDone = true;
       if (m.ranged) {
@@ -675,7 +677,13 @@ function updateEnemy(e, dt) {
         projectiles.push({ kind: m.ranged, fi: e.fi + dx / l * 0.5, fj: e.fj + dy / l * 0.5, vx: dx / l * sp, vy: dy / l * sp, z: m.ranged === 'arrow' ? 18 : 14, life: 2, owner: 'enemy', dmg: e.dmg });
       } else if (!hero.dead && d < m.reach + 0.35) hurtHero(roll(e.dmg), e);
     }
-    if (ki < 0) { e.atk = -1; e.cool = m.ranged ? 1.4 + Math.random() : 0.5 + Math.random() * 0.5; e.clip = 'idle'; }
+    if (ki < 0) {
+      e.atk = -1; e.leapZ = 0; e.open = false; e.clip = 'idle';
+      e.cool = m.ranged ? 1.4 + Math.random() : FEEL_OLD ? 0.5 + Math.random() * 0.5 : 0.35 + Math.random() * 0.45;
+      // elites and champions follow up at once with a second strike (no second wind-up) now and then
+      if (!FEEL_OLD && !m.ranged && (e.def.elite || e.champ) && !e.chained && Math.random() < 0.5 && d < m.reach + swingReach(sw) + 0.3) { e.chained = true; e.atk = sw.slice(0, Math.max(0, sw.findIndex(k => k.mv > 0 || k.hit))).reduce((a, k) => a + k.ms, 0); e.hitDone = false; e.atkDir = null; }
+      else e.chained = false;
+    }
     return;
   }
   if (hero.dead) { e.clip = 'idle'; return; }
@@ -741,10 +749,11 @@ function updateEnemy(e, dt) {
     circling = da > 0.5 && e.slotWait < 1.5;
     if (!circling) e.slotWait = 0;
   }
-  if (!m.ranged && !fleeing && d < m.reach && !circling) {
+  const lunge = m.ranged ? 0 : swingReach(FAMILIES[e.fam].swing(e)) * 0.8;   // a lunging attack starts from farther out
+  if (!m.ranged && !fleeing && (d < m.reach || (e.cool <= 0 && d < m.reach + lunge && see)) && !circling) {
     e.dir = dirFrom(dx, dy); e.clip = 'idle';
-    if (e.cool <= 0) { e.atk = 0; e.hitDone = false; }
-    return;
+    if (e.cool <= 0) { e.atk = 0; e.hitDone = false; e.atkDir = null; }
+    if (d < m.reach) return;
   }
   // move: ranged enemies back off when the hero is close, packs fan out to the flanks, everyone else closes in
   let mv = null;
@@ -784,6 +793,28 @@ function hurtHero(dmg, src) {
     hero.hp = 0; hero.dead = 0.001; hero.clip = 'death'; hero.clock = 0; hero.atk = -1;
   }
   void src;
+}
+// round 34: one frame of a monster's attack. The glint on the wind-up, the lunge or hop along the
+// line it locked when it began (it stops short of the hero and at walls), the arc of a leap, and
+// whether it is open to punishment
+function monsterStrikeStep(e, sw, ki, a0, d) {
+  const k = sw[ki];
+  let t0 = 0; for (let i = 0; i < ki; i++) t0 += sw[i].ms;
+  if (!e.atkDir) { const dx = hero.fi - e.fi, dy = hero.fj - e.fj, l = Math.hypot(dx, dy) || 1; e.atkDir = [dx / l, dy / l]; }
+  if (k.tele && a0 <= t0) {   // the moment the wind-up starts: a glint where the weapon or eyes are, a low growl
+    const [x, y] = screenOf(e);
+    G.sparks.push({ x, y, z: e.def.chest * 1.25 + 8, t: 0.14, col: 51 });
+    sfx('growl');
+  }
+  if (k.mv) {
+    const u = Math.min(1, (e.atk - t0) / k.ms), uPrev = Math.max(0, (a0 - t0) / k.ms), step = k.mv * (u - uPrev);
+    const close = Math.hypot(hero.fi - e.fi, hero.fj - e.fj) < 0.75 + (e.def.unique ? 0.5 : 0);
+    if (step > 0 && !close) tryMove(e, e.atkDir[0] * step, e.atkDir[1] * step, 0.25);
+    if (step < 0) tryMove(e, e.atkDir[0] * step, e.atkDir[1] * step, 0.25);
+    if (step > 0 && Math.random() < 0.6) { const [x, y] = screenOf(e); pspawn(5, x, y, 1, -e.atkDir[0] * 20, -e.atkDir[1] * 10, 6 + Math.random() * 8, 1, LV.outdoor ? DIRT[3] : S[5]); }   // kicked-up dust
+  }
+  e.leapZ = k.z ? Math.sin(Math.min(1, (e.atk - t0) / k.ms) * Math.PI) * k.z : 0;
+  e.open = !!k.open;
 }
 function separate() {
   const list = enemies.filter(alive);
