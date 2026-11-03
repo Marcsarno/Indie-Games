@@ -522,23 +522,24 @@ export function createDave(D) {
     RB.on = false; SHUT.clear(); CLOSED.clear(); RB.blockers = []; if (env.setBlocks) env.setBlocks([], []);
   }
   // round 50: the police close a street ahead of you: the first real junction 70-230 m up your route, the street you would take out of it, shut 16 m in.
-  // Only where there is still a way round, never on the last 150 m, never on screen when it appears; up to DAVE.dynBlocks at once, old ones behind you are taken down
+  // Only where there is still a way round, never on the last 150 m, never where you can see it appear (on screen and closer than the fog); up to DAVE.dynBlocks at once, old ones behind you are taken down
   function dynBlocks(dt, P) {
     if (!DAVE.dynBlocks || !RB.on || !graph) return;
     for (const r of RB.dyn.slice()) if (Math.hypot(r.x - P.x, r.z - P.z) > 230 && !onScreen(r.x, r.z)) { killBlock(r); RB.dyn.splice(RB.dyn.indexOf(r), 1); syncBlocks(); }
     RB.dynT -= dt; if (RB.dynT > 0 || RB.dyn.length >= DAVE.dynBlocks) return; RB.dynT = 2.5;
-    const R = routeTo(P.x, P.z, DAVE.house[0], DAVE.house[1]); if (R.length < 4) return;
+    const R = routeTo(P.x, P.z, DAVE.house[0], DAVE.house[1]); RB.why = []; if (R.length < 4) return;
     let total = 0; for (let i = 1; i < R.length; i++) total += Math.hypot(R[i][0] - R[i - 1][0], R[i][1] - R[i - 1][1]);
     let acc = Math.hypot(R[0][0] - P.x, R[0][1] - P.z);
     for (let i = 1; i < R.length - 2; i++) {
-      acc += Math.hypot(R[i][0] - R[i - 1][0], R[i][1] - R[i - 1][1]); if (acc < 70) continue; if (acc > 230 || total - acc < 150) return;
-      const n = GN.findIndex(q => q.adj.length >= 3 && Math.abs(q.x - R[i][0]) + Math.abs(q.z - R[i][1]) < 1.5); if (n < 0) continue;
+      acc += Math.hypot(R[i][0] - R[i - 1][0], R[i][1] - R[i - 1][1]); if (acc < 70) continue; if (acc > 230 || total - acc < 150) { RB.why.push('end ' + Math.round(acc)); return; }
+      const n = GN.findIndex(q => q.adj.length >= 3 && Math.abs(q.x - R[i][0]) + Math.abs(q.z - R[i][1]) < 1.5); if (n < 0) continue; RB.why.push('J' + n + '@' + Math.round(acc));
       let j = i + 1; while (j < R.length - 1 && Math.hypot(R[j][0] - GN[n].x, R[j][1] - GN[n].z) < 2) j++;     // the next route point past the junction (edges share their end point)
-      const ed = GN[n].adj.find(a => a.P.some((q, m) => m > 0 && Math.abs(q[0] - R[j][0]) + Math.abs(q[1] - R[j][1]) < 1.5)); if (!ed || ed.L < 34 || SHUT.has(ed.k)) continue;
+      const ed = GN[n].adj.find(a => a.P.some((q, m) => m > 0 && Math.abs(q[0] - R[j][0]) + Math.abs(q[1] - R[j][1]) < 1.5)); if (!ed || ed.L < 34 || SHUT.has(ed.k)) { RB.why.push(ed ? 'short/shut' : 'noedge'); continue; }
       const from = graph.edges[ed.k].a === n ? 'a' : 'b', at = 16, q = ed.P[Math.min(ed.P.length - 1, 2)];
-      if (onScreen(GN[n].x, GN[n].z) && Math.hypot(GN[n].x - P.x, GN[n].z - P.z) < 90 || onScreen(q[0], q[1])) continue;
-      SHUT.add(ed.k); CLOSED.set(ed.k, n); route(nearestNode(P.x, P.z), nearestNode(DAVE.house[0], DAVE.house[1])); const ok = gd[nearestNode(DAVE.house[0], DAVE.house[1])] < 1e4; SHUT.delete(ed.k); CLOSED.delete(ed.k);
-      if (!ok) continue;
+      if (onScreen(q[0], q[1]) && Math.hypot(q[0] - P.x, q[1] - P.z) < 125) { RB.why.push('onscreen'); continue; }      // far ones are in the fog (165 m)
+      const hn = nearestNode(DAVE.house[0], DAVE.house[1]), pn = nearestNode(P.x, P.z); route(pn, hn); const base = gd[hn];      // (the fixed blocks may already put a penalty on every way in)
+      SHUT.add(ed.k); CLOSED.set(ed.k, n); route(pn, hn); const ok = gd[hn] < base + 5e3; SHUT.delete(ed.k); CLOSED.delete(ed.k);
+      if (!ok) { RB.why.push('nodetour'); continue; }
       const rec = buildBlock(ed.k, from, at, 0); showBlock(rec, true); RB.dyn.push(rec); syncBlocks(); RB.dynT = DAVE.dynEvery ?? 14; banner('ROADBLOCK AHEAD'); return;
     }
   }
