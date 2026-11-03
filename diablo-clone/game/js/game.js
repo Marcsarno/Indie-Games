@@ -291,7 +291,19 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
   burst(2, ex, ey, e.def.chest, crit ? 16 : 6, crit ? 120 : 70, crit ? 18 : 17);
   if (crit) { sfx('crit'); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.2); }
   if (e.state === 'sleep') wake(e);
+  // round 29: how the monster takes it depends on what hit it
+  const small = !e.def.unique && !e.def.elite, el = G.elem;
+  if (e.hp > 0) {
+    if (el === 'fire') { e.burnT = 2.4; e.burnTick = 0.5; e.burnDmg = Math.max(1, Math.round(dmg * 0.15)); if (small && !e.def.flee && Math.random() < 0.5) e.panicT = Math.max(e.panicT || 0, 0.8); }
+    if (el === 'heavy' && small && !(e.frozen > 0)) { e.downT = e.downT0 = 0.75; e.atk = -1; e.stun = 0; }
+    if (el === 'arcane') { const dd = Math.hypot(e.fi - fromFi, e.fj - fromFj) || 1; e.kb = [(e.fi - fromFi) / dd * 2.2, (e.fj - fromFj) / dd * 2.2]; e.hurt = Math.max(e.hurt || 0, 0.12); }
+    if (el === 'stagger') { const dd = Math.hypot(e.fi - fromFi, e.fj - fromFj) || 1; e.kb = [e.kb[0] + (e.fi - fromFi) / dd * 2.5, e.kb[1] + (e.fj - fromFj) / dd * 2.5]; e.hurt = Math.max(e.hurt || 0, 0.15); }
+  }
   if (e.hp <= 0) {
+    // the death fits the blow: fire burns it to ash, cold shatters it, a heavy blow throws the body
+    e.deathKind = el === 'fire' ? 'ash' : (el === 'cold' || e.frozen > 0) ? 'shatter' : el === 'heavy' && small ? 'thrown' : null;
+    if (e.deathKind === 'thrown') { const dd = Math.hypot(e.fi - fromFi, e.fj - fromFj) || 1; e.throwV = [(e.fi - fromFi) / dd * 7, (e.fj - fromFj) / dd * 7]; }
+    e.burnT = 0; e.downT = 0;
     e.dying = 0; e.atk = -1; e.clip = 'death'; e.tint = 0;
     if (FEEL_OLD) { e.stop = crit ? 0.2 : 0.15; hero.stop = Math.max(hero.stop, e.stop); }
     else { e.stop = crit ? 0.15 : 0.12; hero.stop = Math.max(hero.stop, e.stop * 0.65); }
@@ -538,7 +550,7 @@ function updateHero(dt) {
   hero.clock += dt;
   if (hero.cast >= 0) {
     hero.cast -= dt; hero.castAge = (hero.castAge || 0) + dt; hero.clip = 'channel';
-    if (hero.castFn && hero.castAge >= CAST_RELEASE) { const f = hero.castFn; hero.castFn = null; f(); }   // the spell leaves on the release frame
+    if (hero.castFn && hero.castAge >= castRel(hero.castKind)) { const f = hero.castFn; hero.castFn = null; f(); }   // the spell leaves on the release frame
     if (hero.cast < 0) { hero.cast = -1; hero.clip = 'idle'; }
   }
   if (hero.atk >= 0) {
@@ -594,6 +606,17 @@ function updateEnemy(e, dt) {
     e.flash = Math.max(0, e.flash - dt);   // the kill flash is brief; the death animation shows after it
     if (e.stop > 0) { e.stop -= dt; return; }
     e.dying += dt;
+    if (e.deathKind === 'thrown' && e.throwV) {   // flung back in an arc, landing as the death plays out
+      const u = Math.min(1, e.dying / 0.35); tryMove(e, e.throwV[0] * dt * (1 - u), e.throwV[1] * dt * (1 - u), 0.25); e.leapZ = Math.sin(u * Math.PI) * 9;
+      if (u >= 1) { e.throwV = null; e.leapZ = 0; const [x, y] = screenOf(e); burst(5, x, y, 1, 8, 40, LV.outdoor ? DIRT[3] : S[5]); }
+    }
+    if (e.deathKind === 'ash' || e.deathKind === 'shatter') {   // nothing is left to lie there
+      const [x, y] = screenOf(e);
+      if (e.deathKind === 'ash' && Math.random() < 0.7) { pspawn(3, x + (Math.random() - 0.5) * 12, y, 4 + Math.random() * e.def.chest, (Math.random() - 0.5) * 8, 0, 14 + Math.random() * 14, 0.6, Math.random() < 0.5 ? 16 : 4); pspawn(5, x + (Math.random() - 0.5) * 12, y, 2 + Math.random() * e.def.chest, (Math.random() - 0.5) * 12, (Math.random() - 0.5) * 6, 6, 1, 3); }
+      if (e.deathKind === 'shatter' && !e.shattered) { e.shattered = true; burst(5, x, y, e.def.chest, 22, 100, 118); burst(2, x, y, e.def.chest, 12, 90, 117); sfx('clink'); }
+      if (e.dying >= (e.deathKind === 'ash' ? 0.55 : 0.15) && !e.corpse) { e.corpse = true; if (e.deathKind === 'ash') stampBlood(Math.round(x), Math.round(y), 3, (Math.random() * 1e6) | 0, [2, 3, 3, 4, 5]); }
+      return;
+    }
     if (e.dying >= 0.6 && !e.corpse) {   // the last death frame becomes part of the floor
       e.corpse = true;
       const [x, y] = screenOf(e);
@@ -604,6 +627,12 @@ function updateEnemy(e, dt) {
   e.flash = Math.max(0, e.flash - dt); if (e.tint > 0 && e.flash <= 0) e.tint -= dt;
   if (e.stop > 0) { e.stop -= dt; return; }
   e.clock += dt; e.cool -= dt;
+  if (e.burnT > 0) {   // on fire: a burn every half second, flames licking up, the orange flicker drawn
+    e.burnT -= dt; e.burnTick -= dt;
+    if (Math.random() < dt * 14) { const [x, y] = screenOf(e); pspawn(3, x + (Math.random() - 0.5) * 10, y, 3 + Math.random() * e.def.chest, (Math.random() - 0.5) * 6, 0, 18 + Math.random() * 14, 0.4, Math.random() < 0.5 ? 16 : 17); }
+    if (e.burnTick <= 0) { e.burnTick = 0.5; G.elem = null; damageEnemy(e, e.burnDmg, e.fi, e.fj, false, 0, true); if (e.hp <= 0 && !e.deathKind) e.deathKind = 'ash'; if (e.dying >= 0) return; }
+  }
+  if (e.downT > 0) { e.downT -= dt; e.clip = 'death'; e.atk = -1; if (e.downT <= 0) e.clip = 'idle'; return; }   // knocked down: on the ground, then up
   if (e.slowT > 0) { e.slowT -= dt; if (Math.random() < dt * 5) { const [x, y] = screenOf(e); pspawn(3, x + (Math.random() - 0.5) * 14, y, 4 + Math.random() * e.def.chest, 0, 0, 8, 0.5, 118); } }
   if (Math.abs(e.kb[0]) + Math.abs(e.kb[1]) > 0.01) {
     tryMove(e, e.kb[0] * dt, e.kb[1] * dt, 0.25);
@@ -767,8 +796,8 @@ function updateProjectiles(dt) {
       if (!p.home || !alive(p.home)) { let bd = 4; p.home = null; for (const e of enemies) { if (!alive(e)) continue; const d = Math.hypot(e.fi - p.fi, e.fj - p.fj); if (d < bd) { bd = d; p.home = e; } } }
       if (p.home) {
         const want = Math.atan2(p.home.fj - p.fj, p.home.fi - p.fi), cur = Math.atan2(p.vy, p.vx);
-        let da = ((want - cur + Math.PI * 3) % (Math.PI * 2)) - Math.PI; da = Math.max(-9 * dt, Math.min(9 * dt, da));
-        const sp = Math.hypot(p.vx, p.vy) + dt * 6, a = cur + da; p.vx = Math.cos(a) * sp; p.vy = Math.sin(a) * sp;
+        let da = ((want - cur + Math.PI * 3) % (Math.PI * 2)) - Math.PI; da = Math.max(-5 * dt, Math.min(5 * dt, da));
+        const sp = Math.hypot(p.vx, p.vy), a = cur + da; p.vx = Math.cos(a) * sp; p.vy = Math.sin(a) * sp;
       }
     }
     const n = 3;
@@ -780,7 +809,7 @@ function updateProjectiles(dt) {
       } else {
         for (const e of enemies) if (alive(e) && Math.hypot(e.fi - p.fi, e.fj - p.fj) < 0.5 + (e.def.unique ? 0.4 : 0)) {
           if (p.boom) { p.life = 0; break; }   // a fireball bursts on whatever it touches (below)
-          if (p.spell) { const c = spellCrit(); damageEnemy(e, spellDmg(c ? p.dmgK * 2 : p.dmgK), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, c, 0, true); }
+          if (p.spell) { const c = spellCrit(); G.elem = p.elem || null; damageEnemy(e, spellDmg(c ? p.dmgK * 2 : p.dmgK), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, c, 0, true); G.elem = null; }
           else damageEnemy(e, roll(p.dmg), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, false, 0, true);
           p.life = 0; break;
         }
@@ -824,19 +853,21 @@ function frameOf(e) {
   if (e === hero && hero.dash > 0) return 0;
   if (e.clip === 'idle') return Math.floor(pt / 0.2) % 4;
   if (e.clip === 'walk') return Math.floor(e.walk) % 8;
-  if (e === hero && e.clip === 'channel') { const a = hero.castAge || 0, ph = a < CAST_RELEASE ? 0 : a < 0.19 ? 1 : 2; return (hero.castKind === 'meteor' ? 3 : 0) + ph; }
+  if (e === hero && e.clip === 'channel') { const a = hero.castAge || 0, rl = castRel(hero.castKind), ph = a < rl ? 0 : a < rl + 0.13 ? 1 : 2; return (hero.castKind === 'meteor' ? 3 : 0) + ph; }
   if (e.clip === 'attack2' || e.clip === 'attack3' || e.clip === 'attack4') return Math.max(0, swingKey(FAMILIES[e.fam].combo(e, atkIndex(e.clip)), e.atk));
   if (e.clip === 'attack' || e.clip === 'shoot' || e.clip === 'cast') return Math.max(0, swingKey(FAMILIES[e.fam].swing(e), e.atk));
+  if (e.downT > 0) { const t = e.downT0 - e.downT; return Math.max(0, Math.min(4, Math.floor(Math.min(t, e.downT) / 0.06))); }   // knocked down: fall, lie, get up
   if (e.clip === 'death') return Math.min(5, Math.floor((e === hero ? hero.dead : e.dying) / 0.1));
   return 0;
 }
 // hurt tint: each palette color mapped onto the red ramp by its brightness, so the shape still reads
-const HURT_TINT = new Uint8Array(128), ICE_TINT = new Uint8Array(128), ARC_TINT = new Uint8Array(128);
+const HURT_TINT = new Uint8Array(128), ICE_TINT = new Uint8Array(128), ARC_TINT = new Uint8Array(128), FIRE_TINT = new Uint8Array(128);
 for (let v = 0; v < 128; v++) {
   const n = parseInt(PAL_HEX[v] || '000000', 16), L = (0.3 * (n >> 16) + 0.59 * ((n >> 8) & 255) + 0.11 * (n & 255)) / 255;
   HURT_TINT[v] = v <= 1 ? v : RED[Math.min(4, Math.floor(L * 6 + 0.5))];
   ICE_TINT[v] = v <= 1 ? v : WATER[Math.min(4, Math.floor(L * 4.6 + 0.9))];
-  ARC_TINT[v] = v <= 1 ? v : BLUE[Math.min(3, Math.floor(L * 4 + 1))] | EMIS;   // blink afterimage: glowing arcane blue   // frozen: ice blue that keeps the body's shading
+  ARC_TINT[v] = v <= 1 ? v : BLUE[Math.min(3, Math.floor(L * 4 + 1))] | EMIS;
+  FIRE_TINT[v] = v <= 1 ? v : FIRE[Math.min(FIRE.length - 1, Math.floor(L * FIRE.length * 0.9 + 0.5))] | EMIS;   // burning: the body glows through the fire ramp   // blink afterimage: glowing arcane blue   // frozen: ice blue that keeps the body's shading
 }
 function blit(sp, wx, wy, flash, cidx, tile, dissolve = 0) {
   const sx0 = Math.round(wx - camX) - sp.ax, sy0 = Math.round(wy - camY) - sp.ay;
@@ -1018,8 +1049,10 @@ function render() {
       const sp = getSprite(c.fam, c.look, c.dir, c.clip, frameOf(c), c);
       const jit = c.stop > 0 && c !== hero && c.dying < 0 ? (Math.floor(t * 33) % 2 ? 1 : -1) : 0;
       // white flash, then a brief dithered red; ice blue while frozen, half ice while slowed
-      const fl = c.flash > 0 ? 1 : c.frozen > 0 ? 4 : c.tint > 0 ? 3 : c.slowT > 0 || c.chillT > 0 ? 5 : 0;
-      ovBlit(sp, x + jit, y - (c.leapZ || 0), charLevel[n], fl, 0, tIdx(Math.floor(c.fi), Math.floor(c.fj)), null, c._kl);
+      const ash = c.deathKind === 'ash' && c.dying >= 0, shat = c.deathKind === 'shatter' && c.dying >= 0;
+      const fl = c.flash > 0 ? 1 : shat ? 4 : ash || (c.burnT > 0 && Math.floor(G.t * 16 + c.seed) % 3 === 0) ? 7 : c.frozen > 0 ? 4 : c.tint > 0 ? 3 : c.slowT > 0 || c.chillT > 0 ? 5 : 0;
+      const dis = ash ? Math.min(1, c.dying / 0.55) : shat ? Math.min(1, c.dying / 0.15) : 0;
+      ovBlit(sp, x + jit, y - (c.leapZ || 0), charLevel[n], fl, dis, tIdx(Math.floor(c.fi), Math.floor(c.fj)), null, c._kl);
     } });
   });
   for (const p of projectiles) ov.push({ depth: p.fi + p.fj, draw: () => drawProjectile(p) });
@@ -1158,7 +1191,7 @@ function ovBlit(sp, wx, wy, level, flash, dissolve, tile, clip = null, rim = nul
       let v = sp.data[y * sp.w + x];
       if (!v) continue;
       if (dissolve > 0 && BAYER[((yy & 3) << 2) | (xx & 3)] < dissolve) continue;
-      if (flash && v !== BLK) v = flash === 4 ? ICE_TINT[v & 127] : flash === 6 ? ARC_TINT[v & 127] : flash === 5 ? ((xx + yy) & 2 ? ICE_TINT[v & 127] : v) : flash === 2 ? HURT_TINT[v & 127] : flash === 3 ? ((xx + yy) & 2 ? HURT_TINT[v & 127] : v) : (27 | EMIS);
+      if (flash && v !== BLK) v = flash === 7 ? FIRE_TINT[v & 127] : flash === 4 ? ICE_TINT[v & 127] : flash === 6 ? ARC_TINT[v & 127] : flash === 5 ? ((xx + yy) & 2 ? ICE_TINT[v & 127] : v) : flash === 2 ? HURT_TINT[v & 127] : flash === 3 ? ((xx + yy) & 2 ? HURT_TINT[v & 127] : v) : (27 | EMIS);
       // a world sprite redrawn over a character is already drawn and lit in the world layer at this
       // very pixel: copy it (cheaper than lighting it again, and identical)
       const c = !flash && LV0 < 0 && (!fine || sp.world2) ? (fine ? frame2[yy * OW + xx] : base32[(Y0 + hy) / SPX * W + y * W + (X0 + hx) / SPX + x]) : (v & EMIS) ? PAL32[CYCLE[v & 127]] : v === BLK ? PAL32[BLK] : LV0 >= 0 ? LCOL[LV0 + v] : envCol((xx + hx) >> 1, (yy + hy) >> 1, v, tile);
@@ -1220,17 +1253,20 @@ function drawProjectile(p) {
     for (let s = -4; s <= 3; s++) put(Math.round(dx * s * 1.4), Math.round(dy * s * 1.4), s > 2 ? 30 : 25);
     return;
   }
-  if (p.kind === 'missile') {   // round 27, at full detail: a white-hot core in a blue glow, a ribbon trail along its
-    // real path (it homes, so the trail curves), thinning and twinkling out, and a four-point glint
-    const tr = p.trail || [], tw = Math.floor(G.t * 30 + p.fi * 7) % 2;
+  if (p.kind === 'missile') {   // round 29: an arcane bolt: a fat glowing orb with three sparks circling it,
+    // a crackling tail that jitters along the real path behind it, and a white-hot heart
+    const tr = p.trail || [], sp = (p.spin || 0) + G.t * 14;
     for (let k = 0; k < tr.length; k++) {
-      const [fi, fj, z] = tr[k], [x, y] = iso(fi, fj), X = Math.round(x * SPX) - cam2x, Y = Math.round((y - z) * SPX) - cam2y, u = k / tr.length;
-      const w = u > 0.6 ? 1 : 0, c = u > 0.7 ? 40 : u > 0.35 ? 39 : 38;
-      if (u < 0.3 && ((k + tw) & 1)) continue;
-      for (let b = -w; b <= w; b++) ovSet(X, Y + b, c);
+      const [fi, fj, z] = tr[k], [x, y] = iso(fi, fj), u = k / tr.length, j = (hash(k, Math.floor(G.t * 24), 7) - 0.5) * 4 * (1 - u);
+      const X = Math.round(x * SPX) - cam2x, Y = Math.round((y - z) * SPX + j) - cam2y, w = Math.round(u * 3.5);
+      for (let b = -w; b <= w; b++) for (let a = -w; a <= w; a++) { if (Math.abs(a) + Math.abs(b) > w) continue; if (u < 0.5 && ((X + a + Y + b) & 1)) continue; ovSet(X + a, Y + b, u > 0.75 ? 40 : u > 0.4 ? 39 : 38); }
     }
-    for (let b = -3; b <= 3; b++) for (let a = -4; a <= 4; a++) { const d = a * a / 16 + b * b / 9; if (d > 1) continue; if (d > 0.6 && ((X0 + a + Y0 + b) & 1)) continue; ovSet(X0 + a, Y0 + b, d < 0.18 ? 27 : d < 0.5 ? 40 : 39); }
-    if (tw) for (let k = 4; k <= 6; k++) { ovSet(X0, Y0 - k, 40); ovSet(X0, Y0 + k, 40); ovSet(X0 - k - 1, Y0, 40); ovSet(X0 + k + 1, Y0, 40); }
+    for (let b = -7; b <= 7; b++) for (let a = -9; a <= 9; a++) {
+      const d = a * a / 81 + b * b / 49; if (d > 1) continue;
+      if (d > 0.72 && ((X0 + a + Y0 + b + Math.floor(G.t * 20)) & 1)) continue;   // a fizzing rim
+      ovSet(X0 + a, Y0 + b, d < 0.12 ? 27 : d < 0.4 ? 40 : d < 0.72 ? 39 : 38);
+    }
+    for (let k = 0; k < 3; k++) { const a = sp + k * 2.094, x = Math.round(X0 + Math.cos(a) * 13), y = Math.round(Y0 + Math.sin(a) * 6.5); ovSet(x, y, 27); ovSet(x + 1, y, 40); ovSet(x, y + 1, 39); }
     return;
   }
   if (p.kind === 'hfire') {   // the hero's fireball: a flickering ball of flame with a hot core, tail streaming behind

@@ -22,7 +22,7 @@ const run = n => { for (let k = 0; k < n; k++) update(1 / 60); };
 // slam: two in front, one behind
 arena(); const f1 = spawn('fallen', 1.5, 0), f2 = spawn('fallen', 3, 0.4), bk = spawn('fallen', -2.4, 0); hero.dir = dirFrom(1, 0);
 for (const e of enemies) e.cool = 9;
-run(2); useSkill(0); let stunned = 0; for (let k = 0; k < 40; k++) { update(1 / 60); if (f1.stun > 0 && f2.stun > 0) stunned = 1; }
+run(2); useSkill(0); let stunned = 0; for (let k = 0; k < 40; k++) { update(1 / 60); if ((f1.stun > 0 || f1.downT > 0) && (f2.stun > 0 || f2.downT > 0)) stunned = 1; }
 log.push({ slamFront: [500 - f1.hp, 500 - f2.hp], slamBehind: 500 - bk.hp, stunned: !!stunned, quake: G.quakes.length > 0 || stunned });
 render(); shots.slam = cvs.toDataURL();
 // hook a pack 5 tiles away

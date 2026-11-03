@@ -1,0 +1,58 @@
+<title>Hits That Land</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  /* layout: one narrow column, each change a section with its picture first */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul { margin: 0; max-width: 64ch; }
+  ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .num { font-variant-numeric: tabular-nums; }
+  table { border-collapse: collapse; font-size: 0.95rem; }
+  .tw { overflow-x: auto; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+</style>
+<main>
+  <header>
+    <h1>Hits That Land</h1>
+    <p class="lede">Dungeon of Bones, round 29 (plan step 1): a new magic missile, monsters that react to what hits them, deaths that match the killing blow, and visible wind-ups.</p>
+  </header>
+  <section>
+    <h2>Mage</h2>
+    <figure><div class="frame"><img src="mage.gif" alt="Before and after: the mage fires magic missiles, a fireball, cone of cold, a meteor and blink. After: one fat arcane orb with circling sparks flies slowly into the pack; the fireball sets imps burning orange" width="1048" height="418"></div>
+    <figcaption>Left is before, right is now.</figcaption></figure>
+    <ul>
+      <li><strong>Magic missile:</strong> one heavier arcane bolt per cast instead of a fan of thin darts. It's a fat glowing orb with three sparks circling it and a crackling tail. It flies a third slower (5 tiles a second, no speeding up) and turns more gently. Each hit pushes the target back and makes it flinch. Damage per second is about the same.</li>
+      <li><strong>Fireball and meteor</strong> set monsters alight: they glow and flicker orange, burn for 2.4 seconds, and small ones may panic. Monsters killed by fire burn away to ash and leave a scorch mark.</li>
+      <li><strong>Cone of cold:</strong> monsters killed by cold shatter into ice.</li>
+      <li><strong>Wind-ups:</strong> the fireball and cone are gathered a beat before they leave the staff, and the meteor holds the staff up longest. The missile stays snappy.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Warrior</h2>
+    <figure><div class="frame"><img src="warrior.gif" alt="Before and after: hook, slam, whirlwind and leap. After: the slam knocks the imps flat, they lie on the floor and get back up; the hooked pack bounces as it is dragged" width="1048" height="418"></div>
+    <figcaption>Left is before, right is now.</figcaption></figure>
+    <ul>
+      <li><strong>Slam and leap</strong> knock ordinary monsters to the ground: they fall, lie there for a moment and get back up. A kill with a heavy blow throws the body back in an arc.</li>
+      <li><strong>Hook:</strong> the caught pack is yanked off its feet and bounces as it's dragged in.</li>
+      <li><strong>Whirlwind:</strong> each turn staggers what it hits backward, with a low whoosh under the swish.</li>
+      <li>Bosses and elites don't get knocked down or thrown.</li>
+    </ul>
+  </section>
+</main>

@@ -70,8 +70,8 @@ function groundSlamHit() {
     const da = Math.abs(((Math.atan2(dy, dx) - a0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
     if (d > SLAM_R + (e.def.unique ? 0.5 : 0) || (d > 0.7 && da > SLAM_HALF + 0.3 / Math.max(1, d))) continue;
     const crit = Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100;
-    wake(e); damageEnemy(e, heroDmg((crit ? 2 : 1) * 1.5), hero.fi, hero.fj, crit, 1);
-    if (alive(e) && !e.def.unique) e.stun = Math.max(e.stun || 0, 0.7);
+    wake(e); G.elem = 'heavy'; damageEnemy(e, heroDmg((crit ? 2 : 1) * 1.5), hero.fi, hero.fj, crit, 1); G.elem = null;
+    if (alive(e) && !e.def.unique && !(e.downT > 0)) e.stun = Math.max(e.stun || 0, 0.7);   // (a knocked-down one is on the ground instead)
   }
   G.pierce = false;
   for (const p of dynProps) if (!p.broken && (p.kind === 'barrel' || p.kind === 'egg') && Math.hypot(p.i + 0.5 - hero.fi, p.j + 0.5 - hero.fj) < SLAM_R) hitProp(p);
@@ -138,8 +138,8 @@ function updateLeap(dt) {
       const d = Math.hypot(en.fi - hero.fi, en.fj - hero.fj);
       if (d > 1.9 + (en.def.unique ? 0.5 : 0)) continue;
       const crit = Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100;
-      wake(en); damageEnemy(en, heroDmg((crit ? 2 : 1) * 1.8), hero.fi, hero.fj, crit, 2);
-      if (alive(en) && !en.def.unique) en.stun = Math.max(en.stun || 0, 0.5);
+      wake(en); G.elem = 'heavy'; damageEnemy(en, heroDmg((crit ? 2 : 1) * 1.8), hero.fi, hero.fj, crit, 2); G.elem = null;
+      if (alive(en) && !en.def.unique && !(en.downT > 0)) en.stun = Math.max(en.stun || 0, 0.5);
     }
     G.pierce = false;
     const [x, y] = screenOf(hero), dust = LV.outdoor ? DIRT[3] : S[5];
@@ -180,12 +180,13 @@ function updateWarriorFx(dt) {
         const dx = hero.fi - e.fi, dy = hero.fj - e.fj, d = Math.hypot(dx, dy);
         if (d > 1.05) {
           done = false; const st = Math.min(d - 1, 14 * dt); tryMove(e, dx / d * st, dy / d * st, 0.25); e.kb = [0, 0]; e.clip = 'hit';
+          e.leapZ = 3 + Math.abs(Math.sin(G.t * 22)) * 3;   // yanked off its feet, bouncing along
           if (Math.random() < 0.6) { const [x, y] = screenOf(e); pspawn(5, x + (Math.random() - 0.5) * 6, y, 1, -dx * 20, -dy * 10, 12 + Math.random() * 12, 1, LV.outdoor ? DIRT[3] : S[5]); }   // dragged through the dust
         }
       }
       const lead = h.caught.find(alive); if (lead) { h.fi = lead.fi; h.fj = lead.fj; }
       h.pullT = (h.pullT || 0) + dt;
-      if (done || h.pullT > 0.7) { for (const e of h.caught) if (alive(e)) e.stun = Math.max(e.stun || 0, 0.8); h.state = 'gone'; }
+      if (done || h.pullT > 0.7) { for (const e of h.caught) { e.leapZ = 0; if (alive(e)) e.stun = Math.max(e.stun || 0, 0.8); } h.state = 'gone'; }
     } else if (h.state === 'reel') {   // a boss won't come: the warrior is hauled to it
       const a = h.anchor, dx = a.fi - hero.fi, dy = a.fj - hero.fj, d = Math.hypot(dx, dy);
       h.fi = a.fi; h.fj = a.fj; h.pullT = (h.pullT || 0) + dt;
@@ -250,6 +251,10 @@ function drawHookChains() {
 // harder. A cast is three poses: gather, release (the spell leaves here, CAST_RELEASE s after the
 // tap, with a flare at the staff's orb), follow-through; once it is out, the stick cancels the rest.
 const CAST_RELEASE = 0.06;
+// round 29: how long each spell is gathered before it leaves the staff (the wind-up you can see);
+// the missile stays snappy, the big ones are held a beat longer
+const CAST_REL = { missile: 0.07, fireball: 0.13, cone: 0.12, meteor: 0.24 };
+const castRel = k => CAST_REL[k] ?? CAST_RELEASE;
 const spellDmg = k => Math.max(1, Math.round(roll(STAT.dmg) * k * (hero.buff > 0 ? 1.4 : 1)));
 const spellCrit = () => Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100;
 function startCast(kind, dur, target, fn) {
@@ -272,16 +277,15 @@ function aimAt(range) {
   const [fx, fy] = dirVec(hero.dir); return [null, [hero.fi + fx * 4, hero.fj + fy * 4]];
 }
 // magic missiles (the attack button): two homing darts fanned out, three from level 5
+// Round 29: the magic missile is one heavier arcane bolt per cast instead of a fan of thin darts:
+// slower in flight (5 tiles/s, no speeding up) so it can be watched, a softer homing turn, and a
+// bigger hit (a flinch and a small push). Damage per second is about what the fan dealt.
 function castMissiles() {
   const [t, at] = aimAt(8);
-  startCast('missile', 0.3 / (1 + ((STAT.atkSpeed || 0) + (hero.frenzy > 0 ? 50 : 0)) / 100), at, () => {   // attack speed and frenzy cast faster
-    const [ox, oy] = staffTip(), a0 = Math.atan2(at[1] - hero.fj, at[0] - hero.fi);
-    const spread = hero.lvl >= 5 ? [-0.45, 0, 0.45] : [-0.32, 0.32];
-    for (const da of spread) {
-      const a = a0 + da;
-      projectiles.push({ kind: 'missile', fi: ox, fj: oy, vx: Math.cos(a) * 7.5, vy: Math.sin(a) * 7.5, z: ORB_Z, life: 1.3, owner: 'hero', home: t, spell: true, dmgK: 0.45, age: 0 });
-    }
-    orbFlare(39, 40, 8); sfx('missile');
+  startCast('missile', 0.38 / (1 + ((STAT.atkSpeed || 0) + (hero.frenzy > 0 ? 50 : 0)) / 100), at, () => {   // attack speed and frenzy cast faster
+    const [ox, oy] = staffTip(), a = Math.atan2(at[1] - oy, at[0] - ox);
+    projectiles.push({ kind: 'missile', fi: ox, fj: oy, vx: Math.cos(a) * 5, vy: Math.sin(a) * 5, z: ORB_Z, life: 1.8, owner: 'hero', home: t, spell: true, dmgK: hero.lvl >= 5 ? 1.5 : 1.15, age: 0, spin: Math.random() * 6.28, elem: 'arcane' });
+    orbFlare(39, 40, 10); sfx('missile');
   });
 }
 function castFireball() {
@@ -294,13 +298,13 @@ function castFireball() {
 }
 // fire explosion shared by the fireball and the meteor: everything in radius r takes k x staff damage
 function explodeAt(fi, fj, r, k, pow, big = false) {
-  G.pierce = true;   // blasts get round shields
+  G.pierce = true; G.elem = 'fire';   // blasts get round shields; fire sets things alight
   for (const e of enemies) {
     if (!alive(e)) continue;
     const d = Math.hypot(e.fi - fi, e.fj - fj);
     if (d < r + (e.def.unique ? 0.4 : 0)) { const c = spellCrit(); damageEnemy(e, spellDmg(c ? k * 2 : k), fi, fj, c, pow, true); }
   }
-  G.pierce = false;
+  G.pierce = false; G.elem = null;
   for (const p of dynProps) if (!p.broken && (p.kind === 'barrel' || p.kind === 'egg') && Math.hypot(p.i + 0.5 - fi, p.j + 0.5 - fj) < r + 0.3) hitProp(p);
   const [x, y] = iso(fi, fj);
   // a ring of flame rolls out across the ground to the edge of the blast
@@ -330,7 +334,7 @@ function coneOfCold() {
       const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy);
       let da = Math.abs(((Math.atan2(dy, dx) - a0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
       if (d > CONE_R + (e.def.unique ? 0.5 : 0) || (d > 0.6 && da > CONE_HALF + 0.25 / Math.max(1, d))) continue;
-      wake(e); G.pierce = true; damageEnemy(e, spellDmg(0.8), hero.fi, hero.fj, spellCrit(), 0, true); G.pierce = false;
+      wake(e); G.pierce = true; G.elem = 'cold'; damageEnemy(e, spellDmg(0.8), hero.fi, hero.fj, spellCrit(), 0, true); G.pierce = false; G.elem = null;
       if (!alive(e)) continue;
       if (e.def.unique || e.def.elite || e.champ) { e.slowT = e.def.unique ? 3 : 4; }
       else { e.frozen = 3; e.atk = -1; e.hurt = 0; e.kb = [0, 0]; }
@@ -495,9 +499,9 @@ function updateSkills(dt) {
     hero.whirl -= dt; hero.whirlTick -= dt;
     if (hero.whirlTick <= 0) {   // four hits on everything in reach while spinning
       hero.whirlTick = 0.2;
-      for (const e of enemies) if (alive(e) && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < heroReach() + 0.35) { const crit = Math.random() < CRIT_CHANCE; damageEnemy(e, heroDmg(crit ? 1.2 : 0.6), hero.fi, hero.fj, crit); }
+      for (const e of enemies) if (alive(e) && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < heroReach() + 0.35) { const crit = Math.random() < CRIT_CHANCE; G.elem = 'stagger'; damageEnemy(e, heroDmg(crit ? 1.2 : 0.6), hero.fi, hero.fj, crit); G.elem = null; }
       for (const p of dynProps) if (!p.broken && (p.kind === 'barrel' || p.kind === 'egg') && Math.hypot(p.i + 0.5 - hero.fi, p.j + 0.5 - hero.fj) < 1.7) hitProp(p);
-      sfx('swing');
+      sfx('swing'); sfx('whoomp');   // each turn of the spin has a low whoosh under the swish
     }
   }
   if (hero.dash > 0) {
