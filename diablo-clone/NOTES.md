@@ -196,6 +196,7 @@ Full detail: `reports/Better code generated pixel art.md` and
   only a stand-in.
 
 ## Test and capture tools (saved from the session scratchpad)
+- More capture helpers (round 24 save): `tools/capture/scenes.cjs <gameDir> <outPrefix>` (dungeon/forest/town screenshots), `buildcost.cjs` (sprite build ms at 1x vs 2x), `magetest.cjs <outDir>` (mage spell damage + shots), `hudshot.cjs <out.png>` (warrior HUD), `magewalk-frames.cjs <out.png>` (walk/cast frame sheet), `rprof.cjs`, `arena-overview.cjs`, `behavecap.cjs`, `lichcap.cjs`, `warcap.cjs`; tests `tools/speed-test.cjs`, `tools/cadence-test.cjs`, playtests `behave`, `lich`, `warrior`.
 - `tools/feel-test.cjs` (combat feel numbers, old vs new), `tools/journey.cjs mage` (the mage's run), `tools/journey.cjs` (levels 1-12), `tools/bench-game.cjs` (LEVEL=n), `tools/playtests/` (per-feature tests: boss, treant, king, loot, river, farm, night, ...), `tools/capture/` (sheets, GIFs, profiling), `tools/pages/` (Artifact page sources: game https://claude.ai/artifact/7EX2mEMH4cSGuKC2c3K29g, style compare https://claude.ai/artifact/RV971QGVpko9NfmvhqUgpG, animation compare https://claude.ai/artifact/CWEuhANoypjpDmiFEifuer).
 
 ## Next steps for the game build
