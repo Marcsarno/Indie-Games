@@ -62,14 +62,16 @@ function resizeWorld(mw, mh) {
   floorBuf = new Uint8Array(p); wIdx = new Uint8Array(p); wZ = new Uint8Array(p); wFloor = new Uint8Array(p); wTile = new Int16Array(p);
   staticLight[0] = new Float32Array(p); staticLight[1] = new Float32Array(p);
 }
-function genLevel(level, seed) {
-  // levels cycle town -> forest -> three dungeon floors (outdoor.js); LV.diff drives difficulty
-  const A = areaOf(level);
+function genLevel(level, seed, side = null) {
+  // levels cycle town -> forest -> three dungeon floors (outdoor.js); LV.diff drives difficulty.
+  // A side area (quests.js SIDES) is a short dungeon floor hanging off the hub at the hub's level
+  const A0 = areaOf(level), A = side ? { kind: 'dungeon', cyc: A0.cyc, act: A0.act, loop: A0.loop, floor: 1, depth: A0.cyc * 3 + 1, diff: A0.diff } : A0;
+  LV.side = side; LV.sideCfg = side ? SIDES[side] : null;
   { const big = A.kind === 'forest' || A.hub; resizeWorld(big ? 64 : 40, big ? 64 : 40); }
   LV.area = A.kind; LV.cyc = A.cyc; LV.act = A.act; LV.loop = A.loop; LV.floor = A.floor || 0; LV.arena = A.arena || null;
   LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.hub = !!A.hub; LV.gateSign = null; LV.autumn = A.act === 1; LV.night = A.kind !== 'dungeon' && A.act === 2; LV.plaza = null; LV.npcs = []; LV.critters = []; LV.champsPlanned = false; LV.genFail = null;
   if (LV.outdoor) { LV.theme = A.kind; genOutdoor(level, seed, A); LV.level = level; LV.seed = seed; return; }
-  LV.theme = ACTS[A.act].theme;   // each act's dungeon keeps one theme: crypt, caves, hell
+  LV.theme = LV.sideCfg ? LV.sideCfg.theme : ACTS[A.act].theme;   // each act's dungeon keeps one theme: crypt, caves, hell
   if (LV.arena) { genArena(LV.arena, seed); LV.level = level; LV.seed = seed; return; }
   // reject and retry: each attempt has its own derived seed, so a seed always lands on the same
   // level; after 20 strict failures the checks on shape (not on reachability) are relaxed
@@ -82,12 +84,13 @@ function tryGen(level, seed, relaxed = false) {
   const R = rng(seed), map = LV.map;
   map.fill(VOID); LV.solid.fill(0); LV.roomOf.fill(-1); LV.seen.fill(0); LV.vis.fill(0); LV.reserve.fill(0);
   const rooms = [];
-  for (let t = 0; t < 400 && rooms.length < 11; t++) {
+  const cfg = LV.sideCfg, maxRooms = cfg ? cfg.rooms : 11;
+  for (let t = 0; t < 400 && rooms.length < maxRooms; t++) {
     const w = R.int(6, 10), h = R.int(6, 10), x = R.int(2, MW - w - 2), y = R.int(2, MH - h - 2);
     if (rooms.some(r => x < r.x + r.w + 3 && x + w + 3 > r.x && y < r.y + r.h + 3 && y + h + 3 > r.y)) continue;
     rooms.push({ x, y, w, h, cx: x + (w >> 1), cy: y + (h >> 1), type: R.pick(['crypt', 'hall', 'store', 'crypt']) });
   }
-  if (rooms.length < 7) return false;
+  if (rooms.length < (cfg ? 4 : 7)) return false;
   rooms.forEach((r, n) => { for (let j = r.y; j < r.y + r.h; j++) for (let i = r.x; i < r.x + r.w; i++) { map[tIdx(i, j)] = FLOOR; LV.roomOf[tIdx(i, j)] = n; } });
   // corridors: minimum spanning tree over room centers plus a couple of loops, 2 tiles wide
   const carve = (i, j) => { for (const [a, b] of [[0, 0], [1, 0], [0, 1], [1, 1]]) if (i + a > 0 && j + b > 0 && i + a < MW - 1 && j + b < MH - 1) map[tIdx(i + a, j + b)] = FLOOR; };
@@ -124,8 +127,9 @@ function tryGen(level, seed, relaxed = false) {
   for (let k = 0; k < MW * MH; k++) if (map[k] === FLOOR && dist[k] < 0) return false;
   let far = 1, fd = -1;
   rooms.forEach((r, n) => { const d = dist[tIdx(r.cx, r.cy)]; if (n && d > fd) { fd = d; far = n; } });
-  if (!relaxed && fd < 24) return false;   // the way down must be a real walk from the start
+  if (!relaxed && fd < (cfg ? 16 : 24)) return false;   // the way down must be a real walk from the start
   LV.stairs = { i: rooms[far].cx, j: rooms[far].cy, room: far };
+  if (cfg) { LV.leaderRoom = far; const r0 = rooms[0]; LV.stairs = { i: r0.x + 1, j: r0.y + 1, room: 0, up: true }; }   // side areas: the way out is by the entrance
   analyzeLayout(dist);
   placeDecor(subRng(seed, 'decor'), level, dist);
   placeSpawns(subRng(seed, 'spawns'), level);
@@ -453,7 +457,7 @@ function placeDecor(R, level) {
 // capped, kept apart by walking distance, and put in side rooms before the critical path.
 function placeSpawns(R, level) {
   const S = LV.spawns = [], dist = LV.dist;
-  const pool = Object.keys(MONSTERS).filter(id => !MONSTERS[id].unique && MONSTERS[id].where !== 'out' && (MONSTERS[id].minLevel || 1) <= level);
+  const cfg = LV.sideCfg, pool = cfg ? cfg.pool : Object.keys(MONSTERS).filter(id => !MONSTERS[id].unique && MONSTERS[id].where !== 'out' && (MONSTERS[id].minLevel || 1) <= level);
   const ok = (fi, fj) => {
     const i = Math.floor(fi), j = Math.floor(fj); if (i < 0 || j < 0 || i >= MW || j >= MH) return false;
     const k = tIdx(i, j);
@@ -464,7 +468,7 @@ function placeSpawns(R, level) {
   LV.rooms.forEach((r, n) => {
     if (n === 0) return;
     const base = 2 + Math.floor(level * 0.8) + (r.w * r.h > 50 ? 1 : 0);
-    let budget = Math.round(base * (0.6 + 0.8 * r.depth)) + (r.dead ? 1 : 0);
+    let budget = Math.round(base * (0.6 + 0.8 * r.depth) * (cfg ? 0.6 : 1)) + (r.dead ? 1 : 0);   // side areas are lighter
     while (budget > 0) {
       const id = R.pick(pool), m = MONSTERS[id], count = m.pack ? R.int(2, 4) : 1;
       budget -= m.pack ? 2 : 1;
@@ -489,6 +493,7 @@ function placeSpawns(R, level) {
     champs.push(g); S[g.members[0]].champ = true;
   }
   LV.champsPlanned = true;
+  if (cfg) { const r = LV.rooms[LV.leaderRoom], p = spot(r) || [r.cx + 0.5, r.cy + 0.5]; S.push({ id: cfg.boss, fi: p[0], fj: p[1] }); return; }   // the leader waits in the far room
   if (R() < 0.25) { const r = LV.rooms[R.int(1, LV.rooms.length - 1)], p = spot(r); if (p) S.push({ id: 'treasure', fi: p[0], fj: p[1] }); }   // now and then a treasure goblin
 }
 

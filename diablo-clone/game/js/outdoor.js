@@ -22,7 +22,7 @@ function areaOf(level) {
   return { kind: 'dungeon', cyc, act, loop, floor, arena: floor === 3 ? ACTS[act].arena : null, depth: cyc * 3 + floor, diff: cyc * 3 + floor };
 }
 const AREA_NAMES = { town: ['OAKHOLLOW', 'ASHFORD', 'GREYMARSH'], forest: ['DEEPWOOD', 'EMBERWOOD', 'THORNWOOD'] };
-const areaName = () => LV.outdoor ? AREA_NAMES[LV.area][LV.act % 3] : LV.arena ? ACTS[LV.act].hall : `${TH().name} ${LV.floor}`;
+const areaName = () => LV.side ? SIDES[LV.side].name : LV.outdoor ? AREA_NAMES[LV.area][LV.act % 3] : LV.arena ? ACTS[LV.act].hall : `${TH().name} ${LV.floor}`;
 const actTitle = () => `ACT ${['I', 'II', 'III'][LV.act]}` + (LV.loop ? ' ' + (LOOP_NAMES[LV.loop] || 'LOOP ' + LV.loop) : '');
 
 // ---------------------------------------------------------------- paths
@@ -953,7 +953,7 @@ function nearTrader() {
   return best;
 }
 function trade(n) {
-  if (n.role === 'priest') { say('THE OLD MINE TO THE NORTH IS FULL OF DIGGERS NOW', 26, 3); say('AND WORSE BELOW. WOLVES IN THE WEST WOODS, BANDITS ON THE FARM.', 26, 3); return; }
+  if (n.role === 'priest') { talkPriest(); return; }
   if (n.role === 'merchant') {
     if (hero.gold < 25) { say('NOT ENOUGH GOLD', 23, 1.5); return; }
     if (hero.potions >= 9) { say('YOUR BELT IS FULL', 26, 1.5); return; }
@@ -977,6 +977,7 @@ function drawNpcLabels() {
     const near = Math.hypot(n.fi - hero.fi, n.fj - hero.fj) < 1.6;
     textC(near ? TRADER_ROLES[n.role] : n.name, sx, sy, near ? 51 : 27);
     const by = sy + 9 + Math.round(Math.sin(G.t * 4) * 1.5);
+    if (priestMark(n, sx, by)) continue;
     for (let r = 0; r < 4; r++) for (let c = -3 + r; c <= 3 - r; c++) { const xx = sx + c, yy = by + r; if (xx >= 0 && yy >= 0 && xx < W && yy < H) out32[yy * W + xx] = PAL32[r === 0 || Math.abs(c) === 3 - r ? 123 : 124]; }
   }
 }
@@ -996,7 +997,7 @@ function drawGateSign() {
   const [x, y] = iso(g[0], g[1]); textC('THE ROAD SOUTH IS CLOSED', Math.round(x - camX), Math.round(y - camY) - 40, 22);
 }
 function drawExitLabel() {
-  drawGateSign();
+  drawGateSign(); drawSideDoorLabels();
   const s = LV.stairs; if (!s) return;
   if (!LV.outdoor) { drawStairsMark(s); return; }
   if (Math.hypot(s.i - hero.fi, s.j - hero.fj) > 9) return;
@@ -1012,7 +1013,7 @@ function drawStairsMark(s) {
   const [x, y] = iso(s.i + 0.5, s.j + 0.5), sx = x - camX, sy = y - camY;
   const X0 = 14, X1 = W - 14, Y0 = 40, Y1 = Math.round(H * 0.6);
   if (sx > X0 && sx < X1 && sy > Y0 && sy < Y1) {
-    if (Math.hypot(s.i - hero.fi, s.j - hero.fj) < 7) textC(bossAlive() ? 'SEALED' : 'STAIRS DOWN', Math.round(sx), Math.round(sy) - 24, bossAlive() ? 22 : 51);
+    if (Math.hypot(s.i - hero.fi, s.j - hero.fj) < 7) textC(s.up ? 'WAY OUT' : bossAlive() ? 'SEALED' : 'STAIRS DOWN', Math.round(sx), Math.round(sy) - 24, bossAlive() ? 22 : 51);
     return;
   }
   // from the screen's middle toward the stairs, stopped at the edge of the play area

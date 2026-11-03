@@ -148,7 +148,7 @@ const glyphPortal = (cx, cy) => { for (let y = -7; y <= 7; y++) for (let x = -5;
 const glyphMap = (cx, cy) => { fillRect(cx - 6, cy - 5, 13, 11, 26); frame(cx - 6, cy - 5, 13, 11, 27, 24); line(cx - 4, cy + 3, cx - 1, cy - 1, 22); line(cx - 1, cy - 1, cx + 4, cy + 2, 22); put(cx + 4, cy - 3, 22); };
 
 function drawHud() {
-  drawNpcLabels();
+  drawNpcLabels(); drawQuestTracker();
   // a boss's title card when it first wakes: a dark band slides open with its name and epithet
   if (G.actCard > 0 && G.mode === 'play') {   // entering an act: ACT II / THE BURNING DEEP / the town's name
     const t = 3.2 - G.actCard, open = Math.min(1, t / 0.3, G.actCard / 0.4), cy = Math.round(H * 0.3), hh = Math.round(30 * open);

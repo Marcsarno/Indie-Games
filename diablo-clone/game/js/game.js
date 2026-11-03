@@ -66,8 +66,8 @@ const xpFor = l => Math.round(60 * Math.pow(l, 1.6));
 function say(text, col = 26, t = 2.5) { G.msg.push({ text, col, t }); if (G.msg.length > 3) G.msg.shift(); }
 
 // ---------------------------------------------------------------- level setup
-function startLevel(level, seed) {
-  genLevel(level, seed);
+function startLevel(level, seed, side = null) {
+  genLevel(level, seed, side);
   buildWorld();
   hero.fi = LV.start.cx + 0.5; hero.fj = LV.start.cy + 0.5; hero.atk = -1; hero.clip = 'idle'; hero.dead = 0;
   enemies = LV.spawns.map((s, n) => makeEnemy(s.id, s.fi, s.fj, n));
@@ -302,6 +302,7 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
     if (bony) shatter(e, fromFi, fromFj);   // skeletons burst apart into a heap of bones
     else stampBlood(Math.round(ex), Math.round(ey), e.def.unique ? 6 : 3, (Math.random() * 1e6) | 0, e.fam === 'spider' ? GREEN : RED);
     const streak = killStreak();
+    questKill(e.id);
     gainXp(e.def.xp * (1 + (LV.diff - 1) * 0.3) * (e.champ ? 3 : 1) * (1 + Math.max(0, streak - 2) * 0.1));
     dropLoot(e.fi, e.fj, e.def.unique ? 4 : e.champ || e.def.elite ? 3 : 1, e.def.unique || !!e.champ || !!e.def.elite);
     if (e.def.unique || (e.champ && Math.random() < 0.08)) groundItems.push({ item: rollLegendary(rng((Math.random() * 1e9) | 0)), fi: e.fi, fj: e.fj, t: 0 });
@@ -568,12 +569,16 @@ function updateHero(dt) {
   const s = LV.stairs;
   if (!G.fadeTo && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55 && bossAlive()) {
     if (!(G.sealT > 0)) { say(`THE ${boss.def.name} GUARDS THE WAY DOWN`, 22, 2); G.sealT = 3; }
+  } else if (LV.side) {   // a side area's stairs lead back up to the hub (once the hero has stepped off them)
+    const d = Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj);
+    if (d > 1.2) G.upArmed = true;
+    if (!G.fadeTo && G.upArmed && d < 0.55) { G.upArmed = false; leaveSide(); }
   } else if (!G.fadeTo && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55) {
     sfx('stairs');
     G.fadeTo = () => { G.portal = null; startLevel(LV.level + (LV.hub ? 2 : 1), (LV.seed * 31 + 17) >>> 0); saveGame(); };   // the hub's mine leads straight to the first floor
   }
   G.sealT = (G.sealT || 0) - dt;
-  updatePortal(dt);
+  updatePortal(dt); updateSideDoors();
   hatchEggs(dt);
   updateFov(hero.fi, hero.fj);
 }
@@ -1207,14 +1212,14 @@ function updatePortal(dt) {
   sfx('portal');
   if (!P.back) {
     // remember this level as it stands, then go to town
-    G.portal = { level: LV.level, seed: LV.seed, fi: P.fi, fj: P.fj, snap: {
+    G.portal = { level: LV.level, seed: LV.seed, side: LV.side, sideBack: G.sideBack, fi: P.fi, fj: P.fj, snap: {
       enemies, boss, groundItems, seen: LV.seen.slice(), props: dynProps.map(p => ({ open: p.open, broken: p.broken, hp: p.hp, hatch: p.hatch })) } };
     const T = G.town && G.town.level === LV.level - ((LV.level - 1) % AREA_CYCLE) ? G.town : { level: LV.level - ((LV.level - 1) % AREA_CYCLE), seed: (LV.seed ^ 0x70a1) >>> 0 };
     G.fadeTo = () => { startLevel(T.level, T.seed); saveGame(); };
   } else {
     const R = G.portal;
     G.fadeTo = () => {
-      startLevel(R.level, R.seed);
+      startLevel(R.level, R.seed, R.side || null); if (R.side) G.sideBack = R.sideBack;
       const S = R.snap;
       if (S) {   // (a save loaded in town has no snapshot: the level comes back fresh)
         enemies = S.enemies; boss = S.boss; groundItems = S.groundItems; LV.seen.set(S.seen);
@@ -1250,7 +1255,7 @@ function drawPortal() {
 function saveGame() {
   if (G.mode !== 'play' || hero.dead) return;
   const data = { v: SAVE_V, level: LV.level, seed: LV.seed, hero: { cls: hero.cls, hp: Math.ceil(hero.hp), mana: Math.ceil(hero.mana), gold: hero.gold, xp: hero.xp, lvl: hero.lvl, potions: hero.potions, team: hero.team, equip: hero.equip, bag: hero.bag }, serial: itemSerial,
-    town: G.town || null, portal: G.portal ? { level: G.portal.level, seed: G.portal.seed, fi: G.portal.fi, fj: G.portal.fj } : null };
+    quests: G.quests || null, town: G.town || null, portal: G.portal ? { level: G.portal.level, seed: G.portal.seed, fi: G.portal.fi, fj: G.portal.fj } : null };
   try { localStorage.setItem(saveKey(hero.cls), JSON.stringify(data)); } catch (e) { /* storage can be unavailable; the game still runs */ }
 }
 function loadSave(cls = 'warrior') {
@@ -1273,9 +1278,9 @@ function beginGame(fromSave, cls = 'warrior') {
   const d = fromSave ? loadSave(cls) : null;
   if (d) {
     newHero(cls); Object.assign(hero, d.hero); hero.cls = cls; itemSerial = d.serial || 100; recalcHero();
-    G.mode = 'play'; G.town = d.town || null; G.portal = d.portal || null; startLevel(d.level, d.seed);
+    G.mode = 'play'; G.town = d.town || null; G.portal = d.portal || null; G.quests = d.quests || null; G.sideBack = null; startLevel(d.level, d.seed);
   } else {
-    G.town = null; G.portal = null;
+    G.town = null; G.portal = null; G.quests = null; G.sideBack = null;
     newHero(cls); G.mode = 'play'; startLevel(1, (Math.random() * 1e9) >>> 0);
   }
 }
