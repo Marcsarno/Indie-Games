@@ -20,7 +20,7 @@ const groundToTile = (x, y) => { const A = (x - WX0) + 2 * (y - WY0), B = 2 * (y
 const LV = {
   map: new Uint8Array(MW * MH), tall: new Uint8Array(MW * MH), solid: new Uint8Array(MW * MH),
   roomOf: new Int16Array(MW * MH), rooms: [], start: null, stairs: null, spawns: [], decor: [],
-  seen: new Uint8Array(MW * MH), vis: new Float32Array(MW * MH), level: 1, seed: 1,
+  seen: new Uint8Array(MW * MH), vis: new Float32Array(MW * MH), reserve: new Uint8Array(MW * MH), level: 1, seed: 1,
 };
 // floor themes rotate every two floors: crypt, caves, hell
 const THEMES = {
@@ -58,7 +58,7 @@ function resizeWorld(mw, mh) {
   if (mw === MW && mh === MH) return;
   MW = mw; MH = mh; WX0 = MH * 16 + 24; WW = (MW + MH) * 16 + 48; WH = (MW + MH) * 8 + WY0 + 32;
   const n = MW * MH, p = WW * WH;
-  LV.map = new Uint8Array(n); LV.tall = new Uint8Array(n); LV.solid = new Uint8Array(n); LV.roomOf = new Int16Array(n); LV.seen = new Uint8Array(n); LV.vis = new Float32Array(n);
+  LV.map = new Uint8Array(n); LV.tall = new Uint8Array(n); LV.solid = new Uint8Array(n); LV.roomOf = new Int16Array(n); LV.seen = new Uint8Array(n); LV.vis = new Float32Array(n); LV.reserve = new Uint8Array(n);
   floorBuf = new Uint8Array(p); wIdx = new Uint8Array(p); wZ = new Uint8Array(p); wFloor = new Uint8Array(p); wTile = new Int16Array(p);
   staticLight[0] = new Float32Array(p); staticLight[1] = new Float32Array(p);
 }
@@ -67,16 +67,20 @@ function genLevel(level, seed) {
   const A = areaOf(level);
   resizeWorld(A.kind === 'forest' ? 64 : 40, A.kind === 'forest' ? 64 : 40);
   LV.area = A.kind; LV.cyc = A.cyc; LV.act = A.act; LV.loop = A.loop; LV.floor = A.floor || 0; LV.arena = A.arena || null;
-  LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.autumn = A.act === 1; LV.night = A.kind !== 'dungeon' && A.act === 2; LV.plaza = null; LV.npcs = []; LV.critters = [];
+  LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.autumn = A.act === 1; LV.night = A.kind !== 'dungeon' && A.act === 2; LV.plaza = null; LV.npcs = []; LV.critters = []; LV.champsPlanned = false; LV.genFail = null;
   if (LV.outdoor) { LV.theme = A.kind; genOutdoor(level, seed, A); LV.level = level; LV.seed = seed; return; }
   LV.theme = ACTS[A.act].theme;   // each act's dungeon keeps one theme: crypt, caves, hell
   if (LV.arena) { genArena(LV.arena, seed); LV.level = level; LV.seed = seed; return; }
-  for (let attempt = 0; attempt < 20; attempt++) if (tryGen(LV.diff, seed + attempt * 7919)) { LV.level = level; LV.seed = seed; return; }
+  // reject and retry: each attempt has its own derived seed, so a seed always lands on the same
+  // level; after 20 strict failures the checks on shape (not on reachability) are relaxed
+  for (let attempt = 0; attempt < 30; attempt++) {
+    if (tryGen(LV.diff, (seed + attempt * 7919) >>> 0, attempt >= 20)) { LV.level = level; LV.seed = seed; LV.genAttempts = attempt + 1; return; }
+  }
   throw new Error('level generation failed');
 }
-function tryGen(level, seed) {
+function tryGen(level, seed, relaxed = false) {
   const R = rng(seed), map = LV.map;
-  map.fill(VOID); LV.solid.fill(0); LV.roomOf.fill(-1); LV.seen.fill(0); LV.vis.fill(0);
+  map.fill(VOID); LV.solid.fill(0); LV.roomOf.fill(-1); LV.seen.fill(0); LV.vis.fill(0); LV.reserve.fill(0);
   const rooms = [];
   for (let t = 0; t < 400 && rooms.length < 11; t++) {
     const w = R.int(6, 10), h = R.int(6, 10), x = R.int(2, MW - w - 2), y = R.int(2, MH - h - 2);
@@ -87,7 +91,9 @@ function tryGen(level, seed) {
   rooms.forEach((r, n) => { for (let j = r.y; j < r.y + r.h; j++) for (let i = r.x; i < r.x + r.w; i++) { map[tIdx(i, j)] = FLOOR; LV.roomOf[tIdx(i, j)] = n; } });
   // corridors: minimum spanning tree over room centers plus a couple of loops, 2 tiles wide
   const carve = (i, j) => { for (const [a, b] of [[0, 0], [1, 0], [0, 1], [1, 1]]) if (i + a > 0 && j + b > 0 && i + a < MW - 1 && j + b < MH - 1) map[tIdx(i + a, j + b)] = FLOOR; };
+  const edges = [];
   const corridor = (A, B) => {
+    edges.push([rooms.indexOf(A), rooms.indexOf(B)]);
     const horizFirst = R() < 0.5;
     let i = A.cx, j = A.cy;
     const stepI = () => { while (i !== B.cx) { carve(i, j); i += Math.sign(B.cx - i); } };
@@ -101,20 +107,89 @@ function tryGen(level, seed) {
     for (const a of inTree) for (let b = 0; b < rooms.length; b++) if (!inTree.includes(b)) { const d = d2(rooms[a], rooms[b]); if (!best || d < best[2]) best = [a, b, d]; }
     corridor(rooms[best[0]], rooms[best[1]]); inTree.push(best[1]);
   }
-  for (let e = 0; e < 2; e++) { const a = R.int(0, rooms.length - 1), b = R.int(0, rooms.length - 1); if (a !== b) corridor(rooms[a], rooms[b]); }
+  // loops (round 26, Brogue's rule): join two nearby rooms only if the walk between them is long
+  // (more than two rooms apart), so a loop is a real shortcut and not a doubled corridor
+  const hops = a => { const h = rooms.map(() => -1), q = [a]; h[a] = 0; for (let x = 0; x < q.length; x++) for (const [u, v] of edges) { const o = u === q[x] ? v : v === q[x] ? u : -1; if (o >= 0 && h[o] < 0) { h[o] = h[q[x]] + 1; q.push(o); } } return h; };
+  let loops = 0;
+  for (let t = 0; t < 80 && loops < 2; t++) {
+    const a = R.int(0, rooms.length - 1), b = R.int(0, rooms.length - 1);
+    if (a === b || Math.sqrt(d2(rooms[a], rooms[b])) > 22 || hops(a)[b] <= 2) continue;
+    corridor(rooms[a], rooms[b]); loops++;
+  }
   buildWalls();
-  LV.rooms = rooms;
+  LV.rooms = rooms; LV.edges = edges; LV.loops = loops;
   LV.start = rooms[0];
-  // reachability from the start room; stairs go in the farthest room
+  // reachability from the start room; stairs go in the room farthest by walking distance
   const dist = bfs(LV.start.cx, LV.start.cy);
   for (let k = 0; k < MW * MH; k++) if (map[k] === FLOOR && dist[k] < 0) return false;
   let far = 1, fd = -1;
   rooms.forEach((r, n) => { const d = dist[tIdx(r.cx, r.cy)]; if (n && d > fd) { fd = d; far = n; } });
+  if (!relaxed && fd < 24) return false;   // the way down must be a real walk from the start
   LV.stairs = { i: rooms[far].cx, j: rooms[far].cy, room: far };
-  placeDecor(R, level, dist);
-  placeSpawns(R, level);
+  analyzeLayout(dist);
+  placeDecor(subRng(seed, 'decor'), level, dist);
+  placeSpawns(subRng(seed, 'spawns'), level);
+  const bad = validateLevel(relaxed);
+  if (bad.length) { LV.genFail = bad; return false; }
   return true;
 }
+// Room roles and the reservation mask (round 26). Walking distance from the start gives each room
+// a depth (0 near the start, 1 at the farthest); rooms the start-to-stairs walk passes through are
+// the critical path; rooms with one way in are dead ends. Reserved tiles take no props: the
+// stairs and their approach, the start, and every doorway where a corridor meets a room.
+function analyzeLayout(dist) {
+  const R0 = LV.rooms, res = LV.reserve, map = LV.map;
+  let maxD = 1; for (let k = 0; k < MW * MH; k++) if (dist[k] > maxD) maxD = dist[k];
+  LV.maxDist = maxD; LV.dist = dist;
+  R0.forEach(r => { r.depth = dist[tIdx(r.cx, r.cy)] / maxD; r.deg = 0; r.crit = false; });
+  for (const [a, b] of LV.edges) { if (a >= 0) R0[a].deg++; if (b >= 0) R0[b].deg++; }
+  R0.forEach((r, n) => { r.dead = n > 0 && n !== LV.stairs.room && r.deg <= 1; });
+  // the critical path: walk back from the stairs down the distance field
+  let k = tIdx(LV.stairs.i, LV.stairs.j);
+  for (let guard = 0; guard < MW * MH && dist[k] > 0; guard++) {
+    const rn = LV.roomOf[k]; if (rn >= 0) R0[rn].crit = true;
+    const i = k % MW, j = (k / MW) | 0;
+    for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const kk = tIdx(i + a, j + b); if (i + a >= 0 && j + b >= 0 && i + a < MW && j + b < MH && dist[kk] === dist[k] - 1) { k = kk; break; } }
+  }
+  R0[0].crit = true;
+  const mark = (ci, cj, r) => { for (let j = cj - r; j <= cj + r; j++) for (let i = ci - r; i <= ci + r; i++) if (i >= 0 && j >= 0 && i < MW && j < MH) res[tIdx(i, j)] = 1; };
+  mark(LV.stairs.i, LV.stairs.j, 1); mark(LV.start.cx, LV.start.cy, 1);
+  // the stairs' approach: the tiles in front of them on screen stay open too
+  for (let s = 1; s <= 3; s++) mark(LV.stairs.i + s, LV.stairs.j + s, 0);
+  // doorways: room-edge floor tiles that open onto corridor floor outside the room
+  R0.forEach((r, n) => {
+    for (let j = r.y - 1; j <= r.y + r.h; j++) for (let i = r.x - 1; i <= r.x + r.w; i++) {
+      const inside = i >= r.x && i < r.x + r.w && j >= r.y && j < r.y + r.h; if (inside) continue;
+      if (tileAt(i, j) !== FLOOR || LV.roomOf[tIdx(i, j)] >= 0) continue;
+      mark(clamp(i, r.x, r.x + r.w - 1), clamp(j, r.y, r.y + r.h - 1), 1);
+    }
+  });
+}
+// The proof (round 26): checked on the finished level, after props and monsters, with the
+// hero's real footprint. Any failure throws the level away and the next derived seed is tried.
+function validateLevel(relaxed) {
+  const bad = [], dist = bfs(LV.start.cx, LV.start.cy), S = LV.stairs;
+  if (dist[tIdx(S.i, S.j)] < 0) bad.push('stairs unreachable');
+  let floor = 0, open = 0;
+  for (let k = 0; k < MW * MH; k++) if (LV.map[k] === FLOOR) { floor++; if (!LV.solid[k]) { open++; if (dist[k] < 0) { bad.push('floor cut off'); break; } } }
+  if (!relaxed && floor < MW * MH * 0.16) bad.push('too little floor');
+  // every chest and barrel has a reachable tile beside it
+  for (const d of LV.decor) if (d.kind === 'chest') {
+    let ok = false; for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = tIdx(d.i + a, d.j + b); if (dist[k] >= 0) ok = true; }
+    if (!ok) bad.push('chest unreachable');
+  }
+  // every monster stands on open, reachable ground with room for its body, outside the safe zone
+  for (const sp of LV.spawns) {
+    const k = tIdx(Math.floor(sp.fi), Math.floor(sp.fj));
+    if (dist[k] < 0 || clearance(sp.fi, sp.fj, 0.28)) { bad.push('spawn blocked'); break; }
+    if (dist[k] < SAFE_STEPS) { bad.push('spawn near start'); break; }
+  }
+  if (!LV.spawns.length) bad.push('no monsters');
+  return bad;
+}
+const SAFE_STEPS = 7;   // no monster within this many steps of where the hero arrives
+// true when a body of radius r at (fi, fj) would overlap a wall or a solid prop
+const clearance = (fi, fj, r) => blocked(fi - r, fj - r) || blocked(fi + r, fj - r) || blocked(fi - r, fj + r) || blocked(fi + r, fj + r);
 function buildWalls() {
   const map = LV.map;
   // walls around every floor tile
@@ -318,7 +393,7 @@ const hidesStairs = (i, j) => { const s = LV.stairs; if (!s) return false; const
 // props are only kept if every floor tile stays reachable with them in place
 function trySolid(i, j) {
   const k = tIdx(i, j);
-  if (LV.map[k] !== FLOOR || LV.solid[k]) return false;
+  if (LV.map[k] !== FLOOR || LV.solid[k] || LV.reserve[k]) return false;
   if (Math.abs(i - LV.start.cx) <= 1 && Math.abs(j - LV.start.cy) <= 1) return false;
   if (LV.stairs && Math.abs(i - LV.stairs.i) <= 1 && Math.abs(j - LV.stairs.j) <= 1) return false;
   LV.solid[k] = 1;
@@ -357,32 +432,64 @@ function placeDecor(R, level) {
       }
     }
     if (r.type === 'crypt' || R() < 0.3) {
-      for (let b = 0; b < R.int(1, 3); b++) D.push({ kind: 'bones', fi: r.x + 0.5 + R() * (r.w - 1), fj: r.y + 0.5 + R() * (r.h - 1), seed: R.int(1, 1e6) });
-      for (let b = 0; b < R.int(1, 3); b++) D.push({ kind: 'blood', fi: r.x + 0.5 + R() * (r.w - 1), fj: r.y + 0.5 + R() * (r.h - 1), size: R.int(2, 5), seed: R.int(1, 1e6) });
+      // floor clutter keeps a minimum spacing (a rejection pass, Poisson-style) so it never clumps
+      const spaced = (minD) => { for (let t = 0; t < 20; t++) { const fi = r.x + 0.5 + R() * (r.w - 1), fj = r.y + 0.5 + R() * (r.h - 1); if (!D.some(d => (d.kind === 'bones' || d.kind === 'blood') && Math.hypot(d.fi - fi, d.fj - fj) < minD)) return [fi, fj]; } return null; };
+      for (let b = 0; b < R.int(1, 3); b++) { const q = spaced(2.2); if (q) D.push({ kind: 'bones', fi: q[0], fj: q[1], seed: R.int(1, 1e6) }); }
+      for (let b = 0; b < R.int(1, 3); b++) { const q = spaced(2.2); if (q) D.push({ kind: 'blood', fi: q[0], fj: q[1], size: R.int(2, 5), seed: R.int(1, 1e6) }); }
     }
   });
-  // chests: one or two, against a wall in rooms other than the start
+  // chests: one or two, against a wall, in dead ends and side rooms first (a reward for the detour)
+  const side = LV.rooms.map((r, n) => n).filter(n => n > 0 && (LV.rooms[n].dead || !LV.rooms[n].crit));
   for (let c = 0; c < 1 + (R() < 0.5 ? 1 : 0); c++) {
-    const n = R.int(1, LV.rooms.length - 1), r = LV.rooms[n];
+    const n = side.length && R() < 0.8 ? R.pick(side) : R.int(1, LV.rooms.length - 1), r = LV.rooms[n];
     for (let t = 0; t < 30; t++) { const i = R.int(r.x, r.x + r.w - 1), j = r.y; if (trySolid(i, j)) { D.push({ kind: 'chest', i, j, seed: R.int(1, 1e6) }); break; } }
   }
   placeTorches(D);
 }
+// Monsters (round 26): every room but the start gets a danger budget that grows with its walking
+// distance from the start (0.6x near, 1.4x at the far end; the same total as before) plus a bonus
+// in dead ends, and spends it on whole groups. A pack is placed as a footprint, every member checked
+// for room to stand. Nothing spawns within SAFE_STEPS of the start. Champions are chosen afterward:
+// capped, kept apart by walking distance, and put in side rooms before the critical path.
 function placeSpawns(R, level) {
-  const S = LV.spawns = [];
+  const S = LV.spawns = [], dist = LV.dist;
   const pool = Object.keys(MONSTERS).filter(id => !MONSTERS[id].unique && MONSTERS[id].where !== 'out' && (MONSTERS[id].minLevel || 1) <= level);
-  const free = r => { for (let t = 0; t < 40; t++) { const fi = r.x + 0.5 + R() * (r.w - 1), fj = r.y + 0.5 + R() * (r.h - 1); if (!blocked(fi, fj)) return [fi, fj]; } return null; };
+  const ok = (fi, fj) => {
+    const i = Math.floor(fi), j = Math.floor(fj); if (i < 0 || j < 0 || i >= MW || j >= MH) return false;
+    const k = tIdx(i, j);
+    return LV.map[k] === FLOOR && !LV.solid[k] && dist[k] >= SAFE_STEPS && !clearance(fi, fj, 0.3) && !S.some(o => Math.abs(o.fi - fi) < 0.7 && Math.abs(o.fj - fj) < 0.7);
+  };
+  const spot = r => { for (let t = 0; t < 40; t++) { const fi = r.x + 0.5 + R() * (r.w - 1), fj = r.y + 0.5 + R() * (r.h - 1); if (ok(fi, fj)) return [fi, fj]; } return null; };
+  const groups = [];
   LV.rooms.forEach((r, n) => {
     if (n === 0) return;
-    let budget = 2 + Math.floor(level * 0.8) + (r.w * r.h > 50 ? 1 : 0);
+    const base = 2 + Math.floor(level * 0.8) + (r.w * r.h > 50 ? 1 : 0);
+    let budget = Math.round(base * (0.6 + 0.8 * r.depth)) + (r.dead ? 1 : 0);
     while (budget > 0) {
-      const id = R.pick(pool), m = MONSTERS[id];
-      const count = m.pack ? R.int(2, 4) : 1;
-      for (let c = 0; c < count; c++) { const p = free(r); if (p) S.push({ id, fi: p[0], fj: p[1] }); }
+      const id = R.pick(pool), m = MONSTERS[id], count = m.pack ? R.int(2, 4) : 1;
       budget -= m.pack ? 2 : 1;
+      const c = spot(r); if (!c) continue;
+      const g = { room: n, at: c, members: [] };
+      for (let q = 0; q < count; q++) {
+        let p = q === 0 ? c : null;
+        for (let t = 0; t < 14 && !p; t++) { const a = R() * 6.283, d = 0.8 + R() * 0.7, cand = [c[0] + Math.cos(a) * d, c[1] + Math.sin(a) * d]; if (ok(cand[0], cand[1])) p = cand; }
+        if (p) { S.push({ id, fi: p[0], fj: p[1] }); g.members.push(S.length - 1); }
+      }
+      groups.push(g);
     }
   });
-  if (R() < 0.25) { const r = LV.rooms[R.int(1, LV.rooms.length - 1)], p = free(r); if (p) S.push({ id: 'treasure', fi: p[0], fj: p[1] }); }   // now and then a treasure goblin
+  // champions
+  const want = Math.min(3, Math.max(1, Math.round(S.length * champChance(level))));
+  const order = groups.map((g, n) => ({ g, key: (LV.rooms[g.room].crit ? 1 : 0) + R() * 0.9 })).sort((a, b) => a.key - b.key).map(o => o.g);
+  const champs = [];
+  for (const g of order) {
+    if (champs.length >= want) break;
+    const d = bfs(Math.floor(g.at[0]), Math.floor(g.at[1]));
+    if (champs.some(c => { const v = d[tIdx(Math.floor(c.at[0]), Math.floor(c.at[1]))]; return v >= 0 && v < 12; })) continue;
+    champs.push(g); S[g.members[0]].champ = true;
+  }
+  LV.champsPlanned = true;
+  if (R() < 0.25) { const r = LV.rooms[R.int(1, LV.rooms.length - 1)], p = spot(r); if (p) S.push({ id: 'treasure', fi: p[0], fj: p[1] }); }   // now and then a treasure goblin
 }
 
 // ---------------------------------------------------------------- textures

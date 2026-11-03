@@ -113,6 +113,9 @@ function rng(seed) {
   r.pick = arr => arr[Math.floor(r() * arr.length)];
   return r;
 }
+// a separate random stream per generation system (layout, props, monsters), so a change to one
+// never reshuffles the others: the same seed always gives the same level
+function subRng(seed, name) { let h = 2166136261; for (let k = 0; k < name.length; k++) h = Math.imul(h ^ name.charCodeAt(k), 16777619); return rng((seed ^ h) >>> 0); }
 
 // ---------------------------------------------------------------- vectors ([x, y, z] arrays)
 const V = {

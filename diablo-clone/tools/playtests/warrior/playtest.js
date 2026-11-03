@@ -6,8 +6,16 @@ newHero('warrior'); G.mode = 'play'; hero.lvl = 5; recalcHero(); hero.hp = STAT.
 function arena() {
   startLevel(3, 777);
   let best = null, bs = -1;
-  for (let i = 4; i < MW - 4; i++) for (let j = 4; j < MH - 4; j++) { let n = 0; for (let a = -5; a <= 5; a++) for (let c = -5; c <= 5; c++) if (!blocked(i + a + 0.5, j + c + 0.5)) n++; if (n > bs) { bs = n; best = [i + 0.5, j + 0.5]; } }
-  enemies.length = 0; hero.fi = best[0]; hero.fj = best[1]; hero.hp = 9999; hero.mana = 999; for (const k in CD) CD[k] = 0;
+  for (let i = 4; i < MW - 4; i++) for (let j = 4; j < MH - 4; j++) { let n = 0; for (let a = -5; a <= 5; a++) for (let c = -5; c <= 5; c++) if (!blocked(i + a + 0.5, j + c + 0.5)) n++; let lane = true; for (let a = -2; a <= 6; a++) for (const c of [-0.6, 0, 0.6]) if (blocked(i + a + 0.5, j + c + 0.5)) lane = false; if (lane && n > bs) { bs = n; best = [i + 0.5, j + 0.5]; } }
+  enemies.length = 0; hero.fi = best[0]; hero.fj = best[1]; openGround(hero.fi, hero.fj, 7); hero.hp = 9999; hero.mana = 999; for (const k in CD) CD[k] = 0;
+}
+// round 26: the tests clear a 15x15 patch of open floor around the hero, so their numbers depend on
+// the code and not on what one seed's layout happens to put nearby
+function openGround(fi, fj, r) {
+  const ci = Math.floor(fi), cj = Math.floor(fj);
+  for (let j = cj - r; j <= cj + r; j++) for (let i = ci - r; i <= ci + r; i++) if (i > 0 && j > 0 && i < MW - 1 && j < MH - 1) { LV.map[tIdx(i, j)] = FLOOR; LV.solid[tIdx(i, j)] = 0; }
+  for (const p of dynProps) if (Math.abs(p.i - ci) <= r && Math.abs(p.j - cj) <= r) p.broken = true;
+  computeFlow();
 }
 const spawn = (id, di, dj) => { const e = makeEnemy(id, hero.fi + di, hero.fj + dj, enemies.length + 50); e.state = 'hunt'; e.hp = e.maxHp = 500; e.def = Object.assign({}, e.def, { dmg: [0, 0] }); enemies.push(e); return e; };
 const run = n => { for (let k = 0; k < n; k++) update(1 / 60); };

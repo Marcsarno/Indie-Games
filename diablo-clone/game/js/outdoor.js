@@ -92,6 +92,21 @@ function genOutdoor(level, seed, A) {
   bakeCanopy(A.act === 1);   // before the floor bake, which samples it past the map edge
   if (A.kind === 'town') genTown(R, A); else genForest(R, A);
   bakePathField();
+  settleSpawns();
+}
+// round 26: every outdoor monster must stand on open ground the hero can walk to; one that landed
+// in the trees or across water moves to the nearest good spot within 4 tiles, or is dropped
+function settleSpawns() {
+  if (!LV.start || !LV.spawns.length) return;
+  const d = bfs(LV.start.cx, LV.start.cy), good = (fi, fj) => { const i = Math.floor(fi), j = Math.floor(fj); return i >= 0 && j >= 0 && i < MW && j < MH && d[tIdx(i, j)] >= 0 && !clearance(fi, fj, 0.3); };
+  LV.spawns = LV.spawns.filter(sp => {
+    if (good(sp.fi, sp.fj)) return true;
+    for (let r = 0.5; r <= 4; r += 0.5) for (let a = 0; a < 12; a++) {
+      const fi = sp.fi + Math.cos(a * 0.524) * r, fj = sp.fj + Math.sin(a * 0.524) * r;
+      if (good(fi, fj)) { sp.fi = fi; sp.fj = fj; return true; }
+    }
+    return false;
+  });
 }
 const solidAt = (i, j) => i < 0 || j < 0 || i >= MW || j >= MH || LV.solid[tIdx(i, j)] === 1;
 // a tree may stand on a tile only if no other solid tile touches it, so the gaps between trees

@@ -71,7 +71,9 @@ function startLevel(level, seed) {
   buildWorld();
   hero.fi = LV.start.cx + 0.5; hero.fj = LV.start.cy + 0.5; hero.atk = -1; hero.clip = 'idle'; hero.dead = 0;
   enemies = LV.spawns.map((s, n) => makeEnemy(s.id, s.fi, s.fj, n));
-  { const R = rng(seed ^ 0x5bd1); for (const e of enemies) if (!e.def.unique && R() < champChance(LV.diff)) makeChampion(e, R); }
+  { const R = rng(seed ^ 0x5bd1);   // dungeon floors plan their champions (placeSpawns); other areas roll them per monster
+    if (LV.champsPlanned) LV.spawns.forEach((sp, n) => { if (sp.champ) makeChampion(enemies[n], R); });
+    else for (const e of enemies) if (!e.def.unique && R() < champChance(LV.diff)) makeChampion(e, R); }
   makeNpcs(); resetSkills(); setupBoss();
   groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
   updateFov(hero.fi, hero.fj);
