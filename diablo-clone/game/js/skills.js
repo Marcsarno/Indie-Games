@@ -26,6 +26,10 @@ const heroBusy = () => hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0 || hero.
 // one hit's damage, with the war cry bonus
 const heroDmg = (k = 1) => Math.max(1, Math.round(roll(STAT.dmg) * k * (hero.buff > 0 ? 1.4 : 1)));
 
+// button feedback (round 25): a pulse when a skill fires, a flash when it is ready again, a shake
+// with no mana
+const BTN_FX = [];
+const btnFx = i => BTN_FX[i] || (BTN_FX[i] = { press: 0, ready: 0, deny: 0, cd: 0 });
 function useSkill(i) {
   const s = SKILLS[i];
   if (G.mode !== 'play' || hero.dead || !s) return;
@@ -34,8 +38,8 @@ function useSkill(i) {
   if (s.id === 'bolt') { heroCast(); if (hero.cast >= 0) CD.bolt = s.cd; return; }
   // a spell may cut a magic-missile cast short; anything else waits for the hero to be free
   if (heroBusy() && !(hero.castKind === 'missile' && hero.cast >= 0 && hero.atk < 0 && !(hero.dash > 0) && !(hero.whirl > 0))) return;
-  if (hero.mana < s.mana) { say('NOT ENOUGH MANA', 40, 1.2); return; }
-  hero.mana -= s.mana; CD[s.id] = s.cd;
+  if (hero.mana < s.mana) { say('NOT ENOUGH MANA', 40, 1.2); btnFx(i).deny = 0.3; sfx('tap'); return; }
+  hero.mana -= s.mana; CD[s.id] = s.cd; btnFx(i).press = 0.16;
   if (s.id === 'whirl') { hero.whirl = 0.8; hero.whirlTick = 0; sfx('heavySwing'); }
   if (s.id === 'bash') startBash();
   if (s.id === 'cry') warCry();
@@ -71,7 +75,13 @@ function groundSlamHit() {
   }
   G.pierce = false;
   for (const p of dynProps) if (!p.broken && (p.kind === 'barrel' || p.kind === 'egg') && Math.hypot(p.i + 0.5 - hero.fi, p.j + 0.5 - hero.fj) < SLAM_R) hitProp(p);
-  G.quakes.push({ fi: hero.fi + fx * 0.6, fj: hero.fj + fy * 0.6, a0, t: 0.9, t0: 0.9, seed: (Math.random() * 1e6) | 0 });
+  const q = { fi: hero.fi + fx * 0.6, fj: hero.fj + fy * 0.6, a0, t: 0.9, t0: 0.9, seed: (Math.random() * 1e6) | 0 };
+  G.quakes.push(q); stampCracks(q);
+  // round 25: a wave of dust rolling out over the cone, a flash where the blade bit, stone chunks
+  const lite = LV.outdoor ? [DIRT[4], DIRT[3]] : [TH().ramp[TH().ramp.length - 1], TH().ramp[5]];
+  shockwave(q.fi, q.fj, SLAM_R, 0.38, lite, [a0, SLAM_HALF + 0.1], false);
+  impactFlash(hero.fi + fx * 0.9, hero.fj + fy * 0.9, 3, 6);
+  { const [qx, qy] = iso(q.fi, q.fj); rubble(qx, qy, 18, 70, a0, SLAM_HALF); }
   // rocks and dust thrown up along the cone
   const [x, y] = screenOf(hero), dust = LV.outdoor ? DIRT[3] : S[5];
   for (let k = 0; k < 34; k++) {
@@ -134,7 +144,10 @@ function updateLeap(dt) {
     G.pierce = false;
     const [x, y] = screenOf(hero), dust = LV.outdoor ? DIRT[3] : S[5];
     for (let k = 0; k < 26; k++) { const a = k / 26 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 70, Math.sin(a) * 35, 40 + Math.random() * 30, 1, k % 3 ? dust : DIRT[4]); }
-    G.quakes.push({ fi: hero.fi, fj: hero.fj, a0: 0, ring: true, t: 0.6, t0: 0.6, seed: (Math.random() * 1e6) | 0 });
+    const q = { fi: hero.fi, fj: hero.fj, a0: 0, ring: true, t: 0.6, t0: 0.6, seed: (Math.random() * 1e6) | 0 };
+    G.quakes.push(q); stampCracks(q);
+    const lite = LV.outdoor ? [DIRT[4], DIRT[3]] : [TH().ramp[TH().ramp.length - 1], TH().ramp[5]];
+    shockwave(hero.fi, hero.fj, 2.3, 0.34, lite, null, false); impactFlash(hero.fi, hero.fj, 2, 7); rubble(x, y, 14, 60);
     if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.5);
     hero.stop = Math.max(hero.stop, 0.08);
     sfx('boom');
@@ -185,7 +198,7 @@ function updateWarriorFx(dt) {
 // the chain
 function drawWarriorFx() {
   for (const q of G.quakes) {
-    const p = 1 - q.t / q.t0, grow = Math.min(1, p * 5), [hx, hy] = iso(q.fi, q.fj), n = q.ring ? 9 : 6, R = q.ring ? 1.9 : SLAM_R;
+    const p = 1 - q.t / q.t0, grow = Math.min(1, p * 5), [hx, hy] = iso(q.fi, q.fj), n = q.ring ? 9 : 6, R = q.R || (q.ring ? 1.9 : SLAM_R);
     for (let c = 0; c < n; c++) {
       const r1 = rng(q.seed + c * 31);
       let a = q.ring ? c / n * 6.283 + r1() * 0.5 : q.a0 + (c / (n - 1) - 0.5) * 2 * SLAM_HALF * 0.9;
@@ -277,6 +290,8 @@ function explodeAt(fi, fj, r, k, pow, big = false) {
   for (let k = 0; k < (big ? 16 : 8); k++) { const a = Math.random() * 6.283, d = Math.random() * r * 12; pspawn(3, x + Math.cos(a) * d, y + Math.sin(a) * d * 0.5, 10, (Math.random() - 0.5) * 10, 0, 14 + Math.random() * 14, 0.9, Math.random() < 0.5 ? 4 : 5); }   // smoke rising after
   burst(2, x, y, 8, big ? 40 : 22, big ? 150 : 100, 17); burst(2, x, y, 6, big ? 30 : 14, big ? 110 : 70, 16); burst(3, x, y, 4, big ? 18 : 8, 40, 15);
   stampBlood(Math.round(x), Math.round(y), big ? 7 : 4, (Math.random() * 1e6) | 0, [2, 3, 3, 4, 5]);   // a scorch mark
+  shockwave(fi, fj, r * 1.05, big ? 0.36 : 0.26, [18, 16]); impactFlash(fi, fj, big ? 10 : 7, big ? 10 : 6);   // round 25: the blast's front and its first white frames
+  if (big) { rubble(x, y, 20, 80); const q = { fi, fj, a0: 0, ring: true, R: 2.4, t: 0.7, t0: 0.7, seed: (Math.random() * 1e6) | 0 }; G.quakes.push(q); stampCracks(q); }
   G.flashes.push({ fi, fj, t: big ? 0.45 : 0.25, t0: big ? 0.45 : 0.25, r: big ? 150 : 100 });
   G.blasts.push({ fi, fj, r, t: big ? 0.32 : 0.22, t0: big ? 0.32 : 0.22 });
   if (SHAKE) G.trauma = Math.min(1, G.trauma + (big ? 0.6 : 0.28));
@@ -306,6 +321,8 @@ function coneOfCold() {
       pspawn(4, x, y, 10 + Math.random() * 12, (gx - gy) * 16 * T, (gx + gy) * 8 * T, 0, 0.26 + Math.random() * 0.12, k % 3 ? 118 : 117);
     }
     G.cones.push({ fi: hero.fi, fj: hero.fj, a0, t: 0.5, t0: 0.5 });
+    G.frost.push({ fi: hero.fi, fj: hero.fj, a0, t: 3.2, seed: (Math.random() * 1e6) | 0 });   // round 25: frost stays on the ground a while
+    shockwave(hero.fi, hero.fj, CONE_R, 0.3, [27, 118], [a0, CONE_HALF]);
     orbFlare(117, 118, 12);
     if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.18);
     sfx('frost');
@@ -799,5 +816,112 @@ function hitProp(p) {
     p.hp = (p.hp ?? EGG_HP) - 1; p.flash = 0.06; sfx('hit');
     burst(1, p.wx, p.wy, 6, 6, 40, 54);
     if (p.hp <= 0) { p.broken = true; LV.solid[tIdx(p.i, p.j)] = 0; burst(1, p.wx, p.wy, 6, 16, 50, 54); sfx('barrel'); }
+  }
+}
+
+// ---------------------------------------------------------------- impact kit (round 25)
+// Shared pieces that make the big skills land: a shockwave ring rolling out over the ground (or an
+// arc of one), a white impact flash for the first frames, cracks that stay in the floor, a sheet of
+// frost that lingers, stone chunks thrown up, and the whirlwind's spinning blade smear.
+// G.waves: { fi, fj, r: tiles, t, t0, cols: [lead, body], arc: [a0, half] | null, emis }
+function shockwave(fi, fj, r, dur, cols, arc = null, emis = true) {
+  G.waves.push({ fi, fj, r, t: dur, t0: dur, cols, arc, emis });
+  if (!emis) {   // a dust wave also kicks up puffs that ride out with its front
+    const [x, y] = iso(fi, fj), sp = r * 22.6 / dur * 0.8;
+    for (let k = 0; k < (arc ? 16 : 22); k++) {
+      const a = arc ? arc[0] + (k / 15 - 0.5) * 2 * arc[1] : k / 22 * 6.283, gx = Math.cos(a), gy = Math.sin(a);
+      pspawn(5, x, y, 2, (gx - gy) * 0.707 * sp, (gx + gy) * 0.354 * sp, 18 + Math.random() * 16, 1, k % 2 ? cols[0] : cols[1]);
+    }
+  }
+}
+function impactFlash(fi, fj, z, size) { G.impacts.push({ fi, fj, z, size, t: 0.09, t0: 0.09 }); }
+// cracks: the same branching paths the glowing quake draws, pressed into the floor for good
+function crackPaths(q, fn) {
+  const n = q.ring ? 9 : 6, R = q.R || (q.ring ? 1.9 : SLAM_R);
+  for (let c = 0; c < n; c++) {
+    const r1 = rng(q.seed + c * 31);
+    let a = q.ring ? c / n * 6.283 + r1() * 0.5 : q.a0 + (c / (n - 1) - 0.5) * 2 * SLAM_HALF * 0.9;
+    let gi = 0, gj = 0; const len = R * (0.7 + r1() * 0.3);
+    for (let s = 0; s < len * 6; s++) { a += (r1() - 0.5) * 0.5; gi += Math.cos(a) / 6; gj += Math.sin(a) / 6; fn(gi, gj, s / (len * 6)); }
+  }
+}
+function stampCracks(q) {
+  const [hx, hy] = iso(q.fi, q.fj), dark = LV.outdoor ? DIRT[0] : TH().ramp[0];
+  crackPaths(q, (gi, gj, u) => {
+    const x = Math.round(hx + (gi - gj) * 16), y = Math.round(hy + (gi + gj) * 8);
+    for (const [ox, oy] of u < 0.6 ? [[0, 0], [1, 0]] : [[0, 0]]) { const xx = x + ox, yy = y + oy, k = yy * WW + xx; if (xx >= 0 && yy >= 0 && xx < WW && yy < WH && wFloor[k] && floorBuf[k] !== BLK) setFloor(k, ox ? dark : BLK); }
+  });
+}
+// stone chunks (particle kind 7): thrown up, fall, and are gone when they land
+function rubble(x, y, n, speed, a0 = null, half = Math.PI) {
+  const cols = LV.outdoor ? [DIRT[2], DIRT[3]] : [TH().ramp[3], TH().ramp[5]];
+  for (let k = 0; k < n; k++) { const a = a0 === null ? Math.random() * 6.283 : a0 + (Math.random() * 2 - 1) * half, s = speed * (0.4 + Math.random() * 0.6), gx = Math.cos(a) * s, gy = Math.sin(a) * s; pspawn(7, x, y, 2, (gx - gy) * 0.7, (gx + gy) * 0.35, 70 + Math.random() * 70, 3, cols[k & 1]); }
+}
+function updateImpactFx(dt) {
+  for (const w of G.waves) w.t -= dt; G.waves = G.waves.filter(w => w.t > 0);
+  for (const f of G.impacts) f.t -= dt; G.impacts = G.impacts.filter(f => f.t > 0);
+  for (const f of G.frost) f.t -= dt; G.frost = G.frost.filter(f => f.t > 0);
+  if (hero.whirl > 0 && Math.random() < 0.5) { const [x, y] = screenOf(hero), a = Math.random() * 6.283; pspawn(5, x + Math.cos(a) * 12, y + Math.sin(a) * 6, 1, -Math.sin(a) * 40, Math.cos(a) * 20, 10 + Math.random() * 10, 1, LV.outdoor ? DIRT[3] : S[5]); }
+}
+// ground-level pieces, drawn into the world layer under the bodies
+function drawImpactFx() {
+  const put = (x, y, v) => { if (x >= 0 && y >= 0 && x < W && y < H && !cid[y * W + x]) scr[y * W + x] = v; };
+  for (const f of G.frost) {   // lingering frost: a sparse pale sheet with glints, thinning away
+    const [hx, hy] = iso(f.fi, f.fj), life = Math.min(1, f.t / 1.2);
+    for (let y = Math.floor(hy - camY - 50); y <= hy - camY + 50; y++) for (let x = Math.floor(hx - camX - 100); x <= hx - camX + 100; x++) {
+      if (x < 0 || y < 0 || x >= W || y >= H) continue;
+      const sx = (x + camX - hx) / 16, sy = (y + camY - hy) / 8, gi = (sx + sy) / 2, gj = (sy - sx) / 2, d = Math.hypot(gi, gj);
+      if (d > CONE_R * 0.95 || d < 0.5) continue;
+      const da = Math.abs(((Math.atan2(gj, gi) - f.a0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI); if (da > CONE_HALF * 0.95) continue;
+      const h = hash(x + camX, y + camY, f.seed), th = BAYER[((y & 3) << 2) | (x & 3)];
+      if (h > 0.996 && Math.sin(G.t * 9 + h * 900) > 0.6) { put(x, y, 27 | EMIS); continue; }   // a glint
+      if (th < 0.2 * life && h > 0.35) put(x, y, (h > 0.8 ? 118 : 117) | EMIS);
+    }
+  }
+  for (const w of G.waves) {
+    const p = 1 - w.t / w.t0, e = 1 - (1 - p) * (1 - p), R = w.r * 22.6 * (0.15 + 0.85 * e), [cx0, cy0] = iso(w.fi, w.fj), cx = cx0 - camX, cy = cy0 - camY;
+    const steps = Math.ceil(R * 4);
+    for (let s = 0; s < steps; s++) {
+      const a = s / steps * 6.283;
+      if (w.arc) { const da = Math.abs(((a - w.arc[0] + Math.PI * 3) % (Math.PI * 2)) - Math.PI); if (da > w.arc[1]) continue; }
+      // a ground angle a: tile direction (cos, sin) -> screen
+      const gx = Math.cos(a), gy = Math.sin(a), ux = (gx - gy) * 0.7071, uy = (gx + gy) * 0.3536;
+      for (let k = 0; k < 5; k++) {
+        const rr = R / 22.6 * 16 * 1.414 - k * 1.1, x = Math.round(cx + ux * rr * 1.0), y = Math.round(cy + uy * rr * 1.0);
+        if (x < 0 || y < 0 || x >= W || y >= H) continue;
+        if (BAYER[((y & 3) << 2) | (x & 3)] < p * 1.1 - 0.25 + k * 0.12) continue;   // thins out as it spreads, and toward its back edge
+        const v = k === 0 ? w.cols[0] : w.cols[1];
+        put(x, y, w.emis ? v | EMIS : v);
+      }
+    }
+  }
+}
+// detail-layer pieces: the impact flash and the whirlwind smear (drawn at full detail)
+function ovSet(X, Y, v) { if (X >= 0 && Y >= 0 && X < OW && Y < OH) ov32[Y * OW + X] = PAL32[v]; }
+function drawImpactFlashes() {
+  for (const f of G.impacts) {
+    const [x, y] = iso(f.fi, f.fj), X0 = Math.round(x * SPX - cam2x), Y0 = Math.round((y - f.z) * SPX - cam2y), p = 1 - f.t / f.t0, R = f.size * (0.6 + p * 0.6);
+    // a white core with four spikes, the first frame solid, then hollowing out
+    for (let b = -Math.ceil(R); b <= R; b++) for (let a = -Math.ceil(R * 2); a <= R * 2; a++) {
+      const d = Math.hypot(a / 2, b);
+      const spike = (Math.abs(b) < 1.5 && Math.abs(a) < R * 3) || (Math.abs(a) < 1.5 && Math.abs(b) < R * 1.5);
+      if (d > R && !spike) continue;
+      if (p > 0.5 && d < R * (p - 0.3)) continue;
+      ovSet(X0 + a, Y0 + b, d < R * 0.6 || spike ? 27 : 51);
+    }
+  }
+}
+function whirlSmear(front) {
+  if (!(hero.whirl > 0)) return;
+  const [x, y] = screenOf(hero), X0 = Math.round(x * SPX - cam2x), Y0 = Math.round((y - 9) * SPX - cam2y), rx = 34, ry = 15, spin = G.t * 26;
+  for (const off of [0, Math.PI]) for (let s = 0; s < 70; s++) {
+    const u = s / 70, a = spin + off - u * 2.4;   // the blade's tip leads, the trail fades behind it
+    const sy = Math.sin(a); if ((sy > 0) !== front) continue;
+    for (let k = 0; k < 3; k++) {
+      const r = 1 - k * 0.06, X = Math.round(X0 + Math.cos(a) * rx * r), Y = Math.round(Y0 + sy * ry * r);
+      if (u > 0.25 && ((X + Y + k) & 1)) continue;   // dithered tail
+      if (u > 0.7 && k) continue;
+      ovSet(X, Y, u < 0.1 ? 27 : u < 0.4 ? STEEL[4] : STEEL[2]);
+    }
   }
 }

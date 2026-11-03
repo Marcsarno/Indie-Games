@@ -177,7 +177,11 @@ function drawHud() {
   if (hero.cls === 'mage') drawButton(UI.attack, [37, 38, 39, 40], !!press.attack, glyphMissile);   // magic missiles
   else drawButton(UI.attack, [28, 29, 30, 31], !!press.attack, glyphSword);
   SKILLS.forEach((sk, i) => {
-    const c = UI.skills[i], locked = hero.lvl < sk.lvl;
+    const fx = btnFx(i), dtu = 1 / 60;
+    if (fx.cd > 0 && CD[sk.id] <= 0) fx.ready = 0.3;   // just came off cooldown
+    fx.cd = CD[sk.id]; fx.press = Math.max(0, fx.press - dtu); fx.ready = Math.max(0, fx.ready - dtu); fx.deny = Math.max(0, fx.deny - dtu);
+    const c0 = UI.skills[i], shake = fx.deny > 0 ? Math.round(Math.sin(fx.deny * 70) * 2) : 0;
+    const c = [c0[0] + shake, c0[1], c0[2] + (fx.press > 0.08 ? 1 : 0)], locked = hero.lvl < sk.lvl;
     const sl = SPELL_LOOK[sk.id];
     drawButton(c, locked ? [3, 4, 5] : sl ? sl[0] : [[48, 49, 50, 51], [19, 20, 21, 22], [28, 29, 30, 31], [33, 34, 35, 36]][i], press.skill === i, sl ? sl[1] : i ? SKILL_GLYPH[i] : glyphBolt);
     // cooldown: the button darkens from the top and clears as it recharges; locked buttons stay dark
@@ -188,6 +192,9 @@ function drawHud() {
       if ((covered && BAYER[((y & 3) << 2) | (x & 3)] < 0.7) || (low && ((x + y) & 1))) put(x, y, K1);
     }
     if (locked) textC(`LV${sk.lvl}`, c[0], c[1] - 2, 25);
+    // a bright rim: white as it fires or comes ready, red when there is no mana for it
+    const rim = fx.deny > 0 ? 22 : fx.press > 0 || fx.ready > 0 ? 27 : 0;
+    if (rim && (fx.deny > 0 || fx.press > 0 || Math.floor(fx.ready * 20) % 2 === 0)) for (let a = 0; a < 64; a++) { const t = a / 64 * 6.283; put(c[0] + Math.cos(t) * (c[2] + 1), c[1] + Math.sin(t) * (c[2] + 1), rim); }
   });
   if (hero.buff > 0) textC(`WAR CRY ${Math.ceil(hero.buff)}`, W / 2, H - 46, 51);
   if (hero.frenzy > 0) textC(`FRENZY ${Math.ceil(hero.frenzy)}`, W / 2, H - 54, 23);

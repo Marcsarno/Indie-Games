@@ -26,7 +26,7 @@ const params = new URLSearchParams(location.search);
 const SHAKE = params.get('shake') !== '0';
 
 // ---------------------------------------------------------------- state
-const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0, meteors: [], flashes: [], blasts: [], cones: [], ghosts: [], sparks: [], rings: [], walls: [], quakes: [], hooks: [] };
+const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0, meteors: [], flashes: [], blasts: [], cones: [], ghosts: [], sparks: [], rings: [], walls: [], quakes: [], hooks: [], waves: [], impacts: [], frost: [] };
 const hero = {
   fam: 'hero', fi: 0, fj: 0, dir: 1, clip: 'idle', clock: 0, walk: 0, runT: 0, goT: 0, stopT: 0, atk: -1, combo: 0, swingEnd: -9, hitDone: false, stop: 0, flash: 0,
   hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, hurtT: 0, cast: -1,
@@ -73,7 +73,7 @@ function startLevel(level, seed) {
   enemies = LV.spawns.map((s, n) => makeEnemy(s.id, s.fi, s.fj, n));
   { const R = rng(seed ^ 0x5bd1); for (const e of enemies) if (!e.def.unique && R() < champChance(LV.diff)) makeChampion(e, R); }
   makeNpcs(); resetSkills(); setupBoss();
-  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
+  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
   updateFov(hero.fi, hero.fj);
   flowT = 0; computeFlow();
   warmStep(1e9, prewarm());   // idle poses + the hero's walk now, behind the level fade; the rest during play
@@ -465,7 +465,7 @@ function update(dt) {
   for (const g of groundItems) if (g.item && g.item.rarity === 'legend' && !g.announced) { g.announced = true; say('A LEGENDARY ITEM HAS FALLEN', 112, 3); sfx('levelUp'); }   // never miss one
   if (hero.frenzy > 0) hero.frenzy -= dt; if (hero.stoneskin > 0) hero.stoneskin -= dt;
   separate();
-  updateProjectiles(dt); updateMeteors(dt); updateLichFx(dt); updateWarriorFx(dt);
+  updateProjectiles(dt); updateMeteors(dt); updateLichFx(dt); updateWarriorFx(dt); updateImpactFx(dt);
   updateParticles(dt);
   ambience(dt);
   for (const f of floaters) { f.t -= dt; f.y -= dt * 18; }
@@ -931,12 +931,13 @@ function render() {
   });
   for (const p of projectiles) ov.push({ depth: p.fi + p.fj, draw: () => drawProjectile(p) });
   if (G.tp) ov.push({ depth: G.tp.fi + G.tp.fj, draw: drawPortal });
+  if (hero.whirl > 0) ov.push({ depth: hero.fi + hero.fj - 0.01, draw: () => whirlSmear(false) }, { depth: hero.fi + hero.fj + 0.01, draw: () => whirlSmear(true) });
   shrineCrystals(base);
   for (const f of fires) if (LV.vis[f.tile] > 0.1 || LV.seen[f.tile]) base.push({ depth: (f.tile % MW) + Math.floor(f.tile / MW) + (f.depthAdd ?? 1.2), draw: () => flame(f.wx, f.wy, f.h, f.w, t, f.seed, f.blue) });
   heroRing(kx, ky + 1);
   base.sort((a, b) => a.depth - b.depth);
   for (const d of base) d.draw();
-  drawTelegraph(); drawMeteors(); drawLichFx(); drawWarriorFx();
+  drawTelegraph(); drawImpactFx(); drawMeteors(); drawLichFx(); drawWarriorFx();
   const charLevel = lightPass(chars, kx, ky);
   // the frame: the lit world doubled (shifted by the camera's half pixel), then the detail layer over it
   for (let y = 0; y < H; y++) {
@@ -959,12 +960,13 @@ function render() {
     const X = Math.round(px_[k] * SPX) - cam2x, Y = Math.round((py_[k] - pz_[k]) * SPX) - cam2y;
     if (X < 0 || Y < 0 || X >= OW - 1 || Y >= OH - 1) continue;
     const col = kind === 1 ? (pcol[k] === 22 ? RED[3] : pcol[k]) : pcol[k];
-    const emis = kind === 2 || kind === 3 || kind === 4, s = kind === 6 ? 4 : 2;
+    const emis = kind === 2 || kind === 3 || kind === 4, s = kind === 6 ? 4 : kind === 7 ? 3 : 2;
     const c32 = emis ? PAL32[CYCLE[col]] : envCol((X + hx) >> 1, (Y + hy) >> 1, col, -2);
     if (!c32) continue;
-    const c2 = kind === 6 ? envCol((X + hx) >> 1, (Y + hy) >> 1, BONE[0], -2) || c32 : c32;   // bone chunks are bigger, with a shaded underside
-    for (let b = 0; b < s && Y + b < OH; b++) for (let a = 0; a < s && X + a < OW; a++) ov32[(Y + b) * OW + X + a] = b >= 2 ? c2 : c32;
+    const c2 = kind === 6 ? envCol((X + hx) >> 1, (Y + hy) >> 1, BONE[0], -2) || c32 : kind === 7 ? envCol((X + hx) >> 1, (Y + hy) >> 1, col - 2, -2) || c32 : c32;   // bone chunks are bigger, with a shaded underside
+    for (let b = 0; b < s && Y + b < OH; b++) for (let a = 0; a < s && X + a < OW; a++) ov32[(Y + b) * OW + X + a] = b >= (kind === 7 ? 2 : 2) && (kind !== 7 || a > 0) ? c2 : c32;
   }
+  drawImpactFlashes();
   // the HUD, drawn at the world's scale into its own buffer, merged on top as blocks
   hud32.fill(0); out32 = hud32;
   drawHud();
