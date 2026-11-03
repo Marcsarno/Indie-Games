@@ -5,17 +5,28 @@ import { makeLightbar } from './lightbar.js';
 export const POL = { maxCops: [0, 1, 2, 4, 5], speed: [0, 17, 20, 23, 25], wreckNeed: [0, 1, 2, 4, 6], heatFor: [0, 1, 4, 8, 13], loseAfter: 28, bustTime: 3.5, probation: 6, pool: 7 };
 
 export function createPolice(G, deps) {
-  const { inWater, THREE, makeCar, carPoly, colliders, placeOnGround, scene, camera, pushCircle, audio, onStars, onBusted, onWreck, ram, playerMass } = deps;
+  const { inWater, THREE, makeCar, carPoly, colliders, placeOnGround, scene, camera, pushCircle, audio, onStars, onBusted, onWreck, ram, playerMass } = deps, VK = deps.speedK || 1;   // speedK: the new map's cars are 15 % faster, so are its cops
   // ---------- road graph for routing (node centres + edge polylines) ----------
   const N = G.nodes.map(n => ({ x: n.x, z: -n.y, adj: [] }));
   G.edges.forEach((e, ei) => { const P = e.pts.map(p => [p[0], -p[1]]); let L = 0; for (let k = 1; k < P.length; k++) L += Math.hypot(P[k][0] - P[k - 1][0], P[k][1] - P[k - 1][1]); N[e.a].adj.push({ n: e.b, P, L, ei }); N[e.b].adj.push({ n: e.a, P: P.slice().reverse(), L, ei }); });
   let SHUT = null, CLOSED = null;
   const E2 = G.edges.map((e, k) => ({ a: e.a, b: e.b, k, P: e.pts.map(p => [p[0], -p[1]]) }));
+  // round 50: spawn points every ~10 m along every street, not just at junctions (the new map has few junctions: cops could not appear for long stretches)
+  const SPTS = []; for (const e of E2) for (let j = 0; j < e.P.length - 1; j++) { const a = e.P[j], b = e.P[j + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.round(L / 10));
+    for (let i = 0; i < n; i++) SPTS.push({ x: a[0] + (b[0] - a[0]) * i / n, z: a[1] + (b[1] - a[1]) * i / n, dx: (b[0] - a[0]) / (L || 1), dz: (b[1] - a[1]) / (L || 1) }); }
+  function startOn(x, z) {                         // the street point nearest (x, z): both ways along it to its end nodes, so a cop mid-street does not drive to the far junction first
+    let be = null, bj = 0, bd = 1e18; for (const e of E2) for (let j = 0; j < e.P.length; j++) { const d = (e.P[j][0] - x) ** 2 + (e.P[j][1] - z) ** 2; if (d < bd) { bd = d; be = e; bj = j; } }
+    if (!be || bd > 400) return null; const len = (A) => { let L = 0; for (let k = 1; k < A.length; k++) L += Math.hypot(A[k][0] - A[k - 1][0], A[k][1] - A[k - 1][1]); return L; };
+    const toA = be.P.slice(0, bj + 1).reverse(), toB = be.P.slice(bj); return [{ n: be.a, pre: toA, L: len(toA) }, { n: be.b, pre: toB, L: len(toB) }];
+  }
   function routeTo(x, z, px, pz) {                 // to the road point nearest (px, pz), entering its street from an open end (roadblocks)
     let be = null, bj = 0, bd = 1e18; for (const e of E2) for (let j = 0; j < e.P.length; j++) { const d = (e.P[j][0] - px) ** 2 + (e.P[j][1] - pz) ** 2; if (d < bd) { bd = d; be = e; bj = j; } }
-    const s0 = nearestNode(x, z); if (!be) return route(s0, nearestNode(px, pz));
-    const ra = route(s0, be.a), la = dist[be.a] + bj + (CLOSED && CLOSED.get(be.k) === be.a ? 1e4 : 0), rb = route(s0, be.b), lb = dist[be.b] + (be.P.length - bj) + (CLOSED && CLOSED.get(be.k) === be.b ? 1e4 : 0);
-    return la <= lb ? ra.concat(be.P.slice(0, bj + 1)) : rb.concat(be.P.slice(bj).reverse());
+    const st = startOn(x, z) || [{ n: nearestNode(x, z), pre: [], L: 0 }]; if (!be) return route(st[0].n, nearestNode(px, pz));
+    let best = null;
+    for (const o of st) { route(o.n, -1); const la = o.L + dist[be.a] + bj * 10 + (CLOSED && CLOSED.get(be.k) === be.a ? 1e4 : 0), lb = o.L + dist[be.b] + (be.P.length - bj) * 10 + (CLOSED && CLOSED.get(be.k) === be.b ? 1e4 : 0);
+      if (!best || la < best.c) best = { c: la, o, end: 'a' }; if (lb < best.c) best = { c: lb, o, end: 'b' }; }
+    const R = route(best.o.n, be[best.end]), tail = best.end === 'a' ? be.P.slice(0, bj + 1) : be.P.slice(bj).reverse();
+    return best.o.pre.concat(R, tail);
   }                                  // edges closed by mission roadblocks (a live Set from dave.js): routes avoid them
   function nearestNode(x, z) { let b = 0, bd = 1e18; for (let i = 0; i < N.length; i++) { const d = (N[i].x - x) ** 2 + (N[i].z - z) ** 2; if (d < bd) { bd = d; b = i; } } return b; }
   const dist = new Float64Array(N.length), prev = new Int32Array(N.length), prevE = new Array(N.length), done = new Uint8Array(N.length);
@@ -55,12 +66,12 @@ export function createPolice(G, deps) {
   const onScreen = (x, z) => { sph.center.set(x, 1, z); return frustum.intersectsSphere(sph); };
   function spawn(c, P, block) {                    // on a road node 45-85 m away, off-screen, preferably ahead of the player's travel
     const sp = Math.hypot(P.vx, P.vz), ux = sp > 2 ? P.vx / sp : 0, uz = sp > 2 ? P.vz / sp : 0; let best = -1, bs = -1e9;
-    for (let i = 0; i < N.length; i++) { const dx = N[i].x - P.x, dz = N[i].z - P.z, d = Math.hypot(dx, dz); if (d < 45 || d > 85 || onScreen(N[i].x, N[i].z)) continue;
+    for (let i = 0; i < SPTS.length; i++) { const dx = SPTS[i].x - P.x, dz = SPTS[i].z - P.z, d = Math.hypot(dx, dz); if (d < 45 || d > 85 || onScreen(SPTS[i].x, SPTS[i].z)) continue;
       let sc = (dx * ux + dz * uz) / d * (block ? 3 : 1) + Math.random() * .6; if (W.force > 0 && W.goal) { const gx = W.goal[0] - P.x, gz = W.goal[1] - P.z, gl = Math.hypot(gx, gz) || 1; sc += (dx * gx + dz * gz) / (d * gl) * 1.2; } if (sc > bs) { bs = sc; best = i; } }
     if (best < 0) return false;
-    const n = N[best]; c.x = n.x; c.z = n.z; c.th = Math.atan2(-(P.x - n.x), -(P.z - n.z)); c.v = block ? 0 : 6; c.dmg = 0; c.on = true; c.g.visible = true; c.car.setDamage(0); c.bar.show(true);
+    const n = SPTS[best]; c.x = n.x; c.z = n.z; c.th = Math.atan2(-(P.x - n.x), -(P.z - n.z)); c.v = block ? 0 : 6; c.dmg = 0; c.on = true; c.g.visible = true; c.car.setDamage(0); c.bar.show(true);
     c.state = block ? 'BLOCK' : 'CHASE'; c.blocking = false; c.path = null; c.repath = 0; c.off = 0; c.stuck = 0;
-    if (block && n.adj.length) { const ed = n.adj[0], p = ed.P[Math.min(2, ed.P.length - 1)]; c.th = Math.atan2(-(p[0] - n.x), -(p[1] - n.z)) + Math.PI / 2; }    // parked across the road
+    if (block) c.th = Math.atan2(-n.dx, -n.dz) + Math.PI / 2;    // parked across the road
     return true;
   }
   function despawn(c) { c.on = false; c.g.visible = false; c.col.cx = c.col.cz = 1e5; for (const p of c.col.poly) { p[0] = 1e5; p[1] = 1e5; } c.col.vx = c.col.vz = 0; }
@@ -87,7 +98,7 @@ export function createPolice(G, deps) {
     if (W.goal) {                                  // the first junction on your way to the goal that this cop can reach before you (by any street): go and wait there
       const pn = nearestNode(P.x, P.z), gn = nearestNode(W.goal[0], W.goal[1]); route(pn, gn);
       const chain = []; let v = gn; while (v !== pn && prev[v] >= 0) { chain.push(v); v = prev[v]; } chain.reverse(); const pd = chain.map(n => dist[n]), p0 = Math.hypot(N[pn].x - P.x, N[pn].z - P.z);
-      route(nearestNode(c.x, c.z), -1); const vc = POL.speed[Math.max(1, W.stars)] * 1.25 * .7, vp = Math.max(sp, 10);
+      route(nearestNode(c.x, c.z), -1); const vc = POL.speed[Math.max(1, W.stars)] * 1.25 * VK * .7, vp = Math.max(sp, 10);
       for (let k = 0; k < chain.length; k++) { const n = chain[k], along = pd[k] + p0; if (along < 30) continue; if (along > 260) break; if (dist[n] / vc < along / vp - .4) { c.inode = n; return [N[n].x, N[n].z]; } }
     }
     c.inode = null; const ahead = 55 + (c.id % 3) * 12;
@@ -190,8 +201,8 @@ export function createPolice(G, deps) {
         } else {
         const turn = W.force > 0 ? Math.min(3.2, 20 / Math.max(c.v, 4)) * Math.min(1, .3 + c.v / 6) : 2.4 * Math.min(1, .35 + c.v / 12); c.th += Math.max(-turn * dt, Math.min(turn * dt, da));    // scripted chase: turns as hard as ~20 m/s2 of grip allows
         if (c.blocking) { c.v += Math.max(-14 * dt, Math.min(9 * dt, (Math.hypot(c.bx - c.x, c.bz - c.z) > 2 ? 8 : 0) - c.v)); }
-        const ram = W.stars >= 2 && d < 30, vmax = POL.speed[Math.max(1, W.stars)] * (W.force ? 1.25 : 1);      // the scripted Dave chase: faster than your car (25 -> 31 m/s)
-        let vt = vto != null ? Math.min(vto, POL.speed[4] * 1.25) : W.force > 0 ? vmax * (1 - .7 * Math.min(1, Math.max(corner, Math.abs(da) * .8) / 1.4)) : vmax * Math.max(.35, Math.cos(da)); if (c.blocking) vt = Math.hypot(c.bx - c.x, c.bz - c.z) > 2 ? 9 : 0; if (!ram && d < 9 && c.state !== 'LEAVE') vt = Math.min(vt, Math.hypot(P.vx, P.vz) + 1);     // 1 star: tail you; 2+: ram
+        const ram = W.stars >= 2 && d < 30, vmax = POL.speed[Math.max(1, W.stars)] * (W.force ? 1.25 * VK : 1);      // the scripted Dave chase: faster than your car (25 -> 31 m/s)
+        let vt = vto != null ? Math.min(vto, POL.speed[4] * 1.25 * VK) : W.force > 0 ? vmax * (1 - .7 * Math.min(1, Math.max(corner, Math.abs(da) * .8) / 1.4)) : vmax * Math.max(.35, Math.cos(da)); if (c.blocking) vt = Math.hypot(c.bx - c.x, c.bz - c.z) > 2 ? 9 : 0; if (!ram && d < 9 && c.state !== 'LEAVE') vt = Math.min(vt, Math.hypot(P.vx, P.vz) + 1);     // 1 star: tail you; 2+: ram
         c.v += Math.max(-14 * dt, Math.min(9 * dt, vt - c.v));
         }
         const fx = -Math.sin(c.th), fz = -Math.cos(c.th); let nx = c.x + fx * c.v * dt, nz = c.z + fz * c.v * dt;
