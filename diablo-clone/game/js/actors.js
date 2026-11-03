@@ -239,8 +239,12 @@ const HERO_HK = 1.5, HERO_BK = 0.8;
 const HERO_GAIT = gaitFrameTiles(HERO_B);
 // in a robe: a lighter, gliding stride (lower knees, less bounce, a shorter flight) so the legs
 // don't kick out under the skirt
-const MAGE_B = Object.assign({}, HERO_B, { stride: 5.6, lift: 2.4, duty: 0.4, bob: 0.6, sway: 0.45, runLean: 0.12, counter: 0.26 });
+const MAGE_B = Object.assign({}, HERO_B, { stride: 6.8, lift: 2.4, duty: 0.38, bob: 0.45, sway: 0.22, runLean: 0.12, counter: 0.15 });
 const MAGE_GAIT = gaitFrameTiles(MAGE_B);
+// round 20b: the hero's legs cycle slower than a perfect foot plant would need (the planted foot
+// slides a little; the robe hides most of it): ~3.6 steps/s for the warrior, ~3.3 for the mage,
+// where an exact plant gave 5 and 6.8 steps/s and looked like a frantic wiggle
+const HERO_STEP = HERO_GAIT / 0.72, MAGE_STEP = MAGE_GAIT / 0.62;
 const robed = eq => !!eq.chest && eq.chest.startsWith('robe');
 const TEAM = { red: M.CLOTH_RED, blue: M.CLOTH_BLUE, green: M.CLOTH_GREEN, tan: M.CLOTH_TAN, purple: M.CLOTH_PURPLE, white: M.CLOTH_WHITE };
 // townsfolk share the hero's rig: hair color, a beard, or no weapon at all

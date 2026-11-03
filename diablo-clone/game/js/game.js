@@ -466,7 +466,7 @@ function updateHero(dt) {
     // from a standstill: one push-off pose, then the cycle starts on the left foot's plant
     if (hero.runT === 0) { hero.walk = 0; hero.goT = 0.08; }
     hero.runT += dt; hero.stopT = 0;
-    hero.walk += moved / (robed(hero.look) ? MAGE_GAIT : HERO_GAIT);   // frames advance with distance, so the planted foot stays put
+    hero.walk += moved / m / (robed(hero.look) ? MAGE_STEP : HERO_STEP);   // legs follow the ground speed (without the up/down boost), a bit slower than an exact foot plant
     // turn through the in-between facings instead of snapping (a reversal takes ~0.1 s)
     // from a standstill he faces the new way at once
     const want = dirFrom(gi, gj);
