@@ -31,7 +31,7 @@
 <main>
   <header>
     <h1>Warm Light and Glow</h1>
-    <p class="lede">Dungeon of Bones, round 28: torchlight leans warm, shadows lean cool, and bright things glow.</p>
+    <p class="lede">Dungeon of Bones, round 28: torchlight leans warm, shadows lean cool, bright things glow, and characters catch the light and cast shadows away from it.</p>
   </header>
   <section>
     <h2>What changed</h2>
@@ -47,6 +47,19 @@
     <figure>
       <div class="frame"><img src="light-blind.png" alt="Five pairs of game scenes labelled A and B: a crypt room with a brazier, a crypt with wall torches and the stairs, a cave, a hell room with lava, and a town. One side of each pair has the new lighting, in random order" width="940" height="2500"></div>
       <figcaption>For each row, which looks better: A, B, or can't tell? The order is random and I haven't looked at the key.</figcaption>
+    </figure>
+  </section>
+  <section>
+    <h2>Rim light and torch shadows</h2>
+    <ul>
+      <li><strong>Rim light.</strong> Each character finds the strongest light reaching it: a torch, brazier, campfire or lantern, or your own light for monsters near you. The edge of the character facing that light gets a warm highlight, 2 pixels wide when the light is close.</li>
+      <li><strong>Torch shadows.</strong> Each character also casts a shadow stretched away from that light, longer when the light is close and fading toward its tip. It swings around them as they move past a fire.</li>
+      <li>Outdoors in daylight, neither applies, since the sun is overhead. At night they do.</li>
+      <li><strong>Cost:</strong> about 2 ms per frame at 4x slower CPU, nothing measurable at normal speed. LIGHT: OLD on the title turns these off along with the warm light and glow.</li>
+    </ul>
+    <figure>
+      <div class="frame"><img src="rim-blind.png" alt="Four pairs of close-ups labelled A and B: characters near a brazier, wall torches, a hell room and a cave. One side of each pair has rim light and torch shadows, in random order" width="980" height="2080"></div>
+      <figcaption>Blind test 2: for each row, A, B, or can't tell? The order is random and I haven't looked at the key.</figcaption>
     </figure>
   </section>
 </main>

@@ -854,6 +854,38 @@ function blit(sp, wx, wy, flash, cidx, tile, dissolve = 0) {
     }
   }
 }
+// round 28b, rim light and torch shadows. Each body finds its key light: the strongest light
+// reaching it (torches, braziers, campfires, lanterns; the hero's own light for everyone else).
+// Its silhouette edge facing that light is lit two steps brighter, and it casts a stretched
+// shadow on the ground away from it. Outdoors by day the sun is overhead: neither applies.
+let RIM_SHADOW = HUE_LIGHT;
+try { const q = new URLSearchParams(location.search).get('rim'); if (q !== null) RIM_SHADOW = q !== '0'; } catch (e) { /* ignore */ }
+function keyLight(c, kx, ky) {
+  if (!RIM_SHADOW || (LV.outdoor && !LV.night)) return null;
+  const [x, y] = screenOf(c); let best = null, bw = 0.12;
+  const test = (lx, ly, lz, r, i) => {
+    const dx = lx - x, dy = (ly - y) * 2, d2 = dx * dx + dy * dy; if (d2 >= r * r) return;
+    const w = i * (1 - d2 / (r * r)); if (w > bw) { bw = w; const d = Math.sqrt(d2) || 1; best = { gx: dx / d, gy: dy / d, w, sx: lx - x, sy: ly - lz - (y - 14) }; }
+  };
+  for (const L of lights) test(L.x, L.y, L.z, L.r, L.i);
+  if (c !== hero && !LV.outdoor) test(kx, ky, 34, 145, 0.62 * 0.8);
+  return best;
+}
+// the cast shadow: an ellipse on the ground stretched away from the light, longer when the light
+// is close and strong, dithered toward its far end
+function castShadow(wx, wy, rx, kl) {
+  const len = rx * (1.1 + 1.4 * Math.min(1, kl.w)), wid = rx * 0.55, ux = -kl.gx, uy = -kl.gy;   // away from the light (ground plane, y doubled)
+  const cx = wx - camX + ux * len * 0.55, cy = wy - camY + uy * len * 0.55 / 2;
+  const R = Math.ceil(len) + 2;
+  for (let y = Math.floor(cy - R / 2); y <= cy + R / 2; y++) for (let x = Math.floor(cx - R); x <= cx + R; x++) {
+    if (x < 0 || y < 0 || x >= W || y >= H) continue;
+    const px = x - cx, py = (y - cy) * 2, u = (px * ux + py * uy) / (len * 0.62), v = (-px * uy + py * ux) / wid;
+    const e = u * u + v * v; if (e > 1) continue;
+    const far = (u + 1) / 2;   // 0 at the feet, 1 at the tip
+    if (far > 0.55 && BAYER[((y & 3) << 2) | (x & 3)] < (far - 0.55) / 0.45) continue;
+    if (scr[y * W + x] !== BLK && zbuf[y * W + x] <= 2) shd[y * W + x] = 1;
+  }
+}
 function shadowBlob(wx, wy, rx) {
   const cx = wx - camX, cy = wy - camY, ry = rx * 0.45;
   for (let y = Math.floor(cy - ry); y <= cy + ry; y++) for (let x = Math.floor(cx - rx); x <= cx + rx; x++) {
@@ -900,7 +932,7 @@ function drawGlows() {
   for (const f of G.flashes) { const [x, y] = iso(f.fi, f.fj); glowAt(x, y - 12, Math.round(f.r * 0.4), 0.7 * f.t / f.t0, GLOW_WARM); }
   if (G.tp) { const [x, y] = iso(G.tp.fi, G.tp.fj); glowAt(x, y - 16, 30, 0.35 * Math.min(1, G.tp.t / 0.45), GLOW_BLUE); }
 }
-function setLightNew(v) { HUE_LIGHT = GLOW = v; buildLcol(); try { localStorage.setItem('dcg-light', v ? 'new' : 'old'); } catch (e) { /* ignore */ } }
+function setLightNew(v) { HUE_LIGHT = GLOW = RIM_SHADOW = v; buildLcol(); try { localStorage.setItem('dcg-light', v ? 'new' : 'old'); } catch (e) { /* ignore */ } }
 function flame(wx, wy, hgt, wid, t, seed, blue = false) {
   const bx = wx - camX, by = Math.round(wy - camY);
   for (let r = 0; r < hgt; r++) {
@@ -979,13 +1011,15 @@ function render() {
   }
   chars.forEach((c, n) => {
     const [x, y] = screenOf(c);
-    if (c.clip !== 'death') shadowBlob(x, y + 1, c === hero || c.role ? (c.fam === 'chicken' ? 4 : 8) : c.def.shadow * (c.look.scale || 1));
+    const kl = c.clip !== 'death' ? keyLight(c, kx, ky) : null; c._kl = kl;
+    const srx = c === hero || c.role ? (c.fam === 'chicken' ? 4 : 8) : c.def.shadow * (c.look.scale || 1);
+    if (c.clip !== 'death') { shadowBlob(x, y + 1, srx); if (kl) castShadow(x, y + 1, srx, kl); }
     ov.push({ depth: c.fi + c.fj, draw: () => {
       const sp = getSprite(c.fam, c.look, c.dir, c.clip, frameOf(c), c);
       const jit = c.stop > 0 && c !== hero && c.dying < 0 ? (Math.floor(t * 33) % 2 ? 1 : -1) : 0;
       // white flash, then a brief dithered red; ice blue while frozen, half ice while slowed
       const fl = c.flash > 0 ? 1 : c.frozen > 0 ? 4 : c.tint > 0 ? 3 : c.slowT > 0 || c.chillT > 0 ? 5 : 0;
-      ovBlit(sp, x + jit, y - (c.leapZ || 0), charLevel[n], fl, 0, tIdx(Math.floor(c.fi), Math.floor(c.fj)));
+      ovBlit(sp, x + jit, y - (c.leapZ || 0), charLevel[n], fl, 0, tIdx(Math.floor(c.fi), Math.floor(c.fj)), null, c._kl);
     } });
   });
   for (const p of projectiles) ov.push({ depth: p.fi + p.fj, draw: () => drawProjectile(p) });
@@ -1076,16 +1110,37 @@ function envCol(x, y, v, tile) {
 // draw a sprite on the detail layer. A detail sprite (sp.px === SPX) is placed at sub-pixel
 // precision; a world sprite (px 1) is drawn doubled, exactly over its place in the world layer.
 // level >= 0: one light level for the whole sprite (characters); -1: lit per pixel like the world
-function ovBlit(sp, wx, wy, level, flash, dissolve, tile, clip = null) {
+function ovBlit(sp, wx, wy, level, flash, dissolve, tile, clip = null, rim = null) {
   const fine = sp.px === SPX, k = fine ? 1 : SPX;
   const X0 = fine ? Math.round(wx * SPX) - cam2x - sp.ax : (Math.round(wx - camX) - sp.ax) * SPX - hx;
   const Y0 = fine ? Math.round(wy * SPX) - cam2y - sp.ay : (Math.round(wy - camY) - sp.ay) * SPX - hy;
   const LV0 = level >= 0 ? level * NPAL : -1;
   if (fine && !flash && !dissolve && LV0 >= 0 && !clip) {   // the common case (a character, one light level): a tight loop
-    const data = sp.data, w = sp.w, black = PAL32[BLK], xa = Math.max(0, -X0), xb = Math.min(w, OW - X0);
-    for (let y = Math.max(0, -Y0), y1 = Math.min(sp.h, OH - Y0); y < y1; y++) {
+    const data = sp.data, w = sp.w, h = sp.h, black = PAL32[BLK], xa = Math.max(0, -X0), xb = Math.min(w, OW - X0);
+    // rim light: a body pixel whose neighbor toward the key light is outline or empty is lit
+    // brighter (two steps when the light is strong and close, one otherwise)
+    let rx = 0, ry = 0, RL = 0, ra = 0, rg = 0, rb = 0, thick = false;
+    if (rim) {
+      const d = Math.hypot(rim.sx, rim.sy) || 1; rx = Math.round(rim.sx / d * 1.4); ry = Math.round(rim.sy / d * 1.4);
+      RL = Math.min((LEVELS - 1) * NPAL, LV0 + NPAL); const k = Math.min(1, rim.w); ra = 70 * k; rg = 42 * k; rb = 8 * k; thick = rim.w > 0.5;   // a warm edge, stronger and 2 px wide close to the light
+      if (!rx && !ry) rim = null;
+    }
+    for (let y = Math.max(0, -Y0), y1 = Math.min(h, OH - Y0); y < y1; y++) {
       const row = (Y0 + y) * OW + X0, s = y * w;
-      for (let x = xa; x < xb; x++) { const v = data[s + x]; if (v) ov32[row + x] = (v & EMIS) ? PAL32[CYCLE[v & 127]] : v === BLK ? black : LCOL[LV0 + v]; }
+      for (let x = xa; x < xb; x++) {
+        const v = data[s + x]; if (!v) continue;
+        if (v & EMIS) { ov32[row + x] = PAL32[CYCLE[v & 127]]; continue; }
+        if (v === BLK) { ov32[row + x] = black; continue; }
+        if (rim) {
+          let xx = x + rx, yy = y + ry, nb = xx < 0 || yy < 0 || xx >= w || yy >= h ? 0 : data[yy * w + xx], edge = nb === 0 || nb === BLK;
+          if (!edge && thick) { xx += rx; yy += ry; nb = xx < 0 || yy < 0 || xx >= w || yy >= h ? 0 : data[yy * w + xx]; edge = nb === 0 || nb === BLK; }
+          if (edge) {
+            const c = LCOL[RL + v], r = Math.min(255, (c & 255) + ra), g = Math.min(255, ((c >> 8) & 255) + rg), b = Math.min(255, ((c >> 16) & 255) + rb);
+            ov32[row + x] = (255 << 24) | (b << 16) | (g << 8) | r; continue;
+          }
+        }
+        ov32[row + x] = LCOL[LV0 + v];
+      }
     }
     return;
   }
