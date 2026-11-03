@@ -38,8 +38,8 @@ function useSkill(i) {
   if (s.id === 'bolt') { heroCast(); if (hero.cast >= 0) CD.bolt = s.cd; return; }
   // a spell may cut a magic-missile cast short; anything else waits for the hero to be free
   if (heroBusy() && !(hero.castKind === 'missile' && hero.cast >= 0 && hero.atk < 0 && !(hero.dash > 0) && !(hero.whirl > 0))) return;
-  if (hero.mana < s.mana) { say('NOT ENOUGH MANA', 40, 1.2); btnFx(i).deny = 0.3; sfx('tap'); return; }
-  hero.mana -= s.mana; CD[s.id] = s.cd; btnFx(i).press = 0.16;
+  if (hero.mana < skillCost(s)) { say('NOT ENOUGH MANA', 40, 1.2); btnFx(i).deny = 0.3; sfx('tap'); return; }
+  hero.mana -= skillCost(s); CD[s.id] = s.cd; btnFx(i).press = 0.16;
   if (s.id === 'whirl') { hero.whirl = 0.8; hero.whirlTick = 0; sfx('heavySwing'); }
   if (s.id === 'bash') startBash();
   if (s.id === 'cry') warCry();
@@ -62,35 +62,91 @@ function groundSlam() {
   sfx('heavySwing');
 }
 function groundSlamHit() {
-  const [fx, fy] = dirVec(hero.dir), a0 = Math.atan2(fy, fx);
+  const [fx, fy] = dirVec(hero.dir), a0 = Math.atan2(fy, fx), mod = skillMod('slam');
+  if (mod === 'ring') return slamAt(a0, 2.9, Math.PI, 1.4, true);   // the full circle: all around, shorter reach
+  if (mod === 'fissure') {   // one long narrow crack racing out, hitting as it reaches each enemy
+    G.fissures.push({ fi: hero.fi, fj: hero.fj, a0, reach: 0.5, R: 7.5, half: 0.2, hit: new Set() });
+    const q = { fi: hero.fi + fx * 0.6, fj: hero.fj + fy * 0.6, a0, t: 1.1, t0: 1.1, R: 7.5, half: 0.12, n: 3, seed: (Math.random() * 1e6) | 0 };
+    G.quakes.push(q); stampCracks(q);
+    impactFlash(hero.fi + fx * 0.9, hero.fj + fy * 0.9, 3, 6);
+    if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.4);
+    sfx('boom'); sfx('crack');
+    return;
+  }
+  slamAt(a0, SLAM_R, SLAM_HALF, 1.5);
+  if (mod === 'after') G.aftershocks.push({ t: 0.45, a0 });   // a second, weaker slam on the same ground
+}
+// one slam of the ground from where the hero stands: a cone (or ring) of reach R and half-angle half
+function slamAt(a0, R, half, k, ring = false) {
+  const fx = Math.cos(a0), fy = Math.sin(a0);
   G.pierce = true;
   for (const e of enemies) {
     if (!alive(e)) continue;
     const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy);
     const da = Math.abs(((Math.atan2(dy, dx) - a0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-    if (d > SLAM_R + (e.def.unique ? 0.5 : 0) || (d > 0.7 && da > SLAM_HALF + 0.3 / Math.max(1, d))) continue;
+    if (d > R + (e.def.unique ? 0.5 : 0) || (!ring && d > 0.7 && da > half + 0.3 / Math.max(1, d))) continue;
     const crit = Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100;
-    wake(e); G.elem = 'heavy'; damageEnemy(e, heroDmg((crit ? 2 : 1) * 1.5), hero.fi, hero.fj, crit, 1); G.elem = null;
+    wake(e); G.elem = 'heavy'; damageEnemy(e, heroDmg((crit ? 2 : 1) * k), hero.fi, hero.fj, crit, 1); G.elem = null;
     if (alive(e) && !e.def.unique && !(e.downT > 0)) e.stun = Math.max(e.stun || 0, 0.7);   // (a knocked-down one is on the ground instead)
   }
   G.pierce = false;
-  for (const p of dynProps) if (!p.broken && (p.kind === 'barrel' || p.kind === 'egg') && Math.hypot(p.i + 0.5 - hero.fi, p.j + 0.5 - hero.fj) < SLAM_R) hitProp(p);
-  const q = { fi: hero.fi + fx * 0.6, fj: hero.fj + fy * 0.6, a0, t: 0.9, t0: 0.9, seed: (Math.random() * 1e6) | 0 };
+  for (const p of dynProps) if (!p.broken && (p.kind === 'barrel' || p.kind === 'egg') && Math.hypot(p.i + 0.5 - hero.fi, p.j + 0.5 - hero.fj) < R) hitProp(p);
+  const q = ring ? { fi: hero.fi, fj: hero.fj, a0: 0, ring: true, R, t: 0.9, t0: 0.9, seed: (Math.random() * 1e6) | 0 } : { fi: hero.fi + fx * 0.6, fj: hero.fj + fy * 0.6, a0, t: 0.9, t0: 0.9, seed: (Math.random() * 1e6) | 0 };
   G.quakes.push(q); stampCracks(q);
   // round 25: a wave of dust rolling out over the cone, a flash where the blade bit, stone chunks
   const lite = LV.outdoor ? [DIRT[4], DIRT[3]] : [TH().ramp[TH().ramp.length - 1], TH().ramp[5]];
-  shockwave(q.fi, q.fj, SLAM_R, 0.38, lite, [a0, SLAM_HALF + 0.1], false);
+  shockwave(q.fi, q.fj, R, 0.38, lite, ring ? null : [a0, half + 0.1], false);
   impactFlash(hero.fi + fx * 0.9, hero.fj + fy * 0.9, 3, 6);
-  { const [qx, qy] = iso(q.fi, q.fj); rubble(qx, qy, 18, 70, a0, SLAM_HALF); }
+  { const [qx, qy] = iso(q.fi, q.fj); rubble(qx, qy, 18, 70, ring ? null : a0, ring ? Math.PI : half); }
   // rocks and dust thrown up along the cone
   const [x, y] = screenOf(hero), dust = LV.outdoor ? DIRT[3] : S[5];
-  for (let k = 0; k < 34; k++) {
-    const a = a0 + (Math.random() * 2 - 1) * SLAM_HALF, d = 0.8 + Math.random() * SLAM_R, gx = Math.cos(a) * d, gy = Math.sin(a) * d;
-    pspawn(5, x + (gx - gy) * 16, y + (gx + gy) * 8, 2, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 12, 50 + Math.random() * 60, 1, k % 3 ? dust : S[3]);
+  for (let n = 0; n < 34; n++) {
+    const a = a0 + (Math.random() * 2 - 1) * half, d = 0.8 + Math.random() * R, gx = Math.cos(a) * d, gy = Math.sin(a) * d;
+    pspawn(5, x + (gx - gy) * 16, y + (gx + gy) * 8, 2, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 12, 50 + Math.random() * 60, 1, n % 3 ? dust : S[3]);
   }
-  if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.45);
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.45 * Math.min(1, k / 1.5));
   sfx('boom'); sfx('crit'); sfx('crack');
 }
+// the fissure runs out at 16 tiles a second; aftershocks go off on their timers
+function updateSlamMods(dt) {
+  for (const f of G.fissures) {
+    f.reach += 16 * dt;
+    G.pierce = true;
+    for (const e of enemies) {
+      if (!alive(e) || f.hit.has(e)) continue;
+      const dx = e.fi - f.fi, dy = e.fj - f.fj, d = Math.hypot(dx, dy);
+      const da = Math.abs(((Math.atan2(dy, dx) - f.a0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+      if (d > f.reach || d > f.R + (e.def.unique ? 0.5 : 0) || (d > 0.7 && da > f.half + 0.45 / Math.max(1, d))) continue;
+      f.hit.add(e); const crit = Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100;
+      wake(e); G.elem = 'heavy'; damageEnemy(e, heroDmg((crit ? 2 : 1) * 1.7), f.fi, f.fj, crit, 1); G.elem = null;
+      const [x, y] = screenOf(e); rubble(x, y, 6, 50); impactFlash(e.fi, e.fj, 2, 4);
+    }
+    G.pierce = false;
+    if (Math.random() < 0.8) { const d = Math.min(f.reach, f.R), [x, y] = iso(f.fi + Math.cos(f.a0) * d, f.fj + Math.sin(f.a0) * d); pspawn(5, x, y, 1, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 14, 40 + Math.random() * 40, 1, LV.outdoor ? DIRT[3] : S[5]); }
+  }
+  G.fissures = G.fissures.filter(f => f.reach < f.R + 0.5);
+  for (const a of G.aftershocks) { a.t -= dt; if (a.t <= 0) { a.done = true; slamAt(a.a0, SLAM_R * 0.9, SLAM_HALF + 0.15, 0.9); } }
+  G.aftershocks = G.aftershocks.filter(a => !a.done);
+}
+
+// ---------------------------------------------------------------- skill modifiers (round 29)
+// Like Diablo's runes: each skill has three modifiers that unlock 2, 4 and 6 levels after the
+// skill does; one can be chosen per skill on the skills screen (inventory > SKILLS), or none.
+const SKILL_MODS = {
+  fireball: [
+    { id: 'split', name: 'SPLIT', desc: 'THREE SMALLER FIREBALLS IN A SPREAD' },
+    { id: 'ground', name: 'BURNING GROUND', desc: 'LEAVES FIRE ON THE FLOOR FOR 3 SECONDS' },
+    { id: 'great', name: 'GREAT FIREBALL', desc: 'ONE HUGE, SLOW FIREBALL. COSTS 6 MORE MANA' },
+  ],
+  slam: [
+    { id: 'ring', name: 'FULL CIRCLE', desc: 'HITS ALL AROUND YOU, SHORTER REACH' },
+    { id: 'fissure', name: 'FISSURE', desc: 'A LONG NARROW CRACK THAT RACES OUT' },
+    { id: 'after', name: 'AFTERSHOCK', desc: 'A SECOND, WEAKER SLAM HALF A SECOND LATER' },
+  ],
+};
+const modUnlock = (skillId, k) => { const sk = Object.values(SKILLSETS).flat().find(s => s.id === skillId); return (sk ? sk.lvl : 1) + 2 + k * 2; };
+function skillMod(id) { const m = hero.mods && hero.mods[id]; if (!m) return null; const k = (SKILL_MODS[id] || []).findIndex(x => x.id === m); return k >= 0 && hero.lvl >= modUnlock(id, k) ? m : null; }
+const skillCost = s => s.mana + (s.id === 'fireball' && skillMod('fireball') === 'great' ? 6 : 0);
 // Chain hook: a hook flies at the nearest enemy in reach; whatever it catches (and anything right
 // beside it) is dragged up to the warrior and dazed. Bosses and elites don't budge: he is pulled to them
 function chainHook() {
@@ -203,10 +259,10 @@ function updateWarriorFx(dt) {
 // the chain
 function drawWarriorFx() {
   for (const q of G.quakes) {
-    const p = 1 - q.t / q.t0, grow = Math.min(1, p * 5), [hx, hy] = iso(q.fi, q.fj), n = q.ring ? 9 : 6, R = q.R || (q.ring ? 1.9 : SLAM_R);
+    const p = 1 - q.t / q.t0, grow = Math.min(1, p * 5), [hx, hy] = iso(q.fi, q.fj), n = q.n || (q.ring ? 9 : 6), R = q.R || (q.ring ? 1.9 : SLAM_R), hf = q.half ?? SLAM_HALF;
     for (let c = 0; c < n; c++) {
       const r1 = rng(q.seed + c * 31);
-      let a = q.ring ? c / n * 6.283 + r1() * 0.5 : q.a0 + (c / (n - 1) - 0.5) * 2 * SLAM_HALF * 0.9;
+      let a = q.ring ? c / n * 6.283 + r1() * 0.5 : q.a0 + (c / (n - 1) - 0.5) * 2 * hf * 0.9;
       let gi = 0, gj = 0; const len = R * (0.7 + r1() * 0.3) * grow;
       for (let s = 0; s < len * 6; s++) {
         a += (r1() - 0.5) * 0.5; gi += Math.cos(a) / 6; gj += Math.sin(a) / 6;
@@ -289,12 +345,28 @@ function castMissiles() {
   });
 }
 function castFireball() {
-  const [, at] = aimAt(9);
+  const [, at] = aimAt(9), mod = skillMod('fireball');
   startCast('fireball', 0.32, at, () => {
-    const [ox, oy] = staffTip(), dx = at[0] - ox, dy = at[1] - oy, l = Math.hypot(dx, dy) || 1;
-    projectiles.push({ kind: 'hfire', fi: ox, fj: oy, vx: dx / l * 7, vy: dy / l * 7, z: ORB_Z - 6, life: 1.6, owner: 'hero', spell: true, boom: { r: 1.7, k: 1.6, pow: 1 }, age: 0 });
-    orbFlare(16, 18, 12); sfx('fireball');
+    const [ox, oy] = staffTip(), dx = at[0] - ox, dy = at[1] - oy, l = Math.hypot(dx, dy) || 1, a = Math.atan2(dy, dx);
+    const shot = (a, sp, boom, big) => projectiles.push({ kind: 'hfire', fi: ox, fj: oy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, z: ORB_Z - 6, life: 1.6 * 7 / sp, owner: 'hero', spell: true, boom, age: 0, big });
+    if (mod === 'split') for (const da of [-0.3, 0, 0.3]) shot(a + da, 7, { r: 1.2, k: 0.75, pow: 0 });
+    else if (mod === 'great') shot(a, 4.2, { r: 2.7, k: 2.6, pow: 2, big: true }, true);
+    else shot(a, 7, { r: 1.7, k: 1.6, pow: 1, ground: mod === 'ground' });
+    void l; orbFlare(16, 18, mod === 'great' ? 16 : 12); sfx('fireball');
   });
+}
+// burning ground: patches of fire left by the fireball's Burning Ground modifier
+function updateFireGround(dt) {
+  for (const g of G.fireGround) {
+    g.t -= dt; g.tick -= dt;
+    if (Math.random() < 0.7) { const a = Math.random() * 6.283, d = Math.sqrt(Math.random()) * g.r, [x, y] = iso(g.fi + Math.cos(a) * d, g.fj + Math.sin(a) * d); pspawn(3, x, y, 1, 0, 0, 10 + Math.random() * 16, 0.45, Math.random() < 0.5 ? 16 : 17); }
+    if (g.tick <= 0) {
+      g.tick = 0.5; G.elem = 'fire';
+      for (const e of enemies) if (alive(e) && Math.hypot(e.fi - g.fi, e.fj - g.fj) < g.r) damageEnemy(e, spellDmg(0.3), g.fi, g.fj, false, 0, true);
+      G.elem = null;
+    }
+  }
+  G.fireGround = G.fireGround.filter(g => g.t > 0);
 }
 // fire explosion shared by the fireball and the meteor: everything in radius r takes k x staff damage
 function explodeAt(fi, fj, r, k, pow, big = false) {
@@ -865,10 +937,10 @@ function shockwave(fi, fj, r, dur, cols, arc = null, emis = true) {
 function impactFlash(fi, fj, z, size) { G.impacts.push({ fi, fj, z, size, t: 0.09, t0: 0.09 }); }
 // cracks: the same branching paths the glowing quake draws, pressed into the floor for good
 function crackPaths(q, fn) {
-  const n = q.ring ? 9 : 6, R = q.R || (q.ring ? 1.9 : SLAM_R);
+  const n = q.n || (q.ring ? 9 : 6), R = q.R || (q.ring ? 1.9 : SLAM_R), hf = q.half ?? SLAM_HALF;
   for (let c = 0; c < n; c++) {
     const r1 = rng(q.seed + c * 31);
-    let a = q.ring ? c / n * 6.283 + r1() * 0.5 : q.a0 + (c / (n - 1) - 0.5) * 2 * SLAM_HALF * 0.9;
+    let a = q.ring ? c / n * 6.283 + r1() * 0.5 : q.a0 + (c / (n - 1) - 0.5) * 2 * hf * 0.9;
     let gi = 0, gj = 0; const len = R * (0.7 + r1() * 0.3);
     for (let s = 0; s < len * 6; s++) { a += (r1() - 0.5) * 0.5; gi += Math.cos(a) / 6; gj += Math.sin(a) / 6; fn(gi, gj, s / (len * 6)); }
   }

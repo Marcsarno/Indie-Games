@@ -26,7 +26,7 @@ const params = new URLSearchParams(location.search);
 const SHAKE = params.get('shake') !== '0';
 
 // ---------------------------------------------------------------- state
-const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0, meteors: [], flashes: [], blasts: [], cones: [], ghosts: [], sparks: [], rings: [], walls: [], quakes: [], hooks: [], waves: [], impacts: [], frost: [], streaks: [] };
+const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0, meteors: [], flashes: [], blasts: [], cones: [], ghosts: [], sparks: [], rings: [], walls: [], quakes: [], hooks: [], waves: [], impacts: [], frost: [], streaks: [], fissures: [], aftershocks: [], fireGround: [] };
 const hero = {
   fam: 'hero', fi: 0, fj: 0, dir: 1, clip: 'idle', clock: 0, walk: 0, runT: 0, goT: 0, stopT: 0, atk: -1, combo: 0, swingEnd: -9, hitDone: false, stop: 0, flash: 0,
   hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, hurtT: 0, cast: -1,
@@ -75,7 +75,7 @@ function startLevel(level, seed, side = null) {
     if (LV.champsPlanned) LV.spawns.forEach((sp, n) => { if (sp.champ) makeChampion(enemies[n], R); });
     else for (const e of enemies) if (!e.def.unique && R() < champChance(LV.diff)) makeChampion(e, R); }
   makeNpcs(); resetSkills(); setupBoss();
-  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
+  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
   updateFov(hero.fi, hero.fj);
   flowT = 0; computeFlow();
   warmStep(1e9, prewarm());   // idle poses + the hero's walk now, behind the level fade; the rest during play
@@ -485,7 +485,7 @@ function update(dt) {
   for (const g of groundItems) if (g.item && g.item.rarity === 'legend' && !g.announced) { g.announced = true; say('A LEGENDARY ITEM HAS FALLEN', 112, 3); sfx('levelUp'); }   // never miss one
   if (hero.frenzy > 0) hero.frenzy -= dt; if (hero.stoneskin > 0) hero.stoneskin -= dt;
   separate();
-  updateProjectiles(dt); updateMeteors(dt); updateLichFx(dt); updateWarriorFx(dt); updateImpactFx(dt);
+  updateProjectiles(dt); updateMeteors(dt); updateLichFx(dt); updateWarriorFx(dt); updateImpactFx(dt); updateSlamMods(dt); updateFireGround(dt);
   updateParticles(dt);
   ambience(dt);
   for (const f of floaters) { f.t -= dt; f.y -= dt * 18; }
@@ -821,7 +821,7 @@ function updateProjectiles(dt) {
     if (p.kind === 'missile' && p.life <= 0) { impactFlash(p.fi, p.fj, p.z, 3); sfx('zap'); }
     if (p.kind === 'missile' && p.life <= 0) for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283; pspawn(4, x, y, p.z, Math.cos(a) * 45, Math.sin(a) * 22, 0, 0.16, k % 2 ? 40 : 27); }   // a ring of sparks on impact
     if (p.life <= 0 && p.kind === 'holy') sfx('boltHit');
-    if (p.life <= 0 && p.boom && !p.boomed) { p.boomed = true; explodeAt(p.fi - p.vx * 0.03, p.fj - p.vy * 0.03, p.boom.r, p.boom.k, p.boom.pow); }
+    if (p.life <= 0 && p.boom && !p.boomed) { p.boomed = true; explodeAt(p.fi - p.vx * 0.03, p.fj - p.vy * 0.03, p.boom.r, p.boom.k, p.boom.pow, !!p.boom.big); if (p.boom.ground) G.fireGround.push({ fi: p.fi, fj: p.fj, r: 1.6, t: 3, tick: 0.3 }); }
     if (p.life <= 0 && p.kind !== 'arrow' && !p.boom) burst(2, x, y, p.z, p.kind === 'missile' ? 7 : 12, 60, p.kind === 'holy' ? 51 : p.kind === 'missile' ? 40 : 17);
   }
   projectiles = projectiles.filter(p => p.life > 0);
@@ -1271,9 +1271,11 @@ function drawProjectile(p) {
   }
   if (p.kind === 'hfire') {   // the hero's fireball: a flickering ball of flame with a hot core, tail streaming behind
     const l = Math.hypot(p.vx, p.vy) || 1, tx = -(p.vx - p.vy) / l * 0.75, ty = -(p.vx + p.vy) / l * 0.38;
-    for (let s = 2; s <= 7; s++) { const w = Math.max(0, 3 - s * 0.4); for (let k = -Math.round(w); k <= Math.round(w); k++) put(Math.round(tx * s - ty * k * 0.6), Math.round(ty * s + tx * k * 0.6), (s < 4 ? 16 : s < 6 ? 15 : 14) | EMIS); }
-    for (let b = -4; b <= 4; b++) for (let a = -4; a <= 4; a++) {
-      const d = Math.hypot(a, b) + (hash(a + Math.floor(G.t * 20), b, 9) - 0.5) * 1.6;   // a ragged, flickering edge
+    const B = p.big ? 1.7 : 1;   // the Great Fireball is drawn bigger
+    for (let s = 2; s <= 7 * B; s++) { const w = Math.max(0, 3 * B - s * 0.4); for (let k = -Math.round(w); k <= Math.round(w); k++) put(Math.round(tx * s - ty * k * 0.6), Math.round(ty * s + tx * k * 0.6), (s < 4 * B ? 16 : s < 6 * B ? 15 : 14) | EMIS); }
+    const R4 = Math.ceil(4 * B);
+    for (let b = -R4; b <= R4; b++) for (let a = -R4; a <= R4; a++) {
+      const d = Math.hypot(a, b) / B + (hash(a + Math.floor(G.t * 20), b, 9) - 0.5) * 1.6;   // a ragged, flickering edge
       if (d <= 3.9) put(a, b, (d < 1.4 ? 18 : d < 2.4 ? 17 : d < 3.2 ? 16 : 15) | EMIS);
     }
     return;
@@ -1423,7 +1425,7 @@ function drawPortal() {
 }
 function saveGame() {
   if (G.mode !== 'play' || hero.dead) return;
-  const data = { v: SAVE_V, level: LV.level, seed: LV.seed, hero: { cls: hero.cls, hp: Math.ceil(hero.hp), mana: Math.ceil(hero.mana), gold: hero.gold, xp: hero.xp, lvl: hero.lvl, potions: hero.potions, team: hero.team, equip: hero.equip, bag: hero.bag }, serial: itemSerial,
+  const data = { v: SAVE_V, level: LV.level, seed: LV.seed, hero: { cls: hero.cls, hp: Math.ceil(hero.hp), mana: Math.ceil(hero.mana), gold: hero.gold, xp: hero.xp, lvl: hero.lvl, potions: hero.potions, team: hero.team, equip: hero.equip, bag: hero.bag, mods: hero.mods || {} }, serial: itemSerial,
     quests: G.quests || null, gates: G.gates || null, town: G.town || null, portal: G.portal ? { level: G.portal.level, seed: G.portal.seed, fi: G.portal.fi, fj: G.portal.fj } : null };
   try { localStorage.setItem(saveKey(hero.cls), JSON.stringify(data)); } catch (e) { /* storage can be unavailable; the game still runs */ }
 }
@@ -1436,7 +1438,7 @@ function loadSave(cls = 'warrior') {
   } catch (e) { return null; }
 }
 function newHero(cls = 'warrior') {
-  Object.assign(hero, { cls, hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, bag: [], equip: { weapon: null, helm: null, chest: null, shield: null } });
+  Object.assign(hero, { cls, hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, bag: [], mods: {}, equip: { weapon: null, helm: null, chest: null, shield: null } });
   const R = rng(5);
   const kit = cls === 'mage' ? ['oak_staff', 'apprentice_robe', 'wizard_hat'] : ['short_sword', 'tunic'];
   for (const b of kit) { const it = rollItem(R, 1, b); it.rarity = 'normal'; it.mods = {}; hero.equip[ITEM_BASES[b].slot] = it; }

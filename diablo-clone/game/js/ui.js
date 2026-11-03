@@ -185,7 +185,7 @@ function drawHud() {
     const sl = SPELL_LOOK[sk.id];
     drawButton(c, locked ? [3, 4, 5] : sl ? sl[0] : [[48, 49, 50, 51], [19, 20, 21, 22], [28, 29, 30, 31], [33, 34, 35, 36]][i], press.skill === i, sl ? sl[1] : i ? SKILL_GLYPH[i] : glyphBolt);
     // cooldown: the button darkens from the top and clears as it recharges; locked buttons stay dark
-    const f = locked ? 1 : CD[sk.id] / sk.cd, low = !locked && hero.mana < sk.mana;
+    const f = locked ? 1 : CD[sk.id] / sk.cd, low = !locked && hero.mana < skillCost(sk);
     if (f > 0 || low) for (let y = c[1] - c[2]; y <= c[1] + c[2]; y++) for (let x = c[0] - c[2]; x <= c[0] + c[2]; x++) {
       if (Math.hypot(x - c[0], y - c[1]) > c[2] - 1) continue;
       const covered = (y - (c[1] - c[2])) / (2 * c[2]) < f;
@@ -254,6 +254,7 @@ function drawHud() {
     if (hero.dead > 2) textC('TAP TO RISE AGAIN', W / 2, H * 0.32 + 18, 26);
   }
   if (G.mode === 'inv') drawInventory();
+  if (G.mode === 'skills') drawSkills();
   if (G.paused) { fade(0.6); textC('PAUSED', W / 2, H * 0.4, 26, 2); textC('TAP TO RESUME', W / 2, H * 0.4 + 16, 25); }
   if (G.fade > 0) fade(G.fade);
   if (params.get('fps') === '1') text(`${fpsShown} FPS ${spriteBuilds} SPR`, 4, 20, 31);
@@ -315,6 +316,7 @@ function invLayout() {
   for (let n = 0; n < BAG_SIZE; n++) L.bag.push({ x: 15 + (n % 6) * 41, y: 176 + Math.floor(n / 6) * 34, w: 34, h: 30 });
   L.close = { x: W - 30, y: 6, w: 24, h: 14 };
   L.color = { x: W - 66, y: 150, w: 54, h: 14 };
+  L.skills = { x: W - 66, y: 130, w: 54, h: 14 };
   return L;
 }
 function drawInventory() {
@@ -323,6 +325,7 @@ function drawInventory() {
   const L = invLayout();
   textC('INVENTORY', W / 2, 8, 26, 2);
   frame(L.close.x, L.close.y, L.close.w, L.close.h, 8, 3); textC('X', L.close.x + 12, L.close.y + 5, 27);
+  fillRect(L.skills.x, L.skills.y, L.skills.w, L.skills.h, 5); frame(L.skills.x, L.skills.y, L.skills.w, L.skills.h, 8, 3); textC('SKILLS', L.skills.x + L.skills.w / 2, L.skills.y + 5, 51);
   // paper doll: the real hero sprite at 2x, so gear changes show here too
   const doll = getSprite('hero', hero.look, 1, 'idle', Math.floor(G.t / 0.2) % 4, hero, 1);
   sprite(doll, 150, 148, 2, 4);
@@ -378,9 +381,50 @@ function invTap(p) {
   const L = invLayout();
   for (const b of UI.invBtns || []) if (inRect(p, b)) { b.on(); return; }
   if (inRect(p, L.close)) { G.mode = 'play'; INV.sel = null; return; }
+  if (inRect(p, L.skills)) { G.mode = 'skills'; SKV.sel = null; return; }
   if (inRect(p, L.color)) { hero.team = hero.team === 'red' ? 'blue' : 'red'; recalcHero(); prewarmHero(); return; }
   for (const s of SLOTS) if (inRect(p, L.slots[s])) { INV.sel = hero.equip[s] ? { item: hero.equip[s], from: 'equip', slot: s } : null; return; }
   for (let n = 0; n < L.bag.length; n++) if (inRect(p, L.bag[n])) { INV.sel = hero.bag[n] ? { item: hero.bag[n], from: 'bag' } : null; return; }
+}
+
+// ---------------------------------------------------------------- skills screen (round 29)
+// one row per skill: its name, then its three modifiers; tap one to choose it (tap again for none).
+// Locked ones show the level they open at. The chosen one's line describes it.
+const SKV = { sel: null };
+function skillsLayout() {
+  const L = { close: { x: W - 30, y: 6, w: 24, h: 14 }, rows: [] };
+  SKILLS.forEach((sk, n) => { const y = 40 + n * 74; L.rows.push({ sk, y, chips: [0, 1, 2].map(k => ({ k, x: 8 + k * 87, y: y + 14, w: 82, h: 22 })) }); });
+  return L;
+}
+function drawSkills() {
+  fillRect(0, 0, W, H, 2);
+  for (let y = 0; y < H; y += 2) for (let x = (y >> 1) & 1; x < W; x += 4) put(x, y, 3);
+  const L = skillsLayout();
+  textC('SKILLS', W / 2, 8, 26, 2);
+  frame(L.close.x, L.close.y, L.close.w, L.close.h, 8, 3); textC('X', L.close.x + 12, L.close.y + 5, 27);
+  for (const row of L.rows) {
+    const sk = row.sk, mods = SKILL_MODS[sk.id], cur = hero.mods && hero.mods[sk.id], open = hero.lvl >= sk.lvl;
+    text(sk.name + (open ? '' : `  (LEVEL ${sk.lvl})`), 8, row.y, open ? 51 : 25);
+    if (!mods) { text('MODIFIERS COMING SOON', 8, row.y + 20, 24); continue; }
+    for (const c of row.chips) {
+      const m = mods[c.k], lv = modUnlock(sk.id, c.k), unlocked = hero.lvl >= lv, on = cur === m.id;
+      fillRect(c.x, c.y, c.w, c.h, on ? 38 : unlocked ? 5 : 3); frame(c.x, c.y, c.w, c.h, on ? 40 : 8, on ? 37 : 3);
+      textC(m.name, c.x + c.w / 2, c.y + 4, unlocked ? (on ? 27 : 26) : 24);
+      textC(unlocked ? (on ? 'CHOSEN' : 'TAP TO CHOOSE') : `LEVEL ${lv}`, c.x + c.w / 2, c.y + 13, on ? 51 : 24);
+    }
+    const show = SKV.sel && SKV.sel.id === sk.id ? mods[SKV.sel.k] : cur ? mods.find(m => m.id === cur) : null;
+    if (show) text(show.desc, 8, row.y + 42, 25);
+  }
+}
+function skillsTap(p) {
+  const L = skillsLayout();
+  if (inRect(p, L.close)) { G.mode = 'inv'; return; }
+  for (const row of L.rows) for (const c of row.chips) {
+    if (!inRect(p, c) || !SKILL_MODS[row.sk.id]) continue;
+    const m = SKILL_MODS[row.sk.id][c.k]; SKV.sel = { id: row.sk.id, k: c.k };
+    if (hero.lvl < modUnlock(row.sk.id, c.k)) { sfx('tap'); return; }
+    hero.mods = hero.mods || {}; hero.mods[row.sk.id] = hero.mods[row.sk.id] === m.id ? null : m.id; const m0 = G.mode; G.mode = 'play'; saveGame(); G.mode = m0; return;
+  }
 }
 
 // ---------------------------------------------------------------- input
@@ -394,6 +438,7 @@ cvs.addEventListener('pointerdown', e => {
   if (G.paused) { G.paused = false; last = performance.now(); return; }
   if (G.mode === 'title') { for (const b of UI.titleBtns || []) if (inRect(p, b)) { sfx('tap'); b.on(); } return; }
   if (G.mode === 'inv') { sfx('tap'); invTap(p); return; }
+  if (G.mode === 'skills') { sfx('tap'); skillsTap(p); return; }
   if (hero.dead > 2) { respawn(); return; }
   if (hitCircle(p, UI.bag)) { G.mode = 'inv'; clearInput(); return; }
   if (hitCircle(p, UI.sound)) { setMuted(!SFX.muted); sfx('tap'); return; }
