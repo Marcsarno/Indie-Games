@@ -23,7 +23,7 @@ Tune panel for the car handling. Controls are touch (stick/pads) with keyboard f
 
 ## ROUND 47: BACK OF HOUSE + FASTER CAR (user: shops "then there's grass behind it, and then there's residential homes... no smooth separation"; "don't want to overdo it"; "the car's a little bit slow")
 - `blender/scripts/cc_fill4.py` (exec'd at the end of cc_fill3) `back_of_house()` runs in fill_after right after gap_fill: every APRONS building >= 26 m wide looks out its back: a street/alley within 40 m -> the service lane is paved right up to it, and if homes are across it a buffer wall (stucco 2.8 m + cap) + hedge + oaks/palms goes just past that street; homes within 60 m -> lane up to 16 m then the wall; nothing -> short lane only. Lane = merged 2 m cells (RB, z .029), roll-up doors on the back wall, docks (concrete, collider), dumpsters (colliders), 30 % a box truck. Wall runs merge per line (gaps < 40 m bridged, +10 m past each building) and break at streets / detours / houses / water. Own tile set `boh`. Result: 56 buildings, 6 wall runs, 668 m of wall.
-- Car: `CC_TOP = 1.15` on the new map only (top speed x1.15, acceleration unchanged) in index.html.
+- Car: `CC_TOP = 1.15` on the new map only (top speed x1.15, acceleration unchanged) in index.html. Cars are real size (Jeep 4.6 x 2.0 m); user felt they looked small -> new map play camera 44 -> 38 m (`PLAYD` in index.html, world.json drive view).
 - Shots: .work/r46/boh_top.jpg, a47_wide.jpg. Checks clean (only C1/C2 jumps), both worlds load.
 
 ## ROUND 46: THE SQUEEZE (user: "for a phone game I would love it to be the size it is, but it's just impossible. So we scale it down, we fill in the gaps, we definitely lower the amount of cars that are parked")

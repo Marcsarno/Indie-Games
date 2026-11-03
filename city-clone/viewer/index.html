@@ -260,7 +260,8 @@ function placeSun(x, y, z) {                                   // shadow box fol
 for (const [lx, ly, lz] of world.lamps) { const l = new THREE.PointLight(0xffc27a, 60, 16, 2); l.position.copy(b2t(lx, ly, lz)); scene.add(l); }
 
 const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 300);
-const rig = { tx: world.start.x, tz: -world.start.y, pitch: 45, dist: 44, mode: 'drive', shake: 0, yaw: 0, ySnap: 0, snapT: 0 };      // yaw: camera turned with the car (0 = north up)      // user's chosen game camera: 45 deg tilt, 44 m
+const PLAYD = WN === 'cc' ? 38 : 44;      // round 47 (user: cars look small): new map's play camera 44 -> 38 m
+const rig = { tx: world.start.x, tz: -world.start.y, pitch: 45, dist: PLAYD, mode: 'drive', shake: 0, yaw: 0, ySnap: 0, snapT: 0 };      // yaw: camera turned with the car (0 = north up)      // user's chosen game camera: 45 deg tilt, 44 m
 const HFOV = 54.4 * Math.PI / 180;
 function resize() {
   const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h;
@@ -1116,7 +1117,7 @@ function roamStep(dt) {
 /* Switch (GTA 5 style): the camera rises into the sky over you, slides across the city, and drops onto the other character; you take over at the bottom. */
 const SW = { on: false, t: 0, ci: 0, fog: null };
 const BLK = { cars: [], shut: new Set() };
-const CAMHOLD = { on: false, x: 0, z: 0, yaw: 0, pitch: 50, dist: 44 };      // the mission holds the camera (the relay hand-off shot)
+const CAMHOLD = { on: false, x: 0, z: 0, yaw: 0, pitch: 50, dist: PLAYD };      // the mission holds the camera (the relay hand-off shot)
 function relayTo(ci, burnOld) {                     // the relay (round 33): take over another character's ride where it stands, no sky camera; the old ride stays put
   if (ci === cur) return; const C = CHARS[ci], v = vehs[C.ride]; if (!v) return;
   if (drive) { const d = drive; drive = null; d.air = 0; unseatRider(); parkVehicle(d); if (burnOld) d.car.setDamage(1); }
@@ -1146,8 +1147,8 @@ function switchStep(dt) {
       if (Rm) { const v = Rm.v; drive = v; v.mode = 'driving'; v.vx = -Math.sin(v.th) * Rm.sp; v.vz = -Math.cos(v.th) * Rm.sp; v.w = 0; v.px = undefined; hmode = 'driving'; seatRider(v); }
       else { foot.x = pilot.root.position.x; foot.z = pilot.root.position.z; foot.face = pilot.root.rotation.y; foot.vx = foot.vz = 0; hmode = 'foot'; }
     }
-    const k = e(Math.min(1, (SW.t - PAN) / (DOWN - PAN))); rig.dist = H + (44 - H) * k; rig.pitch = 78 + (45 - 78) * k; rig.tx = to[0]; rig.tz = to[1];
-    if (SW.t >= DOWN) { SW.on = false; rig.dist = 44; rig.pitch = 45; camera.far = 300; camera.updateProjectionMatrix(); }
+    const k = e(Math.min(1, (SW.t - PAN) / (DOWN - PAN))); rig.dist = H + (PLAYD - H) * k; rig.pitch = 78 + (45 - 78) * k; rig.tx = to[0]; rig.tz = to[1];
+    if (SW.t >= DOWN) { SW.on = false; rig.dist = PLAYD; rig.pitch = 45; camera.far = 300; camera.updateProjectionMatrix(); }
   }
   if (scene.fog && SW.fog) scene.fog.far = SW.on ? SW.fog + rig.dist * 2 : SW.fog;
 }
@@ -1159,7 +1160,7 @@ function cine(shots, loop = false) {
 }
 function cineStop() {
   if (!CINE.shots) return; CINE.shots = null; const r = CINE.res; CINE.res = null; $('fade').classList.remove('on'); document.body.classList.remove('cine');
-  if (scene.fog && CINE.fog) [scene.fog.near, scene.fog.far] = CINE.fog; camera.far = 300; camera.updateProjectionMatrix(); rig.dist = 44; rig.pitch = 45; rig.yaw = hmode === 'driving' && drive ? drive.th : 0;
+  if (scene.fog && CINE.fog) [scene.fog.near, scene.fog.far] = CINE.fog; camera.far = 300; camera.updateProjectionMatrix(); rig.dist = PLAYD; rig.pitch = 45; rig.yaw = hmode === 'driving' && drive ? drive.th : 0;
   const tx = hmode === 'foot' ? foot.x : drive ? drive.x : rig.tx, tz = hmode === 'foot' ? foot.z : drive ? drive.z : rig.tz; rig.tx = tx; rig.tz = tz; if (r) r();
 }
 function cineStep(dt) {
