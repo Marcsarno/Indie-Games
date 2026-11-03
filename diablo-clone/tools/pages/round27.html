@@ -1,0 +1,81 @@
+<title>Sharper Props and Skills</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  /* layout: one narrow column, each change a section with its picture first */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul { margin: 0; max-width: 64ch; }
+  ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .num { font-variant-numeric: tabular-nums; }
+  table { border-collapse: collapse; font-size: 0.95rem; }
+  .tw { overflow-x: auto; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+</style>
+<main>
+  <header>
+    <h1>Sharper Props and Skills</h1>
+    <p class="lede">Dungeon of Bones, round 27: the last three skills polished, separate impact sounds, and an optional sharper world.</p>
+  </header>
+
+  <section>
+    <h2>Warrior: the chain hook</h2>
+    <figure>
+      <div class="frame"><img src="warrior.gif" alt="Before and after: the warrior throws a chain hook at a pack. After: a dark-outlined chain of links sags as it flies, the hook bites with a spark, and the pack is dragged through the dust" width="1048" height="418"></div>
+      <figcaption>Left is before, right is now. The rest of the clip (slam, whirlwind, leap) is from last round.</figcaption>
+    </figure>
+    <ul>
+      <li>The chain is drawn at full detail: outlined links that sag while the hook flies and pull straight once it bites.</li>
+      <li>The hook head is barbed. A spark and a clank mark the bite, and dust trails whatever it drags.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Mage: missiles and blink</h2>
+    <figure>
+      <div class="frame"><img src="mage.gif" alt="Before and after: magic missiles, fireball, cone of cold, meteor, blink. After: missiles leave a curving ribbon trail and flash on impact, blink leaves rings of arcane light at both ends and a streak between" width="1048" height="418"></div>
+      <figcaption>Left is before, right is now.</figcaption>
+    </figure>
+    <ul>
+      <li><strong>Missiles:</strong> drawn at full detail with a ribbon trail along the curving path they home in on, and a small flash and zap when they hit.</li>
+      <li><strong>Blink:</strong> a ring of arcane light where you leave and where you land, a streak between the two, and a deeper whoosh.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Sounds</h2>
+    <p>Each impact now layers its own sound over the shared boom: a stone crack for the slam, leap and meteor, a fire sizzle for explosions, an ice clink for the cone, a chain rattle and a metal clank for the hook, and a zap for missiles.</p>
+  </section>
+
+  <section>
+    <h2>Sharper world (your call)</h2>
+    <p>Trees, buildings, braziers, barrels and other props can now be drawn at twice the detail, like the characters. Floors and walls stay as they are. It's off by default. On the title screen, DETAIL: CLASSIC or SHARP switches it, and your choice is remembered.</p>
+    <figure>
+      <div class="frame"><img src="detail-blind.png" alt="Four pairs of crops labelled A and B: the cathedral, the woods, the camp and a crypt room. In each pair one side is the sharper detail and the other the classic look, in random order" width="1220" height="2560"></div>
+      <figcaption>Blind test: for each row, which looks better, A or B (or can't tell)? The order is random and I haven't looked at the key.</figcaption>
+    </figure>
+    <div class="tw"><table class="num">
+      <tr><th>At 4x slower CPU</th><th>Classic</th><th>Sharp</th></tr>
+      <tr><td>Oakhollow, per frame</td><td>31 ms</td><td>43 ms</td></tr>
+      <tr><td>Dungeon, per frame</td><td>34 ms</td><td>39 ms</td></tr>
+      <tr><td>First load of an area type</td><td></td><td>+0.5 s at normal speed (later loads about the same as classic)</td></tr>
+    </table></div>
+    <p>The tree-heavy opening area costs the most. Try SHARP on your phone: if it stays smooth and you prefer the look, I'll make it the default.</p>
+  </section>
+</main>

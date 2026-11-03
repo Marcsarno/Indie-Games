@@ -299,7 +299,8 @@ function drawTitle() {
     if (save) btn(`CONTINUE (LEVEL ${save.level})`, x, H * 0.52, w, () => beginGame(true, cls));
     btn(save ? 'NEW ' + name : 'NEW GAME', x, H * 0.52 + 28, w, () => beginGame(false, cls));
   });
-  btn(FEEL_OLD ? 'COMBAT: OLD' : 'COMBAT: NEW', W / 2 - 60, H * 0.52 + 62, 120, () => setFeelOld(!FEEL_OLD), 25);
+  btn(FEEL_OLD ? 'COMBAT: OLD' : 'COMBAT: NEW', W / 2 - 124, H * 0.52 + 62, 120, () => setFeelOld(!FEEL_OLD), 25);
+  btn(WORLD2X ? 'DETAIL: SHARP' : 'DETAIL: CLASSIC', W / 2 + 4, H * 0.52 + 62, 120, () => setWorld2x(!WORLD2X), 25);
   textC('LEFT THUMB MOVES. RIGHT BUTTONS FIGHT.', W / 2, H * 0.78, 25);
   textC('ALL ART IS DRAWN IN CODE', W / 2, H * 0.78 + 8, 24);
 }
