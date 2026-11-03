@@ -1271,7 +1271,8 @@ function glowAt(wx, wy, R, k, col) {
 function drawGlows() {
   const day = LV.outdoor && !LV.night, fl = 0.9 + 0.1 * Math.sin(G.t * 13);
   for (const f of fires) {
-    if (!(LV.vis[f.tile] > 0.15) && !LV.outdoor) continue;
+    if (VIEW_FOG && !(LV.vis[f.tile] > 0.15) && !LV.outdoor) continue;
+    if (f.wx < camX - 40 || f.wx > camX + W + 40 || f.wy < camY - 40 || f.wy > camY + H + 60) continue;   // off screen
     const big = f.h >= 10, R = big ? 26 : 12, k = (day ? 0.18 : big ? 0.5 : 0.35) * fl;
     glowAt(f.wx, f.wy - f.h * 0.45, R, k, f.blue ? GLOW_BLUE : GLOW_WARM);
   }
@@ -1380,7 +1381,7 @@ function render() {
   if (G.tp) ov.push({ depth: G.tp.fi + G.tp.fj, draw: drawPortal });
   if (hero.whirl > 0) ov.push({ depth: hero.fi + hero.fj - 0.01, draw: () => whirlSmear(false) }, { depth: hero.fi + hero.fj + 0.01, draw: () => whirlSmear(true) });
   shrineCrystals(base);
-  for (const f of fires) if (LV.vis[f.tile] > 0.1 || LV.seen[f.tile]) base.push({ depth: (f.tile % MW) + Math.floor(f.tile / MW) + (f.depthAdd ?? 1.2), draw: () => flame(f.wx, f.wy, f.h, f.w, t, f.seed, f.blue) });
+  for (const f of fires) if (!VIEW_FOG || LV.vis[f.tile] > 0.1 || LV.seen[f.tile]) base.push({ depth: (f.tile % MW) + Math.floor(f.tile / MW) + (f.depthAdd ?? 1.2), draw: () => flame(f.wx, f.wy, f.h, f.w, t, f.seed, f.blue) });
   heroRing(kx, ky + 1);
   base.sort((a, b) => a.depth - b.depth);
   for (const d of base) d.draw();
@@ -1450,13 +1451,19 @@ function render() {
 }
 // the lit color of a palette index at world-layer pixel (x, y), as the world's light pass would
 // light it there (light, fog, dither); 0 where the floor there is unseen. tile -2 = use the pixel's own tile
+// round 38: no fog of war in the view (the user: it feels bad exploring, even areas already seen).
+// Every tile on screen is drawn under its real light (torches, the hero's light), with a little
+// ambient so a far room still reads; what has been seen is still tracked for the map. ?fog=1 brings
+// the old black-until-seen, dim-when-out-of-sight view back for comparison.
+const VIEW_FOG = typeof location !== 'undefined' && new URLSearchParams(location.search).get('fog') === '1';
+const DUNGEON_AMB = 0.2;
 function envCol(x, y, v, tile) {
   if (x < 0 || y < 0 || x >= W || y >= H) return 0;
   if (v & EMIS) return PAL32[CYCLE[v & 127]];
   if (v === BLK) return PAL32[BLK];
   const o = y * W + x, tk = tile === -2 ? tbuf[o] : tile;
-  if (tk < 0 ? !LV.outdoor : !LV.seen[tk]) return 0;
-  const vv = tk < 0 ? 1 : LV.vis[tk], top = (LEVELS - 1) * NPAL;
+  if (tk < 0 ? !LV.outdoor : VIEW_FOG && !LV.seen[tk]) return 0;
+  const vv = tk < 0 || !VIEW_FOG ? 1 : LV.vis[tk], top = (LEVELS - 1) * NPAL;
   const l = (shd[o] ? lbuf[o] * 0.4 : lbuf[o]) * BANDS * vv + 0.9 * (1 - vv) + BAYER[((y & 3) << 2) | (x & 3)];
   const L = (l | 0) * NPAL;
   return LCOL[(L < top ? L : top) + v];
@@ -1629,7 +1636,7 @@ function lightPass(chars, kx, ky) {
   // outdoors: flat daylight at the identity level (the ramps as drawn), no hero light
   // night outdoors (every third town and forest): dim moonlight, the hero carries a light, and the
   // lanterns, fires and windows matter
-  const amb = LV.outdoor ? (LV.night ? 0.3 : 0.6) : 0;
+  const amb = LV.outdoor ? (LV.night ? 0.3 : 0.6) : VIEW_FOG ? 0 : DUNGEON_AMB;
   const dyn = LV.outdoor && !LV.night ? [] : [{ x: kx, y: ky, z: 34, r: LV.night ? 120 : 145, i: LV.night ? 0.42 : 0.62 }];
   for (const p of projectiles) if (p.kind !== 'arrow' && dyn.length < 5) { const [x, y] = iso(p.fi, p.fj); dyn.push({ x, y, z: p.z, r: p.kind === 'missile' ? 45 : 70, i: 0.8 }); }
   if (G.tp) { const [x, y] = iso(G.tp.fi, G.tp.fj); dyn.push({ x, y, z: 20, r: 80, i: 0.7 * Math.min(1, G.tp.t / 0.45) }); }   // the portal's blue glow (brightness only)
@@ -1669,9 +1676,9 @@ function lightPass(chars, kx, ky) {
       levB[o] = 255;   // the level this pixel was lit at, for the 2x world layer (255: none, show as is)
       if (v === BLK) { out32[o] = black; continue; }
       const tk = tbuf[o];
-      if (tk < 0 ? !LV.outdoor : !seen[tk]) { out32[o] = black; continue; }
+      if (tk < 0 ? !LV.outdoor : VIEW_FOG && !seen[tk]) { out32[o] = black; continue; }
       const ci = cid[o];
-      const vv = tk < 0 ? 1 : vis[tk];
+      const vv = tk < 0 || !VIEW_FOG ? 1 : vis[tk];
       // remembered areas sit at a dim floor level; visible areas get their real light
       const l = (shd[o] ? lbuf[o] * 0.4 : lbuf[o]) * BANDS * vv + 0.9 * (1 - vv) + BAYER[by | (x & 3)];
       const L = (l | 0) < LEVELS - 1 ? (l | 0) : LEVELS - 1;

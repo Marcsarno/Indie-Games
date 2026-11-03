@@ -67,7 +67,7 @@ function genLevel(level, seed, side = null) {
   // A side area (quests.js SIDES) is a short dungeon floor hanging off the hub at the hub's level
   const A0 = areaOf(level), A = side ? { kind: 'dungeon', cyc: A0.cyc, act: A0.act, loop: A0.loop, floor: 1, depth: A0.cyc * 3 + 1, diff: A0.diff } : A0;
   LV.side = side; LV.sideCfg = side ? SIDES[side] : null;
-  { const big = A.kind === 'forest' || A.hub; resizeWorld(big ? 64 : 40, big ? 64 : 40); }
+  { const big = A.kind === 'forest' || A.hub, floorBig = A.kind === 'dungeon' && !side && !A.arena; resizeWorld(big ? 64 : floorBig ? 56 : 40, big ? 64 : floorBig ? 56 : 40); }   // round 38: dungeon floors 56x56 (were 40)
   LV.area = A.kind; LV.cyc = A.cyc; LV.act = A.act; LV.loop = A.loop; LV.floor = A.floor || 0; LV.arena = A.arena || null;
   LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.hub = !!A.hub; LV.gateSign = null; LV.gateOpen = false; LV.autumn = A.act === 1; LV.night = A.kind !== 'dungeon' && A.act === 2; LV.plaza = null; LV.npcs = []; LV.critters = []; LV.champsPlanned = false; LV.genFail = null;
   if (LV.outdoor) { LV.theme = A.kind; genOutdoor(level, seed, A); LV.level = level; LV.seed = seed; return; }
@@ -84,18 +84,54 @@ function tryGen(level, seed, relaxed = false) {
   const R = rng(seed), map = LV.map;
   map.fill(VOID); LV.solid.fill(0); LV.roomOf.fill(-1); LV.seen.fill(0); LV.vis.fill(0); LV.reserve.fill(0);
   const rooms = [];
-  const cfg = LV.sideCfg, maxRooms = cfg ? cfg.rooms : 11;
-  for (let t = 0; t < 400 && rooms.length < maxRooms; t++) {
-    const w = R.int(6, 10), h = R.int(6, 10), x = R.int(2, MW - w - 2), y = R.int(2, MH - h - 2);
+  const cfg = LV.sideCfg, maxRooms = cfg ? cfg.rooms : 10;
+  // round 38: rooms come from templates (the user: rooms too small, no wide open spaces, no variety).
+  // Every full floor gets one great hall; the rest is a mix of ordinary rooms, round caverns,
+  // crossroads, long galleries, L-shaped rooms and small side rooms. Each room keeps its bounding
+  // box (x, y, w, h: what decor and spawns sample) and carves its shape inside it.
+  const TPL = {
+    room: () => ({ w: R.int(7, 11), h: R.int(7, 11), shape: 'rect', type: R.pick(['crypt', 'hall', 'store', 'crypt']) }),
+    hall: () => ({ w: R.int(14, 18), h: R.int(10, 13), shape: 'rect', type: 'hall', great: true }),
+    cavern: () => { const d = R.int(12, 16); return { w: d, h: d + R.int(-1, 1), shape: 'round', type: 'crypt' }; },
+    cross: () => { const d = R.int(13, 15); return { w: d, h: d, shape: 'cross', type: 'crypt' }; },
+    gallery: () => { const a = R.int(16, 20), b = R.int(5, 6); return R() < 0.5 ? { w: a, h: b, shape: 'rect', type: 'hall' } : { w: b, h: a, shape: 'rect', type: 'hall' }; },
+    ell: () => ({ w: R.int(11, 14), h: R.int(11, 14), shape: 'ell', flip: R.int(0, 3), type: R.pick(['crypt', 'store']) }),
+    small: () => ({ w: R.int(5, 6), h: R.int(5, 6), shape: 'rect', type: 'store' }),
+  };
+  const pickTpl = () => { const p = R(); return p < 0.3 ? 'room' : p < 0.45 ? 'cavern' : p < 0.57 ? 'cross' : p < 0.69 ? 'gallery' : p < 0.81 ? 'ell' : 'small'; };
+  const want = cfg ? null : ['room', 'hall'];   // the start is an ordinary room; one great hall per floor
+  for (let t = 0; t < 600 && rooms.length < maxRooms; t++) {
+    const kind = cfg ? (rooms.length ? R.pick(['room', 'room', 'cavern', 'small']) : 'room') : rooms.length < want.length ? want[rooms.length] : pickTpl();
+    const T = TPL[kind](), w = T.w, h = T.h;
+    if (w > MW - 6 || h > MH - 6) continue;
+    const x = R.int(2, MW - w - 2), y = R.int(2, MH - h - 2);
     if (rooms.some(r => x < r.x + r.w + 3 && x + w + 3 > r.x && y < r.y + r.h + 3 && y + h + 3 > r.y)) continue;
-    rooms.push({ x, y, w, h, cx: x + (w >> 1), cy: y + (h >> 1), type: R.pick(['crypt', 'hall', 'store', 'crypt']) });
+    rooms.push(Object.assign(T, { kind, x, y, cx: x + (w >> 1), cy: y + (h >> 1) }));
   }
-  if (rooms.length < (cfg ? 4 : 7)) return false;
-  rooms.forEach((r, n) => { for (let j = r.y; j < r.y + r.h; j++) for (let i = r.x; i < r.x + r.w; i++) { map[tIdx(i, j)] = FLOOR; LV.roomOf[tIdx(i, j)] = n; } });
-  // corridors: minimum spanning tree over room centers plus a couple of loops, 2 tiles wide
-  const carve = (i, j) => { for (const [a, b] of [[0, 0], [1, 0], [0, 1], [1, 1]]) if (i + a > 0 && j + b > 0 && i + a < MW - 1 && j + b < MH - 1) map[tIdx(i + a, j + b)] = FLOOR; };
+  if (rooms.length < (cfg ? 4 : 7) || (!cfg && !rooms.some(r => r.great))) return false;
+  // a room's shape: which tiles of its box are floor
+  const inShape = (r, i, j) => {
+    const u = (i - r.x + 0.5) / r.w * 2 - 1, v = (j - r.y + 0.5) / r.h * 2 - 1;
+    if (r.shape === 'round') { const a = Math.atan2(v, u), ragged = (LV.theme === 'caves' ? 0.16 : 0.07) * Math.sin(a * 5 + r.x) + (LV.theme === 'caves' ? 0.08 : 0.03) * Math.sin(a * 11 + r.y); return u * u + v * v <= (1 - ragged) ** 2; }
+    if (r.shape === 'cross') { const arm = 0.38; return Math.abs(u) <= arm || Math.abs(v) <= arm; }
+    if (r.shape === 'ell') { const fu = r.flip & 1 ? -u : u, fv = r.flip & 2 ? -v : v; return fu <= -0.1 || fv <= -0.1; }
+    return true;
+  };
+  rooms.forEach((r, n) => {
+    let area = 0;
+    for (let j = r.y; j < r.y + r.h; j++) for (let i = r.x; i < r.x + r.w; i++) if (inShape(r, i, j)) { map[tIdx(i, j)] = FLOOR; LV.roomOf[tIdx(i, j)] = n; area++; }
+    r.area = area;
+    if (r.shape === 'ell') {   // its centre has to be on its floor: the middle of the corner square
+      const qi = r.flip & 1 ? r.x + Math.floor(r.w * 0.78) : r.x + Math.floor(r.w * 0.22), qj = r.flip & 2 ? r.y + Math.floor(r.h * 0.78) : r.y + Math.floor(r.h * 0.22);
+      r.cx = qi; r.cy = qj;
+    }
+  });
+  // corridors: minimum spanning tree over room centers plus a couple of loops, 2 tiles wide (3 into a big room)
+  let wide = false;
+  const carve = (i, j) => { for (const [a, b] of wide ? [[-1, -1], [0, -1], [1, -1], [-1, 0], [0, 0], [1, 0], [-1, 1], [0, 1], [1, 1]] : [[0, 0], [1, 0], [0, 1], [1, 1]]) if (i + a > 0 && j + b > 0 && i + a < MW - 1 && j + b < MH - 1) map[tIdx(i + a, j + b)] = FLOOR; };
   const edges = [];
   const corridor = (A, B) => {
+    wide = !cfg && (A.area > 120 || B.area > 120) && R() < 0.7;
     edges.push([rooms.indexOf(A), rooms.indexOf(B)]);
     const horizFirst = R() < 0.5;
     let i = A.cx, j = A.cy;
@@ -409,8 +445,9 @@ function placeDecor(R, level) {
   const D = LV.decor = [];
   const wallSide = (i, j) => tileAt(i - 1, j) === WALL || tileAt(i, j - 1) === WALL || tileAt(i + 1, j) === WALL || tileAt(i, j + 1) === WALL;
   LV.rooms.forEach((r, n) => {
-    const th = LV.theme, interior = () => { for (let t = 0; t < 20; t++) { const i = R.int(r.x + 1, r.x + r.w - 2), j = R.int(r.y + 1, r.y + r.h - 2); if (Math.abs(i - r.cx) + Math.abs(j - r.cy) > 1) return [i, j]; } return [r.x + 1, r.y + 1]; };
-    const nearWall = () => { for (let t = 0; t < 30; t++) { const i = R.int(r.x, r.x + r.w - 1), j = R.int(r.y, r.y + r.h - 1); if (wallSide(i, j)) return [i, j]; } return null; };
+    const mine = (i, j) => LV.roomOf[tIdx(i, j)] === n;   // (shaped rooms: only tiles of this room's own floor)
+    const th = LV.theme, interior = () => { for (let t = 0; t < 30; t++) { const i = R.int(r.x + 1, r.x + r.w - 2), j = R.int(r.y + 1, r.y + r.h - 2); if (mine(i, j) && Math.abs(i - r.cx) + Math.abs(j - r.cy) > 1) return [i, j]; } return [r.cx, r.cy]; };
+    const nearWall = () => { for (let t = 0; t < 40; t++) { const i = R.int(r.x, r.x + r.w - 1), j = R.int(r.y, r.y + r.h - 1); if (mine(i, j) && wallSide(i, j)) return [i, j]; } return null; };
     if (th === 'crypt') {
       if (R() < 0.4) { const q = nearWall(); if (q && trySolid(...q)) D.push({ kind: 'coffin', i: q[0], j: q[1], yaw: tileAt(q[0] - 1, q[1]) === WALL || tileAt(q[0] + 1, q[1]) === WALL ? Math.PI / 2 : 0 }); }
       if (R() < 0.3) { const q = nearWall(); if (q && trySolid(...q)) D.push({ kind: 'candles', i: q[0], j: q[1] }); }
@@ -423,7 +460,16 @@ function placeDecor(R, level) {
       if (R() < 0.5) { const q = nearWall(); if (q && trySolid(...q)) D.push({ kind: 'bonepile', i: q[0], j: q[1], seed: R.int(1, 1e6) % 5 }); }
       if (n && R() < 0.7) { const q = interior(); D.push({ kind: 'lava', fi: q[0] + 0.5, fj: q[1] + 0.5, size: R.int(3, 6), seed: R.int(1, 1e6) }); }
     }
-    if (r.type === 'hall' && r.w >= 7 && r.h >= 7 && th !== 'caves') {
+    if (r.great && th !== 'caves') {   // a great hall: a colonnade down its back side (one by the camera hid the fight), a brazier in the middle
+      const along = r.w >= r.h, len = along ? r.w : r.h;
+      for (let s = 2; s <= len - 3; s += 3) for (const off of [2]) {
+        const i = along ? r.x + s : r.x + off, j = along ? r.y + off : r.y + s;
+        if (!hidesStairs(i, j) && trySolid(i, j)) D.push({ kind: 'pillar', i, j });
+      }
+      if (n && trySolid(r.cx, r.cy)) D.push({ kind: 'brazier', i: r.cx, j: r.cy });
+    } else if (r.great) {   // a great cavern: a ring of stalagmites
+      for (let k = 0; k < 6; k++) { const a = k / 6 * 6.283, i = Math.round(r.cx + Math.cos(a) * r.w * 0.3), j = Math.round(r.cy + Math.sin(a) * r.h * 0.3); if (trySolid(i, j)) D.push({ kind: 'stalagmite', i, j, seed: R.int(1, 1e6) % 7 }); }
+    } else if (r.type === 'hall' && r.w >= 7 && r.h >= 7 && th !== 'caves') {
       for (const [i, j] of [[r.x + 1, r.y + 1], [r.x + r.w - 2, r.y + 1], [r.x + 1, r.y + r.h - 2], [r.x + r.w - 2, r.y + r.h - 2]]) if (!hidesStairs(i, j) && trySolid(i, j)) D.push({ kind: 'pillar', i, j });
       if (n && trySolid(r.cx, r.cy)) D.push({ kind: 'brazier', i: r.cx, j: r.cy });
     } else if (n && r.w * r.h >= 36 && R() < 0.5 && trySolid(r.cx, r.cy)) D.push({ kind: 'brazier', i: r.cx, j: r.cy });
@@ -446,7 +492,7 @@ function placeDecor(R, level) {
   const side = LV.rooms.map((r, n) => n).filter(n => n > 0 && (LV.rooms[n].dead || !LV.rooms[n].crit));
   for (let c = 0; c < 1 + (R() < 0.5 ? 1 : 0); c++) {
     const n = side.length && R() < 0.8 ? R.pick(side) : R.int(1, LV.rooms.length - 1), r = LV.rooms[n];
-    for (let t = 0; t < 30; t++) { const i = R.int(r.x, r.x + r.w - 1), j = r.y; if (trySolid(i, j)) { D.push({ kind: 'chest', i, j, seed: R.int(1, 1e6) }); break; } }
+    for (let t = 0; t < 60; t++) { const i = R.int(r.x, r.x + r.w - 1), j = t < 20 ? r.y : R.int(r.y, r.y + r.h - 1); if (LV.roomOf[tIdx(i, j)] !== n || !wallSide(i, j)) continue; if (trySolid(i, j)) { D.push({ kind: 'chest', i, j, seed: R.int(1, 1e6) }); break; } }   // against a wall of its own floor (shaped rooms)
   }
   placeTorches(D);
 }
@@ -467,7 +513,7 @@ function placeSpawns(R, level) {
   const groups = [];
   LV.rooms.forEach((r, n) => {
     if (n === 0) return;
-    const base = 2 + Math.floor(level * 0.8) + (r.w * r.h > 50 ? 1 : 0);
+    const base = (2 + Math.floor(level * 0.8)) * clamp(Math.pow((r.area || r.w * r.h) / 64, 0.6), 0.75, 1.8);   // round 38: more in bigger rooms (capped so a great hall isn't a crowd)
     let budget = Math.round(base * (0.6 + 0.8 * r.depth) * (cfg ? 0.6 : 1)) + (r.dead ? 1 : 0);   // side areas are lighter
     while (budget > 0) {
       const id = R.pick(pool), m = MONSTERS[id], count = m.pack ? R.int(2, 4) : 1;

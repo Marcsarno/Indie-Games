@@ -723,6 +723,7 @@ function gableRoof(r, hx, hy, z0, rise, mat, stripe) {
     r.box(c, [L + 0.6, hy + 3, 1.0], mat, ax, { mf: stripe });
   }
 }
+let TENT_YAW = 5.9;
 const BUILD = {
 
   // round 26, the hub. The cathedral: pale stone nave under a slate roof, buttresses and tall
@@ -840,10 +841,33 @@ const BUILD = {
     r.box([2, 0, 24], [hx + 4, hy + 2, 0.8], M.CLOTH_RED, ax, { mf: p => Math.floor((along ? p[0] : p[1]) / 4 + 20) % 2 ? M.CLOTH_WHITE : 0 });
     for (let k = 0; k < 5; k++) r.sph([(k % 2 ? 4 : -4) * (along ? 0.6 : 1), (k - 2) * (along ? 7 : 3.5), 13.6], 2.2, [M.PUMPKIN, M.CLOTH_RED, M.LEAFM, M.GOLD, M.PUMPKIN][k]);
   }, [80, 70, 40, 46], Math.PI / 2),
+  // (TENT_YAW turns the ridge so the open front gable faces the camera at three quarters)
+  // round 38: an A-frame canvas tent (was a cone the user read as an acorn): two sloped panels on a
+  // ridge pole, closed gable ends with a dark open flap at the front, seams down the panels, guy
+  // ropes out to pegs from both ends of the ridge
   tent: () => propSprite('tent', r => {
-    r.cone([0, 0, 0], [0, 0, 30], 19, 0.8, M.CLOTH_TAN, { mf: p => { const a = Math.atan2(p[1], p[0]); return Math.abs(a - 0.6) < 0.25 && p[2] < 14 ? M.DARK : Math.floor(a * 4 + 20) % 3 === 0 && Math.abs((a * 4) % 1) < 0.15 ? M.LEATHER : 0; } });
-    r.cone([0, 0, 28], [0, 0, 36], 1, 0.4, M.WOOD);
-  }, [72, 72, 36, 50], 0),
+    const HW = 16, HT = 25, HL = 13, L = Math.hypot(HW, HT);   // half width at the base, height, half length
+    for (const s of [-1, 1]) {   // the two sloped panels
+      const a0 = V.norm([-s * HW, 0, HT]), a1 = [0, 1, 0], a2 = V.cross(a0, a1);
+      r.box([s * HW / 2, 0, HT / 2], [L / 2, HL, 0.8], M.CLOTH_TAN, [a0, a1, a2], { mf: p => (Math.abs(((p[1] + HL) % 9) - 4.5) < 0.4) ? M.LEATHER : 0 });   // seams down the canvas
+    }
+    for (const yEnd of [-HL, HL]) {   // the gable ends: stacked strips narrowing to the ridge, the front one with its flap open
+      for (let k = 0; k < 7; k++) {
+        const z0 = k * HT / 7, z1 = (k + 1) * HT / 7, w = HW * (1 - (z0 + z1) / 2 / HT);
+        r.box([0, yEnd, (z0 + z1) / 2], [w, 0.7, (z1 - z0) / 2 + 0.2], M.CLOTH_TAN, null, { mf: p => yEnd > 0 && Math.abs(p[0]) < 8 * (1 - p[2] / 19) && p[2] < 18 ? M.DARK : 0 });
+      }
+    }
+    r.cyl([0, -HL - 3, HT + 0.6], [0, HL + 3, HT + 0.6], 0.9, M.WOOD);   // the ridge pole, sticking out at the ends
+    // one door flap folded back against the canvas, lighter where the inside shows
+    { const a0 = V.norm([-8, 0, 18]), a1 = V.norm([1, 0.9, 0]), a2 = V.cross(a0, a1); r.box([-6.5, HL + 1.6, 7.5], [9, 3.6, 0.5], M.CLOTH_WHITE, [a0, a1, a2], { noShadow: true }); }
+    for (const yEnd of [-HL - 1.5, HL + 1.5]) {
+      if (yEnd < 0) r.cyl([0, yEnd, 0], [0, yEnd, HT + 1.5], 0.8, M.WOOD);   // an upright at the back (the front stays clear of the door)
+      const sy = Math.sign(yEnd), peg = [0, yEnd + sy * 9, 0];
+      r.cone([0, yEnd, HT], peg, 0.35, 0.3, M.WOOD, { noShadow: true });   // a guy rope to a peg
+      r.cyl(peg, V.add(peg, [0, 0, 2]), 0.6, M.WOOD);
+    }
+    for (const [x, y] of [[-HW - 1, -HL + 3], [-HW - 1, HL - 3], [HW + 1, -HL + 3], [HW + 1, HL - 3]]) r.cyl([x, y, 0], [x, y, 1.6], 0.5, M.WOOD);   // pegs along the sides
+  }, [84, 84, 42, 56], TENT_YAW),
 };
 
 // ---------------------------------------------------------------- building the outdoor world

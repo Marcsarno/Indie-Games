@@ -880,8 +880,9 @@ function updateLich(e, dt, d) {
     if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.5);
     for (const f of fires) if (Math.hypot(f.wx - iso(e.home[0], e.home[1])[0], (f.wy - iso(e.home[0], e.home[1])[1]) * 2) < 260) f.blue = true;   // the braziers burn cold
     for (let k = 0; k < 3; k++) {
-      const a = k / 3 * 6.283 + 0.5, fi = e.home[0] + Math.cos(a) * 4, fj = e.home[1] + Math.sin(a) * 4;
-      if (blocked(fi, fj)) continue;
+      let fi = 0, fj = 0, ok = false;
+      for (let t = 0; t < 8 && !ok; t++) { const a = k / 3 * 6.283 + 0.5 + (t ? (t % 2 ? 1 : -1) * Math.ceil(t / 2) * 0.25 : 0); fi = e.home[0] + Math.cos(a) * 4; fj = e.home[1] + Math.sin(a) * 4; ok = standable(fi, fj, 0.3); }   // a prop in the way: try beside it
+      if (!ok) continue;
       const w = makeEnemy('wraith', fi, fj, enemies.length); w.state = 'hunt'; enemies.push(w);
       const [x, y] = iso(fi, fj); burst(4, x, y, 10, 16, 40, 59);
     }

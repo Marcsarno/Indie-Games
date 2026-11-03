@@ -1,0 +1,94 @@
+<title>Bigger Dungeons</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  /* layout: one narrow column, one section per part with its picture first */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul { margin: 0; max-width: 64ch; }
+  ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .frame img.smooth { image-rendering: auto; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .tw { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+</style>
+<main>
+  <header>
+    <h1>Bigger Dungeons</h1>
+    <p class="lede">Dungeon of Bones, round 38, from your phone notes. The dungeon floors are bigger, with real room variety. There's no fog of war in the view any more, the tents are proper tents, the wolf den has a path in, and leaps no longer get you stuck in walls.</p>
+  </header>
+  <section>
+    <h2>Rooms with room to fight</h2>
+    <figure>
+      <div class="frame"><img src="gallery-before-crypt.png" alt="Twenty-four old first-floor layouts from above: small grey box rooms, all about the same size, joined by thin corridors" width="996" height="664"></div>
+      <figcaption>Before: 24 first floors. Every room was a box 6 to 10 tiles across on a 40×40-tile map.</figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><img src="gallery-after-crypt.png" alt="Twelve new first-floor layouts: a mix of large halls, round caverns, plus-shaped crossroads, long thin galleries, L-shaped rooms and small side rooms, joined by wider corridors" width="1380" height="460"></div>
+      <figcaption>Now: 12 first floors on a 56×56-tile map. Green is the start, gold the stairs, red the monsters, magenta champions, yellow chests.</figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><img src="gallery-after-caves.png" alt="Twelve new cave floor layouts with ragged round caverns among the other room shapes" width="1380" height="460"></div>
+      <figcaption>Cave floors, where the caverns have ragged edges.</figcaption>
+    </figure>
+    <ul>
+      <li>Every floor has one <strong>great hall</strong>, about 15 by 11 tiles, with a colonnade down its back wall and a brazier in the middle. In the caves it's a great cavern ringed with stalagmites.</li>
+      <li>The rest is a mix of ordinary rooms (7 to 11 tiles across), <strong>round caverns</strong> (12 to 16 across), <strong>crossroads</strong> (plus-shaped), <strong>long galleries</strong> (16 to 20 by 5 or 6), <strong>L-shaped rooms</strong>, and small side rooms for chests.</li>
+      <li>Corridors into a big room are often 3 tiles wide instead of 2.</li>
+      <li>Bigger rooms hold more monsters, so the number per floor grows with the map (about 30 on the first floor, up to about 100 on the deepest).</li>
+      <li>All the old checks still run on every floor: everything reachable, nothing near the start, champions spread out. A 60-seed sweep of every level passes clean, and floors load as fast as before.</li>
+    </ul>
+    <figure>
+      <div class="frame"><img src="hall-before-after.png" alt="Left: an old crypt room, small and boxy, with the hero and three monsters crowded together. Right: a great hall with a row of tall pillars along its back wall, a brazier, and a pack of spiders with room around them" width="1088" height="660"></div>
+      <figcaption>Left: an old room. Right: a great hall. The first version also had pillars along the side nearest the camera, which hid the hero, so those went.</figcaption>
+    </figure>
+  </section>
+  <section>
+    <h2>No fog of war in the view</h2>
+    <figure>
+      <div class="frame"><img src="fog-before-after.png" alt="Two dungeon views, before and after. Before: everything beyond the hero's sight is black. After: the rooms and corridors around are drawn, lit by their own torches, with the darkness falling off naturally" width="725" height="832"></div>
+      <figcaption>Left: before. Right: now, on a crypt floor (top) and a cave floor (bottom).</figcaption>
+    </figure>
+    <ul>
+      <li>Everything on screen is drawn, explored or not. The torches and your own light still decide how bright each part is, with a low ambient so a far room isn't pitch black.</li>
+      <li>The map still fills in as you explore.</li>
+      <li>Monsters still only show where you have a line of sight, so none appear through walls.</li>
+      <li>Adding <code>?fog=1</code> to the game's address brings the old fog back, for comparison.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Tents</h2>
+    <figure>
+      <div class="frame"><img src="tents.png" alt="Left: the camp with two tan cones like acorns, each with a dark slot. Right: the same camp with two A-frame canvas tents, a door flap folded back, ropes out to pegs" width="1088" height="420"></div>
+      <figcaption>Left: the old cone tents. Right: A-frame canvas tents.</figcaption>
+    </figure>
+    <p>Two sloped canvas panels on a ridge pole, closed ends, the front door open with one flap folded back, guy ropes and pegs. There were two review passes: in the first, the front pole and rope cut right across the doorway, so the pole went.</p>
+  </section>
+  <section>
+    <h2>Fixes</h2>
+    <figure>
+      <div class="frame"><img src="den-before-after.png" alt="The wolf den in the west woods. Left: dense pines right up to its mouth, the hero standing inside a tree. Right: a dirt trail leads to the den with a clearing in front of it" width="1088" height="540"></div>
+      <figcaption>The wolf den: before (left) and with the new trail and clearing (right).</figcaption>
+    </figure>
+    <ul>
+      <li><strong>Stuck in walls.</strong> The leap, blink and the ranger's leap only checked the single spot they landed on, but the hero's body is wider than that. A landing right beside a wall left it overlapping the wall, and then every move was blocked. All three now only land where the whole body fits, and the hero is nudged out if it ever ends up in a wall. A new test jumps 180 times per class from spots beside walls: 45 to 87 of those got stuck before, none now.</li>
+      <li><strong>Wolf den.</strong> A trail runs from the woods road to the den, there's a clearing in front of it, and the woods are a little thinner.</li>
+    </ul>
+  </section>
+</main>
