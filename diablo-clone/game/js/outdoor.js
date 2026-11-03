@@ -364,6 +364,7 @@ function genHub(R, A) {
   road([[cx, cy], [36, 25], [28, 22], [18, 17], [H.mine[0] + 1.5, H.mine[1] + 1.5]], 0.85);   // north to the mine
   road([[cx, cy], [42, 26], [H.farm[0] - 2, H.farm[1] + 3]], 0.8);                             // east to the farm
   road([[cx, cy], [33, 38], [24, 43], [H.woods[0] + 3, H.woods[1] - 2]], 0.75);                 // west into the woods
+  road([[H.woods[0] + 3, H.woods[1] - 2], [13.5, 51.5], [H.den[0] + 2.6, H.den[1] + 1.4]], 0.6);   // round 38: a trail on to the den's mouth
   road([[cx, cy], [43, 39], [H.gate[0] - 1.5, H.gate[1] - 1.5]], 0.85);                         // south to the gate
   road([[28, 22], [24, 27], [24, 34], [33, 38]], 0.55);                                         // round the back of the cathedral
   bakePathField();   // the scatter below asks how far each tile is from a road
@@ -403,11 +404,12 @@ function genHub(R, A) {
   LV.decor.push({ kind: 'signpost', fi: H.gate[0] - 2.2, fj: H.gate[1] - 0.6 });
   LV.gateSign = [H.gate[0] - 1, H.gate[1] - 1];
   // scatter: trees thicken toward the west woods and thin to meadow round the cathedral and fields
-  const keepOut = (i, j) => Math.hypot(i - cx, j - cy) < 7 || Math.hypot(i - (C.i + 3), j - (C.j + 1.5)) < 6.5 || LV.fields.some(f => i > f.x0 - 1 && i < f.x1 + 1 && j > f.y0 - 1 && j < f.y1 + 1);
+  // (round 38: and a clearing before the den's mouth)
+  const keepOut = (i, j) => Math.hypot(i - cx, j - cy) < 7 || Math.hypot(i - (H.den[0] + 2), j - (H.den[1] + 1)) < 3.2 || Math.hypot(i - (C.i + 3), j - (C.j + 1.5)) < 6.5 || LV.fields.some(f => i > f.x0 - 1 && i < f.x1 + 1 && j > f.y0 - 1 && j < f.y1 + 1);
   for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
     if (edgeBand(i, j) || keepOut(i + 0.5, j + 0.5) || LV.solid[tIdx(i, j)] || pathD(i + 0.5, j + 0.5) < 1.1) continue;
     const west = clamp(1 - Math.hypot(i - H.woods[0], j - H.woods[1]) / 16, 0, 1), north = clamp(1 - Math.hypot(i - H.mine[0], j - H.mine[1]) / 12, 0, 1);
-    const dens = 0.035 + west * 0.42 + north * 0.1 + vnoise(i, j, 5, 31) * 0.05;
+    const dens = 0.035 + west * 0.34 + north * 0.1 + vnoise(i, j, 5, 31) * 0.05;
     if (R() < dens && canTree(i, j)) { LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'tree', i, j, tree: west > 0.2 || north > 0.2 || R() < 0.4 ? 'pine' : 'oak', seed: R.int(0, 5), jx: (R() - 0.5) * 0.4, jy: (R() - 0.5) * 0.4 }); }
     else if (R() < 0.05) LV.decor.push({ kind: R() < 0.7 ? 'bush' : 'fern', fi: i + R(), fj: j + R(), seed: R.int(0, 5) });
     else if (north > 0.1 && R() < 0.04 && canTree(i, j)) { LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'rock', i, j, seed: R.int(0, 5) }); }

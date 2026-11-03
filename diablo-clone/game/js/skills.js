@@ -252,9 +252,9 @@ function startLeap() {
   else { const [fx, fy] = dirVec(hero.dir); to = [hero.fi + fx * 5, hero.fj + fy * 5]; }
   // land on open ground: walk the target back toward the hero until it's clear
   const f0 = [hero.fi, hero.fj];
-  for (let k = 0; k < 20 && blocked(to[0], to[1]); k++) { to[0] += (f0[0] - to[0]) * 0.15; to[1] += (f0[1] - to[1]) * 0.15; }
+  for (let k = 0; k < 20 && !standable(to[0], to[1]); k++) { to[0] += (f0[0] - to[0]) * 0.15; to[1] += (f0[1] - to[1]) * 0.15; }
   const dist = Math.hypot(to[0] - f0[0], to[1] - f0[1]);
-  if (dist < 0.8 || blocked(to[0], to[1])) return false;
+  if (dist < 0.8 || !standable(to[0], to[1])) return false;
   hero.dir = dirFrom(to[0] - f0[0], to[1] - f0[1]);
   hero.leap = { from: f0, to, t: 0, dur: 0.32 + dist * 0.035, target: t, mod }; hero.atk = -1; hero.cast = -1; hero.approach = null;
   sfx('heavySwing');
@@ -269,7 +269,7 @@ function updateLeap(dt) {
   if (Math.random() < 0.6) { const [x, y] = screenOf(hero); pspawn(3, x, y, hero.leapZ + 20, 0, 0, 4, 0.25, 31); }
   if (u >= 1) {   // landing
     const mod = L.mod, R = mod === 'quake' ? 3.3 : 1.9;   // round 30: Earthquake lands far wider; Pounce saves it all for the target
-    hero.leap = null; hero.leapZ = 0; hero.atk = -1; hero.clip = 'idle'; hero.stopT = 0.11; hero.swingEnd = G.t;
+    hero.leap = null; hero.leapZ = 0; hero.atk = -1; hero.clip = 'idle'; hero.stopT = 0.11; hero.swingEnd = G.t; unstickHero();
     G.pierce = true;
     for (const en of enemies) {
       if (!alive(en)) continue;
@@ -565,7 +565,7 @@ function blink() {
   const vx = input.mx, vy = input.my;
   if (Math.hypot(vx, vy) > 0.2) [dx, dy] = stickToGround(vx, vy);
   let dist = 0;
-  for (let s = 0.25; s <= 4.5; s += 0.25) { if (blocked(hero.fi + dx * s, hero.fj + dy * s)) break; dist = s; }
+  for (let s = 0.25; s <= 4.5; s += 0.25) { if (blocked(hero.fi + dx * s, hero.fj + dy * s)) break; if (standable(hero.fi + dx * s, hero.fj + dy * s)) dist = s; }   // stops at a wall; lands only where the body fits
   if (dist < 0.5) { CD.blink = 0; hero.mana += 8; return; }   // nowhere to go: refund
   const mod = skillMod('blink');
   const [x0, y0] = screenOf(hero);
@@ -1593,7 +1593,7 @@ function startRoll() {
   if (Math.hypot(input.mx, input.my) > 0.2) [dx, dy] = stickToGround(input.mx, input.my);
   else { const t = nearestEnemy(6); if (t) { const l = Math.hypot(hero.fi - t.fi, hero.fj - t.fj) || 1; dx = (hero.fi - t.fi) / l; dy = (hero.fj - t.fj) / l; } else { const [fx, fy] = dirVec(hero.dir); dx = -fx; dy = -fy; } }
   let dist = 0;
-  for (let s = 0.25; s <= dist0; s += 0.25) { if (blocked(hero.fi + dx * s, hero.fj + dy * s)) break; dist = s; }
+  for (let s = 0.25; s <= dist0; s += 0.25) { if (blocked(hero.fi + dx * s, hero.fj + dy * s)) break; if (standable(hero.fi + dx * s, hero.fj + dy * s)) dist = s; }
   if (dist < 0.75) return false;
   hero.roll = { from: [hero.fi, hero.fj], to: [hero.fi + dx * dist, hero.fj + dy * dist], t: 0, dur: 0.26 + dist * 0.03, mod };
   hero.atk = -1; hero.cast = -1; hero.approach = null;
@@ -1609,7 +1609,7 @@ function updateRoll(dt) {
   hero.clip = 'stop';   // leaning back through the hop
   if (Math.random() < 0.7) { const [x, y] = screenOf(hero); pspawn(5, x, y, 1, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 8, 6, 1, LV.outdoor ? DIRT[3] : S[5]); }
   if (u >= 1) {
-    hero.roll = null; hero.leapZ = 0; hero.clip = 'idle';
+    hero.roll = null; hero.leapZ = 0; hero.clip = 'idle'; unstickHero();
     const [x, y] = screenOf(hero); for (let k = 0; k < 10; k++) { const a = k / 10 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 40, Math.sin(a) * 20, 12, 1, LV.outdoor ? DIRT[3] : S[5]); }
     const t = rangerTarget(8);
     if (t) {   // landing: loose at the nearest

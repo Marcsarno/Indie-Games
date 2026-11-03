@@ -184,6 +184,18 @@ function stickToGround(vx, vy) {
   const gi = ux / 16 + uy / 8, gj = uy / 8 - ux / 16, n = Math.hypot(gi, gj) || 1;
   return [gi / n, gj / n, Math.pow(Math.hypot(ux, 2 * uy), 0.65)];
 }
+// a spot where a whole body fits (all four corners of its footprint on open floor): where leaps,
+// blinks and dodges may land. tryMove checks the same corners, so landing on a spot that only passes
+// a point check left the hero overlapping a wall and unable to move (round 38 fix)
+const standable = (fi, fj, r = 0.3) => !(blocked(fi - r, fj - r) || blocked(fi + r, fj - r) || blocked(fi - r, fj + r) || blocked(fi + r, fj + r));
+// the safety net: if the hero ever ends up overlapping a wall, step to the nearest spot that fits
+function unstickHero() {
+  if (standable(hero.fi, hero.fj, 0.28)) return;
+  for (let r = 0.1; r <= 1.6; r += 0.1) for (let a = 0; a < 16; a++) {
+    const t = a / 16 * Math.PI * 2, fi = hero.fi + Math.cos(t) * r, fj = hero.fj + Math.sin(t) * r;
+    if (standable(fi, fj, 0.3)) { hero.fi = fi; hero.fj = fj; return; }
+  }
+}
 function tryMove(e, dfi, dfj, r = 0.28) {
   const ok = (ni, nj) => !(blocked(ni - r, nj - r) || blocked(ni + r, nj - r) || blocked(ni - r, nj + r) || blocked(ni + r, nj + r));
   let moved = false;
@@ -691,6 +703,7 @@ function updateHero(dt) {
     sfx('stairs'); G.fadeTo = () => { G.portal = null; startLevel(LV.level + AREA_CYCLE, (LV.seed * 31 + 17) >>> 0); saveGame(); };
   }
   hatchEggs(dt);
+  if (!hero.leap && !hero.roll) unstickHero();
   updateFov(hero.fi, hero.fj);
 }
 function updateEnemy(e, dt) {
