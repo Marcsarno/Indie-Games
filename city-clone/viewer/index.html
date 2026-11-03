@@ -1447,14 +1447,54 @@ const mini = $('mini'), mx = mini.getContext('2d'); let miniT = 0, lastCash = -1
 if (!world.map) $('minibox').hidden = true;
 const LMK = world.landmarks ? world.landmarks.map(([n, x, y, col, ch]) => ({ n, x, y, col, ch })) : [['Publix', 868, 372, '#2e8b3e', 'P'], ['Casino', 1180, 495, '#c8901e', '$'], ['City Hall', 930, 620, '#2f6fb3', 'H'], ['Police', 1030, 640, '#1d3f8a', '★'], ['Promenade', 1120, 960, '#c2457a', 'M'], ['Stadium', 1015, 735, '#5a7d2a', 'S'], ['Trash Mountain', 997, 183, '#7a5a2a', '▲']].map(([n, x, y, col, ch]) => ({ n, x: (x - 690) * .43, y: -(y - 545) * .43, col, ch }));     // reference-map px -> Blender metres
 const ROUTE = { t: 0, key: '', pts: null };
-function routeTo(px, py, tx, ty) {                // shortest drive along the lane graph (Blender metres in and out): node nearest you -> node nearest the target
-  if (!graph) return null; const N = graph.nodes, E = graph.edges, near = (x, y) => { let b = 0, bd = 1e18; N.forEach((n, i) => { const d = (n.x - x) ** 2 + (n.y - y) ** 2; if (d < bd) { bd = d; b = i; } }); return b; };
-  const s0 = near(px, py), s1 = near(tx, ty), dist = new Float64Array(N.length).fill(1e18), prev = new Int32Array(N.length).fill(-1), done = new Uint8Array(N.length); dist[s0] = 0;
-  for (;;) { let u = -1, bd = 1e18; for (let i = 0; i < N.length; i++) if (!done[i] && dist[i] < bd) { bd = dist[i]; u = i; } if (u < 0 || u === s1) break; done[u] = 1;
-    E.forEach((e, k) => { const v = e.a === u ? e.b : e.b === u ? e.a : -1; const L = e.L + (BLK.shut.has(k) ? 1e4 : 0); if (v >= 0 && dist[u] + L < dist[v]) { dist[v] = dist[u] + L; prev[v] = k; } }); }
-  if (dist[s1] >= 1e18) return null; const out = []; let v = s1;
-  while (v !== s0) { const e = E[prev[v]], pts = e.b === v ? e.pts.slice().reverse() : e.pts.slice(); for (const p of pts) out.push(p); v = e.a === v ? e.b : e.a; }
-  out.reverse(); out.unshift([px, py]); out.push([tx, ty]); return out;
+// round 50 (user: the GPS "will show to go forward and backwards at the same time... like a U-turn"): it used to start at the junction nearest you and end at the junction
+// nearest the goal, with straight lines to both; on the new map's long streets that junction is often behind you, so the line doubled back. Now it starts on the street
+// you are on (from your spot, either way along it), ends on the goal's street, and a way that starts behind you costs an extra 150 m (a U-turn only when it really pays)
+function snapEdge(x, y) {                          // nearest point on any street: edge k, segment j, the point itself
+  let best = null, bd = 1e18;
+  graph.edges.forEach((e, k) => { const P = e.pts; for (let j = 0; j < P.length - 1; j++) { const ax = P[j][0], ay = P[j][1], dx = P[j + 1][0] - ax, dy = P[j + 1][1] - ay, L2 = dx * dx + dy * dy || 1;
+    const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / L2)), qx = ax + dx * t, qy = ay + dy * t, d = (qx - x) ** 2 + (qy - y) ** 2; if (d < bd) { bd = d; best = { k, j, q: [qx, qy] }; } } });
+  return best;
+}
+const plen = P => { let L = 0; for (let i = 1; i < P.length; i++) L += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]); return L; };
+function routeTo(px, py, tx, ty, face) {          // shortest drive along the street graph (Blender metres in and out); face = your heading (three th) or undefined
+  if (!graph) return null; const N = graph.nodes, E = graph.edges;
+  const s = snapEdge(px, py), g = snapEdge(tx, ty); if (!s || !g) return null;
+  const es = E[s.k], eg = E[g.k];
+  const starts = [{ n: es.a, pre: [s.q].concat(es.pts.slice(0, s.j + 1).reverse()) }, { n: es.b, pre: [s.q].concat(es.pts.slice(s.j + 1)) }];
+  const ends = [{ n: eg.a, post: eg.pts.slice(0, g.j + 1).concat([g.q]) }, { n: eg.b, post: eg.pts.slice(g.j + 1).reverse().concat([g.q]) }];
+  const fx = face === undefined ? 0 : -Math.sin(face), fy = face === undefined ? 0 : Math.cos(face);       // heading in Blender x, y
+  const back = pre => { const q = pre.find(p => Math.hypot(p[0] - pre[0][0], p[1] - pre[0][1]) > 1); return q && (q[0] - pre[0][0]) * fx + (q[1] - pre[0][1]) * fy < 0 ? 150 : 0; };
+  let best = null;
+  if (s.k === g.k) {                               // same street: straight along it
+    const ts = s.j + .5, tg = g.j + .5, pts = ts <= tg ? [s.q].concat(es.pts.slice(s.j + 1, g.j + 1), [g.q]) : [s.q].concat(es.pts.slice(g.j + 1, s.j + 1).reverse(), [g.q]);
+    best = { c: plen(pts) + back(pts), pts };
+  }
+  for (const st of starts) {
+    const dist = new Float64Array(N.length).fill(1e18), prev = new Int32Array(N.length).fill(-1), done = new Uint8Array(N.length); dist[st.n] = 0;
+    for (;;) { let u = -1, bd = 1e18; for (let i = 0; i < N.length; i++) if (!done[i] && dist[i] < bd) { bd = dist[i]; u = i; } if (u < 0) break; done[u] = 1;
+      const came = u === st.n ? s.k : prev[u];      // going straight back down the street you came in on = a U-turn: +150 m, so a way round the block wins when there is one
+      E.forEach((e, k) => { const v = e.a === u ? e.b : e.b === u ? e.a : -1; const L = e.L + (BLK.shut.has(k) ? 1e4 : 0) + (k === came ? 150 : 0); if (v >= 0 && dist[u] + L < dist[v]) { dist[v] = dist[u] + L; prev[v] = k; } }); }
+    const c0 = plen(st.pre) + back(st.pre) + (BLK.shut.has(s.k) ? 1e4 : 0);
+    for (const en of ends) {
+      if (dist[en.n] >= 1e18) continue; const c = c0 + dist[en.n] + plen(en.post) + (BLK.shut.has(g.k) ? 1e4 : 0); if (best && c >= best.c) continue;
+      const mid = []; let v = en.n; while (v !== st.n && prev[v] >= 0) { const e = E[prev[v]], pts = e.b === v ? e.pts.slice().reverse() : e.pts.slice(); for (const p of pts) mid.push(p); v = e.a === v ? e.b : e.a; }
+      mid.reverse(); best = { c, pts: st.pre.concat(mid, en.post) };
+    }
+  }
+  if (!best) return null; let P = []; for (const q of best.pts) if (!P.length || Math.hypot(q[0] - P[P.length - 1][0], q[1] - P[P.length - 1][1]) > .3) P.push(q);     // drop doubled points (edges share their ends)
+  for (let k = 2, acc = 0; k < P.length && acc < 40; k++) {     // a U-turn right ahead: start the line where it turns back (no spike out and back)
+    const ax = P[k - 1][0] - P[k - 2][0], ay = P[k - 1][1] - P[k - 2][1], bx = P[k][0] - P[k - 1][0], by = P[k][1] - P[k - 1][1], la = Math.hypot(ax, ay), lb = Math.hypot(bx, by); acc += la;
+    if (la > .3 && lb > .3 && (ax * bx + ay * by) / (la * lb) < -.7) { let kb = k, bd = 1e18; for (let q = k; q < Math.min(P.length, k + 40); q++) { const d = Math.hypot(P[q][0] - P[0][0], P[q][1] - P[0][1]); if (d < bd) { bd = d; kb = q; } } P = P.slice(kb); break; }   // start from the point on the way back nearest you
+  }
+  for (let guard = 0; guard < 20; guard++) {                    // any out-and-back spike left (a turn-round on a split street): cut the retraced part out
+    let m = -1; for (let k = 2; k < P.length; k++) { const ax = P[k - 1][0] - P[k - 2][0], ay = P[k - 1][1] - P[k - 2][1], bx = P[k][0] - P[k - 1][0], by = P[k][1] - P[k - 1][1], la = Math.hypot(ax, ay), lb = Math.hypot(bx, by);
+      if (la > .3 && lb > .3 && (ax * bx + ay * by) / (la * lb) < -.7) { m = k - 1; break; } }
+    if (m < 0) break; let i = m - 1, j = m + 1;
+    while (i > 0 && j < P.length - 1 && Math.hypot(P[i - 1][0] - P[j + 1][0], P[i - 1][1] - P[j + 1][1]) < 2.5) { i--; j++; }
+    P = i <= 1 ? P.slice(j) : P.slice(0, i + 1).concat(P.slice(j));        // a spike at the very start: the route just starts behind you (a U-turn)
+  }
+  const out = [[px, py]].concat(P); out.push([tx, ty]); return out;
 }
 function drawMini(px, py, face) {                 // map around the player (px, py in Blender metres), turned with the camera (rig.yaw); arrow = heading, yellow/green = missions, flashing red/blue = police, letters = landmarks
   const W = mini.width, c = W / 2, k = c / 55, a = rig.yaw, ca = Math.cos(a), sa = Math.sin(a);
@@ -1474,7 +1514,7 @@ function drawMini(px, py, face) {                 // map around the player (px, 
     for (const rd of world.roads || []) { mx.lineWidth = Math.max(2, rd.w * k); mx.beginPath(); rd.pts.forEach((p, j) => j ? mx.lineTo(X(p[0]), Y(p[1])) : mx.moveTo(X(p[0]), Y(p[1]))); if (rd.closed) mx.closePath(); mx.stroke(); }
     rects(false);
     const tg = missions && missions.target();          // route line to the mission goal, recomputed once a second
-    if (tg) { ROUTE.t -= .1; const key = tg.join(); if (ROUTE.t <= 0 || ROUTE.key !== key) { ROUTE.t = 1; ROUTE.key = key; ROUTE.pts = routeTo(px, py, tg[0], tg[1]); }
+    if (tg) { ROUTE.t -= .1; const key = tg.join(); if (ROUTE.t <= 0 || ROUTE.key !== key) { ROUTE.t = 1; ROUTE.key = key; ROUTE.pts = routeTo(px, py, tg[0], tg[1], hmode === 'driving' && drive && Math.hypot(drive.vx, drive.vz) > 2 ? face : undefined); }
       if (ROUTE.pts) { mx.strokeStyle = '#b06cff'; mx.lineWidth = 7; mx.lineCap = 'round'; mx.beginPath(); ROUTE.pts.forEach((p, j) => j ? mx.lineTo(X(p[0]), Y(p[1])) : mx.moveTo(X(p[0]), Y(p[1]))); mx.stroke(); } }
     else ROUTE.pts = null;
     mx.restore();
@@ -1669,6 +1709,6 @@ let timeK = 1;                                                 // slow motion (t
 function frame(t) { const t0 = performance.now(); const dt_ = Math.min(clock.getDelta(), .05); if (!manual && !paused) { update(dt_ * timeK); if (!titleShown) showTitle(); } else if (paused) renderer.render(scene, camera); if (frameHook) frameHook(t, performance.now() - t0); requestAnimationFrame(frame); }
 syncSliders(); setView('drive'); requestAnimationFrame(frame);
 window.__DAVE = DAVE;
-window.__city = { missions, cops, DENV, CINE, cine, cineStop, titleShots, dstickIn, track, vehs, get ride() { return ride; }, CHARS, switchTo, SW, get cur() { return cur; }, get pilotP() { return pilot; }, world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, ppl, cops, missions, sun, setFrameHook: f => { frameHook = f; }, upd };
+window.__city = { gps: routeTo, missions, cops, DENV, CINE, cine, cineStop, titleShots, dstickIn, track, vehs, get ride() { return ride; }, CHARS, switchTo, SW, get cur() { return cur; }, get pilotP() { return pilot; }, world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, ppl, cops, missions, sun, setFrameHook: f => { frameHook = f; }, upd };
 if (/[?&](hud|bench)=/.test(location.search)) import('./hud.js?v=' + (MAN['hud.js'] || '1')).then(m => m.start(window.__city, THREE)).catch(e => console.error('hud', e));
 </script>
