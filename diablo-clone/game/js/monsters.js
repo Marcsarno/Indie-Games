@@ -219,7 +219,13 @@ function fallenRig(look, st) {
     r.ell(sc, [3.4, 4, 4.6], M.CLOTH_TAN, frameAlong(fwd, up), { mf: p => V.dot(V.sub(p, sc), up) > 3.6 ? M.LEATHER : 0 });
     for (const [a, b, c] of [[0.6, 1, 4.6], [-0.4, -1.2, 4.9], [0.2, 0, 5.4]]) r.sph(V.add(V.add(V.mad(sc, fwd, a), V.mul(sideR, b)), V.mul(up, c)), 1.1, M.GOLD);
   }
-  if (look.unarmed) { /* both hands free to clutch the sack */ }
+  if (look.digger) {   // a pick: a wooden haft with a curved iron head across its tip, and a lamp at the belt
+    r.cone(V.mad(g, bd, -2), V.mad(g, bd, 9), 0.6, 0.6, M.WOOD);
+    const tip = V.mad(g, bd, 9), across = V.norm(V.cross(bd, sideR));
+    r.cone(V.mad(tip, across, -4.5), V.mad(tip, across, 4.5), 0.9, 0.35, M.IRON);
+    const lp = V.add(V.mad(J.pelvis, sideR, -3.4), V.mul(fwd, 0.6));
+    r.box(lp, [1.1, 1.1, 1.4], M.LAMP, null, { noShadow: true }); r.box(V.mad(lp, up, 1.8), [0.8, 0.8, 0.4], M.IRON);
+  } else if (look.unarmed) { /* both hands free to clutch the sack */ }
   else if (look.staff) {
     r.cone(V.mad(g, bd, -7), V.mad(g, bd, 7), 0.65, 0.65, M.WOOD);
     r.sph(V.mad(g, bd, 8.2), 1.5, M.MAGIC, { noShadow: true });
@@ -232,9 +238,15 @@ function fallenRig(look, st) {
   r.ell(hd, [3.8, 3.6, 3.4], skin, frameAlong(fwd, up), { mf: p => { const q = V.sub(p, hd); return V.dot(q, fwd) > 2.4 && Math.abs(V.dot(q, up) + 1.5) < 0.5 && Math.abs(V.dot(q, sideR)) < 1.6 ? M.DARK : 0; } });
   for (const s of [-1, 1]) {
     r.sph(V.add(V.add(V.mad(hd, fwd, 3.2), V.mul(sideR, s * 1.4)), V.mul(up, 0.6)), 0.6, M.EYE_YEL, { noShadow: true });
+    if (look.digger) { r.sph(V.add(V.mad(hd, up, 0.4), V.mul(sideR, s * 3.2)), 1.2, skin); continue; }   // small round ears
     if (look.goblin) { const a = V.add(V.mad(hd, up, 0.8), V.mul(sideR, s * 3.0)); r.cone(a, V.add(V.add(a, V.mul(sideR, s * 4.6)), V.add(V.mul(up, 1.6), V.mul(fwd, -1))), 1.3, 0.25, skin); continue; }
     const a = V.add(V.mad(hd, up, 2.4), V.mul(sideR, s * 2.2)), b = V.add(V.add(V.mad(hd, up, 4.6), V.mul(sideR, s * 3.8)), V.mul(fwd, -2.5));
     r.cone(a, b, 1.0, 0.3, M.HORN);
+  }
+  if (look.digger) {   // a long snout with a dark nose tip, and a dented iron cap with a brim
+    r.ell(V.add(V.mad(hd, fwd, 3.4), V.mul(up, -0.8)), [2.2, 1.6, 1.4], skin, frameAlong(fwd, up), { mf: p => V.dot(V.sub(p, hd), fwd) > 5.1 ? M.DARK : 0 });
+    r.ell(V.mad(hd, up, 2.0), [3.9, 3.7, 2.2], M.IRON, frameAlong(fwd, up));
+    r.cyl(V.mad(hd, up, 1.0), V.mad(hd, up, 1.5), 4.6, M.IRON);
   }
   if (look.hood) r.ell(V.add(V.mad(hd, up, 0.8), V.mul(fwd, -0.8)), [4.2, 4.2, 3.8], M.CLOTH_PURPLE, frameAlong(fwd, up));
   if (look.goblin && !look.chief) r.ell(V.mad(hd, up, 2.2), [3.6, 3.4, 1.8], M.LEATHER, frameAlong(fwd, up));   // a leather cap
@@ -616,6 +628,8 @@ const MONSTERS = {
   gshaman: { family: 'fallen', name: 'GOBLIN SHAMAN', look: { skin: M.GOBLIN, goblin: true, staff: true }, hp: 9, dmg: [3, 6], speed: 30, reach: 6, ranged: 'firebolt', leader: true, xp: 16, chest: 12, shadow: 5, where: 'out' },
   brigand: { family: 'hero', name: 'BRIGAND', look: { team: 'tan', helm: 'cap', chest: 'chain', weapon: 'axe', shield: 'none', hair: 'brown', cape: 'red' }, hp: 22, dmg: [3, 7], speed: 30, reach: 1.35, xp: 24, chest: 18, shadow: 7, where: 'out' },
   wolf: { family: 'hound', name: 'WOLF', look: { skin: M.FUR, eye: M.EYE_YEL, wolf: true }, hp: 14, dmg: [2, 5], speed: 54, reach: 1.35, xp: 15, chest: 12, shadow: 10, pack: true, where: 'out' },
+  // round 26: the diggers of the old mine: hunched, snouted, in a dented iron cap, swinging a pick, a lamp at the belt
+  digger: { family: 'fallen', name: 'DIGGER', look: { skin: M.LEATHER, digger: true }, hp: 10, dmg: [2, 4], speed: 36, reach: 1.25, xp: 9, chest: 12, shadow: 5, pack: true, where: 'out' },
   goblin: { family: 'fallen', name: 'GOBLIN', look: { skin: M.GOBLIN, goblin: true }, hp: 9, dmg: [2, 4], speed: 38, reach: 1.15, xp: 8, chest: 12, shadow: 5, pack: true, where: 'out' },
   ghoulhound: { family: 'hound', name: 'HELL HOUND', look: { skin: M.FLESH, bone: M.OLDBONE, eye: M.FIREM, scale: 1.15 }, hp: 28, dmg: [5, 9], speed: 50, reach: 1.45, xp: 34, chest: 13, shadow: 11, minLevel: 2 },
   spider: { family: 'spider', name: 'CAVE SPIDER', look: { scale: 0.8 }, hp: 10, dmg: [2, 4], speed: 46, reach: 1.3, xp: 10, chest: 8, shadow: 11, pack: true },

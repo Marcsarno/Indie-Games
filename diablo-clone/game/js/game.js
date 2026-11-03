@@ -570,7 +570,7 @@ function updateHero(dt) {
     if (!(G.sealT > 0)) { say(`THE ${boss.def.name} GUARDS THE WAY DOWN`, 22, 2); G.sealT = 3; }
   } else if (!G.fadeTo && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55) {
     sfx('stairs');
-    G.fadeTo = () => { G.portal = null; startLevel(LV.level + 1, (LV.seed * 31 + 17) >>> 0); saveGame(); };
+    G.fadeTo = () => { G.portal = null; startLevel(LV.level + (LV.hub ? 2 : 1), (LV.seed * 31 + 17) >>> 0); saveGame(); };   // the hub's mine leads straight to the first floor
   }
   G.sealT = (G.sealT || 0) - dt;
   updatePortal(dt);

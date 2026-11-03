@@ -274,6 +274,7 @@ function drawAutomap() {
     const [sx, sy] = at(LV.stairs.i, LV.stairs.j); fillRect(sx - 1, sy - 1, 3, 3, 40);
     if (bossAlive()) { const [bx, by] = at(boss.fi, boss.fj); fillRect(bx - 1, by - 1, 3, 3, 22); }
     fillRect(Math.round(ox) - 1, Math.round(oy) - 1, 3, 3, 123 | 0);
+    textC('N', W / 2, 40, 51); for (let k = 0; k < 4; k++) fillRect(W / 2 - k, 48 + k, 1 + 2 * k, 1, 51);   // north is up
     return;
   }
   for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {

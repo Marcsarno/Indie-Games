@@ -16,7 +16,7 @@ const ACTS = [
 const LOOP_NAMES = ['', 'NIGHTMARE', 'HELL', 'TORMENT'];
 function areaOf(level) {
   const p = (level - 1) % AREA_CYCLE, cyc = Math.floor((level - 1) / AREA_CYCLE), act = cyc % ACTS.length, loop = Math.floor(cyc / ACTS.length);
-  if (p === 0) return { kind: 'town', cyc, act, loop, diff: cyc * 3 + 1 };
+  if (p === 0) return { kind: 'town', cyc, act, loop, diff: cyc * 3 + 1, hub: act === 0 };   // Act I's town is the hand-built hub
   if (p === 1) return { kind: 'forest', cyc, act, loop, diff: cyc * 3 + 1 };
   const floor = p - 1;   // 1, 2, then the arena
   return { kind: 'dungeon', cyc, act, loop, floor, arena: floor === 3 ? ACTS[act].arena : null, depth: cyc * 3 + floor, diff: cyc * 3 + floor };
@@ -90,7 +90,7 @@ function genOutdoor(level, seed, A) {
   LV.map.fill(FLOOR); LV.solid.fill(0); LV.tall.fill(0); LV.roomOf.fill(-1); LV.seen.fill(1); LV.vis.fill(1);
   LV.decor = []; LV.spawns = []; LV.paths = []; LV.rooms = []; LV.npcs = [];
   bakeCanopy(A.act === 1);   // before the floor bake, which samples it past the map edge
-  if (A.kind === 'town') genTown(R, A); else genForest(R, A);
+  if (A.hub) genHub(R, A); else if (A.kind === 'town') genTown(R, A); else genForest(R, A);
   bakePathField();
   settleSpawns();
 }
@@ -345,6 +345,89 @@ function genTown(R, A) {
   for (let n = 0; n < 5; n++) LV.critters.push({ kind: 'chicken', fi: cx - 4 + R() * 6, fj: cy + 2 + R() * 3 });
 }
 
+// ---------------------------------------------------------------- the Act I hub (round 26)
+// Hand-built, not generated: the layout is fixed and only the small scatter (grass, flowers, which
+// trees grow where, rocks) varies per seed. North is up on the screen (-i, -j). The cathedral
+// stands in the middle with its doors to the south-east, the camp before them is the safe spot
+// (no monster within 12 tiles). The mine and the first dungeon are north, bandits hold the farm to
+// the east, wolves the woods to the west (with their den), and the road south is shut by a gate.
+const HUB = {
+  cathedral: { i: 26, j: 29, w: 6, h: 3 },
+  camp: [37.5, 31.5], start: [38.5, 35],
+  mine: [11, 12], farm: [49, 14], woods: [14, 49], den: [8.5, 53.5], gate: [51.5, 51.5],
+};
+function genHub(R, A) {
+  const autumn = false, H = HUB, [cx, cy] = H.camp;
+  plantEdge(R, autumn);
+  // roads: the camp to each quarter, bending round the cathedral; a loop path behind it
+  const road = (pts, w) => { for (let k = 0; k + 1 < pts.length; k++) addPath(pts[k], pts[k + 1], w, R); };
+  road([[cx, cy], [36, 25], [28, 22], [18, 17], [H.mine[0] + 1.5, H.mine[1] + 1.5]], 0.85);   // north to the mine
+  road([[cx, cy], [42, 26], [H.farm[0] - 2, H.farm[1] + 3]], 0.8);                             // east to the farm
+  road([[cx, cy], [33, 38], [24, 43], [H.woods[0] + 3, H.woods[1] - 2]], 0.75);                 // west into the woods
+  road([[cx, cy], [43, 39], [H.gate[0] - 1.5, H.gate[1] - 1.5]], 0.85);                         // south to the gate
+  road([[28, 22], [24, 27], [24, 34], [33, 38]], 0.55);                                         // round the back of the cathedral
+  bakePathField();   // the scatter below asks how far each tile is from a road
+  LV.plaza = { x: cx, y: cy, r: 3.4 };
+  const solidRect = (i0, j0, w, h) => { for (let j = j0; j < j0 + h; j++) for (let i = i0; i < i0 + w; i++) LV.solid[tIdx(i, j)] = 1; };
+  const put = (kind, i, j, w, h, extra = {}) => { solidRect(i, j, w, h); LV.decor.push({ kind, i, j, w, h, ...extra }); };
+  // the cathedral, its steps and a graveyard behind it
+  const C = H.cathedral; put('cathedral', C.i, C.j, C.w, C.h);
+  for (let n = 0; n < 9; n++) { const i = 23 + (n % 3) * 1.6 + R() * 0.4, j = 27 + Math.floor(n / 3) * 1.7 + R() * 0.4; if (!solidAt(Math.floor(i), Math.floor(j))) { LV.solid[tIdx(Math.floor(i), Math.floor(j))] = 1; LV.decor.push({ kind: 'grave', i: Math.floor(i), j: Math.floor(j), seed: n }); } }
+  // the camp: campfire, the smith's forge, the potion seller's stall, tents, supplies, lanterns
+  LV.decor.push({ kind: 'campfire', i: Math.floor(cx), j: Math.floor(cy) }); LV.solid[tIdx(Math.floor(cx), Math.floor(cy))] = 1;
+  put('forge', 40, 27, 3, 3); put('stall', 41, 33, 2, 1); put('tent', 34, 35, 2, 2); put('tent', 36, 37.5 | 0, 2, 2);
+  for (const [i, j, k] of [[43, 30, 'barrel'], [43, 31, 'crate'], [33, 33, 'crate'], [40, 36, 'barrel']]) if (!LV.solid[tIdx(i, j)]) { LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: k, i, j, seed: i * 7 + j }); }
+  for (const [x, y] of [[35, 29.6], [40.4, 31], [38.6, 36.6], [34.6, 32.4]]) LV.decor.push({ kind: 'lantern', fi: x, fj: y });
+  // east: the farm the bandits took: a farmhouse, a windmill, ploughed fields, fences
+  put('cabin', 51, 9, 3, 3); put('windmill', 46, 8, 2, 2);
+  LV.fields = [{ x0: 44.5, y0: 13.5, x1: 54.5, y1: 20.5 }, { x0: 52.5, y0: 22.5, x1: 57.5, y1: 28.5 }];
+  for (const f of LV.fields) for (let j = Math.ceil(f.y0); j < f.y1; j++) for (let i = Math.ceil(f.x0); i < f.x1; i++) if (j % 2 === 1 && R() < 0.75) LV.decor.push({ kind: 'crop', fi: i + 0.5 + (R() - 0.5) * 0.3, fj: j + 0.4, seed: R.int(0, 3) });
+  for (let i = 44; i <= 55; i++) if (i !== 49 && i !== 50) { LV.solid[tIdx(i, 21)] = 1; LV.decor.push({ kind: 'fence', i, j: 21, along: 1 }); }
+  for (const [i, j] of [[48, 24], [50, 25], [45, 23]]) if (!LV.solid[tIdx(i, j)]) { LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'hay', i, j }); }
+  // north: the mining camp: the mine mouth in a rock face, carts, crates, a few pines and boulders
+  put('mine', H.mine[0] - 2, H.mine[1] - 2, 3, 3);
+  for (const [i, j, k] of [[15, 11, 'crate'], [15, 12, 'barrel'], [10, 16, 'crate'], [16, 16, 'rock'], [8, 17, 'rock'], [18, 9, 'rock']]) if (!LV.solid[tIdx(i, j)]) { LV.solid[tIdx(i, j)] = 1; LV.decor.push(k === 'rock' ? { kind: 'rock', i, j, seed: i % 5 } : { kind: k, i, j, seed: i * 7 + j }); }
+  LV.decor.push({ kind: 'cart', i: 13, j: 15 }); LV.solid[tIdx(13, 15)] = 1;
+  // west: deep woods, and the wolves' den in a rocky mound
+  put('den', Math.floor(H.den[0]) - 1, Math.floor(H.den[1]) - 1, 2, 2);
+  // south: a stone wall across the road with a shut gate and a sign
+  for (let k = -6; k <= 6; k++) {
+    const i = Math.floor(H.gate[0]) + k, j = Math.floor(H.gate[1]) - k;   // the wall runs along the screen's width
+    if (k === 0) continue;
+    LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'stonewall', i, j });
+  }
+  put('gate', Math.floor(H.gate[0]), Math.floor(H.gate[1]), 1, 1);
+  LV.decor.push({ kind: 'signpost', fi: H.gate[0] - 2.2, fj: H.gate[1] - 0.6 });
+  LV.gateSign = [H.gate[0] - 1, H.gate[1] - 1];
+  // scatter: trees thicken toward the west woods and thin to meadow round the cathedral and fields
+  const keepOut = (i, j) => Math.hypot(i - cx, j - cy) < 7 || Math.hypot(i - (C.i + 3), j - (C.j + 1.5)) < 6.5 || LV.fields.some(f => i > f.x0 - 1 && i < f.x1 + 1 && j > f.y0 - 1 && j < f.y1 + 1);
+  for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
+    if (edgeBand(i, j) || keepOut(i + 0.5, j + 0.5) || LV.solid[tIdx(i, j)] || pathD(i + 0.5, j + 0.5) < 1.1) continue;
+    const west = clamp(1 - Math.hypot(i - H.woods[0], j - H.woods[1]) / 16, 0, 1), north = clamp(1 - Math.hypot(i - H.mine[0], j - H.mine[1]) / 12, 0, 1);
+    const dens = 0.035 + west * 0.42 + north * 0.1 + vnoise(i, j, 5, 31) * 0.05;
+    if (R() < dens && canTree(i, j)) { LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'tree', i, j, tree: west > 0.2 || north > 0.2 || R() < 0.4 ? 'pine' : 'oak', seed: R.int(0, 5), jx: (R() - 0.5) * 0.4, jy: (R() - 0.5) * 0.4 }); }
+    else if (R() < 0.05) LV.decor.push({ kind: R() < 0.7 ? 'bush' : 'fern', fi: i + R(), fj: j + R(), seed: R.int(0, 5) });
+    else if (north > 0.1 && R() < 0.04 && canTree(i, j)) { LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'rock', i, j, seed: R.int(0, 5) }); }
+  }
+  LV.decor.push({ kind: 'meadow', seed: R.int(1, 1e6) });
+  LV.rooms = [{ x: Math.floor(cx - 2), y: Math.floor(cy - 2), w: 4, h: 4, cx: Math.floor(H.start[0]), cy: Math.floor(H.start[1]) }];
+  LV.start = LV.rooms[0];
+  LV.stairs = { i: H.mine[0] + 1, j: H.mine[1] + 1, room: 0, mine: true };   // the way on: into the mine
+  // the people of the camp
+  LV.npcs = [
+    { role: 'priest', name: 'BROTHER OSRIC', fi: C.i + C.w + 1.6, fj: C.j + 1.5 },
+    { role: 'smith', name: 'SMITHY', fi: 39.4, fj: 30.4 },
+    { role: 'merchant', name: 'POTIONS', fi: 40.6, fj: 34.4 },
+    { role: 'villager', fi: 35.5, fj: 34 }, { role: 'villager', fi: 39, fj: 33.5 },
+  ];
+  // monsters by quarter, kept well away from the camp
+  const pack = (id, n, at, spread) => { for (let k = 0; k < n; k++) LV.spawns.push({ id, fi: at[0] + (R() - 0.5) * spread, fj: at[1] + (R() - 0.5) * spread }); };
+  for (const at of [[14, 17], [18, 12], [9, 9], [20, 18]]) pack('digger', R.int(2, 3), at, 2.5);   // north
+  for (const at of [[48, 17], [53, 16], [50, 11], [55, 25]]) pack('brigand', R.int(1, 2), at, 2.5);  // east
+  for (const at of [[12, 45], [17, 52], [10, 50], [20, 47]]) pack('wolf', R.int(2, 3), at, 2.5);     // west
+  LV.spawns = LV.spawns.filter(s => Math.hypot(s.fi - cx, s.fj - cy) > 12);
+}
+
 // ---------------------------------------------------------------- ground
 // grass from layered noise in the olive ramp, small tufts and flower clusters; dirt paths with a
 // dithered edge and pebbles; the canopy texture fills everything past the map
@@ -474,6 +557,21 @@ function shadeGround(wx, wy, rx, ry, steps) {
 
 // ---------------------------------------------------------------- props
 const OUT = {
+  grave: (seed) => propSprite('grave' + (seed % 3), r => {   // a weathered headstone (or a cross) over a low mound
+    r.ell([0, 0, 0.5], [6, 3.5, 1.4], M.GRASSM);
+    if (seed % 3 === 2) { r.box([-2, 0, 6], [0.9, 0.9, 6], M.RUIN); r.box([-2, 0, 9], [0.9, 3.4, 0.9], M.RUIN); }
+    else r.box([-2, 0, 5], [1.2, 3.2, 5], M.RUIN, null, { mf: p => p[2] > 9.2 && Math.abs(p[1]) > 2.2 ? M.GRASSM : (p[0] > -1 && Math.abs(p[1]) < 1.5 && Math.abs(p[2] - 6) < 0.5) ? M.STONE : 0 });
+  }, [24, 26, 12, 18], Math.PI / 4),
+  cart: () => propSprite('cart', r => {   // an ore cart on its wheels, heaped with rock
+    r.box([0, 0, 6], [6, 4, 3.4], M.WOOD, null, { mf: p => Math.abs(p[0]) > 5.2 || Math.abs(p[2] - 8.6) < 0.6 ? M.IRON : 0 });
+    r.ell([0, 0, 9.5], [5, 3.4, 2.4], M.ROCK);
+    for (const sx of [-3.6, 3.6]) for (const sy of [-4.4, 4.4]) r.cyl([sx, sy - 0.6 * Math.sign(sy), 2.4], [sx, sy, 2.4], 2.4, M.IRON);
+  }, [30, 28, 15, 20], 0.5),
+  stonewall: () => propSprite('stonewall', r => {   // a stretch of fieldstone wall, its line along the screen
+    const ax = [V.norm([1, -1, 0]), V.norm([1, 1, 0]), [0, 0, 1]];
+    r.box([0, 0, 7], [11.4, 3.6, 7], M.RUIN, ax, { mf: p => { const u = (p[0] - p[1]) * 0.707; return Math.floor(p[2] / 3.5) % 2 ? (Math.abs(((u + 40) % 7) - 3.5) < 0.4 ? M.STONE : 0) : (Math.abs(((u + 43.5) % 7) - 3.5) < 0.4 ? M.STONE : 0); } });
+    r.box([0, 0, 14.6], [11.8, 4, 0.8], M.STONE, ax);
+  }, [40, 40, 20, 28]),
   pine: (seed, autumn) => propSprite('pine' + seed, r => {
     const R = rng(seed + 11), H = 52 + R() * 14, tiers = 4 + (R() < 0.5 ? 1 : 0);
     r.cone([0, 0, 0], [0, 0, H * 0.35], 2.8, 2.0, M.BARK);
@@ -621,6 +719,64 @@ function gableRoof(r, hx, hy, z0, rise, mat, stripe) {
   }
 }
 const BUILD = {
+
+  // round 26, the hub. The cathedral: pale stone nave under a slate roof, buttresses and tall
+  // blue windows along the side the camera sees, a bell tower over the doors with a rose window,
+  // belfry openings and a spire with a gold cross; broad steps down to the camp
+  cathedral: () => propSprite('cathedral', r => {
+    const ox = -8, nx0 = -54 + ox, nx1 = 34 + ox, hy = 28, wallH = 34, tx = 44 + ox, tw = 14, tH = 92;
+    r.box([(nx0 + nx1) / 2, 0, 2], [(nx1 - nx0) / 2 + 4, hy + 4, 2], M.ROCK);   // plinth
+    const coursed = p => (Math.floor(p[2] / 5) % 2 ? Math.floor((p[0] + p[1]) / 9) : Math.floor((p[0] + p[1]) / 9 + 0.5)) % 4 === 0 && Math.abs((p[2] / 5) % 1) > 0.15 ? M.STONE : 0;
+    const winMf = (along, c0, n, gap, zLo, zHi, face) => p => {   // tall arched windows of blue glass with lead lines
+      const u = p[along] - c0, k = Math.round(u / gap); if (k < 0 || k >= n) return coursed(p);
+      const du = u - k * gap, z = p[2];
+      const arch = z > zHi - 3 ? Math.hypot(du, z - (zHi - 3)) < 3.2 : Math.abs(du) < 3.2;
+      if (z > zLo && z < zHi + 0.5 && arch) return (Math.abs(du) < 0.5 || Math.abs(z - (zLo + zHi) / 2) < 0.5) ? M.IRON : (z > (zLo + zHi) / 2 ? M.CLOTH_BLUE : M.ARCANE);
+      if (z > zLo - 1.5 && z < zHi + 2 && arch) return M.RUIN;
+      return coursed(p);
+    };
+    r.box([(nx0 + nx1) / 2, 0, 4 + wallH / 2], [(nx1 - nx0) / 2, hy, wallH / 2], M.RUIN, null, { mf: winMf(0, nx0 + 10, 5, 17, 12, 30) });
+    // buttresses between the windows on the +y side
+    for (let k = 0; k < 6; k++) { const x = nx0 + 1.5 + k * 17; r.box([x, hy + 2.5, 4 + 13], [2.6, 3, 13], M.RUIN, null, { mf: coursed }); r.box([x, hy + 1.5, 4 + 29], [2.2, 2, 3.5], M.RUIN, [[1, 0, 0], V.norm([0, 1, -0.8]), V.norm([0, 0.8, 1])]); }
+    // the slate roof: two slabs meeting on a ridge along the nave
+    { const rise = 24, run = hy + 3, ang = Math.atan2(rise, run), L = Math.hypot(run, rise) / 2;
+      for (const sg of [-1, 1]) r.box([(nx0 + nx1) / 2 - 2, sg * run / 2, 4 + wallH + rise / 2], [(nx1 - nx0) / 2 + 2, L + 0.6, 1.2], M.IRON, [[1, 0, 0], V.norm([0, sg * Math.cos(ang), -Math.sin(ang)]), V.norm([0, sg * Math.sin(ang), Math.cos(ang)])], { mf: p => Math.abs((p[0] * 0.5) % 3) < 0.35 ? M.CLOTH_DARK : 0 }); }
+    // the bell tower over the doors
+    r.box([tx, 0, 4 + tH / 2], [tw, tw, tH / 2], M.RUIN, null, { mf: p => {
+      const z = p[2], u = p[1], fx = p[0] > tx + tw - 0.8, fy = p[1] > tw - 0.8, a = fx ? p[1] : p[0] - tx;
+      if (fx && z < 26 && (Math.abs(u) < 6 && (z < 20 || Math.hypot(u, z - 20) < 6))) return Math.abs(u) < 0.5 ? M.BARK : (z < 22 ? M.WOOD : M.DARK);   // the doors under an arch
+      if (fx && Math.hypot(u, z - 44) < 7) { const d = Math.hypot(u, z - 44), ang2 = Math.atan2(z - 44, u); return d > 6 ? M.RUIN : (Math.abs(Math.sin(ang2 * 4)) < 0.25 || d < 1.4 ? M.GOLD : d < 3.6 ? M.ARCANE : M.CLOTH_BLUE); }   // the rose window
+      if ((fx || fy) && z > tH - 22 && z < tH - 6 && Math.abs(a) > 2 && Math.abs(a) < 9) return z > tH - 9 && Math.abs(Math.abs(a) - 5.5) > 2 ? M.RUIN : M.VOID;   // belfry openings
+      if (Math.abs(z - (tH - 26)) < 1) return M.STONE;
+      return coursed(p);
+    } });
+    for (const [sx, sy] of [[1, 1], [1, -1], [-1, 1]]) r.box([tx + sx * (tw + 1), sy * (tw + 1), 4 + tH - 3], [1.6, 1.6, 3], M.RUIN);   // corner pinnacles
+    r.cone([tx, 0, 4 + tH], [tx, 0, 4 + tH + 44], tw + 1, 0.8, M.IRON, { mf: p => Math.abs(((p[2] - tH) * 0.6) % 3) < 0.4 ? M.CLOTH_DARK : 0 });   // the spire
+    const top = [tx, 0, 4 + tH + 45];
+    r.cyl(top, V.add(top, [0, 0, 9]), 0.9, M.GOLD); r.cyl(V.add(top, [0, -3.2, 6]), V.add(top, [0, 3.2, 6]), 0.9, M.GOLD);
+    // steps down from the doors
+    for (let n = 0; n < 3; n++) r.box([tx + tw + 3 + n * 3, 0, 1 + (2 - n) * 1.4], [1.6 + (2 - n) * 1.5 + 1.5, 10 - n * 0.5, 1 + (2 - n) * 1.4], M.STONE);
+  }, [176, 228, 88, 186]),
+  mine: () => propSprite('mine', r => {   // a mine mouth cut into a rock face: a heavy timber frame, a lamp, rails running out
+    for (const [x, y, z, a, b, c] of [[-12, -2, 13, 16, 26, 20], [-6, 18, 8, 12, 10, 11], [-6, -22, 8, 12, 10, 10], [-18, 8, 22, 10, 12, 12]]) r.ell([x, y, z], [a, b, c], M.ROCK, null, { mf: p => hash(Math.floor(p[0] / 2), Math.floor(p[1] / 2 + p[2] / 3), 3) < 0.06 ? M.LEAFM : 0 });
+    r.box([4, 0, 10], [3, 7, 10], M.VOID);   // the dark mouth
+    for (const sy of [-1, 1]) { r.box([7, sy * 8.4, 10], [1.8, 1.8, 10], M.WOOD, null, { mf: p => Math.abs(p[2] - 5) < 0.4 || Math.abs(p[2] - 14) < 0.4 ? M.BARK : 0 }); }
+    r.box([7.4, 0, 21], [2.2, 11, 1.8], M.WOOD, null, { mf: p => Math.abs(p[1]) > 9.6 ? M.BARK : 0 });
+    r.box([9.4, -5, 21], [0.4, 3.6, 1.2], M.PLANK);   // a plank nailed over the lintel
+    r.box([9.2, 7.2, 15], [1, 1.2, 1.6], M.LAMP, null, { noShadow: true }); r.box([9.2, 7.2, 17], [0.7, 0.7, 0.4], M.IRON);
+    for (const sy of [-3, 3]) r.box([16, sy, 0.5], [10, 0.5, 0.5], M.IRON);
+    for (let k = 0; k < 5; k++) r.box([8 + k * 4, 0, 0.3], [0.8, 4.4, 0.4], M.WOOD);
+  }, [100, 96, 50, 72]),
+  den: () => propSprite('den', r => {   // the wolves' den: a mossy mound of rock with a low dark opening, bones outside
+    r.ell([-4, -2, 6], [16, 14, 11], M.ROCK, null, { mf: p => p[2] > 9 && hash(Math.floor(p[0] / 2), Math.floor(p[1] / 2), 5) < 0.3 ? M.LEAFM : 0 });
+    r.ell([9, 3, 4], [4, 6, 5], M.VOID);
+    for (const [x, y, a] of [[14, -2, 0.4], [16, 6, 2.1]]) r.cone([x, y, 0.6], [x + Math.cos(a) * 4, y + Math.sin(a) * 4, 0.6], 0.7, 0.7, M.BONE);
+  }, [72, 56, 36, 38]),
+  gate: () => propSprite('gate', r => {   // two stone gate towers and a shut, barred wooden gate between them
+    for (const sy of [-1, 1]) { r.box([0, sy * 14, 15], [6, 5, 15], M.RUIN, null, { mf: p => Math.floor(p[2] / 5) % 2 && Math.abs(p[0] % 6) < 0.5 ? M.STONE : 0 }); r.cone([0, sy * 14, 30], [0, sy * 14, 40], 7, 0.6, M.IRON); }
+    r.box([0, 0, 10], [2, 9, 10], M.WOOD, null, { mf: p => Math.abs(p[1]) < 0.5 || Math.abs(p[2] - 6) < 0.6 || Math.abs(p[2] - 15) < 0.6 ? M.IRON : Math.abs(((p[1] + 20) % 3) - 1.5) < 0.25 ? M.BARK : 0 });
+    r.box([2.6, 0, 10.5], [0.8, 10, 1], M.IRON);   // the bar
+  }, [64, 72, 32, 56]),
   windmill: () => propSprite('windmill', r => {
     // a round stone mill with a thatched cap and four lattice sails
     r.cyl([0, 0, 0], [0, 0, 34], 13, M.STONE, { mf: p => Math.floor(p[2] / 4 + Math.atan2(p[1], p[0]) * 2) % 2 ? M.ROCK : 0 });
@@ -695,6 +851,10 @@ function buildOutdoor(back) {
       const sp = d.kind === 'bush' ? OUT.bush(d.seed, d.autumn) : d.kind === 'fern' ? OUT.fern(d.seed) : d.kind === 'shroom' ? OUT.shroom(d.seed) : OUT.log(d.yaw);
       props.push({ depth: d.fi + d.fj - 0.2, sp, wx: x, wy: y + 2, tile: tIdx(Math.floor(d.fi), Math.floor(d.fj)) });
       if (d.kind === 'bush') shadows.push([x + 3, y + 2, 9, 4]);
+    } else if (d.kind === 'grave' || d.kind === 'cart' || d.kind === 'stonewall') {
+      const [x, y] = iso(d.i + 0.5, d.j + 0.5), sp = d.kind === 'grave' ? OUT.grave(d.seed) : d.kind === 'cart' ? OUT.cart() : OUT.stonewall();
+      props.push({ depth: d.i + d.j + 1, sp, wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
+      shadows.push([x + 2, y + 2, 9, 4]);
     } else if (d.kind === 'rock' || d.kind === 'stump' || d.kind === 'menhir' || d.kind === 'hay') {
       const [x, y] = iso(d.i + 0.5, d.j + 0.5);
       const sp = d.kind === 'rock' ? OUT.rock(d.seed) : d.kind === 'stump' ? OUT.stump() : d.kind === 'hay' ? OUT.hay() : OUT.menhir(d.seed);
@@ -754,6 +914,7 @@ const NPC_LOOKS = {
   merchant: { team: 'purple', helm: 'none', chest: 'tunic', weapon: 'none', shield: 'none', hair: 'grey', beard: true },
   villager: [{ team: 'green', helm: 'none', chest: 'tunic', weapon: 'none', shield: 'none', hair: 'blond' },
     { team: 'blue', helm: 'none', chest: 'tunic', weapon: 'none', shield: 'none', hair: 'brown' }],
+  priest: { team: 'white', helm: 'hood', chest: 'robe_white', weapon: 'none', shield: 'none', hair: 'grey', beard: true },
   farmer: { team: 'tan', helm: 'none', chest: 'tunic', weapon: 'none', shield: 'none', hair: 'brown', beard: true },
 };
 let npcs = [];
@@ -768,7 +929,7 @@ function updateNpcs(dt) {
   for (const n of npcs) {
     n.clock += dt;
     const dh = Math.hypot(hero.fi - n.fi, hero.fj - n.fj);
-    if (n.role === 'merchant' || n.role === 'smith') {   // face the hero when close
+    if (n.role === 'merchant' || n.role === 'smith' || n.role === 'priest') {   // face the hero when close
       if (dh < 3) n.dir = dirFrom(hero.fi - n.fi, hero.fj - n.fj);
       continue;
     }
@@ -785,13 +946,14 @@ function updateNpcs(dt) {
     }
   }
 }
-const TRADER_ROLES = { merchant: 'TAP: POTION 25 GOLD', smith: 'TAP: SELL BAG LOOT' };
+const TRADER_ROLES = { merchant: 'TAP: POTION 25 GOLD', smith: 'TAP: SELL BAG LOOT', priest: 'TAP: TALK' };
 function nearTrader() {
   let best = null, bd = 1.6;
   for (const n of npcs) if (TRADER_ROLES[n.role]) { const d = Math.hypot(n.fi - hero.fi, n.fj - hero.fj); if (d < bd) { bd = d; best = n; } }
   return best;
 }
 function trade(n) {
+  if (n.role === 'priest') { say('THE OLD MINE TO THE NORTH IS FULL OF DIGGERS NOW', 26, 3); say('AND WORSE BELOW. WOLVES IN THE WEST WOODS, BANDITS ON THE FARM.', 26, 3); return; }
   if (n.role === 'merchant') {
     if (hero.gold < 25) { say('NOT ENOUGH GOLD', 23, 1.5); return; }
     if (hero.potions >= 9) { say('YOUR BELT IS FULL', 26, 1.5); return; }
@@ -829,13 +991,18 @@ function heroRing(wx, wy) {
   }
 }
 // where the way on is: the road out of town, the stone ring of the dungeon entrance
+function drawGateSign() {
+  const g = LV.gateSign; if (!g || Math.hypot(g[0] - hero.fi, g[1] - hero.fj) > 6) return;
+  const [x, y] = iso(g[0], g[1]); textC('THE ROAD SOUTH IS CLOSED', Math.round(x - camX), Math.round(y - camY) - 40, 22);
+}
 function drawExitLabel() {
+  drawGateSign();
   const s = LV.stairs; if (!s) return;
   if (!LV.outdoor) { drawStairsMark(s); return; }
   if (Math.hypot(s.i - hero.fi, s.j - hero.fj) > 9) return;
   const [x, y] = iso(s.i + 0.5, s.j + 0.5), sx = Math.round(x - camX), sy = Math.round(y - camY) - (s.road ? 40 : 30);
   if (sx < -60 || sx > W + 60 || sy < 0 || sy > H) return;
-  textC(s.road ? 'TO ' + AREA_NAMES.forest[LV.act % 3] : 'DUNGEON ENTRANCE', sx, sy, 51);
+  textC(s.road ? 'TO ' + AREA_NAMES.forest[LV.act % 3] : s.mine ? 'THE OLD MINE' : 'DUNGEON ENTRANCE', sx, sy, 51);
 }
 
 // dungeon stairs (round 25): a label when close, and once they have been seen, an arrow at the
