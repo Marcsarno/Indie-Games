@@ -616,7 +616,8 @@ function propSprite(name, build, size, yaw = 0) {
   const k = name + '|' + yaw;
   if (!propCache[k]) {
     const r = new Rig(); build(r); const sp = propCache[k] = renderRig(r, yaw, ...size);
-    if (WORLD2X) { scaleRig(r, SPX); const [w, h, ax, ay] = size; sp.sp2 = renderRig(r, yaw, w * SPX, h * SPX, ax * SPX, ay * SPX, 2); sp.sp2.px = SPX; sp.sp2.world2 = true; sp.sp2d = { ...sp.sp2, world2: false }; }   // the same rig at twice the detail
+    // trees and undergrowth stay 1x (the user liked them as they were, and they are most of the cost)
+    if (WORLD2X && !/^(pine|oak|autumn|bush|fern)/.test(name)) { scaleRig(r, SPX); const [w, h, ax, ay] = size; sp.sp2 = renderRig(r, yaw, w * SPX, h * SPX, ax * SPX, ay * SPX, 2); sp.sp2.px = SPX; sp.sp2.world2 = true; sp.sp2d = { ...sp.sp2, world2: false }; }   // the same rig at twice the detail
   }
   return propCache[k];
 }
