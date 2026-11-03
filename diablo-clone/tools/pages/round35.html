@@ -1,0 +1,64 @@
+<title>Monster Movement</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  /* layout: one narrow column, one section per part with its picture first */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul { margin: 0; max-width: 64ch; }
+  ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .frame img.smooth { image-rendering: auto; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .tw { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+</style>
+<main>
+  <header>
+    <h1>Monster Movement</h1>
+    <p class="lede">Dungeon of Bones, round 35, step 2 of making monsters fun to fight. They notice you, take turns, circle, stalk and burst, and look alive before they've seen you.</p>
+  </header>
+  <section>
+    <h2>Groups coming at you</h2>
+    <figure>
+      <div class="frame"><img src="groups.gif" alt="Side by side, before and after: a pack of five fallen, three wolves, then two skeletons with a spider wake and come at a standing hero. Before, they all walk straight in together. After, the first to see the hero hops with a '!', the rest join a beat later, two close in at a time while the others circle, the wolves weave, the spider dashes and stops" width="848" height="303"></div>
+      <figcaption>Left is before, right is now: a pack of fallen, wolves, then skeletons with a spider.</figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><img src="pack-frames.png" alt="Eight frames of the fallen pack, before on top: all five arrive at once and crowd the hero. After, below: they arrive one by one, two attack and the rest hold back at a distance" width="1560" height="306"></div>
+      <figcaption>The fallen pack every 0.4 seconds. Top: before. Bottom: now.</figcaption>
+    </figure>
+  </section>
+  <section>
+    <h2>What changed</h2>
+    <ul>
+      <li><strong>Noticing.</strong> The first monster to see you hops, shows a '!' and growls. The others nearby turn and join a beat later each, so the room comes alive in a ripple instead of all at once.</li>
+      <li><strong>Taking turns.</strong> In a pack, only two press the attack at a time. The rest circle you about two and a half tiles out, sidling with their eyes on you. After striking, a pack monster backs off for a moment and gives up its turn, so they rotate in and out. A pair, or one alone, just comes at you.</li>
+      <li><strong>Stalk and burst.</strong> Pack monsters and hounds move in a rhythm: a slow stalk, then a quick burst forward.
+        <ul>
+          <li>Hounds and wolves weave from side to side as they come.</li>
+          <li>Skeletons come on slow and steady.</li>
+          <li>Spiders skitter in short dashes with stops between.</li>
+        </ul>
+      </li>
+      <li><strong>Breaking off.</strong> When a small monster drops below 30% life, there's a 40% chance it breaks off and runs for about a second (it only happens once per monster).</li>
+      <li><strong>Before they see you.</strong> Monsters waiting in a room look around and shuffle about near where they stand, instead of standing frozen.</li>
+    </ul>
+    <p>Bosses, archers and casters are unchanged, and COMBAT: OLD on the title screen turns all of this off for comparison.</p>
+  </section>
+</main>

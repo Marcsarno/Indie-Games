@@ -297,6 +297,7 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
   if (e.state === 'sleep') wake(e);
   // round 29: how the monster takes it depends on what hit it
   const small = !e.def.unique && !e.def.elite, el = G.elem;
+  if (e.hp > 0 && !FEEL_OLD && small && !e.def.flee && !e.hurtFled && e.hp < e.maxHp * 0.3 && e.hp + dmg >= e.maxHp * 0.3 && Math.random() < 0.4) { e.hurtFled = true; e.panicT = Math.max(e.panicT || 0, 1.1); floater('!', e.fi, e.fj, e.def.chest + 16, 25); }   // round 35: badly hurt, some break off for a moment
   if (e.hp > 0) {
     if (el === 'fire') { e.burnT = 2.4; e.burnTick = 0.5; e.burnDmg = Math.max(1, Math.round(dmg * 0.15)); if (small && !e.def.flee && Math.random() < 0.5) e.panicT = Math.max(e.panicT || 0, 0.8); }
     if (el === 'heavy' && small && !(e.frozen > 0)) { e.downT = e.downT0 = 0.75; e.atk = -1; e.stun = 0; }
@@ -382,7 +383,17 @@ function killStreak() {
   }
   return G.streak;
 }
-function wake(e) { if (e.state !== 'sleep') return; e.state = 'hunt'; for (const o of enemies) if (o.state === 'sleep' && Math.hypot(o.fi - e.fi, o.fj - e.fj) < 4) o.state = 'hunt'; }
+// round 35: waking is a moment, not a switch. Whoever sees the hero starts with a hop, a '!' and a cry;
+// those near it turn and join a beat later each, so a room comes alive in a ripple
+function wake(e, seen = false) {
+  if (e.state !== 'sleep') return;
+  e.state = 'hunt';
+  if (!FEEL_OLD && !e.def.unique) { e.alertT = seen ? 0.5 : 0.15; e.alertT0 = e.alertT; if (seen) { floater('!', e.fi, e.fj, e.def.chest + 18, 51, 2); sfx('growl'); } }
+  for (const o of enemies) if (o.state === 'sleep' && Math.hypot(o.fi - e.fi, o.fj - e.fj) < (FEEL_OLD ? 4 : 5)) {
+    o.state = 'hunt';
+    if (!FEEL_OLD && !o.def.unique) { o.alertT = 0.25 + Math.random() * 0.55; o.alertT0 = o.alertT; }
+  }
+}
 // all = the heavy slam: hits everything in reach around the hero, not just in front
 function heroHitResolve(all = false, pow = 0) {
   const [fx, fy] = dirVec(hero.dir), reach = heroReach() + 0.1;
@@ -483,6 +494,7 @@ function update(dt) {
   G.trauma = Math.max(0, G.trauma - dt * 1.4);
   updateHero(dt);
   flowT -= dt; if (flowT <= 0) { flowT = 0.4; computeFlow(); }
+  assignEngage();
   for (const e of enemies) updateEnemy(e, dt);
   if (boss && !boss.introduced && boss.state !== 'sleep' && alive(boss)) { boss.introduced = true; G.bossIntro = 2.8; sfx('cry'); }   // the title card
   updateNpcs(dt); updateShrines();
@@ -661,7 +673,14 @@ function updateEnemy(e, dt) {
   if (e === boss && e.state !== 'sleep' && !hero.dead && updateBoss(e, dt * (e.slowT > 0 ? 0.6 : 1), d, dx, dy)) return;   // slowed bosses wind up their specials slower too
   if (e.state === 'sleep') {
     e.clip = 'idle';
-    if (!hero.dead && d < 7 && los(e.fi, e.fj, hero.fi, hero.fj)) wake(e);
+    if (!hero.dead && d < 7 && los(e.fi, e.fj, hero.fi, hero.fj)) { wake(e, true); return; }
+    idleLife(e, dt);
+    return;
+  }
+  if (e.alertT > 0) {   // noticing: a startled hop and a turn toward the hero
+    e.alertT -= dt; e.clip = 'idle'; e.dir = dirFrom(dx, dy);
+    const u = 1 - e.alertT / (e.alertT0 || 0.5); e.leapZ = u < 0.45 ? Math.sin(u / 0.45 * Math.PI) * 4 : 0;
+    if (e.alertT <= 0) e.leapZ = 0;
     return;
   }
   const atkClip = m.ranged === 'arrow' ? 'shoot' : m.ranged ? 'cast' : 'attack';
@@ -679,6 +698,7 @@ function updateEnemy(e, dt) {
     }
     if (ki < 0) {
       e.atk = -1; e.leapZ = 0; e.open = false; e.clip = 'idle';
+      if (!FEEL_OLD && m.pack && !m.ranged && !e.def.unique) { e.backT = 0.45 + Math.random() * 0.35; e.engageCd = G.t + 1.2 + Math.random() * 1.2; }   // round 35: hit and run
       e.cool = m.ranged ? 1.4 + Math.random() : FEEL_OLD ? 0.5 + Math.random() * 0.5 : 0.35 + Math.random() * 0.45;
       // elites and champions follow up at once with a second strike (no second wind-up) now and then
       if (!FEEL_OLD && !m.ranged && (e.def.elite || e.champ) && !e.chained && Math.random() < 0.5 && d < m.reach + swingReach(sw) + 0.3) { e.chained = true; e.atk = sw.slice(0, Math.max(0, sw.findIndex(k => k.mv > 0 || k.hit))).reduce((a, k) => a + k.ms, 0); e.hitDone = false; e.atkDir = null; }
@@ -749,6 +769,24 @@ function updateEnemy(e, dt) {
     circling = da > 0.5 && e.slotWait < 1.5;
     if (!circling) e.slotWait = 0;
   }
+  // round 35: a pack member that has just struck backs off, still facing the hero
+  if (!FEEL_OLD && e.backT > 0 && !fleeing) {
+    e.backT -= dt;
+    const l = d || 1, side = Math.sin(e.seed * 3.1) > 0 ? 0.5 : -0.5, sp = m.speed / 16 * 0.9 * dt * (e.slowT > 0 ? 0.5 : 1) * (e.rootT > 0 ? 0 : 1), f0 = e.fi, j0 = e.fj;
+    tryMove(e, (-dx / l - dy / l * side) * sp, (-dy / l + dx / l * side) * sp, 0.25);
+    e.walk += Math.hypot(e.fi - f0, e.fj - j0) / (FAMILIES[e.fam].gait || 0.32); e.clip = 'walk'; e.dir = dirFrom(dx, dy);
+    return;
+  }
+  // round 35: only a few pack members press in at once; the rest circle at a distance, waiting their turn
+  if (!FEEL_OLD && m.pack && !m.ranged && !fleeing && see && d < 6 && !e.mayEngage) {
+    const ring = 2.4 + (e.seed % 3) * 0.3, a = Math.atan2(-dy, -dx) + (e.seed & 1 ? 1 : -1) * 0.5 * dt * 4;   // drift round the ring
+    const tx = hero.fi + Math.cos(a) * ring - e.fi, tj = hero.fj + Math.sin(a) * ring - e.fj, tl = Math.hypot(tx, tj) || 1;
+    const sp = m.speed / 16 * 0.7 * dt * (e.slowT > 0 ? 0.5 : 1) * (e.rootT > 0 ? 0 : 1), f0 = e.fi, j0 = e.fj;
+    if (tl > 0.15) tryMove(e, tx / tl * Math.min(sp, tl), tj / tl * Math.min(sp, tl), 0.25);
+    const moved = Math.hypot(e.fi - f0, e.fj - j0);
+    e.walk += moved / (FAMILIES[e.fam].gait || 0.32); e.clip = moved > 0.002 ? 'walk' : 'idle'; e.dir = dirFrom(dx, dy);   // sidling, eyes on the hero
+    return;
+  }
   const lunge = m.ranged ? 0 : swingReach(FAMILIES[e.fam].swing(e)) * 0.8;   // a lunging attack starts from farther out
   if (!m.ranged && !fleeing && (d < m.reach || (e.cool <= 0 && d < m.reach + lunge && see)) && !circling) {
     e.dir = dirFrom(dx, dy); e.clip = 'idle';
@@ -772,7 +810,8 @@ function updateEnemy(e, dt) {
   else if (see && d < 3) mv = [dx / d, dy / d];
   else mv = flowDir(e.fi, e.fj);
   if (!mv || d > 18) { e.clip = 'idle'; return; }
-  const l = Math.hypot(mv[0], mv[1]) || 1, sp = m.speed / 16 * 1.2 * (e.speedK || 1) * (e.slowT > 0 ? 0.5 : 1) * dt;   // cone of cold slows to half
+  if (!FEEL_OLD && see && d > 1.6 && d < 8 && e.fam === 'hound' && !fleeing) { const l0 = Math.hypot(mv[0], mv[1]) || 1, w = Math.sin(G.t * 5 + e.seed) * 0.7; mv = [mv[0] / l0 - mv[1] / l0 * w, mv[1] / l0 + mv[0] / l0 * w]; }   // round 35: hounds weave in
+  const l = Math.hypot(mv[0], mv[1]) || 1, sp = m.speed / 16 * 1.2 * (e.speedK || 1) * (e.slowT > 0 ? 0.5 : 1) * (see && !fleeing ? pace(e, d, dt) : 1) * dt;   // cone of cold slows to half
   if (e.rootT > 0) { e.clip = 'idle'; return; }   // round 33: snared: can swing and shoot, can't walk
   const f0 = e.fi, j0 = e.fj;
   tryMove(e, mv[0] / l * sp, mv[1] / l * sp, 0.25);
@@ -815,6 +854,50 @@ function monsterStrikeStep(e, sw, ki, a0, d) {
   }
   e.leapZ = k.z ? Math.sin(Math.min(1, (e.atk - t0) / k.ms) * Math.PI) * k.z : 0;
   e.open = !!k.open;
+}
+// round 35: which pack members may press the attack this frame: at most two per pack family near the
+// hero, picked by who has waited longest (anyone already mid-attack keeps its place)
+function assignEngage() {
+  const near = enemies.filter(e => alive(e) && e.def.pack && !e.def.ranged && e.state !== 'sleep' && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 6);
+  for (const e of near) e.mayEngage = false;
+  const fams = {};
+  for (const e of near) (fams[e.fam] = fams[e.fam] || []).push(e);
+  for (const k in fams) {
+    const list = fams[k], busy = list.filter(e => e.atk >= 0), free = list.filter(e => e.atk < 0 && !(e.engageCd > G.t));
+    for (const e of busy) e.mayEngage = true;
+    free.sort((a, b) => (a.engageCd || 0) - (b.engageCd || 0) || Math.hypot(a.fi - hero.fi, a.fj - hero.fj) - Math.hypot(b.fi - hero.fi, b.fj - hero.fj));
+    for (let n = 0; n < free.length && n < 2 - busy.length; n++) free[n].mayEngage = true;
+    if (list.length <= 2) for (const e of list) e.mayEngage = true;   // a pair or a lone one just comes at you
+  }
+}
+// round 35: how each family moves when it has the hero in sight. Packs and hounds stalk and then
+// burst; skeletons come on slow and steady; spiders skitter in short dashes with stops between
+function pace(e, d, dt) {
+  if (FEEL_OLD || e.def.unique) return 1;
+  e.paceT = (e.paceT ?? Math.random()) - dt;
+  if (e.fam === 'skeleton') return 0.85;
+  if (e.fam === 'spider') { if (e.paceT <= 0) { e.paceOn = !e.paceOn; e.paceT = e.paceOn ? 0.22 + Math.random() * 0.12 : 0.18 + Math.random() * 0.25; } return e.paceOn ? 1.8 : 0.05; }
+  if (d < 2.2) return 1.1;
+  if (e.paceT <= 0) { e.paceOn = !e.paceOn; e.paceT = e.paceOn ? 0.35 + Math.random() * 0.35 : 0.5 + Math.random() * 0.6; }
+  return e.paceOn ? 1.55 : 0.6;
+}
+// round 35: monsters that haven't noticed the hero look around and shift about near where they stand
+function idleLife(e, dt) {
+  if (FEEL_OLD) return;
+  e.idleT = (e.idleT ?? 1 + Math.random() * 3) - dt;
+  if (e.wander) {
+    const [ti, tj] = e.wander, dx = ti - e.fi, dy = tj - e.fj, l = Math.hypot(dx, dy);
+    if (l < 0.08 || e.wanderT <= 0) { e.wander = null; e.clip = 'idle'; return; }
+    e.wanderT -= dt; const sp = e.def.speed / 16 * 0.35 * dt, f0 = e.fi, j0 = e.fj;
+    tryMove(e, dx / l * sp, dy / l * sp, 0.25); e.walk += Math.hypot(e.fi - f0, e.fj - j0) / (FAMILIES[e.fam].gait || 0.32); e.clip = 'walk'; e.dir = dirFrom(dx, dy);
+    return;
+  }
+  if (e.idleT > 0) return;
+  e.idleT = 2 + Math.random() * 3.5;
+  if (Math.random() < 0.55) { e.dir = (e.dir + (Math.random() < 0.5 ? 1 : 7) * (Math.random() < 0.3 ? 2 : 1)) % 8; return; }   // a look around
+  const a = Math.random() * 6.283, r = 0.4 + Math.random() * 0.6, h = e.home || [e.fi, e.fj];
+  const t = [h[0] + Math.cos(a) * r, h[1] + Math.sin(a) * r];
+  if (!blocked(t[0], t[1])) { e.wander = t; e.wanderT = 2; }
 }
 function separate() {
   const list = enemies.filter(alive);

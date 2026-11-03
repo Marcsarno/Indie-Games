@@ -335,6 +335,7 @@ function updateWarriorFx(dt) {
       let done = true;
       for (const e of h.caught) {
         if (!alive(e)) continue;
+        e.hurt = Math.max(e.hurt || 0, 0.1); e.backT = 0;   // held by the chain: no walking off while dragged
         const dx = hero.fi - e.fi, dy = hero.fj - e.fj, d = Math.hypot(dx, dy);
         if (d > 1.05) {
           done = false; const st = Math.min(d - 1, 14 * dt); tryMove(e, dx / d * st, dy / d * st, 0.25); e.kb = [0, 0]; e.clip = 'hit';
