@@ -65,6 +65,7 @@ const RECIPES = {
   missile: () => { tone('sine', vary(880), 520, 0.09, 0.16); noise(0.06, 0.1, 'bandpass', 3000, 1500, 2); },
   boom: () => { tone('sine', vary(110), 35, 0.4, 0.8); noise(0.45, 0.5, 'lowpass', 1400, 120); },
   frost: () => { noise(0.35, 0.28, 'highpass', 5000, 2000, 0.8); tone('triangle', 1600, 900, 0.25, 0.12); },
+  blink: () => { tone('sine', 400, 1400, 0.12, 0.14); noise(0.15, 0.12, 'bandpass', 1500, 4000, 1.5); },
   meteor: () => { tone('sine', 1100, 260, 0.8, 0.12); noise(0.8, 0.14, 'bandpass', 600, 2400, 0.8); },
   crackle: v => noise(0.02 + Math.random() * 0.03, 0.03 * v, 'highpass', 2500, 1500, 0.7),
 };

@@ -1,4 +1,4 @@
-// the mage against a pack: missiles held, fireball, frost nova, then a meteor. node magecap.cjs <gameDir> <out.json>
+// the mage against a pack: missiles held, fireball, cone of cold, a meteor, then a blink. node magecap.cjs <gameDir> <out.json>
 const { chromium } = require('playwright'); const fs = require('fs');
 (async () => {
   const [dir, out] = process.argv.slice(2);
@@ -21,6 +21,7 @@ const { chromium } = require('playwright'); const fs = require('fs');
     hero.mana = STAT.maxMana; useSkill(0); step(40);
     useSkill(1); step(50);
     useSkill(2); step(80);
+    input.mx = -1; input.my = 0.3; useSkill(3); input.mx = 0; input.my = 0; step(30);
     return { fr, W, H };
   });
   fs.writeFileSync(out, JSON.stringify(res)); if (errs.length) console.log('ERR', errs.join('\n'));

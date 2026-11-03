@@ -1,0 +1,100 @@
+<title>Mage Polish</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 640px; margin: 0 auto; display: grid; gap: 32px; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0 0 8px; letter-spacing: 0.05em; }
+  p { margin: 0; max-width: 62ch; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 10px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .labels { display: grid; grid-template-columns: 1fr 1fr; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ember); }
+  .labels3 { display: grid; grid-template-columns: 1fr 1fr 1fr; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ember); }
+  .toggle { display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: 600 0.85rem var(--body); color: var(--bone); background: var(--panel); border: 1px solid var(--rule); padding: 6px 12px; cursor: pointer; }
+  button[aria-pressed="true"] { border-color: var(--ember); color: var(--ember); }
+  button:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+  ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; }
+  .note { background: var(--panel); border-left: 3px solid var(--ember); padding: 10px 14px; display: grid; gap: 8px; }
+</style>
+<main>
+  <header>
+    <h1>Mage Polish</h1>
+    <p class="lede">Dungeon of Bones, round 19: Cone of Cold, Blink, the robe walk, three-pose casting, spell effects, and a resolution test.</p>
+  </header>
+
+  <section>
+    <h2>The new spell set in a fight</h2>
+    <figure>
+      <div class="toggle" role="group" aria-label="Spell fight playback speed"><button id="f-real" aria-pressed="true">Game speed</button><button id="f-slow" aria-pressed="false">Slow</button></div>
+      <div class="frame"><img id="fight" src="mage-spells.gif" alt="The mage fights a pack: magic missiles, a fireball, a cone of frost that freezes the enemies in front of him, a meteor, then a blink away that leaves a blue afterimage" width="440" height="340"></div>
+      <figcaption>Missiles held, then fireball, Cone of Cold, meteor, and a blink to the left.</figcaption>
+    </figure>
+    <ul>
+      <li><strong>Cone of Cold</strong> (level 2, replaces Frost Nova): a wedge of frost about 4 tiles long in front of the mage. Ordinary monsters freeze solid for 3 seconds. Bosses, elites and champions are slowed instead: half speed, slower attacks, and slower boss specials, for 3 to 4 seconds. Slowed enemies sparkle with frost and show a light ice tint.</li>
+      <li><strong>Blink</strong> (level 4, the fourth button): the mage vanishes and reappears up to 4.5 tiles away, in the direction you're pushing the stick (or the way he faces), stopping short of walls. A streak of light joins the two spots and a blue afterimage dissolves where he stood. 8 mana, every 3 seconds.</li>
+      <li><strong>Spell effects</strong>: a star flashes at the staff's orb as each spell leaves. Missiles have a white-hot core and a twinkling tail, and burst into a ring of sparks on impact. The fireball is a flickering ball of flame trailing smoke. Explosions leave rising smoke.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Walking and casting in the game</h2>
+    <figure>
+      <div class="toggle" role="group" aria-label="Walk playback speed"><button id="w-real" aria-pressed="true">Game speed</button><button id="w-slow" aria-pressed="false">Slow</button></div>
+      <div class="labels"><span>Before</span><span>After</span></div>
+      <div class="frame"><img id="walk" src="walk-cast.gif" alt="The hooded mage walking around the town well in four directions, then casting missiles and a meteor; old version on the left, new on the right" width="584" height="270"></div>
+      <figcaption>Walking in four directions, then holding attack, then a meteor.</figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><img src="walk-ba.png" alt="Walk frames from the side and the front, before on top and after below" width="896" height="618"></div>
+      <figcaption>Top two rows: before. Bottom two: now (side view, then front view, eight frames each).</figcaption>
+    </figure>
+    <ul>
+      <li>The robe was one stiff tube, and a single leg poked out under it at a time like a peg leg. Now it's two parts: the top hangs from the waist to the knees, and the lower skirt flares out to the hem. The leading knee pushes the hem, it trails behind as he moves, and it swings side to side with each step.</li>
+      <li>In a robe he no longer runs the warrior's high-kneed jog: the stride is shorter and lower, with less bounce, so it reads as a quick glide.</li>
+      <li>The staff swings with the walk like a walking stick.</li>
+    </ul>
+    <figure>
+      <div class="frame"><img src="cast-frames.png" alt="Casting frames from the side, the front and the back: gather, release and follow-through, then the meteor's gather, reach to the sky and hold" width="672" height="456"></div>
+      <figcaption>Each row: gather, release, follow-through, then the meteor's three poses. Views from the side, the front and behind.</figcaption>
+    </figure>
+    <ul>
+      <li>A cast used to be one held pose. Now it's three: <strong>gather</strong> (staff drawn back, weight back), <strong>release</strong> (he steps in and thrusts the staff at the target, the off hand opens with a glow), then <strong>follow-through</strong>. The spell leaves on the release frame, 0.06 s after the tap.</li>
+      <li>For the meteor, he raises the staff to the sky instead.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Is it too pixelated? A resolution test</h2>
+    <figure>
+      <div class="labels3"><span>Now (1x)</span><span>1.5x detail</span><span>2x detail</span></div>
+      <div class="frame"><img src="res.png" alt="The same five characters, the hooded mage, the mage casting, the plate knight, a skeleton and the ogre warlord, rendered at current detail, one and a half times and twice the detail, shown at the same size" width="2560" height="2624"></div>
+      <figcaption>The same models, rendered with 1x, 1.5x and 2x as many pixels and shown at the same size.</figcaption>
+    </figure>
+    <div class="note">
+      <p>The game draws a 270 by 480 picture and your phone blows it up about 4 times, so the hero is only about 40 pixels tall. That's why he looks chunky next to the ogre, which is drawn with several times as many pixels, and the trees, which are big. It's a choice, not a limit: every sprite is rendered from 3D shapes, so the same models can be drawn with more pixels. Above is the same art at 1.5x and 2x. Curves get rounder, the outline gets thinner and the face cleaner.</p>
+      <p>Going to 1.5x or 2x means the whole game (floors, walls, trees, effects, the HUD) is drawn at that resolution, so the look stays consistent. It costs speed: about 2.25 times the pixels at 1.5x and 4 times at 2x. I'd expect 1.5x to stay smooth on a recent phone, and 2x to need more work on speed. It's also a bigger change than a polish pass: every size and position in the game has to scale.</p>
+    </div>
+  </section>
+</main>
+<script>
+  const pair = (img, base, real, slow) => {
+    const go = s => { document.getElementById(img).src = base + (s ? '-slow.gif' : '.gif');
+      document.getElementById(slow).setAttribute('aria-pressed', String(s)); document.getElementById(real).setAttribute('aria-pressed', String(!s)); };
+    document.getElementById(real).addEventListener('click', () => go(false));
+    document.getElementById(slow).addEventListener('click', () => go(true));
+  };
+  pair('fight', 'mage-spells', 'f-real', 'f-slow');
+  pair('walk', 'walk-cast', 'w-real', 'w-slow');
+</script>

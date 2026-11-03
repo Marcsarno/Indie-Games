@@ -166,9 +166,13 @@ function bipedJoints(B, st) {
     footL = [B.stride * 0.8, -B.hipW - 0.4, 0]; footR = [-B.stride * 0.7, B.hipW + 0.4, B.lift * 0.3];
     bob = -1.6; lean = 0.38; twist = 0.42;
   }
-  if (clip === 'channel') {   // casting: weight back, off hand thrust toward the target
-    footL = [B.stride * 0.45, -B.hipW - 0.4, 0]; footR = [-B.stride * 0.45, B.hipW + 0.4, 0];
-    bob = -0.6; lean = -0.06; twist = 0.36;
+  if (clip === 'channel') {   // casting, 3 frames: gather (weight back, coiled), release (stepping
+    // into it, leaning at the target), follow-through; frames 3-5 are the meteor's, reaching skyward
+    const ph = f % 3, sky = f >= 3;
+    footL = [B.stride * (ph === 1 ? 0.75 : 0.45), -B.hipW - 0.4, 0]; footR = [-B.stride * 0.5, B.hipW + 0.4, 0];
+    if (ph === 0) { bob = sky ? 0.2 : -0.3; lean = sky ? -0.16 : -0.12; twist = 0.5; }
+    else if (ph === 1) { bob = -1.3; lean = sky ? 0.02 : 0.16; twist = -0.12; }
+    else { bob = -0.8; lean = 0.06; twist = 0.1; }
   }
   if (clip === 'stop') {   // planting the front foot and sitting back onto it
     footL = [B.stride * 0.7, -B.hipW - 0.3, 0]; footR = [-B.stride * 0.45, B.hipW + 0.3, B.lift * 0.25];
@@ -233,6 +237,11 @@ const HERO_B = { hipH: 11.5, thigh: 6.2, shin: 5.6, ankle: 1.3, spine: 6, shW: 5
 const CAPE_M = M.CLOTH_GREEN;   // a green cloak, like the heroes in the references
 const HERO_HK = 1.5, HERO_BK = 0.8;
 const HERO_GAIT = gaitFrameTiles(HERO_B);
+// in a robe: a lighter, gliding stride (lower knees, less bounce, a shorter flight) so the legs
+// don't kick out under the skirt
+const MAGE_B = Object.assign({}, HERO_B, { stride: 5.6, lift: 2.4, duty: 0.4, bob: 0.6, sway: 0.45, runLean: 0.12, counter: 0.26 });
+const MAGE_GAIT = gaitFrameTiles(MAGE_B);
+const robed = eq => !!eq.chest && eq.chest.startsWith('robe');
 const TEAM = { red: M.CLOTH_RED, blue: M.CLOTH_BLUE, green: M.CLOTH_GREEN, tan: M.CLOTH_TAN, purple: M.CLOTH_PURPLE, white: M.CLOTH_WHITE };
 // townsfolk share the hero's rig: hair color, a beard, or no weapon at all
 const HAIRM = { orange: M.HAIR_O, brown: M.HAIR, blond: M.STRAWM, grey: M.CLOTH_WHITE };
@@ -275,7 +284,7 @@ function weaponSwing(eq, combo = 0) {
 const WEAPON_LEN = { sword: 21, axe: 16, mace: 16, flail: 17, greatsword: 27 };
 
 function heroRig(eq, st) {
-  const B = HERO_B, J = bipedJoints(B, st), r = new Rig();
+  const B = robed(eq) ? MAGE_B : HERO_B, J = bipedJoints(B, st), r = new Rig();
   const team = TEAM[eq.team] || M.CLOTH_RED;
   const plate = eq.chest === 'plate' || eq.chest === 'darkplate', chain = eq.chest === 'chain', brig = eq.chest === 'brigandine';
   const PL = eq.chest === 'darkplate' ? M.DSTEEL : M.PLATE;
@@ -296,10 +305,19 @@ function heroRig(eq, st) {
   // hips, belt and tabard
   r.ell(J.pelvis, [3.4 + bulk, 4.2 + bulk * 1.4, 3.2 + bulk * 0.4], plate ? PL : chain ? M.CHAIN : robe ? robeM : M.CLOTH_TAN);
   if (robe) {   // the skirt: a flared cone from the waist to the shins whose hem follows the feet, gold-trimmed
-    const top = V.mad(J.pelvis, up, 1.5), mid = V.mul(V.add(J.ankL, J.ankR), 0.5);
-    const hem = V.add(mid, V.mul(up, 2.6 + Math.max(0, Math.min(J.ankL[2], J.ankR[2]) - mid[2]) * 0.3));
-    const ax = V.norm(V.sub(hem, top)), Lh = V.len(V.sub(hem, top));
-    r.cone(top, hem, 4.4, 6.4, robeM, { mf: p => Math.abs(V.dot(V.sub(p, top), ax) - (Lh - 2.4)) < 0.45 ? M.GOLD : 0 });   // a gold band just above the hem
+    // upper skirt hangs from the waist to the knees; the lower skirt flares to the hem, which is
+    // pushed by the leading knee, trails behind when he moves and swings side to side with the stride
+    const top = V.mad(J.pelvis, up, 1.5), kneeMid = V.mul(V.add(J.kneeL, J.kneeR), 0.5);
+    const lead = Math.max(V.dot(V.sub(J.kneeL, J.pelvis), fwd), V.dot(V.sub(J.kneeR, J.pelvis), fwd));
+    const moving = st.clip === 'walk' || st.clip === 'go', trail = moving ? -1.4 : st.clip === 'stop' ? 1.0 : 0;
+    const knee = V.add(V.add([kneeMid[0], kneeMid[1], kneeMid[2]], V.mul(fwd, lead * 0.35)), V.mul(sideR, J.swingArm * 0.6));
+    const hemZ = Math.min(J.ankL[2], J.ankR[2]) + 1.9;
+    const hem = V.add(V.add([knee[0], knee[1], hemZ], V.mul(fwd, trail + lead * 0.15)), V.mul(sideR, J.swingArm * 0.9));
+    const ax = V.norm(V.sub(hem, knee)), Lh = V.len(V.sub(hem, knee));
+    r.group(() => {
+      r.cone(top, knee, 4.4, 5.4, robeM);
+      r.cone(knee, hem, 5.4, 6.9, robeM, { mf: p => Math.abs(V.dot(V.sub(p, knee), ax) - (Lh - 1.3)) < 0.45 ? M.GOLD : 0 });   // gold band near the hem
+    });   // a gold band just above the hem
   }
   const belt = V.mad(J.pelvis, up, 3.0);
   if (!plate) { r.ell(belt, [3.8 + bulk * 1.4, 4.6 + bulk * 1.6, 1.1], M.LEATHER, frameAlong(fwd, up)); r.sph(V.mad(belt, fwd, 3.8 + bulk * 1.4), 1.0, M.GOLD); }
@@ -350,12 +368,15 @@ function heroRig(eq, st) {
   const bladeA = k => k.a + (k.ck || 0);   // the blade leads or trails the arm
   let handR, bd;
   const staff = eq.weapon.startsWith('staff');
-  if (staff && st.clip === 'channel') {   // casting: the staff thrust up and forward at the target
-    handR = V.add(V.add(J.shR, V.mul(fwd, 5)), V.add(V.mul(up, -3.5), V.mul(sideR, 1.8)));
-    bd = V.norm(V.add(V.mul(fwd, 0.55), up));
-  } else if (staff && st.clip !== 'death') {   // carried upright at the side, swaying a little with the walk
-    handR = V.add(V.add(J.shR, V.mul(fwd, 2.0 + J.swingArm * 1.2)), V.add(V.mul(up, -7.5), V.mul(sideR, 3.4)));
-    bd = V.norm(V.add(V.add(V.mul(fwd, 0.04 + J.swingArm * 0.08), up), V.mul(sideR, 0.2)));   // leaning out, clear of the face
+  if (staff && st.clip === 'channel') {   // casting: gather (staff drawn back), release (thrust at the target), follow-through
+    const ph = st.f % 3, sky = st.f >= 3;
+    if (ph === 0) { handR = V.add(V.add(J.shR, V.mul(fwd, -0.5)), V.add(V.mul(up, sky ? -1 : -4.5), V.mul(sideR, 2.6))); bd = V.norm(V.add(V.mul(fwd, -0.45), up)); }
+    else if (ph === 1 && sky) { handR = V.add(V.add(J.shR, V.mul(fwd, 2)), V.add(V.mul(up, 2.5), V.mul(sideR, 1.2))); bd = V.norm(V.add(V.mul(fwd, 0.25), up)); }   // raised to the sky
+    else if (ph === 1) { handR = V.add(V.add(J.shR, V.mul(fwd, 6.5)), V.add(V.mul(up, -2.5), V.mul(sideR, 1.0))); bd = V.norm(V.add(V.mul(fwd, 0.95), up)); }   // thrust at the target
+    else { handR = V.add(V.add(J.shR, V.mul(fwd, 4.5)), V.add(V.mul(up, -3.5), V.mul(sideR, 1.8))); bd = V.norm(V.add(V.mul(fwd, 0.5), up)); }
+  } else if (staff && st.clip !== 'death') {   // carried at the side, swinging with the walk like a walking stick
+    handR = V.add(V.add(J.shR, V.mul(fwd, 2.0 + J.swingArm * 1.8)), V.add(V.mul(up, -7.5 + Math.abs(J.swingArm) * 0.6), V.mul(sideR, 3.4)));
+    bd = V.norm(V.add(V.add(V.mul(fwd, 0.04 + J.swingArm * 0.18), up), V.mul(sideR, 0.2)));   // leaning out, clear of the face
   } else if (sw) {
     handR = V.mad(pivot, inPlane(sw.a), sw.r || 6.5); bd = inPlane(bladeA(sw));
   } else if (st.clip === 'bash' || st.clip === 'channel') {   // weapon held back and low, out of the way
@@ -383,7 +404,11 @@ function heroRig(eq, st) {
   let handL = V.add(V.add(J.shL, V.mul(fwd, 5.5 + offSw)), V.add(V.mul(up, -7.5 + Math.max(0, offSw) * (eq.shield === 'none' ? 0.7 : 0.3)), V.mul(sideR, -0.5)));
   if (st.clip === 'death') handL = V.add(J.shL, [2, -3, -9]);
   if (st.clip === 'bash') handL = V.add(V.add(J.shL, V.mul(fwd, 7.5)), V.add(V.mul(up, -3), V.mul(sideR, 1.5)));   // shield driven forward
-  if (st.clip === 'channel') handL = V.add(V.add(J.shL, V.mul(fwd, 8)), V.add(V.mul(up, -0.5), V.mul(sideR, 1.2)));   // open hand at the target
+  if (st.clip === 'channel') {   // open hand: drawn in on the gather, thrust at the target on the release
+    const ph = st.f % 3;
+    handL = ph === 0 ? V.add(V.add(J.shL, V.mul(fwd, 3)), V.add(V.mul(up, -5), V.mul(sideR, 2.5)))
+      : V.add(V.add(J.shL, V.mul(fwd, ph === 1 ? 8.5 : 7)), V.add(V.mul(up, st.f >= 3 ? 1.5 : -0.5), V.mul(sideR, 1.2)));
+  }
   if (sw) {
     if (list.twoHand && (eq.shield === 'none' || eq.weapon === 'greatsword')) handL = V.mad(handR, bd, -2.6);   // lower on the haft
     else {   // counterbalance: the off arm reaches toward the target in the wind-up, pulls back on the strike
@@ -394,7 +419,7 @@ function heroRig(eq, st) {
   const aL = armTo(J, J.shL, handL, B, -1);
   r.cone(J.shL, aL.el, ar[0], ar[1], sleeve); r.cone(aL.el, aL.hand, ar[1], ar[2], foreM);
   r.sph(aL.hand, ar[3], handM);
-  if (st.clip === 'channel') r.sph(V.mad(aL.hand, fwd, 2.2), 1.6, M.HOLY, { noShadow: true });
+  if (st.clip === 'channel' && st.f % 3 !== 0) r.sph(V.mad(aL.hand, fwd, 2.2), st.f % 3 === 1 ? 1.9 : 1.4, staff ? M.ARCANE : M.HOLY, { noShadow: true });
   if (plate) for (const a of [aR, aL]) r.sph(a.el, 2.2, PL);   // elbow cops
   // pauldrons: big rounded plates with a bright lower rim and a rivet (plate); pads otherwise
   if (eq.chest !== 'tunic' && !robe) for (const [sh, sd] of [[J.shL, -1], [J.shR, 1]]) {

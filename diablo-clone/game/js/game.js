@@ -18,7 +18,7 @@ const params = new URLSearchParams(location.search);
 const SHAKE = params.get('shake') !== '0';
 
 // ---------------------------------------------------------------- state
-const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0, meteors: [], flashes: [], blasts: [] };
+const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0, meteors: [], flashes: [], blasts: [], cones: [], ghosts: [], sparks: [] };
 const hero = {
   fam: 'hero', fi: 0, fj: 0, dir: 1, clip: 'idle', clock: 0, walk: 0, runT: 0, goT: 0, stopT: 0, atk: -1, combo: 0, swingEnd: -9, hitDone: false, stop: 0, flash: 0,
   hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, hurtT: 0, cast: -1,
@@ -65,7 +65,7 @@ function startLevel(level, seed) {
   enemies = LV.spawns.map((s, n) => makeEnemy(s.id, s.fi, s.fj, n));
   { const R = rng(seed ^ 0x5bd1); for (const e of enemies) if (!e.def.unique && R() < champChance(LV.diff)) makeChampion(e, R); }
   makeNpcs(); resetSkills(); setupBoss();
-  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = [];
+  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = [];
   updateFov(hero.fi, hero.fj);
   flowT = 0; computeFlow();
   warmStep(1e9, prewarm());   // idle poses + the hero's walk now, behind the level fade; the rest during play
@@ -100,7 +100,7 @@ function prewarm() {
   for (const [k, v] of fams) if (near.has(k)) for (let d = 0; d < 8; d++) warmQueue.push([v[0], v[1], d, 'idle', 0]);
   // the hero's walk is needed at once; monsters' walks fill in during play
   for (let d = 0; d < 8; d++) for (let f = 0; f < 8; f++) warmQueue.push(['hero', hero.look, d, 'walk', f]);
-  if (hero.cls === 'mage') for (let d = 0; d < 8; d++) warmQueue.push(['hero', hero.look, d, 'channel', 0]);
+  if (hero.cls === 'mage') for (let d = 0; d < 8; d++) for (let f = 0; f < 6; f++) warmQueue.push(['hero', hero.look, d, 'channel', f]);
   const now = warmQueue.length;
   for (const [k, v] of fams) if (k !== 'hero' && !near.has(k)) for (let d = 0; d < 8; d++) warmQueue.push([v[0], v[1], d, 'idle', 0]);
   for (const [k, v] of fams) if (k !== 'hero') for (let d = 0; d < 8; d++) for (let f = 0; f < 8; f++) warmQueue.push([v[0], v[1], d, 'walk', f]);
@@ -220,7 +220,7 @@ function heroCast() {
   let best = null, bd = 9;
   for (const e of enemies) { if (!alive(e) || LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] < 0.3) continue; const d = Math.hypot(e.fi - hero.fi, e.fj - hero.fj); if (d < bd && los(hero.fi, hero.fj, e.fi, e.fj)) { bd = d; best = e; } }
   if (best) hero.dir = dirFrom(best.fi - hero.fi, best.fj - hero.fj);
-  hero.mana -= 6; hero.cast = 0.25; sfx('bolt');
+  hero.mana -= 6; hero.cast = 0.25; hero.castAge = CAST_RELEASE; hero.castKind = 'bolt'; sfx('bolt');
   const [dx, dy] = best ? [best.fi - hero.fi, best.fj - hero.fj] : dirVec(hero.dir), l = Math.hypot(dx, dy) || 1;
   projectiles.push({ kind: 'holy', fi: hero.fi + dx / l * 0.6, fj: hero.fj + dy / l * 0.6, vx: dx / l * 8, vy: dy / l * 8, z: 20, life: 1.4, owner: 'hero', dmg: [Math.round((STAT.dmg[0] * 0.9 + 3) * (hero.buff > 0 ? 1.4 : 1)), Math.round((STAT.dmg[1] * 0.9 + 5) * (hero.buff > 0 ? 1.4 : 1))] });
 }
@@ -387,7 +387,7 @@ function unequip(slot) {
   if (!hero.equip[slot] || hero.bag.length >= BAG_SIZE) return;
   hero.bag.push(hero.equip[slot]); hero.equip[slot] = null; recalcHero(); prewarmHero();
 }
-function prewarmHero() { for (let d = 0; d < 8; d++) { warmQueue.unshift([ 'hero', hero.look, d, 'idle', 0]); if (hero.cls === 'mage') warmQueue.push(['hero', hero.look, d, 'channel', 0]); for (let f = 0; f < 8; f++) warmQueue.push(['hero', hero.look, d, 'walk', f]); warmQueue.push(['hero', hero.look, d, 'go', 0], ['hero', hero.look, d, 'stop', 0]); } }
+function prewarmHero() { for (let d = 0; d < 8; d++) { warmQueue.unshift([ 'hero', hero.look, d, 'idle', 0]); if (hero.cls === 'mage') for (let f = 0; f < 6; f++) warmQueue.push(['hero', hero.look, d, 'channel', f]); for (let f = 0; f < 8; f++) warmQueue.push(['hero', hero.look, d, 'walk', f]); warmQueue.push(['hero', hero.look, d, 'go', 0], ['hero', hero.look, d, 'stop', 0]); } }
 
 // ---------------------------------------------------------------- update
 const input = { mx: 0, my: 0, attack: false, keys: new Set() };
@@ -456,7 +456,7 @@ function updateHero(dt) {
     // from a standstill: one push-off pose, then the cycle starts on the left foot's plant
     if (hero.runT === 0) { hero.walk = 0; hero.goT = 0.08; }
     hero.runT += dt; hero.stopT = 0;
-    hero.walk += moved / HERO_GAIT;   // frames advance with distance, so the planted foot stays put
+    hero.walk += moved / (robed(hero.look) ? MAGE_GAIT : HERO_GAIT);   // frames advance with distance, so the planted foot stays put
     // turn through the in-between facings instead of snapping (a reversal takes ~0.1 s)
     // from a standstill he faces the new way at once
     const want = dirFrom(gi, gj);
@@ -474,7 +474,11 @@ function updateHero(dt) {
   if (hero.dash > 0) hero.clip = 'bash';
   if (hero.stop > 0) { hero.stop -= dt; return; }
   hero.clock += dt;
-  if (hero.cast >= 0) { hero.cast -= dt; hero.castAge = (hero.castAge || 0) + dt; hero.clip = 'channel'; if (hero.cast < 0) { hero.cast = -1; hero.clip = 'idle'; } }
+  if (hero.cast >= 0) {
+    hero.cast -= dt; hero.castAge = (hero.castAge || 0) + dt; hero.clip = 'channel';
+    if (hero.castFn && hero.castAge >= CAST_RELEASE) { const f = hero.castFn; hero.castFn = null; f(); }   // the spell leaves on the release frame
+    if (hero.cast < 0) { hero.cast = -1; hero.clip = 'idle'; }
+  }
   if (hero.atk >= 0) {
     hero.clip = ATTACK_CLIPS[hero.combo] || 'attack';
     hero.atk += dt * 1000 * (1 + ((STAT.atkSpeed || 0) + (hero.frenzy > 0 ? 50 : 0)) / 100);
@@ -526,6 +530,7 @@ function updateEnemy(e, dt) {
   e.flash = Math.max(0, e.flash - dt); if (e.tint > 0 && e.flash <= 0) e.tint -= dt;
   if (e.stop > 0) { e.stop -= dt; return; }
   e.clock += dt; e.cool -= dt;
+  if (e.slowT > 0) { e.slowT -= dt; if (Math.random() < dt * 5) { const [x, y] = screenOf(e); pspawn(3, x + (Math.random() - 0.5) * 14, y, 4 + Math.random() * e.def.chest, 0, 0, 8, 0.5, 118); } }
   if (Math.abs(e.kb[0]) + Math.abs(e.kb[1]) > 0.01) {
     tryMove(e, e.kb[0] * dt, e.kb[1] * dt, 0.25);
     const k = Math.exp(-14 * dt); e.kb[0] *= k; e.kb[1] *= k;
@@ -543,7 +548,7 @@ function updateEnemy(e, dt) {
     return;
   }
   const m = e.def, dx = hero.fi - e.fi, dy = hero.fj - e.fj, d = Math.hypot(dx, dy);
-  if (e === boss && e.state !== 'sleep' && !hero.dead && updateBoss(e, dt, d, dx, dy)) return;
+  if (e === boss && e.state !== 'sleep' && !hero.dead && updateBoss(e, dt * (e.slowT > 0 ? 0.6 : 1), d, dx, dy)) return;   // slowed bosses wind up their specials slower too
   if (e.state === 'sleep') {
     e.clip = 'idle';
     if (!hero.dead && d < 7 && los(e.fi, e.fj, hero.fi, hero.fj)) wake(e);
@@ -551,7 +556,7 @@ function updateEnemy(e, dt) {
   }
   const atkClip = m.ranged === 'arrow' ? 'shoot' : m.ranged ? 'cast' : 'attack';
   if (e.atk >= 0) {
-    e.clip = atkClip; e.atk += dt * 1000;
+    e.clip = atkClip; e.atk += dt * 1000 * (e.slowT > 0 ? 0.55 : 1);
     const sw = FAMILIES[e.fam].swing(e), ki = swingKey(sw, e.atk);
     if (ki >= 0 && sw[ki].hit && !e.hitDone) {
       e.hitDone = true;
@@ -594,7 +599,7 @@ function updateEnemy(e, dt) {
   else if (see && d < 3) mv = [dx / d, dy / d];
   else mv = flowDir(e.fi, e.fj);
   if (!mv || d > 18) { e.clip = 'idle'; return; }
-  const l = Math.hypot(mv[0], mv[1]) || 1, sp = m.speed / 16 * 1.2 * (e.speedK || 1) * dt;
+  const l = Math.hypot(mv[0], mv[1]) || 1, sp = m.speed / 16 * 1.2 * (e.speedK || 1) * (e.slowT > 0 ? 0.5 : 1) * dt;   // cone of cold slows to half
   const f0 = e.fi, j0 = e.fj;
   tryMove(e, mv[0] / l * sp, mv[1] / l * sp, 0.25);
   e.walk += Math.hypot(e.fi - f0, e.fj - j0) / (FAMILIES[e.fam].gait || 0.32);
@@ -654,6 +659,8 @@ function updateProjectiles(dt) {
     }
     const [x, y] = iso(p.fi, p.fj);
     if (p.kind !== 'arrow' && Math.random() < 0.7) pspawn(3, x, y, p.z, (Math.random() - 0.5) * 8, 0, 4 + Math.random() * 8, 0.35, p.kind === 'holy' ? 50 : p.kind === 'missile' ? 39 : 16);
+    if (p.kind === 'hfire' && Math.random() < 0.6) pspawn(3, x + (Math.random() - 0.5) * 6, y, p.z + 2, (Math.random() - 0.5) * 6, 0, 10 + Math.random() * 8, 0.5, Math.random() < 0.5 ? 4 : 5);   // smoke
+    if (p.kind === 'missile' && p.life <= 0) for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283; pspawn(4, x, y, p.z, Math.cos(a) * 45, Math.sin(a) * 22, 0, 0.16, k % 2 ? 40 : 27); }   // a ring of sparks on impact
     if (p.life <= 0 && p.kind === 'holy') sfx('boltHit');
     if (p.life <= 0 && p.boom && !p.boomed) { p.boomed = true; explodeAt(p.fi - p.vx * 0.03, p.fj - p.vy * 0.03, p.boom.r, p.boom.k, p.boom.pow); }
     if (p.life <= 0 && p.kind !== 'arrow' && !p.boom) burst(2, x, y, p.z, p.kind === 'missile' ? 7 : 12, 60, p.kind === 'holy' ? 51 : p.kind === 'missile' ? 40 : 17);
@@ -687,17 +694,19 @@ function frameOf(e) {
   if (e === hero && hero.dash > 0) return 0;
   if (e.clip === 'idle') return Math.floor(pt / 0.2) % 4;
   if (e.clip === 'walk') return Math.floor(e.walk) % 8;
+  if (e === hero && e.clip === 'channel') { const a = hero.castAge || 0, ph = a < CAST_RELEASE ? 0 : a < 0.19 ? 1 : 2; return (hero.castKind === 'meteor' ? 3 : 0) + ph; }
   if (e.clip === 'attack2' || e.clip === 'attack3') return Math.max(0, swingKey(FAMILIES[e.fam].combo(e, atkIndex(e.clip)), e.atk));
   if (e.clip === 'attack' || e.clip === 'shoot' || e.clip === 'cast') return Math.max(0, swingKey(FAMILIES[e.fam].swing(e), e.atk));
   if (e.clip === 'death') return Math.min(5, Math.floor((e === hero ? hero.dead : e.dying) / 0.1));
   return 0;
 }
 // hurt tint: each palette color mapped onto the red ramp by its brightness, so the shape still reads
-const HURT_TINT = new Uint8Array(128), ICE_TINT = new Uint8Array(128);
+const HURT_TINT = new Uint8Array(128), ICE_TINT = new Uint8Array(128), ARC_TINT = new Uint8Array(128);
 for (let v = 0; v < 128; v++) {
   const n = parseInt(PAL_HEX[v] || '000000', 16), L = (0.3 * (n >> 16) + 0.59 * ((n >> 8) & 255) + 0.11 * (n & 255)) / 255;
   HURT_TINT[v] = v <= 1 ? v : RED[Math.min(4, Math.floor(L * 6 + 0.5))];
-  ICE_TINT[v] = v <= 1 ? v : WATER[Math.min(4, Math.floor(L * 4.6 + 0.9))];   // frozen: ice blue that keeps the body's shading
+  ICE_TINT[v] = v <= 1 ? v : WATER[Math.min(4, Math.floor(L * 4.6 + 0.9))];
+  ARC_TINT[v] = v <= 1 ? v : BLUE[Math.min(3, Math.floor(L * 4 + 1))] | EMIS;   // blink afterimage: glowing arcane blue   // frozen: ice blue that keeps the body's shading
 }
 function blit(sp, wx, wy, flash, cidx, tile, dissolve = 0) {
   const sx0 = Math.round(wx - camX) - sp.ax, sy0 = Math.round(wy - camY) - sp.ay;
@@ -709,7 +718,7 @@ function blit(sp, wx, wy, flash, cidx, tile, dissolve = 0) {
       if (!v) continue;
       if (dissolve > 0 && BAYER[((yy & 3) << 2) | (xx & 3)] < dissolve) continue;
       const o = yy * W + xx;
-      scr[o] = !flash || v === BLK ? v : flash === 4 ? ICE_TINT[v & 127] : flash === 2 ? HURT_TINT[v & 127] : flash === 3 ? ((xx + yy) & 1 ? HURT_TINT[v & 127] : v) : (27 | EMIS);
+      scr[o] = !flash || v === BLK ? v : flash === 4 ? ICE_TINT[v & 127] : flash === 6 ? ARC_TINT[v & 127] : flash === 5 ? ((xx + yy) & 1 ? ICE_TINT[v & 127] : v) : flash === 2 ? HURT_TINT[v & 127] : flash === 3 ? ((xx + yy) & 1 ? HURT_TINT[v & 127] : v) : (27 | EMIS);
       zbuf[o] = sp.z ? sp.z[k] : Math.max(0, sp.ay - y);
       shd[o] = 0; cid[o] = cidx; if (tile >= 0) tbuf[o] = tile;
     }
@@ -793,7 +802,7 @@ function render() {
     list.push({ depth: c.fi + c.fj, draw: () => {
       const sp = getSprite(c.fam, c.look, c.dir, c.clip, frameOf(c), c);
       const jit = c.stop > 0 && c !== hero && c.dying < 0 ? (Math.floor(t * 33) % 2 ? 1 : -1) : 0;
-      const fl = c.flash > 0 ? 1 : c.frozen > 0 ? 4 : c.tint > 0 ? 3 : 0;   // white, then a brief dithered red; ice blue while frozen
+      const fl = c.flash > 0 ? 1 : c.frozen > 0 ? 4 : c.tint > 0 ? 3 : c.slowT > 0 ? 5 : 0;   // slowed: half ice-dithered   // white, then a brief dithered red; ice blue while frozen
       blit(sp, x + jit, y, fl, n + 1, tIdx(Math.floor(c.fi), Math.floor(c.fj)));
     } });
   });
@@ -857,10 +866,20 @@ function drawProjectile(p) {
     for (let s = -4; s <= 3; s++) put(Math.round(dx * s * 1.4), Math.round(dy * s * 1.4), s > 2 ? 30 : 25);
     return;
   }
-  if (p.kind === 'missile') {   // a small arcane dart with a short tail
-    const l = Math.hypot(p.vx, p.vy) || 1, tx = -(p.vx - p.vy) / l * 0.7, ty = -(p.vx + p.vy) / l * 0.35;
-    for (let s = 1; s <= 3; s++) put(Math.round(tx * s), Math.round(ty * s), (s < 2 ? 39 : 38) | EMIS);
-    for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) if (a * a + b * b <= 1) put(a, b, (a || b ? 40 : 27) | EMIS);
+  if (p.kind === 'missile') {   // an arcane dart: white-hot core, a blue glow, and a tapering tail that twinkles
+    const l = Math.hypot(p.vx, p.vy) || 1, tx = -(p.vx - p.vy) / l * 0.75, ty = -(p.vx + p.vy) / l * 0.38, tw = Math.floor(G.t * 30 + p.fi * 7) % 2;
+    for (let s = 1; s <= 5; s++) { const c = s < 3 ? 40 : s < 4 ? 39 : 38; if (s < 5 || tw) put(Math.round(tx * s), Math.round(ty * s), c | EMIS); }
+    for (let b = -1; b <= 1; b++) for (let a = -2; a <= 2; a++) { const d = a * a / 4 + b * b; if (d <= 1) put(a, b, (d < 0.3 ? 27 : 40) | EMIS); }
+    if (tw) { put(0, -2, 40 | EMIS); put(0, 2, 40 | EMIS); }
+    return;
+  }
+  if (p.kind === 'hfire') {   // the hero's fireball: a flickering ball of flame with a hot core, tail streaming behind
+    const l = Math.hypot(p.vx, p.vy) || 1, tx = -(p.vx - p.vy) / l * 0.75, ty = -(p.vx + p.vy) / l * 0.38;
+    for (let s = 2; s <= 7; s++) { const w = Math.max(0, 3 - s * 0.4); for (let k = -Math.round(w); k <= Math.round(w); k++) put(Math.round(tx * s - ty * k * 0.6), Math.round(ty * s + tx * k * 0.6), (s < 4 ? 16 : s < 6 ? 15 : 14) | EMIS); }
+    for (let b = -4; b <= 4; b++) for (let a = -4; a <= 4; a++) {
+      const d = Math.hypot(a, b) + (hash(a + Math.floor(G.t * 20), b, 9) - 0.5) * 1.6;   // a ragged, flickering edge
+      if (d <= 3.9) put(a, b, (d < 1.4 ? 18 : d < 2.4 ? 17 : d < 3.2 ? 16 : 15) | EMIS);
+    }
     return;
   }
   const hot = p.kind === 'holy' ? [49, 50, 51] : [15, 16, 17], R = p.kind === 'hfire' ? 3 : 2;   // the hero's fireball is bigger
