@@ -179,6 +179,7 @@ def in_bld(x, y, blds, pad=1.0): return any(b_["x0"] - pad < x < b_["x1"] + pad 
 # kept clear of stalls and parked cars; Dave's house at the end of his cul-de-sac off Banks Rd (the plot is reserved before the houses go in)
 _pb = [b_ for l_ in LP["lots"] for b_ in l_["buildings"] if b_["label"] == "PUBLIX"][0]
 PUB_DOOR = (_pb["x1"] - 46 * 1.45 / 2 - 2, (_pb["y0"] + _pb["y1"]) / 2 - 28 * 1.45 / 2); DRV_RECTS.append((PUB_DOOR[0] - 9, PUB_DOOR[1] - 19, PUB_DOOR[0] + 9, PUB_DOOR[1] + .5))
+PUB_STALL = (PUB_DOOR[0] + 25.85, PUB_DOOR[1] - 6.3); DRV_RECTS.append((PUB_STALL[0] - 2.5, PUB_STALL[1] - 3.5, PUB_STALL[0] + 2.5, PUB_STALL[1] + 3.5))   # round 50: curbside = a drive-up stall right of the door
 _dc = min(LP["culs"], key=lambda c: math.hypot(c["x"] - LP["dave"][0], c["y"] - LP["dave"][1])); DAVE_HX, DAVE_HY = _dc["x"], _dc["y"] - _dc["r"] - 1.5 - 6.0 - 4.5
 for lot in LP["lots"]:
     xs = [p[0] for p in lot["poly"]]; ys_ = [p[1] for p in lot["poly"]]; x0, x1, y0, y1 = min(xs), max(xs), min(ys_), max(ys_)
@@ -305,7 +306,8 @@ WORLD = {"name": "cc", "title": "Coconut Creek", "glb": "scene.glb", "mapbg": "#
                   "house": [round(DAVE_DX, 2), round(-(DAVE_HY + 7.5), 2)], "houseYaw": math.pi,
                   "blocks": [{"road": "Banks Rd", "end": [round(SHK.fx(-450), 2), 0.0], "at": 14, "gap": 0}],
                   "blocksFar": [{"road": "Coconut Creek Pkwy", "end": [round(SHK.fx(-450), 2), 0.0], "at": 10, "gap": 0, "other": [round(SHK.fx(-380), 2), 0.0]}],
-                  "chrisFrom": [-131.0, -510.0], "starts": [[-6.0, -400.0], [300.0, -236.0], [-430.0, -286.0]]}}
+                  "chrisFrom": [-131.0, -510.0], "starts": [[-6.0, -400.0], [300.0, -236.0], [-430.0, -286.0]],
+                  "stall": [round(PUB_STALL[0], 2), round(-PUB_STALL[1], 2), 0.0], "copStart": 2, "copEvery": 6, "dynBlocks": 2, "dynFirst": 7, "dynEvery": 14}}
 OUTD = OUT
 json.dump(FOOT, open(os.path.join(OUTD, "foot_cc.json"), "w")); json.dump(COL, open(os.path.join(OUTD, "colliders_cc.json"), "w")); json.dump(PROPS, open(os.path.join(OUTD, "props_cc.json"), "w")); json.dump(CARS, open(os.path.join(OUTD, "cars_cc.json"), "w")); json.dump(WORLD, open(os.path.join(OUTD, "world_cc.json"), "w"))
 print("CC colliders", len(COL), "props", len(PROPS), "cars", len(CARS), "roads", len(net))

@@ -594,7 +594,7 @@ function nearCols(x, z, rad) {                    // candidates within rad (plus
 const qsT = new URLSearchParams(location.search); if (qsT.get('cars')) TT.count = Math.max(0, Math.min(60, +qsT.get('cars')));
 const ai = graph ? createTraffic(graph, { THREE, makeCar, carPoly: (x, z, th, d) => carPoly(x, z, th, d), colliders, placeOnGround, scene, camera, signalPoles: WN === 'cc' }) : null;
 if (ai) for (const c of ai.cars) c.col.ai = true;
-const cops = graph ? createPolice(graph, { inWater: (x, z) => inWater(x, z), THREE, makeCar, carPoly: (x, z, th, d) => carPoly(x, z, th, d), colliders, placeOnGround, scene, camera, pushCircle: (x, z, r, sk) => pushCircle(x, z, r, sk), audio: () => (muted ? null : audio),
+const cops = graph ? createPolice(graph, { speedK: CC_TOP, inWater: (x, z) => inWater(x, z), THREE, makeCar, carPoly: (x, z, th, d) => carPoly(x, z, th, d), colliders, placeOnGround, scene, camera, pushCircle: (x, z, r, sk) => pushCircle(x, z, r, sk), audio: () => (muted ? null : audio),
   ram: (vx, vz, w, hurt) => { DENV.kick(vx, vz, w); if (hurt > 0 && missions && missions.active) DENV.hurt(hurt, vx, vz); crashSound(4 + Math.hypot(vx, vz) * 1.5); }, playerMass: () => DENV.carMass,
   onStars: W => showStars(W), onBusted: () => busted(), onWreck: c => { DENV.wrecks++; crashSound(12); burst(c.x, .8, c.z, 0, 0, 14); game.money += 50; } }) : null;
 const DEV = /[?&]dev=1/.test(location.search);       // round 29: the showcase is the Dave mission; the old test missions and the tuning extras only with ?dev=1
