@@ -115,3 +115,5 @@ def back_of_house():
                 t += 2
     STATIC.extend(BOH.build(vc=True, recalc=False))
     print("back of house: %d buildings, %d wall runs, %.0f m of wall" % tuple(BOH_N))
+
+exec(open(os.path.join(HERE, "cc_fill5.py")).read())                                            # round 51: Wynmoor, golf, high school campus, breakables list

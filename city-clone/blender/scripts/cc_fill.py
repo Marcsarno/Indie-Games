@@ -435,10 +435,7 @@ ROOFS = ["#a9573a", "#b8463a", "#bcb6aa", "#7a5a44", "#5d6670"]; HWALL = ["cream
 def yard(name, pool):
     """Back yard behind a house (house front = -y, 11 x 8.5 m): wood privacy fence + a pool with a screened cage for some."""
     b = Builder(name); F = flat("#9c7a55"); P_ = flat("#7d6145"); hy = 4.25; y0, y1 = hy, hy + 11; x0, x1 = -6.4, 6.4
-    for (p, q) in (((x0, y0), (x0, y1)), ((x0, y1), (x1, y1)), ((x1, y1), (x1, y0))):
-        L = math.dist(p, q); n = int(L / 2.4)
-        b.box(F, min(p[0], q[0]) - .04, max(p[0], q[0]) + .04, min(p[1], q[1]) - .04, max(p[1], q[1]) + .04, .1, 1.8)
-        for t in (0, 1): x, y = p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t; b.box(P_, x - .07, x + .07, y - .07, y + .07, 0, 1.95)      # round 48: corner posts only
+    # round 51: the wood fence itself is a breakable now (cc_fill5.brk_houses -> world.breakables, drawn and knocked flat by the page)
     if pool:
         b.box(flat("#e8e2d4"), -4.2, 4.2, y0 + 1.0, y0 + 9.0, 0, .09); b.box(flat("#3fb6e0"), -3.2, 3.2, y0 + 2.6, y0 + 7.6, 0, .11)
     else: b.box(flat("#d8cfc0"), -3, 3, y0 + .2, y0 + 3.2, 0, .07); b.box(flat("#c9c3b8"), 3.2, 5.6, y1 - 3.2, y1 - .6, 0, 2.3)     # patio + shed
@@ -455,7 +452,7 @@ def extra_houses(placed_xy):
             for side in (1, -1):
                 off = side * (r.hw + 12.5); hx, hy = r.off(s, off)
                 if hx < X441 - 12 or hx > XP + 12: continue
-                if 35 < hx < 790 and 250 < hy < 465: continue                                   # Wynmoor gets condos
+                if 35 < hx < 790 and 250 < hy < 465 or 8 < hx < 640 and 240 < hy < 372: continue   # Wynmoor gets condos (round 51: its new-map box too)
                 if any(f[0] - 4 < hx < f[2] + 4 and f[1] - 4 < hy < f[3] + 4 for f in FOOT): continue
                 if in_water(hx, hy, 14) or hnear(hx, hy, 14.5) or on_cut(hx, hy, 9): continue
                 rr = near_road(hx, hy, 8.0)
@@ -591,7 +588,7 @@ def offices_and_site():
     # round 43: the warehouse + trucks became a real construction site (cc_fill3.construction)
 def fill_after(placed_xy):
     added = extra_houses(placed_xy); tick_("extra houses")
-    with warp(): wyn = wynmoor()
+    wyn = WYN_PERIM()                                                                   # round 51: Wynmoor is built in gap_fill (cc_fill5.wynmoor2), its outline still gets the walls
     walls(placed_xy + added + wyn); tick_("walls")
     lights()
     with warp(): parks(); offices_and_site()

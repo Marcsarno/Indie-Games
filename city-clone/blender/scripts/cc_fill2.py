@@ -26,7 +26,8 @@ def driveways():
         w0 = (hx + f[0] * 4.3 - sd[0] * 1.0, hy + f[1] * 4.3 - sd[1] * 1.0)                      # front walk from the door to the driveway
         seg_box(DRV, CONC2, w0, (w0[0] + f[0] * 2.2, w0[1] + f[1] * 2.2), 1.2, 0, .045); seg_box(DRV, CONC2, (w0[0] + f[0] * 2.2, w0[1] + f[1] * 2.2), (p0[0] + f[0] * 2.2 - sd[0] * 2.2, p0[1] + f[1] * 2.2 - sd[1] * 2.2), 1.2, 0, .045)
         m_ = (q[0] - f[0] * .8 + sd[0] * 3.0, q[1] - f[1] * .8 + sd[1] * 3.0)                       # mailbox at the curb
-        tbox(FUR, POLE, m_[0] - .06, m_[0] + .06, m_[1] - .06, m_[1] + .06, 0, 1.05); tbox(FUR, DARK if i % 3 else WHT, m_[0] - .25, m_[0] + .25, m_[1] - .25, m_[1] + .25, 1.0, 1.35)
+        BRK.append(["mailbox" if i % 3 else "mailbox_w", round(m_[0], 2), round(m_[1], 2), round(rz, 1)])          # round 51: knock-over mailbox (page)
+        if RF.random() < .35: b_ = (m_[0] - sd[0] * 1.4, m_[1] - sd[1] * 1.4); BRK.append(["bin", round(b_[0], 2), round(b_[1], 2), round(rz + RF.uniform(-15, 15), 1)])   # trash cart out at the curb
         if RF.random() < .5 and L > 5.5 and n_car < 420:                                          # a car on about half the driveways
             c = CARCOL[(i * 5) % len(CARCOL)]; cpos = (p0[0] + f[0] * 3.0, p0[1] + f[1] * 3.0)
             o = linked(f"dcar_{c[1:]}", lambda nm, c=c: display_car(nm, c)); place(o, cpos[0], cpos[1], rz=rz + (180 if i % 2 else 0)); cbox(cpos[0], cpos[1], 1.9, 4.5, rz); n_car += 1
@@ -99,8 +100,7 @@ def apron(cx, cy, ww, dd, front=3.5, side=1.5, face="s"):
 def cart_corrals(x0, y0, x1, y1, n=3):
     for i in range(n):
         x = x0 + (i + 1) * (x1 - x0) / (n + 1); y = (y0 + y1) / 2
-        for dx in (-.9, .9): tbox(FUR, flat("#9aa0a6"), x + dx - .05, x + dx + .05, y - 3, y + 3, 0, 1.0)
-        tbox(FUR, flat("#c8362a"), x - .95, x + .95, y + 2.95, y + 3.05, .7, 1.0)
+        BRK.append(["corral", round(x, 2), round(y, 2), 90.0])                                    # round 51: knock-over cart corral (page): 6 m rails along y
 
 def tree_clusters():
     """Leftover grass gets clumps of live oaks / palms / sabals with shrubs round them (real Coconut Creek has trees everywhere)."""
@@ -149,7 +149,7 @@ def local_hydrants():
             if near_road(h_[0], h_[1], -.5) in (None, r) and not hnear(h_[0], h_[1], 3) and not in_drive(h_[0], h_[1], 1): HYDRANTS.append((h_[0], h_[1]))
             s += 110.0
 def believability():
-    local_hydrants(); driveways(); tick_("driveways"); street_furniture(); power_line(); verge_trees(); tree_clusters(); tick_("furniture")
+    local_hydrants(); driveways(); brk_houses(); tick_("driveways"); street_furniture(); power_line(); verge_trees(); tree_clusters(); tick_("furniture")
     for (cx, cy, ww, dd, face) in APRONS: apron(cx, cy, ww, dd, face=face)
     for rect in CORRALS: cart_corrals(*rect)
     STATIC.extend(DRV.build(vc=True, recalc=False)); STATIC.extend(FUR.build(vc=True, recalc=False))
