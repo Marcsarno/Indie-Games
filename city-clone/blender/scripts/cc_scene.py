@@ -175,6 +175,11 @@ def addcar(kind, x, y, rz, color=None):
     global ncar; x, y = W(x, y); o_ = WARP[0]; WARP[0] = False; color = color or R_.choice(PAL); nm = f"parked{ncar}"; ncar += 1
     CARS.append({"name": nm, "kind": kind, "color": color, "x": round(x, 2), "y": round(y, 2), "rz": round(rz, 1)}); cbox(x, y, 1.8, 4.5, rz, car=nm); WARP[0] = o_
 def in_bld(x, y, blds, pad=1.0): return any(b_["x0"] - pad < x < b_["x1"] + pad and b_["y0"] - pad < y < b_["y1"] + pad for b_ in blds)
+# round 49: the mission's spots on the new map. Publix door = centre of the Publix model's front (SITE puts it at the rect's east end), curbside box 8.6 m out,
+# kept clear of stalls and parked cars; Dave's house at the end of his cul-de-sac off Banks Rd (the plot is reserved before the houses go in)
+_pb = [b_ for l_ in LP["lots"] for b_ in l_["buildings"] if b_["label"] == "PUBLIX"][0]
+PUB_DOOR = (_pb["x1"] - 46 * 1.45 / 2 - 2, (_pb["y0"] + _pb["y1"]) / 2 - 28 * 1.45 / 2); DRV_RECTS.append((PUB_DOOR[0] - 9, PUB_DOOR[1] - 19, PUB_DOOR[0] + 9, PUB_DOOR[1] + .5))
+_dc = min(LP["culs"], key=lambda c: math.hypot(c["x"] - LP["dave"][0], c["y"] - LP["dave"][1])); DAVE_HX, DAVE_HY = _dc["x"], _dc["y"] - _dc["r"] - 1.5 - 6.0 - 4.5
 for lot in LP["lots"]:
     xs = [p[0] for p in lot["poly"]]; ys_ = [p[1] for p in lot["poly"]]; x0, x1, y0, y1 = min(xs), max(xs), min(ys_), max(ys_)
     RB.box(m["asphalt"], x0, x1, y0, y1, 0, .028); FOOT.append((x0, y0, x1, y1)); MAP.append([round(x0, 1), round(y0, 1), round(x1, 1), round(y1, 1), "#5a5c60"])
@@ -235,7 +240,10 @@ fill_pads(); tick_("pads")
 WALLS = ["cream", "peach", "butter", "sand", "white"]
 VAR = [make_house(f"house_v{i}", 11 if i % 2 == 0 else 10, 8.5, 1 + (i % 3 == 0), WALLS[i % 5], 300 + i, garage=i % 2 == 0, balcony=False) for i in range(6)]
 for o in VAR: o.location = (0, 0, -60)
-placed = 0; PLACED_XY = []
+placed = 0; PLACED_XY = []; FOOT.append((DAVE_HX - 11, DAVE_HY - 9, DAVE_HX + 11, DAVE_HY + 10))      # Dave's plot
+_dv = make_house("dave_house", 12, 9, 1, "butter", 77, garage=True, balcony=False, roof_h=2.2); _dv.location = (DAVE_HX, DAVE_HY, 0); _dv.rotation_euler = (0, 0, math.radians(180)); STATIC.append(_dv); cbox(DAVE_HX, DAVE_HY, 12, 9, 180)
+DAVE_DX = DAVE_HX - 3.0; RB.box(m["walk"], DAVE_DX - 1.9, DAVE_DX + 1.9, DAVE_HY + 4.5, _dc["y"] - _dc["r"] - .5, 0, .06)                # driveway to the cul-de-sac
+prop("palm_medium", DAVE_HX + 7.5, DAVE_HY - 2); prop("palm_small", DAVE_HX - 8, DAVE_HY + 3)
 for (hx, hy) in LP["houses"]:
     if any(f[0] - 3 < hx < f[2] + 3 and f[1] - 3 < hy < f[3] + 3 for f in FOOT) or on_cut(hx, hy, 9) or in_water(hx, hy, 7): continue      # round 48: no houses in the canal
     if any(rd_.closed is False and rd_.nearest(hx, hy)[0] < rd_.hw + 4.5 for rd_ in net if rd_.bb[0] - 30 < hx < rd_.bb[2] + 30 and rd_.bb[1] - 30 < hy < rd_.bb[3] + 30): continue
@@ -292,7 +300,12 @@ LMK.append(["Trash Mountain", round(tcx, 1), round(tcy, 1), "#7a5a2a", "^"]); LM
 WORLD = {"name": "cc", "title": "Coconut Creek", "glb": "scene.glb", "mapbg": "#4d7a34", "extent": 2000, "sky": "#8fc3f5", "fog": ["#c4dcf2", 70, 165], "hemi": ["#cfe4ff", "#6f8a4a", 1.55],
          "sun": {"color": "#fff0d6", "intensity": 3.7, "dir": [-0.5, -0.74, 0.45]}, "heights": [], "exposure": 1.0, "tone": "AgX", "lamps": [], "ground": "#5d9a3a", "start": start, "money": 1250,
          "traffic": [], "walk": [], "walkers": 0, "fight": None, "demo": None, "landmarks": LMK,
-         "views": {"drive": {"label": "Play", "mode": "drive", "pitch": 45, "dist": 38}, "over": {"label": "Overview", "tx": 0, "ty": 700, "pitch": 55, "dist": 1500}}, "map": MAP, "roads": ROADLINES, "layout": "plan/v7/layout.json", "hydrants": [[round(x, 1), round(y, 1)] for x, y in HYDRANTS]}
+         "views": {"drive": {"label": "Play", "mode": "drive", "pitch": 45, "dist": 38}, "over": {"label": "Overview", "tx": 0, "ty": 700, "pitch": 55, "dist": 1500}}, "map": MAP, "roads": ROADLINES, "layout": "plan/v7/layout.json", "hydrants": [[round(x, 1), round(y, 1)] for x, y in HYDRANTS],
+         "dave": {"lot": [round(PUB_DOOR[0] - 10.8, 2), round(-(PUB_DOOR[1] - 15.6), 2), math.pi], "door": [round(PUB_DOOR[0], 2), round(-PUB_DOOR[1], 2)], "curb": [round(PUB_DOOR[0], 2), round(-(PUB_DOOR[1] - 8.6), 2)],
+                  "house": [round(DAVE_DX, 2), round(-(DAVE_HY + 7.5), 2)], "houseYaw": math.pi,
+                  "blocks": [{"road": "Banks Rd", "end": [round(SHK.fx(-450), 2), 0.0], "at": 14, "gap": 0}],
+                  "blocksFar": [{"road": "Coconut Creek Pkwy", "end": [round(SHK.fx(-450), 2), 0.0], "at": 10, "gap": 0, "other": [round(SHK.fx(-380), 2), 0.0]}],
+                  "chrisFrom": [-131.0, -510.0], "starts": [[-6.0, -400.0], [300.0, -236.0], [-430.0, -286.0]]}}
 OUTD = OUT
 json.dump(FOOT, open(os.path.join(OUTD, "foot_cc.json"), "w")); json.dump(COL, open(os.path.join(OUTD, "colliders_cc.json"), "w")); json.dump(PROPS, open(os.path.join(OUTD, "props_cc.json"), "w")); json.dump(CARS, open(os.path.join(OUTD, "cars_cc.json"), "w")); json.dump(WORLD, open(os.path.join(OUTD, "world_cc.json"), "w"))
 print("CC colliders", len(COL), "props", len(PROPS), "cars", len(CARS), "roads", len(net))

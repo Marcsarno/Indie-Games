@@ -197,7 +197,7 @@ import { createTraffic, TT } from './traffic.js';
 import { createPeople, PT } from './people.js';
 import { createPolice, POL } from './police.js';
 import { createMissions } from './missions.js';
-import { createDave } from './dave.js';
+import { createDave, DAVE } from './dave.js';
 import { createMusic } from './music.js';
 import { createLauncher } from './rocket.js';
 import { stepLightbars } from './lightbar.js';
@@ -606,7 +606,7 @@ const DENV = {                                     // what the Dave mission read
   hurt: (amt, dx, dz) => { if (DENV.invuln) return; amt *= DENV.hurtK; game.hp = Math.max(0, game.hp - amt); rig.shake = Math.min(1, rig.shake + .35); if (hmode === 'foot') { foot.lx += dx * 6; foot.lz += dz * 6; } },
   sound: (k, pan) => { if (k === 'crash') crashSound(12); else if (k === 'whoosh') whooshSound(pan || 0); else if (k === 'scratch') scratchSound(); else if (k === 'zap') zapSound(); else if (k === 'boom') boomSound(); },
   get W() { return innerWidth; }, get H() { return innerHeight; },
-  get coldOpen() { return coldOpen; },
+  get coldOpen() { return coldOpen && WN !== 'cc'; },          // round 49: the new map skips the cold open (user), straight to Dave's texts
   placeRide: (ci, x, z, th) => { const C = CHARS[ci]; stopRoam(C); const v = vehs[C.ride]; if (!v) return; removeCarCollider(v); Object.assign(v, { x, z, th, vx: 0, vz: 0, w: 0, mode: 'parked' }); placeOnGround(v.car.group, x, z, th); v.car.group.visible = true; v.car.setDamage(0); clearMarks(v.car); setCarCollider(v); },
   relayTo: (ci, burnOld = true) => relayTo(ci, burnOld),
   camHold: h => { CAMHOLD.on = !!h; if (h) Object.assign(CAMHOLD, h); },
@@ -616,7 +616,8 @@ const DENV = {                                     // what the Dave mission read
   freeze: on => { paused = on; },
   kick: (vx, vz, spin) => { if (DENV.invuln) return; if (drive && hmode === 'driving') { drive.vx += vx; drive.vz += vz; drive.w += spin; rig.shake = Math.min(1, rig.shake + .5); const m = Math.hypot(vx, vz) || 1; crashFx(drive, drive.x - vx / m * 2.2, drive.z - vz / m * 2.2, vx / m, vz / m, m * 3); } },      // a rocket cop slams into you
 };
-const missions = !graph || WN !== 'coconut' ? null : DEV ? createMissions(graph, { THREE, scene, groundH, banner: t => banner(t), addMoney: v => { game.money += v; }, cops, heights: world.heights })
+if (world.dave) Object.assign(DAVE, world.dave);     // round 49: the new map brings its own Publix / Dave / roadblock spots
+const missions = !graph || (WN !== 'coconut' && !world.dave) ? null : DEV ? createMissions(graph, { THREE, scene, groundH, banner: t => banner(t), addMoney: v => { game.money += v; }, cops, heights: world.heights })
   : createDave({ THREE, scene, makePerson: o => makePerson(o), makeCar: (k, c) => makeCar(k, c), play: (a, n, o) => play(a, n, o), walkers, colliders, carPoly: (x, z, th, d) => carPoly(x, z, th, d), placeOnGround, banner: t => banner(t), cops, graph, camera, env: DENV, pushCircle: (x, z, r, skip) => pushCircle(x, z, r, skip), burst: (x, y, z, nx, nz, p) => burst(x, y, z, nx, nz, p) });
 const MPX = { x: 0, z: 0, vx: 0, vz: 0, th: 0, speed: 0, driving: false };
 const launcher = !launcherG ? null : createLauncher({ THREE, scene, glb: launcherG, camera, pushCircle: (x, z, r, sk) => pushCircle(x, z, r, sk), getCar: () => (hmode === 'driving' && drive ? drive : null), carHeight: car => car.fxH || (car.fxH = carHeight(car)),
@@ -1667,6 +1668,7 @@ let frameHook = null;                                          // hud.js hooks f
 let timeK = 1;                                                 // slow motion (the mission's finish): game time runs at timeK x real time
 function frame(t) { const t0 = performance.now(); const dt_ = Math.min(clock.getDelta(), .05); if (!manual && !paused) { update(dt_ * timeK); if (!titleShown) showTitle(); } else if (paused) renderer.render(scene, camera); if (frameHook) frameHook(t, performance.now() - t0); requestAnimationFrame(frame); }
 syncSliders(); setView('drive'); requestAnimationFrame(frame);
-window.__city = { missions, DENV, CINE, cine, cineStop, titleShots, dstickIn, track, vehs, get ride() { return ride; }, CHARS, switchTo, SW, get cur() { return cur; }, get pilotP() { return pilot; }, world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, ppl, cops, missions, sun, setFrameHook: f => { frameHook = f; }, upd };
+window.__DAVE = DAVE;
+window.__city = { missions, cops, DENV, CINE, cine, cineStop, titleShots, dstickIn, track, vehs, get ride() { return ride; }, CHARS, switchTo, SW, get cur() { return cur; }, get pilotP() { return pilot; }, world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, ppl, cops, missions, sun, setFrameHook: f => { frameHook = f; }, upd };
 if (/[?&](hud|bench)=/.test(location.search)) import('./hud.js?v=' + (MAN['hud.js'] || '1')).then(m => m.start(window.__city, THREE)).catch(e => console.error('hud', e));
 </script>

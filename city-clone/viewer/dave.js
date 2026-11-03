@@ -144,6 +144,7 @@ export function createDave(D) {
   async function start() {
     if (S.stage !== 'off' && S.stage !== 'done') return;
     if (env.coldOpen && !S.coldDone) { S.cswat = false; S.crock = false; S.cth = null; coldOpen(); return; } S.stage = 'intro'; msgs.innerHTML = ''; pick.hidden = true; const tok = ++S.run, gone = () => tok !== S.run;
+    if (DAVE.starts) for (let ci = 0; ci < 3; ci++) { const f = DAVE.starts[ci], sp = stopSpot(f[0], f[1], DAVE.curb[0], DAVE.curb[1]); if (ci === env.cur) env.resetCar(sp.x, sp.z, sp.th); else env.placeRide(ci, sp.x, sp.z, sp.th); }   // round 49: all three wait at a junction, pointed toward Publix
     env.cine([SHOTS.city]); await wait(.8); if (gone()) return; phone.hidden = false; skipBtn.hidden = false; await wait(.05); phone.classList.add('show');
     await wait(.4); await typing('Dave', 1.0); if (gone()) return; say(...INTRO[0]); await wait(.6); if (gone()) return;
     env.cine([SHOTS.publix]); await typing('Dave', 1.2); if (gone()) return; say(...INTRO[1]); await wait(3.6); if (gone()) return;
@@ -533,7 +534,20 @@ export function createDave(D) {
     })();
   }
   // a road spot for a chapter start: on the road nearest (x, z), pointing along the way to Dave's
-  function roadSpot(x, z) { const R = routeTo(x, z, DAVE.house[0], DAVE.house[1]); if (R.length < 6) return { x, z, th: 0 }; const a = R[2], b = R[5]; return { x: a[0], z: a[1], th: Math.atan2(-(b[0] - a[0]), -(b[1] - a[1])) }; }
+  function roadSpot(x, z) { if (DAVE.starts) return stopSpot(x, z, DAVE.house[0], DAVE.house[1]); const R = routeTo(x, z, DAVE.house[0], DAVE.house[1]); if (R.length < 6) return { x, z, th: 0 }; const a = R[2], b = R[5]; return { x: a[0], z: a[1], th: Math.atan2(-(b[0] - a[0]), -(b[1] - a[1])) }; }
+  // round 49 (user: drivers "facing on a road, in the general direction they would go... stopped at an intersection, so when it goes live you can just start driving"):
+  // follow the road route from (x, z) toward (tx, tz) to the first real junction at least `min` m along, and stop in the right-hand lane `back` m short of it
+  function stopSpot(x, z, tx, tz, min = 35, back = 13) {
+    const R = routeTo(x, z, tx, tz); if (R.length < 3) return { x, z, th: 0 };
+    const J = GN.filter(n => n.adj.length >= 3); let acc = 0, pick = -1;
+    for (let i = 1; i < R.length; i++) { acc += Math.hypot(R[i][0] - R[i - 1][0], R[i][1] - R[i - 1][1]); if (acc >= min && J.some(n => Math.abs(n.x - R[i][0]) + Math.abs(n.z - R[i][1]) < 1.5)) { pick = i; break; } }
+    if (pick < 0) pick = Math.min(R.length - 1, 6);
+    let i = pick, left = back; while (i > 0) { const L = Math.hypot(R[i][0] - R[i - 1][0], R[i][1] - R[i - 1][1]); if (L >= left) break; left -= L; i--; }
+    const a = R[Math.max(0, i - 1)], b = R[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L, f = Math.min(1, left / L);
+    const px = b[0] - ux * L * f, pz = b[1] - uz * L * f;       // right-hand lane: right of the travel direction (ux, uz) is (-uz, ux); the lane offset comes from the street's own graph edge
+    let lane = 2.4, ld = 1e18; GE.forEach((e, k) => { for (const q of e.P) { const d = (q[0] - px) ** 2 + (q[1] - pz) ** 2; if (d < ld) { ld = d; lane = graph.edges[k].lane || 2.4; } } });
+    return { x: px - uz * lane, z: pz + ux * lane, th: Math.atan2(-ux, -uz) };
+  }
   const NEXT = [                                            // what Dave says when a chapter is delivered (round 34; the AC is true)
     async () => { await typing('Dave', .8); say('Dave', 'YOU MADE IT 😭 thank you thank you'); await wait(1.0);
       if (UP.rockets) { await typing('Dave', .6); say('Dave', 'why does the bag smell like rocket fuel'); await wait(1.0); }
@@ -565,7 +579,7 @@ export function createDave(D) {
     })();
   }
   function startChapter(n) {                               // the next driver takes over at their start (Aaron: Publix lot, Chris: by City Hall); the last ride is put away
-    const old = env.cur, C = CHAPTERS[n], sp = n === 1 ? { x: DAVE.lot[0], z: DAVE.lot[1], th: DAVE.lot[2] } : roadSpot(DAVE.chrisFrom[0], DAVE.chrisFrom[1]);
+    const old = env.cur, C = CHAPTERS[n], sp = n === 1 ? (DAVE.starts ? stopSpot(DAVE.curb[0], DAVE.curb[1] + 12, DAVE.house[0], DAVE.house[1], 15) : { x: DAVE.lot[0], z: DAVE.lot[1], th: DAVE.lot[2] }) : roadSpot(DAVE.chrisFrom[0], DAVE.chrisFrom[1]);
     S.ch = n; S.cpStart = sp; env.placeRide(C.ci, sp.x, sp.z, sp.th); env.relayTo(C.ci, false); env.resetCar(sp.x, sp.z, sp.th); env.heal();
     if (old !== C.ci) env.placeRide(old, 5000 + old * 10, 40, 0);       // out of Dave's driveway
     S.cpNear = null; S.failed = false; startChase();
