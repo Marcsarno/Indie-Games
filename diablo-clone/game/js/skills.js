@@ -89,7 +89,7 @@ function groundSlamHit() {
     pspawn(5, x + (gx - gy) * 16, y + (gx + gy) * 8, 2, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 12, 50 + Math.random() * 60, 1, k % 3 ? dust : S[3]);
   }
   if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.45);
-  sfx('boom'); sfx('crit');
+  sfx('boom'); sfx('crit'); sfx('crack');
 }
 // Chain hook: a hook flies at the nearest enemy in reach; whatever it catches (and anything right
 // beside it) is dragged up to the warrior and dazed. Bosses and elites don't budge: he is pulled to them
@@ -100,7 +100,7 @@ function chainHook() {
   const dx = t.fi - hero.fi, dy = t.fj - hero.fj, l = Math.hypot(dx, dy) || 1;
   G.hooks.push({ fi: hero.fi + dx / l * 0.5, fj: hero.fj + dy / l * 0.5, vx: dx / l * 16, vy: dy / l * 16, life: 0.6, state: 'out', caught: [] });
   hero.cast = 0.3; hero.castAge = CAST_RELEASE; hero.castKind = 'hook'; hero.clip = 'channel';
-  sfx('swing');
+  sfx('swing'); sfx('chain');
   return true;
 }
 // Leap: a jump in an arc at the nearest enemy (or up to 6 tiles toward the stick); untouchable in
@@ -150,7 +150,7 @@ function updateLeap(dt) {
     shockwave(hero.fi, hero.fj, 2.3, 0.34, lite, null, false); impactFlash(hero.fi, hero.fj, 2, 7); rubble(x, y, 14, 60);
     if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.5);
     hero.stop = Math.max(hero.stop, 0.08);
-    sfx('boom');
+    sfx('boom'); sfx('crack');
   }
 }
 function updateWarriorFx(dt) {
@@ -164,7 +164,8 @@ function updateWarriorFx(dt) {
         if (blocked(h.fi, h.fj) && tileAt(Math.floor(h.fi), Math.floor(h.fj)) !== FLOOR) { h.state = 'back'; break; }
         const hit = enemies.find(e => alive(e) && Math.hypot(e.fi - h.fi, e.fj - h.fj) < 0.55 + (e.def.unique ? 0.4 : 0));
         if (hit) {
-          sfx('block');
+          sfx('clank'); impactFlash(hit.fi, hit.fj, 12, 4);   // round 27: the hook bites with a spark and a clank
+          { const [x, y] = screenOf(hit); for (let k = 0; k < 10; k++) { const a = Math.random() * 6.283; pspawn(4, x, y, 12, Math.cos(a) * 60, Math.sin(a) * 30, 0, 0.18, k % 2 ? 51 : 27); } }
           if (hit.def.unique || hit.def.elite || hit.champ) { h.state = 'reel'; h.anchor = hit; damageEnemy(hit, heroDmg(0.6), hero.fi, hero.fj, false, 0, true); break; }
           h.caught = enemies.filter(e => alive(e) && !e.def.unique && !e.def.elite && !e.champ && Math.hypot(e.fi - hit.fi, e.fj - hit.fj) < 1.6);
           for (const e of h.caught) { wake(e); damageEnemy(e, heroDmg(0.6), hero.fi, hero.fj, false, 0, true); e.atk = -1; }
@@ -177,7 +178,10 @@ function updateWarriorFx(dt) {
       for (const e of h.caught) {
         if (!alive(e)) continue;
         const dx = hero.fi - e.fi, dy = hero.fj - e.fj, d = Math.hypot(dx, dy);
-        if (d > 1.05) { done = false; const st = Math.min(d - 1, 14 * dt); tryMove(e, dx / d * st, dy / d * st, 0.25); e.kb = [0, 0]; e.clip = 'hit'; }
+        if (d > 1.05) {
+          done = false; const st = Math.min(d - 1, 14 * dt); tryMove(e, dx / d * st, dy / d * st, 0.25); e.kb = [0, 0]; e.clip = 'hit';
+          if (Math.random() < 0.6) { const [x, y] = screenOf(e); pspawn(5, x + (Math.random() - 0.5) * 6, y, 1, -dx * 20, -dy * 10, 12 + Math.random() * 12, 1, LV.outdoor ? DIRT[3] : S[5]); }   // dragged through the dust
+        }
       }
       const lead = h.caught.find(alive); if (lead) { h.fi = lead.fi; h.fj = lead.fj; }
       h.pullT = (h.pullT || 0) + dt;
@@ -214,15 +218,31 @@ function drawWarriorFx() {
       }
     }
   }
+}
+// the chain (round 27), drawn at full detail over the bodies: oval links that sag while the hook
+// flies and pull straight once it bites, and a barbed hook head with a glint
+function drawHookChains() {
   for (const h of G.hooks) {
-    const [ax0, ay0] = screenOf(hero), [bx0, by0] = iso(h.fi, h.fj), ax = ax0 - camX, ay = ay0 - camY - 22, bx = bx0 - camX, by = by0 - camY - 14;
-    const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay)));
-    for (let s = 0; s <= n; s++) {
-      const x = Math.round(ax + (bx - ax) * s / n), y = Math.round(ay + (by - ay) * s / n); if (x < 0 || y < 0 || x >= W || y >= H) continue;
-      scr[y * W + x] = (s % 3 === 0) ? BLK : STEEL[(s % 3) + 1];   // iron links
-    }
-    const x = Math.round(bx), y = Math.round(by);
-    for (const [ox, oy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1]]) { const xx = x + ox, yy = y + oy; if (xx >= 0 && yy >= 0 && xx < W && yy < H) scr[yy * W + xx] = oy > 0 ? STEEL[1] : STEEL[3]; }
+    const [hx0, hy0] = screenOf(hero), [bx0, by0] = iso(h.fi, h.fj);
+    const ax = Math.round(hx0 * SPX - cam2x), ay = Math.round((hy0 - 20 - (hero.leapZ || 0)) * SPX - cam2y);
+    const bx = Math.round(bx0 * SPX - cam2x), by = Math.round((by0 - 13) * SPX - cam2y);
+    const len = Math.hypot(bx - ax, by - ay), n = Math.max(2, Math.ceil(len)), ux = (bx - ax) / (len || 1), uy = (by - ay) / (len || 1);
+    const sag = h.state === 'out' || h.state === 'back' ? Math.min(14, len * 0.12) : 0, shake = h.state === 'pull' || h.state === 'reel' ? Math.sin(G.t * 90) * 0.8 : 0;
+    const pts = [];
+    for (let s = 0; s <= n; s++) { const u = s / n; pts.push([ax + (bx - ax) * u - uy * shake, ay + (by - ay) * u + Math.sin(u * Math.PI) * sag + ux * shake]); }
+    // a dark outline first so the chain reads on any floor, then the links over it
+    for (const [x, y] of pts) for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [0, 2]]) ovSet(Math.round(x) + ox, Math.round(y) + oy, BLK);
+    pts.forEach(([x, y], s) => {
+      const link = Math.floor(s / 5), k = s % 5, X = Math.round(x), Y = Math.round(y);
+      if (link % 2 === 0) {   // a link seen flat: an open oval, lit on its upper edge, dark hole in the middle
+        if (k === 0 || k === 4) { ovSet(X, Y, STEEL[2]); }
+        else { ovSet(X, Y - 1, STEEL[4]); ovSet(X, Y + 1, STEEL[1]); ovSet(X, Y, k === 2 ? BLK : STEEL[2]); }
+      } else { ovSet(X, Y, STEEL[3]); ovSet(X, Y + 1, STEEL[1]); }   // a link seen edge-on
+    });
+    // the hook head: a shank and a curved barb
+    const px = -uy, py = ux;
+    for (let s = 0; s < 9; s++) { const x = Math.round(bx + ux * s * 0.7), y = Math.round(by + uy * s * 0.7); ovSet(x, y - 1, BLK); ovSet(x, y, STEEL[4]); ovSet(x + 1, y, STEEL[2]); ovSet(x, y + 1, BLK); }
+    for (let a = 0; a <= 8; a++) { const t = a / 8 * Math.PI, x = Math.round(bx + ux * 6 + (Math.cos(t) * ux * 4 + Math.sin(t) * px * 5)), y = Math.round(by + uy * 6 + (Math.cos(t) * uy * 4 + Math.sin(t) * py * 5)); ovSet(x, y - 1, BLK); ovSet(x, y, a < 3 ? 27 : STEEL[3]); ovSet(x, y + 1, STEEL[1]); ovSet(x, y + 2, BLK); }
   }
 }
 // ---------------------------------------------------------------- mage spells
@@ -295,7 +315,7 @@ function explodeAt(fi, fj, r, k, pow, big = false) {
   G.flashes.push({ fi, fj, t: big ? 0.45 : 0.25, t0: big ? 0.45 : 0.25, r: big ? 150 : 100 });
   G.blasts.push({ fi, fj, r, t: big ? 0.32 : 0.22, t0: big ? 0.32 : 0.22 });
   if (SHAKE) G.trauma = Math.min(1, G.trauma + (big ? 0.6 : 0.28));
-  sfx('boom');
+  sfx('boom'); sfx('sizzle'); if (big) sfx('crack');
 }
 // cone of cold: a blast of frost in a wedge in front of the mage. Ordinary monsters freeze solid
 // (can't move or attack, take 40% more damage, shatter on death); bosses, elites and champions
@@ -325,7 +345,7 @@ function coneOfCold() {
     shockwave(hero.fi, hero.fj, CONE_R, 0.3, [27, 118], [a0, CONE_HALF]);
     orbFlare(117, 118, 12);
     if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.18);
-    sfx('frost');
+    sfx('frost'); sfx('clink');
   });
 }
 // meteor: called down on the thickest group in sight; a ring warns where it will land, then it
@@ -359,7 +379,11 @@ function blink() {
   for (const [x, y] of [[x0, y0], [x1, y1]]) for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283; pspawn(4, x, y, 16, Math.cos(a) * 60, Math.sin(a) * 30, 0, 0.25, k % 2 ? 40 : 39); }
   hero.fi = fi1; hero.fj = fj1; hero.dir = dirFrom(dx, dy); hero.cast = -1; hero.castFn = null; hero.atk = -1; hero.approach = null;
   G.flashes.push({ fi: fi1, fj: fj1, t: 0.2, t0: 0.2, r: 90 });
-  sfx('blink');
+  // round 27: a ring of arcane light where it leaves and where it lands, and a streak between
+  const fi0 = fi1 - dx * dist, fj0 = fj1 - dy * dist;
+  shockwave(fi0, fj0, 1.1, 0.22, [27, 40]); shockwave(fi1, fj1, 1.4, 0.28, [27, 40]); impactFlash(fi1, fj1, 14, 4);
+  G.streaks.push({ a: [fi0, fj0], b: [fi1, fj1], t: 0.22, t0: 0.22 });
+  sfx('blink'); sfx('whoomp');
 }
 function updateMeteors(dt) {
   for (const m of G.meteors) {
@@ -861,6 +885,7 @@ function updateImpactFx(dt) {
   for (const w of G.waves) w.t -= dt; G.waves = G.waves.filter(w => w.t > 0);
   for (const f of G.impacts) f.t -= dt; G.impacts = G.impacts.filter(f => f.t > 0);
   for (const f of G.frost) f.t -= dt; G.frost = G.frost.filter(f => f.t > 0);
+  for (const k of G.streaks) k.t -= dt; G.streaks = G.streaks.filter(k => k.t > 0);
   if (hero.whirl > 0 && Math.random() < 0.5) { const [x, y] = screenOf(hero), a = Math.random() * 6.283; pspawn(5, x + Math.cos(a) * 12, y + Math.sin(a) * 6, 1, -Math.sin(a) * 40, Math.cos(a) * 20, 10 + Math.random() * 10, 1, LV.outdoor ? DIRT[3] : S[5]); }
 }
 // ground-level pieces, drawn into the world layer under the bodies
@@ -898,7 +923,19 @@ function drawImpactFx() {
 }
 // detail-layer pieces: the impact flash and the whirlwind smear (drawn at full detail)
 function ovSet(X, Y, v) { if (X >= 0 && Y >= 0 && X < OW && Y < OH) ov32[Y * OW + X] = PAL32[v]; }
+function drawStreaks() {   // the blink's streak: a white core in an arcane band, thinning from the start as it fades
+  for (const k of G.streaks) {
+    const [x0, y0] = iso(...k.a), [x1, y1] = iso(...k.b), p = 1 - k.t / k.t0;
+    const A = [x0 * SPX - cam2x, (y0 - 14) * SPX - cam2y], B = [x1 * SPX - cam2x, (y1 - 14) * SPX - cam2y], n = Math.ceil(Math.hypot(B[0] - A[0], B[1] - A[1]));
+    for (let s = 0; s <= n; s++) {
+      const u = s / n; if (u < p) continue;
+      const x = Math.round(A[0] + (B[0] - A[0]) * u), y = Math.round(A[1] + (B[1] - A[1]) * u), w = (u - p) < 0.15 ? 1 : 2;
+      for (let b = -w; b <= w; b++) { if (Math.abs(b) === w && ((x + y) & 1)) continue; ovSet(x, y + b, b === 0 ? 27 : 40); }
+    }
+  }
+}
 function drawImpactFlashes() {
+  drawStreaks(); drawHookChains();
   for (const f of G.impacts) {
     const [x, y] = iso(f.fi, f.fj), X0 = Math.round(x * SPX - cam2x), Y0 = Math.round((y - f.z) * SPX - cam2y), p = 1 - f.t / f.t0, R = f.size * (0.6 + p * 0.6);
     // a white core with four spikes, the first frame solid, then hollowing out

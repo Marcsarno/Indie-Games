@@ -68,6 +68,14 @@ const RECIPES = {
   frost: () => { noise(0.35, 0.28, 'highpass', 5000, 2000, 0.8); tone('triangle', 1600, 900, 0.25, 0.12); },
   blink: () => { tone('sine', 400, 1400, 0.12, 0.14); noise(0.15, 0.12, 'bandpass', 1500, 4000, 1.5); },
   meteor: () => { tone('sine', 1100, 260, 0.8, 0.12); noise(0.8, 0.14, 'bandpass', 600, 2400, 0.8); },
+  // round 27: impact layers, so each skill has its own sound on top of the shared boom
+  crack: () => { noise(0.09, 0.5, 'highpass', 2200, 900, 0.7); tone('square', vary(90), 45, 0.12, 0.2); noise(0.25, 0.25, 'lowpass', 900, 150, 1, 0.04); },
+  sizzle: () => noise(0.4, 0.22, 'highpass', 6000, 2500, 0.6),
+  clank: () => { tone('triangle', vary(1240), 980, 0.12, 0.2); tone('square', vary(310), 240, 0.06, 0.12); noise(0.05, 0.3, 'bandpass', 4000, 2500, 2); },
+  chain: () => { for (let k = 0; k < 5; k++) noise(0.025, 0.28, 'bandpass', vary(3800, 0.15), 2600, 3, k * 0.035); },
+  clink: () => { tone('sine', vary(2400), 2200, 0.1, 0.1); tone('sine', vary(3100), 3000, 0.08, 0.08, 0.03); },
+  zap: () => { tone('square', vary(1300), 400, 0.05, 0.08); noise(0.04, 0.16, 'highpass', 5000, 3000, 1); },
+  whoomp: () => { tone('sine', 220, 70, 0.16, 0.35); noise(0.12, 0.2, 'lowpass', 1600, 300); },
   crackle: v => noise(0.02 + Math.random() * 0.03, 0.03 * v, 'highpass', 2500, 1500, 0.7),
 };
 function sfx(name, v = 1) {

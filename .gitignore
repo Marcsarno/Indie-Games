@@ -21,4 +21,6 @@ diablo-clone/art-review/*
 !diablo-clone/art-review/round23/
 !diablo-clone/art-review/round24/
 !diablo-clone/art-review/round25/
+!diablo-clone/art-review/round26/
+!diablo-clone/art-review/round27/
 diablo-clone/tools/playtests/**/pt-*.png

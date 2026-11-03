@@ -26,7 +26,7 @@ const params = new URLSearchParams(location.search);
 const SHAKE = params.get('shake') !== '0';
 
 // ---------------------------------------------------------------- state
-const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0, meteors: [], flashes: [], blasts: [], cones: [], ghosts: [], sparks: [], rings: [], walls: [], quakes: [], hooks: [], waves: [], impacts: [], frost: [] };
+const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0, meteors: [], flashes: [], blasts: [], cones: [], ghosts: [], sparks: [], rings: [], walls: [], quakes: [], hooks: [], waves: [], impacts: [], frost: [], streaks: [] };
 const hero = {
   fam: 'hero', fi: 0, fj: 0, dir: 1, clip: 'idle', clock: 0, walk: 0, runT: 0, goT: 0, stopT: 0, atk: -1, combo: 0, swingEnd: -9, hitDone: false, stop: 0, flash: 0,
   hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, hurtT: 0, cast: -1,
@@ -75,7 +75,7 @@ function startLevel(level, seed, side = null) {
     if (LV.champsPlanned) LV.spawns.forEach((sp, n) => { if (sp.champ) makeChampion(enemies[n], R); });
     else for (const e of enemies) if (!e.def.unique && R() < champChance(LV.diff)) makeChampion(e, R); }
   makeNpcs(); resetSkills(); setupBoss();
-  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
+  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
   updateFov(hero.fi, hero.fj);
   flowT = 0; computeFlow();
   warmStep(1e9, prewarm());   // idle poses + the hero's walk now, behind the level fade; the rest during play
@@ -762,6 +762,7 @@ function separate() {
 function updateProjectiles(dt) {
   for (const p of projectiles) {
     p.life -= dt;
+    if (p.kind === 'missile') { (p.trail = p.trail || []).push([p.fi, p.fj, p.z]); if (p.trail.length > 9) p.trail.shift(); }   // round 27: the path it took, for the trail
     if (p.kind === 'missile') {   // homing: turn toward the target (or the nearest enemy once it dies)
       if (!p.home || !alive(p.home)) { let bd = 4; p.home = null; for (const e of enemies) { if (!alive(e)) continue; const d = Math.hypot(e.fi - p.fi, e.fj - p.fj); if (d < bd) { bd = d; p.home = e; } } }
       if (p.home) {
@@ -788,6 +789,7 @@ function updateProjectiles(dt) {
     const [x, y] = iso(p.fi, p.fj);
     if (p.kind !== 'arrow' && Math.random() < 0.7) pspawn(3, x, y, p.z, (Math.random() - 0.5) * 8, 0, 4 + Math.random() * 8, 0.35, p.kind === 'holy' ? 50 : p.kind === 'missile' ? 39 : p.kind === 'frostbolt' ? 118 : 16);
     if (p.kind === 'hfire' && Math.random() < 0.6) pspawn(3, x + (Math.random() - 0.5) * 6, y, p.z + 2, (Math.random() - 0.5) * 6, 0, 10 + Math.random() * 8, 0.5, Math.random() < 0.5 ? 4 : 5);   // smoke
+    if (p.kind === 'missile' && p.life <= 0) { impactFlash(p.fi, p.fj, p.z, 3); sfx('zap'); }
     if (p.kind === 'missile' && p.life <= 0) for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283; pspawn(4, x, y, p.z, Math.cos(a) * 45, Math.sin(a) * 22, 0, 0.16, k % 2 ? 40 : 27); }   // a ring of sparks on impact
     if (p.life <= 0 && p.kind === 'holy') sfx('boltHit');
     if (p.life <= 0 && p.boom && !p.boomed) { p.boomed = true; explodeAt(p.fi - p.vx * 0.03, p.fj - p.vy * 0.03, p.boom.r, p.boom.k, p.boom.pow); }
@@ -1102,11 +1104,17 @@ function drawProjectile(p) {
     for (let s = -4; s <= 3; s++) put(Math.round(dx * s * 1.4), Math.round(dy * s * 1.4), s > 2 ? 30 : 25);
     return;
   }
-  if (p.kind === 'missile') {   // an arcane dart: white-hot core, a blue glow, and a tapering tail that twinkles
-    const l = Math.hypot(p.vx, p.vy) || 1, tx = -(p.vx - p.vy) / l * 0.75, ty = -(p.vx + p.vy) / l * 0.38, tw = Math.floor(G.t * 30 + p.fi * 7) % 2;
-    for (let s = 1; s <= 5; s++) { const c = s < 3 ? 40 : s < 4 ? 39 : 38; if (s < 5 || tw) put(Math.round(tx * s), Math.round(ty * s), c | EMIS); }
-    for (let b = -1; b <= 1; b++) for (let a = -2; a <= 2; a++) { const d = a * a / 4 + b * b; if (d <= 1) put(a, b, (d < 0.3 ? 27 : 40) | EMIS); }
-    if (tw) { put(0, -2, 40 | EMIS); put(0, 2, 40 | EMIS); }
+  if (p.kind === 'missile') {   // round 27, at full detail: a white-hot core in a blue glow, a ribbon trail along its
+    // real path (it homes, so the trail curves), thinning and twinkling out, and a four-point glint
+    const tr = p.trail || [], tw = Math.floor(G.t * 30 + p.fi * 7) % 2;
+    for (let k = 0; k < tr.length; k++) {
+      const [fi, fj, z] = tr[k], [x, y] = iso(fi, fj), X = Math.round(x * SPX) - cam2x, Y = Math.round((y - z) * SPX) - cam2y, u = k / tr.length;
+      const w = u > 0.6 ? 1 : 0, c = u > 0.7 ? 40 : u > 0.35 ? 39 : 38;
+      if (u < 0.3 && ((k + tw) & 1)) continue;
+      for (let b = -w; b <= w; b++) ovSet(X, Y + b, c);
+    }
+    for (let b = -3; b <= 3; b++) for (let a = -4; a <= 4; a++) { const d = a * a / 16 + b * b / 9; if (d > 1) continue; if (d > 0.6 && ((X0 + a + Y0 + b) & 1)) continue; ovSet(X0 + a, Y0 + b, d < 0.18 ? 27 : d < 0.5 ? 40 : 39); }
+    if (tw) for (let k = 4; k <= 6; k++) { ovSet(X0, Y0 - k, 40); ovSet(X0, Y0 + k, 40); ovSet(X0 - k - 1, Y0, 40); ovSet(X0 + k + 1, Y0, 40); }
     return;
   }
   if (p.kind === 'hfire') {   // the hero's fireball: a flickering ball of flame with a hot core, tail streaming behind
