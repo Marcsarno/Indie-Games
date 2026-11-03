@@ -1,0 +1,65 @@
+<title>Warrior Skills</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 640px; margin: 0 auto; display: grid; gap: 32px; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0 0 8px; letter-spacing: 0.05em; }
+  p { margin: 0; max-width: 62ch; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 10px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; max-width: 495px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .toggle { display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: 600 0.85rem var(--body); color: var(--bone); background: var(--panel); border: 1px solid var(--rule); padding: 6px 12px; cursor: pointer; }
+  button[aria-pressed="true"] { border-color: var(--ember); color: var(--ember); }
+  button:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+  dl { margin: 0; display: grid; gap: 14px; }
+  dt { font-weight: 600; color: var(--ember); }
+  dd { margin: 4px 0 0; }
+</style>
+<main>
+  <header>
+    <h1>Warrior Skills</h1>
+    <p class="lede">Dungeon of Bones, round 24: a new kit for the warrior. Whirlwind stays; three new skills; mana now fills by fighting.</p>
+  </header>
+  <section>
+    <figure>
+      <div class="toggle" role="group" aria-label="Playback speed"><button id="real" aria-pressed="true">Game speed</button><button id="slow" aria-pressed="false">Slow</button></div>
+      <div class="frame"><img id="g" src="warrior.gif" alt="The warrior hooks a pack of fallen to him with a chain, slams his axe into the ground so it cracks open in a cone, spins a whirlwind, then leaps through the air onto a group of skeletons" width="475" height="406"></div>
+      <figcaption>The combo: hook a pack in, slam them, whirlwind, then leap to the next group.</figcaption>
+    </figure>
+  </section>
+  <section>
+    <h2>The four buttons</h2>
+    <dl>
+      <div><dt>Level 1: Ground Slam</dt><dd>An overhead chop straight into the floor (no jump). The ground splits in a cone in front of him, about 4 tiles long: glowing fissures, rocks and dust. Everything in the cone takes 1.5 times weapon damage as a heavy blow (big knockback, through shields) and is dazed for 0.7 seconds. He aims at the nearest enemy. 8 mana, every 2.5 seconds.</dd></div>
+      <div><dt>Level 2: Chain Hook (my suggestion)</dt><dd>He throws a chain at the nearest enemy within 7 tiles. It drags that enemy, and anything standing right beside it, to his feet, dazed. A boss, elite or champion won't budge: the warrior is hauled to it instead, so it doubles as a gap-closer. Hook a pack in, then slam it. 6 mana, every 4 seconds (no mana spent if nothing's in reach).</dd></div>
+      <div><dt>Level 3: Whirlwind</dt><dd>Unchanged: he spins, hitting everything in reach four times.</dd></div>
+      <div><dt>Level 4: Leap</dt><dd>He launches himself in an arc at the nearest enemy 2 to 7 tiles away (or, with none, up to 6 tiles toward where you push the stick). Nothing can hit him in the air. The landing smashes everything within about 2 tiles for 1.8 times weapon damage with a finisher's knockback, dazes them and cracks the floor. Good for getting in, getting out, and crossing the room. 10 mana, every 5 seconds.</dd></div>
+    </dl>
+  </section>
+  <section>
+    <h2>Fury</h2>
+    <p>Each enemy his swings hit gives back 1.5 mana (up to 3 enemies per swing), so a warrior fills his mana by fighting instead of waiting for it, about 10 mana a second while hitting two enemies. Shield Bash, War Cry and Holy Bolt are gone.</p>
+  </section>
+  <section>
+    <h2>Other ideas for level 2</h2>
+    <p>If the hook isn't it: <strong>Berserk</strong> (a few seconds of red-eyed rage: faster swings and life steal) or <strong>Battle Cry</strong> (stuns and taunts everything around him). Either is a quick swap.</p>
+  </section>
+</main>
+<script>
+  const go = s => { document.getElementById('g').src = s ? 'warrior-slow.gif' : 'warrior.gif';
+    document.getElementById('slow').setAttribute('aria-pressed', String(s)); document.getElementById('real').setAttribute('aria-pressed', String(!s)); };
+  document.getElementById('real').addEventListener('click', () => go(false));
+  document.getElementById('slow').addEventListener('click', () => go(true));
+</script>

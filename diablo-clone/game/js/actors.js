@@ -261,7 +261,7 @@ const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shiel
 const hasFx = (eq, k) => !!eq.lgd && eq.lgd.split('|').includes(k);
 // combo 1 = the second swing of a quick pair (a backhand)
 // a quick string of swings: forehand, backhand, then a finisher (sword thrust or heavy slam)
-const ATTACK_CLIPS = ['attack', 'attack2', 'attack3'];
+const ATTACK_CLIPS = ['attack', 'attack2', 'attack3', 'attack4'];   // attack4: the ground slam skill's overhead chop
 const atkIndex = clip => ATTACK_CLIPS.indexOf(clip);
 // Hero swing timing (combat feel pass): the same poses, but the wind-up before the contact key is
 // cut so a tap lands its hit at ~0.11 s (sword) / ~0.2 s (two-handers) instead of 0.19 / 0.34 s.
@@ -282,6 +282,7 @@ for (const name in HERO_PRE) {
 }
 function weaponSwing(eq, combo = 0) {
   const S = FEEL_OLD ? SWINGS : HERO_SWINGS;
+  if (combo === 3) return S.heavy;   // the ground slam: an overhead chop with any weapon
   return (eq.weapon === 'sword' ? [S.light, S.light2, S.thrust] : [S.heavy, S.heavy2, S.slam])[combo] || S.light;
 }
 // how far the weapon's tip is from the swing pivot (smears and reach)

@@ -4,10 +4,11 @@
 
 const SKILLSETS = {
   warrior: [
-    { id: 'bolt', name: 'HOLY BOLT', lvl: 1, mana: 6, cd: 0.5 },
-    { id: 'bash', name: 'SHIELD BASH', lvl: 2, mana: 6, cd: 3 },
+    // round 24: the warrior's kit. Mana works as fury: every enemy his blows hit gives some back
+    { id: 'slam', name: 'GROUND SLAM', lvl: 1, mana: 8, cd: 2.5 },
+    { id: 'hook', name: 'CHAIN HOOK', lvl: 2, mana: 6, cd: 4 },
     { id: 'whirl', name: 'WHIRLWIND', lvl: 3, mana: 10, cd: 4 },
-    { id: 'cry', name: 'WAR CRY', lvl: 4, mana: 8, cd: 12 },
+    { id: 'leap', name: 'LEAP', lvl: 4, mana: 10, cd: 5 },
   ],
   // the mage's attack button fires magic missiles (no mana); these are its three buttons
   mage: [
@@ -19,9 +20,9 @@ const SKILLSETS = {
 };
 let SKILLS = SKILLSETS.warrior;
 function setSkillsFor(cls) { SKILLS = SKILLSETS[cls] || SKILLSETS.warrior; }
-const CD = { bolt: 0, bash: 0, whirl: 0, cry: 0, fireball: 0, cone: 0, meteor: 0, blink: 0 };
+const CD = { bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, leap: 0, fireball: 0, cone: 0, meteor: 0, blink: 0 };
 function resetSkills() { for (const k in CD) CD[k] = 0; hero.whirl = 0; hero.dash = 0; hero.buff = 0; }
-const heroBusy = () => hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0;
+const heroBusy = () => hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0 || !!hero.leap;
 // one hit's damage, with the war cry bonus
 const heroDmg = (k = 1) => Math.max(1, Math.round(roll(STAT.dmg) * k * (hero.buff > 0 ? 1.4 : 1)));
 
@@ -38,12 +39,179 @@ function useSkill(i) {
   if (s.id === 'whirl') { hero.whirl = 0.8; hero.whirlTick = 0; sfx('heavySwing'); }
   if (s.id === 'bash') startBash();
   if (s.id === 'cry') warCry();
+  if (s.id === 'slam') groundSlam();
+  if (s.id === 'hook') { if (!chainHook()) { hero.mana += s.mana; CD.hook = 0; } }
+  if (s.id === 'leap') { if (!startLeap()) { hero.mana += s.mana; CD.leap = 0; } }
   if (s.id === 'fireball') castFireball();
   if (s.id === 'cone') coneOfCold();
   if (s.id === 'blink') blink();
   if (s.id === 'meteor') castMeteor();
 }
 
+// ---------------------------------------------------------------- the warrior's skills (round 24)
+// Ground slam: an overhead chop into the floor (the 'attack4' swing); on contact the ground splits
+// in a cone in front of him: everything in it is hit hard, knocked back and dazed for a moment
+const SLAM_R = 4.2, SLAM_HALF = 0.55;
+function groundSlam() {
+  const t = nearestEnemy(SLAM_R + 1, true); if (t) hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
+  hero.combo = 3; hero.atk = 0; hero.hitDone = false; hero.approach = null; hero.mag = 0;
+  sfx('heavySwing');
+}
+function groundSlamHit() {
+  const [fx, fy] = dirVec(hero.dir), a0 = Math.atan2(fy, fx);
+  G.pierce = true;
+  for (const e of enemies) {
+    if (!alive(e)) continue;
+    const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy);
+    const da = Math.abs(((Math.atan2(dy, dx) - a0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+    if (d > SLAM_R + (e.def.unique ? 0.5 : 0) || (d > 0.7 && da > SLAM_HALF + 0.3 / Math.max(1, d))) continue;
+    const crit = Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100;
+    wake(e); damageEnemy(e, heroDmg((crit ? 2 : 1) * 1.5), hero.fi, hero.fj, crit, 1);
+    if (alive(e) && !e.def.unique) e.stun = Math.max(e.stun || 0, 0.7);
+  }
+  G.pierce = false;
+  for (const p of dynProps) if (!p.broken && (p.kind === 'barrel' || p.kind === 'egg') && Math.hypot(p.i + 0.5 - hero.fi, p.j + 0.5 - hero.fj) < SLAM_R) hitProp(p);
+  G.quakes.push({ fi: hero.fi + fx * 0.6, fj: hero.fj + fy * 0.6, a0, t: 0.9, t0: 0.9, seed: (Math.random() * 1e6) | 0 });
+  // rocks and dust thrown up along the cone
+  const [x, y] = screenOf(hero), dust = LV.outdoor ? DIRT[3] : S[5];
+  for (let k = 0; k < 34; k++) {
+    const a = a0 + (Math.random() * 2 - 1) * SLAM_HALF, d = 0.8 + Math.random() * SLAM_R, gx = Math.cos(a) * d, gy = Math.sin(a) * d;
+    pspawn(5, x + (gx - gy) * 16, y + (gx + gy) * 8, 2, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 12, 50 + Math.random() * 60, 1, k % 3 ? dust : S[3]);
+  }
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.45);
+  sfx('boom'); sfx('crit');
+}
+// Chain hook: a hook flies at the nearest enemy in reach; whatever it catches (and anything right
+// beside it) is dragged up to the warrior and dazed. Bosses and elites don't budge: he is pulled to them
+function chainHook() {
+  const t = nearestEnemy(7, true);
+  if (!t) { say('NOTHING TO HOOK', 25, 1); return false; }
+  hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
+  const dx = t.fi - hero.fi, dy = t.fj - hero.fj, l = Math.hypot(dx, dy) || 1;
+  G.hooks.push({ fi: hero.fi + dx / l * 0.5, fj: hero.fj + dy / l * 0.5, vx: dx / l * 16, vy: dy / l * 16, life: 0.6, state: 'out', caught: [] });
+  hero.cast = 0.3; hero.castAge = CAST_RELEASE; hero.castKind = 'hook'; hero.clip = 'channel';
+  sfx('swing');
+  return true;
+}
+// Leap: a jump in an arc at the nearest enemy (or up to 6 tiles toward the stick); untouchable in
+// the air; the landing smashes everything around it
+function startLeap() {
+  let to = null;
+  const vx = input.mx, vy = input.my;
+  let t = null, bd = 7;   // the nearest enemy worth jumping at: 2 tiles or more away
+  for (const e of enemies) { if (!alive(e) || LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] < 0.3) continue; const d = Math.hypot(e.fi - hero.fi, e.fj - hero.fj); if (d >= 2 && d < bd) { bd = d; t = e; } }
+  if (Math.hypot(vx, vy) > 0.2 && !t) { const [gi, gj] = stickToGround(vx, vy); to = [hero.fi + gi * 6, hero.fj + gj * 6]; }
+  else if (t) { const dx = t.fi - hero.fi, dy = t.fj - hero.fj, l = Math.hypot(dx, dy) || 1, back = Math.min(l, 0.9 + (t.def.unique ? 0.6 : 0)); to = [t.fi - dx / l * back, t.fj - dy / l * back]; }
+  else { const [fx, fy] = dirVec(hero.dir); to = [hero.fi + fx * 5, hero.fj + fy * 5]; }
+  // land on open ground: walk the target back toward the hero until it's clear
+  const f0 = [hero.fi, hero.fj];
+  for (let k = 0; k < 20 && blocked(to[0], to[1]); k++) { to[0] += (f0[0] - to[0]) * 0.15; to[1] += (f0[1] - to[1]) * 0.15; }
+  const dist = Math.hypot(to[0] - f0[0], to[1] - f0[1]);
+  if (dist < 0.8 || blocked(to[0], to[1])) return false;
+  hero.dir = dirFrom(to[0] - f0[0], to[1] - f0[1]);
+  hero.leap = { from: f0, to, t: 0, dur: 0.32 + dist * 0.035 }; hero.atk = -1; hero.cast = -1; hero.approach = null;
+  sfx('heavySwing');
+  return true;
+}
+function updateLeap(dt) {
+  const L = hero.leap; L.t += dt;
+  const u = Math.min(1, L.t / L.dur), e = u * (2 - u);   // fast off the ground, easing into the landing
+  hero.fi = L.from[0] + (L.to[0] - L.from[0]) * e; hero.fj = L.from[1] + (L.to[1] - L.from[1]) * e;
+  hero.leapZ = Math.sin(u * Math.PI) * (14 + Math.hypot(L.to[0] - L.from[0], L.to[1] - L.from[1]) * 3);
+  hero.clip = 'attack4'; hero.combo = 3; hero.atk = u < 0.75 ? 40 : 230;   // weapon raised, then brought down
+  if (Math.random() < 0.6) { const [x, y] = screenOf(hero); pspawn(3, x, y, hero.leapZ + 20, 0, 0, 4, 0.25, 31); }
+  if (u >= 1) {   // landing
+    hero.leap = null; hero.leapZ = 0; hero.atk = -1; hero.clip = 'idle'; hero.stopT = 0.11; hero.swingEnd = G.t;
+    G.pierce = true;
+    for (const en of enemies) {
+      if (!alive(en)) continue;
+      const d = Math.hypot(en.fi - hero.fi, en.fj - hero.fj);
+      if (d > 1.9 + (en.def.unique ? 0.5 : 0)) continue;
+      const crit = Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100;
+      wake(en); damageEnemy(en, heroDmg((crit ? 2 : 1) * 1.8), hero.fi, hero.fj, crit, 2);
+      if (alive(en) && !en.def.unique) en.stun = Math.max(en.stun || 0, 0.5);
+    }
+    G.pierce = false;
+    const [x, y] = screenOf(hero), dust = LV.outdoor ? DIRT[3] : S[5];
+    for (let k = 0; k < 26; k++) { const a = k / 26 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 70, Math.sin(a) * 35, 40 + Math.random() * 30, 1, k % 3 ? dust : DIRT[4]); }
+    G.quakes.push({ fi: hero.fi, fj: hero.fj, a0: 0, ring: true, t: 0.6, t0: 0.6, seed: (Math.random() * 1e6) | 0 });
+    if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.5);
+    hero.stop = Math.max(hero.stop, 0.08);
+    sfx('boom');
+  }
+}
+function updateWarriorFx(dt) {
+  for (const q of G.quakes) q.t -= dt;
+  G.quakes = G.quakes.filter(q => q.t > 0);
+  for (const h of G.hooks) {
+    if (h.state === 'out') {
+      h.life -= dt;
+      for (let s = 0; s < 3 && h.state === 'out'; s++) {
+        h.fi += h.vx * dt / 3; h.fj += h.vy * dt / 3;
+        if (blocked(h.fi, h.fj) && tileAt(Math.floor(h.fi), Math.floor(h.fj)) !== FLOOR) { h.state = 'back'; break; }
+        const hit = enemies.find(e => alive(e) && Math.hypot(e.fi - h.fi, e.fj - h.fj) < 0.55 + (e.def.unique ? 0.4 : 0));
+        if (hit) {
+          sfx('block');
+          if (hit.def.unique || hit.def.elite || hit.champ) { h.state = 'reel'; h.anchor = hit; damageEnemy(hit, heroDmg(0.6), hero.fi, hero.fj, false, 0, true); break; }
+          h.caught = enemies.filter(e => alive(e) && !e.def.unique && !e.def.elite && !e.champ && Math.hypot(e.fi - hit.fi, e.fj - hit.fj) < 1.6);
+          for (const e of h.caught) { wake(e); damageEnemy(e, heroDmg(0.6), hero.fi, hero.fj, false, 0, true); e.atk = -1; }
+          h.state = 'pull'; break;
+        }
+      }
+      if (h.life <= 0 && h.state === 'out') h.state = 'back';
+    } else if (h.state === 'pull') {   // drag the catch in, then daze it at the warrior's feet
+      let done = true;
+      for (const e of h.caught) {
+        if (!alive(e)) continue;
+        const dx = hero.fi - e.fi, dy = hero.fj - e.fj, d = Math.hypot(dx, dy);
+        if (d > 1.05) { done = false; const st = Math.min(d - 1, 14 * dt); tryMove(e, dx / d * st, dy / d * st, 0.25); e.kb = [0, 0]; e.clip = 'hit'; }
+      }
+      const lead = h.caught.find(alive); if (lead) { h.fi = lead.fi; h.fj = lead.fj; }
+      h.pullT = (h.pullT || 0) + dt;
+      if (done || h.pullT > 0.7) { for (const e of h.caught) if (alive(e)) e.stun = Math.max(e.stun || 0, 0.8); h.state = 'gone'; }
+    } else if (h.state === 'reel') {   // a boss won't come: the warrior is hauled to it
+      const a = h.anchor, dx = a.fi - hero.fi, dy = a.fj - hero.fj, d = Math.hypot(dx, dy);
+      h.fi = a.fi; h.fj = a.fj; h.pullT = (h.pullT || 0) + dt;
+      if (d > 1.2 + (a.def.unique ? 0.5 : 0) && h.pullT < 0.7 && alive(a)) { const st = Math.min(d - 1, 14 * dt); tryMove(hero, dx / d * st, dy / d * st); hero.dir = dirFrom(dx, dy); }
+      else h.state = 'gone';
+    } else if (h.state === 'back') {   // a miss: the chain rattles back
+      const dx = hero.fi - h.fi, dy = hero.fj - h.fj, d = Math.hypot(dx, dy);
+      if (d < 0.6) h.state = 'gone'; else { h.fi += dx / d * 20 * dt; h.fj += dy / d * 20 * dt; }
+    }
+  }
+  G.hooks = G.hooks.filter(h => h.state !== 'gone');
+}
+// world layer: the slam's fissures (jagged cracks glowing with heat, spreading out then fading) and
+// the chain
+function drawWarriorFx() {
+  for (const q of G.quakes) {
+    const p = 1 - q.t / q.t0, grow = Math.min(1, p * 5), [hx, hy] = iso(q.fi, q.fj), n = q.ring ? 9 : 6, R = q.ring ? 1.9 : SLAM_R;
+    for (let c = 0; c < n; c++) {
+      const r1 = rng(q.seed + c * 31);
+      let a = q.ring ? c / n * 6.283 + r1() * 0.5 : q.a0 + (c / (n - 1) - 0.5) * 2 * SLAM_HALF * 0.9;
+      let gi = 0, gj = 0; const len = R * (0.7 + r1() * 0.3) * grow;
+      for (let s = 0; s < len * 6; s++) {
+        a += (r1() - 0.5) * 0.5; gi += Math.cos(a) / 6; gj += Math.sin(a) / 6;
+        const x = Math.round(hx + (gi - gj) * 16 - camX), y = Math.round(hy + (gi + gj) * 8 - camY);
+        for (const [ox, oy, v] of [[0, 0, p < 0.55 ? FIRE[2] | EMIS : BLK], [1, 0, BLK], [0, 1, BLK]]) {
+          const xx = x + ox, yy = y + oy; if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+          if (p > 0.7 && BAYER[((yy & 3) << 2) | (xx & 3)] < (p - 0.7) / 0.3) continue;   // fade out
+          scr[yy * W + xx] = v;
+        }
+      }
+    }
+  }
+  for (const h of G.hooks) {
+    const [ax0, ay0] = screenOf(hero), [bx0, by0] = iso(h.fi, h.fj), ax = ax0 - camX, ay = ay0 - camY - 22, bx = bx0 - camX, by = by0 - camY - 14;
+    const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay)));
+    for (let s = 0; s <= n; s++) {
+      const x = Math.round(ax + (bx - ax) * s / n), y = Math.round(ay + (by - ay) * s / n); if (x < 0 || y < 0 || x >= W || y >= H) continue;
+      scr[y * W + x] = (s % 3 === 0) ? BLK : STEEL[(s % 3) + 1];   // iron links
+    }
+    const x = Math.round(bx), y = Math.round(by);
+    for (const [ox, oy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1]]) { const xx = x + ox, yy = y + oy; if (xx >= 0 && yy >= 0 && xx < W && yy < H) scr[yy * W + xx] = oy > 0 ? STEEL[1] : STEEL[3]; }
+  }
+}
 // ---------------------------------------------------------------- mage spells
 // Every spell's damage comes from the staff (STAT.dmg), so a better staff makes all of them hit
 // harder. A cast is three poses: gather, release (the spell leaves here, CAST_RELEASE s after the

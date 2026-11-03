@@ -119,7 +119,23 @@ const SKILL_GLYPH = [null, glyphBash, glyphWhirl, glyphCry];
 // per skill: button ramp and glyph (the warrior's by slot, the mage's by spell)
 const glyphCone = (cx, cy) => { for (let k = 0; k < 9; k++) { const a = -0.55 + k * 0.1375; line(cx - 7, cy + 6, cx - 7 + Math.cos(a - 0.785) * 15, cy + 6 + Math.sin(a - 0.785) * 15, k % 2 ? 117 : 118); } put(cx - 7, cy + 6, 27); };
 const glyphBlink = (cx, cy) => { for (let b = -3; b <= 3; b++) for (let a = -3; a <= 3; a++) if (a * a + b * b <= 9) put(cx + 3 + a, cy - 3 + b, a * a + b * b <= 2 ? 27 : 40); for (let k = 0; k < 4; k++) put(cx - 3 - k * 1.6, cy + 3 + k * 1.6, k % 2 ? 39 : 40); for (const [a, b] of [[-6, -1], [0, 5], [-2, -5]]) put(cx + a, cy + b, 39); };
-const SPELL_LOOK = { fireball: [[13, 14, 15, 16], glyphFire], cone: [[114, 115, 116, 117], glyphCone], meteor: [[19, 20, 21, 22], glyphMeteor], blink: [[56, 57, 58, 59], glyphBlink] };
+const glyphSlam = (cx, cy) => {   // a weapon driven into cracked ground
+  line(cx - 1, cy - 8, cx + 1, cy + 1, 31); line(cx, cy - 8, cx + 2, cy + 1, 27); fillRect(cx - 3, cy - 6, 7, 2, 50);
+  for (const [a, b] of [[-7, 6], [-3, 7], [3, 7], [7, 6]]) line(cx + 1, cy + 3, cx + a, cy + b, 16);
+  line(cx - 8, cy + 4, cx + 9, cy + 4, 35);
+};
+const glyphHook = (cx, cy) => {   // a chain running up to a barbed hook
+  for (let k = 0; k < 4; k++) { const x = cx - 7 + k * 2.2, y = cy + 7 - k * 2.2; put(x, y, 31); put(x + 1, y, 29); }
+  line(cx + 1, cy - 7, cx + 1, cy + 2, 27); line(cx + 2, cy - 7, cx + 2, cy + 2, 31);   // shank
+  for (let a = 0; a <= 12; a++) { const t = Math.PI * a / 12; put(cx + 4.5 - Math.cos(t) * 3.5, cy + 2 + Math.sin(t) * 3.2, 27); put(cx + 4.5 - Math.cos(t) * 2.5, cy + 2 + Math.sin(t) * 2.4, 31); }   // the bend
+  line(cx + 8, cy + 2, cx + 7, cy - 1, 27); line(cx + 8, cy + 2, cx + 6, cy + 1, 27);   // barb
+  fillRect(cx, cy - 8, 4, 2, 50);   // the ring the chain hangs from
+};
+const glyphLeap = (cx, cy) => {   // an arc up and down, landing in a burst
+  for (let a = 0; a <= 16; a++) { const u = a / 16; put(cx - 7 + u * 12, cy + 4 - Math.sin(u * Math.PI) * 10, a > 12 ? 51 : 27); }
+  for (const [a, b] of [[-3, 0], [3, 0], [0, -3], [2, -2], [-2, -2]]) line(cx + 5, cy + 5, cx + 5 + a, cy + 5 + b, 50);
+};
+const SPELL_LOOK = { slam: [[13, 14, 15, 16], glyphSlam], hook: [[28, 29, 30, 31], glyphHook], whirl: [[19, 20, 21, 22], glyphWhirl], leap: [[48, 49, 50, 51], glyphLeap], fireball: [[13, 14, 15, 16], glyphFire], cone: [[114, 115, 116, 117], glyphCone], meteor: [[19, 20, 21, 22], glyphMeteor], blink: [[56, 57, 58, 59], glyphBlink] };
 const glyphBolt = (cx, cy) => { for (let a = 0; a < 8; a++) { const t = a * Math.PI / 4; line(cx, cy, cx + Math.cos(t) * 7, cy + Math.sin(t) * 7, a % 2 ? 50 : 51); } put(cx, cy, 27); };
 const glyphBag = (cx, cy) => { fillRect(cx - 5, cy - 3, 11, 9, 35); frame(cx - 5, cy - 3, 11, 9, 36, 33); line(cx - 3, cy - 3, cx - 1, cy - 6, 36); line(cx + 3, cy - 3, cx + 1, cy - 6, 36); fillRect(cx - 1, cy, 3, 2, 50); };
 const glyphSound = (cx, cy) => {

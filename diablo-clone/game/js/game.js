@@ -26,7 +26,7 @@ const params = new URLSearchParams(location.search);
 const SHAKE = params.get('shake') !== '0';
 
 // ---------------------------------------------------------------- state
-const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0, meteors: [], flashes: [], blasts: [], cones: [], ghosts: [], sparks: [], rings: [], walls: [] };
+const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0, meteors: [], flashes: [], blasts: [], cones: [], ghosts: [], sparks: [], rings: [], walls: [], quakes: [], hooks: [] };
 const hero = {
   fam: 'hero', fi: 0, fj: 0, dir: 1, clip: 'idle', clock: 0, walk: 0, runT: 0, goT: 0, stopT: 0, atk: -1, combo: 0, swingEnd: -9, hitDone: false, stop: 0, flash: 0,
   hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, hurtT: 0, cast: -1,
@@ -73,7 +73,7 @@ function startLevel(level, seed) {
   enemies = LV.spawns.map((s, n) => makeEnemy(s.id, s.fi, s.fj, n));
   { const R = rng(seed ^ 0x5bd1); for (const e of enemies) if (!e.def.unique && R() < champChance(LV.diff)) makeChampion(e, R); }
   makeNpcs(); resetSkills(); setupBoss();
-  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; hero.chillT = 0;
+  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
   updateFov(hero.fi, hero.fj);
   flowT = 0; computeFlow();
   warmStep(1e9, prewarm());   // idle poses + the hero's walk now, behind the level fade; the rest during play
@@ -365,19 +365,21 @@ function wake(e) { if (e.state !== 'sleep') return; e.state = 'hunt'; for (const
 // all = the heavy slam: hits everything in reach around the hero, not just in front
 function heroHitResolve(all = false, pow = 0) {
   const [fx, fy] = dirVec(hero.dir), reach = heroReach() + 0.1;
-  let any = false;
+  let any = false, nHit = 0;
   for (const e of enemies) {
     if (!alive(e)) continue;
     const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy), rr = reach + (e.def.unique ? 0.5 : 0.2);
     if (d > rr || (!all && d > 0.3 && (dx * fx + dy * fy) / d < 0.35)) continue;
     const crit = Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100;
-    damageEnemy(e, heroDmg(crit ? 2 : 1), hero.fi, hero.fj, crit, pow); any = true;
+    damageEnemy(e, heroDmg(crit ? 2 : 1), hero.fi, hero.fj, crit, pow); any = true; nHit++;
   }
   for (const p of dynProps) {
     if (p.broken || (p.kind !== 'barrel' && p.kind !== 'egg')) continue;
     const dx = p.i + 0.5 - hero.fi, dy = p.j + 0.5 - hero.fj, d = Math.hypot(dx, dy);
     if (d < 1.6 && (dx * fx + dy * fy) / (d || 1) > 0.3) hitProp(p);
   }
+  // fury: the warrior's blows feed his skills (1.5 mana per enemy hit, up to 3 a swing)
+  if (nHit && hero.cls !== 'mage') hero.mana = Math.min(STAT.maxMana, hero.mana + Math.min(3, nHit) * 1.5);
   return any;
 }
 function breakBarrel(p) {
@@ -459,7 +461,7 @@ function update(dt) {
   for (const g of groundItems) if (g.item && g.item.rarity === 'legend' && !g.announced) { g.announced = true; say('A LEGENDARY ITEM HAS FALLEN', 112, 3); sfx('levelUp'); }   // never miss one
   if (hero.frenzy > 0) hero.frenzy -= dt; if (hero.stoneskin > 0) hero.stoneskin -= dt;
   separate();
-  updateProjectiles(dt); updateMeteors(dt); updateLichFx(dt);
+  updateProjectiles(dt); updateMeteors(dt); updateLichFx(dt); updateWarriorFx(dt);
   updateParticles(dt);
   ambience(dt);
   for (const f of floaters) { f.t -= dt; f.y -= dt * 18; }
@@ -472,6 +474,7 @@ function updateHero(dt) {
   hero.flash = Math.max(0, hero.flash - dt); hero.hurtT = Math.max(0, hero.hurtT - dt);
   hero.hp = Math.min(STAT.maxHp, hero.hp + dt * 0.25); hero.mana = Math.min(STAT.maxMana, hero.mana + dt * STAT.manaRegen);
   updateSkills(dt);
+  if (hero.leap) { if (hero.stop > 0) { hero.stop -= dt; return; } hero.clock += dt; updateLeap(dt); return; }   // in the air
   if (input.attack || (hero.buf > G.t && (!heroBusy() || canChain()))) heroAttack();
   let vx = input.mx, vy = input.my;
   const K = input.keys;
@@ -533,7 +536,7 @@ function updateHero(dt) {
     if (ki >= 0 && sw[ki].mv) lungeHero(sw[ki].mv * dt * 1000 / sw[ki].ms);
     if (!hero.hitDone && hero.mag > 0) { const st = Math.min(hero.mag, dt * 4.5); lungeHero(st); hero.mag -= st; }
     if (ki >= 0 && sw[ki].hit && !hero.hitDone) {
-      hero.hitDone = true; heroHitResolve(!!sw[ki].slam, hero.combo === 2 ? 2 : STAT.slow ? 1 : 0);
+      hero.hitDone = true; if (hero.combo === 3) groundSlamHit(); else heroHitResolve(!!sw[ki].slam, hero.combo === 2 ? 2 : STAT.slow ? 1 : 0);
       if (sw[ki].slam) {   // the ground slam: extra shake and a ring of dust
         if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.35);
         const [x, y] = screenOf(hero), [fx, fy] = dirVec(hero.dir), cx = x + (fx - fy) * 12, cy = y + (fx + fy) * 6;
@@ -707,7 +710,7 @@ function updateEnemy(e, dt) {
   e.dir = dirFrom(mv[0], mv[1]); e.clip = 'walk';
 }
 function hurtHero(dmg, src) {
-  if (hero.dead) return;
+  if (hero.dead || hero.leap) return;   // nothing touches him in the air
   if (Math.random() * 100 < STAT.block) { floater('BLOCK', hero.fi, hero.fj, 44, 31); sfx('block'); return; }
   dmg = Math.max(1, Math.round(dmg * 40 / (40 + STAT.armor * (hero.buff > 0 ? 1.5 : 1) * 2.5) * (hero.stoneskin > 0 ? 0.5 : 1)));
   hero.hp -= dmg; hero.flash = 0.06; hero.hurtT = 0.15; sfx('hurt');
@@ -796,7 +799,7 @@ function frameOf(e) {
   if (e.clip === 'idle') return Math.floor(pt / 0.2) % 4;
   if (e.clip === 'walk') return Math.floor(e.walk) % 8;
   if (e === hero && e.clip === 'channel') { const a = hero.castAge || 0, ph = a < CAST_RELEASE ? 0 : a < 0.19 ? 1 : 2; return (hero.castKind === 'meteor' ? 3 : 0) + ph; }
-  if (e.clip === 'attack2' || e.clip === 'attack3') return Math.max(0, swingKey(FAMILIES[e.fam].combo(e, atkIndex(e.clip)), e.atk));
+  if (e.clip === 'attack2' || e.clip === 'attack3' || e.clip === 'attack4') return Math.max(0, swingKey(FAMILIES[e.fam].combo(e, atkIndex(e.clip)), e.atk));
   if (e.clip === 'attack' || e.clip === 'shoot' || e.clip === 'cast') return Math.max(0, swingKey(FAMILIES[e.fam].swing(e), e.atk));
   if (e.clip === 'death') return Math.min(5, Math.floor((e === hero ? hero.dead : e.dying) / 0.1));
   return 0;
@@ -918,7 +921,7 @@ function render() {
       const jit = c.stop > 0 && c !== hero && c.dying < 0 ? (Math.floor(t * 33) % 2 ? 1 : -1) : 0;
       // white flash, then a brief dithered red; ice blue while frozen, half ice while slowed
       const fl = c.flash > 0 ? 1 : c.frozen > 0 ? 4 : c.tint > 0 ? 3 : c.slowT > 0 || c.chillT > 0 ? 5 : 0;
-      ovBlit(sp, x + jit, y, charLevel[n], fl, 0, tIdx(Math.floor(c.fi), Math.floor(c.fj)));
+      ovBlit(sp, x + jit, y - (c.leapZ || 0), charLevel[n], fl, 0, tIdx(Math.floor(c.fi), Math.floor(c.fj)));
     } });
   });
   for (const p of projectiles) ov.push({ depth: p.fi + p.fj, draw: () => drawProjectile(p) });
@@ -927,7 +930,7 @@ function render() {
   heroRing(kx, ky + 1);
   base.sort((a, b) => a.depth - b.depth);
   for (const d of base) d.draw();
-  drawTelegraph(); drawMeteors(); drawLichFx();
+  drawTelegraph(); drawMeteors(); drawLichFx(); drawWarriorFx();
   const charLevel = lightPass(chars, kx, ky);
   // the frame: the lit world doubled (shifted by the camera's half pixel), then the detail layer over it
   for (let y = 0; y < H; y++) {
