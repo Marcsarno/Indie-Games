@@ -26,7 +26,7 @@ const params = new URLSearchParams(location.search);
 const SHAKE = params.get('shake') !== '0';
 
 // ---------------------------------------------------------------- state
-const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0, meteors: [], flashes: [], blasts: [], cones: [], ghosts: [], sparks: [], rings: [], walls: [], quakes: [], hooks: [], waves: [], impacts: [], frost: [], streaks: [], fissures: [], aftershocks: [], fireGround: [] };
+const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0, meteors: [], flashes: [], blasts: [], cones: [], ghosts: [], sparks: [], rings: [], walls: [], quakes: [], hooks: [], waves: [], impacts: [], frost: [], streaks: [], fissures: [], aftershocks: [], fireGround: [], zaps: [], iceBursts: [], devils: [] };
 const hero = {
   fam: 'hero', fi: 0, fj: 0, dir: 1, clip: 'idle', clock: 0, walk: 0, runT: 0, goT: 0, stopT: 0, atk: -1, combo: 0, swingEnd: -9, hitDone: false, stop: 0, flash: 0,
   hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, hurtT: 0, cast: -1,
@@ -75,7 +75,7 @@ function startLevel(level, seed, side = null) {
     if (LV.champsPlanned) LV.spawns.forEach((sp, n) => { if (sp.champ) makeChampion(enemies[n], R); });
     else for (const e of enemies) if (!e.def.unique && R() < champChance(LV.diff)) makeChampion(e, R); }
   makeNpcs(); resetSkills(); setupBoss();
-  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
+  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
   updateFov(hero.fi, hero.fj);
   flowT = 0; computeFlow();
   warmStep(1e9, prewarm());   // idle poses + the hero's walk now, behind the level fade; the rest during play
@@ -307,7 +307,7 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
     e.dying = 0; e.atk = -1; e.clip = 'death'; e.tint = 0;
     if (FEEL_OLD) { e.stop = crit ? 0.2 : 0.15; hero.stop = Math.max(hero.stop, e.stop); }
     else { e.stop = crit ? 0.15 : 0.12; hero.stop = Math.max(hero.stop, e.stop * 0.65); }
-    if (e.frozen > 0) { const [x, y] = screenOf(e); burst(5, x, y, e.def.chest, 18, 90, 118); burst(2, x, y, e.def.chest, 10, 80, 117); e.frozen = 0; }   // shatters
+    if (e.frozen > 0) { const [x, y] = screenOf(e); burst(5, x, y, e.def.chest, 18, 90, 118); burst(2, x, y, e.def.chest, 10, 80, 117); e.frozen = 0; if (e.deepIce) G.iceBursts.push({ fi: e.fi, fj: e.fj }); }   // shatters (Deep Freeze: and bursts)
     if (ranged) hero.stop = heroStop;   // spells and arrows never freeze the caster
     if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.5);
     sfx('kill');
@@ -485,7 +485,7 @@ function update(dt) {
   for (const g of groundItems) if (g.item && g.item.rarity === 'legend' && !g.announced) { g.announced = true; say('A LEGENDARY ITEM HAS FALLEN', 112, 3); sfx('levelUp'); }   // never miss one
   if (hero.frenzy > 0) hero.frenzy -= dt; if (hero.stoneskin > 0) hero.stoneskin -= dt;
   separate();
-  updateProjectiles(dt); updateMeteors(dt); updateLichFx(dt); updateWarriorFx(dt); updateImpactFx(dt); updateSlamMods(dt); updateFireGround(dt);
+  updateProjectiles(dt); updateMeteors(dt); updateLichFx(dt); updateWarriorFx(dt); updateImpactFx(dt); updateSlamMods(dt); updateFireGround(dt); updateMods30(dt);
   updateParticles(dt);
   ambience(dt);
   for (const f of floaters) { f.t -= dt; f.y -= dt * 18; }
@@ -793,7 +793,8 @@ function updateProjectiles(dt) {
     p.life -= dt;
     if (p.kind === 'missile') { (p.trail = p.trail || []).push([p.fi, p.fj, p.z]); if (p.trail.length > 9) p.trail.shift(); }   // round 27: the path it took, for the trail
     if (p.kind === 'missile') {   // homing: turn toward the target (or the nearest enemy once it dies)
-      if (!p.home || !alive(p.home)) { let bd = 4; p.home = null; for (const e of enemies) { if (!alive(e)) continue; const d = Math.hypot(e.fi - p.fi, e.fj - p.fj); if (d < bd) { bd = d; p.home = e; } } }
+      if (p.orb) updateOrb(p, dt);   // round 30: the Arcane Orb modifier zaps what is near it as it drifts
+      if (p.noHome) { /* piercing bolts and orbs fly straight */ } else if (!p.home || !alive(p.home)) { let bd = 4; p.home = null; for (const e of enemies) { if (!alive(e)) continue; const d = Math.hypot(e.fi - p.fi, e.fj - p.fj); if (d < bd) { bd = d; p.home = e; } } }
       if (p.home) {
         const want = Math.atan2(p.home.fj - p.fj, p.home.fi - p.fi), cur = Math.atan2(p.vy, p.vx);
         let da = ((want - cur + Math.PI * 3) % (Math.PI * 2)) - Math.PI; da = Math.max(-5 * dt, Math.min(5 * dt, da));
@@ -808,6 +809,12 @@ function updateProjectiles(dt) {
         if (!hero.dead && Math.hypot(hero.fi - p.fi, hero.fj - p.fj) < 0.45) { hurtHero(roll(p.dmg), null); p.life = 0; if (p.kind === 'frostbolt') hero.chillT = 1.5; }
       } else {
         for (const e of enemies) if (alive(e) && Math.hypot(e.fi - p.fi, e.fj - p.fj) < 0.5 + (e.def.unique ? 0.4 : 0)) {
+          if (p.orb) break;   // the orb drifts through, zapping (updateOrb)
+          if (p.pierce) {   // the piercing bolt goes on through, hitting each foe once
+            if (p.hits.has(e)) continue;
+            p.hits.add(e); const c = spellCrit(); G.elem = 'arcane'; G.pierce = true; damageEnemy(e, spellDmg(c ? p.dmgK * 2 : p.dmgK), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, c, 0, true); G.elem = null; G.pierce = false;
+            impactFlash(e.fi, e.fj, p.z, 3); sfx('zap'); continue;
+          }
           if (p.boom) { p.life = 0; break; }   // a fireball bursts on whatever it touches (below)
           if (p.spell) { const c = spellCrit(); G.elem = p.elem || null; damageEnemy(e, spellDmg(c ? p.dmgK * 2 : p.dmgK), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, c, 0, true); G.elem = null; }
           else damageEnemy(e, roll(p.dmg), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, false, 0, true);
@@ -818,6 +825,7 @@ function updateProjectiles(dt) {
     const [x, y] = iso(p.fi, p.fj);
     if (p.kind !== 'arrow' && Math.random() < 0.7) pspawn(3, x, y, p.z, (Math.random() - 0.5) * 8, 0, 4 + Math.random() * 8, 0.35, p.kind === 'holy' ? 50 : p.kind === 'missile' ? 39 : p.kind === 'frostbolt' ? 118 : 16);
     if (p.kind === 'hfire' && Math.random() < 0.6) pspawn(3, x + (Math.random() - 0.5) * 6, y, p.z + 2, (Math.random() - 0.5) * 6, 0, 10 + Math.random() * 8, 0.5, Math.random() < 0.5 ? 4 : 5);   // smoke
+    if (p.kind === 'missile' && p.life <= 0 && p.orb) orbBurst(p);
     if (p.kind === 'missile' && p.life <= 0) { impactFlash(p.fi, p.fj, p.z, 3); sfx('zap'); }
     if (p.kind === 'missile' && p.life <= 0) for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283; pspawn(4, x, y, p.z, Math.cos(a) * 45, Math.sin(a) * 22, 0, 0.16, k % 2 ? 40 : 27); }   // a ring of sparks on impact
     if (p.life <= 0 && p.kind === 'holy') sfx('boltHit');
@@ -1255,18 +1263,25 @@ function drawProjectile(p) {
   }
   if (p.kind === 'missile') {   // round 29: an arcane bolt: a fat glowing orb with three sparks circling it,
     // a crackling tail that jitters along the real path behind it, and a white-hot heart
-    const tr = p.trail || [], sp = (p.spin || 0) + G.t * 14;
+    // round 30 modifiers: seekers are drawn small, the piercing bolt as a lance along its flight, the orb big and slow
+    const tr = p.trail || [], sp = (p.spin || 0) + G.t * (p.orb ? 6 : 14), B = p.small ? 0.55 : p.orb ? 1.55 : 1;
     for (let k = 0; k < tr.length; k++) {
       const [fi, fj, z] = tr[k], [x, y] = iso(fi, fj), u = k / tr.length, j = (hash(k, Math.floor(G.t * 24), 7) - 0.5) * 4 * (1 - u);
-      const X = Math.round(x * SPX) - cam2x, Y = Math.round((y - z) * SPX + j) - cam2y, w = Math.round(u * 3.5);
+      const X = Math.round(x * SPX) - cam2x, Y = Math.round((y - z) * SPX + j) - cam2y, w = Math.round(u * 3.5 * (p.lance ? 0.7 : B));
       for (let b = -w; b <= w; b++) for (let a = -w; a <= w; a++) { if (Math.abs(a) + Math.abs(b) > w) continue; if (u < 0.5 && ((X + a + Y + b) & 1)) continue; ovSet(X + a, Y + b, u > 0.75 ? 40 : u > 0.4 ? 39 : 38); }
     }
-    for (let b = -7; b <= 7; b++) for (let a = -9; a <= 9; a++) {
-      const d = a * a / 81 + b * b / 49; if (d > 1) continue;
+    if (p.lance) {   // a bright spear of light pointing the way it flies
+      const l = Math.hypot(p.vx, p.vy) || 1, ux = (p.vx - p.vy) / l * 0.707, uy = (p.vx + p.vy) / l * 0.354, ul = Math.hypot(ux, uy), dx = ux / ul, dy = uy / ul;
+      for (let s = -16; s <= 6; s++) { const w = s > 0 ? 3 - s * 0.5 : 3 * (1 + s / 16); for (let k = -Math.ceil(w); k <= w; k++) { const x = Math.round(X0 + dx * s - dy * k), y = Math.round(Y0 + dy * s + dx * k), e = Math.abs(k) / Math.max(1, w); ovSet(x, y, e < 0.35 ? 27 : e < 0.7 ? 40 : 39); } }
+      return;
+    }
+    const rx = Math.round(9 * B), ry = Math.round(7 * B);
+    for (let b = -ry; b <= ry; b++) for (let a = -rx; a <= rx; a++) {
+      const d = a * a / (rx * rx) + b * b / (ry * ry); if (d > 1) continue;
       if (d > 0.72 && ((X0 + a + Y0 + b + Math.floor(G.t * 20)) & 1)) continue;   // a fizzing rim
       ovSet(X0 + a, Y0 + b, d < 0.12 ? 27 : d < 0.4 ? 40 : d < 0.72 ? 39 : 38);
     }
-    for (let k = 0; k < 3; k++) { const a = sp + k * 2.094, x = Math.round(X0 + Math.cos(a) * 13), y = Math.round(Y0 + Math.sin(a) * 6.5); ovSet(x, y, 27); ovSet(x + 1, y, 40); ovSet(x, y + 1, 39); }
+    for (let k = 0; k < (p.orb ? 5 : 3); k++) { const a = sp + k * 6.283 / (p.orb ? 5 : 3), x = Math.round(X0 + Math.cos(a) * 13 * B), y = Math.round(Y0 + Math.sin(a) * 6.5 * B); ovSet(x, y, 27); ovSet(x + 1, y, 40); ovSet(x, y + 1, 39); }
     return;
   }
   if (p.kind === 'hfire') {   // the hero's fireball: a flickering ball of flame with a hot core, tail streaming behind

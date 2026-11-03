@@ -40,7 +40,7 @@ function useSkill(i) {
   if (heroBusy() && !(hero.castKind === 'missile' && hero.cast >= 0 && hero.atk < 0 && !(hero.dash > 0) && !(hero.whirl > 0))) return;
   if (hero.mana < skillCost(s)) { say('NOT ENOUGH MANA', 40, 1.2); btnFx(i).deny = 0.3; sfx('tap'); return; }
   hero.mana -= skillCost(s); CD[s.id] = s.cd; btnFx(i).press = 0.16;
-  if (s.id === 'whirl') { hero.whirl = 0.8; hero.whirlTick = 0; sfx('heavySwing'); }
+  if (s.id === 'whirl') { hero.whirl = skillMod('whirl') === 'long' ? 1.6 : 0.8; hero.whirlTick = 0; hero.devilT = 0.1; sfx('heavySwing'); }
   if (s.id === 'bash') startBash();
   if (s.id === 'cry') warCry();
   if (s.id === 'slam') groundSlam();
@@ -107,6 +107,16 @@ function slamAt(a0, R, half, k, ring = false) {
   if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.45 * Math.min(1, k / 1.5));
   sfx('boom'); sfx('crit'); sfx('crack');
 }
+// Tether: hauled in, the warrior lands a heavy blow on the target and what stands beside it
+function tetherBlow(a) {
+  G.pierce = true; G.elem = 'heavy';
+  for (const e of enemies) if (alive(e) && (e === a || Math.hypot(e.fi - a.fi, e.fj - a.fj) < 1.3)) { wake(e); const c = Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100; damageEnemy(e, heroDmg((c ? 2 : 1) * (e === a ? 1.6 : 0.9)), hero.fi, hero.fj, c, 1); }
+  G.pierce = false; G.elem = null;
+  hero.dir = dirFrom(a.fi - hero.fi, a.fj - hero.fj); hero.combo = 2; hero.atk = 0; hero.hitDone = true; hero.approach = null;   // a swing to sell it (the damage is already done)
+  impactFlash(a.fi, a.fj, 12, 7); { const [x, y] = screenOf(a); rubble(x, y, 10, 60); }
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.3);
+  hero.stop = Math.max(hero.stop, 0.08); sfx('boom'); sfx('clank');
+}
 // the fissure runs out at 16 tiles a second; aftershocks go off on their timers
 function updateSlamMods(dt) {
   for (const f of G.fissures) {
@@ -143,18 +153,57 @@ const SKILL_MODS = {
     { id: 'fissure', name: 'FISSURE', desc: 'A LONG NARROW CRACK THAT RACES OUT' },
     { id: 'after', name: 'AFTERSHOCK', desc: 'A SECOND, WEAKER SLAM HALF A SECOND LATER' },
   ],
+  // round 30: the rest of both kits
+  hook: [
+    { id: 'line', name: 'LONG CHAIN', desc: 'REACHES FARTHER, DRAGS IN ALL IT PASSES' },
+    { id: 'barbed', name: 'BARBED HOOK', desc: 'HITS HARDER, DAZES TWICE AS LONG' },
+    { id: 'tether', name: 'TETHER', desc: 'HAULS YOU TO THE TARGET FOR A HEAVY BLOW' },
+  ],
+  whirl: [
+    { id: 'devil', name: 'DUST DEVILS', desc: 'THROWS OUT SMALL WHIRLWINDS AS YOU SPIN' },
+    { id: 'long', name: 'LONG SPIN', desc: 'SPINS TWICE AS LONG, PULLS FOES IN. 6 MORE FURY' },
+    { id: 'storm', name: 'BLADE STORM', desc: 'WIDER REACH, FASTER HITS' },
+  ],
+  leap: [
+    { id: 'burn', name: 'BURNING LAND', desc: 'THE LANDING LEAVES FIRE ON THE FLOOR' },
+    { id: 'quake', name: 'EARTHQUAKE', desc: 'A MUCH WIDER LANDING THAT KNOCKS ALL DOWN' },
+    { id: 'pounce', name: 'POUNCE', desc: 'A LONGER JUMP, ONE HUGE BLOW ON THE TARGET' },
+  ],
+  missile: [
+    { id: 'seek', name: 'SEEKERS', desc: 'THREE SMALL BOLTS, EACH FINDS ITS OWN FOE' },
+    { id: 'pierce', name: 'PIERCING BOLT', desc: 'A FAST STRAIGHT BOLT THAT GOES THROUGH' },
+    { id: 'orb', name: 'ARCANE ORB', desc: 'A SLOW ORB THAT ZAPS ALL NEAR IT, THEN BURSTS' },
+  ],
+  cone: [
+    { id: 'nova', name: 'FROST NOVA', desc: 'A RING OF FROST ALL AROUND YOU' },
+    { id: 'shards', name: 'ICE SHARDS', desc: 'A LONG NARROW CONE THAT HITS HARDER' },
+    { id: 'deep', name: 'DEEP FREEZE', desc: 'FREEZES LONGER. KILLED WHILE FROZEN, THEY BURST' },
+  ],
+  meteor: [
+    { id: 'shower', name: 'SHOWER', desc: 'THREE SMALLER METEORS AROUND THE TARGET' },
+    { id: 'molten', name: 'MOLTEN CRATER', desc: 'THE CRATER BURNS FOR 4 SECONDS' },
+    { id: 'comet', name: 'COMET', desc: 'A BALL OF ICE: FREEZES INSTEAD OF BURNING' },
+  ],
+  blink: [
+    { id: 'burst', name: 'ARCANE BURST', desc: 'A BLAST WHERE YOU LAND THAT THROWS FOES BACK' },
+    { id: 'double', name: 'DOUBLE BLINK', desc: 'A SECOND BLINK FOR FREE, WITHIN 1.5 SECONDS' },
+    { id: 'frost', name: 'FROST STEP', desc: 'FREEZES WHAT STOOD NEAR YOU WHEN YOU LEFT' },
+  ],
 };
-const modUnlock = (skillId, k) => { const sk = Object.values(SKILLSETS).flat().find(s => s.id === skillId); return (sk ? sk.lvl : 1) + 2 + k * 2; };
+// the missile's and the orb's attack timings; the orb is a slower cast
+const missileCast = () => (skillMod('missile') === 'orb' ? 0.55 : 0.38);
+const modUnlock = (skillId, k) => { const sk = Object.values(SKILLSETS).flat().find(s => s.id === skillId) || { lvl: 1 }; return sk.lvl + 2 + k * 2; };   // the missile (the mage's attack) counts as level 1
 function skillMod(id) { const m = hero.mods && hero.mods[id]; if (!m) return null; const k = (SKILL_MODS[id] || []).findIndex(x => x.id === m); return k >= 0 && hero.lvl >= modUnlock(id, k) ? m : null; }
-const skillCost = s => s.mana + (s.id === 'fireball' && skillMod('fireball') === 'great' ? 6 : 0);
+const skillCost = s => s.mana + (s.id === 'fireball' && skillMod('fireball') === 'great' ? 6 : 0) + (s.id === 'whirl' && skillMod('whirl') === 'long' ? 6 : 0);
 // Chain hook: a hook flies at the nearest enemy in reach; whatever it catches (and anything right
 // beside it) is dragged up to the warrior and dazed. Bosses and elites don't budge: he is pulled to them
 function chainHook() {
-  const t = nearestEnemy(7, true);
+  const mod = skillMod('hook'), reach = mod === 'line' ? 9.5 : 7;   // round 30: Long Chain reaches farther
+  const t = nearestEnemy(reach, true);
   if (!t) { say('NOTHING TO HOOK', 25, 1); return false; }
   hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
   const dx = t.fi - hero.fi, dy = t.fj - hero.fj, l = Math.hypot(dx, dy) || 1;
-  G.hooks.push({ fi: hero.fi + dx / l * 0.5, fj: hero.fj + dy / l * 0.5, vx: dx / l * 16, vy: dy / l * 16, life: 0.6, state: 'out', caught: [] });
+  G.hooks.push({ fi: hero.fi + dx / l * 0.5, fj: hero.fj + dy / l * 0.5, vx: dx / l * 16, vy: dy / l * 16, life: mod === 'line' ? 0.68 : 0.6, state: 'out', caught: [], mod });
   hero.cast = 0.3; hero.castAge = CAST_RELEASE; hero.castKind = 'hook'; hero.clip = 'channel';
   sfx('swing'); sfx('chain');
   return true;
@@ -164,7 +213,8 @@ function chainHook() {
 function startLeap() {
   let to = null;
   const vx = input.mx, vy = input.my;
-  let t = null, bd = 7;   // the nearest enemy worth jumping at: 2 tiles or more away
+  const mod = skillMod('leap');
+  let t = null, bd = mod === 'pounce' ? 10 : 7;   // the nearest enemy worth jumping at: 2 tiles or more away (Pounce: farther)
   for (const e of enemies) { if (!alive(e) || LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] < 0.3) continue; const d = Math.hypot(e.fi - hero.fi, e.fj - hero.fj); if (d >= 2 && d < bd) { bd = d; t = e; } }
   if (Math.hypot(vx, vy) > 0.2 && !t) { const [gi, gj] = stickToGround(vx, vy); to = [hero.fi + gi * 6, hero.fj + gj * 6]; }
   else if (t) { const dx = t.fi - hero.fi, dy = t.fj - hero.fj, l = Math.hypot(dx, dy) || 1, back = Math.min(l, 0.9 + (t.def.unique ? 0.6 : 0)); to = [t.fi - dx / l * back, t.fj - dy / l * back]; }
@@ -175,7 +225,7 @@ function startLeap() {
   const dist = Math.hypot(to[0] - f0[0], to[1] - f0[1]);
   if (dist < 0.8 || blocked(to[0], to[1])) return false;
   hero.dir = dirFrom(to[0] - f0[0], to[1] - f0[1]);
-  hero.leap = { from: f0, to, t: 0, dur: 0.32 + dist * 0.035 }; hero.atk = -1; hero.cast = -1; hero.approach = null;
+  hero.leap = { from: f0, to, t: 0, dur: 0.32 + dist * 0.035, target: t, mod }; hero.atk = -1; hero.cast = -1; hero.approach = null;
   sfx('heavySwing');
   return true;
 }
@@ -187,17 +237,33 @@ function updateLeap(dt) {
   hero.clip = 'attack4'; hero.combo = 3; hero.atk = u < 0.75 ? 40 : 230;   // weapon raised, then brought down
   if (Math.random() < 0.6) { const [x, y] = screenOf(hero); pspawn(3, x, y, hero.leapZ + 20, 0, 0, 4, 0.25, 31); }
   if (u >= 1) {   // landing
+    const mod = L.mod, R = mod === 'quake' ? 3.3 : 1.9;   // round 30: Earthquake lands far wider; Pounce saves it all for the target
     hero.leap = null; hero.leapZ = 0; hero.atk = -1; hero.clip = 'idle'; hero.stopT = 0.11; hero.swingEnd = G.t;
     G.pierce = true;
     for (const en of enemies) {
       if (!alive(en)) continue;
       const d = Math.hypot(en.fi - hero.fi, en.fj - hero.fj);
-      if (d > 1.9 + (en.def.unique ? 0.5 : 0)) continue;
-      const crit = Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100;
-      wake(en); G.elem = 'heavy'; damageEnemy(en, heroDmg((crit ? 2 : 1) * 1.8), hero.fi, hero.fj, crit, 2); G.elem = null;
+      if (d > R + (en.def.unique ? 0.5 : 0)) continue;
+      const crit = Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100, k = mod === 'pounce' ? (en === L.target ? 3.2 : 1) : mod === 'quake' ? 1.5 : 1.8;
+      wake(en); G.elem = 'heavy'; damageEnemy(en, heroDmg((crit ? 2 : 1) * k), hero.fi, hero.fj, crit, 2); G.elem = null;
+      if (alive(en) && mod === 'quake' && !en.def.unique && !(en.frozen > 0)) { en.downT = en.downT0 = 1.1; en.atk = -1; en.stun = 0; }   // everything but bosses goes down
       if (alive(en) && !en.def.unique && !(en.downT > 0)) en.stun = Math.max(en.stun || 0, 0.5);
     }
     G.pierce = false;
+    if (mod === 'burn') {   // Burning Landing: a ring of fire bursts out and the ground keeps burning
+      G.fireGround.push({ fi: hero.fi, fj: hero.fj, r: 2.1, t: 3.5, tick: 0.2 });
+      const [x, y] = screenOf(hero);
+      for (let k = 0; k < 30; k++) { const a = k / 30 * 6.283; pspawn(4, x, y, 3, Math.cos(a) * 95, Math.sin(a) * 48, 0, 0.3, k % 3 ? 16 : 17); }
+      burst(2, x, y, 6, 22, 100, 17); shockwave(hero.fi, hero.fj, 2.2, 0.3, [18, 16]); sfx('fireball'); sfx('sizzle');
+    }
+    if (mod === 'quake') {
+      const q = { fi: hero.fi, fj: hero.fj, a0: 0, ring: true, R: 3.2, n: 12, t: 1, t0: 1, seed: (Math.random() * 1e6) | 0 };
+      G.quakes.push(q); stampCracks(q);
+      const lite = LV.outdoor ? [DIRT[4], DIRT[3]] : [TH().ramp[TH().ramp.length - 1], TH().ramp[5]];
+      shockwave(hero.fi, hero.fj, 3.6, 0.42, lite, null, false); { const [x, y] = screenOf(hero); rubble(x, y, 26, 90); }
+      if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.35);
+    }
+    if (mod === 'pounce' && L.target) impactFlash(L.target.fi, L.target.fj, 14, 9);
     const [x, y] = screenOf(hero), dust = LV.outdoor ? DIRT[3] : S[5];
     for (let k = 0; k < 26; k++) { const a = k / 26 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 70, Math.sin(a) * 35, 40 + Math.random() * 30, 1, k % 3 ? dust : DIRT[4]); }
     const q = { fi: hero.fi, fj: hero.fj, a0: 0, ring: true, t: 0.6, t0: 0.6, seed: (Math.random() * 1e6) | 0 };
@@ -217,18 +283,23 @@ function updateWarriorFx(dt) {
       h.life -= dt;
       for (let s = 0; s < 3 && h.state === 'out'; s++) {
         h.fi += h.vx * dt / 3; h.fj += h.vy * dt / 3;
-        if (blocked(h.fi, h.fj) && tileAt(Math.floor(h.fi), Math.floor(h.fj)) !== FLOOR) { h.state = 'back'; break; }
-        const hit = enemies.find(e => alive(e) && Math.hypot(e.fi - h.fi, e.fj - h.fj) < 0.55 + (e.def.unique ? 0.4 : 0));
+        if (blocked(h.fi, h.fj) && tileAt(Math.floor(h.fi), Math.floor(h.fj)) !== FLOOR) { h.state = h.caught.length ? 'pull' : 'back'; break; }
+        const hit = enemies.find(e => alive(e) && !h.caught.includes(e) && Math.hypot(e.fi - h.fi, e.fj - h.fj) < 0.55 + (e.def.unique ? 0.4 : 0));
         if (hit) {
+          const hk = h.mod === 'barbed' ? 1.6 : 0.6;   // Barbed Hook bites harder
           sfx('clank'); impactFlash(hit.fi, hit.fj, 12, 4);   // round 27: the hook bites with a spark and a clank
           { const [x, y] = screenOf(hit); for (let k = 0; k < 10; k++) { const a = Math.random() * 6.283; pspawn(4, x, y, 12, Math.cos(a) * 60, Math.sin(a) * 30, 0, 0.18, k % 2 ? 51 : 27); } }
-          if (hit.def.unique || hit.def.elite || hit.champ) { h.state = 'reel'; h.anchor = hit; damageEnemy(hit, heroDmg(0.6), hero.fi, hero.fj, false, 0, true); break; }
+          if (h.mod === 'line' && smallFoe(hit)) {   // Long Chain: hooks it and flies on, gathering all it passes
+            wake(hit); damageEnemy(hit, heroDmg(hk), hero.fi, hero.fj, false, 0, true); hit.atk = -1; h.caught.push(hit); continue;
+          }
+          if (h.mod === 'line' && h.caught.length) { h.state = 'pull'; break; }
+          if (h.mod === 'tether' || hit.def.unique || hit.def.elite || hit.champ) { h.state = 'reel'; h.anchor = hit; damageEnemy(hit, heroDmg(hk), hero.fi, hero.fj, false, 0, true); if (alive(hit) && smallFoe(hit)) hit.stun = Math.max(hit.stun || 0, 0.6); break; }
           h.caught = enemies.filter(e => alive(e) && !e.def.unique && !e.def.elite && !e.champ && Math.hypot(e.fi - hit.fi, e.fj - hit.fj) < 1.6);
-          for (const e of h.caught) { wake(e); damageEnemy(e, heroDmg(0.6), hero.fi, hero.fj, false, 0, true); e.atk = -1; }
+          for (const e of h.caught) { wake(e); damageEnemy(e, heroDmg(hk), hero.fi, hero.fj, false, 0, true); e.atk = -1; }
           h.state = 'pull'; break;
         }
       }
-      if (h.life <= 0 && h.state === 'out') h.state = 'back';
+      if (h.life <= 0 && h.state === 'out') h.state = h.caught.length ? 'pull' : 'back';
     } else if (h.state === 'pull') {   // drag the catch in, then daze it at the warrior's feet
       let done = true;
       for (const e of h.caught) {
@@ -242,12 +313,12 @@ function updateWarriorFx(dt) {
       }
       const lead = h.caught.find(alive); if (lead) { h.fi = lead.fi; h.fj = lead.fj; }
       h.pullT = (h.pullT || 0) + dt;
-      if (done || h.pullT > 0.7) { for (const e of h.caught) { e.leapZ = 0; if (alive(e)) e.stun = Math.max(e.stun || 0, 0.8); } h.state = 'gone'; }
+      if (done || h.pullT > (h.mod === 'line' ? 0.95 : 0.7)) { for (const e of h.caught) { e.leapZ = 0; if (alive(e)) e.stun = Math.max(e.stun || 0, h.mod === 'barbed' ? 1.6 : 0.8); } h.state = 'gone'; }
     } else if (h.state === 'reel') {   // a boss won't come: the warrior is hauled to it
       const a = h.anchor, dx = a.fi - hero.fi, dy = a.fj - hero.fj, d = Math.hypot(dx, dy);
       h.fi = a.fi; h.fj = a.fj; h.pullT = (h.pullT || 0) + dt;
       if (d > 1.2 + (a.def.unique ? 0.5 : 0) && h.pullT < 0.7 && alive(a)) { const st = Math.min(d - 1, 14 * dt); tryMove(hero, dx / d * st, dy / d * st); hero.dir = dirFrom(dx, dy); }
-      else h.state = 'gone';
+      else { h.state = 'gone'; if (h.mod === 'tether' && alive(a)) tetherBlow(a); }
     } else if (h.state === 'back') {   // a miss: the chain rattles back
       const dx = hero.fi - h.fi, dy = hero.fj - h.fj, d = Math.hypot(dx, dy);
       if (d < 0.6) h.state = 'gone'; else { h.fi += dx / d * 20 * dt; h.fj += dy / d * 20 * dt; }
@@ -338,10 +409,17 @@ function aimAt(range) {
 // bigger hit (a flinch and a small push). Damage per second is about what the fan dealt.
 function castMissiles() {
   const [t, at] = aimAt(8);
-  startCast('missile', 0.38 / (1 + ((STAT.atkSpeed || 0) + (hero.frenzy > 0 ? 50 : 0)) / 100), at, () => {   // attack speed and frenzy cast faster
-    const [ox, oy] = staffTip(), a = Math.atan2(at[1] - oy, at[0] - ox);
-    projectiles.push({ kind: 'missile', fi: ox, fj: oy, vx: Math.cos(a) * 5, vy: Math.sin(a) * 5, z: ORB_Z, life: 1.8, owner: 'hero', home: t, spell: true, dmgK: hero.lvl >= 5 ? 1.5 : 1.15, age: 0, spin: Math.random() * 6.28, elem: 'arcane' });
-    orbFlare(39, 40, 10); sfx('missile');
+  const mod = skillMod('missile');
+  startCast('missile', missileCast() / (1 + ((STAT.atkSpeed || 0) + (hero.frenzy > 0 ? 50 : 0)) / 100), at, () => {   // attack speed and frenzy cast faster
+    const [ox, oy] = staffTip(), a = Math.atan2(at[1] - oy, at[0] - ox), K = hero.lvl >= 5 ? 1.5 : 1.15;
+    const bolt = (a, sp, o) => projectiles.push(Object.assign({ kind: 'missile', fi: ox, fj: oy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, z: ORB_Z, life: 1.8, owner: 'hero', home: t, spell: true, dmgK: K, age: 0, spin: Math.random() * 6.28, elem: 'arcane' }, o));
+    if (mod === 'seek') {   // round 30: three small bolts fanned out, each after a different foe if there are enough
+      const foes = enemies.filter(e => alive(e) && LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] >= 0.3 && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 8).sort((p, q) => Math.hypot(p.fi - hero.fi, p.fj - hero.fj) - Math.hypot(q.fi - hero.fi, q.fj - hero.fj));
+      [-0.55, 0, 0.55].forEach((da, k) => bolt(a + da, 6, { home: foes[k] || foes[0] || null, dmgK: K * 0.45, small: true, life: 2 }));
+    } else if (mod === 'pierce') bolt(a, 8, { home: null, noHome: true, pierce: true, hits: new Set(), dmgK: K * 0.85, life: 1.3, lance: true });
+    else if (mod === 'orb') bolt(a, 2.2, { home: null, noHome: true, orb: true, pulse: 0.15, dmgK: K * 0.24, life: 3.2 });
+    else bolt(a, 5, {});
+    orbFlare(39, 40, mod === 'orb' ? 16 : 10); sfx('missile'); if (mod === 'orb') sfx('whoomp');
   });
 }
 function castFireball() {
@@ -369,14 +447,16 @@ function updateFireGround(dt) {
   G.fireGround = G.fireGround.filter(g => g.t > 0);
 }
 // fire explosion shared by the fireball and the meteor: everything in radius r takes k x staff damage
-function explodeAt(fi, fj, r, k, pow, big = false) {
-  G.pierce = true; G.elem = 'fire';   // blasts get round shields; fire sets things alight
+// (cold: the Comet's ice blast, which freezes instead of burning, in ice colors)
+function explodeAt(fi, fj, r, k, pow, big = false, cold = false) {
+  G.pierce = true; G.elem = cold ? 'cold' : 'fire';   // blasts get round shields; fire sets things alight
   for (const e of enemies) {
     if (!alive(e)) continue;
     const d = Math.hypot(e.fi - fi, e.fj - fj);
-    if (d < r + (e.def.unique ? 0.4 : 0)) { const c = spellCrit(); damageEnemy(e, spellDmg(c ? k * 2 : k), fi, fj, c, pow, true); }
+    if (d < r + (e.def.unique ? 0.4 : 0)) { const c = spellCrit(); damageEnemy(e, spellDmg(c ? k * 2 : k), fi, fj, c, cold ? 0 : pow, true); if (cold) freezeFoe(e, 2.6); }
   }
   G.pierce = false; G.elem = null;
+  if (cold) return iceBlast(fi, fj, r, big);
   for (const p of dynProps) if (!p.broken && (p.kind === 'barrel' || p.kind === 'egg') && Math.hypot(p.i + 0.5 - fi, p.j + 0.5 - fj) < r + 0.3) hitProp(p);
   const [x, y] = iso(fi, fj);
   // a ring of flame rolls out across the ground to the edge of the blast
@@ -398,27 +478,30 @@ function explodeAt(fi, fj, r, k, pow, big = false) {
 // are slowed to half speed instead
 const CONE_R = 4.4, CONE_HALF = 0.62;   // tiles, half-angle (radians: about 70 degrees across)
 function coneOfCold() {
-  const [, at] = aimAt(CONE_R + 0.5);
-  startCast('cone', 0.34, at, () => {
+  // round 30 modifiers: Frost Nova (a ring all around), Ice Shards (long and narrow, harder), Deep Freeze (longer, bursts)
+  const mod = skillMod('cone'), R = mod === 'nova' ? 3.1 : mod === 'shards' ? 6.4 : CONE_R, half = mod === 'nova' ? Math.PI : mod === 'shards' ? 0.3 : CONE_HALF;
+  const dmgK = mod === 'shards' ? 1.5 : 0.8, hold = mod === 'deep' ? 5 : mod === 'nova' ? 2.2 : 3;
+  const [, at] = aimAt(R + 0.5);
+  startCast('cone', 0.34, mod === 'nova' ? null : at, () => {
     const a0 = Math.atan2(at[1] - hero.fj, at[0] - hero.fi), [x, y] = screenOf(hero);
     for (const e of enemies) {
       if (!alive(e)) continue;
       const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy);
       let da = Math.abs(((Math.atan2(dy, dx) - a0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-      if (d > CONE_R + (e.def.unique ? 0.5 : 0) || (d > 0.6 && da > CONE_HALF + 0.25 / Math.max(1, d))) continue;
-      wake(e); G.pierce = true; G.elem = 'cold'; damageEnemy(e, spellDmg(0.8), hero.fi, hero.fj, spellCrit(), 0, true); G.pierce = false; G.elem = null;
+      if (d > R + (e.def.unique ? 0.5 : 0) || (d > 0.6 && da > half + 0.25 / Math.max(1, d))) continue;
+      wake(e); G.pierce = true; G.elem = 'cold'; damageEnemy(e, spellDmg(dmgK), hero.fi, hero.fj, spellCrit(), 0, true); G.pierce = false; G.elem = null;
       if (!alive(e)) continue;
-      if (e.def.unique || e.def.elite || e.champ) { e.slowT = e.def.unique ? 3 : 4; }
-      else { e.frozen = 3; e.atk = -1; e.hurt = 0; e.kb = [0, 0]; }
+      if (e.def.unique || e.def.elite || e.champ) { e.slowT = (e.def.unique ? 3 : 4) * hold / 3; }
+      else { e.frozen = hold; e.atk = -1; e.hurt = 0; e.kb = [0, 0]; e.deepIce = mod === 'deep'; }
     }
     // shards of frost flying out across the wedge, and a sheet of frost on the ground (drawn)
-    for (let k = 0; k < 46; k++) {
-      const a = a0 + (Math.random() * 2 - 1) * CONE_HALF, T = 9 + Math.random() * 5, gx = Math.cos(a), gy = Math.sin(a);   // tiles/s along the ground
+    for (let k = 0; k < (mod === 'nova' ? 64 : 46); k++) {
+      const a = a0 + (Math.random() * 2 - 1) * half, T = (9 + Math.random() * 5) * R / CONE_R, gx = Math.cos(a), gy = Math.sin(a);   // tiles/s along the ground
       pspawn(4, x, y, 10 + Math.random() * 12, (gx - gy) * 16 * T, (gx + gy) * 8 * T, 0, 0.26 + Math.random() * 0.12, k % 3 ? 118 : 117);
     }
-    G.cones.push({ fi: hero.fi, fj: hero.fj, a0, t: 0.5, t0: 0.5 });
-    G.frost.push({ fi: hero.fi, fj: hero.fj, a0, t: 3.2, seed: (Math.random() * 1e6) | 0 });   // round 25: frost stays on the ground a while
-    shockwave(hero.fi, hero.fj, CONE_R, 0.3, [27, 118], [a0, CONE_HALF]);
+    G.cones.push({ fi: hero.fi, fj: hero.fj, a0, t: 0.5, t0: 0.5, R, half });
+    G.frost.push({ fi: hero.fi, fj: hero.fj, a0, t: 3.2 * hold / 3, seed: (Math.random() * 1e6) | 0, R, half });   // round 25: frost stays on the ground a while
+    shockwave(hero.fi, hero.fj, R, 0.3, [27, 118], mod === 'nova' ? null : [a0, half]);
     orbFlare(117, 118, 12);
     if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.18);
     sfx('frost'); sfx('clink');
@@ -434,9 +517,13 @@ function castMeteor() {
     if (n > bn) { bn = n; best = e; }
   }
   const [fx, fy] = dirVec(hero.dir), at = best ? [best.fi, best.fj] : [hero.fi + fx * 3, hero.fj + fy * 3];
+  const mod = skillMod('meteor');
   startCast('meteor', 0.42, best ? at : null, () => {
-    G.meteors.push({ fi: at[0], fj: at[1], t: 0.9, t0: 0.9 });
-    orbFlare(16, 18, 14, true); sfx('meteor');
+    // round 30 modifiers: Shower (three smaller), Molten Crater (burns after), Comet (a ball of ice)
+    if (mod === 'shower') meteorShower(at);
+    else G.meteors.push({ fi: at[0], fj: at[1], t: 0.9, t0: 0.9, molten: mod === 'molten', cold: mod === 'comet' });
+    if (mod === 'comet') orbFlare(117, 27, 14, true); else orbFlare(16, 18, 14, true);
+    sfx('meteor');
   });
 }
 // blink: vanish in a burst of arcane light and reappear up to 4.5 tiles away, in the stick's
@@ -448,6 +535,7 @@ function blink() {
   let dist = 0;
   for (let s = 0.25; s <= 4.5; s += 0.25) { if (blocked(hero.fi + dx * s, hero.fj + dy * s)) break; dist = s; }
   if (dist < 0.5) { CD.blink = 0; hero.mana += 8; return; }   // nowhere to go: refund
+  const mod = skillMod('blink');
   const [x0, y0] = screenOf(hero);
   G.ghosts.push({ sp: getSprite('hero', hero.look, hero.dir, hero.clip, frameOf(hero), hero), x: x0, y: y0, t: 0.35, t0: 0.35 });
   const fi1 = hero.fi + dx * dist, fj1 = hero.fj + dy * dist, [x1, y1] = iso(fi1, fj1);
@@ -460,18 +548,46 @@ function blink() {
   shockwave(fi0, fj0, 1.1, 0.22, [27, 40]); shockwave(fi1, fj1, 1.4, 0.28, [27, 40]); impactFlash(fi1, fj1, 14, 4);
   G.streaks.push({ a: [fi0, fj0], b: [fi1, fj1], t: 0.22, t0: 0.22 });
   sfx('blink'); sfx('whoomp');
+  // round 30 modifiers
+  if (mod === 'burst') {   // Arcane Burst: a blast where it lands that throws foes back
+    G.elem = 'arcane'; G.pierce = true;
+    for (const e of enemies) {
+      if (!alive(e)) continue; const dx = e.fi - fi1, dy = e.fj - fj1, d = Math.hypot(dx, dy); if (d > 1.9 + (e.def.unique ? 0.4 : 0)) continue;
+      const c = spellCrit(); damageEnemy(e, spellDmg(c ? 2.4 : 1.2), fi1, fj1, c, 1, true);
+      if (alive(e) && smallFoe(e)) { const l = d || 1; e.kb = [dx / l * 9, dy / l * 9]; e.stun = Math.max(e.stun || 0, 0.5); }
+    }
+    G.elem = null; G.pierce = false;
+    shockwave(fi1, fj1, 2, 0.3, [27, 40]); impactFlash(fi1, fj1, 12, 8);
+    { const [x, y] = iso(fi1, fj1); for (let k = 0; k < 24; k++) { const a = k / 24 * 6.283; pspawn(4, x, y, 10, Math.cos(a) * 90, Math.sin(a) * 45, 10, 0.24, k % 2 ? 40 : 27); } }
+    if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.25);
+    sfx('boom');
+  }
+  if (mod === 'double') {   // Double Blink: the first one leaves the button ready for 1.5 s; the second is free
+    if (hero.blink2T > 0) { hero.blink2T = 0; hero.mana += skillCost(SKILLS.find(s => s.id === 'blink')); CD.blink = 3; }
+    else { hero.blink2T = 1.5; CD.blink = 0; }
+  }
+  if (mod === 'frost') {   // Frost Step: what stood near the mage freezes as she leaves
+    G.elem = 'cold'; G.pierce = true;
+    for (const e of enemies) if (alive(e) && Math.hypot(e.fi - fi0, e.fj - fj0) < 2.1 + (e.def.unique ? 0.4 : 0)) { wake(e); damageEnemy(e, spellDmg(0.5), fi0, fj0, false, 0, true); freezeFoe(e, 2.6); }
+    G.elem = null; G.pierce = false;
+    G.frost.push({ fi: fi0, fj: fj0, a0: 0, t: 3, seed: (Math.random() * 1e6) | 0, R: 2.1, half: Math.PI, ring0: 0 });
+    shockwave(fi0, fj0, 2.1, 0.3, [27, 118]);
+    { const [x, y] = iso(fi0, fj0); for (let k = 0; k < 26; k++) { const a = k / 26 * 6.283; pspawn(4, x, y, 6, Math.cos(a) * 70, Math.sin(a) * 35, 6, 0.3, k % 3 ? 118 : 27); } }
+    sfx('frost'); sfx('clink');
+  }
 }
 function updateMeteors(dt) {
   for (const m of G.meteors) {
     m.t -= dt;
     if (m.t < 0.45 && Math.random() < 0.9) {   // the falling rock trails fire
       const [x, y] = iso(m.fi, m.fj), k = Math.max(0, m.t) / 0.45;
-      pspawn(3, x - k * 50 + (Math.random() - 0.5) * 6, y, k * 150, 0, 0, 0, 0.3, Math.random() < 0.5 ? 16 : 17);
+      pspawn(3, x - k * 50 + (Math.random() - 0.5) * 6, y, k * 150, 0, 0, 0, 0.3, m.cold ? (Math.random() < 0.5 ? 118 : 27) : Math.random() < 0.5 ? 16 : 17);
     }
     if (m.t <= 0 && !m.done) {
-      m.done = true; explodeAt(m.fi, m.fj, 2.4, 3.2, 2, true);
+      m.done = true; explodeAt(m.fi, m.fj, m.r || 2.4, m.k || 3.2, 2, !m.small, m.cold);
+      if (m.molten) G.fireGround.push({ fi: m.fi, fj: m.fj, r: 2.2, t: 4, tick: 0.3 });
       const [x, y] = iso(m.fi, m.fj), dust = LV.outdoor ? DIRT[3] : S[5];
-      for (let k = 0; k < 28; k++) { const a = k / 28 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 75, Math.sin(a) * 37, 40 + Math.random() * 30, 1, k % 3 ? dust : 15); }
+      for (let k = 0; k < (m.small ? 16 : 28); k++) { const a = k / 28 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 75, Math.sin(a) * 37, 40 + Math.random() * 30, 1, k % 3 ? dust : m.cold ? 117 : 15); }
       sfx('crit');
     }
   }
@@ -487,15 +603,15 @@ function updateMeteors(dt) {
 // disk of fire that swells to the blast's edge and burns out from the middle (dithered)
 function drawMeteors() {
   for (const c of G.cones) {   // a wedge of frost on the ground: sweeps out, then thins away (dithered, under the bodies)
-    const p = 1 - c.t / c.t0, reach = CONE_R * Math.min(1, p * 4), [hx, hy] = iso(c.fi, c.fj);
-    for (let y = Math.floor(hy - camY - 60); y <= hy - camY + 60; y++) for (let x = Math.floor(hx - camX - 110); x <= hx - camX + 110; x++) {
+    const CR = c.R || CONE_R, CH = c.half || CONE_HALF, p = 1 - c.t / c.t0, reach = CR * Math.min(1, p * 4), [hx, hy] = iso(c.fi, c.fj), bx = CR * 23 + 10, by = CR * 12 + 8;
+    for (let y = Math.floor(hy - camY - by); y <= hy - camY + by; y++) for (let x = Math.floor(hx - camX - bx); x <= hx - camX + bx; x++) {
       if (x < 0 || y < 0 || x >= W || y >= H || cid[y * W + x]) continue;
       // screen pixel back to ground tiles, relative to the caster
       const sx = (x + camX - hx) / 16, sy = (y + camY - hy) / 8, gi = (sx + sy) / 2, gj = (sy - sx) / 2, d = Math.hypot(gi, gj);   // inverse of iso()
       if (d > reach || d < 0.4) continue;
       const da = Math.abs(((Math.atan2(gj, gi) - c.a0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-      if (da > CONE_HALF) continue;
-      const th = BAYER[((y & 3) << 2) | (x & 3)], edge = Math.min(1, (CONE_HALF - da) * 5) * (1 - (d / (CONE_R + 0.5)) ** 2);
+      if (da > CH) continue;
+      const th = BAYER[((y & 3) << 2) | (x & 3)], edge = Math.min(1, CH >= 3 ? 1 : (CH - da) * 5) * (1 - (d / (CR + 0.5)) ** 2);
       if (th > edge * 1.5 * (1.1 - p) + 0.08) continue;
       scr[y * W + x] = (th < 0.3 && p < 0.6 ? 118 : 117) | EMIS;
     }
@@ -514,25 +630,26 @@ function drawMeteors() {
       const th = BAYER[((y & 3) << 2) | (x & 3)];
       if (th > 1.1 - p) continue;   // thins out as it burns away
       const heat = (1 - d) * (1 - p * 0.6);
-      scr[y * W + x] = (heat > 0.6 ? 18 : heat > 0.4 ? 17 : heat > 0.2 ? 16 : 15) | EMIS;
+      scr[y * W + x] = (bl.cold ? (heat > 0.6 ? 27 : heat > 0.4 ? 118 : heat > 0.2 ? 117 : 116) : heat > 0.6 ? 18 : heat > 0.4 ? 17 : heat > 0.2 ? 16 : 15) | EMIS;
     }
   }
   for (const m of G.meteors) {
-    const [cx0, cy0] = iso(m.fi, m.fj), cx = cx0 - camX, cy = cy0 - camY, rx = 2.4 * 22.6, ry = rx / 2, blink = Math.floor(G.t * 14) % 2, fill = 1 - m.t / m.t0;
+    const [cx0, cy0] = iso(m.fi, m.fj), cx = cx0 - camX, cy = cy0 - camY, rx = (m.r || 2.4) * 22.6, ry = rx / 2, blink = Math.floor(G.t * 14) % 2, fill = 1 - m.t / m.t0;
+    const C = m.cold ? [116, 117, 118, 27] : [14, 15, 16, 17, 18].slice(1), C0 = m.cold ? 116 : 14;   // fire, or ice for the Comet
     for (let a = 0; a < 170; a++) {
       const t = a / 170 * Math.PI * 2;
       for (const k of [1, fill]) {
         const x = Math.round(cx + Math.cos(t) * rx * k), y = Math.round(cy + Math.sin(t) * ry * k);
         if (x < 0 || y < 0 || x >= W || y >= H || ((a + blink) & 1 && k === 1)) continue;
-        scr[y * W + x] = (k === 1 ? 16 : 15) | EMIS;
+        scr[y * W + x] = (k === 1 ? C[1] : C[0]) | EMIS;
       }
     }
     if (m.t < 0.45) {   // the rock: a glowing ball coming in from the upper left
-      const k = Math.max(0, m.t) / 0.45, rx0 = Math.round(cx - k * 50), ry0 = Math.round(cy - k * 150);
+      const k = Math.max(0, m.t) / 0.45, rx0 = Math.round(cx - k * 50), ry0 = Math.round(cy - k * 150), q = m.small ? 0.6 : 1;
       for (let b = -7; b <= 7; b++) for (let a = -7; a <= 7; a++) {
-        const d = a * a + b * b, x = rx0 + a, y = ry0 + b;
+        const d = (a * a + b * b) / (q * q), x = rx0 + a, y = ry0 + b;
         if (d > 45 || x < 0 || y < 0 || x >= W || y >= H) continue;
-        scr[y * W + x] = (d <= 6 ? 18 : d <= 18 ? 17 : d <= 32 ? 16 : 14) | EMIS;
+        scr[y * W + x] = (d <= 6 ? C[3] : d <= 18 ? C[2] : d <= 32 ? C[1] : C0) | EMIS;
       }
     }
   }
@@ -570,8 +687,9 @@ function updateSkills(dt) {
   if (hero.whirl > 0) {
     hero.whirl -= dt; hero.whirlTick -= dt;
     if (hero.whirlTick <= 0) {   // four hits on everything in reach while spinning
-      hero.whirlTick = 0.2;
-      for (const e of enemies) if (alive(e) && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < heroReach() + 0.35) { const crit = Math.random() < CRIT_CHANCE; G.elem = 'stagger'; damageEnemy(e, heroDmg(crit ? 1.2 : 0.6), hero.fi, hero.fj, crit); G.elem = null; }
+      const storm = skillMod('whirl') === 'storm';   // round 30: Blade Storm reaches wider and hits faster
+      hero.whirlTick = storm ? 0.13 : 0.2;
+      for (const e of enemies) if (alive(e) && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < heroReach() + 0.35 + (storm ? 0.8 : 0)) { const crit = Math.random() < CRIT_CHANCE; G.elem = 'stagger'; damageEnemy(e, heroDmg((crit ? 2 : 1) * (storm ? 0.45 : 0.6)), hero.fi, hero.fj, crit); G.elem = null; }
       for (const p of dynProps) if (!p.broken && (p.kind === 'barrel' || p.kind === 'egg') && Math.hypot(p.i + 0.5 - hero.fi, p.j + 0.5 - hero.fj) < 1.7) hitProp(p);
       sfx('swing'); sfx('whoomp');   // each turn of the spin has a low whoosh under the swish
     }
@@ -968,12 +1086,12 @@ function updateImpactFx(dt) {
 function drawImpactFx() {
   const put = (x, y, v) => { if (x >= 0 && y >= 0 && x < W && y < H && !cid[y * W + x]) scr[y * W + x] = v; };
   for (const f of G.frost) {   // lingering frost: a sparse pale sheet with glints, thinning away
-    const [hx, hy] = iso(f.fi, f.fj), life = Math.min(1, f.t / 1.2);
-    for (let y = Math.floor(hy - camY - 50); y <= hy - camY + 50; y++) for (let x = Math.floor(hx - camX - 100); x <= hx - camX + 100; x++) {
+    const FR = f.R || CONE_R, FH = f.half || CONE_HALF, [hx, hy] = iso(f.fi, f.fj), life = Math.min(1, f.t / 1.2), bx = FR * 23 + 4, by = FR * 12 + 4;
+    for (let y = Math.floor(hy - camY - by); y <= hy - camY + by; y++) for (let x = Math.floor(hx - camX - bx); x <= hx - camX + bx; x++) {
       if (x < 0 || y < 0 || x >= W || y >= H) continue;
       const sx = (x + camX - hx) / 16, sy = (y + camY - hy) / 8, gi = (sx + sy) / 2, gj = (sy - sx) / 2, d = Math.hypot(gi, gj);
-      if (d > CONE_R * 0.95 || d < 0.5) continue;
-      const da = Math.abs(((Math.atan2(gj, gi) - f.a0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI); if (da > CONE_HALF * 0.95) continue;
+      if (d > FR * 0.95 || d < (f.ring0 ?? 0.5)) continue;
+      const da = Math.abs(((Math.atan2(gj, gi) - f.a0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI); if (da > FH * 0.95) continue;
       const h = hash(x + camX, y + camY, f.seed), th = BAYER[((y & 3) << 2) | (x & 3)];
       if (h > 0.996 && Math.sin(G.t * 9 + h * 900) > 0.6) { put(x, y, 27 | EMIS); continue; }   // a glint
       if (th < 0.2 * life && h > 0.35) put(x, y, (h > 0.8 ? 118 : 117) | EMIS);
@@ -1011,7 +1129,7 @@ function drawStreaks() {   // the blink's streak: a white core in an arcane band
   }
 }
 function drawImpactFlashes() {
-  drawStreaks(); drawHookChains();
+  drawStreaks(); drawHookChains(); drawMods30();
   for (const f of G.impacts) {
     const [x, y] = iso(f.fi, f.fj), X0 = Math.round(x * SPX - cam2x), Y0 = Math.round((y - f.z) * SPX - cam2y), p = 1 - f.t / f.t0, R = f.size * (0.6 + p * 0.6);
     // a white core with four spikes, the first frame solid, then hollowing out
@@ -1026,7 +1144,7 @@ function drawImpactFlashes() {
 }
 function whirlSmear(front) {
   if (!(hero.whirl > 0)) return;
-  const [x, y] = screenOf(hero), X0 = Math.round(x * SPX - cam2x), Y0 = Math.round((y - 9) * SPX - cam2y), rx = 34, ry = 15, spin = G.t * 26;
+  const storm = skillMod('whirl') === 'storm', [x, y] = screenOf(hero), X0 = Math.round(x * SPX - cam2x), Y0 = Math.round((y - 9) * SPX - cam2y), rx = storm ? 50 : 34, ry = storm ? 22 : 15, spin = G.t * (storm ? 34 : 26);
   for (const off of [0, Math.PI]) for (let s = 0; s < 70; s++) {
     const u = s / 70, a = spin + off - u * 2.4;   // the blade's tip leads, the trail fades behind it
     const sy = Math.sin(a); if ((sy > 0) !== front) continue;
@@ -1035,6 +1153,135 @@ function whirlSmear(front) {
       if (u > 0.25 && ((X + Y + k) & 1)) continue;   // dithered tail
       if (u > 0.7 && k) continue;
       ovSet(X, Y, u < 0.1 ? 27 : u < 0.4 ? STEEL[4] : STEEL[2]);
+    }
+  }
+}
+
+// ---------------------------------------------------------------- skill modifiers, the rest (round 30)
+// G.zaps: arcane arcs from the Arcane Orb to what it zaps; G.iceBursts: Deep Freeze victims bursting;
+// G.devils: the Dust Devils thrown out by the whirlwind
+const smallFoe = e => !e.def.unique && !e.def.elite && !e.champ;
+function freezeFoe(e, t, deep = false) {
+  if (!alive(e)) return;
+  if (smallFoe(e)) { e.frozen = Math.max(e.frozen || 0, t); e.atk = -1; e.hurt = 0; e.kb = [0, 0]; e.windT = 0; e.deepIce = deep; }
+  else e.slowT = Math.max(e.slowT || 0, e.def.unique ? t * 0.7 : t);
+}
+// the Arcane Orb: every 0.3 s an arc of arcane light jumps to up to four foes near it
+function updateOrb(p, dt) {
+  p.pulse -= dt; if (p.pulse > 0) return;
+  p.pulse = 0.4;
+  const near = enemies.filter(e => alive(e) && Math.hypot(e.fi - p.fi, e.fj - p.fj) < 1.8).slice(0, 4);
+  for (const e of near) {
+    const c = spellCrit(); G.elem = 'arcane'; G.pierce = true; damageEnemy(e, spellDmg(c ? p.dmgK * 2 : p.dmgK), p.fi, p.fj, c, 0, true); G.elem = null; G.pierce = false;
+    G.zaps.push({ a: [p.fi, p.fj, p.z], e, t: 0.14, seed: (Math.random() * 1e6) | 0 });
+  }
+  if (near.length) sfx('zap');
+}
+function orbBurst(p) {   // where the orb ends: one last burst
+  G.elem = 'arcane'; G.pierce = true;
+  for (const e of enemies) if (alive(e) && Math.hypot(e.fi - p.fi, e.fj - p.fj) < 1.7) { const c = spellCrit(); damageEnemy(e, spellDmg(c ? p.dmgK * 6 : p.dmgK * 3), p.fi, p.fj, c, 1, true); }
+  G.elem = null; G.pierce = false;
+  const [x, y] = iso(p.fi, p.fj);
+  for (let k = 0; k < 20; k++) { const a = k / 20 * 6.283; pspawn(4, x, y, p.z, Math.cos(a) * 80, Math.sin(a) * 40, 0, 0.22, k % 2 ? 40 : 27); }
+  shockwave(p.fi, p.fj, 1.7, 0.26, [27, 40]); impactFlash(p.fi, p.fj, p.z, 8);
+  G.flashes.push({ fi: p.fi, fj: p.fj, t: 0.2, t0: 0.2, r: 90 });
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.2);
+  sfx('whoomp');
+}
+// the Comet's landing: a ring of ice shards rolling out, a burst of frost, frost left on the ground
+function iceBlast(fi, fj, r, big) {
+  const [x, y] = iso(fi, fj), ringN = big ? 56 : 30, sp = r * 22.6 / 0.32;
+  for (let k = 0; k < ringN; k++) { const a = k / ringN * 6.283; pspawn(4, x, y, 3, Math.cos(a) * sp, Math.sin(a) * sp * 0.5, 0, 0.32, k % 3 ? 118 : 27); }
+  for (let k = 0; k < (big ? 30 : 14); k++) { const a = Math.random() * 6.283, d = Math.random() * r * 18; pspawn(4, x + Math.cos(a) * d, y + Math.sin(a) * d * 0.5, 2, 0, 0, 30 + Math.random() * 50, 0.45, Math.random() < 0.5 ? 117 : 118); }   // shards thrown up
+  burst(4, x, y, 8, big ? 40 : 22, big ? 150 : 100, 118); burst(2, x, y, 6, big ? 26 : 12, big ? 110 : 70, 27);
+  shockwave(fi, fj, r * 1.05, big ? 0.36 : 0.26, [27, 118]); impactFlash(fi, fj, big ? 10 : 7, big ? 10 : 6);
+  G.frost.push({ fi, fj, a0: 0, t: 4, seed: (Math.random() * 1e6) | 0, R: r, half: Math.PI, ring0: 0 });
+  if (big) { rubble(x, y, 16, 80); const q = { fi, fj, a0: 0, ring: true, R: 2.4, t: 0.7, t0: 0.7, seed: (Math.random() * 1e6) | 0 }; stampCracks(q); }
+  G.blasts.push({ fi, fj, r, t: big ? 0.32 : 0.22, t0: big ? 0.32 : 0.22, cold: true });
+  G.flashes.push({ fi, fj, t: big ? 0.4 : 0.22, t0: big ? 0.4 : 0.22, r: big ? 140 : 90 });
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + (big ? 0.6 : 0.28));
+  sfx('boom'); sfx('frost'); sfx('clink'); if (big) sfx('crack');
+}
+// Meteor Shower: three smaller meteors, staggered, around the chosen spot
+function meteorShower(at) {
+  G.meteors.push({ fi: at[0], fj: at[1], t: 0.9, t0: 0.9, r: 1.8, k: 2.3, small: true });
+  for (const [dt0, a] of [[1.15, Math.random() * 6.283], [1.4, Math.random() * 6.283]]) {
+    let p = [at[0] + Math.cos(a) * 1.8, at[1] + Math.sin(a) * 1.8];
+    if (blocked(p[0], p[1])) p = [at[0] - Math.cos(a) * 1.8, at[1] - Math.sin(a) * 1.8];
+    if (blocked(p[0], p[1])) p = at.slice();
+    G.meteors.push({ fi: p[0], fj: p[1], t: dt0, t0: dt0, r: 1.8, k: 2.3, small: true });
+  }
+}
+// Deep Freeze: a frozen foe killed bursts, freezing (not deep) and hurting those around it
+function updateIceBursts() {
+  const list = G.iceBursts; G.iceBursts = [];
+  for (const b of list) {
+    G.elem = 'cold'; G.pierce = true;
+    for (const e of enemies) if (alive(e) && Math.hypot(e.fi - b.fi, e.fj - b.fj) < 1.8) { damageEnemy(e, spellDmg(0.7), b.fi, b.fj, false, 0, true); freezeFoe(e, 1.6); }
+    G.elem = null; G.pierce = false;
+    const [x, y] = iso(b.fi, b.fj);
+    for (let k = 0; k < 18; k++) { const a = k / 18 * 6.283; pspawn(4, x, y, 10, Math.cos(a) * 70, Math.sin(a) * 35, 20, 0.3, k % 2 ? 118 : 27); }
+    shockwave(b.fi, b.fj, 1.8, 0.26, [27, 118]); impactFlash(b.fi, b.fj, 10, 6);
+    sfx('clink'); sfx('crack');
+  }
+}
+// Dust Devils: small whirlwinds that wander out from the spin and knock about what they touch
+function updateDevils(dt) {
+  if (hero.whirl > 0 && skillMod('whirl') === 'devil') {
+    hero.devilT = (hero.devilT || 0) - dt;
+    if (hero.devilT <= 0) { hero.devilT = 0.22; const a = G.t * 5.3; G.devils.push({ fi: hero.fi + Math.cos(a) * 0.6, fj: hero.fj + Math.sin(a) * 0.6, vx: Math.cos(a) * 3.6, vy: Math.sin(a) * 3.6, t: 1.1, t0: 1.1, hit: new Set(), spin: Math.random() * 6 }); sfx('whoomp'); }
+  }
+  for (const d of G.devils) {
+    d.t -= dt; let a = Math.atan2(d.vy, d.vx) + Math.sin(G.t * 6 + d.spin) * 1.5 * dt; const sp = Math.hypot(d.vx, d.vy);
+    let tg = null, bd = 4; for (const e of enemies) { if (!alive(e) || d.hit.has(e)) continue; const q = Math.hypot(e.fi - d.fi, e.fj - d.fj); if (q < bd) { bd = q; tg = e; } }
+    if (tg) { const want = Math.atan2(tg.fj - d.fj, tg.fi - d.fi), da = ((want - a + Math.PI * 3) % (Math.PI * 2)) - Math.PI; a += Math.max(-4 * dt, Math.min(4 * dt, da)); }   // drifts toward a foe it hasn't hit
+    d.vx = Math.cos(a) * sp; d.vy = Math.sin(a) * sp;
+    const ni = d.fi + d.vx * dt, nj = d.fj + d.vy * dt;
+    if (blocked(ni, nj)) d.t = Math.min(d.t, 0.12); else { d.fi = ni; d.fj = nj; }
+    for (const e of enemies) {
+      if (!alive(e) || d.hit.has(e) || Math.hypot(e.fi - d.fi, e.fj - d.fj) > 0.65 + (e.def.unique ? 0.4 : 0)) continue;
+      d.hit.add(e); wake(e); const c = Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100;
+      G.elem = 'stagger'; damageEnemy(e, heroDmg((c ? 2 : 1) * 0.7), d.fi, d.fj, c, 0, true); G.elem = null;
+    }
+    if (Math.random() < 0.7) { const [x, y] = iso(d.fi, d.fj), q = Math.random() * 6.283; pspawn(5, x + Math.cos(q) * 6, y + Math.sin(q) * 3, 1, -Math.sin(q) * 30, Math.cos(q) * 15, 8 + Math.random() * 14, 1, LV.outdoor ? DIRT[3] : S[5]); }
+  }
+  G.devils = G.devils.filter(d => d.t > 0);
+}
+function updateMods30(dt) {
+  for (const z of G.zaps) z.t -= dt; G.zaps = G.zaps.filter(z => z.t > 0);
+  if (G.iceBursts.length) updateIceBursts();
+  updateDevils(dt);
+  if (hero.blink2T > 0) { hero.blink2T -= dt; if (hero.blink2T <= 0) CD.blink = Math.max(CD.blink, 1.5); }   // the second blink went unused
+  if (hero.whirl > 0 && skillMod('whirl') === 'long') {   // Long Spin drags the small ones in toward the blade
+    for (const e of enemies) { if (!alive(e) || !smallFoe(e) || e.frozen > 0) continue; const dx = hero.fi - e.fi, dy = hero.fj - e.fj, d = Math.hypot(dx, dy); if (d < 3.6 && d > 1.05) tryMove(e, dx / d * 2.6 * dt, dy / d * 2.6 * dt, 0.25); }
+  }
+}
+// detail layer: the orb's arcs (jagged, white core) and the dust devils (a leaning funnel of dust)
+function drawMods30() {
+  for (const z of G.zaps) {
+    if (!alive(z.e) && z.e.dying > 0.2) continue;
+    const [x0, y0] = iso(z.a[0], z.a[1]), [x1, y1] = iso(z.e.fi, z.e.fj);
+    const A = [x0 * SPX - cam2x, (y0 - z.a[2]) * SPX - cam2y], B = [x1 * SPX - cam2x, (y1 - z.e.def.chest * 0.6) * SPX - cam2y];
+    const n = 7, R = rng(z.seed + Math.floor(G.t * 30)); let px = A[0], py = A[1];
+    for (let s = 1; s <= n; s++) {
+      const u = s / n, j = s < n ? (R() - 0.5) * 14 : 0, nx = A[0] + (B[0] - A[0]) * u - (B[1] - A[1]) / 40 * j, ny = A[1] + (B[1] - A[1]) * u + (B[0] - A[0]) / 40 * j;
+      const m = Math.ceil(Math.hypot(nx - px, ny - py));
+      for (let k = 0; k <= m; k++) { const x = Math.round(px + (nx - px) * k / m), y = Math.round(py + (ny - py) * k / m); ovSet(x, y, 27); ovSet(x + 1, y, 40); ovSet(x, y + 1, 39); }
+      px = nx; py = ny;
+    }
+  }
+  for (const d of G.devils) {
+    const [x, y] = iso(d.fi, d.fj), X0 = x * SPX - cam2x, Y0 = y * SPX - cam2y, life = Math.min(1, d.t / 0.25, (d.t0 - d.t) / 0.15), spin = G.t * 18 + d.spin;
+    // pale dust streaks wound round a funnel that widens and leans as it rises; a dark band at the
+    // back of each turn so it reads against the floor
+    const dust = LV.outdoor ? [DIRT[1], DIRT[3], DIRT[4]] : [S[2], S[6], S[8]];
+    for (let h = 0; h < 52; h++) {
+      const rx = (4 + h * 0.5) * life, ry = rx * 0.3, cx = X0 + Math.sin(h * 0.12 + G.t * 7 + d.spin) * h * 0.18, cy = Y0 - h * 1.15;
+      for (let k = 0; k < 5; k++) {
+        const a = spin + k * 1.257 - h * 0.22, sx = Math.round(cx + Math.cos(a) * rx), sy = Math.round(cy + Math.sin(a) * ry), front = Math.sin(a) > 0;
+        if (h > 38 && (sx + sy) & 1) continue;   // the top frays out
+        ovSet(sx, sy, front ? dust[2] : dust[0]); if (front) ovSet(sx, sy + 1, dust[1]);
+      }
     }
   }
 }

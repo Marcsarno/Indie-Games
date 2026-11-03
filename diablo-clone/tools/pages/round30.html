@@ -1,0 +1,131 @@
+<title>Skill Modifiers</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  /* layout: one narrow column, one section per skill with its four shots first */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul { margin: 0; max-width: 64ch; }
+  ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .frame img.smooth { image-rendering: auto; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .tw { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+</style>
+<main>
+  <header>
+    <h1>Skill Modifiers</h1>
+    <p class="lede">Dungeon of Bones, round 30: the last seven skills get their three modifiers, picked on the same skills screen as the fireball and slam ones. Each skill unlocks its modifiers 2, 4 and 6 levels after the skill itself.</p>
+  </header>
+  <section>
+    <h2>Where to pick them</h2>
+    <figure>
+      <div class="frame"><img src="screen.png" alt="The mage's skills screen: Magic Missile, Fireball, Cone of Cold, Meteor and Blink each with three modifier buttons, Arcane Orb and Deep Freeze chosen" width="540" height="840"></div>
+      <figcaption>Inventory, then SKILLS. The mage's attack (magic missile) now has its own row. Tap a modifier to choose it, and tap it again to go back to the plain skill.</figcaption>
+    </figure>
+  </section>
+  <section>
+    <h2>Magic missile (your attack)</h2>
+    <figure>
+      <div class="frame"><img src="missile.png" alt="Four shots of magic missile (your attack): the plain skill at top left, then Seekers, Piercing Bolt, Arcane Orb" width="806" height="586"></div>
+      <figcaption>Top left: the plain skill. Then Seekers, Piercing Bolt and Arcane Orb, left to right and top to bottom.</figcaption>
+    </figure>
+    <ul>
+      <li><strong>Seekers:</strong> 3 small bolts in a fan. Each goes after a different monster, so it's good against packs.</li>
+      <li><strong>Piercing Bolt:</strong> A fast, straight lance of light that goes through every monster in its line.</li>
+      <li><strong>Arcane Orb:</strong> A slow, big orb. Every 0.4 s it zaps up to four monsters near it, then it bursts. The cast is slower.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Cone of cold</h2>
+    <figure>
+      <div class="frame"><img src="cone.png" alt="Four shots of cone of cold: the plain skill at top left, then Frost Nova, Ice Shards, Deep Freeze" width="806" height="586"></div>
+      <figcaption>Top left: the plain skill. Then Frost Nova, Ice Shards and Deep Freeze, left to right and top to bottom.</figcaption>
+    </figure>
+    <ul>
+      <li><strong>Frost Nova:</strong> A ring of frost all around you, shorter reach.</li>
+      <li><strong>Ice Shards:</strong> A long, narrow cone (6 tiles) that hits almost twice as hard.</li>
+      <li><strong>Deep Freeze:</strong> Freezes for 5 s instead of 3. A frozen monster you kill bursts and freezes the ones beside it.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Meteor</h2>
+    <figure>
+      <div class="frame"><img src="meteor.png" alt="Four shots of meteor: the plain skill at top left, then Shower, Molten Crater, Comet" width="806" height="586"></div>
+      <figcaption>Top left: the plain skill. Then Shower, Molten Crater and Comet, left to right and top to bottom.</figcaption>
+    </figure>
+    <ul>
+      <li><strong>Shower:</strong> Three smaller meteors land one after another around the target. Same total damage, spread wider.</li>
+      <li><strong>Molten Crater:</strong> The crater burns for 4 seconds.</li>
+      <li><strong>Comet:</strong> A ball of ice instead of fire: it freezes the monsters it hits instead of burning them.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Blink</h2>
+    <figure>
+      <div class="frame"><img src="blink.png" alt="Four shots of blink: the plain skill at top left, then Arcane Burst, Double Blink, Frost Step" width="806" height="586"></div>
+      <figcaption>Top left: the plain skill. Then Arcane Burst, Double Blink and Frost Step, left to right and top to bottom.</figcaption>
+    </figure>
+    <ul>
+      <li><strong>Arcane Burst:</strong> A blast where you land that throws monsters back.</li>
+      <li><strong>Double Blink:</strong> The button stays ready for 1.5 s after a blink, and the second blink is free.</li>
+      <li><strong>Frost Step:</strong> Freezes whatever stood near you when you left.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Chain hook</h2>
+    <figure>
+      <div class="frame"><img src="hook.png" alt="Four shots of chain hook: the plain skill at top left, then Long Chain, Barbed Hook, Tether" width="806" height="586"></div>
+      <figcaption>Top left: the plain skill. Then Long Chain, Barbed Hook and Tether, left to right and top to bottom.</figcaption>
+    </figure>
+    <ul>
+      <li><strong>Long Chain:</strong> Reaches 9.5 tiles instead of 7, and drags in every monster along the chain.</li>
+      <li><strong>Barbed Hook:</strong> Hits harder, and the catch stays dazed twice as long.</li>
+      <li><strong>Tether:</strong> Pulls you to whatever it hits, even small monsters, for a heavy blow that knocks things down.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Whirlwind</h2>
+    <figure>
+      <div class="frame"><img src="whirl.png" alt="Four shots of whirlwind: the plain skill at top left, then Dust Devils, Long Spin, Blade Storm" width="806" height="586"></div>
+      <figcaption>Top left: the plain skill. Then Dust Devils, Long Spin and Blade Storm, left to right and top to bottom.</figcaption>
+    </figure>
+    <ul>
+      <li><strong>Dust Devils:</strong> Small whirlwinds spin off you and drift into nearby monsters.</li>
+      <li><strong>Long Spin:</strong> Spins twice as long and drags monsters in toward the blade. Costs 6 more fury.</li>
+      <li><strong>Blade Storm:</strong> A wider circle and faster, lighter hits.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Leap</h2>
+    <figure>
+      <div class="frame"><img src="leap.png" alt="Four shots of leap: the plain skill at top left, then Burning Land, Earthquake, Pounce" width="806" height="586"></div>
+      <figcaption>Top left: the plain skill. Then Burning Land, Earthquake and Pounce, left to right and top to bottom.</figcaption>
+    </figure>
+    <ul>
+      <li><strong>Burning Land:</strong> A ring of fire on landing, and the ground keeps burning.</li>
+      <li><strong>Earthquake:</strong> A much wider landing. Everything but bosses is knocked down.</li>
+      <li><strong>Pounce:</strong> Jumps up to 10 tiles. Lands one huge blow on the target (3.2× instead of 1.8×).</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Balance</h2>
+    <p>Each modifier was tested on dummies, with crits off, against the plain skill. Most deal about the plain total in a different shape: wider, longer or on more monsters. The orb and Long Spin deal more in a crowd, but the orb casts slower and Long Spin costs more fury. Pounce trades area for one big hit. All the earlier tests and both full runs (warrior and mage) still pass.</p>
+  </section>
+</main>

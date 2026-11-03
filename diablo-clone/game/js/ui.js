@@ -393,7 +393,9 @@ function invTap(p) {
 const SKV = { sel: null };
 function skillsLayout() {
   const L = { close: { x: W - 30, y: 6, w: 24, h: 14 }, rows: [] };
-  SKILLS.forEach((sk, n) => { const y = 40 + n * 74; L.rows.push({ sk, y, chips: [0, 1, 2].map(k => ({ k, x: 8 + k * 87, y: y + 14, w: 82, h: 22 })) }); });
+  // the mage's attack (magic missile) has modifiers too: its row comes first
+  const list = (hero.cls === 'mage' ? [{ id: 'missile', name: 'MAGIC MISSILE', lvl: 1 }] : []).concat(SKILLS), gap = list.length > 4 ? 66 : 74;
+  list.forEach((sk, n) => { const y = 36 + n * gap; L.rows.push({ sk, y, chips: [0, 1, 2].map(k => ({ k, x: 8 + k * 87, y: y + 13, w: 82, h: 22 })) }); });
   return L;
 }
 function drawSkills() {
@@ -413,7 +415,7 @@ function drawSkills() {
       textC(unlocked ? (on ? 'CHOSEN' : 'TAP TO CHOOSE') : `LEVEL ${lv}`, c.x + c.w / 2, c.y + 13, on ? 51 : 24);
     }
     const show = SKV.sel && SKV.sel.id === sk.id ? mods[SKV.sel.k] : cur ? mods.find(m => m.id === cur) : null;
-    if (show) text(show.desc, 8, row.y + 42, 25);
+    if (show) text(show.desc, 8, row.y + 40, 25);
   }
 }
 function skillsTap(p) {
