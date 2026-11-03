@@ -93,11 +93,13 @@ function castFireball() {
 }
 // fire explosion shared by the fireball and the meteor: everything in radius r takes k x staff damage
 function explodeAt(fi, fj, r, k, pow, big = false) {
+  G.pierce = true;   // blasts get round shields
   for (const e of enemies) {
     if (!alive(e)) continue;
     const d = Math.hypot(e.fi - fi, e.fj - fj);
     if (d < r + (e.def.unique ? 0.4 : 0)) { const c = spellCrit(); damageEnemy(e, spellDmg(c ? k * 2 : k), fi, fj, c, pow, true); }
   }
+  G.pierce = false;
   for (const p of dynProps) if (!p.broken && (p.kind === 'barrel' || p.kind === 'egg') && Math.hypot(p.i + 0.5 - fi, p.j + 0.5 - fj) < r + 0.3) hitProp(p);
   const [x, y] = iso(fi, fj);
   // a ring of flame rolls out across the ground to the edge of the blast
@@ -125,7 +127,7 @@ function coneOfCold() {
       const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy);
       let da = Math.abs(((Math.atan2(dy, dx) - a0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
       if (d > CONE_R + (e.def.unique ? 0.5 : 0) || (d > 0.6 && da > CONE_HALF + 0.25 / Math.max(1, d))) continue;
-      wake(e); damageEnemy(e, spellDmg(0.8), hero.fi, hero.fj, spellCrit(), 0, true);
+      wake(e); G.pierce = true; damageEnemy(e, spellDmg(0.8), hero.fi, hero.fj, spellCrit(), 0, true); G.pierce = false;
       if (!alive(e)) continue;
       if (e.def.unique || e.def.elite || e.champ) { e.slowT = e.def.unique ? 3 : 4; }
       else { e.frozen = 3; e.atk = -1; e.hurt = 0; e.kb = [0, 0]; }
@@ -297,7 +299,7 @@ function updateSkills(dt) {
     if (!hero.bashDone && (hero.dash <= 0 || (t && Math.hypot(t.fi - hero.fi, t.fj - hero.fj) <= 1.0))) {
       hero.bashDone = true; hero.dash = 0;
       if (t && alive(t) && Math.hypot(t.fi - hero.fi, t.fj - hero.fj) < 1.6) {
-        damageEnemy(t, heroDmg(0.5), hero.fi, hero.fj);
+        G.pierce = true; damageEnemy(t, heroDmg(0.5), hero.fi, hero.fj); G.pierce = false;   // the bash knocks a shield aside
         if (alive(t)) { const d = Math.hypot(t.fi - hero.fi, t.fj - hero.fj) || 1; t.kb = [(t.fi - hero.fi) / d * (t.def.unique ? 4 : 10), (t.fj - hero.fj) / d * (t.def.unique ? 4 : 10)]; t.stun = t.def.unique ? 0.5 : 1.4; t.atk = -1; }
         hero.stop = Math.max(hero.stop, 0.12); sfx('kill');
         if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.3);
@@ -446,6 +448,11 @@ function drawSlamRing() {
 // a red dotted warning line from the broodmother to where her lunge will land
 function drawTelegraph() {
   drawSlamRing();
+  for (const e of enemies) {   // a charger's warning line: dotted red down the path it's about to rush
+    if (!(e.windT > 0) || !alive(e)) continue;
+    const [ax, ay] = iso(e.fi, e.fj), [bx, by] = iso(e.fi + e.rdir[0] * e.rushLen, e.fj + e.rdir[1] * e.rushLen), n = Math.ceil(Math.hypot(bx - ax, by - ay)), blink = Math.floor(G.t * 14) % 2;
+    for (let s = 0; s <= n; s++) { const x = Math.round(ax + (bx - ax) * s / n - camX), y = Math.round(ay + (by - ay) * s / n - camY); if (x < 0 || y < 0 || x >= W || y >= H || ((s + blink) & 3) === 0) continue; scr[y * W + x] = RED[3] | EMIS; }
+  }
   if (!bossAlive() || !(boss.lunge > 0)) return;
   const [ax, ay] = iso(boss.fi, boss.fj), [bx, by] = iso(boss.lx, boss.ly), n = Math.ceil(Math.hypot(bx - ax, by - ay));
   const blink = Math.floor(G.t * 12) % 2;

@@ -1,0 +1,58 @@
+<title>Enemy Behaviors</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 640px; margin: 0 auto; display: grid; gap: 32px; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0 0 8px; letter-spacing: 0.05em; }
+  p { margin: 0; max-width: 62ch; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 10px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; max-width: 470px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .toggle { display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: 600 0.85rem var(--body); color: var(--bone); background: var(--panel); border: 1px solid var(--rule); padding: 6px 12px; cursor: pointer; }
+  button[aria-pressed="true"] { border-color: var(--ember); color: var(--ember); }
+  button:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+  dl { margin: 0; display: grid; gap: 14px; }
+  dt { font-weight: 600; color: var(--ember); }
+  dd { margin: 4px 0 0; }
+</style>
+<main>
+  <header>
+    <h1>Enemy Behaviors</h1>
+    <p class="lede">Dungeon of Bones, round 21, step 2 of the plan: monsters that fight differently, so each area plays differently.</p>
+  </header>
+  <section>
+    <figure>
+      <div class="toggle" role="group" aria-label="Playback speed"><button id="real" aria-pressed="true">Game speed</button><button id="slow" aria-pressed="false">Slow</button></div>
+      <div class="frame"><img id="g" src="behave.gif" alt="Four scenes: a boar's warning line and charge that misses when the warrior sidesteps; a shield skeleton blocking twice, then its guard breaking; a skeleton archer backing away; a pack of fallen spreading around the warrior" width="450" height="378"></div>
+      <figcaption>Four scenes back to back: a boar charge dodged, a shield skeleton, an archer, a pack.</figcaption>
+    </figure>
+  </section>
+  <section>
+    <h2>What each one does</h2>
+    <dl>
+      <div><dt>Boars and dire bears charge</dt><dd>When you're 3 to 7 tiles away, they scrape the ground and a red dotted line shows where they'll run. Then they rush straight down it, much faster than they walk. Get off the line and they miss and run on. If they hit you, it's 1.6 times their normal damage and a shove. If they run into a wall or a tree, they're stunned for over a second. A big hit during the scrape stops the charge.</dd></div>
+      <div><dt>Shield skeletons block</dt><dd>Hits from the front are blocked while the skeleton isn't swinging: a clang, BLOCK, and only a quarter of the damage. After two blocks in a row, or a heavy weapon blow, or a combo finisher, the guard breaks (GUARD BROKEN) and blows land fully for about two seconds. They can't block from the side or behind, mid-swing, frozen or stunned. Fireball, meteor, Cone of Cold and the shield bash go around the shield. Magic missiles can be blocked.</dd></div>
+      <div><dt>Archers and casters keep their distance</dt><dd>Skeleton archers and fallen and goblin shamans back away (at an angle) when you get closer than about 3.5 tiles, sidestep between shots, and shoot from range. Corner them and they'll still fire point-blank.</dd></div>
+      <div><dt>Packs surround you</dt><dd>Fallen, goblins and wolves each pick a spot around you, spread across about 160 degrees, and circle to it before attacking (for up to a second and a half). Five fallen now come at you from the front and both sides instead of in a queue.</dd></div>
+      <div><dt>Packs panic when their leader dies</dt><dd>Kill a fallen shaman, goblin shaman or goblin chieftain and nearby members of its pack scatter for 2.5 to 4 seconds (a "!" over each, and THEY SCATTER IN PANIC). Easy hits as they run.</dd></div>
+    </dl>
+  </section>
+</main>
+<script>
+  const go = s => { document.getElementById('g').src = s ? 'behave-slow.gif' : 'behave.gif';
+    document.getElementById('slow').setAttribute('aria-pressed', String(s)); document.getElementById('real').setAttribute('aria-pressed', String(!s)); };
+  document.getElementById('real').addEventListener('click', () => go(false));
+  document.getElementById('slow').addEventListener('click', () => go(true));
+</script>

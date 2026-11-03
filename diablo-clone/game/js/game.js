@@ -255,6 +255,27 @@ const HITSTOP = [0.045, 0.08, 0.11], KNOCK = [5, 7.7, 11];   // knock speed: til
 function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = false) {
   if (e.frozen > 0) dmg = Math.round(dmg * 1.4);   // frozen solid: hits land harder
   const heroStop = hero.stop;
+  // shield-bearers block blows from the front while they aren't swinging. A heavy blow breaks the
+  // guard for a while; finishers, area spells, a frozen or stunned shield-bearer all get through
+  if (!FEEL_OLD && e.look.shield === true && !e.def.unique && e.atk < 0 && !(e.frozen > 0) && !(e.stun > 0) && !(e.guardT > G.t) && !G.pierce && pow < 2) {
+    const [fx, fy] = dirVec(e.dir), ax = fromFi - e.fi, ay = fromFj - e.fj, al = Math.hypot(ax, ay);
+    if (al > 0.05 && (ax * fx + ay * fy) / al > 0.4) {
+      const [ex, ey] = screenOf(e);
+      if (pow === 1) { e.guardT = G.t + 2.5; dmg = Math.round(dmg * 0.6); floater('GUARD BROKEN', e.fi, e.fj, e.def.chest + 22, 51); burst(2, ex, ey, e.def.chest * 0.8, 14, 110, 31); sfx('block'); }
+      else if (dmg * 0.25 < e.hp) {
+        e.hp -= Math.max(1, Math.round(dmg * 0.25)); sfx('block');
+        e.blocks = (e.blocks || 0) + 1;   // two blocks in a row and the arm drops: the next blows land
+        if (e.blocks >= 2) { e.blocks = 0; e.guardT = G.t + 2.2; floater('GUARD BROKEN', e.fi, e.fj, e.def.chest + 22, 51); } else floater('BLOCK', e.fi, e.fj, e.def.chest + 14, 31);
+        burst(2, ex, ey, e.def.chest * 0.8, 8, 80, 31); e.flash = 0.04; e.stop = 0.04;
+        if (!ranged) hero.stop = Math.max(hero.stop, 0.035);
+        const dd = Math.hypot(e.fi - fromFi, e.fj - fromFj) || 1; e.kb = [(e.fi - fromFi) / dd * 2, (e.fj - fromFj) / dd * 2];
+        if (e.state === 'sleep') wake(e);
+        return;
+      }
+    }
+  }
+  if (e.windT > 0 && (pow >= 1 || dmg >= e.maxHp * 0.18)) e.windT = 0;   // a big hit stops a charge before it starts
+  if (pow === 2 && e.look.shield === true) e.guardT = G.t + 2.2;   // a finisher knocks the shield aside
   e.hp -= dmg; e.flash = FEEL_OLD ? (crit ? 0.09 : 0.05) : (crit ? 0.1 : 0.065); if (!FEEL_OLD) e.tint = 0.08;
   if (crit) floater(dmg + '!', e.fi, e.fj, e.def.chest + 18, 51, 2); else floater(String(dmg), e.fi, e.fj, e.def.chest + 14, 27);
   if (STAT.leech) hero.hp = Math.min(STAT.maxHp, hero.hp + Math.max(1, Math.round(dmg * STAT.leech / 100)));
@@ -289,6 +310,11 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
       G.bursting = true; burst(2, ex, ey, e.def.chest * 0.6, 26, 110, 16); burst(3, ex, ey, 6, 14, 40, 17); sfx('fireball');
       for (const o of enemies) if (o !== e && alive(o) && Math.hypot(o.fi - e.fi, o.fj - e.fj) < 1.9) damageEnemy(o, Math.max(1, Math.round(heroDmg(1) * 0.6)), e.fi, e.fj, false);
       G.bursting = false;
+    }
+    if (e.def.leader) {   // the pack scatters when its shaman or chieftain falls
+      let n = 0;
+      for (const o of enemies) if (o !== e && alive(o) && o.def.pack && o.fam === e.fam && Math.hypot(o.fi - e.fi, o.fj - e.fj) < 7) { o.panicT = 2.5 + Math.random() * 1.5; o.atk = -1; floater('!', o.fi, o.fj, o.def.chest + 16, 51); n++; }
+      if (n >= 2) say('THEY SCATTER IN PANIC', 51, 1.6);
     }
     if (e === boss) { say(`THE ${e.def.name} IS SLAIN`, 51, 4); say('THE WAY DOWN IS OPEN', 26, 4); sfx('levelUp'); G.slowmo = 0.9; G.bossIntro = 0; }
     G.kills++;
@@ -597,23 +623,77 @@ function updateEnemy(e, dt) {
   }
   if (d > 20 && !m.flee) { e.clip = 'idle'; return; }   // too far to matter: skip sight and pathing (big forests)
   const see = d < 10 && los(e.fi, e.fj, hero.fi, hero.fj);
-  if (m.ranged && see && d < m.reach && d > 2.2) {
+  // round 21b behaviors -------------------------------------------------------------------------
+  // chargers (boars, bears): scrape the ground with a warning line locked on the hero's spot, then
+  // rush straight down it. Sidestep and they run on; into a wall and they're stunned
+  if (m.charge && e.windT > 0) {
+    e.windT -= dt; e.clip = 'idle'; e.dir = dirFrom(e.rdir[0], e.rdir[1]);
+    if (Math.random() < dt * 14) { const [x, y] = screenOf(e); pspawn(5, x - e.rdir[0] * 6 + e.rdir[1] * 6, y, 1, (Math.random() - 0.5) * 30, -Math.random() * 10, 20, 1, DIRT[3]); }
+    if (e.windT <= 0) { e.rush = e.rushLen / 10; e.rushHit = false; }
+    return;
+  }
+  if (m.charge && e.rush > 0) {
+    e.rush -= dt;
+    const sp = 10 * dt, f0 = e.fi, j0 = e.fj;
+    tryMove(e, e.rdir[0] * sp, e.rdir[1] * sp, 0.25);
+    const moved = Math.hypot(e.fi - f0, e.fj - j0);
+    e.walk += moved / (FAMILIES[e.fam].gait || 0.32) * 0.6; e.clip = 'walk';
+    if (Math.random() < 0.6) { const [x, y] = screenOf(e); pspawn(5, x, y, 1, (Math.random() - 0.5) * 20, -10, 14, 1, DIRT[3]); }
+    if (!e.rushHit && !hero.dead && Math.hypot(hero.fi - e.fi, hero.fj - e.fj) < 0.85 + (e.look.scale || 1) * 0.2) {
+      e.rushHit = true; hurtHero(Math.round(roll(e.dmg) * 1.6), e); tryMove(hero, e.rdir[0] * 0.7, e.rdir[1] * 0.7);
+      if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.3);
+    }
+    if (moved < sp * 0.35) {   // slammed into something solid
+      e.rush = 0; e.stun = 1.4; const [x, y] = screenOf(e); burst(5, x, y, 10, 14, 60, DIRT[3]); sfx('barrel');
+      if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.15);
+    }
+    if (e.rush <= 0) { e.chargeCd = G.t + 2.5 + Math.random() * 2; e.cool = Math.max(e.cool, 0.5); }
+    return;
+  }
+  if (m.charge && see && d > 2.6 && d < 7.5 && !(e.chargeCd > G.t) && e.state !== 'sleep') {
+    const l = d || 1; e.rdir = [dx / l, dy / l]; e.rushLen = Math.min(d + 2.5, 9); e.windT = 0.6; e.dir = dirFrom(dx, dy); sfx('heavySwing');
+    return;
+  }
+  const fleeing = m.flee || e.panicT > 0;   // the treasure goblin always; a pack whose leader just died for a moment
+  if (e.panicT > 0) e.panicT -= dt;
+  // archers and casters keep their distance: they back away while reloading, strafe, and shoot from range
+  if (m.ranged && see && d < m.reach && (d > 3.6 || e.cool <= 0 && d > 1.6)) {
+    e.dir = dirFrom(dx, dy);
+    if (e.cool <= 0) { e.atk = 0; e.hitDone = false; e.clip = 'idle'; return; }
+    if (e.cool > 0.35) {   // between shots: a few sidesteps
+      const sd = Math.sin(G.t * 1.3 + e.seed * 7) > 0 ? 1 : -1, sp = m.speed / 16 * 0.55 * (e.slowT > 0 ? 0.5 : 1) * dt, f0 = e.fi, j0 = e.fj;
+      tryMove(e, -dy / d * sd * sp, dx / d * sd * sp, 0.25);
+      e.walk += Math.hypot(e.fi - f0, e.fj - j0) / (FAMILIES[e.fam].gait || 0.32); e.clip = 'walk'; e.dir = dirFrom(dx, dy);
+    } else e.clip = 'idle';
+    return;
+  }
+  // a pack member keeps circling to its spot before it attacks (at most 1.5 s, then it attacks anyway)
+  let circling = false;
+  if (m.pack && e.slotA !== undefined && d < m.reach) {
+    const da = Math.abs(((Math.atan2(-dy, -dx) - e.slotA + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+    e.slotWait = (e.slotWait || 0) + dt;
+    circling = da > 0.5 && e.slotWait < 1.5;
+    if (!circling) e.slotWait = 0;
+  }
+  if (!m.ranged && !fleeing && d < m.reach && !circling) {
     e.dir = dirFrom(dx, dy); e.clip = 'idle';
     if (e.cool <= 0) { e.atk = 0; e.hitDone = false; }
     return;
   }
-  if (!m.ranged && !m.flee && d < m.reach) {
-    e.dir = dirFrom(dx, dy); e.clip = 'idle';
-    if (e.cool <= 0) { e.atk = 0; e.hitDone = false; }
-    return;
-  }
-  // move: ranged enemies back off when the hero is close, everyone else closes in
+  // move: ranged enemies back off when the hero is close, packs fan out to the flanks, everyone else closes in
   let mv = null;
-  if (m.flee) {   // away from the hero, swerving so it does not stick on walls
+  if (fleeing) {   // away from the hero, swerving so it does not stick on walls
     const l = d || 1, sw = Math.sin(G.t * 2 + e.seed) * 0.6;
     mv = [-dx / l - dy / l * sw, -dy / l + dx / l * sw];
   } else
-  if (m.ranged && d <= 2.2) mv = [-dx / d, -dy / d];
+  if (m.ranged && see && d <= 3.6) { const sd = (e.seed & 1) ? 1 : -1; mv = [-dx / d - dy / d * sd * 0.5, -dy / d + dx / d * sd * 0.5]; }
+  else if (m.pack && (see || circling) && d < 5) {
+    // each pack member claims a spot around the hero: the angle it came from, turned by one of five
+    // offsets (about 160 degrees across), so the pack ends up around the hero instead of in a line
+    if (e.slotA === undefined || G.t > e.slotT) { e.slotA = Math.atan2(-dy, -dx) + ((e.seed % 5) - 2) * 0.7; e.slotT = G.t + 4; }
+    const tx = hero.fi + Math.cos(e.slotA) * (m.reach * 0.8) - e.fi, tj = hero.fj + Math.sin(e.slotA) * (m.reach * 0.8) - e.fj, tl = Math.hypot(tx, tj);
+    mv = tl > 0.25 ? [tx / tl, tj / tl] : [dx / d, dy / d];
+  }
   else if (see && d < 3) mv = [dx / d, dy / d];
   else mv = flowDir(e.fi, e.fj);
   if (!mv || d > 18) { e.clip = 'idle'; return; }
