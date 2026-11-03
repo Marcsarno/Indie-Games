@@ -391,12 +391,15 @@ function genHub(R, A) {
   // west: deep woods, and the wolves' den in a rocky mound
   put('den', Math.floor(H.den[0]) - 1, Math.floor(H.den[1]) - 1, 2, 2);
   // south: a stone wall across the road with a shut gate and a sign
-  for (let k = -6; k <= 6; k++) {
+  for (let k = -10; k <= 10; k++) {   // end to end into the border trees, so the gate is the only way through
     const i = Math.floor(H.gate[0]) + k, j = Math.floor(H.gate[1]) - k;   // the wall runs along the screen's width
     if (k === 0) continue;
-    LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'stonewall', i, j });
+    LV.solid[tIdx(i, j)] = 1; if (!edgeBand(i, j)) LV.decor.push({ kind: 'stonewall', i, j });
   }
-  put('gate', Math.floor(H.gate[0]), Math.floor(H.gate[1]), 1, 1);
+  // the gate opens for good once this act's boss is dead (G.gates, saved, one flag per cycle)
+  LV.gateOpen = !!(G.gates && G.gates[A.cyc]);
+  if (LV.gateOpen) LV.decor.push({ kind: 'gateo', i: Math.floor(H.gate[0]), j: Math.floor(H.gate[1]), w: 1, h: 1 });
+  else put('gate', Math.floor(H.gate[0]), Math.floor(H.gate[1]), 1, 1);
   LV.decor.push({ kind: 'signpost', fi: H.gate[0] - 2.2, fj: H.gate[1] - 0.6 });
   LV.gateSign = [H.gate[0] - 1, H.gate[1] - 1];
   // scatter: trees thicken toward the west woods and thin to meadow round the cathedral and fields
@@ -757,6 +760,10 @@ const BUILD = {
     // steps down from the doors
     for (let n = 0; n < 3; n++) r.box([tx + tw + 3 + n * 3, 0, 1 + (2 - n) * 1.4], [1.6 + (2 - n) * 1.5 + 1.5, 10 - n * 0.5, 1 + (2 - n) * 1.4], M.STONE);
   }, [176, 228, 88, 186]),
+  gateo: () => propSprite('gateo', r => {   // the same towers with the two gate leaves swung wide open
+    for (const sy of [-1, 1]) { r.box([0, sy * 14, 15], [6, 5, 15], M.RUIN, null, { mf: p => Math.floor(p[2] / 5) % 2 && Math.abs(p[0] % 6) < 0.5 ? M.STONE : 0 }); r.cone([0, sy * 14, 30], [0, sy * 14, 40], 7, 0.6, M.IRON); }
+    for (const sy of [-1, 1]) r.box([5, sy * 8, 10], [4.5, 0.9, 10], M.WOOD, null, { mf: p => Math.abs(p[2] - 6) < 0.6 || Math.abs(p[2] - 15) < 0.6 ? M.IRON : 0 });
+  }, [64, 72, 32, 56]),
   mine: () => propSprite('mine', r => {   // a mine mouth cut into a rock face: a heavy timber frame, a lamp, rails running out
     for (const [x, y, z, a, b, c] of [[-12, -2, 13, 16, 26, 20], [-6, 18, 8, 12, 10, 11], [-6, -22, 8, 12, 10, 10], [-18, 8, 22, 10, 12, 12]]) r.ell([x, y, z], [a, b, c], M.ROCK, null, { mf: p => hash(Math.floor(p[0] / 2), Math.floor(p[1] / 2 + p[2] / 3), 3) < 0.06 ? M.LEAFM : 0 });
     r.box([4, 0, 10], [3, 7, 10], M.VOID);   // the dark mouth
@@ -886,7 +893,7 @@ function buildOutdoor(back) {
       props.push({ depth: d.i + d.j + 1, sp: OUT.campfire(), wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
       fires.push({ wx: x, wy: y - 2, h: 14, w: 5, seed: d.i * 31 + d.j, ember: 0.12, tile: tIdx(d.i, d.j) });
       lights.push({ x, y, z: 16, r: LV.night ? 150 : 90, i: LV.night ? 0.9 : 0.35, seed: d.i + d.j * 7 });
-    } else if (BUILD[d.kind.replace('2', '')] || d.kind === 'stall2') {
+    } else if (BUILD[d.kind.replace('2', '')] || d.kind === 'stall2') {   // (the open gate 'gateo' has no footprint: it is walked through)
       const dw = d.w || 1, dh = d.h || 1, ci = d.i + dw / 2, cj = d.j + dh / 2, [x, y] = iso(ci, cj);   // forest tents have no footprint size
       const sp = d.kind === 'stall' ? BUILD.stall(0) : d.kind === 'stall2' ? BUILD.stall(1) : BUILD[d.kind]();
       props.push({ depth: ci + cj + 0.5, sp, wx: x, wy: y, tile: tIdx(d.i + dw - 1, d.j + dh - 1) });
@@ -994,7 +1001,7 @@ function heroRing(wx, wy) {
 // where the way on is: the road out of town, the stone ring of the dungeon entrance
 function drawGateSign() {
   const g = LV.gateSign; if (!g || Math.hypot(g[0] - hero.fi, g[1] - hero.fj) > 6) return;
-  const [x, y] = iso(g[0], g[1]); textC('THE ROAD SOUTH IS CLOSED', Math.round(x - camX), Math.round(y - camY) - 40, 22);
+  const [x, y] = iso(g[0], g[1]); textC(LV.gateOpen ? 'THE ROAD SOUTH: ' + ACTS[(LV.act + 1) % ACTS.length].name : 'THE ROAD SOUTH IS CLOSED', Math.round(x - camX), Math.round(y - camY) - 40, LV.gateOpen ? 51 : 22);
 }
 function drawExitLabel() {
   drawGateSign(); drawSideDoorLabels();
@@ -1013,7 +1020,7 @@ function drawStairsMark(s) {
   const [x, y] = iso(s.i + 0.5, s.j + 0.5), sx = x - camX, sy = y - camY;
   const X0 = 14, X1 = W - 14, Y0 = 40, Y1 = Math.round(H * 0.6);
   if (sx > X0 && sx < X1 && sy > Y0 && sy < Y1) {
-    if (Math.hypot(s.i - hero.fi, s.j - hero.fj) < 7) textC(s.up ? 'WAY OUT' : bossAlive() ? 'SEALED' : 'STAIRS DOWN', Math.round(sx), Math.round(sy) - 24, bossAlive() ? 22 : 51);
+    if (Math.hypot(s.i - hero.fi, s.j - hero.fj) < 7) textC(s.up ? 'WAY OUT' : bossAlive() ? 'SEALED' : LV.arena && LV.act === 0 ? 'HOME TO ' + AREA_NAMES.town[0] : 'STAIRS DOWN', Math.round(sx), Math.round(sy) - 24, bossAlive() ? 22 : 51);
     return;
   }
   // from the screen's middle toward the stairs, stopped at the edge of the play area

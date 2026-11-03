@@ -1,0 +1,114 @@
+<title>Oakhollow Opening Area</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  /* layout: one narrow column, each part of the plan a section with its picture first */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul { margin: 0; max-width: 64ch; }
+  ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .frame img.smooth { image-rendering: auto; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .tw { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+</style>
+<main>
+  <header>
+    <h1>Oakhollow Opening Area</h1>
+    <p class="lede">Dungeon of Bones, round 26: a hand-built start around a cathedral, quests from the priest, two side areas, the act's ending, and sturdier level generation underneath.</p>
+  </header>
+
+  <section>
+    <h2>The map</h2>
+    <figure>
+      <div class="frame"><img class="smooth" src="hub-map.png" alt="Overview of the opening area as a diamond, north at the top: the mine with diggers in the north, the cathedral and camp in the middle, the farm with bandits in the east, the woods and wolf den in the west, and the closed gate in the south" width="524" height="286"></div>
+      <figcaption>North is up on the screen; the minimap now shows an N. Red dots are monsters, and none come within 12 tiles of the camp. The layout is fixed, and only small things (grass, flowers, which trees grow where) change between runs.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>The camp at the cathedral</h2>
+    <figure>
+      <div class="frame"><img src="town-before-after.png" alt="Left: the old walled town with log cabins. Right: the new camp in front of a stone cathedral with a bell tower and spire, the priest on its steps marked with a gold exclamation mark, the smith and the potion seller nearby" width="1090" height="620"></div>
+      <figcaption>Left: the old town. Right: the new camp in front of the cathedral. You can walk all the way around the cathedral (there's a graveyard behind it) but not go inside.</figcaption>
+    </figure>
+    <ul>
+      <li><strong>Brother Osric</strong> stands on the steps. A gold ! means he has quests for you, and a ? means one is ready to hand in.</li>
+      <li><strong>Smithy</strong> buys your bag loot. <strong>Potions</strong> sells healing potions for 25 gold.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>The four directions</h2>
+    <figure>
+      <div class="frame"><img src="hub-quarters.png" alt="Four views: north, a timber-framed mine mouth in a rock face surrounded by diggers in iron caps; east, ploughed fields with bandits; west, dense pine woods with wolves; south, a stone wall with a shut gate and a red sign saying the road south is closed" width="1090" height="1010"></div>
+      <figcaption>Clockwise from top left: north, east, south, west.</figcaption>
+    </figure>
+    <ul>
+      <li><strong>North, the old mine:</strong> diggers, a new creature (hunched, snouted, in a dented iron cap, swinging a pick, with a lamp at the belt). The mine leads straight to the first dungeon floor.</li>
+      <li><strong>East, the farm:</strong> a farmhouse, a windmill and fields held by bandits. The farmhouse door leads down to the cellar.</li>
+      <li><strong>West, the woods:</strong> they get denser toward the wolf den, a rock mound you can go into.</li>
+      <li><strong>South, the gate:</strong> shut until the act's boss is dead.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Quests and side areas</h2>
+    <figure>
+      <div class="frame"><img src="quests.png" alt="Three shots: the quest tracker lines at the top left next to the priest; inside the wolf den cave with stairs marked WAY OUT; inside the farm cellar, a brick crypt" width="1640" height="520"></div>
+      <figcaption>The tracker at the top left, the wolf den, and the farm cellar.</figcaption>
+    </figure>
+    <div class="tw"><table>
+      <tr><th>Quest</th><th>Steps</th></tr>
+      <tr><td>The Wolf Den</td><td>Kill 6 wolves in the woods, then the Alpha in its den</td></tr>
+      <tr><td>The Stolen Farm</td><td>Kill 4 bandits on the farm, then their chief in the cellar</td></tr>
+      <tr><td>The Old Mine</td><td>Kill the Skeleton King below the mine</td></tr>
+    </table></div>
+    <ul>
+      <li>He gives all three the first time you talk to him. Each one pays gold, experience and a rare-or-better item when you hand it in.</li>
+      <li>The den and the cellar are short generated floors of five rooms. The leader waits in the farthest room, and the way out is beside the entrance.</li>
+      <li>When you come back out, you're at the door you went in by, and the opening area is just as you left it.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>The end of Act I</h2>
+    <figure>
+      <div class="frame"><img src="gate-open.png" alt="The south gate with its two wooden leaves swung open in the stone wall" width="540" height="500"></div>
+      <figcaption>After the Skeleton King, his hall's exit takes you home. The south gate now stands open (it's saved), and walking through it starts Act II.</figcaption>
+    </figure>
+    <p>Act I's old forest level is skipped, since the woods now live in the opening area. Acts II and III are unchanged.</p>
+  </section>
+
+  <section>
+    <h2>Under the hood: steadier levels</h2>
+    <figure>
+      <div class="frame"><img src="gallery-crypt1.png" alt="Twenty-four generated crypt layouts as top-down maps: grey rooms joined by corridors, a green start, a gold stairs, red monsters, magenta champions and yellow chests" width="996" height="664"></div>
+      <figcaption>Twenty-four generated first floors. Green is the start, gold the stairs, red monsters, magenta champions, yellow chests. The lighter rooms are on the direct route to the stairs.</figcaption>
+    </figure>
+    <ul>
+      <li>Every finished level is checked with the hero's real size: the stairs, every chest and every monster have to be reachable. If a check fails, the level is rebuilt from the next seed.</li>
+      <li>Monsters get harder with walking distance from the start, and none stand within 7 steps of it. Packs only go where all their members fit.</li>
+      <li>Champions are capped and kept at least 12 steps apart, in side rooms first. Chests go in dead ends and side rooms.</li>
+      <li>Doorways and the approach to the stairs are kept clear of props. Up to two loops are added, so fewer routes dead-end.</li>
+      <li>A test runs 300 seeds of every level type. All of them generate, with no unreachable or stuck monsters.</li>
+      <li>Loot: grey items drop a quarter as often as before. Blue and yellow are back at their original rates.</li>
+    </ul>
+  </section>
+</main>

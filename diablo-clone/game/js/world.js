@@ -69,7 +69,7 @@ function genLevel(level, seed, side = null) {
   LV.side = side; LV.sideCfg = side ? SIDES[side] : null;
   { const big = A.kind === 'forest' || A.hub; resizeWorld(big ? 64 : 40, big ? 64 : 40); }
   LV.area = A.kind; LV.cyc = A.cyc; LV.act = A.act; LV.loop = A.loop; LV.floor = A.floor || 0; LV.arena = A.arena || null;
-  LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.hub = !!A.hub; LV.gateSign = null; LV.autumn = A.act === 1; LV.night = A.kind !== 'dungeon' && A.act === 2; LV.plaza = null; LV.npcs = []; LV.critters = []; LV.champsPlanned = false; LV.genFail = null;
+  LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.hub = !!A.hub; LV.gateSign = null; LV.gateOpen = false; LV.autumn = A.act === 1; LV.night = A.kind !== 'dungeon' && A.act === 2; LV.plaza = null; LV.npcs = []; LV.critters = []; LV.champsPlanned = false; LV.genFail = null;
   if (LV.outdoor) { LV.theme = A.kind; genOutdoor(level, seed, A); LV.level = level; LV.seed = seed; return; }
   LV.theme = LV.sideCfg ? LV.sideCfg.theme : ACTS[A.act].theme;   // each act's dungeon keeps one theme: crypt, caves, hell
   if (LV.arena) { genArena(LV.arena, seed); LV.level = level; LV.seed = seed; return; }

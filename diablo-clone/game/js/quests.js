@@ -53,7 +53,7 @@ function talkPriest() {
   if (paid) { sfx('gold'); saveGame(); return; }
   // otherwise, a reminder of what is left
   const next = QUESTS.find(q => !G.quests[q.id].done);
-  if (next) say(next.give[1], 26, 3); else say('THE LIGHT KEEPS YOU. THE ROAD SOUTH WILL OPEN SOON.', 26, 3);
+  if (next) say(next.give[1], 26, 3); else say(LV.gateOpen ? 'THE ROAD SOUTH IS OPEN. GO WITH THE LIGHT.' : 'THE LIGHT KEEPS YOU.', 26, 3);
 }
 // a rare (or better) item: rerolls until one comes up
 function rollRare(R, level) {
