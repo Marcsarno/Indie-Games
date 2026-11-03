@@ -22,7 +22,7 @@ let SKILLS = SKILLSETS.warrior;
 function setSkillsFor(cls) { SKILLS = SKILLSETS[cls] || SKILLSETS.warrior; }
 const CD = { bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, leap: 0, fireball: 0, cone: 0, meteor: 0, blink: 0 };
 function resetSkills() { for (const k in CD) CD[k] = 0; hero.whirl = 0; hero.dash = 0; hero.buff = 0; }
-const heroBusy = () => hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0 || !!hero.leap;
+const heroBusy = () => hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0 || !!hero.leap || !!hero.ultOn;
 // one hit's damage, with the war cry bonus
 const heroDmg = (k = 1) => Math.max(1, Math.round(roll(STAT.dmg) * k * (hero.buff > 0 ? 1.4 : 1)));
 
@@ -1129,7 +1129,7 @@ function drawStreaks() {   // the blink's streak: a white core in an arcane band
   }
 }
 function drawImpactFlashes() {
-  drawStreaks(); drawHookChains(); drawMods30();
+  drawStreaks(); drawHookChains(); drawMods30(); drawStrikes();
   for (const f of G.impacts) {
     const [x, y] = iso(f.fi, f.fj), X0 = Math.round(x * SPX - cam2x), Y0 = Math.round((y - f.z) * SPX - cam2y), p = 1 - f.t / f.t0, R = f.size * (0.6 + p * 0.6);
     // a white core with four spikes, the first frame solid, then hollowing out
@@ -1285,3 +1285,179 @@ function drawMods30() {
     }
   }
 }
+
+// ---------------------------------------------------------------- ultimates (round 31)
+// A fifth button from level 10. It charges from fighting, not a cooldown: dealing a monster's
+// worth of damage gives 4%, each kill 1% more (champions and elites 6%, bosses 20%), so it fills
+// in about one or two big fights. Damage the ultimate itself deals doesn't charge it.
+const ULT_LVL = 10;
+const ULTS = {
+  warrior: { id: 'wrath', name: 'WRATH OF THE MOUNTAIN' },
+  mage: { id: 'storm', name: 'ARCANE STORM' },
+};
+const ultReady = () => hero.lvl >= ULT_LVL && (hero.ult || 0) >= 100;
+function ultGain(e, dmg, killed) {
+  if (hero.lvl < ULT_LVL || hero.ultOn || G.rocks.length || !(e.maxHp > 0)) return;
+  let g = 4 * Math.max(0, dmg) / e.maxHp;
+  if (killed) g += e.def.unique ? 20 : e.champ || e.def.elite ? 6 : 1;
+  const was = hero.ult || 0; hero.ult = Math.min(100, was + g);
+  if (was < 100 && hero.ult >= 100) { say(`${ULTS[hero.cls].name} IS READY`, 51, 2); sfx('levelUp'); }
+}
+function useUlt() {
+  if (G.mode !== 'play' || hero.dead) return;
+  if (hero.lvl < ULT_LVL) { say(`ULTIMATE UNLOCKS AT LEVEL ${ULT_LVL}`, 25, 1.4); return; }
+  if (!ultReady()) { say('NOT CHARGED YET', 40, 1.2); btnFx(9).deny = 0.3; sfx('tap'); return; }
+  if (hero.ultOn || hero.leap) return;
+  if (hero.castKind === 'missile' && hero.cast >= 0) { hero.cast = -1; hero.castFn = null; }
+  if (heroBusy()) return;
+  hero.ult = 0; btnFx(9).press = 0.2;
+  if (hero.cls === 'mage') startStorm(); else startWrath();
+}
+// Wrath of the Mountain: the warrior leaps straight up, hangs, and drives down; a huge ring of
+// ground shatters, everything is knocked down, then rocks rain over the area
+function startWrath() {
+  hero.ultOn = { kind: 'wrath', t: 0, fi: hero.fi, fj: hero.fj, landed: false };
+  hero.atk = -1; hero.cast = -1; hero.approach = null;
+  say('WRATH OF THE MOUNTAIN!', 51, 1.6); sfx('heavySwing'); sfx('cry');
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.2);
+}
+const WRATH_R = 5.2;
+function updateWrath(dt) {
+  const U = hero.ultOn; U.t += dt;
+  const t = U.t;
+  hero.clip = 'attack4'; hero.combo = 3;
+  if (t < 0.42) { const u = t / 0.42; hero.leapZ = Math.sin(u * Math.PI / 2) * 64; hero.atk = 40; }   // up
+  else if (t < 0.62) { hero.leapZ = 64 + Math.sin((t - 0.42) * 30) * 1.5; hero.atk = 40; if (Math.random() < 0.8) { const [x, y] = screenOf(hero); pspawn(4, x + (Math.random() - 0.5) * 20, y, hero.leapZ + Math.random() * 30, 0, 0, -30, 0.3, Math.random() < 0.5 ? 51 : 27); } }   // hangs, gathering light
+  else if (t < 0.72) { hero.leapZ = 64 * (1 - (t - 0.62) / 0.1); hero.atk = 230; }   // drives down
+  else if (!U.landed) { U.landed = true; hero.leapZ = 0; wrathLand(); }
+  else if (t > 0.95) { hero.ultOn = null; hero.atk = -1; hero.clip = 'idle'; hero.swingEnd = G.t; }
+}
+function wrathLand() {
+  G.pierce = true; G.elem = 'heavy';
+  for (const e of enemies) {
+    if (!alive(e)) continue;
+    const d = Math.hypot(e.fi - hero.fi, e.fj - hero.fj); if (d > WRATH_R + (e.def.unique ? 0.5 : 0)) continue;
+    wake(e); const c = Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100, k = 6 * (1 - d / (WRATH_R * 2.2));   // hardest near the middle
+    damageEnemy(e, heroDmg((c ? 2 : 1) * k), hero.fi, hero.fj, c, 2);
+    if (!alive(e)) continue;
+    if (e.def.unique) e.stun = Math.max(e.stun || 0, 1.2);
+    else { e.downT = e.downT0 = 1.6; e.atk = -1; e.stun = 0; e.windT = 0; const l = d || 1; e.kb = [(e.fi - hero.fi) / l * 6, (e.fj - hero.fj) / l * 6]; }
+  }
+  G.pierce = false; G.elem = null;
+  for (const p of dynProps) if (!p.broken && (p.kind === 'barrel' || p.kind === 'egg') && Math.hypot(p.i + 0.5 - hero.fi, p.j + 0.5 - hero.fj) < WRATH_R) hitProp(p);
+  const q = { fi: hero.fi, fj: hero.fj, a0: 0, ring: true, R: WRATH_R * 0.9, n: 16, t: 1.6, t0: 1.6, seed: (Math.random() * 1e6) | 0 };
+  G.quakes.push(q); stampCracks(q);
+  const lite = LV.outdoor ? [DIRT[4], DIRT[3]] : [TH().ramp[TH().ramp.length - 1], TH().ramp[5]];
+  shockwave(hero.fi, hero.fj, WRATH_R, 0.5, lite, null, false); shockwave(hero.fi, hero.fj, WRATH_R * 0.6, 0.3, [27, 51]);
+  impactFlash(hero.fi, hero.fj, 4, 14);
+  G.flashes.push({ fi: hero.fi, fj: hero.fj, t: 0.4, t0: 0.4, r: 160 });
+  const [x, y] = screenOf(hero); rubble(x, y, 46, 130);
+  for (let k = 0; k < 48; k++) { const a = k / 48 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 120, Math.sin(a) * 60, 30 + Math.random() * 40, 1, k % 3 ? (LV.outdoor ? DIRT[3] : S[5]) : DIRT[4]); }
+  // rocks rain down over the area for the next second and a half
+  for (let k = 0; k < 16; k++) {
+    let p = null;
+    for (let tr = 0; tr < 8 && !p; tr++) { const a = Math.random() * 6.283, d = 1.2 + Math.sqrt(Math.random()) * (WRATH_R - 0.8), c = [hero.fi + Math.cos(a) * d, hero.fj + Math.sin(a) * d]; if (!blocked(c[0], c[1])) p = c; }
+    if (p) { const t0 = 0.35 + k * 0.08 + Math.random() * 0.1; G.rocks.push({ fi: p[0], fj: p[1], t: t0, t0, fall: 0.35, s: 0.7 + Math.random() * 0.5 }); }
+  }
+  if (SHAKE) G.trauma = 1;
+  hero.stop = Math.max(hero.stop, 0.12);
+  sfx('boom'); sfx('crit'); sfx('crack'); sfx('kill');
+}
+function updateRocks(dt) {
+  for (const r of G.rocks) {
+    r.t -= dt; if (r.t > 0 || r.done) continue;
+    r.done = true;
+    G.pierce = true; G.elem = 'heavy';
+    for (const e of enemies) if (alive(e) && Math.hypot(e.fi - r.fi, e.fj - r.fj) < 1 + (e.def.unique ? 0.4 : 0)) { const c = Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100; damageEnemy(e, heroDmg((c ? 2 : 1) * 1.6 * r.s), r.fi, r.fj, c, 1, true); }
+    G.pierce = false; G.elem = null;
+    const [x, y] = iso(r.fi, r.fj); rubble(x, y, 8, 60);
+    const lite = LV.outdoor ? [DIRT[4], DIRT[3]] : [TH().ramp[TH().ramp.length - 1], TH().ramp[5]];
+    shockwave(r.fi, r.fj, 1.1, 0.25, lite, null, false); impactFlash(r.fi, r.fj, 2, 4);
+    const q = { fi: r.fi, fj: r.fj, a0: 0, ring: true, R: 0.9, n: 5, t: 0.5, t0: 0.5, seed: (Math.random() * 1e6) | 0 }; stampCracks(q);
+    if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.15);
+    sfx('crack'); if (Math.random() < 0.5) sfx('boom');
+  }
+  G.rocks = G.rocks.filter(r => !r.done);
+}
+// a falling rock: a shadow on the ground that grows, and a lumpy boulder coming down onto it (world layer)
+function drawRocks() {
+  for (const r of G.rocks) {
+    const [cx0, cy0] = iso(r.fi, r.fj), cx = Math.round(cx0 - camX), cy = Math.round(cy0 - camY);
+    const near = 1 - Math.max(0, r.t) / r.t0, sr = Math.round(4 + near * 8 * r.s);
+    for (let y = -sr; y <= sr; y++) for (let x = -sr * 2; x <= sr * 2; x++) { if ((x / 2) ** 2 + y * y > sr * sr) continue; const X = cx + x, Y = cy + Math.round(y / 2); if (X < 0 || Y < 0 || X >= W || Y >= H || cid[Y * W + X]) continue; if (BAYER[((Y & 3) << 2) | (X & 3)] < 0.5 + near * 0.3) scr[Y * W + X] = BLK; }
+    if (r.t > r.fall) continue;
+    const k = Math.max(0, r.t) / r.fall, R = Math.round(7 * r.s + 2), rx0 = cx - Math.round(k * 20), ry0 = cy - Math.round(k * 170) - R;
+    const ramp = LV.outdoor ? [DIRT[0], DIRT[1], DIRT[2], DIRT[3]] : [S[1], S[3], S[5], S[7]];
+    for (let b = -R; b <= R; b++) for (let a = -R; a <= R; a++) {
+      const d = Math.hypot(a, b) / R + (hash(a, b, r.s * 99 | 0) - 0.5) * 0.25; if (d > 1) continue;
+      const X = rx0 + a, Y = ry0 + b; if (X < 0 || Y < 0 || X >= W || Y >= H) continue;
+      const lit = (-a - b) / R;   // upper left light
+      scr[Y * W + X] = d > 0.88 ? BLK : ramp[Math.max(0, Math.min(3, Math.floor(1.6 + lit * 1.6)))];
+    }
+  }
+}
+// Arcane Storm: for four seconds, bolts of arcane lightning strike every enemy on screen in turn.
+// The mage can keep moving (slower) while it rages but casts nothing else
+function startStorm() {
+  hero.ultOn = { kind: 'storm', t: 0, next: 0, n: 0 };
+  hero.cast = -1; hero.castFn = null;
+  say('ARCANE STORM!', 40, 1.6); sfx('meteor'); sfx('whoomp');
+  G.flashes.push({ fi: hero.fi, fj: hero.fj, t: 0.3, t0: 0.3, r: 120 });
+}
+const STORM_T = 4;
+function updateStorm(dt) {
+  const U = hero.ultOn; U.t += dt; U.next -= dt;
+  if (Math.random() < 0.6) { const [x, y] = screenOf(hero), a = Math.random() * 6.283; pspawn(3, x + Math.cos(a) * 14, y + Math.sin(a) * 6, 10 + Math.random() * 30, 0, 0, 20, 0.4, Math.random() < 0.5 ? 40 : 39); }   // power crackling round the mage
+  if (U.next <= 0 && U.t < STORM_T) {
+    U.next = 0.11;
+    const foes = enemies.filter(e => alive(e) && LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] >= 0.3 && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 9);
+    if (foes.length) {
+      // the least-struck first, so the storm spreads over everything on screen
+      foes.sort((a, b) => (a.stormN || 0) - (b.stormN || 0) || Math.random() - 0.5);
+      const e = foes[0]; e.stormN = (e.stormN || 0) + 1; U.n++;
+      const c = spellCrit(); G.elem = 'arcane'; G.pierce = true; damageEnemy(e, spellDmg(c ? 2.8 : 1.4), e.fi - 0.1, e.fj - 0.1, c, 0, true); G.elem = null; G.pierce = false;
+      G.strikes.push({ fi: e.fi, fj: e.fj, z: e.def.chest * 0.5, t: 0.16, t0: 0.16, seed: (Math.random() * 1e6) | 0 });
+      impactFlash(e.fi, e.fj, e.def.chest * 0.5, 5); shockwave(e.fi, e.fj, 0.9, 0.2, [27, 40]);
+      const [x, y] = iso(e.fi, e.fj); for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283; pspawn(4, x, y, 4, Math.cos(a) * 50, Math.sin(a) * 25, 10, 0.2, k % 2 ? 40 : 27); }
+      G.flashes.push({ fi: e.fi, fj: e.fj, t: 0.1, t0: 0.1, r: 70 });
+      if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.08);
+      sfx('zap'); if (U.n % 3 === 0) sfx('boom');
+    } else if (Math.random() < 0.3) {   // nothing to hit: bolts fall around her anyway
+      const a = Math.random() * 6.283, d = 2 + Math.random() * 3, p = [hero.fi + Math.cos(a) * d, hero.fj + Math.sin(a) * d];
+      G.strikes.push({ fi: p[0], fj: p[1], z: 0, t: 0.16, t0: 0.16, seed: (Math.random() * 1e6) | 0 }); sfx('zap');
+    }
+  }
+  if (U.t >= STORM_T) { hero.ultOn = null; for (const e of enemies) e.stormN = 0; }
+}
+function updateUlt(dt) {
+  for (const s of G.strikes) s.t -= dt; G.strikes = G.strikes.filter(s => s.t > 0);
+  updateRocks(dt);
+  if (hero.ultOn && hero.ultOn.kind === 'storm') updateStorm(dt);
+}
+// detail layer: lightning from the top of the screen down to the struck spot, jagged, white core
+function drawStrikes() {
+  for (const s of G.strikes) {
+    const [x, y] = iso(s.fi, s.fj), X1 = x * SPX - cam2x, Y1 = (y - s.z) * SPX - cam2y, p = 1 - s.t / s.t0;
+    const R = rng(s.seed + Math.floor(G.t * 40)), n = 12; let px = X1 + (R() - 0.5) * 40, py = -10;
+    for (let k = 1; k <= n; k++) {
+      const u = k / n, nx = k === n ? X1 : X1 + (R() - 0.5) * 30 * (1 - u) + (px - X1) * 0.3, ny = -10 + (Y1 + 10) * u;
+      const m = Math.ceil(Math.hypot(nx - px, ny - py));
+      for (let j = 0; j <= m; j++) {
+        const X = Math.round(px + (nx - px) * j / m), Y = Math.round(py + (ny - py) * j / m);
+        ovSet(X, Y, 27); ovSet(X + 1, Y, 27); ovSet(X - 1, Y, 40); ovSet(X + 2, Y, 40); if (p < 0.6) { if ((X + Y) & 1) { ovSet(X - 2, Y, 39); ovSet(X + 3, Y, 39); } }
+      }
+      px = nx; py = ny;
+    }
+  }
+}
+// the button's glyphs: a mountain peak with a crack of light, a swirl of arcane bolts
+const glyphWrath = (cx, cy) => {
+  for (let y = 0; y <= 9; y++) { const hw = y * 0.95; for (let x = -hw; x <= hw; x++) put(cx + x, cy - 4 + y, x < -hw * 0.2 ? S[6] : S[3]); }
+  for (let x = -2; x <= 2; x++) put(cx + x, cy - 3 + Math.abs(x), 27);   // snow cap
+  line(cx + 1, cy - 1, cx - 1, cy + 2, 51); line(cx - 1, cy + 2, cx + 2, cy + 5, 51);   // the crack of light
+  for (const [a, b] of [[-7, -7], [6, -8], [-3, -9]]) fillRect(cx + a, cy + b, 2, 2, S[5]);   // rocks in the air
+};
+const glyphStorm = (cx, cy) => {
+  for (let a = 0; a < 30; a++) { const t = a / 30 * 6.283, r = 7; put(cx + Math.cos(t) * r, cy - 3 + Math.sin(t) * r * 0.35, 39); }   // the cloud's ring
+  for (const ox of [-4, 1, 5]) { line(cx + ox, cy - 2, cx + ox - 2, cy + 3, 40); line(cx + ox - 2, cy + 3, cx + ox + 1, cy + 3, 40); line(cx + ox + 1, cy + 3, cx + ox - 1, cy + 8, 27); }
+};

@@ -1,0 +1,77 @@
+<title>Ultimates</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  /* layout: one narrow column, one section per part with its picture first */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul { margin: 0; max-width: 64ch; }
+  ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .frame img.smooth { image-rendering: auto; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .tw { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+</style>
+<main>
+  <header>
+    <h1>Ultimates</h1>
+    <p class="lede">Dungeon of Bones, round 31: a fifth button from level 10, with one big move per class. It charges as you fight, not on a timer.</p>
+  </header>
+  <section>
+    <h2>The button</h2>
+    <figure>
+      <div class="frame"><img src="hud.png" alt="Left: the warrior's buttons with a new gold mountain button at the lower left, fully lit with a pulsing white rim. Right: the mage's blue storm button two thirds full, with a ring around it showing the charge" width="706" height="380"></div>
+      <figcaption>Left: the warrior's, full and pulsing. Right: the mage's, about two thirds charged. The ring around the button shows how full it is.</figcaption>
+    </figure>
+    <ul>
+      <li>It sits left of the other skill buttons and is locked (LV10) until level 10. On a keyboard it's 5 or R.</li>
+      <li>Damage you deal charges it: a monster's worth of damage gives 4%, and each kill gives 1% more. Champions and elites give 6% more, and bosses 20%. That's about 20 ordinary monsters, so one or two big fights.</li>
+      <li>The ultimate's own damage doesn't charge it. When it's full, a message says so and a sound plays. The charge is saved with your game.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Warrior: Wrath of the Mountain</h2>
+    <figure>
+      <div class="frame"><img src="wrath.png" alt="Three frames: the warrior high in the air above a ring of fallen; the landing, a gold ring of cracks and a flash spreading around him; afterwards, monsters knocked down, dark rock shadows and fresh cracks across the floor" width="1062" height="380"></div>
+      <figcaption>Up, down, then the rocks.</figcaption>
+    </figure>
+    <ul>
+      <li>He leaps straight up, hangs for a moment gathering light, and drives down. Nothing can touch him in the air.</li>
+      <li>A ring of ground 5 tiles across shatters and stays cracked. Monsters near the middle take up to 6× his weapon damage.</li>
+      <li>Everything but bosses is knocked down for 1.6 s and pushed back. Bosses are dazed.</li>
+      <li>Then 16 rocks rain over the area for about a second and a half. A shadow on the ground shows where each will land.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Mage: Arcane Storm</h2>
+    <figure>
+      <div class="frame"><img src="storm.png" alt="The mage among a ring of fallen; a bolt of white and blue lightning comes straight down from the top of the screen onto one of them" width="450" height="450"></div>
+      <figcaption>A strike every 0.11 s, for four seconds.</figcaption>
+    </figure>
+    <ul>
+      <li>For 4 seconds, arcane lightning strikes monsters within 9 tiles, about 36 bolts in all. Each one deals 1.4× her staff damage and pushes.</li>
+      <li>It goes for whatever has been struck least, so the storm spreads over everything on screen. With nothing in sight, bolts fall around her anyway.</li>
+      <li>She can keep walking (slower) but casts nothing else while it rages.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Also fixed</h2>
+    <p>During a leap, the view stopped refreshing, so the world dimmed a little in mid-air. It now stays lit (the ultimate's longer jump made this obvious).</p>
+  </section>
+</main>

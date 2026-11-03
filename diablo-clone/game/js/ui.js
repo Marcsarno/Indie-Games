@@ -30,11 +30,31 @@ function sprite(sp, x, y, z = 1, L = 4) {
   }
 }
 
+// the ultimate's button (round 31): fills from the bottom as it charges; full, it glows and its rim pulses
+function drawUltButton() {
+  const U = ULTS[hero.cls]; if (!U) return;
+  const fx = btnFx(9), dtu = 1 / 60; fx.press = Math.max(0, fx.press - dtu); fx.deny = Math.max(0, fx.deny - dtu);
+  const c0 = UI.ult, shake = fx.deny > 0 ? Math.round(Math.sin(fx.deny * 70) * 2) : 0, c = [c0[0] + shake, c0[1], c0[2] + (fx.press > 0.08 ? 1 : 0)];
+  const locked = hero.lvl < ULT_LVL, f = locked ? 0 : (hero.ult || 0) / 100, full = f >= 1;
+  drawButton(c, locked ? [3, 4, 5] : hero.cls === 'mage' ? [37, 38, 39, 40] : [48, 49, 50, 51], full || !!hero.ultOn, hero.cls === 'mage' ? glyphStorm : glyphWrath);
+  // not yet charged: dark from the top down to the charge line
+  if (!full) for (let y = c[1] - c[2]; y <= c[1] + c[2]; y++) for (let x = c[0] - c[2]; x <= c[0] + c[2]; x++) {
+    if (Math.hypot(x - c[0], y - c[1]) > c[2] - 1) continue;
+    const covered = (c[1] + c[2] - y) / (2 * c[2]) > f;
+    if (covered && BAYER[((y & 3) << 2) | (x & 3)] < 0.75) put(x, y, K1);
+  }
+  if (locked) textC(`LV${ULT_LVL}`, c[0], c[1] - 2, 25);
+  // a ring around it showing the charge, gold (arcane for the mage), and a pulsing rim when full
+  const col = hero.cls === 'mage' ? 40 : 51;
+  if (!locked) for (let a = 0; a < 80; a++) { const u = a / 80, t = -Math.PI / 2 + u * 6.283; if (u > f) continue; put(c[0] + Math.cos(t) * (c[2] + 2), c[1] + Math.sin(t) * (c[2] + 2), col); }
+  if (full && Math.floor(G.t * 4) % 2 === 0) for (let a = 0; a < 80; a++) { const t = a / 80 * 6.283; put(c[0] + Math.cos(t) * (c[2] + 3), c[1] + Math.sin(t) * (c[2] + 3), 27); }
+  if (fx.deny > 0) for (let a = 0; a < 64; a++) { const t = a / 64 * 6.283; put(c[0] + Math.cos(t) * (c[2] + 1), c[1] + Math.sin(t) * (c[2] + 1), 22); }
+}
 // ---------------------------------------------------------------- layout
 const UI = {};
 function uiResize() {
   UI.orbL = [34, H - 34]; UI.orbR = [W - 34, H - 34]; UI.orbR0 = 24;
-  UI.attack = [W - 48, H - 100, 21]; UI.skills = [[W - 96, H - 70, 12], [W - 104, H - 110, 12], [W - 88, H - 146, 12], [W - 50, H - 158, 12]]; UI.potion = [W / 2, H - 22, 12];
+  UI.attack = [W - 48, H - 100, 21]; UI.skills = [[W - 96, H - 70, 12], [W - 104, H - 110, 12], [W - 88, H - 146, 12], [W - 50, H - 158, 12]]; UI.potion = [W / 2, H - 22, 12]; UI.ult = [W - 140, H - 60, 13];
   UI.bag = [W - 15, 15, 11]; UI.map = [W - 40, 15, 11]; UI.sound = [W - 65, 15, 11]; UI.portal = [W - 90, 15, 11];
   UI.stickHome = [52, H - 104];
 }
@@ -196,6 +216,7 @@ function drawHud() {
     const rim = fx.deny > 0 ? 22 : fx.press > 0 || fx.ready > 0 ? 27 : 0;
     if (rim && (fx.deny > 0 || fx.press > 0 || Math.floor(fx.ready * 20) % 2 === 0)) for (let a = 0; a < 64; a++) { const t = a / 64 * 6.283; put(c[0] + Math.cos(t) * (c[2] + 1), c[1] + Math.sin(t) * (c[2] + 1), rim); }
   });
+  drawUltButton();
   if (hero.buff > 0) textC(`WAR CRY ${Math.ceil(hero.buff)}`, W / 2, H - 46, 51);
   if (hero.frenzy > 0) textC(`FRENZY ${Math.ceil(hero.frenzy)}`, W / 2, H - 54, 23);
   if (hero.stoneskin > 0) textC(`STONESKIN ${Math.ceil(hero.stoneskin)}`, W / 2, H - 62, 39);
@@ -448,6 +469,7 @@ cvs.addEventListener('pointerdown', e => {
   if (hitCircle(p, UI.portal)) { usePortal(); return; }
   if (hitCircle(p, UI.potion)) { drinkPotion(); return; }
   for (let i = 0; i < UI.skills.length; i++) if (hitCircle(p, UI.skills[i], 5)) { press.skill = i; useSkill(i); return; }
+  if (ULTS[hero.cls] && hitCircle(p, UI.ult, 4)) { useUlt(); return; }
   if (hitCircle(p, UI.attack, 10) || (p[0] > W * 0.55 && p[1] > H * 0.3)) { press.attack = e.pointerId; input.attack = true; heroAttack(); capture(e); return; }
   if (p[0] < W * 0.55 && stick.id === null) { stick.id = e.pointerId; stick.ox = p[0]; stick.oy = p[1]; stick.x = p[0]; stick.y = p[1]; capture(e); }
 }, { passive: false });
@@ -476,6 +498,7 @@ addEventListener('keydown', e => {
   if (k === '2' || k === 'l') useSkill(1);
   if (k === '3') useSkill(2);
   if (k === '4') useSkill(3);
+  if (k === '5' || k === 'r') useUlt();
   if (k === 'q') drinkPotion();
   if (k === 'i' || k === 'b') { G.mode = G.mode === 'inv' ? 'play' : 'inv'; INV.sel = null; }
   if (k === 'm' || k === 'tab') showMap = !showMap;
