@@ -1161,7 +1161,7 @@ function drawStreaks() {   // the blink's streak: a white core in an arcane band
   }
 }
 function drawImpactFlashes() {
-  drawStreaks(); drawHookChains(); drawMods30(); drawStrikes(); drawRangerFx();
+  drawStreaks(); drawHookChains(); drawMods30(); drawStrikes(); drawRangerFx(); drawDebris();
   for (const f of G.impacts) {
     const [x, y] = iso(f.fi, f.fj), X0 = Math.round(x * SPX - cam2x), Y0 = Math.round((y - f.z) * SPX - cam2y), p = 1 - f.t / f.t0, R = f.size * (0.6 + p * 0.6);
     // a white core with four spikes, the first frame solid, then hollowing out

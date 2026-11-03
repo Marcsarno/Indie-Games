@@ -1,0 +1,63 @@
+<title>Monster Deaths</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  /* layout: one narrow column, one section per part with its picture first */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul { margin: 0; max-width: 64ch; }
+  ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .frame img.smooth { image-rendering: auto; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .tw { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+</style>
+<main>
+  <header>
+    <h1>Monster Deaths</h1>
+    <p class="lede">Dungeon of Bones, round 37, the last step of the monster plan. Kills now have weight: bodies are knocked back by the blow, monsters die in their own way, big hits burst small monsters apart, and the last kill of a fight lands in slow motion.</p>
+  </header>
+  <section>
+    <h2>Before and after</h2>
+    <figure>
+      <div class="frame"><img src="deaths.gif" alt="Side by side, before and after: a fallen, a skeleton, a bone hound and a spider are each killed twice, by an ordinary blow and by an overkill. After: bodies fly back along the blow and bounce before settling, the fallen's spear spins away, the skeleton's skull pops off and bounces, and the overkills burst into chunks and a spray of blood or green ichor" width="648" height="242"></div>
+      <figcaption>Left is before, right is now. Each family dies twice: once to an ordinary blow, then to an overkill.</figcaption>
+    </figure>
+  </section>
+  <section>
+    <h2>What changed</h2>
+    <ul>
+      <li><strong>Knocked back by the blow.</strong> A dying monster slides back about two thirds of a tile along the hit, more than a tile for a crit or a finisher. It hops once and lands with a thud of dust. It always falls over backwards, away from you. Bosses barely move.</li>
+      <li><strong>Each family dies its own way.</strong>
+        <ul>
+          <li><strong>Skeletons:</strong> collapse into their heap of bones as before, but the skull now pops off and bounces away.</li>
+          <li><strong>Fallen, diggers, bandits:</strong> their spear, pick or staff spins out of their hands and clatters onto the floor.</li>
+          <li><strong>Hounds and wolves</strong> yelp, fallen squeal, spiders hiss, and skeletons clatter.</li>
+        </ul>
+        Dropped skulls and weapons stay on the floor where they land.</li>
+      <li><strong>Overkill.</strong> A crit or a finisher that does far more than the monster had left bursts it into chunks and a spray of blood (green ichor for spiders), with nothing left to lie there. Skeletons already shatter, so they don't burst.</li>
+      <li><strong>The last kill.</strong> When you kill the last awake monster nearby, and it's the third kill within ten seconds, the game drops into slow motion for half a second.</li>
+    </ul>
+    <p>Fire still burns monsters to ash and cold still shatters them; those take priority over an overkill. COMBAT: OLD on the title screen brings back the old deaths.</p>
+  </section>
+  <section>
+    <h2>Tested</h2>
+    <p>A new test kills each family both ways. It checks that each body slides back and hops, that the weapon or skull flies and is pressed into the floor, that overkills leave no body even for a frame, and that the slow motion starts on the third kill, not before. The other tests and the full run through every level are listed in the notes.</p>
+  </section>
+</main>

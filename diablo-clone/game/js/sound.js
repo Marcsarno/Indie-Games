@@ -76,6 +76,11 @@ const RECIPES = {
   clink: () => { tone('sine', vary(2400), 2200, 0.1, 0.1); tone('sine', vary(3100), 3000, 0.08, 0.08, 0.03); },
   zap: () => { tone('square', vary(1300), 400, 0.05, 0.08); noise(0.04, 0.16, 'highpass', 5000, 3000, 1); },
   whoomp: () => { tone('sine', 220, 70, 0.16, 0.35); noise(0.12, 0.2, 'lowpass', 1600, 300); },
+  squeal: () => { tone('square', vary(900), 300, 0.12, 0.07); tone('sawtooth', vary(600), 200, 0.1, 0.05, 0.03); },   // round 37: death cries
+  yelp: () => { tone('triangle', vary(1300), 500, 0.14, 0.12); tone('triangle', vary(900), 300, 0.08, 0.08, 0.1); },
+  hiss: () => noise(0.22, 0.12, 'highpass', 4000, 2500, 1),
+  clatter: () => { for (let k = 0; k < 4; k++) tone('square', vary(700 + k * 150), 300, 0.03, 0.06, k * 0.04); noise(0.08, 0.15, 'bandpass', 2000, 900, 2); },
+  splat: () => { noise(0.14, 0.32, 'lowpass', 1400, 300); tone('sine', 140, 60, 0.12, 0.2); },
   growl: () => { tone('sawtooth', vary(110), 80, 0.12, 0.05); noise(0.1, 0.06, 'lowpass', 500, 200); },   // round 34: a monster winding up
   twang: () => { tone('triangle', vary(190), 120, 0.05, 0.16); noise(0.05, 0.22, 'bandpass', vary(2600), 1600, 2); },   // round 33: the bowstring
   thunk: () => { noise(0.05, 0.3, 'lowpass', 900, 300); tone('sine', vary(320), 160, 0.05, 0.12); },   // an arrow biting

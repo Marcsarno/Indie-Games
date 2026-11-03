@@ -26,7 +26,7 @@ const params = new URLSearchParams(location.search);
 const SHAKE = params.get('shake') !== '0';
 
 // ---------------------------------------------------------------- state
-const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0, meteors: [], flashes: [], blasts: [], cones: [], ghosts: [], sparks: [], rings: [], walls: [], quakes: [], hooks: [], waves: [], impacts: [], frost: [], streaks: [], fissures: [], aftershocks: [], fireGround: [], zaps: [], iceBursts: [], devils: [], rocks: [], strikes: [], traps: [], rain: [], falling: [], stuck: [], smoke: [] };
+const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0, meteors: [], flashes: [], blasts: [], cones: [], ghosts: [], sparks: [], rings: [], walls: [], quakes: [], hooks: [], waves: [], impacts: [], frost: [], streaks: [], fissures: [], aftershocks: [], fireGround: [], zaps: [], iceBursts: [], devils: [], rocks: [], strikes: [], traps: [], rain: [], falling: [], stuck: [], smoke: [], debris: [] };
 const hero = {
   fam: 'hero', fi: 0, fj: 0, dir: 1, clip: 'idle', clock: 0, walk: 0, runT: 0, goT: 0, stopT: 0, atk: -1, combo: 0, swingEnd: -9, hitDone: false, stop: 0, flash: 0,
   hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, hurtT: 0, cast: -1,
@@ -75,7 +75,7 @@ function startLevel(level, seed, side = null) {
     if (LV.champsPlanned) LV.spawns.forEach((sp, n) => { if (sp.champ) makeChampion(enemies[n], R); });
     else for (const e of enemies) if (!e.def.unique && R() < champChance(LV.diff)) makeChampion(e, R); }
   makeNpcs(); resetSkills(); setupBoss(); setupRoutines(seed);
-  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
+  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; G.debris = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
   updateFov(hero.fi, hero.fj);
   flowT = 0; computeFlow();
   warmStep(1e9, prewarm());   // idle poses + the hero's walk now, behind the level fade; the rest during play
@@ -307,6 +307,9 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
   if (e.hp <= 0) {
     // the death fits the blow: fire burns it to ash, cold shatters it, a heavy blow throws the body
     e.deathKind = el === 'fire' ? 'ash' : (el === 'cold' || e.frozen > 0) ? 'shatter' : el === 'heavy' && small ? 'thrown' : null;
+    // round 37: an overkill (a blow far past what was left, a crit or a finisher) bursts a small one apart
+    if (!FEEL_OLD && small && !e.deathKind && e.fam !== 'skeleton' && dmg - (e.hp + dmg) >= e.maxHp * 0.6 && (crit || pow >= 1)) e.deathKind = 'gib';
+    if (!FEEL_OLD) deathWeight(e, fromFi, fromFj, dmg, crit, pow);
     if (e.deathKind === 'thrown') { const dd = Math.hypot(e.fi - fromFi, e.fj - fromFj) || 1; e.throwV = [(e.fi - fromFi) / dd * 7, (e.fj - fromFj) / dd * 7]; }
     e.burnT = 0; e.downT = 0;
     e.dying = 0; e.atk = -1; e.clip = 'death'; e.tint = 0;
@@ -316,7 +319,8 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
     if (ranged) hero.stop = heroStop;   // spells and arrows never freeze the caster
     if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.5);
     sfx('kill');
-    if (bony) shatter(e, fromFi, fromFj);   // skeletons burst apart into a heap of bones
+    if (e.deathKind === 'gib') gibBurst(e, fromFi, fromFj);
+    else if (bony) shatter(e, fromFi, fromFj);   // skeletons burst apart into a heap of bones
     else stampBlood(Math.round(ex), Math.round(ey), e.def.unique ? 6 : 3, (Math.random() * 1e6) | 0, e.fam === 'spider' ? GREEN : RED);
     const streak = killStreak();
     questKill(e.id);
@@ -366,12 +370,82 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
   }
 }
 const CRIT_CHANCE = 0.12;
+// round 37: deaths with weight. The body is knocked back along the blow (harder for a crit or a
+// finisher, barely for a boss), hops once and thuds down; each family gives its own cry; a fallen's
+// weapon goes spinning; the last of a fight goes down in a moment of slow motion
+function deathWeight(e, fromFi, fromFj, dmg, crit, pow) {
+  const d = Math.hypot(e.fi - fromFi, e.fj - fromFj) || 1, ux = (e.fi - fromFi) / d, uy = (e.fj - fromFj) / d;
+  const big = !!e.def.unique, sp = big ? 0.8 : crit || pow >= 2 ? 5.2 : pow >= 1 ? 4.2 : 3;
+  e.deathV = [ux * sp, uy * sp]; e.deathHop = big ? 1 : crit || pow >= 1 ? 6 : 3.5;
+  if (d > 0.05) e.dir = dirFrom(-ux, -uy);   // facing the blow, so it tips over backwards, away from it
+  const cry = { fallen: 'squeal', hound: 'yelp', spider: 'hiss', skeleton: null }[e.fam];
+  if (cry) sfx(cry);
+  if (e.fam === 'fallen' && !e.look.unarmed && e.deathKind !== 'gib' && e.deathKind !== 'ash' && e.deathKind !== 'shatter') {   // the weapon flies out of its hands
+    const a = Math.atan2(uy, ux) + (Math.random() < 0.5 ? 1 : -1) * (0.6 + Math.random() * 0.8), s2 = 1.6 + Math.random() * 1.6;
+    G.debris.push({ kind: e.look.digger ? 'pick' : e.look.staff ? 'staff' : 'spear', fi: e.fi, fj: e.fj, z: e.def.chest + 6, vx: Math.cos(a) * s2, vy: Math.sin(a) * s2, vz: 140 + Math.random() * 60, spin: Math.random() * 6, vs: 16 + Math.random() * 10, b: 0 });
+  }
+  // the last one standing of a real fight: a beat of slow motion
+  (G.killTimes = G.killTimes || []).push(G.t); G.killTimes = G.killTimes.filter(t => G.t - t < 10);
+  const others = enemies.some(o => o !== e && alive(o) && o.state !== 'sleep' && Math.hypot(o.fi - hero.fi, o.fj - hero.fj) < 12);
+  if (!others && G.killTimes.length >= 3 && !(G.slowmo > 0)) { G.slowmo = 0.5; G.killTimes = []; }
+}
+// an overkill: chunks and a spray of blood (or ichor), no body left
+function gibBurst(e, fromFi, fromFj) {
+  const [x, y] = screenOf(e), d = Math.hypot(e.fi - fromFi, e.fj - fromFj) || 1, ux = (e.fi - fromFi) / d, uy = (e.fj - fromFj) / d;
+  const flesh = e.look.skin === M.FUR ? [DIRT[2], DIRT[3]] : e.fam === 'spider' ? [54, 55] : [20, 22], blood = e.fam === 'spider' ? GREEN : RED;
+  const a0 = Math.atan2(uy, ux);
+  for (let k = 0; k < 16; k++) { const a = a0 + (Math.random() - 0.5) * 2.4, s = 60 + Math.random() * 90, gx = Math.cos(a) * s, gy = Math.sin(a) * s; pspawn(7, x, y, e.def.chest * 0.8, (gx - gy) * 0.7, (gx + gy) * 0.35, 60 + Math.random() * 80, 3, flesh[k & 1]); }
+  burst(1, x, y, e.def.chest, 30, 130, e.fam === 'spider' ? 54 : 22, (ux - uy) * 40);
+  for (let k = 0; k < 3; k++) stampBlood(Math.round(x + (ux - uy) * k * 9), Math.round(y + (ux + uy) * k * 4.5), 4 - k, (Math.random() * 1e6) | 0, blood);
+  impactFlash(e.fi, e.fj, e.def.chest, 7);
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.25);
+  sfx('splat'); e.corpse = true;   // gone at once: nothing left standing through the kill's hit-pause
+}
+// flying debris (a skull, a weapon): arcs, bounces, skids to rest, then is pressed into the floor
+function updateDebris(dt) {
+  for (const b of G.debris) {
+    b.vz -= 520 * dt; b.z += b.vz * dt; b.spin += b.vs * dt;
+    const ni = b.fi + b.vx * dt, nj = b.fj + b.vy * dt;
+    if (blocked(ni, nj)) { b.vx *= -0.4; b.vy *= -0.4; } else { b.fi = ni; b.fj = nj; }
+    if (b.z <= 0) {
+      b.z = 0; b.b++;
+      if (b.vz < -60 && b.b < 4) { b.vz = -b.vz * 0.38; b.vx *= 0.55; b.vy *= 0.55; b.vs *= 0.5; sfx(b.kind === 'skull' ? 'clink' : 'clank', 0.5); }
+      else { b.done = true; stampDebris(b); }
+    }
+  }
+  G.debris = G.debris.filter(b => !b.done);
+}
+const debrisPixels = b => {   // its shape in world pixels about its centre: [dx, dy, colour]
+  if (b.kind === 'skull') return [[0, -1, b.col], [1, -1, b.col], [-1, 0, b.col], [0, 0, BLK], [1, 0, b.col], [2, 0, BLK], [0, 1, b.col], [1, 1, b.col], [-1, -1, b.col], [2, -1, b.col], [0, -2, b.col], [1, -2, b.col]];
+  const px = [], ca = Math.cos(b.spin), sa = Math.sin(b.spin) * 0.5, L = b.kind === 'pick' ? 4 : 6;
+  for (let s = -L; s <= L; s++) px.push([Math.round(ca * s), Math.round(sa * s), s > L - 2 ? STEEL[3] : WOOD[1]]);
+  if (b.kind === 'pick') for (let s = -3; s <= 3; s++) px.push([Math.round(ca * L - sa * s * 2), Math.round(sa * L + ca * s), STEEL[2]]);
+  return px;
+};
+function stampDebris(b) {
+  const [x0, y0] = iso(b.fi, b.fj);
+  for (const [dx, dy, c] of debrisPixels(b)) { const x = Math.round(x0 + dx), y = Math.round(y0 + dy), k = y * WW + x; if (x >= 0 && y >= 0 && x < WW && y < WH && wFloor[k]) setFloor(k, c); }
+}
+function drawDebris() {   // in the air: on the detail layer, with a dark outline and a shadow under it
+  for (const b of G.debris) {
+    const [x, y] = iso(b.fi, b.fj), X = Math.round(x * SPX - cam2x), Y = Math.round((y - b.z) * SPX - cam2y), Ys = Math.round(y * SPX - cam2y);
+    for (let a = -3; a <= 3; a++) ovSet(X + a, Ys + (Math.abs(a) > 2 ? 0 : 1), BLK);
+    const px = debrisPixels(b);
+    for (const [dx, dy] of px) for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) ovSet(X + dx * 2 + ox, Y + dy * 2 + oy, BLK);
+    for (const [dx, dy, c] of px) { ovSet(X + dx * 2, Y + dy * 2, c); ovSet(X + dx * 2 + 1, Y + dy * 2, c); ovSet(X + dx * 2, Y + dy * 2 + 1, c); ovSet(X + dx * 2 + 1, Y + dy * 2 + 1, c); }
+  }
+}
 function shatter(e, fromFi, fromFj) {
   const [x, y] = screenOf(e), d = Math.hypot(e.fi - fromFi, e.fj - fromFj) || 1, dx = (e.fi - fromFi - (e.fj - fromFj)) / d * 40;
   burst(5, x, y, e.def.chest, 22, 90, e.look.bone === M.OLDBONE ? 25 : 26, dx);
   for (let k = 0; k < 9; k++) { const a = Math.random() * 6.283, s = 40 + Math.random() * 60; pspawn(6, x, y, 10 + Math.random() * 20, Math.cos(a) * s + dx, Math.sin(a) * s * 0.5, 50 + Math.random() * 60, 3, 26); }
   blitWorld(PROPS.bones(Math.floor(Math.random() * 6)), x, y, 0, -1, true);
   e.corpse = true;   // no tipping corpse: the bones are on the floor now
+  if (!FEEL_OLD) {   // round 37: the skull pops off and bounces away
+    const ux = (e.fi - fromFi) / d, uy = (e.fj - fromFj) / d, a = Math.atan2(uy, ux) + (Math.random() - 0.5) * 0.9, sp = 2.2 + Math.random() * 1.6;
+    G.debris.push({ kind: 'skull', fi: e.fi, fj: e.fj, z: e.def.chest * 1.6 + 6, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: 120 + Math.random() * 60, spin: 0, vs: 14, col: e.look.bone === M.OLDBONE ? BONE[1] : BONE[3], b: 0 });
+    sfx('clatter');
+  }
 }
 // kills within 2.5 s of each other build a streak: bonus xp, a little life back, a rising chime
 function killStreak() {
@@ -501,7 +575,7 @@ function update(dt) {
   for (const g of groundItems) if (g.item && g.item.rarity === 'legend' && !g.announced) { g.announced = true; say('A LEGENDARY ITEM HAS FALLEN', 112, 3); sfx('levelUp'); }   // never miss one
   if (hero.frenzy > 0) hero.frenzy -= dt; if (hero.stoneskin > 0) hero.stoneskin -= dt;
   separate();
-  updateProjectiles(dt); updateMeteors(dt); updateLichFx(dt); updateWarriorFx(dt); updateImpactFx(dt); updateSlamMods(dt); updateFireGround(dt); updateMods30(dt); updateUlt(dt);
+  updateProjectiles(dt); updateMeteors(dt); updateLichFx(dt); updateWarriorFx(dt); updateImpactFx(dt); updateSlamMods(dt); updateFireGround(dt); updateMods30(dt); updateUlt(dt); updateDebris(dt);
   updateParticles(dt);
   ambience(dt);
   for (const f of floaters) { f.t -= dt; f.y -= dt * 18; }
@@ -628,6 +702,14 @@ function updateEnemy(e, dt) {
       const u = Math.min(1, e.dying / 0.35); tryMove(e, e.throwV[0] * dt * (1 - u), e.throwV[1] * dt * (1 - u), 0.25); e.leapZ = Math.sin(u * Math.PI) * 9;
       if (u >= 1) { e.throwV = null; e.leapZ = 0; const [x, y] = screenOf(e); burst(5, x, y, 1, 8, 40, LV.outdoor ? DIRT[3] : S[5]); }
     }
+    if (e.deathV && e.deathKind !== 'thrown') {   // round 37: the blow carries the body back, it bounces once and settles
+      const u = Math.min(1, e.dying / 0.32), k = 1 - u;
+      tryMove(e, e.deathV[0] * dt * k * 1.6, e.deathV[1] * dt * k * 1.6, 0.25);
+      e.leapZ = e.dying < 0.34 ? Math.sin(Math.min(1, e.dying / 0.34) * Math.PI) * e.deathHop : e.dying < 0.46 ? Math.sin((e.dying - 0.34) / 0.12 * Math.PI) * e.deathHop * 0.3 : 0;
+      if (!e.thudded && e.dying >= 0.34) { e.thudded = true; const [x, y] = screenOf(e); burst(5, x, y, 1, e.def.unique ? 18 : 8, 45, LV.outdoor ? DIRT[3] : S[5]); sfx('thunk'); }
+      if (u >= 1 && e.dying >= 0.46) { e.deathV = null; e.leapZ = 0; }
+    }
+    if (e.deathKind === 'gib') { e.corpse = true; return; }
     if (e.deathKind === 'ash' || e.deathKind === 'shatter') {   // nothing is left to lie there
       const [x, y] = screenOf(e);
       if (e.deathKind === 'ash' && Math.random() < 0.7) { pspawn(3, x + (Math.random() - 0.5) * 12, y, 4 + Math.random() * e.def.chest, (Math.random() - 0.5) * 8, 0, 14 + Math.random() * 14, 0.6, Math.random() < 0.5 ? 16 : 4); pspawn(5, x + (Math.random() - 0.5) * 12, y, 2 + Math.random() * e.def.chest, (Math.random() - 0.5) * 12, (Math.random() - 0.5) * 6, 6, 1, 3); }
@@ -635,7 +717,7 @@ function updateEnemy(e, dt) {
       if (e.dying >= (e.deathKind === 'ash' ? 0.55 : 0.15) && !e.corpse) { e.corpse = true; if (e.deathKind === 'ash') stampBlood(Math.round(x), Math.round(y), 3, (Math.random() * 1e6) | 0, [2, 3, 3, 4, 5]); }
       return;
     }
-    if (e.dying >= 0.6 && !e.corpse) {   // the last death frame becomes part of the floor
+    if (e.dying >= (FEEL_OLD ? 0.6 : 0.7) && !e.corpse) {   // the last death frame becomes part of the floor (after the slide and bounce)
       e.corpse = true;
       const [x, y] = screenOf(e);
       blitWorld(getSprite(e.fam, e.look, e.dir, 'death', 5, e, 1), x, y, 0, -1, true);
