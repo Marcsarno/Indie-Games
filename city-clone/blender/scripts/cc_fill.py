@@ -239,7 +239,7 @@ def SITE(b_, lot):
     if lab == "COOPER'S HAWK":
         px = x0 + 15; place(bldg("coopershawk", min(lw, 44), 28, 9.0, wall="#b9a58a", key="coopershawk", accent="#3a2a1a", roof="hip", roof_hex="#5a4a3a", sign_h=2.2), px, cy, face); cbox(px, cy, 28, min(lw, 44)); return
     if lab == "PLAZA":                                                                       # the Promenade's fountain plaza: pavers, fountain, cafe tables, a shop row along the back
-        paver(x0, y0, x1, y1, "#d9cbb0"); place(LMP.fountain("prom_fountain"), cx, cy, "s"); ccir(cx, cy, 3.4)                # the main street: pavers, fountain, cafe tables, palms, arch at the Lyons end
+        paver(x0, y0, x1, y1, "#d9cbb0"); place(LMP.fountain("prom_fountain"), cx, cy, "s"); ccir(cx, cy, 3.4); COL[-1]["low"] = 1                # the main street: pavers, fountain, cafe tables, palms, arch at the Lyons end
         for i in range(12): place(LMP.cafe_set(f"cafe_{i}"), x0 + 20 + i * ((x1 - x0 - 40) / 11), cy + (12 if i % 2 else -12), "s")
         for i in range(int((x1 - x0) / 24)): prop("palm_tall", x0 + 12 + i * 24, cy + (20 if i % 2 else -20), 1.0)
         for i in range(int((x1 - x0) / 30)): place(LMP.lamp_post(f"plamp_{i}"), x0 + 15 + i * 30, cy + (6 if i % 2 else -6), "s")
@@ -490,7 +490,7 @@ def walls(all_houses):
                     seg_box(WL, HED, (p[0] + p[3] * 1.0, p[1] + p[4] * 1.0), (q[0] + q[3] * 1.0, q[1] + q[4] * 1.0), 1.1, 0, 1.05); seg_box(WL, HTOP, (p[0] + p[3] * 1.0, p[1] + p[4] * 1.0), (q[0] + q[3] * 1.0, q[1] + q[4] * 1.0), .95, 1.05, 1.2); nseg += 1
                 for i in range(0, len(run) - 2, 6):
                     pi, qi = run[i], run[min(i + 6, len(run) - 1)]; cx_, cy_ = (pi[0] + qi[0]) / 2, (pi[1] + qi[1]) / 2
-                    cbox(cx_, cy_, math.dist(pi[:2], qi[:2]), .9, math.degrees(math.atan2(qi[1] - pi[1], qi[0] - pi[0])))
+                    cbox(cx_, cy_, math.dist(pi[:2], qi[:2]), .9, math.degrees(math.atan2(qi[1] - pi[1], qi[0] - pi[0])), low=1)      # round 52: low = a ramp jump clears it
                 for i in range(0, len(run), 10): prop("palm_medium", run[i][0] + run[i][3] * 1.2, run[i][1] + run[i][4] * 1.2, col=True)
             while s < r.L - 4:
                 x, y = r.off(s, off); bx, by = r.off(s, side * (r.hw + rd.CURB + rd.SWK + 30))
@@ -498,7 +498,12 @@ def walls(all_houses):
                 if ok:
                     rr = near_road(x, y, 3.0); ok = rr is None or rr is r
                 since_gap -= 3
-                if ok and since_gap <= 0: flush(run); run = []; since_gap = RF.uniform(120, 180); s += 6; continue
+                if ok and since_gap <= 0:
+                    flush(run); run = []; since_gap = RF.uniform(120, 180)
+                    if RF.random() < .4 and not on_cut(*r.off(s + 3, off), 4):                      # round 52: some gaps are a cracked stretch of wall instead (smash through)
+                        a_, b_ = r.off(s - .3, off), r.off(s + 6.3, off); c_ = ((a_[0] + b_[0]) / 2, (a_[1] + b_[1]) / 2)
+                        BRK.append(["crackwall", round(c_[0], 2), round(c_[1], 2), round(math.degrees(math.atan2(b_[1] - a_[1], b_[0] - a_[0])), 1), round(math.dist(a_, b_), 2)])
+                    s += 6; continue
                 if ok:
                     cx_, cy_, _, _ = r.at(s); nx_, ny_ = cx_ - x, cy_ - y                     # unit normal pointing back toward the road
                     nl = math.hypot(nx_, ny_) or 1; run.append((x, y, s, nx_ / nl, ny_ / nl))

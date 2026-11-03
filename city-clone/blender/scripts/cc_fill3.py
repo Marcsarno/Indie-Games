@@ -621,7 +621,7 @@ def gap_fill():
     for fn in (hs_athletics, construction, offices_more, butterfly_garden, skate_dress, rec_park_more, sabal_more, lake_parks, storage, townhomes, church):
         with warp(): fn()
         tick_(fn.__name__)
-    for fn in (wynmoor2, golf2, hs_campus): fn(); tick_(fn.__name__)                             # round 51: new map coordinates (cc_fill5.py)
+    for fn in (wynmoor2, golf2, hs_campus, ramps): fn(); tick_(fn.__name__)                             # round 51: new map coordinates (cc_fill5.py)
     STATIC.extend(T43.build(vc=True, recalc=False))
 
 exec(open(os.path.join(HERE, "cc_fill4.py")).read())                                            # round 47: back-of-house service lanes + buffer walls

@@ -387,9 +387,6 @@ city.scene.updateMatrixWorld(true); city.scene.traverse(o => { o.matrixAutoUpdat
 for (const im of instances) { im.updateMatrix(); im.updateMatrixWorld(true); im.matrixAutoUpdate = false; im.matrixWorldAutoUpdate = false; }
 window.__perf = STATS;
 const HYD = initHydrants(THREE, scene, world.hydrants || [], b2t);          // round 42: knock-over fire hydrants with a water jet (hydrant.js)
-const BRK_V = [];
-const BRKS = initBreakables(THREE, scene, world.breakables || [], b2t, { cull: im => instances.push(im), onHit: (k, sp) => crashSound(k === 'fence' || k === 'corral' || k === 'arm' ? 3 + sp * .15 : 1.5 + sp * .06) });   // round 51: knock-over mailboxes, bins, fences, cart corrals, gate arms
-
 /* ---------- async helpers: scripted sequences await frames, so they pause and resume with the loop ---------- */
 let frameWaiters = [];
 const nextFrame = () => new Promise(r => frameWaiters.push(r));
@@ -578,7 +575,22 @@ function polyBox(cx, cy, w, d, rzDeg) {          // Blender box (centre x,y; siz
 }
 const polyCircle = (cx, cy, r) => Array.from({ length: 8 }, (_, k) => [cx + r * Math.cos((k + .5) * Math.PI / 4), -cy + r * Math.sin((k + .5) * Math.PI / 4)]);
 const cen = P => { let x = 0, z = 0; for (const p of P) { x += p[0]; z += p[1]; } return [x / P.length, z / P.length]; };
-const colliders = colList.filter(c => !c.car).map(c => { const soft = c.soft || null, poly = c.t === 'box' ? polyBox(c.x, c.y, c.w, c.d, c.rz) : c.t === 'poly' ? c.pts.map(p => [p[0], -p[1]]) : polyCircle(c.x, c.y, c.r); const [cx, cz] = cen(poly); let r = 0; for (const p of poly) r = Math.max(r, Math.hypot(p[0] - cx, p[1] - cz)); return { poly, cx, cz, r, vx: 0, vz: 0, soft }; });
+const colliders = colList.filter(c => !c.car).map(c => { const soft = c.soft || null, poly = c.t === 'box' ? polyBox(c.x, c.y, c.w, c.d, c.rz) : c.t === 'poly' ? c.pts.map(p => [p[0], -p[1]]) : polyCircle(c.x, c.y, c.r); const [cx, cz] = cen(poly); let r = 0; for (const p of poly) r = Math.max(r, Math.hypot(p[0] - cx, p[1] - cz)); return { poly, cx, cz, r, vx: 0, vz: 0, soft, low: !!c.low }; });     // round 52: low = walls / fountain a ramp jump clears
+const BRK_V = [];
+const BRKS = initBreakables(THREE, scene, world.breakables || [], b2t, { cull: im => instances.push(im), onHit: (k, sp, v) => { crashSound(k === 'crackwall' ? 16 : k === 'fence' || k === 'corral' || k === 'arm' ? 3 + sp * .15 : 1.5 + sp * .06); if (k === 'crackwall' && v === drive) wallMoment(v); },
+  addCollider: (x, z, th, len, t) => { const ux = Math.cos(th), uz = -Math.sin(th), nx = -uz, nz = ux, h = len / 2, w = t / 2; const poly = [[x - ux * h - nx * w, z - uz * h - nz * w], [x + ux * h - nx * w, z + uz * h - nz * w], [x + ux * h + nx * w, z + uz * h + nz * w], [x - ux * h + nx * w, z - uz * h + nz * w]];
+    const c = { poly, cx: x, cz: z, r: h + w, vx: 0, vz: 0, soft: null, low: true }; colliders.push(c); return c; },
+  removeCollider: c => { c.poly = [[1e6, 1e6], [1e6 + .1, 1e6], [1e6, 1e6 + .1]]; c.cx = c.cz = 1e6; c.r = 0; },     // it sits in the static grid: move it out of the world (no splice: that would shift the moving colliders' indices)
+  burst: (x, z, vx, vz, len) => { debris(x, 1.2, z, vx * .45, vz * .45, 30, '#e3d4b4', len * .6, 5, 2.4); debris(x, 1.0, z, vx * .3, vz * .3, 12, '#8f826a', len * .5, 3, 2.0);
+    for (let i = 0; i < 7; i++) puff(x + (Math.random() - .5) * len, .6 + Math.random() * 1.5, z + (Math.random() - .5) * len, 2.2 + Math.random() * 1.5, 0xd8ccb4, 1.4, .8, 1.8); rig.shake = Math.min(1, rig.shake + .6); } });
+// round 52: smashing a cracked wall = a short slow-motion camera swing round the car, then straight back to driving
+let wallT = 0;
+function wallMoment(v) {
+  const now = performance.now(); if (CINE.shots || now - wallT < 6000 || (missions && missions.S && missions.S.park)) return; wallT = now;
+  timeK = .3; cine([{ a: [v.x, v.z], b: [v.x + v.vx * .45, v.z + v.vz * .45], y0: v.th + 1.25, y1: v.th + .55, pitch: 20, d0: 13, d1: 17, dur: .5 }]);
+  setTimeout(() => { if (CINE.shots && CINE.shots.length === 1 && CINE.shots[0].dur === .5) cineStop(); if (timeK === .3) timeK = 1; }, 1700);
+}
+
 /* Water (round 35): the lake triangles are not walls any more. You plough in with a splash and wade at a crawl (heavy drag, low top speed); cops follow at the same crawl, so ponds are no hiding place. */
 const WATER = { top: 6, drag: 2.2, sink: .55 };      // top speed in water m/s, how fast speed bleeds off above it (1/s), how far the car settles in (m)
 const LAKES3 = (world.map || []).filter(e => e[4] === '#2d78b8' && e[5] === 'poly').map(e => { const P = e[6].map(p => [p[0], -p[1]]); let a = 1e9, b = 1e9, c = -1e9, d = -1e9; for (const [x, z] of P) { a = Math.min(a, x); b = Math.min(b, z); c = Math.max(c, x); d = Math.max(d, z); } return { P, bb: [a, b, c, d] }; });
@@ -643,6 +655,21 @@ if (launcher) {
 /* Chris's bike jump (round 34, the Dave mission's third upgrade): JUMP launches the bike; in the air the world runs in slow motion, the steering still works,
    and the bike passes over cars, cops, shrubs and roadblocks (never buildings). Lands with a thump and a dust puff. */
 const JUMP = { T: .95, H: 3.6, cool: 2.0, slow: .35, minV: 4 };       // airborne game-seconds, peak height m, seconds between jumps, world speed in the air, slowest speed that jumps
+// round 52 (user: shortcuts): ramps any car can launch off. world.ramps = [[x, y, headingDeg, length, width], ...] (Blender metres). Hit one going its way above minV:
+// airborne for a time that grows with speed (flies over cars, walls, the fountain, water), a short slow-mo and a dust puff on landing
+const RAMP = { minV: 9, kT: .055, T: [.7, 1.6], kH: .15, H: [1.8, 5.2], slow: .6 };
+const RAMPS = (world.ramps || []).map(([x, y, h, L, W]) => { const th = h * Math.PI / 180; return { x, z: -y, ux: Math.cos(th), uz: -Math.sin(th), L, W }; });
+function rampStep() {
+  if (!RAMPS.length || !drive || hmode !== 'driving' || drive.air > 0 || CINE.shots) return;
+  const sp = Math.hypot(drive.vx, drive.vz); if (sp < RAMP.minV) return;
+  for (const r of RAMPS) {
+    const ox = drive.x - r.x, oz = drive.z - r.z, u = ox * r.ux + oz * r.uz, v = ox * r.uz - oz * r.ux;    // along / across the ramp (u = 0 at its foot)
+    if (u < r.L * .35 || u > r.L + .5 || Math.abs(v) > r.W / 2 + .3) continue;
+    if ((drive.vx * r.ux + drive.vz * r.uz) / sp < .6) continue;                                        // going up it, not across or down it
+    const T = clamp(sp * RAMP.kT, RAMP.T[0], RAMP.T[1]); drive.air = T; drive.airT0 = T; drive.airH = clamp(sp * RAMP.kH, RAMP.H[0], RAMP.H[1]);
+    if (timeK === 1) timeK = RAMP.slow; ensureAudio(); whooshSound(0); rig.shake = Math.min(1, rig.shake + .15); return;
+  }
+}
 let jumpCool = 0;
 function startJump() {
   if (!DENV.jump || !drive || hmode !== 'driving' || drive.car.kind !== 'moto' || drive.air > 0 || jumpCool > 0 || CINE.shots || paused) return;
@@ -655,7 +682,7 @@ function splash(c, sp) {                            // driving into a pond: a bu
   debris(c.x, .5, c.z, c.vx * .2, c.vz * .2, 10, '#cfe9ff', 6, 4, .9); crashSound(Math.min(10, 3 + sp * .25)); rig.shake = Math.min(1, rig.shake + .2);
 }
 function land(c) {
-  c.air = 0; if (timeK === JUMP.slow) timeK = 1; crashSound(7); rig.shake = Math.min(1, rig.shake + .35);
+  c.air = 0; c.airT0 = 0; c.airH = 0; if (timeK === JUMP.slow || timeK === RAMP.slow) timeK = 1; crashSound(7); rig.shake = Math.min(1, rig.shake + .35);
   for (let i = 0; i < 3; i++) puff(c.x + (Math.random() - .5) * 2, .25, c.z + (Math.random() - .5) * 2, 1.8 + Math.random(), 0xcbbfa8, .9, .5, 1.6);
 }
 function jumpHud(dt) {
@@ -1600,7 +1627,7 @@ function update(dt, draw = true) {
     drive.rx = x; drive.rz = z; placeOnGround(drive.car.group, x, z, th);
     if (drive.car.kind === 'moto') { const tl = clamp(drive.w * Math.hypot(drive.vx, drive.vz) * TUNE.motoLean, -.6, .6); drive.lean = (drive.lean || 0) + (tl - (drive.lean || 0)) * (1 - Math.exp(-8 * dt)); drive.car.group.rotation.z += drive.lean; }     // the bike leans into the turn
     drive.sink = (drive.sink || 0) + ((drive.wetT > 0 ? WATER.sink : 0) - (drive.sink || 0)) * (1 - Math.exp(-6 * dt)); if (drive.sink > .005) drive.car.group.position.y -= drive.sink;
-    if (drive.air > 0) { const k = 1 - drive.air / JUMP.T; drive.car.group.position.y += 4 * JUMP.H * k * (1 - k); drive.car.group.rotation.x += (.5 - k) * .55; }     // the jump arc, nose up then down
+    if (drive.air > 0) { const T0 = drive.airT0 || JUMP.T, k = 1 - drive.air / T0; drive.car.group.position.y += 4 * (drive.airH || JUMP.H) * k * (1 - k); drive.car.group.rotation.x += (.5 - k) * .55; }     // the jump arc, nose up then down
   }
   if (loose.size) looseStep(dta);
   debrisStep(dta); splatStep(dta); treeStep(dta); puffStep(dt); hoodSmoke(dt);
@@ -1683,6 +1710,7 @@ function update(dt, draw = true) {
   { const ext = track.active ? 1e5 : world.extent; rig.tx = clamp(rig.tx, -ext, ext); rig.tz = clamp(rig.tz, -ext, ext); }
   if (rig.mode === 'drive') cullStep(dt); else for (const c of cullables) c.o.visible = true;
   compassStep();
+  rampStep();
   HYD.step(dt, Object.values(vehs));
   BRK_V.length = 0; for (const v of Object.values(vehs)) BRK_V.push(v); if (cops) for (const c of cops.cops) if (c.on && c.v > 2.5) BRK_V.push({ x: c.x, z: c.z, vx: -Math.sin(c.th) * c.v, vz: -Math.cos(c.th) * c.v }); BRKS.step(dt, BRK_V);
   if (!SW.on && !CINE.shots && !CAMHOLD.on) { let ty = 0; const dv = hmode === 'driving' && drive;           // camera yaw: turns with the car while driving (eases, holds when nearly stopped, reversing or handbraking), back to north-up on foot
