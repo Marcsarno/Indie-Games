@@ -961,22 +961,36 @@ function render() {
   for (const d of base) d.draw();
   drawTelegraph(); drawImpactFx(); drawMeteors(); drawLichFx(); drawWarriorFx();
   const charLevel = lightPass(chars, kx, ky);
-  // the frame: the lit world doubled (shifted by the camera's half pixel), then the detail layer over it.
-  // Round 27: where the world pixel is still the baked one this frame (nothing drawn over it) and
-  // the 2x layer holds a prop pixel, that detail pixel is the 2x prop, lit at the 1x pixel's level
-  const W2 = WW * 2, H2 = WH * 2, black = PAL32[BLK];
-  for (let yy = 0; yy < OH; yy++) {
-    const y = Math.min(H - 1, (yy + hy) >> 1), r0 = y * W, d = yy * OW, wy2 = cam2y + yy, wy = camY + y;
-    const has2 = WORLD2X && wy2 >= 0 && wy2 < H2 && wy >= 0 && wy < WH, row2 = wy2 * W2, wrow = wy * WW + camX;
-    if (!has2) { for (let X = 0; X < OW; X++) ov32[d + X] = base32[r0 + Math.min(W - 1, (X + hx) >> 1)]; continue; }
-    for (let X = 0; X < OW; X++) {
-      const x = Math.min(W - 1, (X + hx) >> 1), o = r0 + x, wx2 = cam2x + X;
-      let c = base32[o];
-      if (wx2 >= 0 && wx2 < W2) {
-        const v2 = wIdx2[row2 + wx2];
-        if (v2) { const lv = levB[o], wx = camX + x; if (lv !== 255 && wx >= 0 && wx < WW && scr[o] === wIdx[wrow + x]) c = (v2 & EMIS) ? PAL32[CYCLE[v2 & 127]] : v2 === BLK ? black : LCOL[lv * NPAL + v2]; }
+  // the frame: the lit world doubled (shifted by the camera's half pixel), then the detail layer over it
+  for (let y = 0; y < H; y++) {
+    const r0 = y * W; let first = -1;
+    for (let b = 0; b < SPX; b++) {
+      const yy = y * SPX - hy + b; if (yy < 0 || yy >= OH) continue;
+      const d = yy * OW;
+      if (first >= 0) { ov32.copyWithin(d, first, first + OW); continue; }   // the second line of a doubled row
+      for (let x = 0, X = -hx; x < W; x++, X += SPX) { const c = base32[r0 + x]; if (X >= 0) ov32[d + X] = c; ov32[d + X + 1] = c; }
+      if (hx) ov32[d + OW - 1] = base32[r0 + W - 1];
+      first = d;
+    }
+  }
+  if (hy) ov32.copyWithin((OH - 1) * OW, (OH - 2) * OW, (OH - 1) * OW);
+  // round 27: the 2x props, visiting only the spans of each row that hold 2x pixels. A detail pixel
+  // takes its 2x prop color where the world pixel under it is still the baked one this frame
+  // (nothing drawn over it), lit at that 1x pixel's level
+  if (WORLD2X && runs2.length) {
+    const W2 = WW * 2, black = PAL32[BLK];
+    for (let yy = 0; yy < OH; yy++) {
+      const wy2 = cam2y + yy, runs = runs2[wy2]; if (!runs) continue;
+      const y = Math.min(H - 1, (yy + hy) >> 1), r0 = y * W, d = yy * OW, row2 = wy2 * W2, wrow = (camY + y) * WW + camX;
+      for (let k = 0; k < runs.length; k += 2) {
+        const xa = Math.max(runs[k], cam2x), xb = Math.min(runs[k + 1], cam2x + OW);
+        for (let wx2 = xa; wx2 < xb; wx2++) {
+          const X = wx2 - cam2x, x = (X + hx) >> 1; if (x >= W) break;
+          const o = r0 + x, lv = levB[o]; if (lv === 255 || scr[o] !== wIdx[wrow + x]) continue;
+          const v2 = wIdx2[row2 + wx2];
+          ov32[d + X] = (v2 & EMIS) ? PAL32[CYCLE[v2 & 127]] : v2 === BLK ? black : LCOL[lv * NPAL + v2];
+        }
       }
-      ov32[d + X] = c;
     }
   }
   ov.sort((a, b) => a.depth - b.depth);

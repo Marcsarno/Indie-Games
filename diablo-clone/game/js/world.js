@@ -836,6 +836,16 @@ function blit2(sp, wx, wy, sx0, sy0) {
     for (let x = 0; x < s2.w; x++) { const v = s2.data[y * s2.w + x], xx = X0 + x; if (v && xx >= 0 && xx < W2) wIdx2[yy * W2 + xx] = v; }
   }
 }
+// per 2x row, the spans [x0, x1) that hold 2x pixels, so the frame only visits those (round 27)
+let runs2 = [];
+function build2Runs() {
+  const W2 = WW * 2, H2 = WH * 2; runs2 = new Array(H2);
+  for (let y = 0; y < H2; y++) {
+    const row = y * W2, r = []; let x = 0;
+    while (x < W2) { while (x < W2 && !wIdx2[row + x]) x++; if (x >= W2) break; const a = x; while (x < W2 && wIdx2[row + x]) x++; r.push(a, x); }
+    runs2[y] = r.length ? Int32Array.from(r) : null;
+  }
+}
 function blitWorld(sp, wx, wy, zBase = 0, tile = -1, asFloor = false) {
   const sx0 = Math.round(wx) - sp.ax, sy0 = Math.round(wy) - sp.ay;
   if (WORLD2X && !asFloor) blit2(sp, wx, wy, sx0, sy0);
@@ -938,6 +948,7 @@ function buildWorld() {
   for (const d of back) blitWorld(d.sp, d.wx, d.wy, d.z || 0, d.tile);
   props.sort((a, b) => a.depth - b.depth);
   for (const p of props) blitWorld(p.sp, p.wx, p.wy, p.z || 0, p.tile);
+  if (WORLD2X) build2Runs();
   bakeLightMaps();
 }
 // static lights never move: each one's falloff over the baked scenery is computed once
