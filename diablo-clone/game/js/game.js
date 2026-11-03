@@ -410,7 +410,9 @@ function dropLoot(fi, fj, n, rich) {
     if (q < 0.45 || rich && k === 0) groundItems.push({ gold: Math.round((2 + Math.random() * 6) * LV.diff * (rich ? 3 : 1)), fi: p[0], fj: p[1], t: 0 });
     else if (q < 0.6) groundItems.push({ item: rollItem(R, LV.diff, Math.random() < 0.35 ? 'mana' : 'heal'), fi: p[0], fj: p[1], t: 0 });
     else if (q < 0.66 || (rich && k === 1)) groundItems.push({ gem: GEMS[Math.min(3, Math.floor(Math.random() * (1.5 + LV.diff * 0.5)))], fi: p[0], fj: p[1], t: 0 });   // gems: rarer kinds deeper in
-    else if (q < (rich ? 1 : 0.8)) groundItems.push({ item: rollItem(R, LV.diff), fi: p[0], fj: p[1], t: 0 });
+    // round 25: fewer, better items: no plain greys, and an item on 8% of kills instead of 14%
+    else if (q < (rich ? 1 : 0.74)) groundItems.push({ item: rollItem(R, LV.diff, null, true), fi: p[0], fj: p[1], t: 0 });
+    else if (q < 0.8) groundItems.push({ gold: Math.round((2 + Math.random() * 6) * LV.diff), fi: p[0], fj: p[1], t: 0 });   // where a grey item used to fall
   }
 }
 function pickup(g) {

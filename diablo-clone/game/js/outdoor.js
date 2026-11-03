@@ -815,13 +815,38 @@ function heroRing(wx, wy) {
 }
 // where the way on is: the road out of town, the stone ring of the dungeon entrance
 function drawExitLabel() {
-  const s = LV.stairs; if (!LV.outdoor || !s) return;
+  const s = LV.stairs; if (!s) return;
+  if (!LV.outdoor) { drawStairsMark(s); return; }
   if (Math.hypot(s.i - hero.fi, s.j - hero.fj) > 9) return;
   const [x, y] = iso(s.i + 0.5, s.j + 0.5), sx = Math.round(x - camX), sy = Math.round(y - camY) - (s.road ? 40 : 30);
   if (sx < -60 || sx > W + 60 || sy < 0 || sy > H) return;
   textC(s.road ? 'TO ' + AREA_NAMES.forest[LV.act % 3] : 'DUNGEON ENTRANCE', sx, sy, 51);
 }
 
+// dungeon stairs (round 25): a label when close, and once they have been seen, an arrow at the
+// screen edge pointing the way while they are off screen
+function drawStairsMark(s) {
+  if (!LV.seen[tIdx(s.i, s.j)]) return;
+  const [x, y] = iso(s.i + 0.5, s.j + 0.5), sx = x - camX, sy = y - camY;
+  const X0 = 14, X1 = W - 14, Y0 = 40, Y1 = Math.round(H * 0.6);
+  if (sx > X0 && sx < X1 && sy > Y0 && sy < Y1) {
+    if (Math.hypot(s.i - hero.fi, s.j - hero.fj) < 7) textC(bossAlive() ? 'SEALED' : 'STAIRS DOWN', Math.round(sx), Math.round(sy) - 24, bossAlive() ? 22 : 51);
+    return;
+  }
+  // from the screen's middle toward the stairs, stopped at the edge of the play area
+  const cx = W / 2, cy = (Y0 + Y1) / 2, dx = sx - cx, dy = sy - cy;
+  const k = Math.min((dx > 0 ? X1 - cx : cx - X0) / Math.abs(dx || 1e-6), (dy > 0 ? Y1 - cy : cy - Y0) / Math.abs(dy || 1e-6));
+  const bob = Math.sin(G.t * 5) * 1.5, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
+  const ax = cx + dx * k - ux * bob, ay = cy + dy * k - uy * bob;
+  // a filled arrowhead 14 px long, gold with a black edge
+  for (let b = -10; b <= 10; b++) for (let a = -10; a <= 10; a++) {
+    const f = a * ux + b * uy, g = -a * uy + b * ux;   // along, across
+    if (f < -8 || f > 6) continue;
+    const half = (6 - f) * 0.5;
+    if (Math.abs(g) > half + 1) continue;
+    put(Math.round(ax + a), Math.round(ay + b), Math.abs(g) > half || f < -7 ? BLK : (g < 0 ? 51 : 50));
+  }
+}
 // ---------------------------------------------------------------- shrines
 const SHRINES = {
   frenzy: { name: 'SHRINE OF FRENZY', msg: 'ATTACK SPEED UP', cols: [21, 22, 23] },

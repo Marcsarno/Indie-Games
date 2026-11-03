@@ -53,6 +53,7 @@ defMat('CHITIN', [2, 41, 42, 43], 2, { span: 1.0, spec: [0.982, 25] });
 defMat('GOLD', GOLD, 2, { shiny: true, span: 1.1, spec: [0.93, 51] });
 defMat('HAIR', [33, 34, 35], 1, { span: 0.7 });
 defMat('DARK', [2], 0, { flat: true });
+defMat('VOID', [1], 0, { flat: true });   // outline black: no light table lifts it (the stairwell's depths)
 defMat('EYE_RED', [23], 0, { flat: true, emis: true });
 defMat('EYE_YEL', [17], 0, { flat: true, emis: true });
 defMat('EYE_GRN', [55], 0, { flat: true, emis: true });
@@ -62,6 +63,10 @@ defMat('MARK', [20, 21, 22], 1, { span: 0.6 });
 defMat('ROCK', [65, 66, 67, 68, 69], 2, { span: 1.0 });
 defMat('HELLSTONE', [73, 74, 75, 76, 77], 2, { span: 0.9 });
 defMat('STONE', [5, 6, 7, 8, 9, 10], 2, { span: 0.9 });
+// the stairs' lit step edges and shaded step fronts, one pair per floor theme
+defMat('STONELIP', [5, 6, 7, 8, 9, 10], 4, { span: 0.5 }); defMat('STONERISE', [4, 5, 6, 7, 8], 0, { span: 0.5 });
+defMat('ROCKLIP', [65, 66, 67, 68, 69], 4, { span: 0.5 }); defMat('ROCKRISE', [64, 65, 66, 67], 0, { span: 0.5 });
+defMat('HELLLIP', [73, 74, 75, 76, 77], 4, { span: 0.5 }); defMat('HELLRISE', [73, 74, 75, 76], 0, { span: 0.5 });
 defMat('FUNGUS', [71], 0, { flat: true, emis: true });
 defMat('FUNGUS2', [72], 0, { flat: true, emis: true });
 defMat('WAX', [25, 26, 27], 1, { span: 0.6 });

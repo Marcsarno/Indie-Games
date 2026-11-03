@@ -313,6 +313,8 @@ function bfs(si, sj) {
   }
   return dist;
 }
+// a tall pillar straight below the stairs on screen (same i - j, a little nearer) would cover them
+const hidesStairs = (i, j) => { const s = LV.stairs; if (!s) return false; const a = i - s.i, b = j - s.j; return Math.abs(a - b) <= 1 && a + b > 0 && a + b <= 6; };
 // props are only kept if every floor tile stays reachable with them in place
 function trySolid(i, j) {
   const k = tIdx(i, j);
@@ -343,7 +345,7 @@ function placeDecor(R, level) {
       if (n && R() < 0.7) { const q = interior(); D.push({ kind: 'lava', fi: q[0] + 0.5, fj: q[1] + 0.5, size: R.int(3, 6), seed: R.int(1, 1e6) }); }
     }
     if (r.type === 'hall' && r.w >= 7 && r.h >= 7 && th !== 'caves') {
-      for (const [i, j] of [[r.x + 1, r.y + 1], [r.x + r.w - 2, r.y + 1], [r.x + 1, r.y + r.h - 2], [r.x + r.w - 2, r.y + r.h - 2]]) if (trySolid(i, j)) D.push({ kind: 'pillar', i, j });
+      for (const [i, j] of [[r.x + 1, r.y + 1], [r.x + r.w - 2, r.y + 1], [r.x + 1, r.y + r.h - 2], [r.x + r.w - 2, r.y + r.h - 2]]) if (!hidesStairs(i, j) && trySolid(i, j)) D.push({ kind: 'pillar', i, j });
       if (n && trySolid(r.cx, r.cy)) D.push({ kind: 'brazier', i: r.cx, j: r.cy });
     } else if (n && r.w * r.h >= 36 && R() < 0.5 && trySolid(r.cx, r.cy)) D.push({ kind: 'brazier', i: r.cx, j: r.cy });
     if (r.type === 'store' || R() < (LV.theme === 'caves' ? 0.15 : 0.4)) {
@@ -502,6 +504,40 @@ function propSprite(name, build, size, yaw = 0) {
   const k = name + '|' + yaw;
   if (!propCache[k]) { const r = new Rig(); build(r); propCache[k] = renderRig(r, yaw, ...size); }
   return propCache[k];
+}
+// the stairwell: opening half-sizes in rig units (one tile is TILE_U = 22.6); the steps run down
+// toward -x (up the screen) so their treads face the camera, and the far wall opens into darkness
+const STW = { x: 18, y: 12, steps: 8, drop: 2.2 };
+const stairCache = {};
+function stairwellSprite(theme) {
+  if (stairCache[theme]) return stairCache[theme];
+  const T = theme === 'caves' ? 'ROCK' : theme === 'hell' ? 'HELL' : 'STONE', mat = M[T === 'HELL' ? 'HELLSTONE' : T], lipM = M[T + 'LIP'], riseM = M[T + 'RISE'];
+  const r = new Rig(), X = STW.x, Y = STW.y, n = STW.steps, len = 2 * X / n;
+  for (let k = 0; k < n; k++) {
+    // the steps go down toward the camera (+x), so each step's front faces it: a lit edge on
+    // every tread, a shaded front below it, and a step darker every other one on the way down
+    const top = -STW.drop * (k + 1), x0 = -X + len * k, x1 = x0 + len;
+    r.box([(x0 + x1) / 2, 0, (top - 40) / 2], [len / 2, Y, (top + 40) / 2], mat, null, { noShadow: true, bias: -k,
+      mf: (q, nn) => k >= 3 ? M.VOID : nn[0] > 0.5 ? riseM : nn[2] > 0.5 && q[0] > x1 - 1.3 ? lipM : 0 });   // the last visible ones vanish into the dark
+  }
+  const wall = (c, h, o) => r.box(c, h, mat, null, { noShadow: true, ...o });
+  // the side walls darken with depth into the same lightless black the last steps fall into
+  const sideMf = q => q[2] < -STW.drop * 2.5 ? M.VOID : q[2] < -STW.drop * 1.2 ? riseM : 0;
+  wall([0, -Y - 6, -20], [X + 12, 6, 20], { bias: -2, mf: sideMf });
+  wall([0, Y + 6, -20], [X + 12, 6, 20], { bias: -2, mf: sideMf });
+  wall([X + 6, 0, -20], [6, Y, 20], {});
+  wall([-X - 6, 0, -20], [6, Y, 20], { bias: -1 });
+  const sp = renderRig(r, 0, 56, 72, 28, 14);
+  // keep only what shows through the opening; a one-pixel lip of floor stone frames it
+  const C = Math.SQRT1_2, lip = theme === 'caves' ? CAVE : theme === 'hell' ? HELL : S;
+  for (let py = 0; py < sp.h; py++) for (let px = 0; px < sp.w; px++) {
+    const sx = px - sp.ax + 0.5, sy = py - sp.ay + 0.5, gx = (sx / C + sy / (C / 2)) / 2, gy = (sy / (C / 2) - sx / C) / 2, k = py * sp.w + px;
+    const inX = Math.abs(gx) < X, inY = Math.abs(gy) < Y;
+    if (inX && inY) continue;
+    if (Math.abs(gx) < X + 1.6 && Math.abs(gy) < Y + 1.6) sp.data[k] = (gx < -X || gy < -Y) ? lip[lip.length - 2] : lip[1];
+    else sp.data[k] = 0;
+  }
+  return (stairCache[theme] = sp);
 }
 const PROPS = {
   barrel: () => propSprite('barrel', r => {
@@ -737,24 +773,25 @@ function buildWorld() {
       dynProps.push({ kind: d.kind, i: d.i, j: d.j, depth: d.i + d.j + 1, wx: x, wy: y + (d.kind === 'barrel' ? 3 : 2), hp: d.kind === 'egg' ? EGG_HP : 1, hatch: 3 + (d.seed % 5), open: false, seed: d.seed, tile: tIdx(d.i, d.j) });
     }
   }
-  // stairs down: a stepped pit in the floor
-  {
-    const s = LV.stairs, [x, y] = iso(s.i, s.j);
-    const sp = makeBox(1, 1, 1, (face, a, b) => {
-      if (face !== 'top') return 0;
-      const step = Math.floor(b / 3);
-      if (a < 1 || b < 1 || a > 15) return ST(2);
-      return step >= 4 ? BLK : ST([6, 4, 3, 1][step] + (a < 3 ? 1 : 0));
-    });
-    s.sp = sp; s.wx = x; s.wy = y;
+  // stairs down (round 25): a stairwell sunk into the floor, steps falling away into a dark arch,
+  // with a lit lip around the opening and a fire bowl at each side so it reads from across a room
+  if (!LV.outdoor) {
+    const s = LV.stairs, [x, y] = iso(s.i + 0.5, s.j + 0.5);
+    s.sp = stairwellSprite(LV.theme || 'crypt'); s.wx = x; s.wy = y;
+    for (const [ox, oy] of [[-STW.x - 4.5, STW.y + 4.5], [STW.x + 4.5, -STW.y - 4.5]]) {
+      const fi = s.i + 0.5 + ox / TILE_U, fj = s.j + 0.5 + oy / TILE_U, [bx, by] = iso(fi, fj);
+      props.push({ depth: fi + fj, sp: PROPS.brazier(), wx: bx, wy: by, tile: tIdx(Math.floor(fi), Math.floor(fj)) });
+      fires.push({ wx: bx, wy: by - 20, h: 13, w: 5, seed: s.i * 31 + fi * 7, ember: 0.1, tile: tIdx(Math.floor(fi), Math.floor(fj)) });
+      lights.push({ x: bx, y: by, z: 30, r: 120, i: 0.9, seed: s.i + fi * 7 });   // lit from the sides, so the well itself stays dark
+    }
   }
   wIdx.set(floorBuf); wZ.fill(0); wFloor.fill(1);
-  if (!LV.stairs.road) blitWorld(LV.stairs.sp, LV.stairs.wx, LV.stairs.wy + 1, 0, -1, true);
   for (const d of LV.decor) {
     if (d.kind === 'blood') { const [x, y] = iso(d.fi, d.fj); stampBlood(Math.round(x), Math.round(y), d.size, d.seed); }
     if (d.kind === 'lava') { const [x, y] = iso(d.fi, d.fj); stampLava(Math.round(x), Math.round(y), d.size, d.seed); }
     if (d.kind === 'bones') blitWorld(d.sp, d.wx, d.wy, 0, -1, true);
   }
+  if (LV.stairs.sp) blitWorld(LV.stairs.sp, LV.stairs.wx, LV.stairs.wy, 0, -1, true);   // over any lava or blood stamped there
   back.sort((a, b) => a.depth - b.depth);
   for (const d of back) blitWorld(d.sp, d.wx, d.wy, d.z || 0, d.tile);
   props.sort((a, b) => a.depth - b.depth);
