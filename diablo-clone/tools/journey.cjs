@@ -1,6 +1,6 @@
 // Plays through levels 1-16 (three acts and the start of the next loop) (towns, forests, dungeons, every boss): checks the exit is reachable,
 // kills the boss, fights a few seconds, renders, saves and reloads. Prints one line per level and
-// any page errors. Usage: node tools/journey.cjs [warrior|mage]
+// any page errors. Usage: node tools/journey.cjs [warrior|mage|ranger]
 const { chromium } = require('playwright'), path = require('path');
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage();
@@ -19,7 +19,7 @@ const { chromium } = require('playwright'), path = require('path');
       const d = bfs(LV.start.cx, LV.start.cy), reach = d[tIdx(LV.stairs.i, LV.stairs.j)] >= 0, bossId = boss ? boss.id : '-';
       if (boss) damageEnemy(boss, 99999, hero.fi, hero.fj, false);
       input.attack = true; step(150); input.attack = false; step(30);
-      if (cls === 'mage') { hero.lvl = 5; hero.mana = 999; for (let k = 0; k < SKILLS.length; k++) { CD[SKILLS[k].id] = 0; useSkill(k); step(40); } }
+      if (cls === 'mage' || cls === 'ranger') { hero.lvl = 5; hero.mana = 999; for (let k = 0; k < SKILLS.length; k++) { CD[SKILLS[k].id] = 0; useSkill(k); step(40); } }
       render();
       saveGame(); const sv = loadSave(cls);
       out.push(`L${L} ${actTitle().padEnd(13)} ${areaName().padEnd(15)} boss=${bossId.padEnd(11)} exit=${reach ? 'ok' : 'BLOCKED'} enemies=${enemies.length} save=${sv && sv.level === L ? 'ok' : 'FAIL'} ${Math.round(performance.now() - t0)}ms`);

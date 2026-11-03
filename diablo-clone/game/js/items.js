@@ -33,6 +33,17 @@ const ITEM_BASES = {
   archmage_robe: { slot: 'chest', look: 'robe_red', name: 'ARCHMAGE ROBE', armor: 8, cls: 'mage', lvl: 3 },
   wizard_hat: { slot: 'helm', look: 'hat', name: 'WIZARD HAT', armor: 1, cls: 'mage', lvl: 1 },
   hood: { slot: 'helm', look: 'hood', name: 'DEEP HOOD', armor: 3, cls: 'mage', lvl: 1 },
+  // ranger gear (round 33): bows (the off hand), leather jerkins, hoods, and quivers in the shield slot
+  hunting_bow: { slot: 'weapon', look: 'bow', name: 'HUNTING BOW', dmg: [2, 6], cls: 'ranger', lvl: 1 },
+  long_bow: { slot: 'weapon', look: 'bow_long', name: 'LONGBOW', dmg: [4, 10], cls: 'ranger', lvl: 2 },
+  horn_bow: { slot: 'weapon', look: 'bow_horn', name: 'HORN BOW', dmg: [7, 14], cls: 'ranger', lvl: 3 },
+  leather_jerkin: { slot: 'chest', look: 'jerkin', name: 'LEATHER JERKIN', armor: 3, cls: 'ranger', lvl: 1 },
+  studded_jerkin: { slot: 'chest', look: 'jerkin_stud', name: 'STUDDED JERKIN', armor: 6, cls: 'ranger', lvl: 2 },
+  hide_coat: { slot: 'chest', look: 'jerkin_hide', name: 'HIDE COAT', armor: 9, cls: 'ranger', lvl: 3 },
+  ranger_hood: { slot: 'helm', look: 'rhood', name: 'RANGER HOOD', armor: 2, cls: 'ranger', lvl: 1 },
+  shadow_hood: { slot: 'helm', look: 'rhood_dark', name: 'SHADOW HOOD', armor: 4, cls: 'ranger', lvl: 2 },
+  quiver: { slot: 'shield', look: 'quiver', name: 'QUIVER', armor: 1, cls: 'ranger', lvl: 1 },
+  war_quiver: { slot: 'shield', look: 'quiver', name: 'WAR QUIVER', armor: 3, cls: 'ranger', lvl: 2 },
   heal: { slot: 'potion', name: 'HEALING POTION', heal: 30, lvl: 1 },
   mana: { slot: 'potion', name: 'MANA POTION', mana: 25, lvl: 1 },   // drunk on pickup
 };
@@ -60,6 +71,8 @@ const LEGENDARIES = [
   { fx: 'cinder', base: 'ember_staff', name: 'STAFF OF CINDERS', cls: 'mage', mods: { dmgPct: 60, fireburst: 1 }, lore: 'EVERY DEATH CATCHES FIRE' },
   { fx: 'magi', base: 'archmage_robe', name: 'MANTLE OF THE MAGI', cls: 'mage', mods: { mana: 40, hp: 20, regen: 2 }, lore: 'WOVEN FROM STARLIGHT' },
   { fx: 'seer', base: 'wizard_hat', name: "SEER'S PEAK", cls: 'mage', mods: { crit: 15, mana: 20 }, lore: 'IT SEES WHERE TO STRIKE' },
+  { fx: 'wind', base: 'long_bow', name: 'WINDRUNNER', cls: 'ranger', mods: { atkSpeed: 30, speed: 15 }, lore: 'IT SINGS BEFORE IT STRIKES' },
+  { fx: 'fang', base: 'hide_coat', name: 'WOLFHIDE', cls: 'ranger', mods: { hp: 30, crit: 10 }, lore: 'THE PACK REMEMBERS' },
   { fx: 'maul', base: 'war_axe', name: "WARLORD'S MAUL", mods: { dmgPct: 50, crit: 15 }, lore: 'TAKEN FROM THE OGRE' },
 ];
 // sets (round 16): three named pieces each; wearing two gives a bonus, all three a bigger one
@@ -68,8 +81,10 @@ const SETS = {
     bonus: [{ mana: 25 }, { dmgPct: 25, crit: 8 }], lines: ['2: +25 MANA', '3: +25% DAMAGE, +8% CRIT'] },
   warden: { name: "WARDEN'S", pieces: [['great_helm', "WARDEN'S VISOR"], ['plate_mail', "WARDEN'S PLATE"], ['kite_shield', "WARDEN'S WALL"]],
     bonus: [{ armorFlat: 10 }, { regen: 2, thorns: 30 }], lines: ['2: +10 ARMOR', '3: +2 LIFE/S, 30% RETURNED'] },
-  ranger: { name: "RANGER'S", pieces: [['cap', "RANGER'S HOOD"], ['brigandine', "RANGER'S JERKIN"], ['buckler', "RANGER'S TARGE"]],
+  ranger: { name: "SCOUT'S", pieces: [['cap', "SCOUT'S CAP"], ['brigandine', "SCOUT'S JERKIN"], ['buckler', "SCOUT'S TARGE"]],   // a warrior set (renamed when the ranger class came)
     bonus: [{ speed: 12 }, { atkSpeed: 20, crit: 8 }], lines: ['2: +12% MOVE SPEED', '3: +20% ATTACK SPEED, +8% CRIT'] },
+  stalker: { name: "STALKER'S", cls: 'ranger', pieces: [['shadow_hood', "STALKER'S COWL"], ['studded_jerkin', "STALKER'S HIDE"], ['war_quiver', "STALKER'S QUIVER"]],
+    bonus: [{ crit: 8 }, { atkSpeed: 25, dmgPct: 20 }], lines: ['2: +8% CRIT', '3: +25% ATTACK SPEED, +20% DAMAGE'] },
 };
 // the hero's class decides which gear drops (game.js sets hero.cls; warrior when unset)
 const heroCls = () => (typeof hero !== 'undefined' && hero.cls) || 'warrior';
@@ -174,6 +189,13 @@ function itemIcon(it) {
       const orb = b.look === 'staff_fire' ? M.FIREM : b.look === 'staff_ice' ? M.ICE : M.ARCANE;
       r.cone(V.mad(g, bd, -1), V.mad(g, bd, 14), 0.9, 1.0, M.WOOD); r.sph(V.mad(g, bd, 16), 2.8, orb, { noShadow: true });
       for (const s of [-1, 1]) r.cone(V.mad(g, bd, 13), V.add(V.mad(g, bd, 16.6), V.mul(wide, s * 2.6)), 0.7, 0.4, M.GOLD);
+    } else if (b.look.startsWith('bow')) {   // a bow standing on its end, strung
+      const lm = b.look === 'bow_horn' ? M.HORN : M.WOOD, L = b.look === 'bow_long' ? 10 : 8.5;
+      r.p.length = 0;   // no grip and pommel for a bow
+      r.cone([0, 0, 4], [-2, 0, 4 + L * 0.6], 1.1, 0.9, lm); r.cone([-2, 0, 4 + L * 0.6], [0.6, 0, 4 + L * 1.1], 0.9, 0.5, lm);
+      r.cone([0, 0, 4], [-2, 0, 4 - L * 0.6], 1.1, 0.9, lm); r.cone([-2, 0, 4 - L * 0.6], [0.6, 0, 4 - L * 1.1], 0.9, 0.5, lm);
+      r.cone([0.6, 0, 4 + L * 1.1], [0.6, 0, 4 - L * 1.1], 0.3, 0.3, M.CLOTH_WHITE, { noShadow: true });
+      return (iconCache[k] = renderRig(r, Math.PI / 2, 26, 26, 13, 15));
     } else if (b.look === 'sword') { r.box(V.mad(g, bd, 1.8), [0.7, 3.4, 0.8], M.GOLD, wf); r.box(V.mad(g, bd, 9.6), [7.4, 1.2, 0.4], M.BLADE, wf); }
     else if (b.look === 'greatsword') { r.box(V.mad(g, bd, 1.8), [0.8, 4.2, 0.9], M.IRON, wf); r.box(V.mad(g, bd, 10.2), [8.4, 1.5, 0.45], M.BLADE, wf); }
     else if (b.look === 'flail') { r.cone(V.mad(g, bd, 1.2), V.mad(g, bd, 7), 0.9, 0.9, M.WOOD); r.sph(V.mad(V.mad(g, bd, 9), [0, 0, -1], 3), 2.6, M.IRON); }
@@ -186,6 +208,7 @@ function itemIcon(it) {
     const hd = [0, 0, 4], fwd = [1, 0, 0], up = [0, 0, 1], sd = [0, 1, 0];
     if (b.look === 'cap') r.ell([0, 0, 3], [5.2, 5.1, 4.0], M.IRON);
     else if (b.look === 'hat') { r.cyl([0, 0, 0], [0, 0, 0.8], 7, M.CLOTH_PURPLE); r.cone([0, 0, 0.5], [-1.2, 0, 6], 4.6, 2.4, M.CLOTH_PURPLE, { mf: p => p[2] < 2 ? M.GOLD : 0 }); r.cone([-1.2, 0, 6], [-4.5, 0, 10.5], 2.4, 0.5, M.CLOTH_PURPLE); }
+    else if (b.look.startsWith('rhood')) { const hm = b.look === 'rhood_dark' ? M.CLOTH_DARK : M.CLOTH_GREEN; r.ell([0, 0, 4], [5.4, 5.6, 5.8], hm, null, { mf: p => p[0] > 3 && Math.abs(p[1]) < 3 && p[2] < 5 ? M.DARK : 0 }); r.cone([-4, 0, 7], [-8, 0, 4], 2.2, 0.5, hm); r.ell([0, 0, -1.5], [4, 5.4, 1.6], hm); }
     else if (b.look === 'hood') { r.ell([0, 0, 4], [5.4, 5.6, 5.8], M.CLOTH_BLUE, null, { mf: p => p[0] > 3 && Math.abs(p[1]) < 3 && p[2] < 5 ? M.DARK : 0 }); r.cone([-4, 0, 6], [-8, 0, 2], 2.2, 0.5, M.CLOTH_BLUE); }
     else if (b.look === 'barbute') r.ell(hd, [5.4, 5.3, 6.2], M.STEEL, null, { mf: p => { const q = V.sub(p, hd); return q[0] > 2.4 && ((Math.abs(q[2] - 0.8) < 0.75 && Math.abs(q[1]) < 3.2) || (Math.abs(q[1]) < 0.8 && q[2] < 0.8 && q[2] > -4)) ? M.DARK : 0; } });
     else {
@@ -195,10 +218,13 @@ function itemIcon(it) {
       void fwd; void up; void sd;
     }
   } else if (b.slot === 'chest') {
-    const m = b.look === 'plate' ? M.PLATE : b.look === 'darkplate' ? M.DSTEEL : b.look === 'chain' ? M.CHAIN : b.look.startsWith('robe') ? (TEAM[b.look.slice(5)] || team) : team;
+    const m = b.look === 'jerkin_hide' ? M.HIDE : b.look.startsWith('jerkin') ? M.LEATHER : b.look === 'plate' ? M.PLATE : b.look === 'darkplate' ? M.DSTEEL : b.look === 'chain' ? M.CHAIN : b.look.startsWith('robe') ? (TEAM[b.look.slice(5)] || team) : team;
     if (b.look.startsWith('robe')) r.cone([0, 0, 2], [0, 0, -7], 4.4, 6.6, m, { mf: p => p[2] < -5.4 ? M.GOLD : 0 });   // the robe's skirt
     r.ell([0, 0, 3], [4.6, 6.6, 6.4], m, null, b.look.startsWith('robe') ? { mf: p => p[0] > 2 && Math.abs(p[1]) < 0.8 ? M.GOLD : 0 } : undefined);
-    for (const s of [-1, 1]) r.ell([0, s * 7, 6.5], [3.6, 3.4, 3], b.look === 'tunic' ? M.LEATHER : m);
+    for (const s of [-1, 1]) r.ell([0, s * 7, 6.5], [3.6, 3.4, 3], b.look === 'tunic' ? M.LEATHER : b.look.startsWith('jerkin') ? M.CLOTH_GREEN : m);
+  } else if (b.slot === 'shield' && b.look === 'quiver') {   // a leather quiver with three fletchings
+    r.cone([0, 0, -4], [0, 0, 7], 2.2, 2.6, M.LEATHER, { mf: p => p[2] > 5.6 || Math.abs(p[2] - 0.5) < 0.6 ? M.DARK : 0 });
+    for (const [y, m] of [[-1.1, M.CLOTH_WHITE], [0, M.CLOTH_RED], [1.1, M.CLOTH_WHITE]]) r.cone([0, y, 7], [0, y * 1.3, 11], 0.9, 0.4, m, { noShadow: true });
   } else if (b.slot === 'shield') {
     if (b.look === 'tower') { r.box([0, 0, 4], [0.8, 4.4, 7.4], team, null, { mf: p => Math.abs(p[1]) > 3.5 || Math.abs(p[2] - 4) > 6.5 ? M.IRON : Math.abs(p[1]) < 0.8 ? M.GOLD : 0 }); return (iconCache[k] = renderRig(r, Math.PI / 4, 26, 26, 13, 17)); }
     if (b.look === 'round') { r.ell([0, 0, 4], [1, 5, 5], M.WOOD, null, { mf: p => { const d2 = (p[1] ** 2 + (p[2] - 4) ** 2) / 25; return d2 > 0.74 || d2 < 0.06 ? M.IRON : 0; } }); return (iconCache[k] = renderRig(r, Math.PI / 4, 26, 26, 13, 17)); }

@@ -26,7 +26,7 @@ const params = new URLSearchParams(location.search);
 const SHAKE = params.get('shake') !== '0';
 
 // ---------------------------------------------------------------- state
-const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0, meteors: [], flashes: [], blasts: [], cones: [], ghosts: [], sparks: [], rings: [], walls: [], quakes: [], hooks: [], waves: [], impacts: [], frost: [], streaks: [], fissures: [], aftershocks: [], fireGround: [], zaps: [], iceBursts: [], devils: [], rocks: [], strikes: [] };
+const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null, msg: [], saveT: 0, kills: 0, meteors: [], flashes: [], blasts: [], cones: [], ghosts: [], sparks: [], rings: [], walls: [], quakes: [], hooks: [], waves: [], impacts: [], frost: [], streaks: [], fissures: [], aftershocks: [], fireGround: [], zaps: [], iceBursts: [], devils: [], rocks: [], strikes: [], traps: [], rain: [], falling: [], stuck: [], smoke: [] };
 const hero = {
   fam: 'hero', fi: 0, fj: 0, dir: 1, clip: 'idle', clock: 0, walk: 0, runT: 0, goT: 0, stopT: 0, atk: -1, combo: 0, swingEnd: -9, hitDone: false, stop: 0, flash: 0,
   hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, hurtT: 0, cast: -1,
@@ -49,17 +49,17 @@ function recalcHero() {
   STAT.armor = ['helm', 'chest', 'shield'].reduce((a, s) => a + (it(s)?.armor || 0), 0) + (mods.armorFlat || 0);
   STAT.block = it('shield')?.block || 0;
   // the mage trades life for a deep pool of mana that refills fast (spells are its only attack)
-  const mage = hero.cls === 'mage';
-  STAT.maxHp = (mage ? 32 : 40) + (hero.lvl - 1) * (mage ? 7 : 9) + (mods.hp || 0);
-  STAT.maxMana = (mage ? 45 : 20) + (hero.lvl - 1) * (mage ? 7 : 4) + (mods.mana || 0);
-  STAT.manaRegen = mage ? 4 + hero.lvl * 0.25 : 1.2;
+  const mage = hero.cls === 'mage', ranger = hero.cls === 'ranger';   // the ranger sits between: focus that refills steadily
+  STAT.maxHp = (mage ? 32 : ranger ? 36 : 40) + (hero.lvl - 1) * (mage ? 7 : ranger ? 8 : 9) + (mods.hp || 0);
+  STAT.maxMana = (mage ? 45 : ranger ? 30 : 20) + (hero.lvl - 1) * (mage ? 7 : ranger ? 5 : 4) + (mods.mana || 0);
+  STAT.manaRegen = mage ? 4 + hero.lvl * 0.25 : ranger ? 2.6 + hero.lvl * 0.15 : 1.2;
   STAT.leech = mods.leech || 0;
   STAT.crit = mods.crit || 0; STAT.thorns = mods.thorns || 0; STAT.atkSpeed = mods.atkSpeed || 0; STAT.regen = mods.regen || 0; STAT.fireburst = mods.fireburst || 0;
   STAT.speed = 4.2 * (1 + (mods.speed || 0) / 100);
   STAT.slow = !!w?.slow;
   // legendaries change how their piece looks (glowing ember blade, oak-leaf crown, ...)
   const lgd = ['weapon', 'helm', 'chest', 'shield'].map(s => e[s] && e[s].rarity === 'legend' ? (e[s].fx || (LEGENDARIES.find(L => L.name === e[s].name) || {}).fx) : null).filter(Boolean).join('|');
-  hero.look = { team: hero.team, helm: it('helm')?.look || 'none', chest: it('chest')?.look || 'tunic', weapon: w?.look || (mage ? 'staff' : 'sword'), shield: it('shield')?.look || 'none', lgd };
+  hero.look = { team: hero.team, helm: it('helm')?.look || 'none', chest: it('chest')?.look || 'tunic', weapon: w?.look || (mage ? 'staff' : ranger ? 'bow' : 'sword'), shield: it('shield')?.look || 'none', lgd };
   hero.hp = Math.min(hero.hp, STAT.maxHp); hero.mana = Math.min(hero.mana, STAT.maxMana);
 }
 const xpFor = l => Math.round(60 * Math.pow(l, 1.6));
@@ -75,7 +75,7 @@ function startLevel(level, seed, side = null) {
     if (LV.champsPlanned) LV.spawns.forEach((sp, n) => { if (sp.champ) makeChampion(enemies[n], R); });
     else for (const e of enemies) if (!e.def.unique && R() < champChance(LV.diff)) makeChampion(e, R); }
   makeNpcs(); resetSkills(); setupBoss();
-  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; hero.ultOn = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
+  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
   updateFov(hero.fi, hero.fj);
   flowT = 0; computeFlow();
   warmStep(1e9, prewarm());   // idle poses + the hero's walk now, behind the level fade; the rest during play
@@ -115,6 +115,7 @@ function prewarm() {
   // the hero's walk is needed at once; monsters' walks fill in during play
   for (let d = 0; d < 8; d++) for (let f = 0; f < 8; f++) warmQueue.push(['hero', hero.look, d, 'walk', f]);
   if (hero.cls === 'mage') for (let d = 0; d < 8; d++) for (let f = 0; f < 6; f++) warmQueue.push(['hero', hero.look, d, 'channel', f]);
+  if (hero.cls === 'ranger') for (let d = 0; d < 8; d++) for (let f = 0; f < 4; f++) warmQueue.push(['hero', hero.look, d, 'shoot', f]);
   const now = warmQueue.length;
   for (const [k, v] of fams) if (k !== 'hero' && !near.has(k)) for (let d = 0; d < 8; d++) warmQueue.push([v[0], v[1], d, 'idle', 0]);
   for (const [k, v] of fams) if (k !== 'hero') for (let d = 0; d < 8; d++) for (let f = 0; f < 8; f++) warmQueue.push([v[0], v[1], d, 'walk', f]);
@@ -204,6 +205,7 @@ function heroAttack() {
     if (heroBusy()) { hero.buf = G.t + 0.3; return; }
     hero.buf = 0; castMissiles(); return;
   }
+  if (hero.cls === 'ranger') { rangerShoot(); return; }   // round 33: the ranger's attack is a quick arrow (skills.js)
   if (heroBusy() && !canChain()) { if (!FEEL_OLD) hero.buf = G.t + 0.45; return; }   // a tap mid-swing is kept until the swing can chain (a heavy one takes longest)
   hero.buf = 0;
   if (hero.atk >= 0) hero.swingEnd = G.t;   // chained: the combo carries on
@@ -260,6 +262,7 @@ function drinkPotion() {
 const HITSTOP = [0.045, 0.08, 0.11], KNOCK = [5, 7.7, 11];   // knock speed: tiles/s, ~1/14 of it is the slide
 function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = false) {
   if (e.frozen > 0) dmg = Math.round(dmg * 1.4);   // frozen solid: hits land harder
+  if (e.markT > 0) { dmg = Math.round(dmg * (e.markK || 1.35)); if (e.markLeech) hero.hp = Math.min(STAT.maxHp, hero.hp + dmg * e.markLeech); }   // round 33: Hunter's Mark
   const heroStop = hero.stop;
   // shield-bearers block blows from the front while they aren't swinging. A heavy blow breaks the
   // guard for a while; finishers, area spells, a frozen or stunned shield-bearer all get through
@@ -396,7 +399,7 @@ function heroHitResolve(all = false, pow = 0) {
     if (d < 1.6 && (dx * fx + dy * fy) / (d || 1) > 0.3) hitProp(p);
   }
   // fury: the warrior's blows feed his skills (1.5 mana per enemy hit, up to 3 a swing)
-  if (nHit && hero.cls !== 'mage') hero.mana = Math.min(STAT.maxMana, hero.mana + Math.min(3, nHit) * 1.5);
+  if (nHit && hero.cls === 'warrior') hero.mana = Math.min(STAT.maxMana, hero.mana + Math.min(3, nHit) * 1.5);
   return any;
 }
 function breakBarrel(p) {
@@ -460,7 +463,7 @@ function unequip(slot) {
   if (!hero.equip[slot] || hero.bag.length >= BAG_SIZE) return;
   hero.bag.push(hero.equip[slot]); hero.equip[slot] = null; recalcHero(); prewarmHero();
 }
-function prewarmHero() { for (let d = 0; d < 8; d++) { warmQueue.unshift([ 'hero', hero.look, d, 'idle', 0]); if (hero.cls === 'mage') for (let f = 0; f < 6; f++) warmQueue.push(['hero', hero.look, d, 'channel', f]); for (let f = 0; f < 8; f++) warmQueue.push(['hero', hero.look, d, 'walk', f]); warmQueue.push(['hero', hero.look, d, 'go', 0], ['hero', hero.look, d, 'stop', 0]); } }
+function prewarmHero() { for (let d = 0; d < 8; d++) { warmQueue.unshift([ 'hero', hero.look, d, 'idle', 0]); if (hero.cls === 'mage') for (let f = 0; f < 6; f++) warmQueue.push(['hero', hero.look, d, 'channel', f]); if (hero.cls === 'ranger') for (let f = 0; f < 4; f++) warmQueue.push(['hero', hero.look, d, 'shoot', f]); for (let f = 0; f < 8; f++) warmQueue.push(['hero', hero.look, d, 'walk', f]); warmQueue.push(['hero', hero.look, d, 'go', 0], ['hero', hero.look, d, 'stop', 0]); } }
 
 // ---------------------------------------------------------------- update
 const input = { mx: 0, my: 0, attack: false, keys: new Set() };
@@ -499,6 +502,7 @@ function updateHero(dt) {
   hero.hp = Math.min(STAT.maxHp, hero.hp + dt * 0.25); hero.mana = Math.min(STAT.maxMana, hero.mana + dt * STAT.manaRegen);
   updateSkills(dt);
   if (hero.leap) { if (hero.stop > 0) { hero.stop -= dt; return; } hero.clock += dt; updateLeap(dt); updateFov(hero.fi, hero.fj); return; }   // in the air
+  if (hero.roll) { hero.clock += dt; updateRoll(dt); updateFov(hero.fi, hero.fj); return; }   // round 33: the ranger's leap
   if (hero.ultOn && hero.ultOn.kind === 'wrath') { if (hero.stop > 0) { hero.stop -= dt; return; } hero.clock += dt; updateWrath(dt); updateFov(hero.fi, hero.fj); return; }   // the ultimate's leap (the view must keep refreshing: it fades)
   if (input.attack || (hero.buf > G.t && (!heroBusy() || canChain()))) heroAttack();
   let vx = input.mx, vy = input.my;
@@ -555,13 +559,13 @@ function updateHero(dt) {
     if (hero.cast < 0) { hero.cast = -1; hero.clip = 'idle'; }
   }
   if (hero.atk >= 0) {
-    hero.clip = ATTACK_CLIPS[hero.combo] || 'attack';
+    hero.clip = hero.cls === 'ranger' && hero.combo !== 3 ? 'shoot' : ATTACK_CLIPS[hero.combo] || 'attack';
     hero.atk += dt * 1000 * (1 + ((STAT.atkSpeed || 0) + (hero.frenzy > 0 ? 50 : 0)) / 100);
     const sw = weaponSwing(hero.look, hero.combo), ki = swingKey(sw, hero.atk);
     if (ki >= 0 && sw[ki].mv) lungeHero(sw[ki].mv * dt * 1000 / sw[ki].ms);
     if (!hero.hitDone && hero.mag > 0) { const st = Math.min(hero.mag, dt * 4.5); lungeHero(st); hero.mag -= st; }
     if (ki >= 0 && sw[ki].hit && !hero.hitDone) {
-      hero.hitDone = true; if (hero.combo === 3) groundSlamHit(); else heroHitResolve(!!sw[ki].slam, hero.combo === 2 ? 2 : STAT.slow ? 1 : 0);
+      hero.hitDone = true; if (hero.cls === 'ranger') looseArrow(); else if (hero.combo === 3) groundSlamHit(); else heroHitResolve(!!sw[ki].slam, hero.combo === 2 ? 2 : STAT.slow ? 1 : 0);
       if (sw[ki].slam) {   // the ground slam: extra shake and a ring of dust
         if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.35);
         const [x, y] = screenOf(hero), [fx, fy] = dirVec(hero.dir), cx = x + (fx - fy) * 12, cy = y + (fx + fy) * 6;
@@ -634,6 +638,7 @@ function updateEnemy(e, dt) {
     if (e.burnTick <= 0) { e.burnTick = 0.5; G.elem = null; damageEnemy(e, e.burnDmg, e.fi, e.fj, false, 0, true); if (e.hp <= 0 && !e.deathKind) e.deathKind = 'ash'; if (e.dying >= 0) return; }
   }
   if (e.downT > 0) { e.downT -= dt; e.clip = 'death'; e.atk = -1; if (e.downT <= 0) e.clip = 'idle'; return; }   // knocked down: on the ground, then up
+  if (e.rootT > 0) { e.rootT -= dt; if (Math.random() < dt * 6) { const [x, y] = screenOf(e); pspawn(3, x + (Math.random() - 0.5) * 12, y, 2 + Math.random() * 6, 0, 0, 6, 0.4, Math.random() < 0.5 ? 55 : 54); } }
   if (e.slowT > 0) { e.slowT -= dt; if (Math.random() < dt * 5) { const [x, y] = screenOf(e); pspawn(3, x + (Math.random() - 0.5) * 14, y, 4 + Math.random() * e.def.chest, 0, 0, 8, 0.5, 118); } }
   if (Math.abs(e.kb[0]) + Math.abs(e.kb[1]) > 0.01) {
     tryMove(e, e.kb[0] * dt, e.kb[1] * dt, 0.25);
@@ -693,6 +698,7 @@ function updateEnemy(e, dt) {
     return;
   }
   if (m.charge && e.rush > 0) {
+    if (e.rootT > 0) e.rush = 0;
     e.rush -= dt;
     const sp = 10 * dt, f0 = e.fi, j0 = e.fj;
     tryMove(e, e.rdir[0] * sp, e.rdir[1] * sp, 0.25);
@@ -721,7 +727,7 @@ function updateEnemy(e, dt) {
     e.dir = dirFrom(dx, dy);
     if (e.cool <= 0) { e.atk = 0; e.hitDone = false; e.clip = 'idle'; return; }
     if (e.cool > 0.35) {   // between shots: a few sidesteps
-      const sd = Math.sin(G.t * 1.3 + e.seed * 7) > 0 ? 1 : -1, sp = m.speed / 16 * 0.55 * (e.slowT > 0 ? 0.5 : 1) * dt, f0 = e.fi, j0 = e.fj;
+      const sd = Math.sin(G.t * 1.3 + e.seed * 7) > 0 ? 1 : -1, sp = m.speed / 16 * 0.55 * (e.slowT > 0 ? 0.5 : 1) * (e.rootT > 0 ? 0 : 1) * dt, f0 = e.fi, j0 = e.fj;
       tryMove(e, -dy / d * sd * sp, dx / d * sd * sp, 0.25);
       e.walk += Math.hypot(e.fi - f0, e.fj - j0) / (FAMILIES[e.fam].gait || 0.32); e.clip = 'walk'; e.dir = dirFrom(dx, dy);
     } else e.clip = 'idle';
@@ -758,13 +764,14 @@ function updateEnemy(e, dt) {
   else mv = flowDir(e.fi, e.fj);
   if (!mv || d > 18) { e.clip = 'idle'; return; }
   const l = Math.hypot(mv[0], mv[1]) || 1, sp = m.speed / 16 * 1.2 * (e.speedK || 1) * (e.slowT > 0 ? 0.5 : 1) * dt;   // cone of cold slows to half
+  if (e.rootT > 0) { e.clip = 'idle'; return; }   // round 33: snared: can swing and shoot, can't walk
   const f0 = e.fi, j0 = e.fj;
   tryMove(e, mv[0] / l * sp, mv[1] / l * sp, 0.25);
   e.walk += Math.hypot(e.fi - f0, e.fj - j0) / (FAMILIES[e.fam].gait || 0.32);
   e.dir = dirFrom(mv[0], mv[1]); e.clip = 'walk';
 }
 function hurtHero(dmg, src) {
-  if (hero.dead || hero.leap || (hero.ultOn && hero.ultOn.kind === 'wrath')) return;   // nothing touches him in the air
+  if (hero.dead || hero.leap || hero.roll || (hero.ultOn && hero.ultOn.kind === 'wrath')) return;   // nothing touches him in the air
   if (Math.random() * 100 < STAT.block) { floater('BLOCK', hero.fi, hero.fj, 44, 31); sfx('block'); return; }
   dmg = Math.max(1, Math.round(dmg * 40 / (40 + STAT.armor * (hero.buff > 0 ? 1.5 : 1) * 2.5) * (hero.stoneskin > 0 ? 0.5 : 1)));
   hero.hp -= dmg; hero.flash = 0.06; hero.hurtT = 0.15; sfx('hurt');
@@ -813,11 +820,12 @@ function updateProjectiles(dt) {
           if (p.orb) break;   // the orb drifts through, zapping (updateOrb)
           if (p.pierce) {   // the piercing bolt goes on through, hitting each foe once
             if (p.hits.has(e)) continue;
-            p.hits.add(e); const c = spellCrit(); G.elem = 'arcane'; G.pierce = true; damageEnemy(e, spellDmg(c ? p.dmgK * 2 : p.dmgK), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, c, 0, true); G.elem = null; G.pierce = false;
-            impactFlash(e.fi, e.fj, p.z, 3); sfx('zap'); continue;
+            const arrow = p.kind === 'arrow';   // (the ranger's Piercing Shots use it too)
+            p.hits.add(e); const c = spellCrit(); G.elem = arrow ? p.elem || null : 'arcane'; G.pierce = true; damageEnemy(e, spellDmg(c ? p.dmgK * 2 : p.dmgK), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, c, 0, true); G.elem = null; G.pierce = false;
+            if (arrow) arrowBite(p, e); else { impactFlash(e.fi, e.fj, p.z, 3); sfx('zap'); } continue;
           }
           if (p.boom) { p.life = 0; break; }   // a fireball bursts on whatever it touches (below)
-          if (p.spell) { const c = spellCrit(); G.elem = p.elem || null; damageEnemy(e, spellDmg(c ? p.dmgK * 2 : p.dmgK), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, c, 0, true); G.elem = null; }
+          if (p.spell) { const c = spellCrit(); G.elem = p.elem || null; damageEnemy(e, spellDmg(c ? p.dmgK * 2 : p.dmgK), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, c, 0, true); G.elem = null; if (p.kind === 'arrow') arrowBite(p, e); }
           else damageEnemy(e, roll(p.dmg), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, false, 0, true);
           p.life = 0; break;
         }
@@ -1072,7 +1080,7 @@ function render() {
   heroRing(kx, ky + 1);
   base.sort((a, b) => a.depth - b.depth);
   for (const d of base) d.draw();
-  drawTelegraph(); drawImpactFx(); drawRocks(); drawMeteors(); drawLichFx(); drawWarriorFx();
+  drawTelegraph(); drawImpactFx(); drawRocks(); drawRangerGround(); drawMeteors(); drawLichFx(); drawWarriorFx();
   const charLevel = lightPass(chars, kx, ky);
   // the frame: the lit world doubled (shifted by the camera's half pixel), then the detail layer over it
   for (let y = 0; y < H; y++) {
@@ -1257,6 +1265,14 @@ function drawProjectile(p) {
   // on the detail layer, over the characters: blocks the size of a world pixel, placed at the finer position
   const X0 = Math.round(x * SPX) - cam2x, Y0 = Math.round((y - p.z) * SPX) - cam2y;
   const put = (a, b, c) => ovPutAt(X0 + a * SPX, Y0 + b * SPX, c);
+  if (p.kind === 'arrow' && p.owner === 'hero') {   // round 33: the ranger's arrow, at full detail: shaft, steel head, fletching
+    const l = Math.hypot(p.vx, p.vy) || 1, ux = (p.vx - p.vy) / l * 0.707, uy = (p.vx + p.vy) / l * 0.354, ul = Math.hypot(ux, uy), dx = ux / ul, dy = uy / ul;
+    for (let s = -13; s <= 10; s++) { const x = Math.round(X0 + dx * s), y = Math.round(Y0 + dy * s); ovSet(x, y - 1, BLK); ovSet(x, y + 2, BLK); }   // a dark outline so it reads on any floor
+    for (let s = -12; s <= 9; s++) { const x = Math.round(X0 + dx * s), y = Math.round(Y0 + dy * s); ovSet(x, y, s > 6 ? 27 : BONE[2]); ovSet(x, y + 1, s > 6 ? STEEL[3] : WOOD[3]); }
+    for (let s = -12; s <= -8; s++) for (const sd of [-1, 1]) { const x = Math.round(X0 + dx * s - dy * sd * (s + 14) * 0.5), y = Math.round(Y0 + dy * s + dx * sd * (s + 14) * 0.5); ovSet(x, y, p.fire ? 16 : p.mark ? 23 : 27); }
+    if (p.fire) for (let k = 0; k < 3; k++) ovSet(Math.round(X0 + dx * 10 + (Math.random() - 0.5) * 3), Math.round(Y0 + dy * 10 - Math.random() * 3), 17);
+    return;
+  }
   if (p.kind === 'arrow') {
     const l = Math.hypot(p.vx, p.vy), dx = (p.vx - p.vy) / l * 16 / 22.6, dy = (p.vx + p.vy) / l * 8 / 22.6;
     for (let s = -4; s <= 3; s++) put(Math.round(dx * s * 1.4), Math.round(dy * s * 1.4), s > 2 ? 30 : 25);
@@ -1367,7 +1383,7 @@ function lightPass(chars, kx, ky) {
 // ---------------------------------------------------------------- save / load (versioned)
 const SAVE_KEY = 'dcg-save', SAVE_V = 1;
 // one save per class: the warrior keeps the original key, so older saves still load
-const saveKey = cls => cls === 'mage' ? SAVE_KEY + '-mage' : SAVE_KEY;
+const saveKey = cls => cls === 'mage' || cls === 'ranger' ? SAVE_KEY + '-' + cls : SAVE_KEY;
 // ---------------------------------------------------------------- town portal (round 25)
 // The portal button opens a blue gate beside the hero. Walking into it from a dungeon or forest
 // goes to the act's town and leaves a gate there; that one leads back to the same spot, with the
@@ -1456,7 +1472,7 @@ function loadSave(cls = 'warrior') {
 function newHero(cls = 'warrior') {
   Object.assign(hero, { cls, hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, bag: [], mods: {}, ult: 0, equip: { weapon: null, helm: null, chest: null, shield: null } });
   const R = rng(5);
-  const kit = cls === 'mage' ? ['oak_staff', 'apprentice_robe', 'wizard_hat'] : ['short_sword', 'tunic'];
+  const kit = cls === 'mage' ? ['oak_staff', 'apprentice_robe', 'wizard_hat'] : cls === 'ranger' ? ['hunting_bow', 'leather_jerkin', 'ranger_hood', 'quiver'] : ['short_sword', 'tunic'];
   for (const b of kit) { const it = rollItem(R, 1, b); it.rarity = 'normal'; it.mods = {}; hero.equip[ITEM_BASES[b].slot] = it; }
   setSkillsFor(cls);
   recalcHero(); hero.hp = STAT.maxHp; hero.mana = STAT.maxMana;

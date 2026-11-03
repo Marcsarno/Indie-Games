@@ -1,0 +1,90 @@
+<title>The Ranger</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  /* layout: one narrow column, one section per part with its picture first */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul { margin: 0; max-width: 64ch; }
+  ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .frame img.smooth { image-rendering: auto; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .tw { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+</style>
+<main>
+  <header>
+    <h1>The Ranger</h1>
+    <p class="lede">Dungeon of Bones, round 33: a third class. A hooded archer with four skills, three modifiers for each, an ultimate and its own gear.</p>
+  </header>
+  <section>
+    <h2>The look</h2>
+    <figure>
+      <div class="frame"><img src="lineup.png" alt="The warrior, the mage and the new ranger side by side from three angles; the ranger wears a green hood and cowl, a leather jerkin over a green shirt, leather bracers, and carries a bow at the side with a quiver on the back" width="518" height="546"></div>
+      <figcaption>Warrior, mage, ranger.</figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><img src="looks.png" alt="Rows of ranger sprites in eight directions: green hood with leather jerkin; dark hood with studded jerkin and longbow; green hood with dark hide coat and horn bow; the bow drawn to the cheek with an arrow nocked; a walking frame" width="1037" height="818"></div>
+      <figcaption>Rows, top to bottom: the starting gear, the Shadow Hood with the Studded Jerkin and Longbow, the Hide Coat with the Horn Bow, the draw, and walking.</figcaption>
+    </figure>
+    <p>Drawn the same way as the other heroes, with two review passes. The first had a big cowl that hid the jerkin, and the bow at rest was a thin line behind the leg. The second shrank the cowl, held the bow out from the body, and made the quiver larger, with fletchings showing over the shoulder.</p>
+  </section>
+  <section>
+    <h2>Skills</h2>
+    <figure>
+      <div class="frame"><img src="skills.png" alt="Six shots: the ranger drawing at a monster; a fan of arrows leaving the bow; a wide net trap snapping on three monsters; the evasive leap in mid-air; a gold target lock around the marked monster; arrows falling over a group" width="1062" height="766"></div>
+      <figcaption>Top row: the attack, Multishot, Snare Trap (Wide Net). Bottom row: Evasive Leap, Hunter's Mark, Rain of Arrows.</figcaption>
+    </figure>
+    <div class="tw"><table>
+      <tr><th>Button</th><th>What it does</th><th>Modifiers</th></tr>
+      <tr><td>Attack</td><td>A quick arrow at the nearest monster in sight, about three a second while held. A marked monster is shot first.</td><td>None</td></tr>
+      <tr><td>Multishot (L1)</td><td>A fan of five arrows.</td><td>Volley (nine, wider) · Piercing Shots · Fire Arrows</td></tr>
+      <tr><td>Snare Trap (L2)</td><td>Thrown at a monster's feet. It arms, then snaps on the first monster to step in, rooting everything nearby for 3 s. Rooted monsters can still swing and shoot, but can't walk.</td><td>Spike Trap (no root, a heavy blow) · Wide Net · Three Traps</td></tr>
+      <tr><td>Evasive Leap (L3)</td><td>A hop back away from the nearest monster (or along the stick), untouchable in the air. Lands loosing three arrows.</td><td>Smoke Bomb (dazes what you left) · Long Leap · Leaping Volley</td></tr>
+      <tr><td>Hunter's Mark (L4)</td><td>Marks the toughest monster in sight (bosses and elites first) for 8 s. It takes 35% more damage, and a gold target lock shows where it is, even behind walls.</td><td>Spreading Mark · Death Mark (+70%, 5 s) · Prey's Blood (heals you)</td></tr>
+      <tr><td>Rain of Arrows (ultimate)</td><td>Three seconds of arrows falling over the middle of the biggest group. Each one that lands hurts and pins for a moment. The missed ones stay stuck in the floor for a few seconds.</td><td>None</td></tr>
+    </table></div>
+    <p>Its resource is called focus. It's steadier than the warrior's fury and smaller than the mage's mana, and it refills on its own. Health sits between the two other classes.</p>
+    <p><strong>Note:</strong> "Evasive Roll" became Evasive Leap. The character rig can't tumble yet, so it's a quick backward hop with dust and arrows on landing. A real roll needs new rig work, which I can do in a later pass.</p>
+  </section>
+  <section>
+    <h2>Gear and the title screen</h2>
+    <figure>
+      <div class="frame"><img src="title-hud.png" alt="Left: the title screen with three columns, Warrior, Mage and Ranger, each with its own New Game and Continue. Right: the ranger in a crypt with green focus bar, a bow attack button and the four skill buttons" width="1086" height="840"></div>
+      <figcaption>Each class has its own save. On the right: the ranger's buttons and green focus bar.</figcaption>
+    </figure>
+    <ul>
+      <li><strong>Bows:</strong> Hunting Bow, Longbow, Horn Bow. <strong>Chest:</strong> Leather Jerkin, Studded Jerkin, Hide Coat. <strong>Hoods:</strong> Ranger Hood, Shadow Hood. <strong>Quivers</strong> go in the shield slot: Quiver and War Quiver.</li>
+      <li>Two legendaries: <strong>Windrunner</strong> (a longbow: +30% attack speed, +15% move speed) and <strong>Wolfhide</strong> (a hide coat: +30 life, +10% crit). One set: <strong>Stalker's</strong> (cowl, hide and quiver).</li>
+      <li>A ranger only finds ranger gear, as the other classes only find theirs. The warrior's old "Ranger's" set is now called Scout's, to avoid a mix-up.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Tested</h2>
+    <p>A new test fires every skill and modifier at test dummies:</p>
+    <ul>
+      <li>Every trap snaps and roots the monsters in reach, and a rooted monster doesn't move.</li>
+      <li>The leap takes no damage in the air.</li>
+      <li>The mark picks the elite over a weak monster, and the elite takes 35% more damage (70% with Death Mark). Spreading Mark passes on when the target dies.</li>
+      <li>Rain of Arrows hits the whole group of seven.</li>
+      <li>All 300 test drops were ranger gear.</li>
+    </ul>
+    <p>The full run through every level passes for all three classes, and all the earlier tests still pass.</p>
+  </section>
+</main>

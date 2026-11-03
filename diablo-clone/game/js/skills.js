@@ -17,12 +17,19 @@ const SKILLSETS = {
     { id: 'meteor', name: 'METEOR', lvl: 3, mana: 22, cd: 9 },
     { id: 'blink', name: 'BLINK', lvl: 4, mana: 8, cd: 3 },
   ],
+  // round 33: the ranger's attack button looses single arrows (no focus); these are its four
+  ranger: [
+    { id: 'multi', name: 'MULTISHOT', lvl: 1, mana: 8, cd: 1.2 },
+    { id: 'trap', name: 'SNARE TRAP', lvl: 2, mana: 10, cd: 4 },
+    { id: 'roll', name: 'EVASIVE LEAP', lvl: 3, mana: 6, cd: 3 },
+    { id: 'mark', name: "HUNTER'S MARK", lvl: 4, mana: 12, cd: 8 },
+  ],
 };
 let SKILLS = SKILLSETS.warrior;
 function setSkillsFor(cls) { SKILLS = SKILLSETS[cls] || SKILLSETS.warrior; }
-const CD = { bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, leap: 0, fireball: 0, cone: 0, meteor: 0, blink: 0 };
+const CD = { bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, leap: 0, fireball: 0, cone: 0, meteor: 0, blink: 0, multi: 0, trap: 0, roll: 0, mark: 0 };
 function resetSkills() { for (const k in CD) CD[k] = 0; hero.whirl = 0; hero.dash = 0; hero.buff = 0; }
-const heroBusy = () => hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0 || !!hero.leap || !!hero.ultOn;
+const heroBusy = () => hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0 || !!hero.leap || !!hero.ultOn || !!hero.roll;
 // one hit's damage, with the war cry bonus
 const heroDmg = (k = 1) => Math.max(1, Math.round(roll(STAT.dmg) * k * (hero.buff > 0 ? 1.4 : 1)));
 
@@ -50,6 +57,10 @@ function useSkill(i) {
   if (s.id === 'cone') coneOfCold();
   if (s.id === 'blink') blink();
   if (s.id === 'meteor') castMeteor();
+  if (s.id === 'multi') multishot();
+  if (s.id === 'trap') { if (!throwTrap()) { hero.mana += skillCost(s); CD.trap = 0; } }
+  if (s.id === 'roll') { if (!startRoll()) { hero.mana += skillCost(s); CD.roll = 0; } }
+  if (s.id === 'mark') { if (!huntersMark()) { hero.mana += skillCost(s); CD.mark = 0; } }
 }
 
 // ---------------------------------------------------------------- the warrior's skills (round 24)
@@ -183,6 +194,26 @@ const SKILL_MODS = {
     { id: 'shower', name: 'SHOWER', desc: 'THREE SMALLER METEORS AROUND THE TARGET' },
     { id: 'molten', name: 'MOLTEN CRATER', desc: 'THE CRATER BURNS FOR 4 SECONDS' },
     { id: 'comet', name: 'COMET', desc: 'A BALL OF ICE: FREEZES INSTEAD OF BURNING' },
+  ],
+  multi: [
+    { id: 'wide', name: 'VOLLEY', desc: 'NINE ARROWS IN A WIDE FAN, EACH A LITTLE WEAKER' },
+    { id: 'pierce', name: 'PIERCING SHOTS', desc: 'THE ARROWS GO THROUGH EVERY FOE IN LINE' },
+    { id: 'fire', name: 'FIRE ARROWS', desc: 'BURNING ARROWS THAT SET FOES ALIGHT' },
+  ],
+  trap: [
+    { id: 'spike', name: 'SPIKE TRAP', desc: 'NO SNARE: IT SPRINGS FOR A HEAVY BLOW' },
+    { id: 'net', name: 'WIDE NET', desc: 'SNARES EVERYTHING IN A WIDER RING, LONGER' },
+    { id: 'triple', name: 'THREE TRAPS', desc: 'THROWS THREE SMALLER TRAPS IN A SPREAD' },
+  ],
+  roll: [
+    { id: 'smoke', name: 'SMOKE BOMB', desc: 'LEAVES SMOKE THAT DAZES FOES WHERE YOU STOOD' },
+    { id: 'long', name: 'LONG LEAP', desc: 'JUMPS TWICE AS FAR' },
+    { id: 'volley', name: 'LEAPING VOLLEY', desc: 'FIVE STRONGER ARROWS AS YOU LAND' },
+  ],
+  mark: [
+    { id: 'spread', name: 'SPREADING MARK', desc: 'WHEN THE MARKED DIES, THE MARK JUMPS ON' },
+    { id: 'death', name: 'DEATH MARK', desc: 'TAKES 70% MORE DAMAGE, BUT ONLY 5 SECONDS' },
+    { id: 'blood', name: "PREY'S BLOOD", desc: 'HITS ON THE MARKED HEAL YOU' },
   ],
   blink: [
     { id: 'burst', name: 'ARCANE BURST', desc: 'A BLAST WHERE YOU LAND THAT THROWS FOES BACK' },
@@ -1129,7 +1160,7 @@ function drawStreaks() {   // the blink's streak: a white core in an arcane band
   }
 }
 function drawImpactFlashes() {
-  drawStreaks(); drawHookChains(); drawMods30(); drawStrikes();
+  drawStreaks(); drawHookChains(); drawMods30(); drawStrikes(); drawRangerFx();
   for (const f of G.impacts) {
     const [x, y] = iso(f.fi, f.fj), X0 = Math.round(x * SPX - cam2x), Y0 = Math.round((y - f.z) * SPX - cam2y), p = 1 - f.t / f.t0, R = f.size * (0.6 + p * 0.6);
     // a white core with four spikes, the first frame solid, then hollowing out
@@ -1294,10 +1325,11 @@ const ULT_LVL = 10;
 const ULTS = {
   warrior: { id: 'wrath', name: 'WRATH OF THE MOUNTAIN' },
   mage: { id: 'storm', name: 'ARCANE STORM' },
+  ranger: { id: 'rain', name: 'RAIN OF ARROWS' },
 };
 const ultReady = () => hero.lvl >= ULT_LVL && (hero.ult || 0) >= 100;
 function ultGain(e, dmg, killed) {
-  if (hero.lvl < ULT_LVL || hero.ultOn || G.rocks.length || !(e.maxHp > 0)) return;
+  if (hero.lvl < ULT_LVL || hero.ultOn || G.rocks.length || G.rain.length || !(e.maxHp > 0)) return;
   let g = 4 * Math.max(0, dmg) / e.maxHp;
   if (killed) g += e.def.unique ? 20 : e.champ || e.def.elite ? 6 : 1;
   const was = hero.ult || 0; hero.ult = Math.min(100, was + g);
@@ -1311,7 +1343,7 @@ function useUlt() {
   if (hero.castKind === 'missile' && hero.cast >= 0) { hero.cast = -1; hero.castFn = null; }
   if (heroBusy()) return;
   hero.ult = 0; btnFx(9).press = 0.2;
-  if (hero.cls === 'mage') startStorm(); else startWrath();
+  if (hero.cls === 'mage') startStorm(); else if (hero.cls === 'ranger') startRain(); else startWrath();
 }
 // Wrath of the Mountain: the warrior leaps straight up, hangs, and drives down; a huge ring of
 // ground shatters, everything is knocked down, then rocks rain over the area
@@ -1431,7 +1463,7 @@ function updateStorm(dt) {
 }
 function updateUlt(dt) {
   for (const s of G.strikes) s.t -= dt; G.strikes = G.strikes.filter(s => s.t > 0);
-  updateRocks(dt);
+  updateRocks(dt); updateRanger(dt);
   if (hero.ultOn && hero.ultOn.kind === 'storm') updateStorm(dt);
 }
 // detail layer: lightning from the top of the screen down to the struck spot, jagged, white core
@@ -1461,3 +1493,250 @@ const glyphStorm = (cx, cy) => {
   for (let a = 0; a < 30; a++) { const t = a / 30 * 6.283, r = 7; put(cx + Math.cos(t) * r, cy - 3 + Math.sin(t) * r * 0.35, 39); }   // the cloud's ring
   for (const ox of [-4, 1, 5]) { line(cx + ox, cy - 2, cx + ox - 2, cy + 3, 40); line(cx + ox - 2, cy + 3, cx + ox + 1, cy + 3, 40); line(cx + ox + 1, cy + 3, cx + ox - 1, cy + 8, 27); }
 };
+
+// ---------------------------------------------------------------- the ranger (round 33)
+// The attack looses one quick arrow at the nearest foe in sight (held to keep firing). Skills:
+// Multishot (a fan), Snare Trap (thrown at a foe's feet; snaps shut and roots), Evasive Leap (a hop
+// back away from danger, loosing arrows on landing), Hunter's Mark (the toughest foe in sight takes
+// more damage and shows through walls). Ultimate: Rain of Arrows.
+const ARROW_SP = 13, ARROW_RANGE = 9;
+function rangerTarget(range = ARROW_RANGE) {
+  // the marked foe first, if it can be shot; else the nearest in sight
+  const m = enemies.find(e => alive(e) && e.markT > 0 && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < range && los(hero.fi, hero.fj, e.fi, e.fj));
+  return m || nearestEnemy(range, true);
+}
+function rangerShoot() {
+  const tr = LV.outdoor && nearTrader();
+  if (tr) { if (G.t > (hero.tradeT || 0)) { hero.tradeT = G.t + 0.6; trade(tr); } return; }
+  if (heroBusy()) { hero.buf = G.t + 0.3; return; }
+  hero.buf = 0;
+  const t = rangerTarget(); hero.shotAt = t;
+  if (t) hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
+  hero.combo = 0; hero.atk = 0; hero.hitDone = false; hero.approach = null; hero.mag = 0;
+}
+// where an arrow leaves: in front of the bow, at chest height
+function bowTip() { const [fx, fy] = dirVec(hero.dir); return [hero.fi + fx * 0.5 - fy * 0.15, hero.fj + fy * 0.5 + fx * 0.15]; }
+function shootArrow(a, o = {}) {
+  const [ox, oy] = bowTip(), sp = o.sp || ARROW_SP;
+  projectiles.push(Object.assign({ kind: 'arrow', fi: ox, fj: oy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, z: 20, life: ARROW_RANGE / sp, owner: 'hero', spell: true, dmgK: 1, age: 0, elem: null }, o));
+}
+// the angle from the bow to a target (or straight ahead)
+function aimAngle(t) {
+  if (!t) { const [fx, fy] = dirVec(hero.dir); return Math.atan2(fy, fx); }
+  const [ox, oy] = bowTip(); return Math.atan2(t.fj - oy, t.fi - ox);
+}
+function looseArrow() {
+  const t = hero.shotAt && alive(hero.shotAt) ? hero.shotAt : rangerTarget();
+  if (t) hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
+  shootArrow(aimAngle(t), { dmgK: 1.05 });
+  sfx('twang');
+}
+// an arrow biting: a spark of splinters, a thunk, a small push
+function arrowBite(p, e) {
+  const [x, y] = screenOf(e);
+  for (let k = 0; k < 5; k++) { const a = Math.atan2(p.vy, p.vx) + (Math.random() - 0.5) * 1.6; pspawn(4, x, y, 14, Math.cos(a) * 40, Math.sin(a) * 20, 6, 0.14, k % 2 ? WOOD[3] : 27); }
+  if (alive(e) && !e.def.unique) { const l = Math.hypot(p.vx, p.vy) || 1; e.kb = [e.kb[0] + p.vx / l * 1.6, e.kb[1] + p.vy / l * 1.6]; }
+  if (p.fire) sfx('sizzle'); sfx('thunk');
+}
+// Multishot: a fan of five (Volley: nine, wider), Piercing Shots go through, Fire Arrows burn
+function multishot() {
+  const mod = skillMod('multi'), t = rangerTarget(), a0 = aimAngle(t);
+  if (t) hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
+  const n = mod === 'wide' ? 9 : 5, spread = mod === 'wide' ? 1.4 : 0.8, k = mod === 'wide' ? 0.5 : 0.65;
+  for (let i = 0; i < n; i++) {
+    const a = a0 + (i / (n - 1) - 0.5) * spread;
+    shootArrow(a, { dmgK: k, pierce: mod === 'pierce', hits: mod === 'pierce' ? new Set() : null, fire: mod === 'fire', elem: mod === 'fire' ? 'fire' : null, sp: ARROW_SP * (0.95 + Math.random() * 0.1) });
+  }
+  hero.combo = 0; hero.atk = 70; hero.hitDone = true; hero.approach = null;   // the release pose, already loosed
+  sfx('twang'); sfx('swing'); if (mod === 'fire') sfx('fireball');
+}
+// Snare Trap: thrown to a foe's feet (or ahead); arms in 0.4 s; the first foe to step in snaps it
+function throwTrap() {
+  const mod = skillMod('trap'), t = rangerTarget(7);
+  const [fx, fy] = dirVec(hero.dir), at = t ? [t.fi, t.fj] : [hero.fi + fx * 2.5, hero.fj + fy * 2.5];
+  if (t) hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
+  const spots = mod === 'triple' ? [-0.55, 0, 0.55].map(da => { const a = Math.atan2(at[1] - hero.fj, at[0] - hero.fi) + da, d = Math.hypot(at[0] - hero.fi, at[1] - hero.fj); return [hero.fi + Math.cos(a) * d, hero.fj + Math.sin(a) * d]; }) : [at];
+  let n = 0;
+  for (const s of spots) {
+    if (blocked(s[0], s[1])) continue;
+    G.traps.push({ fi: s[0], fj: s[1], from: [hero.fi, hero.fj], fly: 0.25, arm: 0.4, life: 15, mod, r: mod === 'net' ? 2.6 : mod === 'triple' ? 1.1 : 1.6, small: mod === 'triple' });
+    n++;
+  }
+  if (!n) return false;
+  while (G.traps.length > 6) G.traps.shift();
+  hero.combo = 0; hero.atk = 70; hero.hitDone = true; sfx('swing'); sfx('clank');
+  return true;
+}
+function snapTrap(tp) {
+  tp.snapT = 0.5; tp.life = 0.5;
+  const spike = tp.mod === 'spike';
+  G.pierce = true; G.elem = spike ? 'heavy' : null;
+  for (const e of enemies) {
+    if (!alive(e) || Math.hypot(e.fi - tp.fi, e.fj - tp.fj) > tp.r + (e.def.unique ? 0.4 : 0)) continue;
+    wake(e); const c = spellCrit();
+    damageEnemy(e, spellDmg((c ? 2 : 1) * (spike ? 2.6 : tp.small ? 0.8 : 1.1)), tp.fi, tp.fj, c, spike ? 1 : 0, true);
+    if (alive(e) && !spike) e.rootT = Math.max(e.rootT || 0, (e.def.unique ? 1.2 : 3) * (tp.mod === 'net' ? 1.4 : 1));
+  }
+  G.pierce = false; G.elem = null;
+  const [x, y] = iso(tp.fi, tp.fj);
+  for (let k = 0; k < 14; k++) { const a = k / 14 * 6.283; pspawn(4, x, y, 3, Math.cos(a) * 50, Math.sin(a) * 25, 10, 0.2, k % 2 ? STEEL[4] : 27); }
+  if (!spike) shockwave(tp.fi, tp.fj, tp.r, 0.25, [55, 54]); else { rubble(x, y, 8, 50); impactFlash(tp.fi, tp.fj, 3, 5); }
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.15);
+  sfx('clank'); sfx('crack');
+}
+// Evasive Leap: a hop back, away from the nearest foe (or along the stick), untouchable in the air;
+// three arrows loosed at the nearest foe on landing
+function startRoll() {
+  const mod = skillMod('roll'), dist0 = mod === 'long' ? 5.5 : 3.2;
+  let dx, dy;
+  if (Math.hypot(input.mx, input.my) > 0.2) [dx, dy] = stickToGround(input.mx, input.my);
+  else { const t = nearestEnemy(6); if (t) { const l = Math.hypot(hero.fi - t.fi, hero.fj - t.fj) || 1; dx = (hero.fi - t.fi) / l; dy = (hero.fj - t.fj) / l; } else { const [fx, fy] = dirVec(hero.dir); dx = -fx; dy = -fy; } }
+  let dist = 0;
+  for (let s = 0.25; s <= dist0; s += 0.25) { if (blocked(hero.fi + dx * s, hero.fj + dy * s)) break; dist = s; }
+  if (dist < 0.75) return false;
+  hero.roll = { from: [hero.fi, hero.fj], to: [hero.fi + dx * dist, hero.fj + dy * dist], t: 0, dur: 0.26 + dist * 0.03, mod };
+  hero.atk = -1; hero.cast = -1; hero.approach = null;
+  if (mod === 'smoke') { G.smoke.push({ fi: hero.fi, fj: hero.fj, t: 3, t0: 3, r: 2 }); for (const e of enemies) if (alive(e) && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 2.2 && !e.def.unique) { e.stun = Math.max(e.stun || 0, 1.5); e.atk = -1; } sfx('whoomp'); }
+  sfx('swing');
+  return true;
+}
+function updateRoll(dt) {
+  const R = hero.roll; R.t += dt;
+  const u = Math.min(1, R.t / R.dur), e = u * (2 - u);
+  hero.fi = R.from[0] + (R.to[0] - R.from[0]) * e; hero.fj = R.from[1] + (R.to[1] - R.from[1]) * e;
+  hero.leapZ = Math.sin(u * Math.PI) * 9;
+  hero.clip = 'stop';   // leaning back through the hop
+  if (Math.random() < 0.7) { const [x, y] = screenOf(hero); pspawn(5, x, y, 1, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 8, 6, 1, LV.outdoor ? DIRT[3] : S[5]); }
+  if (u >= 1) {
+    hero.roll = null; hero.leapZ = 0; hero.clip = 'idle';
+    const [x, y] = screenOf(hero); for (let k = 0; k < 10; k++) { const a = k / 10 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 40, Math.sin(a) * 20, 12, 1, LV.outdoor ? DIRT[3] : S[5]); }
+    const t = rangerTarget(8);
+    if (t) {   // landing: loose at the nearest
+      hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
+      const a0 = aimAngle(t), n = R.mod === 'volley' ? 5 : 3, k = R.mod === 'volley' ? 0.85 : 0.6;
+      for (let i = 0; i < n; i++) shootArrow(a0 + (i / (n - 1) - 0.5) * 0.3, { dmgK: k });
+      hero.combo = 0; hero.atk = 70; hero.hitDone = true; sfx('twang');
+    }
+  }
+}
+// Hunter's Mark: the toughest foe in sight (a boss or elite first, else the one with most life)
+function huntersMark(from = null) {
+  const mod = skillMod('mark');
+  const foes = enemies.filter(e => alive(e) && e !== from && (from ? Math.hypot(e.fi - from.fi, e.fj - from.fj) < 6 : LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] >= 0.3 && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 10));
+  if (!foes.length) { if (!from) say('NOTHING TO MARK', 25, 1); return false; }
+  const rank = e => (e.def.unique ? 3e6 : e.champ || e.def.elite ? 2e6 : 0) + e.hp - (from ? Math.hypot(e.fi - from.fi, e.fj - from.fj) * 50 : 0);
+  const t = foes.sort((a, b) => rank(b) - rank(a))[0];
+  for (const e of enemies) if (e.markT > 0 && !from) e.markT = 0;   // one mark at a time
+  t.markT = mod === 'death' ? 5 : 8; t.markK = mod === 'death' ? 1.7 : 1.35; t.markLeech = mod === 'blood' ? 0.15 : 0; t.markSpread = mod === 'spread';
+  wake(t); impactFlash(t.fi, t.fj, t.def.chest + 8, 6); sfx('clink'); if (!from) sfx('cry');
+  return true;
+}
+// Rain of Arrows: a storm of arrows falls over the thickest group in reach for three seconds; every
+// one that lands on a foe hurts it and pins it in place a moment
+function startRain() {
+  let best = null, bn = -1;
+  for (const e of enemies) {
+    if (!alive(e) || LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] < 0.3 || Math.hypot(e.fi - hero.fi, e.fj - hero.fj) > 9) continue;
+    let n = 0; for (const o of enemies) if (alive(o) && Math.hypot(o.fi - e.fi, o.fj - e.fj) < 3) n++;
+    if (n > bn) { bn = n; best = e; }
+  }
+  const [fx, fy] = dirVec(hero.dir);
+  let at = [hero.fi + fx * 4, hero.fj + fy * 4];
+  if (best) {   // the middle of that group, so the circle covers all of it
+    const g = enemies.filter(o => alive(o) && Math.hypot(o.fi - best.fi, o.fj - best.fj) < 3);
+    at = [g.reduce((a, o) => a + o.fi, 0) / g.length, g.reduce((a, o) => a + o.fj, 0) / g.length];
+  }
+  G.rain.push({ fi: at[0], fj: at[1], t: 3, next: 0, r: 3.0 });
+  hero.dir = dirFrom(at[0] - hero.fi, at[1] - hero.fj); hero.combo = 0; hero.atk = 0; hero.hitDone = true;   // loosed into the sky
+  say('RAIN OF ARROWS!', 55, 1.6); sfx('twang'); sfx('whoomp');
+  for (let k = 0; k < 12; k++) { const [x, y] = screenOf(hero); pspawn(4, x, y, 30, (Math.random() - 0.5) * 20, 0, 180 + Math.random() * 60, 0.3, 27); }   // a sheaf sent straight up
+}
+function updateRanger(dt) {
+  // traps: thrown in an arc, arm, wait, snap
+  for (const tp of G.traps) {
+    if (tp.fly > 0) { tp.fly -= dt; continue; }
+    tp.life -= dt;
+    if (tp.snapT > 0) { tp.snapT -= dt; continue; }
+    if (tp.arm > 0) { tp.arm -= dt; if (tp.arm <= 0) sfx('clink'); continue; }
+    if (enemies.some(e => alive(e) && Math.hypot(e.fi - tp.fi, e.fj - tp.fj) < (tp.small ? 0.7 : 0.85) + (e.def.unique ? 0.4 : 0))) snapTrap(tp);
+  }
+  G.traps = G.traps.filter(tp => tp.life > 0);
+  // marks: count down; Spreading Mark passes on from a dead foe
+  for (const e of enemies) if (e.markT > 0) { if (!alive(e)) { const sp = e.markSpread; e.markT = 0; if (sp) huntersMark(e); } else e.markT -= dt; }
+  for (const s of G.smoke) s.t -= dt; G.smoke = G.smoke.filter(s => s.t > 0);
+  // the rain: an arrow every 0.025 s somewhere in the circle, falling from on high
+  for (const R of G.rain) {
+    R.t -= dt; R.next -= dt;
+    while (R.next <= 0 && R.t > 0) {
+      R.next += 0.025;
+      const a = Math.random() * 6.283, d = Math.sqrt(Math.random()) * R.r, fi = R.fi + Math.cos(a) * d, fj = R.fj + Math.sin(a) * d;
+      if (!blocked(fi, fj)) G.falling.push({ fi, fj, z: 150 + Math.random() * 40, vz: 420 });
+    }
+  }
+  G.rain = G.rain.filter(R => R.t > 0);
+  for (const f of G.falling) {
+    f.z -= f.vz * dt; if (f.z > 0) continue;
+    f.done = true;
+    const e = enemies.find(o => alive(o) && Math.hypot(o.fi - f.fi, o.fj - f.fj) < 0.7 + (o.def.unique ? 0.4 : 0));
+    if (e) { wake(e); const c = spellCrit(); G.pierce = true; damageEnemy(e, spellDmg(c ? 2.4 : 1.2), f.fi - 0.05, f.fj - 0.05, c, 0, true); G.pierce = false; if (alive(e)) e.rootT = Math.max(e.rootT || 0, e.def.unique ? 0.25 : 0.6); sfx('thunk'); }
+    else { G.stuck.push({ fi: f.fi, fj: f.fj, t: 3 + Math.random(), seed: (Math.random() * 1e6) | 0 }); const [x, y] = iso(f.fi, f.fj); pspawn(5, x, y, 1, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 10, 8, 1, LV.outdoor ? DIRT[3] : S[5]); }
+  }
+  G.falling = G.falling.filter(f => !f.done);
+  for (const s of G.stuck) s.t -= dt; G.stuck = G.stuck.filter(s => s.t > 0);
+  if (G.stuck.length > 120) G.stuck.splice(0, G.stuck.length - 120);
+}
+// world layer: traps (iron jaws in a ring, open then snapped), arrows stuck in the ground, smoke
+function drawRangerGround() {
+  const put = (x, y, v) => { if (x >= 0 && y >= 0 && x < W && y < H && !cid[y * W + x]) scr[y * W + x] = v; };
+  for (const tp of G.traps) {
+    let fi = tp.fi, fj = tp.fj, z = 0;
+    if (tp.fly > 0) { const u = 1 - tp.fly / 0.25; fi = tp.from[0] + (tp.fi - tp.from[0]) * u; fj = tp.from[1] + (tp.fj - tp.from[1]) * u; z = Math.sin(u * Math.PI) * 16; }
+    const [x0, y0] = iso(fi, fj), cx = Math.round(x0 - camX), cy = Math.round(y0 - camY - z), R = tp.small ? 4 : 6, shut = tp.snapT > 0;
+    for (let k = 0; k < 24; k++) {   // the ring of the jaws, and teeth pointing in (or meeting in the middle when shut)
+      const a = k / 24 * 6.283, rx = Math.cos(a) * R, ry = Math.sin(a) * R * 0.5;
+      put(cx + Math.round(rx), cy + Math.round(ry), STEEL[1]); put(cx + Math.round(rx), cy + Math.round(ry) - 1, STEEL[3]);
+      if (k % 3 === 0) { const t = shut ? 0.15 : 0.6; put(cx + Math.round(rx * t), cy + Math.round(ry * t) - 1, STEEL[4]); }
+    }
+    put(cx, cy, tp.arm > 0 ? STEEL[2] : 22);   // the plate in the middle: red once it is armed
+    if (tp.mod === 'net' && !shut) for (let k = 0; k < 12; k++) { const a = k / 12 * 6.283; put(cx + Math.round(Math.cos(a) * R * 1.6), cy + Math.round(Math.sin(a) * R * 0.8), WOOD[1]); }
+  }
+  for (const s of G.stuck) {   // a shaft leaning out of the ground with its fletching
+    const [x0, y0] = iso(s.fi, s.fj), x = Math.round(x0 - camX), y = Math.round(y0 - camY), lean = (s.seed & 3) - 1.5;
+    if (s.t < 0.6 && BAYER[((y & 3) << 2) | (x & 3)] > s.t / 0.6) continue;
+    for (let k = 0; k < 5; k++) put(x + Math.round(lean * k * 0.3), y - k, k < 4 ? WOOD[1] : 27);
+  }
+  for (const s of G.smoke) {   // a grey cloud, thinning out
+    const [x0, y0] = iso(s.fi, s.fj), cx = x0 - camX, cy = y0 - camY - 8, life = s.t / s.t0, R = s.r * 22;
+    for (let y = Math.floor(cy - R / 2); y <= cy + R / 2; y++) for (let x = Math.floor(cx - R); x <= cx + R; x++) {
+      if (x < 0 || y < 0 || x >= W || y >= H) continue;
+      const d = Math.hypot((x - cx) / R, (y - cy) * 2 / R) + (hash(x >> 2, y >> 2, Math.floor(G.t * 3)) - 0.5) * 0.3; if (d > 1) continue;
+      if (BAYER[((y & 3) << 2) | (x & 3)] < life * 0.55 * (1 - d)) scr[y * W + x] = d < 0.4 ? S[6] : S[4];
+    }
+  }
+}
+// detail layer: falling arrows (streaks with a head), the hunter's mark (a red reticle over the
+// marked foe, drawn over walls too, so it shows where it hides)
+function drawRangerFx() {
+  for (const f of G.falling) {
+    const [x, y] = iso(f.fi, f.fj), X = Math.round(x * SPX - cam2x), Y = Math.round((y - f.z) * SPX - cam2y);
+    for (let s = 0; s < 20; s++) { const x = X - Math.round(s * 0.25); ovSet(x + 2, Y - s, BLK); ovSet(x - 1, Y - s, BLK); const c = s < 3 ? 27 : s > 15 ? 22 : BONE[2]; ovSet(x, Y - s, c); ovSet(x + 1, Y - s, s < 3 ? 27 : s > 15 ? 23 : BONE[1]); }
+  }
+  for (const e of enemies) {
+    if (!(e.markT > 0) || !alive(e)) continue;
+    // a target lock around the body: a broken red ring that breathes, four ticks pointing in
+    const [x, y] = iso(e.fi, e.fj), X = Math.round(x * SPX - cam2x), Y = Math.round((y - e.def.chest * 0.8) * SPX - cam2y), R = Math.round(e.def.chest * 1.1 + 12 + Math.sin(G.t * 8) * 2), seen = LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] >= 0.3;
+    for (let a = 0; a < 72; a++) { const t = a / 72 * 6.283; if ((a % 18) > 12) continue; for (const dr of [-2, -1, 0, 1, 2]) ovSet(Math.round(X + Math.cos(t) * (R + dr)), Math.round(Y + Math.sin(t) * (R + dr) * 0.8), dr === 2 || dr === -2 ? BLK : dr < 0 ? 51 : 27); }
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 0.8], [0, -0.8]]) for (let k = R - 6; k <= R + 4; k++) { ovSet(Math.round(X + dx * k), Math.round(Y + dy * k), 51); ovSet(Math.round(X + dx * k) + (dy ? 1 : 0), Math.round(Y + dy * k) + (dx ? 1 : 0), BLK); }
+    if (!seen) {   // out of sight: its outline glows red through the wall
+      const [ex, ey] = iso(e.fi, e.fj), sx = Math.round(ex * SPX - cam2x), sy = Math.round(ey * SPX - cam2y), h = e.def.chest * 2 * SPX * 0.9;
+      for (let k = 0; k < 30; k++) { const t = k / 30 * 6.283; ovSet(Math.round(sx + Math.cos(t) * 10), Math.round(sy - h / 2 + Math.sin(t) * h / 2), 22); }
+    }
+  }
+}
+// button glyphs for the ranger
+const glyphBowAtk = (cx, cy) => { for (let a = -6; a <= 6; a++) put(cx - 4 + Math.round((a * a) / 12), cy + a, a % 3 ? 35 : 36); line(cx - 4, cy - 6, cx - 4, cy + 6, 27); line(cx - 6, cy, cx + 7, cy, 31); line(cx + 7, cy, cx + 5, cy - 2, 27); line(cx + 7, cy, cx + 5, cy + 2, 27); };
+const glyphMulti = (cx, cy) => { for (const a of [-0.5, -0.25, 0, 0.25, 0.5]) { const x1 = cx - 6 + Math.cos(a - 0.6) * 14, y1 = cy + 6 + Math.sin(a - 0.6) * 14; line(cx - 6, cy + 6, x1, y1, 35); put(x1, y1, 27); } };
+const glyphTrap = (cx, cy) => { for (let k = 0; k < 20; k++) { const a = k / 20 * 6.283; put(cx + Math.cos(a) * 7, cy + 2 + Math.sin(a) * 3.5, 31); if (k % 3 === 0) line(cx + Math.cos(a) * 7, cy + 2 + Math.sin(a) * 3.5, cx + Math.cos(a) * 4, cy + Math.sin(a) * 2 - 1, 27); } put(cx, cy + 2, 22); };
+const glyphRoll = (cx, cy) => { for (let a = 0; a <= 14; a++) { const u = a / 14; put(cx + 6 - u * 13, cy + 4 - Math.sin(u * Math.PI) * 9, a < 3 ? 27 : 55); } for (const [a, b] of [[-7, 5], [-5, 6], [-8, 7]]) put(cx + a, cy + b, 25); };
+const glyphMark = (cx, cy) => { for (let a = 0; a < 32; a++) { const t = a / 32 * 6.283; if (a % 8 > 5) continue; put(cx + Math.cos(t) * 7, cy + Math.sin(t) * 7, 23); } line(cx - 9, cy, cx - 4, cy, 22); line(cx + 4, cy, cx + 9, cy, 22); line(cx, cy - 9, cx, cy - 4, 22); line(cx, cy + 4, cx, cy + 9, 22); fillRect(cx - 1, cy - 1, 2, 2, 27); };
+const glyphRain = (cx, cy) => { for (const [ox, oy] of [[-6, -6], [-1, -8], [4, -5], [-3, -1], [3, 0]]) { line(cx + ox, cy + oy, cx + ox - 1, cy + oy + 6, 35); put(cx + ox - 1, cy + oy + 7, 27); } line(cx - 8, cy + 8, cx + 8, cy + 8, 25); };

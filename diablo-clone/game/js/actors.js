@@ -280,7 +280,11 @@ for (const name in HERO_PRE) {
   let t = 0; for (let i = 0; i <= hi; i++) t += keys[i].ms;
   HERO_SWINGS[name] = withTilt(keys, sw.tilt, { twoHand: sw.twoHand, free: t, chain: t + keys[hi + 1].ms });
 }
+// round 33: the ranger's shot, a short draw: nock, draw, loose (the arrow leaves on 'hit'), recover
+const RANGER_BOW = [{ a: 0.2, ms: 50 }, { a: 1, ms: 110 }, { a: 1, ms: 40, hit: true }, { a: 0.3, ms: 110 }];
+const isBow = w => typeof w === 'string' && w.startsWith('bow');
 function weaponSwing(eq, combo = 0) {
+  if (isBow(eq.weapon)) return RANGER_BOW;
   const S = FEEL_OLD ? SWINGS : HERO_SWINGS;
   if (combo === 3) return S.heavy;   // the ground slam: an overhead chop with any weapon
   return (eq.weapon === 'sword' ? [S.light, S.light2, S.thrust] : [S.heavy, S.heavy2, S.slam])[combo] || S.light;
@@ -295,10 +299,12 @@ function heroRig(eq, st) {
   const PL = eq.chest === 'darkplate' ? M.DSTEEL : M.PLATE;
   // mage robes: one design in three colors (look 'robe_blue' / 'robe_purple' / 'robe_red')
   const robe = eq.chest.startsWith('robe'), robeM = robe ? (TEAM[eq.chest.slice(5)] || M.CLOTH_BLUE) : null;
-  const legM = plate ? PL : M.LEATHER, torsoM = plate ? PL : chain ? M.CHAIN : robe ? robeM : team;
+  // the ranger's jerkins (round 33): leather over a green shirt; studded, or dark hide
+  const jerk = eq.chest.startsWith('jerkin'), jerkM = eq.chest === 'jerkin_hide' ? M.HIDE : M.LEATHER, bow = isBow(eq.weapon);
+  const legM = plate ? PL : M.LEATHER, torsoM = plate ? PL : chain ? M.CHAIN : robe ? robeM : jerk ? jerkM : team;
   const { fwd, sideR, up } = J;
   // a lean body underneath; armor adds its own bulk on top (chain a little, plate the most)
-  const bulk = plate ? 1 : brig ? 0.75 : chain ? 0.55 : 0;
+  const bulk = plate ? 1 : brig ? 0.75 : chain ? 0.55 : jerk ? 0.3 : 0;
 
   // legs
   for (const [hip, knee, ank, s] of [[J.hipL, J.kneeL, J.ankL, -1], [J.hipR, J.kneeR, J.ankR, 1]]) {
@@ -339,15 +345,22 @@ function heroRig(eq, st) {
   // torso
   // torso: a chest that tapers to a narrower waist, so the silhouette has shoulders and a middle
   const tf = frameAlong(fwd, up), abd = V.mad(J.chest, up, -3.6);
-  r.ell(abd, [3.2 + bulk * 1.6, 4.0 + bulk * 2.2, 3.4 + bulk * 0.8], plate ? PL : chain ? M.CHAIN : brig ? team : team, tf);
+  r.ell(abd, [3.2 + bulk * 1.6, 4.0 + bulk * 2.2, 3.4 + bulk * 0.8], plate ? PL : chain ? M.CHAIN : jerk ? jerkM : team, tf);
   if (!plate && !chain && !brig) r.cone(V.mad(J.chest, up, 4.5), J.head, 1.4, 1.2, M.FACE);   // neck
+  const jerkMf = p => {   // jerkin: a V of green shirt at the neck, laces down the front, studs on the studded one
+    const q = V.sub(p, J.chest), sd = Math.abs(V.dot(q, sideR)), z = V.dot(q, up), f = V.dot(q, fwd);
+    if (f > 1.5 && z > 2.2 && sd < (z - 2.2) * 0.9 + 0.7) return M.CLOTH_GREEN;
+    if (f > 2.4 && sd < 0.5 && z > -3 && z < 2.4) return M.DARK;
+    if (eq.chest === 'jerkin_stud') { const u = V.dot(q, sideR) * 0.55, v = z * 0.55; if (sd > 1.2 && Math.abs(u - Math.round(u)) < 0.2 && Math.abs(v - Math.round(v)) < 0.2) return M.IRON; }
+    return 0;
+  };
   const robeMf = p => {   // robe: a V of skin at the neck and a gold stripe down the front
     const q = V.sub(p, J.chest), sd = Math.abs(V.dot(q, sideR)), z = V.dot(q, up), f = V.dot(q, fwd);
     if (f > 1.5 && z > 2.6 && sd < (z - 2.6) * 0.9 + 0.6) return M.FACE;
     return f > 2 && sd < 0.6 ? M.GOLD : 0;
   };
   r.ell(V.mad(J.chest, up, 0.8), [3.8 + bulk * 1.4, 5.0 + bulk * 1.8, 4.6 + bulk * 1.6], torsoM, tf, {
-    mf: robe ? robeMf : brig ? (p => {   // brigandine: cloth over plates, rows of gold rivets
+    mf: robe ? robeMf : jerk ? jerkMf : brig ? (p => {   // brigandine: cloth over plates, rows of gold rivets
       const q = V.sub(p, J.chest), u = V.dot(q, sideR) * 0.62, v = V.dot(q, up) * 0.62;
       return Math.abs(u - Math.round(u)) < 0.22 && Math.abs(v - Math.round(v)) < 0.22 ? (hasFx(eq, 'storm') ? M.FUNGUS2 : M.GOLD) : 0;   // Stormhide's studs crackle
     }) : chain ? (p => {   // a tabard panel over the mail
@@ -373,7 +386,12 @@ function heroRig(eq, st) {
   const bladeA = k => k.a + (k.ck || 0);   // the blade leads or trails the arm
   let handR, bd;
   const staff = eq.weapon.startsWith('staff');
-  if (staff && st.clip === 'channel') {   // casting: gather (staff drawn back), release (thrust at the target), follow-through
+  const draw = bow && st.clip === 'shoot' && st.key ? st.key.a : 0;
+  if (bow && st.clip === 'shoot') {   // drawing: the string hand comes back to the cheek
+    handR = V.add(V.add(J.shR, V.mul(fwd, 9 - draw * 7.5)), V.add(V.mul(up, -0.6), V.mul(sideR, -2.6))); bd = fwd;
+  } else if (bow && st.clip !== 'death') {   // walking: the free right hand pumps with the stride
+    handR = V.add(V.add(J.shR, V.mul(fwd, 3.5 + J.swingArm * 3)), V.add(V.mul(up, -7.5 + Math.max(0, J.swingArm) * 0.8), V.mul(sideR, 0.6))); bd = fwd;
+  } else if (staff && st.clip === 'channel') {   // casting: gather (staff drawn back), release (thrust at the target), follow-through
     const ph = st.f % 3, sky = st.f >= 3;
     if (ph === 0) { handR = V.add(V.add(J.shR, V.mul(fwd, -0.5)), V.add(V.mul(up, sky ? -1 : -4.5), V.mul(sideR, 2.6))); bd = V.norm(V.add(V.mul(fwd, -0.45), up)); }
     else if (ph === 1 && sky) { handR = V.add(V.add(J.shR, V.mul(fwd, 2)), V.add(V.mul(up, 2.5), V.mul(sideR, 1.2))); bd = V.norm(V.add(V.mul(fwd, 0.25), up)); }   // raised to the sky
@@ -399,7 +417,7 @@ function heroRig(eq, st) {
   const aR = armTo(J, J.shR, handR, B, 1);
   const armM = plate ? PL : chain ? M.CHAIN : M.LEATHER;
   const ar = [1.9 + bulk * 0.8, 1.7 + bulk * 0.8, 1.5 + bulk * 0.7, 1.8 + bulk * 0.8];
-  const sleeve = eq.chest === 'tunic' ? team : robe ? robeM : armM, foreM = eq.chest === 'tunic' ? M.FACE : robe ? robeM : armM, handM = plate ? PL : eq.chest === 'tunic' || robe ? M.FACE : M.LEATHER;
+  const sleeve = eq.chest === 'tunic' ? team : robe ? robeM : jerk ? M.CLOTH_GREEN : armM, foreM = eq.chest === 'tunic' ? M.FACE : robe ? robeM : jerk ? M.LEATHER : armM, handM = plate ? PL : eq.chest === 'tunic' || robe || jerk ? M.FACE : M.LEATHER;   // the jerkin: green sleeves, leather bracers
   if (robe) ar[2] += 1.1;   // bell sleeves widen toward the wrist
   r.cone(J.shR, aR.el, ar[0], ar[1], sleeve); r.cone(aR.el, aR.hand, ar[1], ar[2], foreM);
   r.sph(aR.hand, ar[3], handM);
@@ -407,6 +425,8 @@ function heroRig(eq, st) {
   // shield only rocks
   const offSw = -J.swingArm * (eq.shield === 'none' ? 3.6 : 1.6);
   let handL = V.add(V.add(J.shL, V.mul(fwd, 5.5 + offSw)), V.add(V.mul(up, -7.5 + Math.max(0, offSw) * (eq.shield === 'none' ? 0.7 : 0.3)), V.mul(sideR, -0.5)));
+  if (bow && st.clip !== 'death') handL = st.clip === 'shoot' ? V.add(V.add(J.shL, V.mul(fwd, 9.5)), V.add(V.mul(up, -0.6), V.mul(sideR, 0.6)))   // bow arm straight at the target
+    : V.add(V.add(J.shL, V.mul(fwd, 3.2 - J.swingArm * 1.2)), V.add(V.mul(up, -7.2), V.mul(sideR, -3.2)));   // bow carried at the side, held out from the leg
   if (st.clip === 'death') handL = V.add(J.shL, [2, -3, -9]);
   if (st.clip === 'bash') handL = V.add(V.add(J.shL, V.mul(fwd, 7.5)), V.add(V.mul(up, -3), V.mul(sideR, 1.5)));   // shield driven forward
   if (st.clip === 'channel') {   // open hand: drawn in on the gather, thrust at the target on the release
@@ -427,7 +447,7 @@ function heroRig(eq, st) {
   if (st.clip === 'channel' && st.f % 3 !== 0) r.sph(V.mad(aL.hand, fwd, 2.2), st.f % 3 === 1 ? 1.9 : 1.4, staff ? M.ARCANE : M.HOLY, { noShadow: true });
   if (plate) for (const a of [aR, aL]) r.sph(a.el, 2.2, PL);   // elbow cops
   // pauldrons: big rounded plates with a bright lower rim and a rivet (plate); pads otherwise
-  if (eq.chest !== 'tunic' && !robe) for (const [sh, sd] of [[J.shL, -1], [J.shR, 1]]) {
+  if (eq.chest !== 'tunic' && !robe && !jerk) for (const [sh, sd] of [[J.shL, -1], [J.shR, 1]]) {
     const c = plate ? V.add(V.mad(sh, up, 1.4), V.mul(sideR, sd * 1.2)) : V.mad(sh, up, 1.0);
     r.ell(c, plate ? [5.0, 5.0, 4.4] : [4.2, 4.0, 3.4], plate ? PL : M.LEATHER, frameAlong(fwd, up), { mf: eq.chest === 'darkplate' ? (p => V.dot(V.sub(p, c), up) < -2.6 ? M.MARKB : 0) : null });
     if (plate) r.sph(V.add(V.add(c, V.mul(fwd, 4.4)), V.mul(up, -1)), 0.9, M.STEEL);
@@ -451,11 +471,17 @@ function heroRig(eq, st) {
     const top = V.add(V.mad(J.chest, up, B.shZ + 0.6), V.mul(fwd, -2.6)), L = 8.2;
     r.box(V.mad(top, dn, L / 2), [0.5, B.shW * 0.78, L / 2], TEAM[eq.cape] || CAPE_M, [a0, a1, dn], { mf: p => V.dot(V.sub(p, top), dn) > L - 1.2 ? M.LEATHER : 0 });
   }
+  if (bow) {   // a quiver on the back, from behind the right shoulder down to the left hip, fletchings showing
+    const qa = V.add(V.add(V.mad(J.chest, up, 6.4), V.mul(fwd, -4.6)), V.mul(sideR, 3.0)), qb = V.add(V.add(V.mad(J.chest, up, -4.4), V.mul(fwd, -4.0)), V.mul(sideR, -2.2));
+    const qd = V.norm(V.sub(qa, qb));
+    r.cone(qb, qa, 1.8, 2.2, M.LEATHER, { mf: p => V.dot(V.sub(p, qa), qd) > -1.0 ? M.DARK : 0 });
+    for (const [o, m] of [[-0.9, M.CLOTH_WHITE], [0.2, M.CLOTH_RED], [1.1, M.CLOTH_WHITE]]) { const b0 = V.add(V.mad(qa, qd, 0.4), V.mul(sideR, o)); r.cone(b0, V.mad(b0, qd, 3.6), 0.9, 0.4, m, { noShadow: true }); }
+  }
   const hr0 = r.p.length;
   // head
   const hd = J.head;
   const helmF = frameAlong(fwd, up), hairM = HAIRM[eq.hair] || M.HAIR_O, bald = eq.hair === 'bald';
-  if (eq.helm === 'none' || eq.helm === 'cap' || eq.helm === 'hat' || eq.helm === 'hood') {
+  if (eq.helm === 'none' || eq.helm === 'cap' || eq.helm === 'hat' || eq.helm === 'hood' || eq.helm.startsWith('rhood')) {
     // chibi face (round 13 pass 2): light, nearly flat skin; small dark eyes under short brows, a
     // tiny mouth; the hairline is painted on the head and the hair mass sits on top
     r.ell(hd, [4.3, 4.3, 4.5], M.FACE, helmF, { mf: p => {
@@ -479,6 +505,14 @@ function heroRig(eq, st) {
       const hc = V.add(V.mad(hd, up, 0.7), V.mul(fwd, -1.3));
       r.ell(hc, [4.6, 5.0, 5.0], M.CLOTH_BLUE, helmF);
       r.cone(V.add(V.mad(hd, up, 2.6), V.mul(fwd, -4.0)), V.add(V.mad(hd, up, 0.2), V.mul(fwd, -7.2)), 2.0, 0.5, M.CLOTH_BLUE);   // the point falls behind
+    }
+    if (eq.helm.startsWith('rhood')) {   // the ranger's hood: a shell over the head with the face open, a pointed back and a cowl on the shoulders
+      const hm = eq.helm === 'rhood_dark' ? M.CLOTH_DARK : M.CLOTH_GREEN, hc = V.add(V.mad(hd, up, 0.8), V.mul(fwd, -1.0));
+      r.group(() => {
+        r.ell(hc, [4.7, 5.1, 5.1], hm, helmF);   // set back, so the face stands out of its opening
+        r.cone(V.add(V.mad(hd, up, 3.0), V.mul(fwd, -3.4)), V.add(V.mad(hd, up, 1.0), V.mul(fwd, -6.6)), 2.2, 0.5, hm);
+        r.ell(V.add(V.mad(hd, up, -4.2), V.mul(fwd, -1.2)), [3.3, 4.5, 1.3], hm, helmF);   // the cowl, kept small so the jerkin shows
+      });
     }
     if (eq.beard) r.ell(V.add(V.mad(hd, up, -3.2), V.mul(fwd, 2.4)), [2.6, 3.3, 2.3], bald ? M.HAIR : hairM, helmF, { noShadow: true });   // a big round beard
     if (eq.helm === 'none' && !bald) {
@@ -553,7 +587,7 @@ function heroRig(eq, st) {
     }
   }
   // shield on the left forearm, face turned outward
-  if (eq.shield !== 'none') {
+  if (eq.shield !== 'none' && eq.shield !== 'quiver') {   // (a quiver is worn on the back, drawn with the bow)
     const n = V.norm(V.add(V.mul(fwd, 0.75), V.mul(sideR, -0.65)));
     const c = V.mad(V.mad(aL.hand, n, 1.6), up, 1.5);
     const ax = [n, V.norm(V.cross(up, n)), up];
@@ -580,6 +614,18 @@ function heroRig(eq, st) {
   const g = aR.hand;
   const wide = V.norm(V.cross(bd, V.len(V.cross(bd, up)) > 0.3 ? up : fwd));
   const wf = [bd, wide, V.cross(bd, wide)];
+  if (bow) {   // the bow in the left hand: two curved limbs and the string, pulled back to the right hand while drawing
+    const c = aL.hand, back = V.mul(fwd, -1), lm = eq.weapon === 'bow_horn' ? M.HORN : M.WOOD, L = eq.weapon === 'bow_long' ? 12.5 : 10;
+    const bend = 1.8 + draw * 1.6;   // the limbs bend further at full draw
+    const tip = sd2 => V.add(V.mad(c, up, sd2 * L), V.mul(back, bend + (eq.weapon === 'bow_horn' ? -1.6 : 0))), mid = sd2 => V.add(V.mad(c, up, sd2 * L * 0.55), V.mul(back, -0.6));
+    r.group(() => { for (const sd2 of [1, -1]) { r.cone(c, mid(sd2), 1.3, 1.1, lm); r.cone(mid(sd2), tip(sd2), 1.1, 0.6, lm); } });
+    r.cone(V.mad(c, up, -1.2), V.mad(c, up, 1.2), 1.15, 1.15, M.LEATHER);   // grip
+    const nock = st.clip === 'shoot' ? aR.hand : V.add(c, V.mul(back, bend + 0.4));
+    r.cone(tip(1), nock, 0.3, 0.3, M.CLOTH_WHITE, { noShadow: true }); r.cone(nock, tip(-1), 0.3, 0.3, M.CLOTH_WHITE, { noShadow: true });
+    if (st.clip === 'shoot' && draw > 0.5) { r.cone(aR.hand, V.mad(aR.hand, fwd, 12), 0.4, 0.4, M.WOOD, { noShadow: true }); r.cone(V.mad(aR.hand, fwd, 11.5), V.mad(aR.hand, fwd, 13.2), 0.7, 0.2, M.STEEL, { noShadow: true }); }
+    if (st.clip === 'death') deathTip(r, B, st.f, -1);
+    return r;
+  }
   if (staff) {   // a long wooden staff with gold prongs cradling a glowing orb (color by staff)
     r.cone(V.mad(g, bd, -9), V.mad(g, bd, 18), 0.9, 1.0, M.WOOD);
     const orbM = eq.weapon === 'staff_fire' ? M.FIREM : eq.weapon === 'staff_ice' ? M.ICE : M.ARCANE, top = V.mad(g, bd, 21);

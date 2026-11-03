@@ -36,7 +36,7 @@ function drawUltButton() {
   const fx = btnFx(9), dtu = 1 / 60; fx.press = Math.max(0, fx.press - dtu); fx.deny = Math.max(0, fx.deny - dtu);
   const c0 = UI.ult, shake = fx.deny > 0 ? Math.round(Math.sin(fx.deny * 70) * 2) : 0, c = [c0[0] + shake, c0[1], c0[2] + (fx.press > 0.08 ? 1 : 0)];
   const locked = hero.lvl < ULT_LVL, f = locked ? 0 : (hero.ult || 0) / 100, full = f >= 1;
-  drawButton(c, locked ? [3, 4, 5] : hero.cls === 'mage' ? [37, 38, 39, 40] : [48, 49, 50, 51], full || !!hero.ultOn, hero.cls === 'mage' ? glyphStorm : glyphWrath);
+  drawButton(c, locked ? [3, 4, 5] : hero.cls === 'mage' ? [37, 38, 39, 40] : hero.cls === 'ranger' ? [52, 53, 54, 55] : [48, 49, 50, 51], full || !!hero.ultOn || G.rain.length > 0, hero.cls === 'mage' ? glyphStorm : hero.cls === 'ranger' ? (x, y) => glyphRain(x, y) : glyphWrath);
   // not yet charged: dark from the top down to the charge line
   if (!full) for (let y = c[1] - c[2]; y <= c[1] + c[2]; y++) for (let x = c[0] - c[2]; x <= c[0] + c[2]; x++) {
     if (Math.hypot(x - c[0], y - c[1]) > c[2] - 1) continue;
@@ -45,7 +45,7 @@ function drawUltButton() {
   }
   if (locked) textC(`LV${ULT_LVL}`, c[0], c[1] - 2, 25);
   // a ring around it showing the charge, gold (arcane for the mage), and a pulsing rim when full
-  const col = hero.cls === 'mage' ? 40 : 51;
+  const col = hero.cls === 'mage' ? 40 : hero.cls === 'ranger' ? 55 : 51;
   if (!locked) for (let a = 0; a < 80; a++) { const u = a / 80, t = -Math.PI / 2 + u * 6.283; if (u > f) continue; put(c[0] + Math.cos(t) * (c[2] + 2), c[1] + Math.sin(t) * (c[2] + 2), col); }
   if (full && Math.floor(G.t * 4) % 2 === 0) for (let a = 0; a < 80; a++) { const t = a / 80 * 6.283; put(c[0] + Math.cos(t) * (c[2] + 3), c[1] + Math.sin(t) * (c[2] + 3), 27); }
   if (fx.deny > 0) for (let a = 0; a < 64; a++) { const t = a / 64 * 6.283; put(c[0] + Math.cos(t) * (c[2] + 1), c[1] + Math.sin(t) * (c[2] + 1), 22); }
@@ -66,7 +66,7 @@ function drawVitals(t) {
   const B = UI.bars, hf = hero.hp / STAT.maxHp, low = hf < 0.3, beat = low && Math.sin(t * 9) > 0;
   text(`LV ${hero.lvl}`, B.x, B.yH - 9, 25);
   vitalBar(B.x, B.yH, B.w, hf, [20, 21, 22, 23], `${Math.ceil(hero.hp)}`, beat);
-  vitalBar(B.x, B.yM, B.w, hero.mana / STAT.maxMana, hero.cls === 'mage' ? [37, 38, 39, 40] : [14, 15, 16, 17], `${Math.floor(hero.mana)}`, false);
+  vitalBar(B.x, B.yM, B.w, hero.mana / STAT.maxMana, hero.cls === 'mage' ? [37, 38, 39, 40] : hero.cls === 'ranger' ? [52, 53, 54, 55] : [14, 15, 16, 17], `${Math.floor(hero.mana)}`, false);
   const f = hero.xp / xpFor(hero.lvl), yb = H - 3;
   for (let x = 0; x < W; x++) { put(x, yb, x < W * f ? 50 : BLK); put(x, yb + 1, BLK); }
   if (low && !hero.dead) {   // the edge of the screen glows red with the heartbeat
@@ -188,7 +188,7 @@ const glyphLeap = (cx, cy) => {   // an arc up and down, landing in a burst
   for (let a = 0; a <= 16; a++) { const u = a / 16; put(cx - 7 + u * 12, cy + 4 - Math.sin(u * Math.PI) * 10, a > 12 ? 51 : 27); }
   for (const [a, b] of [[-3, 0], [3, 0], [0, -3], [2, -2], [-2, -2]]) line(cx + 5, cy + 5, cx + 5 + a, cy + 5 + b, 50);
 };
-const SPELL_LOOK = { slam: [[13, 14, 15, 16], glyphSlam], hook: [[28, 29, 30, 31], glyphHook], whirl: [[19, 20, 21, 22], glyphWhirl], leap: [[48, 49, 50, 51], glyphLeap], fireball: [[13, 14, 15, 16], glyphFire], cone: [[114, 115, 116, 117], glyphCone], meteor: [[19, 20, 21, 22], glyphMeteor], blink: [[56, 57, 58, 59], glyphBlink] };
+const SPELL_LOOK = { multi: [[33, 34, 35, 36], (x, y) => glyphMulti(x, y)], trap: [[28, 29, 30, 31], (x, y) => glyphTrap(x, y)], roll: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)], mark: [[19, 20, 21, 22], (x, y) => glyphMark(x, y)], slam: [[13, 14, 15, 16], glyphSlam], hook: [[28, 29, 30, 31], glyphHook], whirl: [[19, 20, 21, 22], glyphWhirl], leap: [[48, 49, 50, 51], glyphLeap], fireball: [[13, 14, 15, 16], glyphFire], cone: [[114, 115, 116, 117], glyphCone], meteor: [[19, 20, 21, 22], glyphMeteor], blink: [[56, 57, 58, 59], glyphBlink] };
 const glyphBolt = (cx, cy) => { for (let a = 0; a < 8; a++) { const t = a * Math.PI / 4; line(cx, cy, cx + Math.cos(t) * 7, cy + Math.sin(t) * 7, a % 2 ? 50 : 51); } put(cx, cy, 27); };
 const glyphBag = (cx, cy) => { fillRect(cx - 5, cy - 3, 11, 9, 35); frame(cx - 5, cy - 3, 11, 9, 36, 33); line(cx - 3, cy - 3, cx - 1, cy - 6, 36); line(cx + 3, cy - 3, cx + 1, cy - 6, 36); fillRect(cx - 1, cy, 3, 2, 50); };
 const glyphSound = (cx, cy) => {
@@ -221,6 +221,7 @@ function drawHud() {
   drawButton(UI.potion, [19, 20, 21, 22], false, (cx, cy) => { sprite(itemIcon({ base: 'heal' }), cx, cy + 4, 1, 4); });
   text(`${hero.potions}`, UI.potion[0] + 9, UI.potion[1] + 4, 27);
   if (hero.cls === 'mage') drawButton(UI.attack, [37, 38, 39, 40], !!press.attack, glyphMissile);   // magic missiles
+  else if (hero.cls === 'ranger') drawButton(UI.attack, [33, 34, 35, 36], !!press.attack, (x, y) => glyphBowAtk(x, y));   // arrows
   else drawButton(UI.attack, [28, 29, 30, 31], !!press.attack, glyphSword);
   SKILLS.forEach((sk, i) => {
     const fx = btnFx(i), dtu = 1 / 60;
@@ -341,11 +342,11 @@ function drawTitle() {
   UI.titleBtns = [];
   const btn = (label, x, y, w, on, col = 27) => { fillRect(x, y, w, 20, 5); frame(x, y, w, 20, 8, 2); textC(label, x + w / 2, y + 7, col); UI.titleBtns.push({ x, y, w, h: 20, on }); };
   // one column per class: continue its save (if any) or start a new one
-  [['warrior', 'WARRIOR', 22], ['mage', 'MAGE', 40]].forEach(([cls, name, col], k) => {
-    const x = W / 2 - 124 + k * 128, w = 120, save = loadSave(cls);
+  [['warrior', 'WARRIOR', 22], ['mage', 'MAGE', 40], ['ranger', 'RANGER', 55]].forEach(([cls, name, col], k) => {   // round 33: three classes
+    const x = W / 2 - 130 + k * 88, w = 84, save = loadSave(cls);
     textC(name, x + w / 2, H * 0.47, col, 2);
-    if (save) btn(`CONTINUE (LEVEL ${save.level})`, x, H * 0.52, w, () => beginGame(true, cls));
-    btn(save ? 'NEW ' + name : 'NEW GAME', x, H * 0.52 + 28, w, () => beginGame(false, cls));
+    if (save) btn(`CONTINUE L${save.hero ? save.hero.lvl : save.level}`, x, H * 0.52, w, () => beginGame(true, cls));
+    btn('NEW GAME', x, H * 0.52 + 28, w, () => beginGame(false, cls));
   });
   btn(FEEL_OLD ? 'COMBAT: OLD' : 'COMBAT: NEW', W / 2 - 124, H * 0.52 + 62, 120, () => setFeelOld(!FEEL_OLD), 25);
   btn(WORLD2X ? 'DETAIL: SHARP' : 'DETAIL: CLASSIC', W / 2 + 4, H * 0.52 + 62, 120, () => setWorld2x(!WORLD2X), 25);

@@ -76,6 +76,8 @@ const RECIPES = {
   clink: () => { tone('sine', vary(2400), 2200, 0.1, 0.1); tone('sine', vary(3100), 3000, 0.08, 0.08, 0.03); },
   zap: () => { tone('square', vary(1300), 400, 0.05, 0.08); noise(0.04, 0.16, 'highpass', 5000, 3000, 1); },
   whoomp: () => { tone('sine', 220, 70, 0.16, 0.35); noise(0.12, 0.2, 'lowpass', 1600, 300); },
+  twang: () => { tone('triangle', vary(190), 120, 0.05, 0.16); noise(0.05, 0.22, 'bandpass', vary(2600), 1600, 2); },   // round 33: the bowstring
+  thunk: () => { noise(0.05, 0.3, 'lowpass', 900, 300); tone('sine', vary(320), 160, 0.05, 0.12); },   // an arrow biting
   crackle: v => noise(0.02 + Math.random() * 0.03, 0.03 * v, 'highpass', 2500, 1500, 0.7),
 };
 function sfx(name, v = 1) {
