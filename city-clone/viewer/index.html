@@ -202,6 +202,7 @@ import { createMusic } from './music.js';
 import { createLauncher } from './rocket.js';
 import { stepLightbars } from './lightbar.js';
 import { initHydrants } from './hydrant.js';
+import { initBreakables } from './breakables.js';
 import { createTrack, PAD } from './track.js';
 
 const $ = id => document.getElementById(id);
@@ -386,6 +387,8 @@ city.scene.updateMatrixWorld(true); city.scene.traverse(o => { o.matrixAutoUpdat
 for (const im of instances) { im.updateMatrix(); im.updateMatrixWorld(true); im.matrixAutoUpdate = false; im.matrixWorldAutoUpdate = false; }
 window.__perf = STATS;
 const HYD = initHydrants(THREE, scene, world.hydrants || [], b2t);          // round 42: knock-over fire hydrants with a water jet (hydrant.js)
+const BRK_V = [];
+const BRKS = initBreakables(THREE, scene, world.breakables || [], b2t, { cull: im => instances.push(im), onHit: (k, sp) => crashSound(k === 'fence' || k === 'corral' || k === 'arm' ? 3 + sp * .15 : 1.5 + sp * .06) });   // round 51: knock-over mailboxes, bins, fences, cart corrals, gate arms
 
 /* ---------- async helpers: scripted sequences await frames, so they pause and resume with the loop ---------- */
 let frameWaiters = [];
@@ -1681,6 +1684,7 @@ function update(dt, draw = true) {
   if (rig.mode === 'drive') cullStep(dt); else for (const c of cullables) c.o.visible = true;
   compassStep();
   HYD.step(dt, Object.values(vehs));
+  BRK_V.length = 0; for (const v of Object.values(vehs)) BRK_V.push(v); if (cops) for (const c of cops.cops) if (c.on && c.v > 2.5) BRK_V.push({ x: c.x, z: c.z, vx: -Math.sin(c.th) * c.v, vz: -Math.cos(c.th) * c.v }); BRKS.step(dt, BRK_V);
   if (!SW.on && !CINE.shots && !CAMHOLD.on) { let ty = 0; const dv = hmode === 'driving' && drive;           // camera yaw: turns with the car while driving (eases, holds when nearly stopped, reversing or handbraking), back to north-up on foot
     if (playView && rig.mode === 'drive' && dv && TUNE.camYaw) {
       const th = drive.th, vfw = drive.vx * -Math.sin(th) + drive.vz * -Math.cos(th); ty = rig.yaw;
@@ -1709,6 +1713,6 @@ let timeK = 1;                                                 // slow motion (t
 function frame(t) { const t0 = performance.now(); const dt_ = Math.min(clock.getDelta(), .05); if (!manual && !paused) { update(dt_ * timeK); if (!titleShown) showTitle(); } else if (paused) renderer.render(scene, camera); if (frameHook) frameHook(t, performance.now() - t0); requestAnimationFrame(frame); }
 syncSliders(); setView('drive'); requestAnimationFrame(frame);
 window.__DAVE = DAVE;
-window.__city = { gps: routeTo, missions, cops, DENV, CINE, cine, cineStop, titleShots, dstickIn, track, vehs, get ride() { return ride; }, CHARS, switchTo, SW, get cur() { return cur; }, get pilotP() { return pilot; }, world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, ppl, cops, missions, sun, setFrameHook: f => { frameHook = f; }, upd };
+window.__city = { gps: routeTo, BRKS, missions, cops, DENV, CINE, cine, cineStop, titleShots, dstickIn, track, vehs, get ride() { return ride; }, CHARS, switchTo, SW, get cur() { return cur; }, get pilotP() { return pilot; }, world, game, rig, renderer, scene, camera, setView, demo, allCars, vehs, hero, victim, walkers, input, stickIn, foot, combat, TUNE, colliders, resetCar, interact, startPunch, nearestDoor, pilot, get drive() { return drive; }, get hmode() { return hmode; }, tick: update, step: physicsStep, polyOf: carPoly, sat, setManual: v => { manual = v; }, stats: () => ({ skCount, hits: drive ? drive.hits : 0, hardest: drive ? drive.hardest : 0 }), PF, q, resize, cityRoot: city.scene, instances, traffic, ai, ppl, cops, missions, sun, setFrameHook: f => { frameHook = f; }, upd };
 if (/[?&](hud|bench)=/.test(location.search)) import('./hud.js?v=' + (MAN['hud.js'] || '1')).then(m => m.start(window.__city, THREE)).catch(e => console.error('hud', e));
 </script>

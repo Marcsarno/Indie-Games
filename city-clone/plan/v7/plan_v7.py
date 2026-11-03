@@ -113,9 +113,11 @@ for p in [(-480 - 26 * i, -120) for i in range(1, 6)]: HOUSES += [(p[0], -100), 
 houses_along((-700, -215), (-700, -290), 17, 18)
 grid(-420, -470, -260, -40, step=80, join=("n",)); st([(-260, -255), (XBANKS, -255)])     # pocket east of Banks
 CULS.append((XBANKS, -420, 12)); st([(XBANKS, -330), (-620, -330)]); CULS.append((-620, -330, 11)); houses_along((XBANKS, -330), (-620, -330))
-LAKES.append((-140, -300, 95, 70)); LAKES.append((420, -270, 75, 32)); LAKES.append((-545, -228, 55, 30)); LAKES.append((115, 300, 40, 18)); LAKES.append((690, 1492, 66, 22)); st([(-232, -230), (-330, -180), (-560, -150), (-625, -128)], 4, "trail")   # canal ends in this lake; lake path to Dave's street (bike); round 43: subdivision lake, Wynmoor golf pond, office pond
+LAKES.append((-140, -300, 95, 70)); LAKES.append((420, -270, 75, 32)); LAKES.append((-545, -228, 55, 30)); LAKES.append((690, 1492, 66, 22)); st([(-232, -230), (-330, -180), (-560, -150), (-625, -128)], 4, "trail")   # canal ends in this lake; lake path to Dave's street (bike); round 43: subdivision lake, Wynmoor golf pond, office pond
 # Wynmoore (north half of its block): gate on Lyons, a ring drive round the golf lake
-LAKES.append((470, 360, 120, 45)); RINGS.append((470, 360, 230, 85)); st([(XLYONS + 12, 360), (240, 360)]); st([(XPOWER - 12, 350), (700, 350)], 5, "trail")
+# round 51 (user: "the Wynmoor is really bad. You just drive in and there's like almost no buildings. There's no guard gate. And there's just like a golf course right in the middle"):
+# the ring is now a small loop round the lake at the east end (the golf holes live there); a wide entry boulevard from the guard gate on Lyons runs to it, condo blocks both sides
+LAKES.append((570, 359, 110, 40)); RINGS.append((570, 359, 180, 69)); st([(XLYONS + 12, 359), (390, 359)], 11); st([(XPOWER - 12, 359), (750, 359)], 5, "trail")
 
 # ---- zones / lots ----
 def R_(x0, y0, x1, y1): return [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
@@ -187,7 +189,7 @@ CUTS = [  # (label, colour, polyline): the detours, each through a landmark
     ("A1", AARON, [(400, 1300), (400, 1250), (330, 1180), (400, 1092)]),                        # elementary drop-off loop: Winston -> Wiles
     ("A2", AARON, [(60, 1062), (60, 960), (60, 848)]),                                         # landfill road past Trash Mountain
     ("A3", AARON, [(390, 790), (430, 700), (560, 650), (560, 548)]),                            # through Butterfly World (service gate, past the dome)
-    ("A4", AARON, [(40, 360), (250, 325), (230, 240)]),                                         # smash the Wynmoore gate, across the golf course
+    ("A4", AARON, [(40, 352), (240, 352), (240, 236)]),        # round 51: in the gate's in-lane (smash the arm), down the boulevard, out between the condos                                         # smash the Wynmoore gate, across the golf course
     ("A5", AARON, [(230, 236), (180, 180), (162, 140), (162, 116), (230, 118), (250, 100), (250, 14)]),                              # across the football field, out the bus loop
     ("C1", CHRIS, [(-150, 1345), (-160, 1316), (-175, 1300), (-175, 1246), (-253, 1246), (-330, 1246), (-350, 1244), (-400, 1205), (-470, 1150)]),         # through the paseo, under the arch, jump the fountain                    # Publix lot, median gap, Promenade plaza: jump the fountain
     ("C2", CHRIS, [(-600, 1282), (-600, 1230), (-600, 1170), (-600, 1095)]),                    # up the parking garage, jump off the top deck onto Wiles

@@ -308,6 +308,7 @@ WORLD = {"name": "cc", "title": "Coconut Creek", "glb": "scene.glb", "mapbg": "#
                   "blocksFar": [{"road": "Coconut Creek Pkwy", "end": [round(SHK.fx(-450), 2), 0.0], "at": 10, "gap": 0, "other": [round(SHK.fx(-380), 2), 0.0]}],
                   "chrisFrom": [-131.0, -510.0], "starts": [[-6.0, -400.0], [300.0, -236.0], [-430.0, -286.0]],
                   "stall": [round(PUB_STALL[0], 2), round(-PUB_STALL[1], 2), 0.0], "copStart": 2, "copEvery": 6, "dynBlocks": 2, "dynFirst": 7, "dynEvery": 14}}
+WORLD["breakables"] = BRK                                                                    # round 51: knock-over props drawn + simulated by the page (breakables.js)
 OUTD = OUT
 json.dump(FOOT, open(os.path.join(OUTD, "foot_cc.json"), "w")); json.dump(COL, open(os.path.join(OUTD, "colliders_cc.json"), "w")); json.dump(PROPS, open(os.path.join(OUTD, "props_cc.json"), "w")); json.dump(CARS, open(os.path.join(OUTD, "cars_cc.json"), "w")); json.dump(WORLD, open(os.path.join(OUTD, "world_cc.json"), "w"))
 print("CC colliders", len(COL), "props", len(PROPS), "cars", len(CARS), "roads", len(net))

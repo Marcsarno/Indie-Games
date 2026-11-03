@@ -187,22 +187,7 @@ def hs_athletics():
     restroom(b, 92, -28, 7, 12); wbox(f, 0, 92, -28, 7, 12)
     FOOT.append((cx_ - 88, cy_ - 60, cx_ + 104, cy_ + 50))
     diamond(60, 52, -45, 68, lights=True, key="cchs"); diamond(205, 52, 45, 56)
-    # the school: one big connected block (x 265..405, y 70..198)
-    W1 = "#d9b48a"; parts = [("cchs_n", 335, 182, 140, 30, 9.0, "n", "cchs", 2), ("cchs_gym", 292, 132, 52, 68, 12.0, "w", None, 1), ("cchs_mid", 330, 132, 24, 68, 7.0, "e", None, 1), ("cchs_s", 373, 132, 64, 68, 9.0, "e", None, 2),
-                             ("cchs_caf", 335, 84, 140, 24, 6.5, "s", "cchs", 1)]
-    for (nm, x, y, w, d, h, face, key, fl) in parts:
-        ww, dd = world_dims(face, w, d)
-        o = bldg(nm, ww, dd, h, wall=W1, key=key, accent="#7a1f1f", floors=fl, sign_h=2.0, canopy=False); place(o, x, y, face); cbox(x, y, w, d)
-    FOOT.append((262, 68, 408, 200))
-    c = TB(T43)
-    for x in range(272, 400, 6): c.box(flat("#d0c8b8"), x - .15, x + .15, 196.5, 196.8, 0, 3.6)
-    c.box(flat("#e9e3d6"), 268, 402, 196.3, 200, 3.6, 4.0); c.box(flat("#e9e3d6"), 268, 402, 68, 71.5, 3.6, 4.0)
-    RB.box(ASPH, 410, 434, 72, 196, 0, .028); FOOT.append((408, 70, 436, 198))                                      # bus loop along Cougar Way
-    for y in (66, 200): RB.box(ASPH, 410, 437, y - 6, y + 6, 0, .175); RB.box(ASPH, 410, 434, min(y, 72) if y < 72 else 196, max(y + 6, 72) if y < 72 else y + 6, 0, .028); DRV_RECTS.append((405, y - 6, 437, y + 6))   # in + out onto Cougar Way
-    for i in range(9):
-        y = 82 + i * 13
-        RB.box(m["white"], 410, 433, y - 6.5 - .05, y - 6.5 + .05, .028, .034)
-        if R3.random() < .85: o = linked("school_bus", lambda nm: CV.make_bus(nm)); place(o, 421, y, rz=90); cbox(421, y, 10, 2.6)
+    # round 51: the school block + bus row moved to cc_fill5.hs_campus (separate wings round a courtyard, a drop-off loop)
     place(pylon("cchs_sign", "cchs", 5.0, 8.0), 246, 30, "e")
     # Antigua Terrace condos east of Cougar Way: two rows round a parking court, a pool
     for (yy, face) in ((212, "s"), (110, "n")):
@@ -633,9 +618,10 @@ def lot_drives(x0, x1, y0, y1, blds, label=""):
     return len(pick)
 
 def gap_fill():
-    for fn in (hs_athletics, golf, golf_trees, construction, offices_more, butterfly_garden, skate_dress, rec_park_more, sabal_more, lake_parks, storage, townhomes, church):
+    for fn in (hs_athletics, construction, offices_more, butterfly_garden, skate_dress, rec_park_more, sabal_more, lake_parks, storage, townhomes, church):
         with warp(): fn()
         tick_(fn.__name__)
+    for fn in (wynmoor2, golf2, hs_campus): fn(); tick_(fn.__name__)                             # round 51: new map coordinates (cc_fill5.py)
     STATIC.extend(T43.build(vc=True, recalc=False))
 
 exec(open(os.path.join(HERE, "cc_fill4.py")).read())                                            # round 47: back-of-house service lanes + buffer walls
