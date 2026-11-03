@@ -36,6 +36,27 @@ def wynmoor2():
     # (no canopy over the lanes: from the play camera it was a big slab hiding your car)
     for s_ in (-1, 1): monument(g, 22, yc + s_ * 12.5, 12.0, -s_); cbox(22, yc + s_ * 12.5, 15, 1.6)
     for k in range(4): prop("palm_tall", 26 + k * 4.5, yc + 16.5); prop("palm_tall", 26 + k * 4.5, yc - 16.5)
+    # ---- round 51b (user: "The gate arms are useless. Can just drive around them"): a solid community wall all the way round; the only ways in or out are the
+    # two gate lanes (smash an arm), an exit gate with its own arm on NW 15th St (cut A4) and a bike-width gap where the Powerline trail comes in
+    STU = flat("#e9dcc0"); CAP = flat("#cdbf9f"); X0, X1, Y0, Y1 = 50.0, 620.0, 250.0, 365.0
+    def wall(x0, y0, x1, y1):
+        if abs(x1 - x0) + abs(y1 - y0) < .5: return
+        t = .2; bx0, bx1, by0, by1 = (min(x0, x1), max(x0, x1), y0 - t, y0 + t) if y0 == y1 else (x0 - t, x0 + t, min(y0, y1), max(y0, y1))
+        g.box(STU, bx0, bx1, by0, by1, 0, 2.4); g.box(CAP, bx0 - .08, bx1 + .08, by0 - .08, by1 + .08, 2.4, 2.55)
+        cbox((bx0 + bx1) / 2, (by0 + by1) / 2, bx1 - bx0, by1 - by0); FOOT.append((bx0 - .5, by0 - .5, bx1 + .5, by1 + .5))
+    EX = 240.0
+    wall(X0, Y0, X0, yc - 6.0); wall(X0, yc + 6.0, X0, Y1)                                          # the gate line (west)
+    wall(X0, Y1, X1, Y1); wall(X0, Y0, EX - 2.3, Y0); wall(EX + 2.3, Y0, X1, Y0)                     # north, south (exit gap)
+    wall(X1, Y0, X1, yc - .8); wall(X1, yc + .8, X1, Y1)                                             # east (bike gap)
+    for px in (X0, X1):
+        for py in (Y0, Y1): g.box(STU, px - .45, px + .45, py - .45, py + .45, 0, 2.9)
+    for py in (yc - 6.0, yc + 6.0): g.box(STU, X0 - .45, X0 + .45, py - .45, py + .45, 0, 2.9)
+    for px in (EX - 2.3, EX + 2.3): g.box(STU, px - .45, px + .45, Y0 - .45, Y0 + .45, 0, 2.9)
+    g.box(flat("#3a3c40"), EX - 2.9, EX - 2.5, Y0 - .2, Y0 + .2, 0, 1.1); BRK.append(["arm", EX, Y0, 0.0])            # exit arm across the gap
+    RB.box(ASPH, EX - 2.3, EX + 2.3, 242.0, Y0 + 14.0, 0, .028)                                      # exit lane from the condo court to NW 15th St
+    for x in range(int(X0) + 8, int(X1), 9):                                                         # hedge + palms inside the wall
+        for py in (Y0 + 1.6, Y1 - 1.6):
+            if abs(x - EX) > 6 and not near_road(x, py, 2) and R5.random() < .5: prop("shrub_b", x, py, 1.0, col=False)
     # ---- condo blocks along the boulevard: a parking court in front (one row of stalls), the building behind it, lawn + palms at the back
     rows = (("n", yc + 10.5, yc + 23.5, yc + 31.5), ("s", yc - 23.5, yc - 10.5, yc - 31.5))
     for face, l0, l1, by in rows:
@@ -72,10 +93,7 @@ def wynmoor2():
 
 def WYN_PERIM():
     """Wynmoor's outline as 'house' points, so walls() puts the community wall + hedge along Lyons / Copans / NW 15th St."""
-    WP = []
-    for x in range(35, 621, 20): WP.append((x, 248)); WP.append((x, 366))
-    for y in range(248, 367, 20): WP.append((35, y)); WP.append((620, y))
-    return WP
+    return []                                                                                       # round 51b: wynmoor2 builds its own closed wall
 
 def golf2():
     """Inside the lake loop only: two short holes (west + east of the lake), greens, sand, flags, a cart path, carts parked by the clubhouse end."""
