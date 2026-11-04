@@ -1399,14 +1399,12 @@ function zombieRig(look, st) {
     const cr = V.add(V.mad(hd, up, 0.8), V.mul(fwd, -0.5));
     r.ell(cr, [4.6, 4.1, 4.5], flesh, frameAlong(fwd, up), { mf: p => {
       const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up);
-      if (f2 > 1.4 && (Math.abs(s2) - 1.8) ** 2 + (z2 - 0.2) ** 2 < 1.6) return M.DARK;   // sunken sockets
-      // a dark, balding scalp over the crown and the back of the head, with a ragged edge
-      if (f2 < -1.0 + Math.sin(s2 * 2.3) * 0.7 && z2 > 0.4 + f2 * 0.3 + Math.cos(s2 * 3.1) * 0.5) return M.HAIR;   // (behind the crown only: the dome stays bald from the front)
+      if (f2 > 1.0 && (Math.abs(s2) - 1.8) ** 2 + (z2 - 0.1) ** 2 < 2.3) return M.DARK;   // big sunken sockets (B3: skull-like)
       return 0;
     } });
     r.ell(V.add(V.mad(hd, fwd, 1.4), V.mul(up, -1.4)), [3.0, 3.1, 2.8], flesh, frameAlong(fwd, up), { mf: p => {
       const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up);
-      if (f2 > 1.4 && (Math.abs(s2) - 1.8) ** 2 + (z2 - 0.2) ** 2 < 1.6) return M.DARK;   // sunken sockets
+      if (f2 > 1.0 && (Math.abs(s2) - 1.8) ** 2 + (z2 - 0.1) ** 2 < 2.3) return M.DARK;   // big sunken sockets (B3: skull-like)
       if (f2 > 3 && Math.abs(s2) < 0.5 && z2 < -0.8 && z2 > -1.8) return M.DARK;            // nose hole
       if (f2 > 2.2 && Math.abs(s2) > 1.6 && z2 < -1.6) return M.HORN;                       // hollow cheeks under the cheekbones
       return 0;
@@ -1415,13 +1413,12 @@ function zombieRig(look, st) {
     r.ell(V.add(V.mad(hd, fwd, 2.6), V.mul(up, 1.8)), [1.4, 3.6, 1.0], flesh, frameAlong(fwd, up));   // brow ridge
     for (const s of [-1, 1]) r.ell(V.add(V.mad(hd, sideR, s * 4.2), V.mul(up, -0.4)), [1.2, 0.7, 1.5], flesh, frameAlong(fwd, up));   // ears
   });
-  for (const s of [-1, 1]) r.sph(V.add(V.add(V.mad(hd, fwd, 3.6), V.mul(sideR, s * 1.8)), V.mul(up, 0.2)), 0.75, M.EYE_RED, { noShadow: true });
+  for (const s of [-1, 1]) {   // B3: big dark round sockets set into the skull face, a small red glint deep inside each
+    r.ell(V.add(V.add(V.mad(hd, fwd, 3.1), V.mul(sideR, s * 1.8)), V.mul(up, 0.1)), [0.9, 1.35, 1.25], M.DARK, frameAlong(fwd, up), { noShadow: true });
+    r.sph(V.add(V.add(V.mad(hd, fwd, 3.7), V.mul(sideR, s * 1.8)), V.mul(up, 0.0)), 0.6, M.EYE_RED, { noShadow: true });
+  }
   const jc = V.add(V.mad(hd, fwd, 2.2), V.mul(up, -3.6));   // the hanging jaw, mouth gaping dark
   r.ell(V.add(jc, V.mul(up, 1.1)), [1.8, 2.2, 1.0], M.DARK, frameAlong(fwd, up), { noShadow: true });
-  for (const [a, z, l] of [[2.4, 4.4, 4], [3.0, 3.0, 3.4], [3.6, 4.0, 4.2], [4.2, 2.6, 3.0]]) {   // a few lank hair wisps hanging at the back
-    const d = V.add(V.mul(fwd, Math.cos(a)), V.mul(sideR, Math.sin(a))), p0 = V.add(V.mad(hd, d, 3.6), V.mul(up, z - 1.4));
-    r.cone(p0, V.add(V.mad(p0, up, -l), V.mul(d, 1.2)), 0.8, 0.35, M.HAIR);
-  }
   r.ell(jc, [2.3, 2.0, 1.3], flesh, frameAlong(fwd, up), { mf: p => V.dot(V.sub(p, jc), fwd) > 1.6 && V.dot(V.sub(p, jc), up) > 0.4 && (Math.round(V.dot(V.sub(p, jc), sideR) * 1.4) & 1) ? M.CLOTH_WHITE : 0 });
   if (clip === 'death') deathTip(r, B, f, 1);
   if (look.scale && look.scale !== 1) scaleRig(r, look.scale);

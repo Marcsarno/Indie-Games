@@ -357,3 +357,9 @@ Test copy republished with this round's `monsters.js`/`actors.js` (new monsters 
 show flat shading bands; enforcer cleaver very pale from the front; gravebow's quiver hidden in the pure front view;
 cave bat membrane shows thin CHITIN highlights; Restless Dead's pale flesh is close to skeleton bone at 1x; bog toad
 throat is ochre (no pale green in the palette); crossbowman's bone prod reads paler than the concept's wood.
+
+## B3: Restless Dead head fix (2026-11-04)
+The user disliked the brown on the Restless Dead's head (B2 pass 6-7 had added a dark balding scalp patch and hair
+wisps). Removed both: the head is now a bald pale skull like the concept. Added big dark round eye sockets with a
+small red glint deep in each (front views now read as a skull face). Kept: won both orders vs B2's final. Other
+monsters pixel-identical; 304 frames, 0 sprite-edge hits; no page errors. Review/progress/test pages updated.
