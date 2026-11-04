@@ -38,72 +38,104 @@
 <main>
   <header>
     <h1>Song Breaks</h1>
-    <p class="lede">Your 23-minute recording, with the places where one song might end and the next begin. There's no silence between the songs, so I found these by loudness and by how much the sound changes. Each clip is 20 seconds: 10 before the spot and 10 after.</p>
+    <p class="lede">Your 23-minute recording with the applause taken out. Applause sounds like noise (lots of claps, no pitch) and the music doesn't, so it can be found by measure. I calibrated on the stretch you heard at 5:22.</p>
   </header>
   <section>
-    <h2>The whole recording</h2>
-    <figure>
-      <div class="frame"><img src="song2-map.png" alt="A strip of the whole 23 minutes: the sound's frequencies on top, the loudness line below, and a line showing how different the sound is just before and just after each moment, with tall peaks near 5:20, 7:00 and 17:05" width="1600" height="358"></div>
-      <figcaption>Top: the sound. Blue: loudness. Orange: how different the sound is just before and just after each moment. The three tall orange peaks are the clear changes.</figcaption>
-    </figure>
+    <h2>Applause found</h2>
+    <div class="tw"><table>
+      <tr><th>Where</th><th>Length</th><th></th></tr>
+      <tr><td>0:00 to 0:13</td><td>13 s</td><td>applause before the first song</td></tr>
+      <tr><td>5:21 to 7:03</td><td>1 min 42 s</td><td>applause, with quieter gaps that may be talking</td></tr>
+      <tr><td>17:05 to 17:42</td><td>37 s</td><td>applause</td></tr>
+      <tr><td>11:38, 14:14, 15:27</td><td>about 2 s each</td><td>short noisy moments, probably a cymbal (left in; check below)</td></tr>
+    </table></div>
   </section>
   <section>
-    <h2>Listen to each spot</h2>
-    <p>Tell me the numbers that are real song changes, for example "2, 3, 5, 8, 10". If a song starts somewhere I didn't list, tell me roughly when and I'll find the exact spot.</p>
+    <h2>The three pieces, applause removed</h2>
+    <p>Each has a short fade at both ends.</p>
     <div class="clip">
-      <h3>1. At 4:33<span class="tag maybe">possible</span></h3>
-      <p>A dip in loudness. The moment is at 0:10 in this clip.</p>
-      <audio controls preload="none" src="clip01.mp3"></audio>
+      <h3>Piece 1: 0:13 to 5:21</h3>
+      <p>5 min 8 s.</p>
+      <audio controls preload="none" src="piece1.mp3"></audio>
     </div>
     <div class="clip">
-      <h3>2. At 5:22<span class="tag strong">clear change</span></h3>
-      <p>The sound changes sharply and gets sparser. The moment is at 0:10 in this clip.</p>
-      <audio controls preload="none" src="clip02.mp3"></audio>
+      <h3>Piece 2: 7:03 to 17:05</h3>
+      <p>10 min 2 s. Probably two or three songs played straight through, with no applause between them. The spots below may be where they change.</p>
+      <audio controls preload="none" src="piece2.mp3"></audio>
     </div>
     <div class="clip">
-      <h3>3. At 6:57<span class="tag strong">clear change</span></h3>
-      <p>The sparse section ends and a full, loud part starts. The moment is at 0:10 in this clip.</p>
-      <audio controls preload="none" src="clip03.mp3"></audio>
+      <h3>Piece 3: 17:42 to the end</h3>
+      <p>5 min 12 s.</p>
+      <audio controls preload="none" src="piece3.mp3"></audio>
     </div>
+  </section>
+  <section>
+    <h2>Check the cuts</h2>
+    <p>12 seconds around each cut in the original recording, the cut 6 seconds in. If the music starts or stops a little earlier or later than the cut, tell me.</p>
+    <div class="clip">
+      <h3>Cut A at 0:13</h3>
+      <p>Applause ends, the first song starts.</p>
+      <audio controls preload="none" src="edge13.mp3"></audio>
+    </div>
+    <div class="clip">
+      <h3>Cut B at 5:21</h3>
+      <p>The first song ends, applause starts.</p>
+      <audio controls preload="none" src="edge321.mp3"></audio>
+    </div>
+    <div class="clip">
+      <h3>Cut C at 7:03</h3>
+      <p>Applause and talking end, the next song starts.</p>
+      <audio controls preload="none" src="edge423.mp3"></audio>
+    </div>
+    <div class="clip">
+      <h3>Cut D at 17:05</h3>
+      <p>The music ends, applause starts.</p>
+      <audio controls preload="none" src="edge1025.mp3"></audio>
+    </div>
+    <div class="clip">
+      <h3>Cut E at 17:42</h3>
+      <p>Applause ends, the last song starts.</p>
+      <audio controls preload="none" src="edge1062.mp3"></audio>
+    </div>
+  </section>
+  <section>
+    <h2>Inside piece 2: where might songs change?</h2>
+    <p>From the first round of clips, these four fall inside piece 2. The moment is 10 seconds in.</p>
     <div class="clip">
       <h3>4. At 8:21<span class="tag maybe">possible</span></h3>
-      <p>A deep dip in loudness. The moment is at 0:10 in this clip.</p>
+      <p>A deep dip in loudness.</p>
       <audio controls preload="none" src="clip04.mp3"></audio>
     </div>
     <div class="clip">
       <h3>5. At 11:11<span class="tag maybe">possible</span></h3>
-      <p>The level steps down and stays lower. The moment is at 0:10 in this clip.</p>
+      <p>The level steps down and stays lower.</p>
       <audio controls preload="none" src="clip05.mp3"></audio>
     </div>
     <div class="clip">
       <h3>6. At 15:19<span class="tag maybe">possible</span></h3>
-      <p>A dip, then the level shifts. The moment is at 0:10 in this clip.</p>
+      <p>A dip, then the level shifts.</p>
       <audio controls preload="none" src="clip06.mp3"></audio>
     </div>
     <div class="clip">
       <h3>7. At 16:26<span class="tag maybe">possible</span></h3>
-      <p>A deep dip. The moment is at 0:10 in this clip.</p>
+      <p>A deep dip.</p>
       <audio controls preload="none" src="clip07.mp3"></audio>
     </div>
+  </section>
+  <section>
+    <h2>The short noisy moments</h2>
+    <p>10 seconds each, the moment in the middle. If any is applause, I'll take it out too.</p>
     <div class="clip">
-      <h3>8. At 17:05<span class="tag strong">clear change</span></h3>
-      <p>The biggest change in the whole recording. The moment is at 0:10 in this clip.</p>
-      <audio controls preload="none" src="clip08.mp3"></audio>
+      <h3>At 11:38</h3>
+      <audio controls preload="none" src="blip698.mp3"></audio>
     </div>
     <div class="clip">
-      <h3>9. At 18:05<span class="tag maybe">possible</span></h3>
-      <p>A quieter stretch ends and a loud part starts. The moment is at 0:10 in this clip.</p>
-      <audio controls preload="none" src="clip09.mp3"></audio>
+      <h3>At 14:14</h3>
+      <audio controls preload="none" src="blip853.mp3"></audio>
     </div>
     <div class="clip">
-      <h3>10. At 19:33<span class="tag maybe">possible</span></h3>
-      <p>A deep dip. The moment is at 0:10 in this clip.</p>
-      <audio controls preload="none" src="clip10.mp3"></audio>
-    </div>
-    <div class="clip">
-      <h3>11. At 21:28<span class="tag maybe">possible</span></h3>
-      <p>A deep dip. The moment is at 0:10 in this clip.</p>
-      <audio controls preload="none" src="clip11.mp3"></audio>
+      <h3>At 15:27</h3>
+      <audio controls preload="none" src="blip926.mp3"></audio>
     </div>
   </section>
 </main>
