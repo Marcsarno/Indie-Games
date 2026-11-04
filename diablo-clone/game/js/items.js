@@ -67,6 +67,80 @@ const ITEM_BASES = {
   war_bow: { slot: 'weapon', look: 'bow_war', name: 'WAR BOW', dmg: [11, 20], cls: 'ranger', lvl: 5 },
   scale_jerkin: { slot: 'chest', look: 'jerkin_scale', name: 'SCALE JERKIN', armor: 11, cls: 'ranger', lvl: 4 },
   drake_hide: { slot: 'chest', look: 'jerkin_drake', name: 'DRAKE HIDE', armor: 14, cls: 'ranger', lvl: 5 },
+  // round 49: the art chat's hero sets (art A6, A8) as items, named for their sets; icon: the nearest hand-drawn icon, tint: its color
+  militia_mail: { slot: 'chest', look: 'militia', name: 'MILITIA ARMOR', armor: 5, cls: 'warrior', lvl: 1, icon: 'brigandine', tint: 'LEATHER' },
+  roadwarden_mail: { slot: 'chest', look: 'roadwarden', name: 'ROADWARDEN ARMOR', armor: 5, cls: 'warrior', lvl: 1, icon: 'brigandine', tint: 'CHAIN' },
+  roadwarden_helm: { slot: 'helm', look: 'kettle', name: 'ROADWARDEN HELM', armor: 3, cls: 'warrior', lvl: 1, icon: 'cap' },
+  border_warden_mail: { slot: 'chest', look: 'borderwarden', name: 'BORDER WARDEN ARMOR', armor: 8, cls: 'warrior', lvl: 2, icon: 'brigandine', tint: 'CLOTH_GREEN' },
+  gatewatch_mail: { slot: 'chest', look: 'gatewatch', name: 'GATEWATCH ARMOR', armor: 8, cls: 'warrior', lvl: 2, icon: 'brigandine', tint: 'CHAIN' },
+  gatewatch_helm: { slot: 'helm', look: 'nasal', name: 'GATEWATCH HELM', armor: 5, cls: 'warrior', lvl: 2, icon: 'spangen' },
+  gatewatch_weapon: { slot: 'weapon', look: 'spear', name: 'LEAFBLADE SPEAR', dmg: [5, 12], cls: 'warrior', lvl: 2, icon: 'spear' },
+  gatewatch_shield: { slot: 'shield', look: 'board', name: 'GATEWATCH SHIELD', armor: 6, block: 18, cls: 'warrior', lvl: 2, icon: 'round', tint: 'CHAIN' },
+  copper_raider_mail: { slot: 'chest', look: 'copperraider', name: 'COPPER RAIDER ARMOR', armor: 8, cls: 'warrior', lvl: 2, icon: 'brigandine', tint: 'PUMPKIN' },
+  copper_raider_helm: { slot: 'helm', look: 'barbute_dark', name: 'COPPER RAIDER HELM', armor: 5, cls: 'warrior', lvl: 2, icon: 'barbute' },
+  copper_raider_weapon: { slot: 'weapon', look: 'caxe', name: 'CRESCENT AXE', dmg: [6, 15], cls: 'warrior', lvl: 2, icon: 'axe', slow: true },
+  iron_guard_mail: { slot: 'chest', look: 'ironguard', name: 'IRON GUARD ARMOR', armor: 10, cls: 'warrior', lvl: 3, icon: 'brigandine', tint: 'PLATE' },
+  vanguard_mail: { slot: 'chest', look: 'vanguard', name: 'VANGUARD ARMOR', armor: 10, cls: 'warrior', lvl: 3, icon: 'brigandine', tint: 'CLOTH_BLUE' },
+  dusk_duelist_mail: { slot: 'chest', look: 'duskduelist', name: 'DUSK DUELIST ARMOR', armor: 10, cls: 'warrior', lvl: 3, icon: 'brigandine', tint: 'CLOTH_SHADOW' },
+  dusk_duelist_helm: { slot: 'helm', look: 'skullcap', name: 'DUSK DUELIST HELM', armor: 6, cls: 'warrior', lvl: 3, icon: 'cap' },
+  dusk_duelist_weapon: { slot: 'weapon', look: 'sabre', name: 'SILVER SABRE', dmg: [7, 15], cls: 'warrior', lvl: 3, icon: 'sword' },
+  dusk_duelist_shield: { slot: 'shield', look: 'buckler_steel', name: 'DUSK DUELIST SHIELD', armor: 7, block: 20, cls: 'warrior', lvl: 3, icon: 'buckler', tint: 'CLOTH_SHADOW' },
+  warbringer_mail: { slot: 'chest', look: 'warbringer', name: 'WARBRINGER ARMOR', armor: 12, cls: 'warrior', lvl: 4, icon: 'brigandine', tint: 'DSTEEL' },
+  oathkeeper_mail: { slot: 'chest', look: 'oathkeeper', name: 'OATHKEEPER ARMOR', armor: 12, cls: 'warrior', lvl: 4, icon: 'brigandine', tint: 'CLOTH_WHITE' },
+  oathkeeper_weapon: { slot: 'weapon', look: 'fmace', name: 'FLANGED MACE', dmg: [10, 21], cls: 'warrior', lvl: 4, icon: 'mstar', slow: true },
+  oathkeeper_shield: { slot: 'shield', look: 'heater_oath', name: 'OATHKEEPER SHIELD', armor: 9, block: 24, cls: 'warrior', lvl: 4, icon: 'heater', tint: 'CLOTH_WHITE' },
+  winter_bulwark_mail: { slot: 'chest', look: 'winterbulwark', name: 'WINTER BULWARK ARMOR', armor: 12, cls: 'warrior', lvl: 4, icon: 'brigandine', tint: 'SLATE' },
+  winter_bulwark_helm: { slot: 'helm', look: 'great_flat', name: 'WINTER BULWARK HELM', armor: 7, cls: 'warrior', lvl: 4, icon: 'great' },
+  winter_bulwark_weapon: { slot: 'weapon', look: 'faxe', name: 'FROSTSTEEL AXE', dmg: [10, 21], cls: 'warrior', lvl: 4, icon: 'baxe', slow: true },
+  winter_bulwark_shield: { slot: 'shield', look: 'heater_frost', name: 'WINTER BULWARK SHIELD', armor: 9, block: 24, cls: 'warrior', lvl: 4, icon: 'heater', tint: 'SLATE' },
+  steel_knight_mail: { slot: 'chest', look: 'steelknight', name: 'STEEL KNIGHT ARMOR', armor: 16, cls: 'warrior', lvl: 5, icon: 'brigandine', tint: 'PLATE' },
+  crown_guard_mail: { slot: 'chest', look: 'crownguard', name: 'CROWN GUARD ARMOR', armor: 16, cls: 'warrior', lvl: 5, icon: 'brigandine', tint: 'GOLD' },
+  ember_forged_mail: { slot: 'chest', look: 'emberforged', name: 'EMBER FORGED ARMOR', armor: 20, cls: 'warrior', lvl: 6, icon: 'brigandine', tint: 'AUTUMNM' },
+  ember_forged_helm: { slot: 'helm', look: 'bascinet_gold', name: 'EMBER FORGED HELM', armor: 10, cls: 'warrior', lvl: 6, icon: 'bascinet' },
+  ember_forged_weapon: { slot: 'weapon', look: 'fhammer', name: 'FORGE HAMMER', dmg: [14, 28], cls: 'warrior', lvl: 6, icon: 'mace', slow: true },
+  royal_executor_mail: { slot: 'chest', look: 'royalexecutor', name: 'ROYAL EXECUTOR ARMOR', armor: 20, cls: 'warrior', lvl: 6, icon: 'brigandine', tint: 'CLOTH_RED' },
+  royal_executor_helm: { slot: 'helm', look: 'helm_royal', name: 'ROYAL EXECUTOR HELM', armor: 10, cls: 'warrior', lvl: 6, icon: 'crown' },
+  royal_executor_weapon: { slot: 'weapon', look: 'kgsword', name: 'KINGSGUARD GREATSWORD', dmg: [14, 28], cls: 'warrior', lvl: 6, icon: 'greatsword', slow: true },
+  bramble_scout_jerkin: { slot: 'chest', look: 'jerkin_bramble', name: 'BRAMBLE SCOUT JERKIN', armor: 4, cls: 'ranger', lvl: 1, icon: 'jerkin', tint: 'LEATHER' },
+  bramble_scout_bow: { slot: 'weapon', look: 'bow_ash', name: 'BRAMBLE SCOUT BOW', dmg: [3, 7], cls: 'ranger', lvl: 1, icon: 'bow', tint: 'WOOD' },
+  marsh_runner_jerkin: { slot: 'chest', look: 'jerkin_marsh', name: 'MARSH RUNNER JERKIN', armor: 4, cls: 'ranger', lvl: 1, icon: 'jerkin', tint: 'PINE' },
+  marsh_runner_bow: { slot: 'weapon', look: 'bow_swamp', name: 'MARSH RUNNER BOW', dmg: [3, 7], cls: 'ranger', lvl: 1, icon: 'bow', tint: 'HAIR' },
+  ashwood_hunter_jerkin: { slot: 'chest', look: 'jerkin_ashwood', name: 'ASHWOOD HUNTER JERKIN', armor: 6, cls: 'ranger', lvl: 2, icon: 'jerkin', tint: 'STRAWM' },
+  ashwood_hunter_bow: { slot: 'weapon', look: 'bow_iron', name: 'ASHWOOD HUNTER BOW', dmg: [5, 10], cls: 'ranger', lvl: 2, icon: 'bow', tint: 'IRON' },
+  dune_strider_jerkin: { slot: 'chest', look: 'jerkin_dune', name: 'DUNE STRIDER JERKIN', armor: 9, cls: 'ranger', lvl: 3, icon: 'jerkin', tint: 'STRAWM' },
+  dune_strider_bow: { slot: 'weapon', look: 'bow_arbalest', name: 'DUNE STRIDER CROSSBOW', dmg: [7, 14], cls: 'ranger', lvl: 3, icon: 'bow', tint: 'PUMPKIN' },
+  night_tracker_jerkin: { slot: 'chest', look: 'jerkin_night', name: 'NIGHT TRACKER JERKIN', armor: 9, cls: 'ranger', lvl: 3, icon: 'jerkin', tint: 'SLATE' },
+  night_tracker_bow: { slot: 'weapon', look: 'bow_cross', name: 'NIGHT TRACKER CROSSBOW', dmg: [7, 14], cls: 'ranger', lvl: 3, icon: 'bow', tint: 'IRON' },
+  thorn_sentinel_jerkin: { slot: 'chest', look: 'jerkin_thorn', name: 'THORN SENTINEL JERKIN', armor: 11, cls: 'ranger', lvl: 4, icon: 'jerkin', tint: 'CLOTH_GREEN' },
+  thorn_sentinel_bow: { slot: 'weapon', look: 'bow_recurve', name: 'THORN SENTINEL BOW', dmg: [9, 17], cls: 'ranger', lvl: 4, icon: 'bow', tint: 'HORN' },
+  frostpath_stalker_jerkin: { slot: 'chest', look: 'jerkin_frost', name: 'FROSTPATH STALKER JERKIN', armor: 14, cls: 'ranger', lvl: 5, icon: 'jerkin', tint: 'CHAIN' },
+  frostpath_stalker_bow: { slot: 'weapon', look: 'bow_silver', name: 'FROSTPATH STALKER BOW', dmg: [11, 20], cls: 'ranger', lvl: 5, icon: 'bow', tint: 'STEEL' },
+  blackthorn_warden_jerkin: { slot: 'chest', look: 'jerkin_warden', name: 'BLACKTHORN WARDEN JERKIN', armor: 16, cls: 'ranger', lvl: 6, icon: 'jerkin', tint: 'CLOTH_SHADOW' },
+  blackthorn_warden_bow: { slot: 'weapon', look: 'bow_thorn', name: 'BLACKTHORN WARDEN BOW', dmg: [13, 23], cls: 'ranger', lvl: 6, icon: 'bow', tint: 'CHITIN' },
+  wayfarer_robe: { slot: 'chest', look: 'robe_way', name: 'WAYFARER ROBE', armor: 3, cls: 'mage', lvl: 1, icon: 'robe', tint: 'LEATHER' },
+  wayfarer_hat: { slot: 'helm', look: 'hat_way', name: 'WAYFARER HAT', armor: 2, cls: 'mage', lvl: 1, icon: 'hat', tint: 'LEATHER' },
+  wayfarer_staff: { slot: 'weapon', look: 'staff_amber', name: 'WAYFARER STAFF', dmg: [4, 8], cls: 'mage', lvl: 1, icon: 'staff', orb: 'FIREM' },
+  tidekeeper_robe: { slot: 'chest', look: 'robe_tide', name: 'TIDEKEEPER ROBE', armor: 5, cls: 'mage', lvl: 2, icon: 'robe', tint: 'WATERM' },
+  tidekeeper_hat: { slot: 'helm', look: 'hat_tide', name: 'TIDEKEEPER HAT', armor: 3, cls: 'mage', lvl: 2, icon: 'hat', tint: 'WATERM' },
+  tidekeeper_staff: { slot: 'weapon', look: 'staff_pearl', name: 'TIDEKEEPER STAFF', dmg: [6, 12], cls: 'mage', lvl: 2, icon: 'staff', orb: 'ICE' },
+  frost_scholar_robe: { slot: 'chest', look: 'robe_frost', name: 'FROST SCHOLAR ROBE', armor: 5, cls: 'mage', lvl: 2, icon: 'robe', tint: 'CLOTH_WHITE' },
+  frost_scholar_hat: { slot: 'helm', look: 'hat_frost', name: 'FROST SCHOLAR HAT', armor: 3, cls: 'mage', lvl: 2, icon: 'hat', tint: 'CLOTH_WHITE' },
+  frost_scholar_staff: { slot: 'weapon', look: 'staff_frost', name: 'FROST SCHOLAR STAFF', dmg: [6, 12], cls: 'mage', lvl: 2, icon: 'staff', orb: 'ICE' },
+  rose_oracle_robe: { slot: 'chest', look: 'robe_rose', name: 'ROSE ORACLE ROBE', armor: 8, cls: 'mage', lvl: 3, icon: 'robe', tint: 'CLOTH_RED' },
+  rose_oracle_hat: { slot: 'helm', look: 'hat_rose', name: 'ROSE ORACLE HAT', armor: 4, cls: 'mage', lvl: 3, icon: 'hat', tint: 'CLOTH_RED' },
+  rose_oracle_staff: { slot: 'weapon', look: 'staff_rose', name: 'ROSE ORACLE STAFF', dmg: [8, 15], cls: 'mage', lvl: 3, icon: 'staff', orb: 'ARCANE' },
+  duskweaver_robe: { slot: 'chest', look: 'robe_dusk', name: 'DUSKWEAVER ROBE', armor: 8, cls: 'mage', lvl: 3, icon: 'robe', tint: 'CLOTH_PURPLE' },
+  duskweaver_hat: { slot: 'helm', look: 'hat_dusk', name: 'DUSKWEAVER HAT', armor: 4, cls: 'mage', lvl: 3, icon: 'hat', tint: 'CLOTH_PURPLE' },
+  duskweaver_staff: { slot: 'weapon', look: 'staff_moon', name: 'DUSKWEAVER STAFF', dmg: [8, 15], cls: 'mage', lvl: 3, icon: 'staff', orb: 'ARCANE' },
+  cinder_sage_robe: { slot: 'chest', look: 'robe_cinder', name: 'CINDER SAGE ROBE', armor: 10, cls: 'mage', lvl: 4, icon: 'robe', tint: 'CLOTH_SHADOW' },
+  cinder_sage_hat: { slot: 'helm', look: 'hat_cinder', name: 'CINDER SAGE HAT', armor: 5, cls: 'mage', lvl: 4, icon: 'hat', tint: 'CLOTH_SHADOW' },
+  cinder_sage_staff: { slot: 'weapon', look: 'staff_cage', name: 'CINDER SAGE STAFF', dmg: [10, 18], cls: 'mage', lvl: 4, icon: 'staff', orb: 'FIREM' },
+  runebinder_robe: { slot: 'chest', look: 'robe_rune', name: 'RUNEBINDER ROBE', armor: 13, cls: 'mage', lvl: 5, icon: 'robe', tint: 'CLOTH_NAVY' },
+  runebinder_hat: { slot: 'helm', look: 'hat_rune', name: 'RUNEBINDER HAT', armor: 6, cls: 'mage', lvl: 5, icon: 'hat', tint: 'CLOTH_NAVY' },
+  runebinder_staff: { slot: 'weapon', look: 'staff_runestone', name: 'RUNEBINDER STAFF', dmg: [13, 22], cls: 'mage', lvl: 5, icon: 'staff', orb: 'ICE' },
+  sunwarden_robe: { slot: 'chest', look: 'robe_sun', name: 'SUNWARDEN ROBE', armor: 15, cls: 'mage', lvl: 6, icon: 'robe', tint: 'GOLD' },
+  sunwarden_hat: { slot: 'helm', look: 'hat_sun', name: 'SUNWARDEN HAT', armor: 7, cls: 'mage', lvl: 6, icon: 'hat', tint: 'GOLD' },
+  sunwarden_staff: { slot: 'weapon', look: 'staff_sun', name: 'SUNWARDEN STAFF', dmg: [15, 26], cls: 'mage', lvl: 6, icon: 'staff', orb: 'FIREM' },
   hunter_hood: { slot: 'helm', look: 'rhood_hunter', name: "HUNTER'S HOOD", armor: 4, cls: 'ranger', lvl: 3 },
   night_hood: { slot: 'helm', look: 'rhood_night', name: 'NIGHT HOOD', armor: 6, cls: 'ranger', lvl: 4 },
   deep_quiver: { slot: 'shield', look: 'quiver_deep', name: 'DEEP QUIVER', armor: 5, cls: 'ranger', lvl: 4 },
@@ -236,7 +310,7 @@ function itemLines(it) {
 // ---------------------------------------------------------------- icons (rig-drawn, 24x24)
 const iconCache = {};
 function itemIcon(it) {
-  const b = ITEM_BASES[it.base], k = b.look || it.base;
+  const b0 = ITEM_BASES[it.base], k = b0.look || it.base, b = b0.icon ? Object.assign({}, b0, { look: b0.icon }) : b0, tint = b0.tint ? M[b0.tint] : null;   // (round 49: a new look borrows the nearest icon, in its own color)
   if (iconCache[k]) return iconCache[k];
   const r = new Rig();
   const team = M.CLOTH_RED;
@@ -245,12 +319,12 @@ function itemIcon(it) {
     const wide = V.norm(V.cross(bd, [0, 0, 1])), wf = [bd, wide, V.cross(bd, wide)];
     r.cone(V.mad(g, bd, -2.5), V.mad(g, bd, 1.2), 0.9, 0.9, M.LEATHER); r.sph(V.mad(g, bd, -3.1), 1.2, M.GOLD);
     if (b.look.startsWith('staff')) {
-      const orb = b.look === 'staff_fire' ? M.FIREM : b.look === 'staff_ice' || b.look === 'staff_rune' ? M.ICE : M.ARCANE;
+      const orb = b0.orb ? M[b0.orb] : b.look === 'staff_fire' ? M.FIREM : b.look === 'staff_ice' || b.look === 'staff_rune' ? M.ICE : M.ARCANE;
       if (b.look === 'staff_rune') for (const z of [7, 11]) r.cyl(V.mad(g, bd, z), V.mad(g, bd, z + 0.9), 1.4, M.GOLD);
       r.cone(V.mad(g, bd, -1), V.mad(g, bd, 14), 0.9, 1.0, M.WOOD); r.sph(V.mad(g, bd, 16), 2.8, orb, { noShadow: true });
       for (const s of [-1, 1]) r.cone(V.mad(g, bd, 13), V.add(V.mad(g, bd, 16.6), V.mul(wide, s * 2.6)), 0.7, 0.4, M.GOLD);
     } else if (b.look.startsWith('bow')) {   // a bow standing on its end, strung
-      const lm = b.look === 'bow_horn' ? M.HORN : b.look === 'bow_war' ? M.BARK : M.WOOD, L = b.look === 'bow_long' || b.look === 'bow_war' ? 10 : 8.5;
+      const lm = tint || b.look === 'bow_horn' ? M.HORN : b.look === 'bow_war' ? M.BARK : M.WOOD, L = b.look === 'bow_long' || b.look === 'bow_war' ? 10 : 8.5;
       r.p.length = 0;   // no grip and pommel for a bow
       r.cone([0, 0, 4], [-2, 0, 4 + L * 0.6], 1.1, 0.9, lm); r.cone([-2, 0, 4 + L * 0.6], [0.6, 0, 4 + L * 1.1], 0.9, 0.5, lm);
       r.cone([0, 0, 4], [-2, 0, 4 - L * 0.6], 1.1, 0.9, lm); r.cone([-2, 0, 4 - L * 0.6], [0.6, 0, 4 - L * 1.1], 0.9, 0.5, lm);
@@ -270,7 +344,7 @@ function itemIcon(it) {
   } else if (b.slot === 'helm') {
     const hd = [0, 0, 4], fwd = [1, 0, 0], up = [0, 0, 1], sd = [0, 1, 0];
     if (b.look === 'cap') r.ell([0, 0, 3], [5.2, 5.1, 4.0], M.IRON);
-    else if (b.look === 'hat' || b.look === 'hat_conj') { r.cyl([0, 0, 0], [0, 0, 0.8], 7, (b.look === 'hat_conj' ? M.CLOTH_NAVY : M.CLOTH_PURPLE)); r.cone([0, 0, 0.5], [-1.2, 0, 6], 4.6, 2.4, (b.look === 'hat_conj' ? M.CLOTH_NAVY : M.CLOTH_PURPLE), { mf: p => p[2] < 2 ? M.GOLD : 0 }); r.cone([-1.2, 0, 6], [-4.5, 0, 10.5], 2.4, 0.5, (b.look === 'hat_conj' ? M.CLOTH_NAVY : M.CLOTH_PURPLE)); }
+    else if (b.look === 'hat' || b.look === 'hat_conj') { r.cyl([0, 0, 0], [0, 0, 0.8], 7, (tint || (b.look === 'hat_conj' ? M.CLOTH_NAVY : M.CLOTH_PURPLE))); r.cone([0, 0, 0.5], [-1.2, 0, 6], 4.6, 2.4, (tint || (b.look === 'hat_conj' ? M.CLOTH_NAVY : M.CLOTH_PURPLE)), { mf: p => p[2] < 2 ? M.GOLD : 0 }); r.cone([-1.2, 0, 6], [-4.5, 0, 10.5], 2.4, 0.5, (tint || (b.look === 'hat_conj' ? M.CLOTH_NAVY : M.CLOTH_PURPLE))); }
     else if (b.look.startsWith('rhood')) { const hm = b.look === 'rhood_dark' ? M.CLOTH_SHADOW : b.look === 'rhood_night' ? M.CLOTH_NAVY : M.CLOTH_GREEN; r.ell([0, 0, 4], [5.4, 5.6, 5.8], hm, null, { mf: p => p[0] > 3 && Math.abs(p[1]) < 3 && p[2] < 5 ? M.DARK : 0 }); r.cone([-4, 0, 7], [-8, 0, 4], 2.2, 0.5, hm); r.ell([0, 0, -1.5], [4, 5.4, 1.6], hm); }
     else if (b.look === 'spangen') { r.ell([0, 0, 3], [5.2, 5.1, 4.0], M.STEEL, null, { mf: p => Math.abs(p[1]) < 0.6 || p[2] < 0.6 ? M.GOLD : 0 }); r.cone([0, 0, 5], [0, 0, 9.5], 3, 0.3, M.STEEL); }
     else if (b.look === 'hood_sage') { r.ell([0, 0, 4], [5.4, 5.6, 5.8], M.CLOTH_GREEN, null, { mf: p => p[0] > 3 && Math.abs(p[1]) < 3 && p[2] < 5 ? M.DARK : p[0] > 3 && Math.abs(p[1]) < 4 && p[2] < 6.2 ? M.GOLD : 0 }); r.cone([-4, 0, 6], [-8, 0, 2], 2.2, 0.5, M.CLOTH_GREEN); }
@@ -284,7 +358,7 @@ function itemIcon(it) {
       void fwd; void up; void sd;
     }
   } else if (b.slot === 'chest') {
-    const m = b.look === 'jerkin_hide' ? M.HIDE : b.look === 'jerkin_drake' ? M.BLOODY : b.look.startsWith('jerkin') ? M.LEATHER : b.look === 'plate' ? M.PLATE : b.look === 'darkplate' || b.look === 'gothic' ? M.DSTEEL : b.look === 'chain' ? M.CHAIN : b.look === 'scale' ? M.GOLD : b.look.startsWith('robe') ? (TEAM[b.look.slice(5)] || team) : team;
+    const m = tint || b.look === 'jerkin_hide' ? (tint || M.HIDE) : b.look === 'jerkin_drake' ? M.BLOODY : b.look.startsWith('jerkin') ? M.LEATHER : b.look === 'plate' ? M.PLATE : b.look === 'darkplate' || b.look === 'gothic' ? M.DSTEEL : b.look === 'chain' ? M.CHAIN : b.look === 'scale' ? M.GOLD : b.look.startsWith('robe') ? (TEAM[b.look.slice(5)] || team) : team;
     if (b.look.startsWith('robe')) r.cone([0, 0, 2], [0, 0, -7], 4.4, 6.6, m, { mf: p => p[2] < -5.4 ? M.GOLD : 0 });   // the robe's skirt
     r.ell([0, 0, 3], [4.6, 6.6, 6.4], m, null, b.look.startsWith('robe') ? { mf: p => p[0] > 2 && Math.abs(p[1]) < 0.8 ? M.GOLD : 0 } : undefined);
     for (const s of [-1, 1]) r.ell([0, s * 7, 6.5], [3.6, 3.4, 3], b.look === 'tunic' ? M.LEATHER : b.look.startsWith('jerkin') ? M.CLOTH_GREEN : m);

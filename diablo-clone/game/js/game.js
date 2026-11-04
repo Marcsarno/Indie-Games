@@ -297,7 +297,7 @@ function lungeHero(dist) {
   }
   tryMove(hero, fx / l * dist, fy / l * dist);
 }
-const heroReach = () => ({ sword: 1.45, greatsword: 1.75, flail: 1.5 })[hero.look.weapon] || 1.35;
+const heroReach = () => ({ sword: 1.45, greatsword: 1.75, flail: 1.5, spear: 1.75, kgsword: 1.75, sabre: 1.45 })[hero.look.weapon] || 1.35;   // (round 49: the art chat's spear and greatsword reach far)
 function heroCast() {
   if (G.mode !== 'play' || hero.dead || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0) return;
   if (hero.atk >= 0) { hero.castQueued = true; return; }   // fires when the swing ends
