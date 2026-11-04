@@ -434,6 +434,45 @@ function setChest(r, eq, J, fwd, up, sideR) {
   }
   if (eq.set === 'magus') { const c = V.add(V.mad(J.chest, up, 3.2), V.mul(fwd, 3.4)); r.sph(V.mad(c, fwd, 0.6), 1.9, M.ARCANE, { noShadow: true }); r.cyl(V.mad(c, fwd, -0.4), V.mad(c, fwd, 0.2), 2.8, M.GOLD); }
 }
+// the ranger's five jerkins (a6, from the concept sheet): body, sleeves, how far the skirt or coat
+// tails hang below the waist, and what each wears over it
+const JERKIN = {
+  jerkin: { m: M.LEATHER, sleeve: M.CLOTH_GREEN, skirt: 2.4 },          // tan leather vest over a green shirt
+  jerkin_stud: { m: M.BARK, sleeve: M.OGRE, skirt: 2.4 },               // dark leather, silver studs, a shoulder pad, olive sleeves
+  jerkin_hide: { m: M.HIDE, sleeve: M.HIDE, skirt: 4.4 },               // a slate long coat: fur collar, strap, tails to mid-thigh
+  jerkin_scale: { m: M.CLOTH_GREEN, sleeve: M.STRAWM, skirt: 2.4 },     // green with gold scale bands, ochre sleeves, a round pad
+  jerkin_drake: { m: M.BLOODY, sleeve: M.CLOTH_SHADOW, skirt: 2.8 },    // maroon under a short mantle, grey sleeves, a green sash
+};
+// the parts a jerkin adds over the torso (built before the body is slimmed, like the torso)
+function jerkinChest(r, eq, J, fwd, up, sideR) {
+  const K = JERKIN[eq.chest] || JERKIN.jerkin, k = eq.chest, B = HERO_B;
+  const C = V.mad(J.chest, up, 0.8), R = [(3.8 + 0.42) * HERO_BK, (5.0 + 0.54) * HERO_BK, (4.6 + 0.48) * HERO_BK];   // the torso as drawn
+  const onT = (s, z, back) => { const t = 1 - (s / R[1]) ** 2 - (z / R[2]) ** 2, f = R[0] * Math.sqrt(Math.max(0, t)) * (back ? -1 : 1); return V.add(V.add(V.mad(C, fwd, f), V.mul(sideR, s)), V.mul(up, z)); };
+  // the skirt (or the coat's tails): a flared cone from under the belt toward the knees, so it follows the stride
+  const top = V.mad(J.pelvis, up, 1.6), kneeMid = V.mul(V.add(J.kneeL, J.kneeR), 0.5);
+  const dn = V.norm(V.sub(kneeMid, top)), bot = V.mad(top, dn, K.skirt + 1.6);
+  const coat = k === 'jerkin_hide';
+  r.cone(top, bot, 4.2, coat ? 5.0 : 4.8, K.m, { mf: p => {
+    const q = V.sub(p, top), s = Math.abs(V.dot(q, sideR)), along = V.dot(q, dn);
+    if (s < 0.45 && along > (coat ? 1.2 : 2.0)) return M.DARK;   // the split, front and back
+    if (k === 'jerkin_scale' && Math.abs(along - 2.4) < 0.5) return M.GOLD;
+    return 0;
+  } });
+  if (k === 'jerkin_stud') {   // silver studs in two columns down the chest, one up the back, and a pad on the right shoulder
+    for (const [s, z] of [[-1.7, 1.8], [1.7, 1.8], [-1.7, -1.0], [1.7, -1.0]]) r.sph(V.mad(onT(s, z), fwd, -0.3), 1.5, M.STEEL, { noShadow: true });
+    for (const z of [1.8, -1.0]) r.sph(V.mad(onT(-1.8, z, true), fwd, 0.3), 1.5, M.STEEL, { noShadow: true });
+    r.ell(V.add(V.mad(J.shR, up, 0.9), V.mul(sideR, 0.4)), [3.4, 3.0, 2.4], M.LEATHER, frameAlong(fwd, up));
+  }
+  if (k === 'jerkin_scale') r.sph(V.add(V.mad(J.shR, up, 0.8), V.mul(sideR, 0.3)), 3.1, M.LEATHER);   // the round shoulder pad
+  if (coat) r.ell(V.add(V.mad(J.chest, up, 3.8), V.mul(fwd, 0.6)), [4.6, 5.8, 2.3], M.CLOTH_WHITE, frameAlong(fwd, up));   // the fur collar
+  if (k === 'jerkin_drake') {   // a short mantle over the shoulders, and a green sash with its end hanging at the left hip
+    r.ell(V.mad(J.chest, up, B.shZ - 0.4), [5.0, 8.6, 3.4], M.MARK, frameAlong(fwd, up));
+    const belt = V.mad(J.pelvis, up, 3.0);
+    r.ell(belt, [4.3, 5.1, 1.4], M.CLOTH_GREEN, frameAlong(fwd, up));
+    const a = V.add(V.mad(belt, fwd, 3.9), V.mul(sideR, -2.0));
+    r.box(V.add(V.mad(a, up, -3.0), V.mul(fwd, 0.6)), [0.7, 1.4, 3.0], M.CLOTH_GREEN, frameAlong(fwd, up));
+  }
+}
 function setHead(r, eq, hd, fwd, up, sideR, helmF) {
   if (eq.set === 'warden') {   // a white plume streaming back from the crest
     const a = V.add(V.mad(hd, up, 5.6), V.mul(fwd, 0.5)), b = V.add(V.mad(hd, up, 8.2), V.mul(fwd, -3.2)), c = V.add(V.mad(hd, up, 6.2), V.mul(fwd, -7));
@@ -463,7 +502,7 @@ function heroRig(eq, st) {
   // mage robes: one design in three colors (look 'robe_blue' / 'robe_purple' / 'robe_red')
   const robe = eq.chest.startsWith('robe'), robeM = robe ? (TEAM[eq.chest.slice(5)] || M.CLOTH_BLUE) : null;
   // the ranger's jerkins (round 33): leather over a green shirt; studded, or dark hide
-  const jerk = eq.chest.startsWith('jerkin'), jerkM = eq.chest === 'jerkin_hide' ? M.HIDE : eq.chest === 'jerkin_drake' ? M.BLOODY : M.LEATHER, bow = isBow(eq.weapon);   // round 43: drake hide, dark scaled
+  const jerk = eq.chest.startsWith('jerkin'), jerkM = jerk ? (JERKIN[eq.chest] || JERKIN.jerkin).m : M.LEATHER, bow = isBow(eq.weapon);   // round 43: drake hide, dark scaled
   const legM = plate ? PL : M.LEATHER, torsoM = plate ? PL : chain ? (scale ? M.GOLD : M.CHAIN) : robe ? robeM : jerk ? jerkM : team;
   const { fwd, sideR, up } = J;
   // a lean body underneath; armor adds its own bulk on top (chain a little, plate the most)
@@ -510,12 +549,11 @@ function heroRig(eq, st) {
   const tf = frameAlong(fwd, up), abd = V.mad(J.chest, up, -3.6);
   r.ell(abd, [3.2 + bulk * 1.6, 4.0 + bulk * 2.2, 3.4 + bulk * 0.8], plate ? PL : chain ? (scale ? M.GOLD : M.CHAIN) : jerk ? jerkM : team, tf);
   if (!plate && !chain && !brig) r.cone(V.mad(J.chest, up, 4.5), J.head, 1.4, 1.2, M.FACE);   // neck
-  const jerkMf = p => {   // jerkin: a V of green shirt at the neck, laces down the front, studs on the studded one
-    const q = V.sub(p, J.chest), sd = Math.abs(V.dot(q, sideR)), z = V.dot(q, up), f = V.dot(q, fwd);
-    if (f > 1.5 && z > 2.2 && sd < (z - 2.2) * 0.9 + 0.7) return M.CLOTH_GREEN;
-    if (f > 2.4 && sd < 0.5 && z > -3 && z < 2.4) return M.DARK;
-    if (eq.chest === 'jerkin_scale') { const v = z * 0.62 + (Math.floor(V.dot(q, sideR) * 0.5) % 2) * 0.5; if (sd > 0.9 && Math.abs(v - Math.round(v)) < 0.2) return M.GOLD; }   // round 43: the scale jerkin: rows of bronze scales on the leather
-    if (eq.chest === 'jerkin_stud') { const u = V.dot(q, sideR) * 0.55, v = z * 0.55; if (sd > 1.2 && Math.abs(u - Math.round(u)) < 0.2 && Math.abs(v - Math.round(v)) < 0.2) return M.IRON; }
+  const jerkMf = p => {   // jerkin: the leather one a V of green shirt and laces; studs, scale bands or the coat's strap on the others
+    const q = V.sub(p, J.chest), s = V.dot(q, sideR), sd = Math.abs(s), z = V.dot(q, up), f = V.dot(q, fwd);
+    if (eq.chest === 'jerkin') { if (f > 1.5 && z > 2.2 && sd < (z - 2.2) * 0.9 + 0.7) return M.CLOTH_GREEN; if (f > 2.4 && sd < 0.5 && z > -3 && z < 2.4) return M.DARK; }
+    if (eq.chest === 'jerkin_scale') { const v = (z + 0.4) / 2.3; if (Math.abs(v - Math.round(v)) < 0.22) return M.GOLD; }   // horizontal bands of gold scales
+    if (eq.chest === 'jerkin_hide' && Math.abs(s - z * 0.85 + 0.6) < 0.9) return M.LEATHER;   // the strap from the right shoulder to the left hip
     return 0;
   };
   const robeMf = p => {   // robe: a V of skin at the neck and a gold stripe down the front
@@ -541,6 +579,7 @@ function heroRig(eq, st) {
     }),
   });
   { const xc = GEAR_EXTRA.chest[eq.chest]; if (xc) xc(r, { J, fwd, up, sideR, tf, eq, st, bulk }); }   // an art-kit chest look, over the torso
+  if (jerk) jerkinChest(r, eq, J, fwd, up, sideR);   // a6: the ranger's jerkins
   setChest(r, eq, J, fwd, up, sideR);   // round 43: armor sets wear their colors
   // arms: right hand holds the weapon, left the shield
   const atk = atkIndex(st.clip) >= 0;
@@ -610,7 +649,7 @@ function heroRig(eq, st) {
   const aR = armTo(J, J.shR, handR, B, 1);
   const armM = plate ? PL : chain ? (scale ? M.GOLD : M.CHAIN) : M.LEATHER;
   const ar = [1.9 + bulk * 0.8, 1.7 + bulk * 0.8, 1.5 + bulk * 0.7, 1.8 + bulk * 0.8];
-  const sleeve = eq.chest === 'tunic' ? team : robe ? robeM : jerk ? M.CLOTH_GREEN : armM, foreM = eq.chest === 'tunic' ? M.FACE : robe ? robeM : jerk ? M.LEATHER : armM, handM = plate ? PL : eq.chest === 'tunic' || robe || jerk ? M.FACE : M.LEATHER;   // the jerkin: green sleeves, leather bracers
+  const sleeve = eq.chest === 'tunic' ? team : robe ? robeM : jerk ? (JERKIN[eq.chest] || JERKIN.jerkin).sleeve : armM, foreM = eq.chest === 'tunic' ? M.FACE : robe ? robeM : jerk ? M.LEATHER : armM, handM = plate ? PL : eq.chest === 'tunic' || robe || jerk ? M.FACE : M.LEATHER;   // the jerkin: green sleeves, leather bracers
   if (robe) ar[2] += 1.1;   // bell sleeves widen toward the wrist
   r.cone(J.shR, aR.el, ar[0], ar[1], sleeve); r.cone(aR.el, aR.hand, ar[1], ar[2], foreM);
   r.sph(aR.hand, ar[3], handM);
@@ -667,7 +706,7 @@ function heroRig(eq, st) {
   for (const q of r.p) { if (q.a) { q.ra *= HERO_BK; q.rb *= HERO_BK; } if (q.r) q.r *= HERO_BK; if (q.rad) q.rad = V.mul(q.rad, HERO_BK); if (q.half) q.half = V.mul(q.half, HERO_BK); }
   // a short cloak hanging from the shoulders: it streams back and flutters when he runs, swings
   // forward when he stops, and follows the shoulders through a swing (secondary motion)
-  if (!robe) {
+  if (!robe && !(jerk && !SET_CAPE[eq.set])) {   // a6: a plain jerkin wears no cloak (the quiver shows)
     const c = st.clip, ph = st.f / 8 * Math.PI * 2;
     let th = 0.14, side = 0;
     if (c === 'walk') { th = 0.62 + 0.12 * Math.sin(ph * 2); side = J.swingArm * 0.18; }
