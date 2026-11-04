@@ -596,7 +596,7 @@ function warriorSet(r, id, J) {
   const skirt = (m, o) => r.group(() => {
     if (o.front) panel(fwd, rf + 0.2, o.fw || 3.2, o.front, o.fm || m, o.fmf);
     if (o.side) for (const sd of [-1, 1]) panel(V.mul(sideR, sd), rs - 0.2, 3.2, o.side, m, o.smf);
-    if (o.back) panel(V.mul(fwd, -1), rf, 3.6, o.back, m, o.smf);
+    if (o.back) panel(V.mul(fwd, -1), rf, o.bw || 3.6, o.back, m, o.smf);
   });
   const lw = (p, c) => Math.abs(V.dot(V.sub(p, top), sideR) - c);   // distance across the body from c
   if (id === 'militia') {   // red plaid tunic, a leather baldric with a gold buckle, leather bracers
@@ -659,6 +659,7 @@ function warriorSet(r, id, J) {
     r.box(V.add(V.mad(J.chest, up, 1.2), V.mul(fwd, (3.8 + bulk * 1.4) * K + 0.1)), [0.6, 2.2, 2.3], M.STEEL, frameAlong(V.norm(V.add(fwd, V.mul(up, 0.45))), up), { bias: 1 });   // tipped up so it catches the light
     belt(M.LEATHER); skirt(M.CLOTH_GREEN, { front: 3.6, fw: 2.6, fm: M.CLOTH_BLUE, side: 2.6, back: 2.6 });
   }
+  warriorSetA8(r, id, J, { chest, abd, pel, legs, arms, pads, rivets, L, A, mat, paint, loc, goldEdge, goldRim, belt, skirt, bulk, K });
   r.p = r.p.filter(q => !q.dead);
 }
 // art A6b: helm variants drawn as a built-in helm and then recolored (helmVar), and new looks
@@ -671,6 +672,19 @@ function helmVar(r, id, hr0, hd, up) {
     const dome = H.find(q => q.k === 1), c = dome.c, o = dome.mf;
     dome.mf = (p, n) => (Math.abs(V.dot(V.sub(p, c), up) - 2.5) < 0.65 ? M.GOLD : 0) || (o ? o(p, n) : 0);
   }
+  helmVarA8(r, id, H, hd, up);
+}
+// art A8: the dusk duelist's dark skullcap, the winter bulwark's flat-topped great helm, the royal executor's closed helm
+Object.assign(HELM_VARS, { skullcap: 'cap', great_flat: 'great', helm_royal: 'horned' });
+function helmVarA8(r, id, H, hd, up) {
+  if (id === 'skullcap') for (const q of H) if (q.m === M.STEEL) { q.m = M.SLATE; q.mf = p => V.dot(V.sub(p, hd), up) < 0.6 ? M.DSTEEL : 0; }
+  if (id === 'great_flat') {   // a bucket: the dome cut flat by a steel drum, the visor's grille still in front
+    for (const q of H) if (q.k === 3 && q.half && q.half[0] === 2.6) q.dead = true;   // no ridge on a flat top
+    for (const q of H) if (q.k === 1 && q.m === M.PLATE) q.rad = [q.rad[0], q.rad[1], 3.5];   // the dome kept under the drum's lid
+    r.cyl(V.mad(hd, up, -2.6), V.mad(hd, up, 3.7), 4.4, M.PLATE, { mf: p => V.dot(V.sub(p, hd), up) > 3.0 ? M.STEEL : 0 });
+    r.p = r.p.filter(q => !q.dead);
+  }
+  if (id === 'helm_royal') r.p = r.p.filter(q => H.indexOf(q) < 0 || (q.m !== M.HORN && !(q.k === 3 && q.m === M.GOLD)));   // the horned helm without its horns: dark steel, a gold band, a T slit
 }
 const SHIELD_VARS = { heater_oath: 'heater' };
 function shieldVar(r, id, sh0) {
@@ -678,6 +692,32 @@ function shieldVar(r, id, sh0) {
     const q = r.p[sh0], c = q.c, ax = q.ax, rad = q.rad;
     q.m = M.CLOTH_BLUE;
     q.mf = p => { const d = V.sub(p, c), u = V.dot(d, ax[1]) / rad[1], v = V.dot(d, ax[2]) / rad[2]; if (v > 0.62) return M.IRON; if (u * u + v * v > 0.7) return M.STEEL; return Math.abs(u) < 0.2 ? M.CLOTH_WHITE : 0; };
+  }
+  shieldVarA8(r, id, sh0);
+}
+// art A8: the gatewatch's wooden board, the duelist's steel buckler, the bulwark's striped heater (their backs: wood and leather straps)
+Object.assign(SHIELD_VARS, { board: 'tower', buckler_steel: 'buckler', heater_frost: 'heater' });
+function shieldVarA8(r, id, sh0) {
+  const q = r.p[sh0]; if (!q) return;
+  const c = q.c, ax = q.ax, back = d => V.dot(d, ax[0]) < -0.3;
+  const straps = (v, s) => Math.abs(Math.abs(v) - s) < 0.13 ? M.LEATHER : M.WOOD;   // two straps across the back
+  if (id === 'board') {   // a plank board, steel corners, an iron edge
+    q.half = [0.7, 3.3, 5.0]; q.m = M.WOOD;
+    q.mf = p => { const d = V.sub(p, c), u = V.dot(d, ax[1]) / 3.3, v = V.dot(d, ax[2]) / 5.0;
+      if (Math.abs(u) > 0.62 && Math.abs(v) > 0.72) return M.STEEL;
+      if (back(d)) return straps(v, 0.35);
+      if (Math.abs(u) > 0.86 || Math.abs(v) > 0.9) return M.IRON;
+      return Math.abs(u * 3.3 - Math.round(u * 3.3 / 2.2) * 2.2) < 0.2 ? M.BARK : 0; };
+  }
+  if (id === 'buckler_steel') {   // a small round steel buckler with a raised boss
+    q.m = M.STEEL; const rad = q.rad;
+    q.mf = p => { const d = V.sub(p, c), u = V.dot(d, ax[1]) / rad[1], v = V.dot(d, ax[2]) / rad[2]; if (back(d)) return straps(v, 0.3) === M.LEATHER ? M.LEATHER : M.WOOD; return u * u + v * v > 0.66 ? M.IRON : 0; };
+    r.cone(V.mad(c, ax[0], 0.6), V.mad(c, ax[0], 2.0), 1.6, 0.6, M.STEEL);
+  }
+  if (id === 'heater_frost') {   // blue and white stripes, a steel rim, a wooden back
+    q.m = M.CLOTH_BLUE; const rad = q.rad;
+    q.mf = p => { const d = V.sub(p, c), u = V.dot(d, ax[1]) / rad[1], v = V.dot(d, ax[2]) / rad[2]; if (back(d)) return straps(v, 0.3); if (v > 0.62 || u * u + v * v > 0.66) return M.STEEL; return Math.abs(u) > 0.18 && Math.abs(u) < 0.48 ? M.CLOTH_WHITE : 0; };
+    if (r.p[sh0 + 1]) { r.p[sh0 + 1].m = M.STEEL; }
   }
 }
 // the roadwarden's kettle helm: a round steel cap with a brim and a nasal bar, the face open
@@ -720,6 +760,94 @@ GEAR_EXTRA.weapon.fhammer = (r, { g, bd, wide, wf }) => {
 };
 GEAR_SWING.caxe = 'heavy'; GEAR_SWING.fmace = 'heavy'; GEAR_SWING.fhammer = 'heavy';
 GEAR_LEN.caxe = 16; GEAR_LEN.fmace = 16; GEAR_LEN.fhammer = 18;
+// art A8: four more warrior sets from the front-and-back concept (art/concepts/heroes/warrior-front-back.png).
+// Olive has no cloth: OGRE (grey-green); maroon: BLOODY; slate-teal: WATERM; navy: CLOTH_NAVY; cream: CLOTH_WHITE.
+Object.assign(WARRIOR_SETS, { gatewatch: { base: 'brigandine' }, duskduelist: { base: 'brigandine' }, winterbulwark: { base: 'plate' }, royalexecutor: { base: 'plate' } });
+// art A8: the gatewatch's open helm: a steel dome on a riveted iron band, a nasal bar, the face open
+GEAR_EXTRA.helm.nasal = (r, { hd, fwd, up, sideR, helmF }) => {
+  r.ell(hd, [4.3, 4.3, 4.5], M.FACE, helmF, { mf: p => {
+    const q = V.sub(p, hd), f2 = V.dot(q, fwd), as = Math.abs(V.dot(q, sideR)), z2 = V.dot(q, up);
+    if (f2 > 2.3 && Math.abs(as - 1.6) < 0.5 && z2 > -1.0 && z2 < 0.7) return M.EYE;
+    if (f2 > 3.2 && as < 0.45 && Math.abs(z2 + 1.9) < 0.22) return M.MOUTH;
+    return 0;
+  } });
+  const hc = V.mad(hd, up, 1.6);
+  r.ell(hc, [4.65, 4.6, 4.1], M.STEEL, helmF, { mf: p => { const q = V.sub(p, hc), z2 = V.dot(q, up); if (z2 > -0.6) return 0;   // the band, rivets round it
+    const a = Math.atan2(V.dot(q, sideR), V.dot(q, fwd)); return Math.abs(z2 + 1.25) < 0.4 && Math.abs(Math.sin(a * 5)) > 0.8 ? M.STEEL : M.IRON; } });
+  r.box(V.add(V.mad(hd, up, 0.3), V.mul(fwd, 4.4)), [0.5, 0.5, 1.6], M.STEEL, helmF);   // the nasal
+};
+// weapons (art A8): the leaf-bladed spear (held upright at rest), the curved sabre, the froststeel axe, the kingsguard greatsword (both hands)
+GEAR_EXTRA.weapon.spear = (r, { g, bd, wide, wf }) => {
+  r.cone(V.mad(g, bd, -9), V.mad(g, bd, 20), 0.9, 0.9, M.WOOD);
+  r.sph(V.mad(g, bd, -9.2), 1.0, M.STEEL);   // the butt cap
+  r.cone(V.mad(g, bd, 19.4), V.mad(g, bd, 21.4), 1.1, 0.9, M.STEEL);   // the socket
+  r.ell(V.mad(g, bd, 24.2), [3.4, 1.5, 0.45], M.BLADE, wf);   // the leaf
+};
+GEAR_EXTRA.weapon.sabre = (r, { g, bd, wide, wf }) => {
+  r.box(V.mad(g, bd, 1.8), [0.7, 2.8, 0.8], M.GOLD, wf);
+  r.cone(V.add(V.mad(g, bd, 1.6), V.mul(wide, -2.2)), V.add(V.mad(g, bd, -2.6), V.mul(wide, -1.6)), 0.7, 0.6, M.GOLD);   // the knuckle bow
+  const at = t => V.add(V.mad(g, bd, 2.4 + t * 16), V.mul(wide, -2.8 * t * t));   // the blade curves back toward its spine
+  r.group(() => { for (let k = 0; k < 4; k++) { const a = at(k / 4), b = at((k + 1) / 4), d = V.norm(V.sub(b, a)), w2 = V.norm(V.sub(wide, V.mul(d, V.dot(wide, d)))); r.box(V.mul(V.add(a, b), 0.5), [V.len(V.sub(b, a)) / 2 + 0.3, 1.05 - k * 0.08, 0.4], M.BLADE, [d, w2, V.cross(d, w2)]); }
+    const e = at(1), d = V.norm(V.sub(e, at(0.9))); r.cone(V.mad(e, d, -0.4), V.add(V.mad(e, d, 1.8), V.mul(wide, 0.3)), 0.8, 0.2, M.BLADE); });
+};
+GEAR_EXTRA.weapon.faxe = (r, { g, bd, wide, wf }) => {
+  r.cone(V.mad(g, bd, -2.4), V.mad(g, bd, 2.6), 1.0, 1.0, M.CLOTH_BLUE);   // the blue grip
+  r.cone(V.mad(g, bd, 2.6), V.mad(g, bd, 13.4), 0.9, 0.9, M.WOOD);
+  r.cyl(V.mad(g, bd, 9.4), V.mad(g, bd, 10.4), 1.2, M.STEEL);
+  r.group(() => {   // a bearded head
+    r.box(V.add(V.mad(g, bd, 11.6), V.mul(wide, 3.0)), [2.4, 2.8, 0.5], M.BLADE, wf);
+    r.cone(V.add(V.mad(g, bd, 11.4), V.mul(wide, 5.0)), V.add(V.mad(g, bd, 7.4), V.mul(wide, 4.4)), 1.7, 0.5, M.BLADE);   // the beard
+    r.cone(V.add(V.mad(g, bd, 12.4), V.mul(wide, 5.0)), V.add(V.mad(g, bd, 14.6), V.mul(wide, 5.4)), 1.5, 0.4, M.BLADE);
+  });
+  r.cone(V.add(V.mad(g, bd, 11.6), V.mul(wide, -0.6)), V.add(V.mad(g, bd, 11.6), V.mul(wide, -2.8)), 1.0, 0.3, M.STEEL);   // the back spike
+};
+GEAR_EXTRA.weapon.kgsword = (r, { g, bd, wide, wf }) => {
+  r.cone(V.mad(g, bd, -5.6), V.mad(g, bd, -2.6), 0.9, 0.9, M.LEATHER);   // a two-hand grip
+  r.sph(V.mad(g, bd, -6.0), 1.3, M.GOLD);
+  r.box(V.mad(g, bd, 2), [0.8, 4.8, 0.9], M.GOLD, wf);
+  r.box(V.mad(g, bd, 14.2), [11.6, 1.5, 0.45], M.BLADE, wf, { mf: p => Math.abs(V.dot(V.sub(p, g), wide)) < 0.35 && V.dot(V.sub(p, g), bd) < 23 ? M.STEEL : 0 });   // a fuller
+  r.cone(V.mad(g, bd, 25.6), V.mad(g, bd, 27.4), 1.2, 0.3, M.BLADE);
+};
+Object.assign(GEAR_SWING, { spear: 'light', sabre: 'light', faxe: 'heavy', kgsword: 'heavy' });
+Object.assign(GEAR_LEN, { spear: 26, sabre: 20, faxe: 16, kgsword: 27 });
+// art A8: the warrior sets' backs, now that they wear no cloak: a back panel where a set had none
+const SET_BACK = { ironguard: [M.CLOTH_BLUE, 4.0, 3.2], vanguard: [M.WATERM, 3.0, 3.2], crownguard: [M.CLOTH_RED, 3.4, 3.2], steelknight: [M.CLOTH_PURPLE, 4.2, 2.6], copperraider: [M.CLOTH_DARK, 3.0, 3.2] };
+function warriorSetA8(r, id, J, S) {
+  const { fwd, up, sideR } = J, { chest, abd, pel, legs, arms, pads, rivets, L, A, mat, paint, loc, goldEdge, goldRim, belt, skirt } = S;
+  if (SET_BACK[id]) { const [m, h, w] = SET_BACK[id]; skirt(m, { back: h, bw: w }); }
+  if (id === 'gatewatch') {   // an olive padded tunic, steel pauldrons, knee guards and greaves, leather tassets round a cream flap
+    mat([chest, abd, pel, ...A('sleeve'), ...A('fore'), ...L('thigh')], M.OGRE); chest.mf = null;
+    for (const q of pads) { q.m = M.STEEL; q.mf = null; }
+    mat(L('shin'), M.STEEL); mat(L('boot'), M.LEATHER);
+    for (const l of legs) r.sph(V.add(l.shin.a, V.mul(fwd, 1.3)), 2.1, M.STEEL);
+    belt(M.LEATHER); skirt(M.LEATHER, { front: 3.6, fw: 1.9, fm: M.CLOTH_WHITE, side: 2.8, back: 2.8 });
+  } else if (id === 'duskduelist') {   // a wine tunic over dark sleeves and trousers, steel shoulder and elbow cops, a long tabard front and back, brown boots
+    mat([chest, abd], M.BLOODY); chest.mf = null; mat([pel, ...A('sleeve'), ...A('fore'), ...L('thigh')], M.CLOTH_DARK);
+    for (const q of pads) { q.m = M.STEEL; q.mf = null; }
+    for (const a of arms) r.sph(a.sleeve.b, 2.0, M.STEEL);   // elbow cops
+    mat([...L('shin'), ...L('boot')], M.LEATHER);
+    belt(M.LEATHER); skirt(M.BLOODY, { front: 4.6, fw: 2.6, back: 4.6, bw: 2.8 });
+  } else if (id === 'winterbulwark') {   // slate-teal plate, steel arms and greaves, a cream fur mantle round the shoulders, a blue-grey skirt
+    mat([chest, abd], M.WATERM); chest.mf = null;
+    mat([...A('sleeve'), ...A('fore'), ...A('hand'), ...A('cop'), ...pads, ...L('knee'), ...L('shin')], M.STEEL);
+    mat([pel, ...L('thigh')], M.CLOTH_SHADOW); mat(L('boot'), M.LEATHER);
+    const mc = V.mad(J.chest, up, 4.3);
+    r.group(() => {   // the mantle: a ring of fur tufts over the shoulders, front and back
+      r.ell(mc, [5.0, 6.6, 2.2], M.CLOTH_WHITE, frameAlong(fwd, up));
+      for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; r.sph(V.add(V.mad(mc, up, -0.6), V.add(V.mul(fwd, Math.cos(a) * 4.6), V.mul(sideR, Math.sin(a) * 6.2))), 2.0, M.CLOTH_WHITE); }
+    });
+    belt(M.LEATHER); skirt(M.CLOTH_SHADOW, { front: 4.2, fw: 3.0, side: 3.6, back: 4.2 });
+  } else if (id === 'royalexecutor') {   // navy plate, gold-trimmed pauldrons, gold bands, a navy tasset over a cream skirt
+    mat([chest, abd, ...A('sleeve'), ...A('fore'), ...A('cop'), ...pads], M.CLOTH_NAVY); mat(A('hand'), M.DSTEEL);
+    chest.mf = p => { const [f, s, z] = loc(p); return z > 3.9 || (f > 0 && Math.abs(z + 1.6) < 0.55) ? M.GOLD : 0; };
+    for (const q of pads) { q.mf = null; goldEdge(q); } mat(rivets, M.GOLD); for (const q of A('cop')) if (q) goldEdge(q);
+    for (const q of A('fore')) { const b = q.b; paint(q, p => V.len(V.sub(p, b)) < 1.4 ? M.GOLD : 0); }   // gold cuffs
+    mat([pel, ...L('thigh')], M.CLOTH_WHITE); for (const q of L('knee')) goldRim(q, -0.5);
+    for (const q of L('shin')) { const a = q.a; paint(q, p => Math.abs(V.dot(V.sub(p, a), up) + 1.6) < 0.6 ? M.GOLD : 0); }
+    mat(L('boot'), M.LEATHER);
+    belt(M.LEATHER); skirt(M.CLOTH_WHITE, { front: 4.2, fw: 3.0, fm: M.CLOTH_NAVY, side: 4.0, back: 4.2, bw: 3.4 });
+  }
+}
 function weaponSwing(eq, combo = 0) {
   if (isBow(eq.weapon)) return RANGER_BOW;
   const S = FEEL_OLD ? SWINGS : HERO_SWINGS;
@@ -845,6 +973,7 @@ function heroRig(eq, st) {
   const inPlane = a => V.norm(V.add(V.mul(F, Math.cos(a)), V.mul(U, Math.sin(a))));
   const bladeA = k => k.a + (k.ck || 0);   // the blade leads or trails the arm
   let handR, bd, acrossG = false;
+  let bothG = false;   // art A8: the kingsguard greatsword held in both hands at rest
   const staff = eq.weapon.startsWith('staff');
   const draw = bow && st.clip === 'shoot' && st.key ? st.key.a : 0;
   // round 40a: the hero's new poses for the weapon hand
@@ -901,6 +1030,8 @@ function heroRig(eq, st) {
     handR = V.add(V.add(J.shR, V.mul(fwd, 4 + s)), V.add(V.mul(up, -8.5 + Math.max(0, J.swingArm) * 1.2), V.mul(sideR, 2.6)));
     bd = V.norm(V.add(V.add(V.mul(fwd, 0.55), V.mul(up, 0.7)), V.mul(sideR, 0.45)));
     if (eq.weapon === 'fhammer') { handR = V.add(V.add(J.shR, V.mul(fwd, 4.5 + s * 0.3)), V.add(V.mul(up, -8.5), V.mul(sideR, -3.2))); bd = V.norm(V.add(V.add(V.mul(sideR, -1), V.mul(up, 0.22)), V.mul(fwd, 0.15))); acrossG = true; }   // art A6b: the forge hammer held across the body
+    if (eq.weapon === 'spear') { handR = V.add(V.add(J.shR, V.mul(fwd, 1.2 + s * 0.3)), V.add(V.mul(up, -6.5), V.mul(sideR, 4.0))); bd = V.norm(V.add(V.add(up, V.mul(fwd, 0.1)), V.mul(sideR, 0.06))); }   // art A8: the spear stood upright at his side
+    if (eq.weapon === 'kgsword') { handR = V.add(V.add(J.shR, V.mul(fwd, 5 + s * 0.2)), V.add(V.mul(up, -8.5), V.mul(sideR, -2.4))); bd = V.norm(V.add(V.add(V.mul(fwd, 0.75), V.mul(sideR, -0.5)), V.mul(up, -0.12))); bothG = true; }   // art A8: the greatsword low across the front
   }
   // a6: the steel crossbow is held level in both hands: low at the belly, raised to the shoulder to shoot
   const xbow = eq.weapon === 'bow_cross', xbHold = xbow && st.clip !== 'death' && st.clip !== 'toss' && st.clip !== 'vault' && st.clip !== 'drink';
@@ -961,6 +1092,7 @@ function heroRig(eq, st) {
     }
   }
   if (acrossG) handL = V.mad(handR, bd, 7.5);   // the other hand further along the haft
+  if (bothG) handL = V.mad(handR, bd, -3.2);   // art A8: the other hand below it on the grip
   const aL = armTo(J, J.shL, handL, B, -1);
   if (st.clip === 'drink') flask(drinkR ? aR.hand : aL.hand);
   r.cone(J.shL, aL.el, ar[0], ar[1], sleeve); r.cone(aL.el, aL.hand, ar[1], ar[2], foreM);
@@ -992,7 +1124,7 @@ function heroRig(eq, st) {
   for (const q of r.p) { if (q.a) { q.ra *= HERO_BK; q.rb *= HERO_BK; } if (q.r) q.r *= HERO_BK; if (q.rad) q.rad = V.mul(q.rad, HERO_BK); if (q.half) q.half = V.mul(q.half, HERO_BK); }
   // a short cloak hanging from the shoulders: it streams back and flutters when he runs, swings
   // forward when he stops, and follows the shoulders through a swing (secondary motion)
-  if (!robe && !(jerk && !SET_CAPE[eq.set])) {   // a6: a plain jerkin wears no cloak (the quiver shows)
+  if (!robe && !(jerk && !SET_CAPE[eq.set]) && !(wset && !SET_CAPE[eq.set])) {   // a6: a plain jerkin wears no cloak (the quiver shows); art A8: nor does a warrior set (its back shows)
     const c = st.clip, ph = st.f / 8 * Math.PI * 2;
     let th = 0.14, side = 0;
     if (c === 'walk') { th = 0.62 + 0.12 * Math.sin(ph * 2); side = J.swingArm * 0.18; }
