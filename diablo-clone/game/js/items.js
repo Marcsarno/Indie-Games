@@ -68,7 +68,7 @@ const ITEM_BASES = {
   scale_jerkin: { slot: 'chest', look: 'jerkin_stud', name: 'SCALE JERKIN', armor: 11, cls: 'ranger', lvl: 4 },
   drake_hide: { slot: 'chest', look: 'jerkin_hide', name: 'DRAKE HIDE', armor: 14, cls: 'ranger', lvl: 5 },
   hunter_hood: { slot: 'helm', look: 'rhood', name: "HUNTER'S HOOD", armor: 4, cls: 'ranger', lvl: 3 },
-  night_hood: { slot: 'helm', look: 'rhood_dark', name: 'NIGHT HOOD', armor: 6, cls: 'ranger', lvl: 4 },
+  night_hood: { slot: 'helm', look: 'rhood_night', name: 'NIGHT HOOD', armor: 6, cls: 'ranger', lvl: 4 },
   deep_quiver: { slot: 'shield', look: 'quiver', name: 'DEEP QUIVER', armor: 5, cls: 'ranger', lvl: 4 },
   // rings and amulets: every class, no base stat, always at least magic
   ring: { slot: 'ring', look: 'ring', name: 'RING', cls: 'any', lvl: 1, w: 0.065 },
@@ -267,7 +267,7 @@ function itemIcon(it) {
     const hd = [0, 0, 4], fwd = [1, 0, 0], up = [0, 0, 1], sd = [0, 1, 0];
     if (b.look === 'cap') r.ell([0, 0, 3], [5.2, 5.1, 4.0], M.IRON);
     else if (b.look === 'hat') { r.cyl([0, 0, 0], [0, 0, 0.8], 7, M.CLOTH_PURPLE); r.cone([0, 0, 0.5], [-1.2, 0, 6], 4.6, 2.4, M.CLOTH_PURPLE, { mf: p => p[2] < 2 ? M.GOLD : 0 }); r.cone([-1.2, 0, 6], [-4.5, 0, 10.5], 2.4, 0.5, M.CLOTH_PURPLE); }
-    else if (b.look.startsWith('rhood')) { const hm = b.look === 'rhood_dark' ? M.CLOTH_DARK : M.CLOTH_GREEN; r.ell([0, 0, 4], [5.4, 5.6, 5.8], hm, null, { mf: p => p[0] > 3 && Math.abs(p[1]) < 3 && p[2] < 5 ? M.DARK : 0 }); r.cone([-4, 0, 7], [-8, 0, 4], 2.2, 0.5, hm); r.ell([0, 0, -1.5], [4, 5.4, 1.6], hm); }
+    else if (b.look.startsWith('rhood')) { const hm = b.look === 'rhood_dark' ? M.CLOTH_SHADOW : b.look === 'rhood_night' ? M.CLOTH_NAVY : M.CLOTH_GREEN; r.ell([0, 0, 4], [5.4, 5.6, 5.8], hm, null, { mf: p => p[0] > 3 && Math.abs(p[1]) < 3 && p[2] < 5 ? M.DARK : 0 }); r.cone([-4, 0, 7], [-8, 0, 4], 2.2, 0.5, hm); r.ell([0, 0, -1.5], [4, 5.4, 1.6], hm); }
     else if (b.look === 'hood') { r.ell([0, 0, 4], [5.4, 5.6, 5.8], M.CLOTH_BLUE, null, { mf: p => p[0] > 3 && Math.abs(p[1]) < 3 && p[2] < 5 ? M.DARK : 0 }); r.cone([-4, 0, 6], [-8, 0, 2], 2.2, 0.5, M.CLOTH_BLUE); }
     else if (b.look === 'barbute') r.ell(hd, [5.4, 5.3, 6.2], M.STEEL, null, { mf: p => { const q = V.sub(p, hd); return q[0] > 2.4 && ((Math.abs(q[2] - 0.8) < 0.75 && Math.abs(q[1]) < 3.2) || (Math.abs(q[1]) < 0.8 && q[2] < 0.8 && q[2] > -4)) ? M.DARK : 0; } });
     else {

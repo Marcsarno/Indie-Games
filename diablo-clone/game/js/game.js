@@ -60,7 +60,8 @@ function recalcHero() {
   STAT.slow = !!w?.slow;
   // legendaries change how their piece looks (glowing ember blade, oak-leaf crown, ...)
   const lgd = ['weapon', 'helm', 'chest', 'shield'].map(s => e[s] && e[s].rarity === 'legend' ? (e[s].fx || (LEGENDARIES.find(L => L.name === e[s].name) || {}).fx) : null).filter(Boolean).join('|');
-  hero.look = { team: hero.team, helm: it('helm')?.look || 'none', chest: it('chest')?.look || 'tunic', weapon: w?.look || (mage ? 'staff' : ranger ? 'bow' : 'sword'), shield: it('shield')?.look || 'none', lgd };
+  const setOn = Object.keys(SETS).find(k => Object.values(e).filter(it => it && it.set === k).length >= 2) || '';   // round 43: a set's own look from two pieces
+  hero.look = { set: setOn, team: hero.team, helm: it('helm')?.look || 'none', chest: it('chest')?.look || 'tunic', weapon: w?.look || (mage ? 'staff' : ranger ? 'bow' : 'sword'), shield: it('shield')?.look || 'none', lgd };
   hero.hp = Math.min(hero.hp, STAT.maxHp); hero.mana = Math.min(hero.mana, STAT.maxMana);
 }
 const xpFor = l => Math.round(60 * Math.pow(l, 1.6));
@@ -115,8 +116,8 @@ function prewarm() {
   for (const [k, v] of fams) if (near.has(k)) for (let d = 0; d < 8; d++) warmQueue.push([v[0], v[1], d, 'idle', 0]);
   // the hero's walk is needed at once; monsters' walks fill in during play
   for (let d = 0; d < 8; d++) for (let f = 0; f < 8; f++) warmQueue.push(['hero', hero.look, d, 'walk', f]);
-  if (hero.cls === 'mage') for (let d = 0; d < 8; d++) for (let f = 0; f < 6; f++) warmQueue.push(['hero', hero.look, d, 'channel', f]);
-  if (hero.cls === 'ranger') for (let d = 0; d < 8; d++) for (let f = 0; f < 4; f++) warmQueue.push(['hero', hero.look, d, 'shoot', f]);
+  if (hero.cls === 'mage') for (let d = 0; d < 8; d++) for (let f = 0; f < 12; f++) warmQueue.push(['hero', hero.look, d, 'channel', f]);
+  if (hero.cls === 'ranger') for (let d = 0; d < 8; d++) { for (let f = 0; f < 4; f++) warmQueue.push(['hero', hero.look, d, 'shoot', f]); for (let f = 0; f < 3; f++) warmQueue.push(['hero', hero.look, d, 'vault', f]); for (let f = 0; f < 2; f++) warmQueue.push(['hero', hero.look, d, 'toss', f]); for (let f = 0; f < 4; f++) warmQueue.push(['hero', hero.look, d, 'volley', f]); }
   const now = warmQueue.length;
   for (const [k, v] of fams) if (k !== 'hero' && !near.has(k)) for (let d = 0; d < 8; d++) warmQueue.push([v[0], v[1], d, 'idle', 0]);
   for (const [k, v] of fams) if (k !== 'hero') for (let d = 0; d < 8; d++) for (let f = 0; f < 8; f++) warmQueue.push([v[0], v[1], d, 'walk', f]);
@@ -569,7 +570,7 @@ function unequip(slot) {
   if (!hero.equip[slot] || hero.bag.length >= BAG_SIZE) return;
   hero.bag.push(hero.equip[slot]); hero.equip[slot] = null; recalcHero(); prewarmHero();
 }
-function prewarmHero() { for (let d = 0; d < 8; d++) { warmQueue.unshift([ 'hero', hero.look, d, 'idle', 0]); if (hero.cls === 'mage') for (let f = 0; f < 6; f++) warmQueue.push(['hero', hero.look, d, 'channel', f]); if (hero.cls === 'ranger') for (let f = 0; f < 4; f++) warmQueue.push(['hero', hero.look, d, 'shoot', f]); for (let f = 0; f < 8; f++) warmQueue.push(['hero', hero.look, d, 'walk', f]); warmQueue.push(['hero', hero.look, d, 'go', 0], ['hero', hero.look, d, 'stop', 0]);
+function prewarmHero() { for (let d = 0; d < 8; d++) { warmQueue.unshift([ 'hero', hero.look, d, 'idle', 0]); if (hero.cls === 'mage') for (let f = 0; f < 12; f++) warmQueue.push(['hero', hero.look, d, 'channel', f]); if (hero.cls === 'ranger') { for (let f = 0; f < 4; f++) { warmQueue.push(['hero', hero.look, d, 'shoot', f]); warmQueue.push(['hero', hero.look, d, 'volley', f]); } for (let f = 0; f < 3; f++) warmQueue.push(['hero', hero.look, d, 'vault', f]); for (let f = 0; f < 2; f++) warmQueue.push(['hero', hero.look, d, 'toss', f]); } for (let f = 0; f < 8; f++) warmQueue.push(['hero', hero.look, d, 'walk', f]); warmQueue.push(['hero', hero.look, d, 'go', 0], ['hero', hero.look, d, 'stop', 0]);
   if (!FEEL_OLD) {   // round 40a: the short poses, so the first one shown is never a stand-in
     for (let f = 0; f < 4; f++) warmQueue.push(['hero', hero.look, d, 'hit', f]);
     warmQueue.push(['hero', hero.look, d, 'pivot', 0], ['hero', hero.look, d, 'skid', 0], ['hero', hero.look, d, 'drink', 8]);
@@ -719,7 +720,9 @@ function updateHero(dt) {
   if (!FEEL_OLD && !busy && hero.cast < 0 && G.hooks.some(h => h.state === 'pull' || h.state === 'reel') && !moving) hero.clip = 'hook';
   if (hero.drinkT > 0) { hero.drinkT -= dt; if (!busy && (hero.clip === 'walk' || hero.clip === 'idle' || hero.clip === 'go' || hero.clip === 'stop' || hero.clip === 'fidget')) { hero.clip = 'drink'; hero.fidget = null; } }
   if (hero.atk >= 0) {
-    hero.clip = hero.cls === 'ranger' && hero.combo !== 3 ? 'shoot' : ATTACK_CLIPS[hero.combo] || 'attack';
+    hero.clip = hero.cls === 'ranger' && hero.tossT > 0 && !FEEL_OLD ? 'toss' : hero.cls === 'ranger' && hero.volleyT > 0 && !FEEL_OLD ? 'volley' : hero.cls === 'ranger' && hero.combo !== 3 ? 'shoot' : ATTACK_CLIPS[hero.combo] || 'attack';
+    if (hero.tossT > 0) hero.tossT -= dt;
+    if (hero.volleyT > 0) hero.volleyT -= dt;
     hero.atk += dt * 1000 * (1 + ((STAT.atkSpeed || 0) + (hero.frenzy > 0 ? 50 : 0)) / 100);
     const sw = weaponSwing(hero.look, hero.combo), ki = swingKey(sw, hero.atk);
     if (ki >= 0 && sw[ki].mv) lungeHero(sw[ki].mv * dt * 1000 / sw[ki].ms);
@@ -1249,9 +1252,11 @@ function frameOf(e) {
   if (e === hero && hero.dash > 0) return 0;
   if (e.clip === 'idle') return Math.floor(pt / 0.2) % 4;
   if (e.clip === 'walk') return Math.floor(e.walk) % 8;
-  if (e === hero && e.clip === 'channel') { const a = hero.castAge || 0, rl = castRel(hero.castKind), ph = a < rl ? 0 : a < rl + 0.13 ? 1 : 2; return (hero.castKind === 'meteor' ? 3 : 0) + ph; }
+  if (e === hero && e.clip === 'vault' && hero.roll) { const u = hero.roll.t / hero.roll.dur; return u < 0.16 ? 0 : u < 0.78 ? 1 : 2; }   // round 43
+  if (e === hero && e.clip === 'toss') return hero.tossT > 0.2 ? 0 : 1;
+  if (e === hero && e.clip === 'channel') { const a = hero.castAge || 0, rl = castRel(hero.castKind), ph = a < rl ? 0 : a < rl + 0.13 ? 1 : 2; return (hero.castKind === 'meteor' ? 3 : hero.castKind === 'cone' && !FEEL_OLD ? 6 : hero.castKind === 'fireball' && !FEEL_OLD ? 9 : 0) + ph; }   // round 43: the slam and the hurl
   if (e.clip === 'attack2' || e.clip === 'attack3' || e.clip === 'attack4') return Math.max(0, swingKey(FAMILIES[e.fam].combo(e, atkIndex(e.clip)), e.atk));
-  if (e.clip === 'attack' || e.clip === 'shoot' || e.clip === 'cast') return Math.max(0, swingKey(FAMILIES[e.fam].swing(e), e.atk));
+  if (e.clip === 'attack' || e.clip === 'shoot' || e.clip === 'volley' || e.clip === 'cast') return Math.max(0, swingKey(FAMILIES[e.fam].swing(e), e.atk));
   if (e.downT > 0) { const t = e.downT0 - e.downT; return Math.max(0, Math.min(4, Math.floor(Math.min(t, e.downT) / 0.06))); }   // knocked down: fall, lie, get up
   if (e.clip === 'death') return Math.min(5, Math.floor((e === hero ? hero.dead : e.dying) / 0.1));
   return 0;

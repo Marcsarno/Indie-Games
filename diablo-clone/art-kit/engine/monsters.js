@@ -657,13 +657,13 @@ let spriteBuilds = 0;
 function poseState(fam, ent, clip, f) {
   const st = { clip, f };
   const ai = atkIndex(clip);
-  if (ai >= 0 || clip === 'shoot' || clip === 'cast') { const sw = ai > 0 ? FAMILIES[fam].combo(ent, ai) : FAMILIES[fam].swing(ent); st.key = sw[f]; st.prev = sw[f - 1]; }
+  if (ai >= 0 || clip === 'shoot' || clip === 'volley' || clip === 'cast') { const sw = ai > 0 ? FAMILIES[fam].combo(ent, ai) : FAMILIES[fam].swing(ent); st.key = sw[f]; st.prev = sw[f - 1]; }
   return st;
 }
 // Builds are budgeted per frame: past the budget, a missing pose falls back to the nearest cached
 // frame (same direction) and is queued, so a crowd turning at once never stalls a frame.
 const buildBudget = { ms: Infinity, used: 0 };
-const fallbackOrder = { walk: ['walk', 'idle'], idle: ['idle'], attack: ['attack', 'idle'], attack2: ['attack2', 'attack', 'idle'], attack3: ['attack3', 'attack', 'idle'], attack4: ['attack4', 'attack', 'idle'], bash: ['bash', 'idle'], channel: ['channel', 'idle'], shoot: ['shoot', 'idle'], cast: ['cast', 'idle'], hit: ['hit', 'idle'], death: ['death'], go: ['go', 'walk', 'idle'], stop: ['stop', 'idle'], hook: ['hook', 'channel', 'idle'], spin: ['spin', 'attack', 'idle'], drink: ['drink', 'walk', 'idle'], fidget: ['fidget', 'idle'], pivot: ['pivot', 'stop', 'walk'], skid: ['skid', 'stop', 'idle'] };
+const fallbackOrder = { walk: ['walk', 'idle'], idle: ['idle'], attack: ['attack', 'idle'], attack2: ['attack2', 'attack', 'idle'], attack3: ['attack3', 'attack', 'idle'], attack4: ['attack4', 'attack', 'idle'], bash: ['bash', 'idle'], channel: ['channel', 'idle'], shoot: ['shoot', 'idle'], cast: ['cast', 'idle'], hit: ['hit', 'idle'], death: ['death'], go: ['go', 'walk', 'idle'], stop: ['stop', 'idle'], hook: ['hook', 'channel', 'idle'], spin: ['spin', 'attack', 'idle'], drink: ['drink', 'walk', 'idle'], fidget: ['fidget', 'idle'], pivot: ['pivot', 'stop', 'walk'], skid: ['skid', 'stop', 'idle'], vault: ['vault', 'stop', 'idle'], toss: ['toss', 'shoot', 'idle'], volley: ['volley', 'shoot', 'idle'] };
 // px: detail scale. Characters draw at SPX (2: twice the pixels, round 21); the world, the bag's
 // paper doll and corpses baked into the floor use 1.
 function getSprite(fam, look, dir, clip, f, ent, px = SPX) {

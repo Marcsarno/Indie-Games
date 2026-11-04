@@ -44,6 +44,8 @@ defMat('CLOTH_BLUE', BLUE, 2, { span: 0.6 });
 defMat('CLOTH_GREEN', GREEN, 2, { span: 0.6 });
 defMat('CLOTH_PURPLE', PURPLE, 2, { span: 0.6 });
 defMat('CLOTH_DARK', [2, 3, 5, 6], 2, { span: 0.6 });
+defMat('CLOTH_SHADOW', [2, 28, 29, 30], 1, { span: 0.75 });   // round 43: cool slate (the shadow hood: lit, not a black hole, not hair)
+defMat('CLOTH_NAVY', BLUE, 0, { span: 0.5 });   // round 43: the night hood
 defMat('WOOD', WOOD, 2, { span: 0.8 });
 defMat('LEATHER', [33, 34, 35, 36], 2, { span: 0.8 });
 defMat('FLESH', FLESH, 1, { span: 1.0, spec: [0.985, 47] });

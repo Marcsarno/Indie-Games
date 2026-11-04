@@ -209,11 +209,29 @@ function bipedJoints(B, st) {
   }
   if (clip === 'channel') {   // casting, 3 frames: gather (weight back, coiled), release (stepping
     // into it, leaning at the target), follow-through; frames 3-5 are the meteor's, reaching skyward
-    const ph = f % 3, sky = f >= 3;
+    const ph = f % 3, sky = f >= 3 && f < 6, set = Math.floor(f / 3);
     footL = [B.stride * (ph === 1 ? 0.75 : 0.45), -B.hipW - 0.4, 0]; footR = [-B.stride * 0.5, B.hipW + 0.4, 0];
     if (ph === 0) { bob = sky ? 0.2 : -0.3; lean = sky ? -0.16 : -0.12; twist = 0.5; }
     else if (ph === 1) { bob = -1.3; lean = sky ? 0.02 : 0.16; twist = -0.12; }
     else { bob = -0.8; lean = 0.06; twist = 0.1; }
+    if (set === 2) {   // round 43, frames 6-8: the slam (frost): staff up on the toes, then down into a deep crouch driving it into the ground
+      footL = [B.stride * 0.55, -B.hipW - 1.2, 0]; footR = [-B.stride * 0.45, B.hipW + 1.2, 0];
+      if (ph === 0) { bob = 0.7; lean = -0.14; twist = 0.05; } else if (ph === 1) { bob = -3.2; lean = 0.3; twist = 0; } else { bob = -1.7; lean = 0.14; twist = 0; }
+    }
+    if (set === 3) {   // frames 9-11: the hurl (fireball): the free hand cocked back by the ear, then thrown with a long step
+      if (ph === 0) { bob = -0.2; lean = -0.16; twist = -0.55; footL = [B.stride * 0.3, -B.hipW - 0.4, 0]; }
+      else if (ph === 1) { bob = -1.5; lean = 0.24; twist = 0.5; footL = [B.stride * 1.0, -B.hipW - 0.4, 0]; }
+      else { bob = -0.9; lean = 0.12; twist = 0.3; footL = [B.stride * 0.85, -B.hipW - 0.4, 0]; }
+    }
+  }
+  if (clip === 'vault') {   // round 43: the ranger's evasive leap: a crouch, a tucked jump back, a landing that sits into it
+    if (f === 0) { footL = [1.2, -B.hipW - 0.3, 0]; footR = [-1.2, B.hipW + 0.3, 0]; bob = -2.4; lean = 0.22; twist = 0.1; }
+    else if (f === 1) { footL = [2.6, -B.hipW, B.lift * 1.7]; footR = [0.8, B.hipW, B.lift * 2.0]; bob = 0.4; lean = -0.24; twist = -0.08; }
+    else { footL = [B.stride * 0.6, -B.hipW - 0.8, 0]; footR = [-B.stride * 0.6, B.hipW + 0.8, 0]; bob = -2.0; lean = 0.12; twist = 0.05; }
+  }
+  if (clip === 'toss') {   // round 43: the snare trap thrown underhand: the arm swung back low, then up and out
+    if (f === 0) { footL = [B.stride * 0.35, -B.hipW - 0.4, 0]; footR = [-B.stride * 0.5, B.hipW + 0.4, 0]; bob = -1.3; lean = 0.08; twist = 0.45; }
+    else { footL = [B.stride * 0.8, -B.hipW - 0.4, 0]; footR = [-B.stride * 0.4, B.hipW + 0.4, 0]; bob = -1.0; lean = 0.16; twist = -0.35; }
   }
   if (clip === 'stop') {   // planting the front foot and sitting back onto it
     footL = [B.stride * 0.7, -B.hipW - 0.3, 0]; footR = [-B.stride * 0.45, B.hipW + 0.3, B.lift * 0.25];
@@ -331,7 +349,7 @@ const GEAR_LOOKS = {
   weapon: ['sword', 'axe', 'mace', 'flail', 'greatsword'],
   shield: ['none', 'buckler', 'round', 'kite', 'tower'],
 };
-const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}.${eq.cape || ''}.${eq.lgd || ''}`;
+const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}.${eq.cape || ''}.${eq.lgd || ''}.${eq.set || ''}`;
 const hasFx = (eq, k) => !!eq.lgd && eq.lgd.split('|').includes(k);
 // combo 1 = the second swing of a quick pair (a backhand)
 // a quick string of swings: forehand, backhand, then a finisher (sword thrust or heavy slam)
@@ -360,6 +378,27 @@ const isBow = w => typeof w === 'string' && w.startsWith('bow');
 // round 41b: gear looks from outside the hero's body code (the art kit). A helm, chest or weapon
 // look id found here is drawn by its function instead of a built-in one; GEAR_SWING picks a
 // weapon's swing set ('light' = the sword's, else the heavy chops) and GEAR_LEN its reach
+// round 43: armor sets (items.js SETS) get a look of their own once two pieces are worn: the
+// Warden a white tabard with a gold cross, a white cloak and a plume; the Scout a green cloak and
+// a red feather; the Stalker a black cloak and a red scarf over the face; the Magus a glowing
+// arcane gem at the collar and a star at the hat's tip
+const SET_CAPE = { warden: { m: M.CLOTH_WHITE, hem: M.GOLD, len: 11 }, ranger: { m: M.CLOTH_GREEN, hem: M.LEATHER, len: 10 }, stalker: { m: M.CLOTH_DARK, hem: M.CLOTH_RED, len: 11.5 } };
+function setChest(r, eq, J, fwd, up, sideR) {
+  if (eq.set === 'warden') {
+    const c = V.add(V.mad(J.chest, up, -1.6), V.mul(fwd, 4.8)), ax = [fwd, sideR, up];
+    r.box(c, [0.6, 3.4, 6.4], M.CLOTH_WHITE, ax, { mf: p => { const q = V.sub(p, c), u = Math.abs(V.dot(q, sideR)), v = V.dot(q, up); return (u < 0.45 && v > -2.6 && v < 3.6) || (Math.abs(v - 1.6) < 0.45 && u < 1.9) ? M.GOLD : v < -5.6 ? M.GOLD : 0; } });
+  }
+  if (eq.set === 'magus') { const c = V.add(V.mad(J.chest, up, 3.2), V.mul(fwd, 3.4)); r.sph(V.mad(c, fwd, 0.6), 1.9, M.ARCANE, { noShadow: true }); r.cyl(V.mad(c, fwd, -0.4), V.mad(c, fwd, 0.2), 2.8, M.GOLD); }
+}
+function setHead(r, eq, hd, fwd, up, sideR, helmF) {
+  if (eq.set === 'warden') {   // a white plume streaming back from the crest
+    const a = V.add(V.mad(hd, up, 5.6), V.mul(fwd, 0.5)), b = V.add(V.mad(hd, up, 8.2), V.mul(fwd, -3.2)), c = V.add(V.mad(hd, up, 6.2), V.mul(fwd, -7));
+    r.group(() => { r.cone(a, b, 1.6, 1.4, M.CLOTH_WHITE, { noShadow: true }); r.cone(b, c, 1.4, 0.5, M.CLOTH_WHITE, { noShadow: true }); });
+  }
+  if (eq.set === 'ranger') { const a = V.add(V.mad(hd, up, 3.4), V.mul(sideR, -4.0)), b = V.add(V.add(V.mad(hd, up, 8.5), V.mul(sideR, -5.2)), V.mul(fwd, -3)); r.cone(a, b, 1.1, 0.4, M.CLOTH_RED, { noShadow: true }); }
+  if (eq.set === 'stalker') r.ell(V.add(V.mad(hd, up, -2.0), V.mul(fwd, 1.6)), [3.0, 4.1, 1.9], M.CLOTH_RED, helmF);
+  if (eq.set === 'magus' && eq.helm === 'hat') r.sph(V.add(V.mad(hd, up, 12), V.mul(fwd, -4.6)), 1.4, M.GOLD, { noShadow: true });
+}
 const GEAR_EXTRA = { helm: {}, chest: {}, weapon: {} }, GEAR_SWING = {}, GEAR_LEN = {};
 function weaponSwing(eq, combo = 0) {
   if (isBow(eq.weapon)) return RANGER_BOW;
@@ -371,6 +410,7 @@ function weaponSwing(eq, combo = 0) {
 const WEAPON_LEN = { sword: 21, axe: 16, mace: 16, flail: 17, greatsword: 27 };
 
 function heroRig(eq, st) {
+  const volley = st.clip === 'volley'; if (volley) st = Object.assign({}, st, { clip: 'shoot' });   // round 43: Multishot draws like a shot, the bow canted over and three arrows on the string
   const B = robed(eq) ? MAGE_B : HERO_B, J = bipedJoints(B, st), r = new Rig();
   const team = TEAM[eq.team] || M.CLOTH_RED;
   const plate = eq.chest === 'plate' || eq.chest === 'darkplate', chain = eq.chest === 'chain', brig = eq.chest === 'brigandine';
@@ -455,6 +495,7 @@ function heroRig(eq, st) {
     }),
   });
   { const xc = GEAR_EXTRA.chest[eq.chest]; if (xc) xc(r, { J, fwd, up, sideR, tf, eq, st, bulk }); }   // an art-kit chest look, over the torso
+  setChest(r, eq, J, fwd, up, sideR);   // round 43: armor sets wear their colors
   // arms: right hand holds the weapon, left the shield
   const atk = atkIndex(st.clip) >= 0;
   const sw = atk ? st.key : null, list = atk ? weaponSwing(eq, atkIndex(st.clip)) : null;
@@ -480,13 +521,22 @@ function heroRig(eq, st) {
     handR = V.add(V.add(J.head, V.mul(fwd, 3.4)), V.add(V.mul(up, -3.2), V.mul(sideR, 1.8))); bd = V.norm(V.add(V.add(V.mul(fwd, -0.5), V.mul(up, -0.9)), V.mul(sideR, 0.4)));
   } else if (st.clip === 'fidget' && st.f >= 8) {   // checking the weapon: raised upright in front of the face
     handR = V.add(V.add(J.shR, V.mul(fwd, 5.5)), V.add(V.mul(up, -6 + 4 * fk), V.mul(sideR, 0.6))); bd = V.norm(V.add(up, V.mul(fwd, 0.18 - 0.1 * fk)));
+  } else if (bow && st.clip === 'toss') {   // the trap: swung back past the hip, then released forward at chest height
+    handR = st.f === 0 ? V.add(V.add(J.shR, V.mul(fwd, -3.5)), V.add(V.mul(up, -8.5), V.mul(sideR, 1.2))) : V.add(V.add(J.shR, V.mul(fwd, 10)), V.add(V.mul(up, 0.5), V.mul(sideR, -1.2))); bd = fwd;
+  } else if (bow && st.clip === 'vault') {   // in the air the free arm flies out for balance
+    handR = V.add(V.add(J.shR, V.mul(fwd, st.f === 1 ? -2 : 2)), V.add(V.mul(up, st.f === 1 ? -2 : -6.5), V.mul(sideR, st.f === 1 ? 5 : 2))); bd = fwd;
   } else if (bow && st.clip === 'shoot') {   // drawing: the string hand comes back to the cheek
     handR = V.add(V.add(J.shR, V.mul(fwd, 9 - draw * 7.5)), V.add(V.mul(up, -0.6), V.mul(sideR, -2.6))); bd = fwd;
   } else if (bow && st.clip !== 'death') {   // walking: the free right hand pumps with the stride
     handR = V.add(V.add(J.shR, V.mul(fwd, 3.5 + J.swingArm * 3)), V.add(V.mul(up, -7.5 + Math.max(0, J.swingArm) * 0.8), V.mul(sideR, 0.6))); bd = fwd;
   } else if (staff && st.clip === 'channel') {   // casting: gather (staff drawn back), release (thrust at the target), follow-through
-    const ph = st.f % 3, sky = st.f >= 3;
-    if (ph === 0) { handR = V.add(V.add(J.shR, V.mul(fwd, -0.5)), V.add(V.mul(up, sky ? -1 : -4.5), V.mul(sideR, 2.6))); bd = V.norm(V.add(V.mul(fwd, -0.45), up)); }
+    const ph = st.f % 3, sky = st.f >= 3 && st.f < 6, set = Math.floor(st.f / 3);
+    if (set === 2) {   // the slam: raised high, then planted upright in front, both hands on it
+      if (ph === 0) { handR = V.add(V.add(J.shR, V.mul(fwd, 2.5)), V.add(V.mul(up, 5.5), V.mul(sideR, -1))); bd = V.norm(V.add(up, V.mul(fwd, 0.3))); }
+      else { handR = V.add(V.add(J.shR, V.mul(fwd, ph === 1 ? 7 : 6)), V.add(V.mul(up, ph === 1 ? -3.5 : -3), V.mul(sideR, -2.2))); bd = V.norm(V.add(up, V.mul(fwd, ph === 1 ? -0.08 : 0.05))); }
+    } else if (set === 3) {   // the hurl: the staff held back out of the way
+      handR = V.add(V.add(J.shR, V.mul(fwd, -1.5)), V.add(V.mul(up, -6.5), V.mul(sideR, 2.2))); bd = V.norm(V.add(V.add(V.mul(fwd, -0.35), up), V.mul(sideR, 0.3)));
+    } else if (ph === 0) { handR = V.add(V.add(J.shR, V.mul(fwd, -0.5)), V.add(V.mul(up, sky ? -1 : -4.5), V.mul(sideR, 2.6))); bd = V.norm(V.add(V.mul(fwd, -0.45), up)); }
     else if (ph === 1 && sky) { handR = V.add(V.add(J.shR, V.mul(fwd, 2)), V.add(V.mul(up, 2.5), V.mul(sideR, 1.2))); bd = V.norm(V.add(V.mul(fwd, 0.25), up)); }   // raised to the sky
     else if (ph === 1) { handR = V.add(V.add(J.shR, V.mul(fwd, 6.5)), V.add(V.mul(up, -2.5), V.mul(sideR, 1.0))); bd = V.norm(V.add(V.mul(fwd, 0.95), up)); }   // thrust at the target
     else { handR = V.add(V.add(J.shR, V.mul(fwd, 4.5)), V.add(V.mul(up, -3.5), V.mul(sideR, 1.8))); bd = V.norm(V.add(V.mul(fwd, 0.5), up)); }
@@ -514,6 +564,7 @@ function heroRig(eq, st) {
   if (robe) ar[2] += 1.1;   // bell sleeves widen toward the wrist
   r.cone(J.shR, aR.el, ar[0], ar[1], sleeve); r.cone(aR.el, aR.hand, ar[1], ar[2], foreM);
   r.sph(aR.hand, ar[3], handM);
+  if (st.clip === 'toss' && st.f === 0) { r.cyl(V.mad(aR.hand, up, -1.6), V.mad(aR.hand, up, -0.8), 2.6, M.IRON); for (const s2 of [-1, 1]) r.cone(V.add(V.mad(aR.hand, up, -1.2), V.mul(sideR, s2 * 2.4)), V.add(V.mad(aR.hand, up, 0.6), V.mul(sideR, s2 * 1.4)), 0.6, 0.3, M.STEEL); }   // round 43: the snare's iron jaws in the hand
   // off hand swings against the sword arm: a free hand pumps (elbow bent, rising forward), a
   // shield only rocks
   const offSw = -J.swingArm * (eq.shield === 'none' ? 3.6 : 1.6);
@@ -527,9 +578,11 @@ function heroRig(eq, st) {
   if (st.clip === 'drink' && !drinkR) handL = V.add(V.add(J.head, V.mul(fwd, 3.4)), V.add(V.mul(up, -3.2), V.mul(sideR, -1.8)));   // the free hand brings the flask up
   if (st.clip === 'spin') handL = V.add(V.add(J.shL, V.mul(sideR, -6.5)), V.add(V.mul(up, -2.5), V.mul(fwd, 0.5)));   // the off arm out too, for balance
   if (st.clip === 'channel') {   // open hand: drawn in on the gather, thrust at the target on the release
-    const ph = st.f % 3;
+    const ph = st.f % 3, set = Math.floor(st.f / 3);
     handL = ph === 0 ? V.add(V.add(J.shL, V.mul(fwd, 3)), V.add(V.mul(up, -5), V.mul(sideR, 2.5)))
       : V.add(V.add(J.shL, V.mul(fwd, ph === 1 ? 8.5 : 7)), V.add(V.mul(up, st.f >= 3 ? 1.5 : -0.5), V.mul(sideR, 1.2)));
+    if (set === 2 && staff) handL = V.mad(handR, bd, ph === 0 ? -2.8 : 3.2);   // both hands on the staff
+    if (set === 3) handL = ph === 0 ? V.add(V.add(J.shL, V.mul(fwd, -3)), V.add(V.mul(up, 1), V.mul(sideR, -2.5))) : V.add(V.add(J.shL, V.mul(fwd, ph === 1 ? 9.5 : 7.5)), V.add(V.mul(up, ph === 1 ? 0.5 : -2), V.mul(sideR, 1)));
   }
   if (sw) {
     if (list.twoHand && (eq.shield === 'none' || eq.weapon === 'greatsword')) handL = V.mad(handR, bd, -2.6);   // lower on the haft
@@ -542,7 +595,9 @@ function heroRig(eq, st) {
   if (st.clip === 'drink') flask(drinkR ? aR.hand : aL.hand);
   r.cone(J.shL, aL.el, ar[0], ar[1], sleeve); r.cone(aL.el, aL.hand, ar[1], ar[2], foreM);
   r.sph(aL.hand, ar[3], handM);
-  if (st.clip === 'channel' && st.f % 3 !== 0) r.sph(V.mad(aL.hand, fwd, 2.2), st.f % 3 === 1 ? 1.9 : 1.4, staff ? M.ARCANE : M.HOLY, { noShadow: true });
+  if (st.clip === 'channel' && st.f >= 9) { if (st.f === 9) { const fb = V.add(V.mad(aL.hand, up, 2.6), V.mul(fwd, 0.8)); r.sph(fb, 3.3, M.FIREM, { noShadow: true }); r.sph(V.mad(fb, up, 2.6), 1.6, M.FIREM, { noShadow: true }); } }   // the hurl: a fireball held in the cocked hand, gone once thrown
+  else if (st.clip === 'channel' && st.f >= 6) { if (st.f === 7) { const ft = V.add(V.mad(aR.hand, up, -12), V.mul(fwd, 1.5)); for (const [s, h] of [[-1, 2.2], [0, 3.4], [1, 2.2]]) r.cone(V.add(ft, V.mul(sideR, s * 3.6)), V.add(V.mad(ft, up, h + 2.5), V.mul(sideR, s * 5)), 1.6, 0.4, M.ICE, { noShadow: true }); } }   // ice shards spring up round the staff's foot   // the slam: frost bursting at the staff's foot
+  else if (st.clip === 'channel' && st.f % 3 !== 0) r.sph(V.mad(aL.hand, fwd, 2.2), st.f % 3 === 1 ? 1.9 : 1.4, staff ? M.ARCANE : M.HOLY, { noShadow: true });
   if (plate) for (const a of [aR, aL]) r.sph(a.el, 2.2, PL);   // elbow cops
   // pauldrons: big rounded plates with a bright lower rim and a rivet (plate); pads otherwise
   if (eq.chest !== 'tunic' && !robe && !jerk) for (const [sh, sd] of [[J.shL, -1], [J.shR, 1]]) {
@@ -567,7 +622,8 @@ function heroRig(eq, st) {
     const dn = V.norm(V.add(V.add(V.mul(up, -Math.cos(th)), V.mul(fwd, -Math.sin(th))), V.mul(sideR, side)));
     const a1 = V.norm(V.sub(sideR, V.mul(dn, V.dot(sideR, dn)))), a0 = V.cross(a1, dn);
     const top = V.add(V.mad(J.chest, up, B.shZ + 0.6), V.mul(fwd, -2.6)), L = 8.2;
-    r.box(V.mad(top, dn, L / 2), [0.5, B.shW * 0.78, L / 2], TEAM[eq.cape] || CAPE_M, [a0, a1, dn], { mf: p => V.dot(V.sub(p, top), dn) > L - 1.2 ? M.LEATHER : 0 });
+    const SC = SET_CAPE[eq.set], LL = SC ? SC.len : L;   // round 43: a set's cloak, longer and in its colors
+    r.box(V.mad(top, dn, LL / 2), [0.5, B.shW * (SC ? 0.86 : 0.78), LL / 2], SC ? SC.m : TEAM[eq.cape] || CAPE_M, [a0, a1, dn], { mf: p => V.dot(V.sub(p, top), dn) > LL - 1.2 ? (SC ? SC.hem : M.LEATHER) : 0 });
   }
   if (bow) {   // a quiver on the back, from behind the right shoulder down to the left hip, fletchings showing
     const qa = V.add(V.add(V.mad(J.chest, up, 6.4), V.mul(fwd, -4.6)), V.mul(sideR, 3.0)), qb = V.add(V.add(V.mad(J.chest, up, -4.4), V.mul(fwd, -4.0)), V.mul(sideR, -2.2));
@@ -607,7 +663,7 @@ function heroRig(eq, st) {
       r.cone(V.add(V.mad(hd, up, 2.6), V.mul(fwd, -4.0)), V.add(V.mad(hd, up, 0.2), V.mul(fwd, -7.2)), 2.0, 0.5, M.CLOTH_BLUE);   // the point falls behind
     }
     if (eq.helm.startsWith('rhood')) {   // the ranger's hood: a shell over the head with the face open, a pointed back and a cowl on the shoulders
-      const hm = eq.helm === 'rhood_dark' ? M.CLOTH_DARK : M.CLOTH_GREEN, hc = V.add(V.mad(hd, up, 0.8), V.mul(fwd, -1.0));
+      const hm = eq.helm === 'rhood_dark' ? M.CLOTH_SHADOW : eq.helm === 'rhood_night' ? M.CLOTH_NAVY : M.CLOTH_GREEN, hc = V.add(V.mad(hd, up, 0.8), V.mul(fwd, -1.0));
       r.group(() => {
         r.ell(hc, [4.7, 5.1, 5.1], hm, helmF);   // set back, so the face stands out of its opening
         r.cone(V.add(V.mad(hd, up, 3.0), V.mul(fwd, -3.4)), V.add(V.mad(hd, up, 1.0), V.mul(fwd, -6.6)), 2.2, 0.5, hm);
@@ -680,6 +736,7 @@ function heroRig(eq, st) {
       }
     }
   }
+  setHead(r, eq, hd, fwd, up, sideR, helmF);   // round 43: a set's crest, feather, scarf or star
   {   // the head (skin, hair, helm) drawn big about its center
     const HK = HERO_HK, sc = q => V.add(hd, V.mul(V.sub(q, hd), HK));
     for (const q of r.p.slice(hr0)) {
@@ -716,15 +773,16 @@ function heroRig(eq, st) {
   const g = aR.hand;
   const wide = V.norm(V.cross(bd, V.len(V.cross(bd, up)) > 0.3 ? up : fwd));
   const wf = [bd, wide, V.cross(bd, wide)];
+  const bowUp = volley ? V.norm(V.add(V.mul(up, 0.5), V.mul(sideR, -0.87))) : up;   // round 43: canted over for the volley
   if (bow) {   // the bow in the left hand: two curved limbs and the string, pulled back to the right hand while drawing
     const c = aL.hand, back = V.mul(fwd, -1), lm = eq.weapon === 'bow_horn' ? M.HORN : M.WOOD, L = eq.weapon === 'bow_long' ? 12.5 : 10;
     const bend = 1.8 + draw * 1.6;   // the limbs bend further at full draw
-    const tip = sd2 => V.add(V.mad(c, up, sd2 * L), V.mul(back, bend + (eq.weapon === 'bow_horn' ? -1.6 : 0))), mid = sd2 => V.add(V.mad(c, up, sd2 * L * 0.55), V.mul(back, -0.6));
+    const tip = sd2 => V.add(V.mad(c, bowUp, sd2 * L), V.mul(back, bend + (eq.weapon === 'bow_horn' ? -1.6 : 0))), mid = sd2 => V.add(V.mad(c, bowUp, sd2 * L * 0.55), V.mul(back, -0.6));
     r.group(() => { for (const sd2 of [1, -1]) { r.cone(c, mid(sd2), 1.3, 1.1, lm); r.cone(mid(sd2), tip(sd2), 1.1, 0.6, lm); } });
-    r.cone(V.mad(c, up, -1.2), V.mad(c, up, 1.2), 1.15, 1.15, M.LEATHER);   // grip
+    r.cone(V.mad(c, bowUp, -1.2), V.mad(c, bowUp, 1.2), 1.15, 1.15, M.LEATHER);   // grip
     const nock = st.clip === 'shoot' ? aR.hand : V.add(c, V.mul(back, bend + 0.4));
     r.cone(tip(1), nock, 0.3, 0.3, M.CLOTH_WHITE, { noShadow: true }); r.cone(nock, tip(-1), 0.3, 0.3, M.CLOTH_WHITE, { noShadow: true });
-    if (st.clip === 'shoot' && draw > 0.5) { r.cone(aR.hand, V.mad(aR.hand, fwd, 12), 0.4, 0.4, M.WOOD, { noShadow: true }); r.cone(V.mad(aR.hand, fwd, 11.5), V.mad(aR.hand, fwd, 13.2), 0.7, 0.2, M.STEEL, { noShadow: true }); }
+    if (st.clip === 'shoot' && draw > 0.5) for (const fan of volley ? [-0.28, 0, 0.28] : [0]) { const ad = V.norm(V.add(fwd, V.mul(bowUp, fan))); r.cone(aR.hand, V.mad(aR.hand, ad, 12), 0.4, 0.4, M.WOOD, { noShadow: true }); r.cone(V.mad(aR.hand, ad, 11.5), V.mad(aR.hand, ad, 13.2), 0.7, 0.2, M.STEEL, { noShadow: true }); }
     if (st.clip === 'death') deathTip(r, B, st.f, -1);
     return r;
   }

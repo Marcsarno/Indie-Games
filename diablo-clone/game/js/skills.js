@@ -1554,7 +1554,7 @@ function multishot() {
     const a = a0 + (i / (n - 1) - 0.5) * spread;
     shootArrow(a, { dmgK: k, pierce: mod === 'pierce', hits: mod === 'pierce' ? new Set() : null, fire: mod === 'fire', elem: mod === 'fire' ? 'fire' : null, sp: ARROW_SP * (0.95 + Math.random() * 0.1) });
   }
-  hero.combo = 0; hero.atk = 70; hero.hitDone = true; hero.approach = null;   // the release pose, already loosed
+  hero.combo = 0; hero.atk = 70; hero.hitDone = true; hero.approach = null; hero.volleyT = 0.3;   // the release pose, already loosed (round 43: the canted volley)
   sfx('twang'); sfx('swing'); if (mod === 'fire') sfx('fireball');
 }
 // Snare Trap: thrown to a foe's feet (or ahead); arms in 0.4 s; the first foe to step in snaps it
@@ -1571,7 +1571,7 @@ function throwTrap() {
   }
   if (!n) return false;
   while (G.traps.length > 6) G.traps.shift();
-  hero.combo = 0; hero.atk = 70; hero.hitDone = true; sfx('swing'); sfx('clank');
+  hero.combo = 0; hero.atk = 70; hero.hitDone = true; hero.tossT = 0.34; sfx('swing'); sfx('clank');   // round 43: thrown underhand (the toss pose)
   return true;
 }
 function snapTrap(tp) {
@@ -1612,7 +1612,7 @@ function updateRoll(dt) {
   const u = Math.min(1, R.t / R.dur), e = u * (2 - u);
   hero.fi = R.from[0] + (R.to[0] - R.from[0]) * e; hero.fj = R.from[1] + (R.to[1] - R.from[1]) * e;
   hero.leapZ = Math.sin(u * Math.PI) * 9;
-  hero.clip = 'stop';   // leaning back through the hop
+  hero.clip = FEEL_OLD ? 'stop' : 'vault';   // round 43: crouch, tucked jump, landing (frameOf reads the leap's progress)
   if (Math.random() < 0.7) { const [x, y] = screenOf(hero); pspawn(5, x, y, 1, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 8, 6, 1, LV.outdoor ? DIRT[3] : S[5]); }
   if (u >= 1) {
     hero.roll = null; hero.leapZ = 0; hero.clip = 'idle'; unstickHero();
