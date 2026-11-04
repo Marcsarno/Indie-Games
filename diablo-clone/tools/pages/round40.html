@@ -1,0 +1,87 @@
+<title>Hero Animation</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  /* layout: one narrow column, one section per part with its picture first */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul { margin: 0; max-width: 64ch; }
+  ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .frame img.smooth { image-rendering: auto; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .tw { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+</style>
+<main>
+  <header>
+    <h1>Hero Animation</h1>
+    <p class="lede">Dungeon of Bones, round 40. An animation pass on the hero: the warrior&rsquo;s four skills have poses of their own now, and moving has more weight for all three classes. Every clip shows the same moves played before (left) and now (right).</p>
+  </header>
+  <section>
+    <h2>The warrior&rsquo;s skills</h2>
+    <figure>
+      <div class="frame"><img src="ground-slam.gif" alt="Ground slam, before and now. Before: an ordinary overhead chop. Now: he crouches with the weapon overhead in both hands, hops, crashes down into a deep squat, holds it, and rises" width="606" height="276"></div>
+      <figcaption><strong>Ground Slam:</strong> a crouch, a small hop with the weapon overhead, a crash into a deep squat that holds for a beat, then he rises. The blow lands at exactly the same moment as before.</figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><img src="chain-hook.gif" alt="Chain hook, before and now. Before: the mage casting pose. Now: he winds back, whips his arm out after the chain, then plants his feet and hauls with both hands while the monster is dragged in" width="606" height="276"></div>
+      <figcaption><strong>Chain Hook:</strong> it used to borrow the mage&rsquo;s casting pose. Now he winds back, whips the arm out after the chain, then braces and hauls with both hands while the catch is dragged in.</figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><img src="whirlwind.gif" alt="Whirlwind, before and now. Before: the attack pose flicking through facings. Now: he spins low with the sword held straight out to the side and the other arm out for balance" width="606" height="276"></div>
+      <figcaption><strong>Whirlwind:</strong> a spin pose of its own: low and wide, the blade straight out to the side so the turn sweeps it round, the off arm out for balance, feet shuffling. It winds up at the start and slows at the end.</figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><img src="leap.gif" alt="Leap, before and now. Now: a crouch, a tuck in the air with the weapon overhead, a dive, a strike, then a squash on landing and a kneel before standing" width="606" height="276"></div>
+      <figcaption><strong>Leap:</strong> a crouch and spring, tucked in the air with the weapon overhead, diving with it, the strike, then a squash on landing and a kneel before he stands.</figcaption>
+    </figure>
+  </section>
+  <section>
+    <h2>Moving, for all three classes</h2>
+    <figure>
+      <div class="frame"><img src="run-turn-back-stop.gif" alt="Running right, turning back and stopping, before and now. Now: dust at each footfall, a pivot step on the reversal, and a short braced skid with dust when he stops" width="606" height="276"></div>
+      <figcaption><strong>Run, turn back, stop:</strong> a puff of dust and a soft step sound on each footfall, a pivot step and dust on a hard reversal, and a short braced skid when stopping from a full run. The hair trails when running and swings forward when stopping.</figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><img src="drink-walking.gif" alt="Drinking a potion while walking, before and now. Now: the free hand brings a glowing red flask to the mouth while the legs keep walking" width="606" height="276"></div>
+      <figcaption><strong>Potion:</strong> the free hand (the weapon hand if a shield is carried) brings a red flask to the mouth, head back, without stopping.</figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><img src="hit-from-the-side.gif" alt="Hit from the side, before and now. Now: he is knocked toward the far side with a twist" width="606" height="276"></div>
+      <figcaption><strong>Getting hit:</strong> the flinch now comes from where the blow came from: front, left, right or behind.</figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><img src="standing-still.gif" alt="Standing still, before and now. Now: after a moment he shifts his weight, rolls his shoulders, or raises his weapon to look at it" width="606" height="276"></div>
+      <figcaption><strong>Standing still:</strong> after 4 to 10 seconds, a small fidget: a weight shift, a shoulder roll, or a look at the weapon. (The clip starts it early.)</figcaption>
+    </figure>
+  </section>
+  <section>
+    <h2>Checks</h2>
+    <figure>
+      <div class="frame"><img src="poses-warrior.png" alt="A sheet of every new warrior pose in two facings: idle, walk, push-off, stop, skid, pivot, four hit directions, drink, fidgets, hook throw and haul, spin, and the six slam frames" width="2122" height="1440"></div>
+      <figcaption>The new poses in two facings, from the art review. Three passes: the first drink pose held the sword straight over his head and hid the flask; then the free hand took the flask; then the flask got bigger, in front of the face.</figcaption>
+    </figure>
+    <ul>
+      <li><strong>Nothing got slower.</strong> The same timing test on the previous version and on this one: slam blow at 217 ms, leap landing at 450 ms, hook bite at 217 ms, first whirlwind hit at 17 ms, in both. Wind-ups are only in the pose.</li>
+      <li>A new test checks each pose shows when it should: pivot on a reversal, skid on a hard stop, footfall dust, drink, a fidget after standing, all four hit directions, spin, the hook&rsquo;s three frames, the leap&rsquo;s six.</li>
+      <li>The short poses (hits, pivot, skid, hook, spin, slam) are built in the background when a level loads, so the first time one plays it never shows a stand-in.</li>
+      <li>Your second song is saved in the game&rsquo;s files (it isn&rsquo;t played anywhere yet). It&rsquo;s almost 23 minutes long and 21.8 MB, which is over the 15 MB limit for one file in the published game, so we&rsquo;ll need to pick the part to use.</li>
+    </ul>
+  </section>
+</main>

@@ -236,7 +236,7 @@ function chainHook() {
   hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
   const dx = t.fi - hero.fi, dy = t.fj - hero.fj, l = Math.hypot(dx, dy) || 1;
   G.hooks.push({ fi: hero.fi + dx / l * 0.5, fj: hero.fj + dy / l * 0.5, vx: dx / l * 16, vy: dy / l * 16, life: mod === 'line' ? 0.68 : 0.6, state: 'out', caught: [], mod });
-  hero.cast = 0.3; hero.castAge = CAST_RELEASE; hero.castKind = 'hook'; hero.clip = 'channel';
+  hero.cast = 0.3; hero.castAge = CAST_RELEASE; hero.castKind = 'hook'; hero.clip = FEEL_OLD ? 'channel' : 'hook';
   sfx('swing'); sfx('chain');
   return true;
 }
@@ -266,11 +266,13 @@ function updateLeap(dt) {
   const u = Math.min(1, L.t / L.dur), e = u * (2 - u);   // fast off the ground, easing into the landing
   hero.fi = L.from[0] + (L.to[0] - L.from[0]) * e; hero.fj = L.from[1] + (L.to[1] - L.from[1]) * e;
   hero.leapZ = Math.sin(u * Math.PI) * (14 + Math.hypot(L.to[0] - L.from[0], L.to[1] - L.from[1]) * 3);
-  hero.clip = 'attack4'; hero.combo = 3; hero.atk = u < 0.75 ? 40 : 230;   // weapon raised, then brought down
+  // round 40a: crouch and spring, tucked in the air with the weapon overhead, diving with it, then the strike
+  hero.clip = 'attack4'; hero.combo = 3; hero.atk = FEEL_OLD ? (u < 0.75 ? 40 : 230) : u < 0.1 ? 50 : u < 0.55 ? 130 : u < 0.8 ? 175 : 230;
   if (Math.random() < 0.6) { const [x, y] = screenOf(hero); pspawn(3, x, y, hero.leapZ + 20, 0, 0, 4, 0.25, 31); }
   if (u >= 1) {   // landing
     const mod = L.mod, R = mod === 'quake' ? 3.3 : 1.9;   // round 30: Earthquake lands far wider; Pounce saves it all for the target
     hero.leap = null; hero.leapZ = 0; hero.atk = -1; hero.clip = 'idle'; hero.stopT = 0.11; hero.swingEnd = G.t; unstickHero();
+    if (!FEEL_OLD) { hero.landT = 0.26; hero.stopT = 0; }   // round 40a: a squash on landing, then a kneel before standing
     G.pierce = true;
     for (const en of enemies) {
       if (!alive(en)) continue;
@@ -1363,8 +1365,8 @@ function updateWrath(dt) {
   const U = hero.ultOn; U.t += dt;
   const t = U.t;
   hero.clip = 'attack4'; hero.combo = 3;
-  if (t < 0.42) { const u = t / 0.42; hero.leapZ = Math.sin(u * Math.PI / 2) * 64; hero.atk = 40; }   // up
-  else if (t < 0.62) { hero.leapZ = 64 + Math.sin((t - 0.42) * 30) * 1.5; hero.atk = 40; if (Math.random() < 0.8) { const [x, y] = screenOf(hero); pspawn(4, x + (Math.random() - 0.5) * 20, y, hero.leapZ + Math.random() * 30, 0, 0, -30, 0.3, Math.random() < 0.5 ? 51 : 27); } }   // hangs, gathering light
+  if (t < 0.42) { const u = t / 0.42; hero.leapZ = Math.sin(u * Math.PI / 2) * 64; hero.atk = FEEL_OLD ? 40 : u < 0.15 ? 50 : 130; }   // up
+  else if (t < 0.62) { hero.leapZ = 64 + Math.sin((t - 0.42) * 30) * 1.5; hero.atk = FEEL_OLD ? 40 : 130; if (Math.random() < 0.8) { const [x, y] = screenOf(hero); pspawn(4, x + (Math.random() - 0.5) * 20, y, hero.leapZ + Math.random() * 30, 0, 0, -30, 0.3, Math.random() < 0.5 ? 51 : 27); } }   // hangs, gathering light
   else if (t < 0.72) { hero.leapZ = 64 * (1 - (t - 0.62) / 0.1); hero.atk = 230; }   // drives down
   else if (!U.landed) { U.landed = true; hero.leapZ = 0; wrathLand(); }
   else if (t > 0.95) { hero.ultOn = null; hero.atk = -1; hero.clip = 'idle'; hero.swingEnd = G.t; }

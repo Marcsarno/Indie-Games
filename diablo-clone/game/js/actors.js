@@ -49,6 +49,17 @@ const SWINGS = {
     K(-0.6, 180, { ck: -0.1, r: 7, tw: -0.1, ln: 0.3, bob: -2.4, fl: 6, fr: -4 }),
     K(0.6, 120, { ck: 0.3, r: 5.5, tw: 0, ln: 0.1, bob: -0.8, fl: 4, fr: -3 }),
   ], 0.22, { twoHand: true }),
+  // round 40a: the ground slam skill: crouch with the weapon overhead, a hop (hop = how high the body
+  // leaves the ground, jump = knees tucked), crash down into a deep squat and hold it, then rise.
+  // The blow lands at the same moment as the old overhead chop it replaces
+  gslam: withTilt([
+    K(2.1, 220, { ck: 0.2, r: 4.5, tw: 0.1, ln: 0.18, bob: -2.4, fl: 3, fr: -3 }),
+    K(2.3, 60, { ck: 0.3, r: 4.8, tw: 0, ln: -0.12, bob: 0.4, fl: 3.5, fr: -3, jump: 3.5, hop: 7 }),
+    K(1.0, 60, { smear: true, ck: 0.3, r: 7, tw: 0, ln: 0.2, bob: -0.6, fl: 5, fr: -3.5, jump: 1.2, hop: 3, mv: 0.06 }),
+    K(-0.45, 60, { smear: true, hit: true, ck: 0, r: 7.4, tw: -0.1, ln: 0.4, bob: -3.4, fl: 6.5, fr: -4.5, mv: 0.03 }),
+    K(-0.6, 180, { ck: -0.1, r: 7, tw: -0.1, ln: 0.36, bob: -3.2, fl: 6.5, fr: -4.5 }),
+    K(0.6, 120, { ck: 0.3, r: 5.5, tw: 0, ln: 0.1, bob: -1, fl: 4, fr: -3 }),
+  ], 0.22, { twoHand: true }),
   // heavy combo follow-up: a rising diagonal backhand at heavy timing
   heavy2: withTilt([
     K(-1.3, 200, { ck: -0.5, r: 5, tw: -0.5, ln: 0.14, bob: -1.4, fl: 5, fr: -3.6 }),
@@ -175,7 +186,7 @@ function bipedJoints(B, st) {
   let footL = [0.5 + sw0, -B.hipW - sw0, 0], footR = [-0.5 - sw0 * 0.6, B.hipW + sw0, 0];
   let swingArm = 0, sway = 0, hipF = 0;   // swingArm: +1 = right arm forward (left foot forward)
   if (clip === 'idle') { bob = [0, -0.4, -0.6, -0.3][f % 4]; }
-  if (clip === 'walk') {
+  if (clip === 'walk' || (clip === 'drink' && f < 8)) {
     const g = gaitFoot(B, f / 8), h = gaitFoot(B, f / 8 + 0.5), A = B.stride;
     footL = [g[0], -B.hipW, g[1]]; footR = [h[0], B.hipW, h[1]];
     // a run (duty < 0.5) is lowest at mid-stance and rises in flight; a walk vaults over the
@@ -224,6 +235,39 @@ function bipedJoints(B, st) {
       bob = k.hit ? -1.4 : k.a > 1.5 ? 0.4 : -0.6;
     }
     if (clip === 'shoot' || clip === 'cast') { twist = 0.25 * k.a; lean = 0.02; }
+  }
+  // round 40a: the hero's new poses
+  if (clip === 'hit') {   // knocked from where the blow came: 0 front, 1 left, 2 right, 3 behind
+    if (f === 1) { lean = -0.12; twist = 0.4; sway = 1.3; bob = -0.8; footL = [0.8, -B.hipW - 1, 0]; footR = [-1, B.hipW + 0.6, 0]; }
+    else if (f === 2) { lean = -0.12; twist = -0.4; sway = -1.3; bob = -0.8; footL = [-1, -B.hipW - 0.6, 0]; footR = [0.8, B.hipW + 1, 0]; }
+    else if (f === 3) { lean = 0.3; bob = -1.0; twist = 0.1; footL = [2.5, -B.hipW, 0]; footR = [-1, B.hipW, B.lift * 0.3]; }
+  }
+  if (clip === 'hook') {   // chain hook: 0 wind back, 1 throw (stepping in), 2 haul (braced, sitting back)
+    if (f === 0) { twist = 0.5; lean = -0.08; bob = -0.4; footL = [B.stride * 0.3, -B.hipW - 0.5, 0]; footR = [-B.stride * 0.5, B.hipW + 0.5, 0]; }
+    else if (f === 1) { twist = -0.35; lean = 0.22; bob = -1.2; footL = [B.stride * 0.85, -B.hipW - 0.5, 0]; footR = [-B.stride * 0.55, B.hipW + 0.5, 0]; }
+    else { twist = 0.15; lean = -0.24; bob = -1.8; footL = [B.stride * 0.75, -B.hipW - 1.2, 0]; footR = [-B.stride * 0.6, B.hipW + 1.2, 0]; }
+  }
+  if (clip === 'spin') {   // whirlwind: low, wide, leaning into the turn, feet shuffling round
+    const ph = f % 4;
+    footL = [1.5 + (ph === 1 ? 1 : 0), -B.hipW - 1.6, ph === 0 ? B.lift * 0.3 : 0]; footR = [-1.5 - (ph === 3 ? 1 : 0), B.hipW + 1.6, ph === 2 ? B.lift * 0.3 : 0];
+    bob = -1.6 + (ph % 2) * 0.3; lean = 0.12; twist = -0.25; sway = ph < 2 ? 0.4 : -0.4;
+  }
+  if (clip === 'drink') {   // a potion while walking (frames 0-7 follow the stride) or standing (8): head back
+    if (f < 8) { lean = -0.06; twist = 0.12; } else { lean = -0.14; bob = 0.2; twist = 0.15; footL = [1, -B.hipW - 0.3, 0]; footR = [-1, B.hipW + 0.3, 0]; }
+  }
+  if (clip === 'fidget') {   // standing a while: 0-3 shifts its weight, 4-7 rolls its shoulders, 8-11 checks its weapon
+    const v = Math.floor(f / 4), ph = f % 4, k = [0, 1, 1, 0.4][ph];
+    if (v === 0) { sway = 1.3 * k; bob = -0.6 * k; footL = [0.5 + sw0, -B.hipW - sw0, 0]; footR = [-0.5 - sw0 * 0.6, B.hipW + sw0, k > 0.5 ? B.lift * 0.15 : 0]; }
+    else if (v === 1) { twist = [0, 0.3, -0.3, 0][ph]; bob = [0, 0.6, 0.6, 0][ph]; lean = -0.04 * k; }
+    else { lean = -0.04 * k; twist = 0.2 * k; bob = -0.2 * k; }
+  }
+  if (clip === 'pivot') {   // a hard reversal mid-run: the outside foot plants and the body swings over it
+    footL = [B.stride * 0.6, -B.hipW - 0.8, 0]; footR = [-B.stride * 0.3, B.hipW + 0.8, B.lift * 0.4];
+    bob = -1.6; lean = -0.1; twist = 0.35; swingArm = -0.4; hipF = -0.3;
+  }
+  if (clip === 'skid') {   // stopping from a full run: both feet braced ahead, sitting back into the slide
+    footL = [B.stride * 0.9, -B.hipW - 0.5, 0]; footR = [B.stride * 0.2, B.hipW + 0.6, 0];
+    bob = -2.0; lean = -0.2; swingArm = -0.6; twist = 0.1; hipF = -0.5;
   }
   lean += B.hunch || 0;
   if (clip === 'death') { bob = -[0, 2, 4, 5, 5, 5][f] * B.hipH / 18; lean = 0.15; footL = [2, -B.hipW - 1, 0]; footR = [-1, B.hipW + 1, 0]; }
@@ -302,7 +346,7 @@ const atkIndex = clip => ATTACK_CLIPS.indexOf(clip);
 let FEEL_OLD = typeof location !== 'undefined' && new URLSearchParams(location.search).get('feel') === 'old';
 try { if (localStorage.getItem('dcg-feel') === 'old') FEEL_OLD = true; } catch (e) { /* storage blocked */ }
 function setFeelOld(v) { FEEL_OLD = v; try { localStorage.setItem('dcg-feel', v ? 'old' : 'new'); } catch (e) { /* ignore */ } }
-const HERO_PRE = { light: [45, 35, 35], light2: [45, 35, 35], thrust: [70, 40], heavy: [110, 45, 45], heavy2: [100, 45, 45], slam: [140, 45, 45] };
+const HERO_PRE = { light: [45, 35, 35], light2: [45, 35, 35], thrust: [70, 40], heavy: [110, 45, 45], heavy2: [100, 45, 45], slam: [140, 45, 45], gslam: [110, 45, 45] };
 const HERO_SWINGS = {};
 for (const name in HERO_PRE) {
   const sw = SWINGS[name], hi = sw.findIndex(k => k.hit), pre = HERO_PRE[name];
@@ -316,7 +360,7 @@ const isBow = w => typeof w === 'string' && w.startsWith('bow');
 function weaponSwing(eq, combo = 0) {
   if (isBow(eq.weapon)) return RANGER_BOW;
   const S = FEEL_OLD ? SWINGS : HERO_SWINGS;
-  if (combo === 3) return S.heavy;   // the ground slam: an overhead chop with any weapon
+  if (combo === 3) return FEEL_OLD ? S.heavy : S.gslam;   // the ground slam (round 40a: a hop and a crash; ?feel=old keeps the old chop)
   return (eq.weapon === 'sword' ? [S.light, S.light2, S.thrust] : [S.heavy, S.heavy2, S.slam])[combo] || S.light;
 }
 // how far the weapon's tip is from the swing pivot (smears and reach)
@@ -417,7 +461,21 @@ function heroRig(eq, st) {
   let handR, bd;
   const staff = eq.weapon.startsWith('staff');
   const draw = bow && st.clip === 'shoot' && st.key ? st.key.a : 0;
-  if (bow && st.clip === 'shoot') {   // drawing: the string hand comes back to the cheek
+  // round 40a: the hero's new poses for the weapon hand
+  const fk = [0, 1, 1, 0.4][st.f % 4];
+  const flask = hd => { const fl = V.add(V.mad(hd, fwd, 2.2), V.mul(up, 1.8)); r.sph(fl, 2.3, M.EYE_RED, { noShadow: true }); r.cone(fl, V.mad(fl, V.norm(V.add(V.mul(fwd, -0.9), up)), 2.2), 0.7, 0.6, M.WOOD, { noShadow: true }); };   // the flask, glowing red, tipped to the mouth
+  const drinkR = bow || (eq.shield !== 'none' && eq.shield !== undefined && !staff);   // which hand drinks: the free one
+  if (st.clip === 'hook') {   // wind back over the shoulder, whip out after the chain, then haul it in at the chest
+    if (st.f === 0) { handR = V.add(V.add(J.shR, V.mul(fwd, -3)), V.add(V.mul(up, 0.5), V.mul(sideR, 2.5))); bd = V.norm(V.add(V.mul(fwd, -0.6), up)); }
+    else if (st.f === 1) { handR = V.add(V.add(J.shR, V.mul(fwd, 8.5)), V.add(V.mul(up, -1), V.mul(sideR, 0.3))); bd = V.norm(V.add(fwd, V.mul(up, 0.25))); }
+    else { handR = V.add(V.add(J.shR, V.mul(fwd, 3.5)), V.add(V.mul(up, -4.5), V.mul(sideR, -0.8))); bd = V.norm(V.add(V.mul(fwd, 0.45), up)); }
+  } else if (st.clip === 'spin') {   // the weapon held straight out to the side, level, so the turn sweeps it round
+    handR = V.add(V.add(J.shR, V.mul(sideR, 7.5)), V.add(V.mul(up, -2.5), V.mul(fwd, 1))); bd = V.norm(V.add(V.add(sideR, V.mul(fwd, 0.45)), V.mul(up, 0.08)));
+  } else if (st.clip === 'drink' && drinkR) {   // the flask up to the mouth in the weapon hand (a shield fills the other), the blade hanging down behind
+    handR = V.add(V.add(J.head, V.mul(fwd, 3.4)), V.add(V.mul(up, -3.2), V.mul(sideR, 1.8))); bd = V.norm(V.add(V.add(V.mul(fwd, -0.5), V.mul(up, -0.9)), V.mul(sideR, 0.4)));
+  } else if (st.clip === 'fidget' && st.f >= 8) {   // checking the weapon: raised upright in front of the face
+    handR = V.add(V.add(J.shR, V.mul(fwd, 5.5)), V.add(V.mul(up, -6 + 4 * fk), V.mul(sideR, 0.6))); bd = V.norm(V.add(up, V.mul(fwd, 0.18 - 0.1 * fk)));
+  } else if (bow && st.clip === 'shoot') {   // drawing: the string hand comes back to the cheek
     handR = V.add(V.add(J.shR, V.mul(fwd, 9 - draw * 7.5)), V.add(V.mul(up, -0.6), V.mul(sideR, -2.6))); bd = fwd;
   } else if (bow && st.clip !== 'death') {   // walking: the free right hand pumps with the stride
     handR = V.add(V.add(J.shR, V.mul(fwd, 3.5 + J.swingArm * 3)), V.add(V.mul(up, -7.5 + Math.max(0, J.swingArm) * 0.8), V.mul(sideR, 0.6))); bd = fwd;
@@ -459,6 +517,10 @@ function heroRig(eq, st) {
     : V.add(V.add(J.shL, V.mul(fwd, 3.2 - J.swingArm * 1.2)), V.add(V.mul(up, -7.2), V.mul(sideR, -3.2)));   // bow carried at the side, held out from the leg
   if (st.clip === 'death') handL = V.add(J.shL, [2, -3, -9]);
   if (st.clip === 'bash') handL = V.add(V.add(J.shL, V.mul(fwd, 7.5)), V.add(V.mul(up, -3), V.mul(sideR, 1.5)));   // shield driven forward
+  if (st.clip === 'hook') handL = st.f === 2 ? V.add(V.add(handR, V.mul(sideR, -2.2)), V.add(V.mul(up, -0.8), V.mul(fwd, 0.8)))   // both hands on the chain
+    : st.f === 1 ? V.add(V.add(J.shL, V.mul(fwd, -2)), V.add(V.mul(up, -6), V.mul(sideR, -1))) : V.add(V.add(J.shL, V.mul(fwd, 5)), V.add(V.mul(up, -4), V.mul(sideR, 0.5)));
+  if (st.clip === 'drink' && !drinkR) handL = V.add(V.add(J.head, V.mul(fwd, 3.4)), V.add(V.mul(up, -3.2), V.mul(sideR, -1.8)));   // the free hand brings the flask up
+  if (st.clip === 'spin') handL = V.add(V.add(J.shL, V.mul(sideR, -6.5)), V.add(V.mul(up, -2.5), V.mul(fwd, 0.5)));   // the off arm out too, for balance
   if (st.clip === 'channel') {   // open hand: drawn in on the gather, thrust at the target on the release
     const ph = st.f % 3;
     handL = ph === 0 ? V.add(V.add(J.shL, V.mul(fwd, 3)), V.add(V.mul(up, -5), V.mul(sideR, 2.5)))
@@ -472,6 +534,7 @@ function heroRig(eq, st) {
     }
   }
   const aL = armTo(J, J.shL, handL, B, -1);
+  if (st.clip === 'drink') flask(drinkR ? aR.hand : aL.hand);
   r.cone(J.shL, aL.el, ar[0], ar[1], sleeve); r.cone(aL.el, aL.hand, ar[1], ar[2], foreM);
   r.sph(aL.hand, ar[3], handM);
   if (st.clip === 'channel' && st.f % 3 !== 0) r.sph(V.mad(aL.hand, fwd, 2.2), st.f % 3 === 1 ? 1.9 : 1.4, staff ? M.ARCANE : M.HOLY, { noShadow: true });
@@ -549,7 +612,9 @@ function heroRig(eq, st) {
       // one mass of hair: a cap over the top and back, a fringe falling over the brow, and a few
       // chunky spikes on the crown and the back only (nothing sticks out at the sides)
       const at = (f2, s2, z2) => V.add(V.add(V.mad(hd, fwd, f2), V.mul(sideR, s2)), V.mul(up, z2));
-      const dirOf = (f2, s2, z2) => V.norm(V.add(V.add(V.mul(fwd, f2), V.mul(sideR, s2)), V.mul(up, z2)));
+      // round 40a: the hair trails a little when running, swings forward when stopping, flies out in a spin
+      const hairT = st.clip === 'walk' || st.clip === 'go' ? -0.45 : st.clip === 'stop' || st.clip === 'skid' || st.clip === 'pivot' ? 0.35 : st.clip === 'spin' ? -0.3 : 0, hairS = st.clip === 'spin' ? 0.5 : 0;
+      const dirOf = (f2, s2, z2) => V.norm(V.add(V.add(V.mul(fwd, f2 + (f2 < 0 ? hairT : hairT * 0.3)), V.mul(sideR, s2 + hairS)), V.mul(up, z2)));
       r.group(() => {
         r.ell(at(-0.9, 0, 1.9), [4.6, 4.75, 3.3], hairM, helmF, { noShadow: true });
         // [base f, s, z, direction f, s, z, length, radius]

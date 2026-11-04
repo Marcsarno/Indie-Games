@@ -126,6 +126,7 @@ const RECIPES = {
   growl: () => { tone('sawtooth', vary(110), 80, 0.12, 0.05); noise(0.1, 0.06, 'lowpass', 500, 200); },   // round 34: a monster winding up
   twang: () => { tone('triangle', vary(190), 120, 0.05, 0.16); noise(0.05, 0.22, 'bandpass', vary(2600), 1600, 2); },   // round 33: the bowstring
   thunk: () => { noise(0.05, 0.3, 'lowpass', 900, 300); tone('sine', vary(320), 160, 0.05, 0.12); },   // an arrow biting
+  step: v => noise(0.04, 0.07 * v, 'lowpass', vary(LV && LV.outdoor ? 520 : 760), 220),   // round 40a: a soft footfall
   crackle: v => noise(0.02 + Math.random() * 0.03, 0.03 * v, 'highpass', 2500, 1500, 0.7),
 };
 function sfx(name, v = 1) {

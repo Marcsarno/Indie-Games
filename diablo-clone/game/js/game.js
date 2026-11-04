@@ -267,7 +267,7 @@ function drinkPotion() {
   if (G.mode !== 'play' || hero.dead) return;
   if (hero.potions <= 0) { say('NO POTIONS', 22, 1.2); return; }
   if (hero.hp >= STAT.maxHp) return;
-  hero.potions--; hero.hp = Math.min(STAT.maxHp, hero.hp + 30 + hero.lvl * 3); sfx('potion');
+  hero.potions--; hero.hp = Math.min(STAT.maxHp, hero.hp + 30 + hero.lvl * 3); sfx('potion'); hero.drinkT = 0.5;   // round 40a: the drink pose
   const [x, y] = screenOf(hero); burst(4, x, y, 20, 10, 30, 22);
 }
 // pow: 0 = light blow (sword swings, spells), 1 = heavy (two-handers), 2 = combo finisher
@@ -564,7 +564,12 @@ function unequip(slot) {
   if (!hero.equip[slot] || hero.bag.length >= BAG_SIZE) return;
   hero.bag.push(hero.equip[slot]); hero.equip[slot] = null; recalcHero(); prewarmHero();
 }
-function prewarmHero() { for (let d = 0; d < 8; d++) { warmQueue.unshift([ 'hero', hero.look, d, 'idle', 0]); if (hero.cls === 'mage') for (let f = 0; f < 6; f++) warmQueue.push(['hero', hero.look, d, 'channel', f]); if (hero.cls === 'ranger') for (let f = 0; f < 4; f++) warmQueue.push(['hero', hero.look, d, 'shoot', f]); for (let f = 0; f < 8; f++) warmQueue.push(['hero', hero.look, d, 'walk', f]); warmQueue.push(['hero', hero.look, d, 'go', 0], ['hero', hero.look, d, 'stop', 0]); } }
+function prewarmHero() { for (let d = 0; d < 8; d++) { warmQueue.unshift([ 'hero', hero.look, d, 'idle', 0]); if (hero.cls === 'mage') for (let f = 0; f < 6; f++) warmQueue.push(['hero', hero.look, d, 'channel', f]); if (hero.cls === 'ranger') for (let f = 0; f < 4; f++) warmQueue.push(['hero', hero.look, d, 'shoot', f]); for (let f = 0; f < 8; f++) warmQueue.push(['hero', hero.look, d, 'walk', f]); warmQueue.push(['hero', hero.look, d, 'go', 0], ['hero', hero.look, d, 'stop', 0]);
+  if (!FEEL_OLD) {   // round 40a: the short poses, so the first one shown is never a stand-in
+    for (let f = 0; f < 4; f++) warmQueue.push(['hero', hero.look, d, 'hit', f]);
+    warmQueue.push(['hero', hero.look, d, 'pivot', 0], ['hero', hero.look, d, 'skid', 0], ['hero', hero.look, d, 'drink', 8]);
+    if (hero.cls === 'warrior') { for (let f = 0; f < 3; f++) warmQueue.push(['hero', hero.look, d, 'hook', f]); for (let f = 0; f < 4; f++) warmQueue.push(['hero', hero.look, d, 'spin', f]); for (let f = 0; f < 6; f++) warmQueue.push(['hero', hero.look, d, 'attack4', f]); }
+  } } }
 
 // ---------------------------------------------------------------- update
 const input = { mx: 0, my: 0, attack: false, keys: new Set() };
@@ -638,34 +643,75 @@ function updateHero(dt) {
     // from a standstill: one push-off pose, then the cycle starts on the left foot's plant
     if (hero.runT === 0) { hero.walk = 0; hero.goT = 0.08; }
     hero.runT += dt; hero.stopT = 0;
+    const w0 = hero.walk;
     hero.walk += moved / m / (robed(hero.look) ? MAGE_STEP : HERO_STEP);   // legs follow the ground speed (without the up/down boost), a bit slower than an exact foot plant
+    hero.lastV = [gi * sp / dt, gj * sp / dt];
+    // round 40a: each footfall kicks up a little dust and makes a soft step
+    if (!FEEL_OLD && Math.floor(w0 / 4) !== Math.floor(hero.walk / 4) && hero.runT > 0.1) {
+      const [x, y] = screenOf(hero), dust = LV.outdoor ? DIRT[3] : S[5];
+      for (let k = 0; k < 3; k++) pspawn(5, x + (Math.random() - 0.5) * 6 - gi * 4, y + 1, 1, -(gi - gj) * 12 + (Math.random() - 0.5) * 14, -(gi + gj) * 6 + (Math.random() - 0.5) * 6, 8 + Math.random() * 10, 1, dust);
+      sfx('step', 0.6);
+    }
     // turn through the in-between facings instead of snapping (a reversal takes ~0.1 s)
     // from a standstill he faces the new way at once
     const want = dirFrom(gi, gj);
     if (hero.runT <= dt) hero.dir = want;
-    else if (want !== hero.dir && (hero.turnT = (hero.turnT || 0) - dt) <= 0) { hero.dir = (hero.dir + (((want - hero.dir + 8) % 8) <= 4 ? 1 : 7)) % 8; hero.turnT = 0.028; }
-    hero.clip = hero.goT > 0 ? 'go' : 'walk'; hero.goT -= dt;
+    else if (want !== hero.dir && (hero.turnT = (hero.turnT || 0) - dt) <= 0) {
+      // round 40a: a hard reversal at speed plants the outside foot: a pivot pose and a puff of dust
+      const steps = Math.min((want - hero.dir + 8) % 8, (hero.dir - want + 8) % 8);
+      if (!FEEL_OLD && steps >= 3 && hero.runT > 0.3 && !(hero.pivotT > 0)) { hero.pivotT = 0.09; const [x, y] = screenOf(hero), dust = LV.outdoor ? DIRT[3] : S[5]; for (let k = 0; k < 8; k++) { const a = Math.random() * 6.283; pspawn(5, x, y + 1, 1, Math.cos(a) * 30, Math.sin(a) * 15, 10 + Math.random() * 12, 1, dust); } sfx('step', 1); }
+      hero.dir = (hero.dir + (((want - hero.dir + 8) % 8) <= 4 ? 1 : 7)) % 8; hero.turnT = 0.028;
+    }
+    hero.clip = hero.goT > 0 ? 'go' : hero.pivotT > 0 ? 'pivot' : 'walk'; hero.goT -= dt; hero.pivotT = (hero.pivotT || 0) - dt;
+    hero.skidT = 0; hero.landT = 0; hero.idleT = 0;
   } else {
     // stopping after a real run plants the front foot for a beat before standing
     if (hero.runT > 0.25 && !busy) hero.stopT = 0.11;
+    // round 40a: stopping from a full run skids a little way, braced, with dust
+    if (!FEEL_OLD && hero.runT > 0.6 && !busy && hero.lastV) { hero.skidT = 0.16; hero.skidV = hero.lastV.slice(); hero.stopT = 0; }
     hero.runT = 0;
-    if (!busy) hero.clip = hero.hurtT > 0 ? 'hit' : hero.stopT > 0 ? 'stop' : 'idle';
+    if (hero.skidT > 0 && !busy) {
+      hero.skidT -= dt; const k = Math.max(0, hero.skidT / 0.16) * 0.55; tryMove(hero, hero.skidV[0] * k * dt, hero.skidV[1] * k * dt);
+      if (Math.random() < 0.7) { const [x, y] = screenOf(hero); pspawn(5, x + (Math.random() - 0.5) * 8, y + 1, 1, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 8, 6 + Math.random() * 10, 1, LV.outdoor ? DIRT[3] : S[5]); }
+      if (hero.skidT <= 0) hero.stopT = 0.08;
+    }
+    if (!busy) hero.clip = hero.hurtT > 0 ? 'hit' : hero.skidT > 0 ? 'skid' : hero.landT > 0 ? 'attack4' : hero.stopT > 0 ? 'stop' : 'idle';
+    if (hero.landT > 0 && !busy) { hero.landT -= dt; hero.combo = 3; }
     hero.stopT -= dt;
+    // standing a while: now and then a small fidget (a weight shift, a shoulder roll, a look at the weapon)
+    if (!FEEL_OLD && hero.clip === 'idle' && !busy) {
+      hero.idleT = (hero.idleT || 0) + dt;
+      if (!hero.fidgetAt) hero.fidgetAt = 4 + Math.random() * 4;
+      if (hero.idleT > hero.fidgetAt) { hero.fidget = { v: Math.floor(Math.random() * 3), t: 0 }; hero.idleT = 0; hero.fidgetAt = 5 + Math.random() * 5; }
+    } else if (hero.clip !== 'fidget') hero.fidget = null;
+    if (hero.fidget) { hero.fidget.t += dt; if (hero.fidget.t >= 0.84 || busy) hero.fidget = null; else hero.clip = 'fidget'; }
   }
-  if (hero.whirl > 0) { hero.clip = 'attack'; hero.dir = Math.floor(G.t / 0.05) % 8; }   // spin through all 8 facings
+  if (hero.whirl > 0) {   // spin through all 8 facings (round 40a: its own pose, winding up and slowing at the end)
+    if (FEEL_OLD) { hero.clip = 'attack'; hero.dir = Math.floor(G.t / 0.05) % 8; }
+    else {
+      if (!(hero.whirl0 > 0) || hero.whirl > hero.whirlLast) { hero.whirl0 = hero.whirl; hero.spinA = hero.dir; }
+      hero.whirlLast = hero.whirl;
+      const age = hero.whirl0 - hero.whirl, rate = 20 * Math.min(1, 0.45 + age / 0.15) * Math.min(1, 0.45 + hero.whirl / 0.15);
+      hero.spinA += rate * dt; hero.dir = Math.floor(hero.spinA) % 8; hero.clip = 'spin';
+    }
+  } else hero.whirl0 = 0;
   if (hero.dash > 0) hero.clip = 'bash';
   if (hero.stop > 0) { hero.stop -= dt; return; }
   hero.clock += dt;
   if (hero.cast >= 0) {
-    hero.cast -= dt; hero.castAge = (hero.castAge || 0) + dt; hero.clip = 'channel';
+    hero.cast -= dt; hero.castAge = (hero.castAge || 0) + dt; hero.clip = hero.castKind === 'hook' && !FEEL_OLD ? 'hook' : 'channel';
     if (hero.castFn && hero.castAge >= castRel(hero.castKind)) { const f = hero.castFn; hero.castFn = null; f(); }   // the spell leaves on the release frame
     if (hero.cast < 0) { hero.cast = -1; hero.clip = 'idle'; }
   }
+  // round 40a: hauling on the chain while the hook drags its catch in; a potion drunk on the move
+  if (!FEEL_OLD && !busy && hero.cast < 0 && G.hooks.some(h => h.state === 'pull' || h.state === 'reel') && !moving) hero.clip = 'hook';
+  if (hero.drinkT > 0) { hero.drinkT -= dt; if (!busy && (hero.clip === 'walk' || hero.clip === 'idle' || hero.clip === 'go' || hero.clip === 'stop' || hero.clip === 'fidget')) { hero.clip = 'drink'; hero.fidget = null; } }
   if (hero.atk >= 0) {
     hero.clip = hero.cls === 'ranger' && hero.combo !== 3 ? 'shoot' : ATTACK_CLIPS[hero.combo] || 'attack';
     hero.atk += dt * 1000 * (1 + ((STAT.atkSpeed || 0) + (hero.frenzy > 0 ? 50 : 0)) / 100);
     const sw = weaponSwing(hero.look, hero.combo), ki = swingKey(sw, hero.atk);
     if (ki >= 0 && sw[ki].mv) lungeHero(sw[ki].mv * dt * 1000 / sw[ki].ms);
+    if (hero.combo === 3 && !hero.leap && !hero.ultOn) { const want = ki >= 0 ? sw[ki].hop || 0 : 0; hero.leapZ = (hero.leapZ || 0) + (want - (hero.leapZ || 0)) * Math.min(1, dt * 28); }   // round 40a: the slam's hop
     if (!hero.hitDone && hero.mag > 0) { const st = Math.min(hero.mag, dt * 4.5); lungeHero(st); hero.mag -= st; }
     if (ki >= 0 && sw[ki].hit && !hero.hitDone) {
       hero.hitDone = true; if (hero.cls === 'ranger') looseArrow(); else if (hero.combo === 3) groundSlamHit(); else heroHitResolve(!!sw[ki].slam, hero.combo === 2 ? 2 : STAT.slow ? 1 : 0);
@@ -677,7 +723,7 @@ function updateHero(dt) {
         sfx('crit');
       }
     }
-    if (ki < 0) { hero.atk = -1; hero.clip = 'idle'; hero.swingEnd = G.t; if (hero.castQueued) heroCast(); }
+    if (ki < 0) { hero.atk = -1; hero.clip = 'idle'; hero.swingEnd = G.t; if (hero.combo === 3 && !hero.leap && !hero.ultOn) hero.leapZ = 0; if (hero.castQueued) heroCast(); }
   }
   // pick up what we walk over; open chests by walking into them
   for (let n = groundItems.length - 1; n >= 0; n--) {
@@ -923,6 +969,8 @@ function hurtHero(dmg, src) {
   if (Math.random() * 100 < STAT.block) { floater('BLOCK', hero.fi, hero.fj, 44, 31); sfx('block'); return; }
   dmg = Math.max(1, Math.round(dmg * 40 / (40 + STAT.armor * (hero.buff > 0 ? 1.5 : 1) * 2.5) * (hero.stoneskin > 0 ? 0.5 : 1)));
   hero.hp -= dmg; hero.flash = 0.06; hero.hurtT = 0.15; sfx('hurt');
+  hero.hitF = 0;   // round 40a: which way the blow knocks him (0 front, 1 from his left, 2 from his right, 3 from behind)
+  if (src && src.fi !== undefined && !FEEL_OLD) { const [fx, fy] = dirVec(hero.dir), dx = src.fi - hero.fi, dy = src.fj - hero.fj, l = Math.hypot(dx, dy) || 1, dt = (dx * fx + dy * fy) / l, cr = (fx * dy - fy * dx) / l; hero.hitF = dt > 0.5 ? 0 : dt < -0.5 ? 3 : cr > 0 ? 2 : 1; }
   if (src && src.pw) eliteOnHit(src, dmg);
   floater(String(dmg), hero.fi, hero.fj, 46, 23);
   const [x, y] = screenOf(hero); burst(1, x, y, 24, 6, 40, 22);
@@ -1177,7 +1225,14 @@ function updateParticles(dt) {
 // ---------------------------------------------------------------- render
 function frameOf(e) {
   const pt = e.clock;
-  if (e === hero && hero.whirl > 0) return 3;   // the sword held out level, smeared
+  if (e === hero && hero.whirl > 0) return FEEL_OLD ? 3 : Math.floor(G.t / 0.07) % 4;   // the sword held out level, smeared (round 40a: the spin pose, feet shuffling)
+  if (e === hero) {   // round 40a: the hero's new clips
+    if (e.clip === 'hook') return hero.cast >= 0 ? (hero.castAge < CAST_RELEASE + 0.05 ? 0 : G.hooks.some(h => h.state === 'pull' || h.state === 'reel') ? 2 : 1) : 2;
+    if (e.clip === 'hit') return hero.hitF || 0;
+    if (e.clip === 'drink') return hero.runT > 0 ? Math.floor(hero.walk) % 8 : 8;
+    if (e.clip === 'fidget' && hero.fidget) return hero.fidget.v * 4 + Math.min(3, Math.floor(hero.fidget.t / 0.21));
+    if (e.clip === 'attack4' && hero.landT > 0 && hero.atk < 0 && !hero.leap) return hero.landT > 0.12 ? 4 : 5;
+  }
   if (e === hero && hero.dash > 0) return 0;
   if (e.clip === 'idle') return Math.floor(pt / 0.2) % 4;
   if (e.clip === 'walk') return Math.floor(e.walk) % 8;
