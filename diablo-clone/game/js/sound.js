@@ -1,10 +1,31 @@
 'use strict';
-// Sound effects synthesized with Web Audio: no sound files. Deliberately simple shapes (a thump,
-// a whoosh, a ping) rather than attempts at realistic recordings. Audio starts on the first tap,
-// as phones require. Music is the exception: the user's own songs in music/ (round 39b, 40b).
+// Sound effects: recordings the user picked (round 44, sfx/, from free packs: sfx/CREDITS.md),
+// with the Web Audio synth recipes below as the fallback while they load, for the sounds kept as
+// they were, and when OPTIONS > SOUND is SYNTH. Audio starts on the first tap, as phones require.
+// Music: the user's own songs in music/ (round 39b, 40b).
 
-const SFX = { ctx: null, out: null, noise: null, muted: false, last: {} };
-try { SFX.muted = localStorage.getItem('dcg-mute') === '1'; } catch (e) { /* storage unavailable */ }
+const SFX = { ctx: null, out: null, noise: null, muted: false, last: {}, synth: false };
+try { SFX.muted = localStorage.getItem('dcg-mute') === '1'; SFX.synth = localStorage.getItem('dcg-sfx') === 'synth'; } catch (e) { /* storage unavailable */ }
+// round 44: the recorded sounds: each name -> how many takes (sfx/<name>.mp3, sfx/<name>_2.mp3, ...),
+// one picked at random per play with a little pitch change so repeats don't grate
+const SAMPLES = {"swing": 2, "heavySwing": 1, "hit": 2, "crit": 1, "kill": 2, "block": 1, "clank": 1, "crack": 1, "chain": 1, "twang": 1, "thunk": 2, "missile": 1, "fireball": 1, "boom": 1, "meteor": 1, "frost": 1, "blink": 1, "squeal": 1, "yelp": 1, "hiss": 1, "clatter": 2, "growl": 1, "cry": 1, "splat": 1, "hurt": 1, "death": 1, "step": 4, "potion": 1, "levelUp": 1, "gold": 3, "clink": 1, "chest": 1, "portal": 1};
+const SAMPLE_GAIN = { step: 0.28, swing: 0.45, heavySwing: 0.5, hit: 0.6, crit: 0.75, kill: 0.7, block: 0.55, clank: 0.5, crack: 0.6, chain: 0.5, twang: 0.5, thunk: 0.5, missile: 0.42, fireball: 0.6, boom: 0.8, meteor: 0.6, frost: 0.55, blink: 0.5, squeal: 0.5, yelp: 0.5, hiss: 0.45, clatter: 0.55, growl: 0.5, cry: 0.75, splat: 0.45, hurt: 0.6, death: 0.75, potion: 0.5, levelUp: 0.55, gold: 0.4, clink: 0.4, chest: 0.55, portal: 0.5 };
+const SBUF = {};
+function loadSamples() {
+  if (SFX.loading || !SFX.ctx) return; SFX.loading = true;
+  for (const k in SAMPLES) for (let i = 0; i < SAMPLES[k]; i++) {
+    fetch('sfx/' + k + (i ? '_' + (i + 1) : '') + '.mp3').then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status))
+      .then(b => new Promise((ok, no) => SFX.ctx.decodeAudioData(b, ok, no))).then(buf => { (SBUF[k] = SBUF[k] || []).push(buf); }).catch(() => { /* this one stays synthesized */ });
+  }
+}
+function playSample(name, v) {
+  const L = SBUF[name]; if (!L || !L.length || SFX.synth) return false;
+  const c = SFX.ctx, s = c.createBufferSource(), g = c.createGain();
+  s.buffer = L[Math.floor(Math.random() * L.length)]; s.playbackRate.value = 1 + (Math.random() * 2 - 1) * (name === 'levelUp' || name === 'death' ? 0 : 0.06);
+  g.gain.value = (SAMPLE_GAIN[name] ?? 0.6) * v; s.connect(g); g.connect(SFX.out); s.start();
+  return true;
+}
+function setSynthSfx(on) { SFX.synth = on; try { localStorage.setItem('dcg-sfx', on ? 'synth' : 'rec'); } catch (e) { /* ignore */ } }
 
 function audioInit() {
   if (SFX.ctx) { if (SFX.ctx.state === 'suspended') SFX.ctx.resume(); musicUnlock(); return; }
@@ -17,7 +38,7 @@ function audioInit() {
   SFX.noise = c.createBuffer(1, c.sampleRate, c.sampleRate);
   const d = SFX.noise.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-  musicUnlock();
+  musicUnlock(); loadSamples();
 }
 // ---------------------------------------------------------------- music (round 39b, 40b)
 // The user's songs: the forest song in forest areas and Act I's west woods; three songs cut from
@@ -147,7 +168,7 @@ function sfx(name, v = 1) {
   const now = SFX.ctx.currentTime;
   if (SFX.last[name] && now - SFX.last[name] < 0.045) return;   // many hits on one frame play once
   SFX.last[name] = now;
-  try { RECIPES[name](v); } catch (e) { /* audio is optional */ }
+  try { if (!playSample(name, v)) RECIPES[name](v); } catch (e) { /* audio is optional */ }
 }
 // a faint fire crackle that swells near visible torches and braziers
 let crackleT = 0;

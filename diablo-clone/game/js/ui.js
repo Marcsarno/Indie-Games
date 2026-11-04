@@ -405,9 +405,12 @@ function drawTitle() {
     btn(FEEL_OLD ? 'COMBAT: OLD' : 'COMBAT: NEW', 6, oy - 22, 84, 16, () => setFeelOld(!FEEL_OLD), 25, 3, 6);
     btn(WORLD2X ? 'DETAIL: SHARP' : 'DETAIL: CLASSIC', 93, oy - 22, 84, 16, () => setWorld2x(!WORLD2X), 25, 3, 6);
     btn(HUE_LIGHT ? 'LIGHT: NEW' : 'LIGHT: OLD', 180, oy - 22, 84, 16, () => setLightNew(!HUE_LIGHT), 25, 3, 6);
+    btn(SFX.synth ? 'SOUND: SYNTH' : 'SOUND: REAL', 180, oy, 84, 16, () => { setSynthSfx(!SFX.synth); sfx('hit'); }, 25, 3, 6);   // round 44: compare the recorded sounds with the old synth
   }
   textC('LEFT THUMB MOVES. RIGHT BUTTONS FIGHT.', W / 2, H - 32, 25);
   textC('ALL ART IS DRAWN IN CODE', W / 2, H - 24, 24);
+  textC('SOUNDS: KENNEY, ARTISTICDUDE, RUBBERDUCK, QUBODUP,', W / 2, H - 15, 24);   // round 44: the sound packs' credits (sfx/CREDITS.md)
+  textC('LITTLE ROBOT SOUND FACTORY, WILL LEAMON, BART + MORE', W / 2, H - 8, 24);
 }
 // round 42b: a small speech bubble (over the attack button when a tap would talk)
 function talkBubble(x, y) {
