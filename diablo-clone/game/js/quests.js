@@ -343,7 +343,7 @@ PROPS.sacks = v => propSprite('sacks' + v, r => {
 const SIDES = {
   den: { name: 'THE WOLF DEN', theme: 'caves', rooms: 5, pool: ['wolf'], boss: 'alpha', at: 'hub', door: () => [HUB.den[0] + 1.6, HUB.den[1] + 0.6], label: 'WOLF DEN', seed: 0xd3d },
   // round 48c: the Hollow's other doors (the barrow: dangerous, level 6; the watchtower: goblins and their shaman)
-  barrow: { name: 'THE BARROW', theme: 'crypt', rooms: 6, pool: ['skeleton', 'archer', 'ghoulhound'], boss: 'wraith', at: 'hub', diff: 6, door: () => [HUB.barrow[0] + 1.6, HUB.barrow[1] + 0.6], label: 'THE BARROW: DANGER', labelCol: 22, seed: 0xba770 },
+  barrow: { name: 'THE BARROW', theme: 'crypt', rooms: 6, pool: ['spearman', 'axeman', 'gravebow', 'tombguard', 'skeleton'], boss: 'wraith', at: 'hub', diff: 6, door: () => [HUB.barrow[0] + 1.6, HUB.barrow[1] + 0.6], label: 'THE BARROW: DANGER', labelCol: 22, seed: 0xba770 },
   tower: { name: 'THE OLD WATCHTOWER', theme: 'crypt', rooms: 4, pool: ['goblin', 'goblin', 'gshaman'], boss: 'gchief', at: 'hub', diff: 3, door: () => [HUB.tower[0] + 1.6, HUB.tower[1] - 0.4], label: 'OLD WATCHTOWER', seed: 0x70e7 },
   cellar: { name: 'THE FARM CELLAR', theme: 'crypt', rooms: 5, pool: ['brigand'], boss: 'banditchief', at: 'riv', door: () => RIV.cellar, label: 'FARMHOUSE CELLAR', seed: 0xce11a },
 };
