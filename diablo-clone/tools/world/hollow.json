@@ -1,0 +1,470 @@
+{
+ "name": "THE HOLLOW",
+ "act": 1,
+ "region": 1,
+ "size": 100,
+ "note": "Coordinates are (u, s): u = east(+)/west(-) across the screen, s = north(0) to south(100) down the screen. Tile i = s + u, j = s - u. Radii in tiles.",
+ "clearings": [
+  {
+   "id": "camp",
+   "name": "CAMP",
+   "u": 0,
+   "s": 86,
+   "r": 9,
+   "level": 0,
+   "kind": "camp"
+  },
+  {
+   "id": "brook",
+   "name": "BROOK MEADOW",
+   "u": -22,
+   "s": 72,
+   "r": 9,
+   "level": 1
+  },
+  {
+   "id": "glade",
+   "name": "WOLF GLADE",
+   "u": 17,
+   "s": 63,
+   "r": 13,
+   "level": 1,
+   "lvlTo": 2
+  },
+  {
+   "id": "denyard",
+   "name": "DEN MOUTH",
+   "u": 33,
+   "s": 53,
+   "r": 6,
+   "level": 2
+  },
+  {
+   "id": "westwood",
+   "name": "WESTWOOD",
+   "u": -20,
+   "s": 49,
+   "r": 10,
+   "level": 2,
+   "lvlTo": 3
+  },
+  {
+   "id": "grove",
+   "name": "HIDDEN GROVE",
+   "u": -38,
+   "s": 52,
+   "r": 4,
+   "level": 2
+  },
+  {
+   "id": "tower",
+   "name": "WATCHTOWER YARD",
+   "u": -2,
+   "s": 33,
+   "r": 9,
+   "level": 2,
+   "lvlTo": 3
+  },
+  {
+   "id": "graves",
+   "name": "GRAVEYARD PATH",
+   "u": -24,
+   "s": 33,
+   "r": 6,
+   "level": 3
+  },
+  {
+   "id": "barrowyard",
+   "name": "BARROW",
+   "u": -31,
+   "s": 40,
+   "r": 5,
+   "level": 6,
+   "danger": true
+  },
+  {
+   "id": "crossing",
+   "name": "FALLEN TREE",
+   "u": 12,
+   "s": 22,
+   "r": 5,
+   "level": 2
+  },
+  {
+   "id": "exit",
+   "name": "TO THE RIVERLANDS",
+   "u": 2,
+   "s": 8,
+   "r": 4,
+   "level": 2
+  }
+ ],
+ "roads": [
+  {
+   "from": "camp",
+   "via": [
+    [
+     0,
+     74
+    ]
+   ],
+   "to": "tower",
+   "w": 3,
+   "main": true
+  },
+  {
+   "from": "camp",
+   "via": [
+    [
+     0,
+     74
+    ],
+    [
+     9,
+     70
+    ]
+   ],
+   "to": "glade",
+   "w": 3,
+   "main": true
+  },
+  {
+   "from": "camp",
+   "via": [
+    [
+     -9,
+     77
+    ]
+   ],
+   "to": "brook",
+   "w": 2
+  },
+  {
+   "from": "brook",
+   "via": [
+    [
+     -24,
+     62
+    ]
+   ],
+   "to": "westwood",
+   "w": 2
+  },
+  {
+   "from": "westwood",
+   "via": [
+    [
+     -12,
+     40
+    ]
+   ],
+   "to": "tower",
+   "w": 2
+  },
+  {
+   "from": "westwood",
+   "via": [
+    [
+     -31,
+     51
+    ]
+   ],
+   "to": "grove",
+   "w": 1
+  },
+  {
+   "from": "westwood",
+   "via": [
+    [
+     -24,
+     41
+    ]
+   ],
+   "to": "graves",
+   "w": 2
+  },
+  {
+   "from": "graves",
+   "to": "barrowyard",
+   "w": 1
+  },
+  {
+   "from": "glade",
+   "to": "denyard",
+   "w": 2,
+   "main": true
+  },
+  {
+   "from": "glade",
+   "via": [
+    [
+     18,
+     44
+    ],
+    [
+     14,
+     30
+    ]
+   ],
+   "to": "crossing",
+   "w": 3,
+   "main": true
+  },
+  {
+   "from": "tower",
+   "via": [
+    [
+     6,
+     26
+    ]
+   ],
+   "to": "crossing",
+   "w": 2
+  },
+  {
+   "from": "crossing",
+   "via": [
+    [
+     6,
+     14
+    ]
+   ],
+   "to": "exit",
+   "w": 3,
+   "main": true
+  }
+ ],
+ "water": [
+  {
+   "name": "brook",
+   "path": [
+    [
+     -36,
+     52
+    ],
+    [
+     -34,
+     60
+    ],
+    [
+     -30,
+     68
+    ],
+    [
+     -26,
+     76
+    ],
+    [
+     -20,
+     84
+    ],
+    [
+     -14,
+     90
+    ]
+   ],
+   "w": 2
+  }
+ ],
+ "cliffs": [
+  {
+   "name": "den cliffs",
+   "path": [
+    [
+     24,
+     42
+    ],
+    [
+     32,
+     44
+    ],
+    [
+     40,
+     50
+    ],
+    [
+     44,
+     56
+    ]
+   ],
+   "w": 3
+  },
+  {
+   "name": "barrow cliffs",
+   "path": [
+    [
+     -38,
+     34
+    ],
+    [
+     -32,
+     34
+    ],
+    [
+     -26,
+     37
+    ]
+   ],
+   "w": 3
+  },
+  {
+   "name": "north crags",
+   "path": [
+    [
+     18,
+     14
+    ],
+    [
+     26,
+     22
+    ],
+    [
+     32,
+     30
+    ]
+   ],
+   "w": 2
+  }
+ ],
+ "doors": [
+  {
+   "id": "den",
+   "name": "WOLF DEN",
+   "u": 35,
+   "s": 50,
+   "dungeon": "caves",
+   "floors": 1,
+   "boss": "alpha",
+   "note": "Aldo caged inside; the Alpha"
+  },
+  {
+   "id": "barrow",
+   "name": "THE BARROW",
+   "u": -32,
+   "s": 37,
+   "dungeon": "crypt",
+   "floors": 2,
+   "level": 6,
+   "danger": true,
+   "note": "DANGER sign, torches, red grass"
+  },
+  {
+   "id": "towerdoor",
+   "name": "OLD WATCHTOWER",
+   "u": -2,
+   "s": 30,
+   "dungeon": "crypt",
+   "floors": 1,
+   "note": "optional: goblin shaman and a chest at the top"
+  }
+ ],
+ "gates": [
+  {
+   "id": "fallentree",
+   "at": [
+    12,
+    20
+   ],
+   "opens": "aldoFree",
+   "note": "a fallen tree across the road; Aldo clears it once freed"
+  }
+ ],
+ "landmarks": [
+  {
+   "name": "watchtower (tall ruin, seen from camp)",
+   "u": -2,
+   "s": 31
+  },
+  {
+   "name": "standing stones",
+   "u": -20,
+   "s": 48
+  },
+  {
+   "name": "den tusks",
+   "u": 34,
+   "s": 51
+  },
+  {
+   "name": "barrow torches + DANGER sign",
+   "u": -28,
+   "s": 41
+  }
+ ],
+ "packs": [
+  {
+   "at": "glade",
+   "id": "wolf",
+   "n": 3,
+   "count": 3
+  },
+  {
+   "at": "denyard",
+   "id": "wolf",
+   "n": 2,
+   "count": 1
+  },
+  {
+   "at": "brook",
+   "id": "slime",
+   "n": 3,
+   "count": 1
+  },
+  {
+   "at": "westwood",
+   "id": "boar",
+   "n": 2,
+   "count": 1
+  },
+  {
+   "at": "westwood",
+   "id": "goblin",
+   "n": 3,
+   "count": 1
+  },
+  {
+   "at": "tower",
+   "id": "goblin",
+   "n": 4,
+   "count": 2,
+   "with": "gshaman"
+  },
+  {
+   "at": "graves",
+   "id": "skeleton",
+   "n": 3,
+   "count": 1
+  },
+  {
+   "at": "crossing",
+   "id": "wolf",
+   "n": 3,
+   "count": 1
+  }
+ ],
+ "caches": [
+  {
+   "name": "first cache",
+   "u": -25,
+   "s": 75
+  },
+  {
+   "name": "hollow log cache",
+   "u": 24,
+   "s": 70
+  },
+  {
+   "name": "tower cache",
+   "u": 5,
+   "s": 34
+  },
+  {
+   "name": "hidden grove chest",
+   "u": -39,
+   "s": 52
+  }
+ ],
+ "woodsFringe": 7,
+ "roadFringe": 4.5,
+ "note2": "Walkable = clearings + open woods (tree clumps with gaps) within woodsFringe tiles of a clearing or roadFringe of a road; thick forest only as the walls between areas and the map edge."
+}
