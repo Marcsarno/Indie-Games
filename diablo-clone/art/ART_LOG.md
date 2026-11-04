@@ -313,3 +313,9 @@ Substitutes: bronze = PUMPKIN, blue-grey steel = SLATE, dark steel = IRON, indig
 Still off: the hawk wings read as orange flames more than feathers; the sallet's bronze brim is thin from the front
 and its crest reads as a spike; the woodsman's pinched crown and leaf badge are small at 1x; the winter cap's fur rim
 reads as a white headband across the brow; the scout cap's ear flaps are faint against the jerkin.
+
+## B1: Brigand Mastiff removed (2026-11-04)
+The user didn't like the Mastiff and asked to remove it from the game. The `mastiff` MONSTERS entry and every
+`look.mastiff` branch in `houndRig` are gone (it never spawned: it was `minLevel: 99`). **For the main chat:**
+drop any mastiff item/spawn wiring if you had started it. All 39 remaining monsters render pixel-identical to
+before (artcompare zoom 1, `cmp` equal). Its card is off the progress page.
