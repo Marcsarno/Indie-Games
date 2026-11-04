@@ -370,6 +370,7 @@ function drawTitle() {
   }
   fade(0.7);
   textC('DUNGEON', W / 2, 34, 22, 4);
+  if (!MUS.unlocked && !SFX.muted && Math.floor(G.t * 1.5) % 3) textC('TAP ANYWHERE FOR MUSIC', W / 2, 12, 25);   // round 46b: phones stay silent until a tap
   textC('OF BONES', W / 2, 60, 26, 2);
   textC('CHOOSE YOUR HERO', W / 2, 86, 25);
   UI.titleBtns = [];

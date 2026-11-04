@@ -60,15 +60,28 @@ const PLAYLISTS = { title: ['title'], forest: ['forest', 'set1', 'forest', 'set2
 const MUS = { decks: [], cur: null, inWoods: false, pos: {}, duck: 1, idx: {}, place: null };
 // round 45: the song keeps playing under the dialogue, the bag and the skills screen, 40% quieter
 const MUSIC_MODES = { play: 1, talk: 0.6, inv: 0.6, skills: 0.6, title: 1 };
+// round 46b: the two players exist from page load, the first already downloading the title song,
+// so the first tap on the character screen can start it at once (inside the tap, which phones allow)
+function musicPrep() {
+  if (MUS.els || (typeof window !== 'undefined' && window.__PREVIEW) || typeof Audio === 'undefined') return;
+  try {
+    MUS.els = [new Audio(), new Audio()];
+    for (const el of MUS.els) { el.loop = false; el.preload = 'none'; }
+    MUS.els[0].preload = 'auto'; MUS.els[0].src = MUSIC.title; MUS.preTrack = 'title';
+  } catch (e) { MUS.els = null; }
+}
+musicPrep();
 function musicUnlock() {
   if (!SFX.ctx || MUS.unlocked) return;
   MUS.unlocked = true;
   for (let k = 0; k < 2; k++) {
     try {
-      const el = new Audio(); el.loop = false; el.preload = 'none';
+      const el = (MUS.els && MUS.els[k]) || new Audio(); el.loop = false; if (!MUS.els) el.preload = 'none';
       const src = SFX.ctx.createMediaElementSource(el), g = SFX.ctx.createGain(); g.gain.value = 0;
       src.connect(g); g.connect(SFX.ctx.destination);
-      const d = { el, g, v: 0, track: null, playing: false }; MUS.decks.push(d);
+      const pre = k === 0 && MUS.els && G.mode === 'title' ? MUS.preTrack : null;   // (already holds the title song)
+      if (k === 0 && MUS.els && !pre) { el.removeAttribute('src'); el.preload = 'none'; }
+      const d = { el, g, v: 0, track: pre, playing: !!pre }; MUS.decks.push(d);
       el.addEventListener('ended', () => musicEnded(d));
       const p = el.play(); if (p && p.catch) p.catch(() => { /* no source yet: the tap still unlocks it */ });
     } catch (e) { /* music is optional */ }
@@ -121,7 +134,7 @@ function updateMusic(dt) {
   }
   for (const d of MUS.decks) {
     const up = d === on;
-    d.v = up ? Math.min(1, d.v + dt / 2) : Math.max(0, d.v - dt / 1.5);
+    d.v = up ? Math.min(1, d.v + dt / (d.track === 'title' ? 0.5 : 2)) : Math.max(0, d.v - dt / 1.5);   // (the title song comes up fast)
     if (up && !d.playing && !d.el.ended) { d.playing = true; const p = d.el.play(); if (p && p.catch) p.catch(() => { d.playing = false; }); }
     if (!up && d.playing && d.v <= 0) { d.playing = false; d.el.pause(); if (d.track) MUS.pos[d.track] = d.el.currentTime; }
     d.g.gain.value = d.v * d.v * MUSIC_VOL * MUS.duck;   // an eased fade
