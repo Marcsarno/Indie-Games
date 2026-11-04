@@ -51,9 +51,9 @@ const ITEM_BASES = {
   morning_star: { slot: 'weapon', look: 'mace', name: 'MORNING STAR', dmg: [7, 16], cls: 'warrior', lvl: 3, slow: true },
   battle_axe: { slot: 'weapon', look: 'axe', name: 'BATTLE AXE', dmg: [10, 21], cls: 'warrior', lvl: 5, slow: true },
   spangenhelm: { slot: 'helm', look: 'barbute', name: 'SPANGENHELM', armor: 6, cls: 'warrior', lvl: 3 },
-  bascinet: { slot: 'helm', look: 'great', name: 'BASCINET', armor: 8, cls: 'warrior', lvl: 5 },
+  bascinet: { slot: 'helm', look: 'bascinet', name: 'BASCINET', armor: 8, cls: 'warrior', lvl: 5 },
   scale_mail: { slot: 'chest', look: 'chain', name: 'SCALE MAIL', armor: 9, cls: 'warrior', lvl: 3 },
-  gothic_plate: { slot: 'chest', look: 'darkplate', name: 'GOTHIC PLATE', armor: 18, cls: 'warrior', lvl: 5 },
+  gothic_plate: { slot: 'chest', look: 'gothic', name: 'GOTHIC PLATE', armor: 18, cls: 'warrior', lvl: 5 },
   targe: { slot: 'shield', look: 'round', name: 'TARGE', armor: 5, block: 17, cls: 'warrior', lvl: 3 },
   heater_shield: { slot: 'shield', look: 'kite', name: 'HEATER SHIELD', armor: 8, block: 22, cls: 'warrior', lvl: 4 },
   battle_staff: { slot: 'weapon', look: 'staff_fire', name: 'BATTLE STAFF', dmg: [10, 18], cls: 'mage', lvl: 4 },
@@ -272,12 +272,13 @@ function itemIcon(it) {
     else if (b.look === 'barbute') r.ell(hd, [5.4, 5.3, 6.2], M.STEEL, null, { mf: p => { const q = V.sub(p, hd); return q[0] > 2.4 && ((Math.abs(q[2] - 0.8) < 0.75 && Math.abs(q[1]) < 3.2) || (Math.abs(q[1]) < 0.8 && q[2] < 0.8 && q[2] > -4)) ? M.DARK : 0; } });
     else {
       r.ell(hd, [5.6, 5.4, 6.2], M.STEEL, null, { mf: p => { const q = V.sub(p, hd); if (Math.abs(q[2] - 2.2) < 0.8) return M.GOLD; if (q[0] > 2.6 && Math.abs(q[2] - 0.4) < 0.75 && Math.abs(q[1]) < 4) return M.DARK; return 0; } });
+      if (b.look === 'bascinet') r.cone([0, 0, 9], [-1.5, 0, 14], 3.6, 0.4, M.STEEL);
       if (b.look === 'horned') for (const s of [-1, 1]) r.cone(V.add(hd, [0, s * 5, 2.5]), V.add(hd, [0, s * 8.5, 8]), 1.4, 0.4, M.HORN);
       if (b.look === 'crown') { r.cyl(V.add(hd, [0, 0, 3]), V.add(hd, [0, 0, 4.6]), 5.2, M.GOLD); for (let k = 0; k < 6; k++) { const a = k / 6 * 6.283; r.cone(V.add(hd, [Math.cos(a) * 4.8, Math.sin(a) * 4.8, 4.4]), V.add(hd, [Math.cos(a) * 4.8, Math.sin(a) * 4.8, 7]), 0.9, 0.2, M.GOLD); } }
       void fwd; void up; void sd;
     }
   } else if (b.slot === 'chest') {
-    const m = b.look === 'jerkin_hide' ? M.HIDE : b.look.startsWith('jerkin') ? M.LEATHER : b.look === 'plate' ? M.PLATE : b.look === 'darkplate' ? M.DSTEEL : b.look === 'chain' ? M.CHAIN : b.look.startsWith('robe') ? (TEAM[b.look.slice(5)] || team) : team;
+    const m = b.look === 'jerkin_hide' ? M.HIDE : b.look.startsWith('jerkin') ? M.LEATHER : b.look === 'plate' ? M.PLATE : b.look === 'darkplate' || b.look === 'gothic' ? M.DSTEEL : b.look === 'chain' ? M.CHAIN : b.look.startsWith('robe') ? (TEAM[b.look.slice(5)] || team) : team;
     if (b.look.startsWith('robe')) r.cone([0, 0, 2], [0, 0, -7], 4.4, 6.6, m, { mf: p => p[2] < -5.4 ? M.GOLD : 0 });   // the robe's skirt
     r.ell([0, 0, 3], [4.6, 6.6, 6.4], m, null, b.look.startsWith('robe') ? { mf: p => p[0] > 2 && Math.abs(p[1]) < 0.8 ? M.GOLD : 0 } : undefined);
     for (const s of [-1, 1]) r.ell([0, s * 7, 6.5], [3.6, 3.4, 3], b.look === 'tunic' ? M.LEATHER : b.look.startsWith('jerkin') ? M.CLOTH_GREEN : m);

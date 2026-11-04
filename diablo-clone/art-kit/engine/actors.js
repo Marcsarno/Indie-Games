@@ -344,8 +344,8 @@ const HAIRM = { orange: M.HAIR_O, brown: M.HAIR, blond: M.STRAWM, grey: M.CLOTH_
 
 // Equipment is visual family ids, separate from item stats: many items share one look.
 const GEAR_LOOKS = {
-  helm: ['none', 'cap', 'great', 'horned', 'barbute', 'crown'],
-  chest: ['tunic', 'chain', 'brigandine', 'plate', 'darkplate'],
+  helm: ['none', 'cap', 'great', 'horned', 'barbute', 'crown', 'bascinet'],
+  chest: ['tunic', 'chain', 'brigandine', 'plate', 'darkplate', 'gothic'],
   weapon: ['sword', 'axe', 'mace', 'flail', 'greatsword'],
   shield: ['none', 'buckler', 'round', 'kite', 'tower'],
 };
@@ -413,8 +413,8 @@ function heroRig(eq, st) {
   const volley = st.clip === 'volley'; if (volley) st = Object.assign({}, st, { clip: 'shoot' });   // round 43: Multishot draws like a shot, the bow canted over and three arrows on the string
   const B = robed(eq) ? MAGE_B : HERO_B, J = bipedJoints(B, st), r = new Rig();
   const team = TEAM[eq.team] || M.CLOTH_RED;
-  const plate = eq.chest === 'plate' || eq.chest === 'darkplate', chain = eq.chest === 'chain', brig = eq.chest === 'brigandine';
-  const PL = eq.chest === 'darkplate' ? M.DSTEEL : M.PLATE;
+  const gothic = eq.chest === 'gothic', plate = eq.chest === 'plate' || eq.chest === 'darkplate' || gothic, chain = eq.chest === 'chain', brig = eq.chest === 'brigandine';
+  const PL = eq.chest === 'darkplate' || gothic ? M.DSTEEL : M.PLATE;   // round 43: gothic plate is blackened steel with gold edges and spiked pauldrons
   // mage robes: one design in three colors (look 'robe_blue' / 'robe_purple' / 'robe_red')
   const robe = eq.chest.startsWith('robe'), robeM = robe ? (TEAM[eq.chest.slice(5)] || M.CLOTH_BLUE) : null;
   // the ranger's jerkins (round 33): leather over a green shirt; studded, or dark hide
@@ -602,8 +602,9 @@ function heroRig(eq, st) {
   // pauldrons: big rounded plates with a bright lower rim and a rivet (plate); pads otherwise
   if (eq.chest !== 'tunic' && !robe && !jerk) for (const [sh, sd] of [[J.shL, -1], [J.shR, 1]]) {
     const c = plate ? V.add(V.mad(sh, up, 1.4), V.mul(sideR, sd * 1.2)) : V.mad(sh, up, 1.0);
-    r.ell(c, plate ? [5.0, 5.0, 4.4] : [4.2, 4.0, 3.4], plate ? PL : M.LEATHER, frameAlong(fwd, up), { mf: eq.chest === 'darkplate' ? (p => V.dot(V.sub(p, c), up) < -2.6 ? M.MARKB : 0) : null });
-    if (plate) r.sph(V.add(V.add(c, V.mul(fwd, 4.4)), V.mul(up, -1)), 0.9, M.STEEL);
+    r.ell(c, plate ? [5.0, 5.0, 4.4] : [4.2, 4.0, 3.4], plate ? PL : M.LEATHER, frameAlong(fwd, up), { mf: eq.chest === 'darkplate' ? (p => V.dot(V.sub(p, c), up) < -2.6 ? M.MARKB : 0) : gothic ? (p => V.dot(V.sub(p, c), up) < -1.7 ? M.GOLD : 0) : null });
+    if (plate) r.sph(V.add(V.add(c, V.mul(fwd, 4.4)), V.mul(up, -1)), 0.9, gothic ? M.GOLD : M.STEEL);
+    if (gothic) r.cone(V.add(V.mad(c, up, 2.6), V.mul(sideR, sd * 1.5)), V.add(V.mad(c, up, 9), V.mul(sideR, sd * 4)), 2.0, 0.3, M.DSTEEL);   // a spike on each shoulder
   }
   // slim every body part made so far (centers stay put), then build the head at normal size and
   // scale it up about its center
@@ -701,7 +702,7 @@ function heroRig(eq, st) {
         return (Math.abs(z2 - 1.8) < 1.1 && s2 < 3.8) || (s2 < 1.2 && z2 < 1.8 && z2 > -3.4) ? M.DARK : 0;   // set high and wide so it reads from above
       } });
       r.box(V.mad(hc, up, 5.8), [4.6, 0.6, 0.9], M.STEEL, helmF);
-    } else if (eq.helm === 'great' || eq.helm === 'crown') {
+    } else if (eq.helm === 'great' || eq.helm === 'crown' || eq.helm === 'bascinet') {
       // great helm: tall dome with a raised crest ridge and a barred visor plate on the front
       const hc = V.mad(hd, up, 0.6);
       r.ell(hc, [5.6, 5.4, 7.2], PL, helmF);
@@ -715,6 +716,7 @@ function heroRig(eq, st) {
         return 0;
       } });
       for (const sd of [-1, 1]) r.sph(V.add(V.add(V.mad(hd, fwd, 3.2), V.mul(sideR, sd * 4.4)), V.mul(up, 0.4)), 1.0, M.STEEL);   // visor rivets
+      if (eq.helm === 'bascinet') { r.cone(V.mad(hc, up, 5), V.add(V.mad(hc, up, 10.5), V.mul(fwd, -2)), 3.8, 0.4, PL); r.cone(vc, V.add(V.mad(vc, fwd, 3.4), V.mul(up, -0.6)), 2.4, 0.7, PL); }   // round 43: the bascinet's pointed skull and snouted visor
       if (eq.helm === 'crown') {   // a gold circlet with points and a red stone
         r.cyl(V.mad(hc, up, 3.2), V.mad(hc, up, 4.6), 5.0, M.GOLD);
         const oak = hasFx(eq, 'oak');   // the Oak King's crown sprouts leaves and a green stone
