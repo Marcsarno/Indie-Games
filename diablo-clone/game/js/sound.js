@@ -48,25 +48,46 @@ function audioInit() {
 // is only downloaded when it is first wanted. They run through gain nodes on the audio context
 // (phones ignore an element's own volume) and follow the mute button. A song that fades out is
 // remembered where it was, so coming back picks it up there.
-const MUSIC = { forest: 'music/forest.mp3', camp: 'music/camp.mp3', dungeon: 'music/dungeon.mp3', lair: 'music/lair.mp3' }, MUSIC_VOL = 0.5;
-const MUS = { decks: [], cur: null, inWoods: false, pos: {}, duck: 1 };
+// Round 46: two more recordings. The 13-minute live set (song3.m4a, no applause) is cut at its
+// breaks: set1 (0:12-2:12), title (2:13-5:45, the character screen only), set2 (5:45-10:54) and
+// set3 (10:54-end); the 3-minute song (song4.m4a) is `enter`, the first thing heard on going down
+// into a dungeon. Each place has a playlist: a song plays to its end, then the next one (the set's
+// parts alternate with the forest song in forests and with the camp song in towns).
+const MUSIC = { forest: 'music/forest.mp3', camp: 'music/camp.mp3', dungeon: 'music/dungeon.mp3', lair: 'music/lair.mp3',
+  title: 'music/title.mp3', enter: 'music/enter.mp3', set1: 'music/set1.mp3', set2: 'music/set2.mp3', set3: 'music/set3.mp3' }, MUSIC_VOL = 0.5;
+const PLAYLISTS = { title: ['title'], forest: ['forest', 'set1', 'forest', 'set2', 'forest', 'set3'], camp: ['camp', 'set2', 'camp', 'set3', 'camp', 'set1'],
+  dungeon: ['enter', 'dungeon'], lair: ['lair'] };
+const MUS = { decks: [], cur: null, inWoods: false, pos: {}, duck: 1, idx: {}, place: null };
 // round 45: the song keeps playing under the dialogue, the bag and the skills screen, 40% quieter
-const MUSIC_MODES = { play: 1, talk: 0.6, inv: 0.6, skills: 0.6 };
+const MUSIC_MODES = { play: 1, talk: 0.6, inv: 0.6, skills: 0.6, title: 1 };
 function musicUnlock() {
   if (!SFX.ctx || MUS.unlocked) return;
   MUS.unlocked = true;
   for (let k = 0; k < 2; k++) {
     try {
-      const el = new Audio(); el.loop = true; el.preload = 'none';
+      const el = new Audio(); el.loop = false; el.preload = 'none';
       const src = SFX.ctx.createMediaElementSource(el), g = SFX.ctx.createGain(); g.gain.value = 0;
       src.connect(g); g.connect(SFX.ctx.destination);
       const d = { el, g, v: 0, track: null, playing: false }; MUS.decks.push(d);
+      el.addEventListener('ended', () => musicEnded(d));
       const p = el.play(); if (p && p.catch) p.catch(() => { /* no source yet: the tap still unlocks it */ });
     } catch (e) { /* music is optional */ }
   }
 }
-function musicWanted() {
-  if (SFX.muted || !MUSIC_MODES[G.mode] || typeof LV === 'undefined' || !LV.area) return null;
+// a song finished: the place's playlist moves on (a one-song list starts it again)
+function musicEnded(d) {
+  MUS.pos[d.track] = 0;
+  const L = PLAYLISTS[MUS.place];
+  if (!L || L[(MUS.idx[MUS.place] || 0) % L.length] !== d.track) { d.playing = false; return; }
+  MUS.idx[MUS.place] = ((MUS.idx[MUS.place] || 0) + 1) % L.length;
+  if (L.length === 1 || L[MUS.idx[MUS.place]] === d.track) { try { d.el.currentTime = 0; d.el.play().catch(() => {}); } catch (e) { /* ignore */ } }
+  else { d.playing = false; d.v = 0; d.g.gain.value = 0; }   // (the next song fades in on the other deck)
+}
+// which place's music is wanted: title, forest, camp, dungeon or lair
+function musicPlace() {
+  if (SFX.muted || !MUSIC_MODES[G.mode]) return null;
+  if (G.mode === 'title') return 'title';
+  if (typeof LV === 'undefined' || !LV.area) return null;
   if (LV.area === 'forest' && !LV.side) return 'forest';
   if (LV.side || LV.arena) return 'lair';
   if (LV.area === 'dungeon') return 'dungeon';
@@ -77,6 +98,15 @@ function musicWanted() {
   }
   return 'camp';
 }
+function musicWanted() {
+  const place = musicPlace();
+  if (place !== MUS.place) {
+    if (place === 'dungeon' && MUS.place !== 'lair') { MUS.idx.dungeon = 0; MUS.pos.enter = 0; }   // going down from above: the entering song first, from its start
+    if (place) MUS.place = place;
+  }
+  if (!place) return null;
+  const L = PLAYLISTS[place]; return L[(MUS.idx[place] || 0) % L.length];
+}
 function updateMusic(dt) {
   if (!MUS.unlocked || !MUS.decks.length) return;
   const want = musicWanted(), duck = MUSIC_MODES[G.mode] || 1;
@@ -84,7 +114,7 @@ function updateMusic(dt) {
   let on = MUS.decks.find(d => d.track === want && want);
   if (want && !on) {   // start the wanted song on the quieter deck
     on = MUS.decks.slice().sort((a, b) => a.v - b.v)[0];
-    if (on.track) { MUS.pos[on.track] = on.el.currentTime; }
+    if (on.track && on.playing) { MUS.pos[on.track] = on.el.currentTime; }
     on.track = want; on.el.src = MUSIC[want]; on.v = 0; on.playing = false;
     const at = MUS.pos[want] || 0;
     if (at) on.el.addEventListener('loadedmetadata', () => { try { on.el.currentTime = at; } catch (e) { /* ignore */ } }, { once: true });
@@ -92,7 +122,7 @@ function updateMusic(dt) {
   for (const d of MUS.decks) {
     const up = d === on;
     d.v = up ? Math.min(1, d.v + dt / 2) : Math.max(0, d.v - dt / 1.5);
-    if (up && !d.playing) { d.playing = true; const p = d.el.play(); if (p && p.catch) p.catch(() => { d.playing = false; }); }
+    if (up && !d.playing && !d.el.ended) { d.playing = true; const p = d.el.play(); if (p && p.catch) p.catch(() => { d.playing = false; }); }
     if (!up && d.playing && d.v <= 0) { d.playing = false; d.el.pause(); if (d.track) MUS.pos[d.track] = d.el.currentTime; }
     d.g.gain.value = d.v * d.v * MUSIC_VOL * MUS.duck;   // an eased fade
   }
