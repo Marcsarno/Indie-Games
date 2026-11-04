@@ -1,7 +1,7 @@
 'use strict';
 // Sound effects synthesized with Web Audio: no sound files. Deliberately simple shapes (a thump,
 // a whoosh, a ping) rather than attempts at realistic recordings. Audio starts on the first tap,
-// as phones require. Music is the exception: the user's own recordings in music/ (round 39b).
+// as phones require. Music is the exception: the user's own songs in music/ (round 39b, 40b).
 
 const SFX = { ctx: null, out: null, noise: null, muted: false, last: {} };
 try { SFX.muted = localStorage.getItem('dcg-mute') === '1'; } catch (e) { /* storage unavailable */ }
@@ -19,45 +19,58 @@ function audioInit() {
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   musicUnlock();
 }
-// ---------------------------------------------------------------- music (round 39b)
-// The user's forest song loops in the forest areas and in Act I's west woods. It runs through a
-// gain node on the audio context (phones ignore an audio element's own volume), fades in over 2 s
-// and out over 1.5 s, pauses where it was when faded out, and follows the mute button. The element
-// is made and unlocked on the first tap, so it can start later without one.
-const MUSIC = { forest: 'music/forest.mp3' }, MUSIC_VOL = 0.5;
-const MUS = { tracks: {}, cur: null, inWoods: false };
+// ---------------------------------------------------------------- music (round 39b, 40b)
+// The user's songs: the forest song in forest areas and Act I's west woods; three songs cut from
+// their live recording (applause removed) for the camp and towns, the dungeon floors, and the boss
+// halls and side areas. Two audio elements take turns so one song fades out while the next fades
+// in; both are unlocked on the first tap (phones only let an element play after a tap), and a song
+// is only downloaded when it is first wanted. They run through gain nodes on the audio context
+// (phones ignore an element's own volume) and follow the mute button. A song that fades out is
+// remembered where it was, so coming back picks it up there.
+const MUSIC = { forest: 'music/forest.mp3', camp: 'music/camp.mp3', dungeon: 'music/dungeon.mp3', lair: 'music/lair.mp3' }, MUSIC_VOL = 0.5;
+const MUS = { decks: [], cur: null, inWoods: false, pos: {} };
 function musicUnlock() {
   if (!SFX.ctx || MUS.unlocked) return;
   MUS.unlocked = true;
-  for (const k in MUSIC) {
+  for (let k = 0; k < 2; k++) {
     try {
-      const el = new Audio(MUSIC[k]); el.loop = true; el.preload = 'auto';
+      const el = new Audio(); el.loop = true; el.preload = 'none';
       const src = SFX.ctx.createMediaElementSource(el), g = SFX.ctx.createGain(); g.gain.value = 0;
       src.connect(g); g.connect(SFX.ctx.destination);
-      MUS.tracks[k] = { el, g, v: 0, playing: false };
-      const p = el.play(); if (p && p.then) p.then(() => { if (!MUS.tracks[k].playing) el.pause(); }).catch(() => { /* not allowed yet */ });
+      const d = { el, g, v: 0, track: null, playing: false }; MUS.decks.push(d);
+      const p = el.play(); if (p && p.catch) p.catch(() => { /* no source yet: the tap still unlocks it */ });
     } catch (e) { /* music is optional */ }
   }
 }
 function musicWanted() {
   if (SFX.muted || G.mode !== 'play' || typeof LV === 'undefined' || !LV.area) return null;
   if (LV.area === 'forest' && !LV.side) return 'forest';
+  if (LV.side || LV.arena) return 'lair';
+  if (LV.area === 'dungeon') return 'dungeon';
   if (LV.hub && typeof HUB !== 'undefined') {   // Act I's west woods, with a margin so walking the edge doesn't flip it
     const d = Math.hypot(hero.fi - HUB.woods[0], hero.fj - HUB.woods[1]);
     MUS.inWoods = d < (MUS.inWoods ? 19 : 16);
     if (MUS.inWoods) return 'forest';
   }
-  return null;
+  return 'camp';
 }
 function updateMusic(dt) {
-  if (!MUS.unlocked) return;
+  if (!MUS.unlocked || !MUS.decks.length) return;
   const want = musicWanted();
-  for (const k in MUS.tracks) {
-    const t = MUS.tracks[k], on = k === want;
-    t.v = on ? Math.min(1, t.v + dt / 2) : Math.max(0, t.v - dt / 1.5);
-    if (on && !t.playing) { t.playing = true; const p = t.el.play(); if (p && p.catch) p.catch(() => { t.playing = false; }); }
-    if (!on && t.playing && t.v <= 0) { t.playing = false; t.el.pause(); }
-    t.g.gain.value = t.v * t.v * MUSIC_VOL;   // an eased fade
+  let on = MUS.decks.find(d => d.track === want && want);
+  if (want && !on) {   // start the wanted song on the quieter deck
+    on = MUS.decks.slice().sort((a, b) => a.v - b.v)[0];
+    if (on.track) { MUS.pos[on.track] = on.el.currentTime; }
+    on.track = want; on.el.src = MUSIC[want]; on.v = 0; on.playing = false;
+    const at = MUS.pos[want] || 0;
+    if (at) on.el.addEventListener('loadedmetadata', () => { try { on.el.currentTime = at; } catch (e) { /* ignore */ } }, { once: true });
+  }
+  for (const d of MUS.decks) {
+    const up = d === on;
+    d.v = up ? Math.min(1, d.v + dt / 2) : Math.max(0, d.v - dt / 1.5);
+    if (up && !d.playing) { d.playing = true; const p = d.el.play(); if (p && p.catch) p.catch(() => { d.playing = false; }); }
+    if (!up && d.playing && d.v <= 0) { d.playing = false; d.el.pause(); if (d.track) MUS.pos[d.track] = d.el.currentTime; }
+    d.g.gain.value = d.v * d.v * MUSIC_VOL;   // an eased fade
   }
 }
 function setMuted(m) { SFX.muted = m; try { localStorage.setItem('dcg-mute', m ? '1' : '0'); } catch (e) { /* ignore */ } }
