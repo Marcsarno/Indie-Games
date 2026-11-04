@@ -786,11 +786,14 @@ let wIdx = new Uint8Array(WW * WH), wZ = new Uint8Array(WW * WH), wFloor = new U
 // round 27: the 2x world layer. Props are also rendered at twice the detail and baked here, one
 // palette index per detail pixel (0 = nothing: show the doubled 1x world). Floors and walls stay
 // 1x, doubled. Lighting, fog and gameplay keep reading the 1x buffers. A title-screen toggle
-// (DETAIL: SHARP / CLASSIC, kept in storage) or ?w2=1 / ?w2=0 switches it; off by default for now.
-let WORLD2X = (new URLSearchParams(location.search)).get('w2') === '1';
-try { const q = new URLSearchParams(location.search).get('w2'); if (q === null && localStorage.getItem('dcg-w2') === '1') WORLD2X = true; } catch (e) { /* storage blocked */ }
+// (DETAIL: SHARP / CLASSIC, kept in storage) or ?w2=1 / ?w2=0 switches it. Round 46d: SHARP is the
+// default (the old 'dcg-w2' setting is ignored so everyone starts sharp; CLASSIC stays for slow phones).
+// Only scenery props change (tents, wagons, crates, barrels, stalls, fences, pillars...): characters
+// and effects are always drawn at full detail, trees and floors at 1x either way.
+let WORLD2X = true;
+try { const q = new URLSearchParams(location.search).get('w2'); if (q !== null) WORLD2X = q === '1'; else if (localStorage.getItem('dcg-detail') === 'classic') WORLD2X = false; } catch (e) { /* storage blocked */ }
 // switching rebuilds the prop sprites and the level behind the title
-function setWorld2x(v) { WORLD2X = v; try { localStorage.setItem('dcg-w2', v ? '1' : '0'); } catch (e) { /* ignore */ } for (const k in propCache) delete propCache[k]; runs2 = []; titleScene(); }
+function setWorld2x(v) { WORLD2X = v; try { localStorage.setItem('dcg-detail', v ? 'sharp' : 'classic'); } catch (e) { /* ignore */ } for (const k in propCache) delete propCache[k]; runs2 = []; titleScene(); }
 let wIdx2 = new Uint8Array(WW * WH * 4);
 let wTile = new Int16Array(WW * WH);
 const props = [];    // static, baked, depth-sorted with characters where they overlap
