@@ -38,6 +38,7 @@ const PAL_HEX = [
   '4a1a14', '7a2c1a', 'a8461e', 'cf6e2a',                               // 119-122 autumn leaves
   '3fae3a', '8af06a',                                                   // 123-124 lime (markers, emissive only)
   'f2cc9e',                                                             // 125 light skin (top of the skin ramp)
+  '22305c', '3a5088',                                                   // 126-127 navy (round 54: the last two free slots; its ends borrow blue 37 and steel 30)
 ];
 const NPAL = PAL_HEX.length;
 const PR = new Uint8Array(NPAL), PG = new Uint8Array(NPAL), PB = new Uint8Array(NPAL);
@@ -71,6 +72,7 @@ const STRAW = [104, 105, 106, 107, 108];
 const ORANGE = [109, 110, 111, 112, 113];
 const WATER = [114, 115, 116, 117, 118];
 const AUTUMN = [119, 120, 121, 122];
+const NAVY = [37, 126, 127, 30];   // round 54: a true navy (deep blue into blue-grey, not royal blue)
 const BLK = 1, K1 = 2, K2 = 3, EMIS = 128;
 
 // Light tables (Diablo 1's method): lighting never mixes RGB. Level L maps each palette index to
@@ -78,7 +80,7 @@ const BLK = 1, K1 = 2, K2 = 3, EMIS = 128;
 // shared tail; above L_ID it steps up for torch-side over-exposure. Emissive pixels skip the tables.
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const TAIL = [1, 2, 3];
-const PAL_RAMPS = [S, FIRE, RED, BONE, STEEL, WOOD, BLUE, CHITIN, FLESH, GOLD, GREEN, PURPLE, SKIN, CAVE, FUNGUS, HELL, LAVA, GRASS, LEAF, DIRT, STRAW, ORANGE, WATER, AUTUMN];
+const PAL_RAMPS = [S, FIRE, RED, BONE, STEEL, WOOD, BLUE, CHITIN, FLESH, GOLD, GREEN, PURPLE, SKIN, CAVE, FUNGUS, HELL, LAVA, GRASS, LEAF, DIRT, STRAW, ORANGE, WATER, AUTUMN, NAVY];   // (NAVY last: its shared ends keep lighting on their own ramps)
 const LEVELS = 9, L_ID = 3, BANDS = 5;
 const LTAB = Array.from({ length: LEVELS }, () => new Uint8Array(NPAL));
 // round 48: the new dungeon light (DL48; the user: lit areas too bright and flat, no shading, some

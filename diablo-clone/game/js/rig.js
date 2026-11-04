@@ -45,7 +45,7 @@ defMat('CLOTH_GREEN', GREEN, 2, { span: 0.6 });
 defMat('CLOTH_PURPLE', PURPLE, 2, { span: 0.6 });
 defMat('CLOTH_DARK', [2, 3, 5, 6], 2, { span: 0.6 });
 defMat('CLOTH_SHADOW', [2, 28, 29, 30], 1, { span: 0.75 });   // round 43: cool slate (the shadow hood: lit, not a black hole, not hair)
-defMat('CLOTH_NAVY', BLUE, 0, { span: 0.5 });   // round 43: the night hood
+defMat('CLOTH_NAVY', NAVY, 1, { span: 0.6 });   // round 43: the night hood (round 54: on the true navy ramp; was the royal blue ramp's dark end)
 defMat('WOOD', WOOD, 2, { span: 0.8 });
 defMat('LEATHER', [33, 34, 35, 36], 2, { span: 0.8 });
 defMat('FLESH', FLESH, 1, { span: 1.0, spec: [0.985, 47] });
@@ -106,6 +106,8 @@ defMat('MOUTH', [61], 0, { flat: true });
 defMat('GOBLIN', [52, 53, 54, 55, 97], 2, { span: 0.9 });
 defMat('FUR', [2, 65, 66, 67, 68, 69], 4, { span: 0.9 });   // wolf grey
 defMat('SLATE', [2, 28, 29, 30, 31], 2, { shiny: true, span: 1.2, spec: [0.95, 31] });   // art A2: blued steel, between PLATE and IRON (the skeleton field variants' armor)
+defMat('CLOTH_WINE', [2, 19, 20, 21], 2, { span: 0.6 });   // round 54: deep wine / oxblood cloth (the red ramp's dark end)
+defMat('BRONZE', [33, 48, 35, 49], 2, { shiny: true, span: 1.1, spec: [0.96, 50] });   // round 54: antique bronze (was PUMPKIN orange on the copper pieces)
 
 // ---------------------------------------------------------------- rig builder
 class Rig {

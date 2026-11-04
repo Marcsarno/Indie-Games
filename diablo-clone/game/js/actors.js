@@ -401,7 +401,7 @@ Object.assign(ROBE_STYLE, {
   robe_tide: { m: M.WATERM, collar: M.CLOTH_WHITE, mantle: M.CLOTH_WHITE, cuff: M.CLOTH_NAVY, buckle: M.GOLD },   // the Tidekeeper
   robe_cinder: { m: M.CLOTH_DARK, panel: M.HAIR_O, pw: 0.7, wk: 0.5, hem: M.HAIR_O, hw: 0.3, mantle: M.CLOTH_DARK, trim: M.HAIR_O, tz: -0.2, cuff: M.HAIR_O, buckle: M.PUMPKIN },   // the Cinder Sage
   robe_rune: { m: M.OLDBONE, mantle: M.CLOTH_NAVY, collar: M.CLOTH_NAVY, cuff: M.CLOTH_NAVY, hem: M.CLOTH_NAVY, hw: 1.5, buckle: M.STEEL },   // the Runebinder
-  robe_rose: { m: M.CLOTH_RED, panel: M.CLOTH_WHITE, pw: 1.3, wk: 1.3, hem: M.CLOTH_WHITE, hw: 1.0, mantle: M.BLOODY, collar: M.BLOODY, buckle: M.GOLD },   // the Rose Oracle
+  robe_rose: { m: M.CLOTH_WINE, panel: M.CLOTH_WHITE, pw: 1.3, wk: 1.3, hem: M.CLOTH_WHITE, hw: 1.0, mantle: M.BLOODY, collar: M.BLOODY, buckle: M.GOLD },   // the Rose Oracle
 });
 Object.assign(HAT_STYLE, { hat_tide: { m: M.CLOTH_NAVY, band: M.WATERM }, hat_cinder: { m: M.AUTUMNM, band: M.AUTUMNM }, hat_rune: { m: M.OLDBONE, band: M.CLOTH_NAVY }, hat_rose: { m: M.BLOODY, band: M.CLOTH_WHITE } });
 const TEAM = { red: M.CLOTH_RED, blue: M.CLOTH_BLUE, green: M.CLOTH_GREEN, tan: M.CLOTH_TAN, purple: M.CLOTH_PURPLE, white: M.CLOTH_WHITE };
@@ -475,7 +475,7 @@ const JERKIN = {
   // a6 upgrades (ranger-upgrades concept): four sets, each armor with its own bow
   jerkin_bramble: { m: M.CLOTH_TAN, sleeve: M.CLOTH_TAN, skirt: 2.4 },  // Bramble Scout: tan tunic and strap under a green hooded mantle
   jerkin_ashwood: { m: M.AUTUMNM, sleeve: M.CLOTH_SHADOW, skirt: 2.2 }, // Ashwood Hunter: russet studded vest, cream fur collar, dark grey sleeves
-  jerkin_night: { m: M.CLOTH_SHADOW, sleeve: M.CLOTH_SHADOW, fore: M.IRON, skirt: 4.4 },   // Night Tracker: navy coat, slate cowl, steel cuffs
+  jerkin_night: { m: M.CLOTH_NAVY, sleeve: M.CLOTH_NAVY, fore: M.IRON, skirt: 4.4 },   // Night Tracker: navy coat, slate cowl, steel cuffs
   jerkin_thorn: { m: M.CLOTH_GREEN, sleeve: M.CLOTH_GREEN, skirt: 2.0, skirtM: M.CLOTH_WHITE },   // Thorn Sentinel: cream leaf plate on green, leaf tassets, greaves
   // a8 (ranger-front-back concept): four more sets, front and back. mf paints the torso (s signed, z up, f forward
   // from the chest), skirtMf the skirt (s = |side|, along = down from the belt, f = forward), legs/boots recolor them
@@ -493,7 +493,7 @@ const BOWX = { bow_ash: { m: M.PLANK, L: 8.6 }, bow_iron: { m: M.BARK, L: 14, ca
 Object.assign(BOWX, { bow_swamp: { m: M.HAIR, L: 10, grip: M.CLOTH_GREEN, cap: M.GOLD, curl: 1.2 }, bow_silver: { m: M.WAX, L: 11.5, grip: M.CLOTH_BLUE, cap: M.STEEL, curl: 2.6 },
   bow_thorn: { m: M.CHITIN, L: 14.5, grip: M.CLOTH_PURPLE, cap: M.STEEL, bands: M.STEEL } });
 // the crossbows (a6 steel, a8 Bronze Arbalest): stock, prod, fittings
-const XBOW = { bow_cross: { stock: M.WOOD, prod: M.STEEL }, bow_arbalest: { stock: M.WOOD, prod: M.PUMPKIN, fit: M.GOLD } };
+const XBOW = { bow_cross: { stock: M.WOOD, prod: M.STEEL }, bow_arbalest: { stock: M.WOOD, prod: M.BRONZE, fit: M.GOLD } };
 // the parts a jerkin adds over the torso (built before the body is slimmed, like the torso)
 function jerkinChest(r, eq, J, fwd, up, sideR) {
   const K = JERKIN[eq.chest] || JERKIN.jerkin, k = eq.chest, B = HERO_B;
@@ -743,7 +743,7 @@ function warriorSet(r, id, J) {
       const sash = p => { const [f, s, z] = loc(p); return Math.abs(-s * 0.75 + z - 0.4) < 1.6 ? M.CLOTH_PURPLE : 0; }; paint(chest, sash); paint(abd, sash);
       belt(M.LEATHER); skirt(M.CLOTH_PURPLE, { front: 4.4, fw: 2.2 });
     } else if (id === 'copperraider') {   // a copper breastplate, pauldrons and knees over dark cloth, leather bracers, a cream front
-      mat([chest, ...pads, ...L('knee')], M.PUMPKIN); chest.mf = null; mat([abd, pel, ...A('sleeve'), ...L('thigh')], M.CLOTH_DARK);
+      mat([chest, ...pads, ...L('knee')], M.BRONZE); chest.mf = null; mat([abd, pel, ...A('sleeve'), ...L('thigh')], M.CLOTH_DARK);
       mat(A('fore'), M.LEATHER); mat(A('hand'), M.FACE); for (const q of A('cop')) if (q) q.dead = true; mat([...L('shin'), ...L('boot')], M.LEATHER);
       belt(M.LEATHER); skirt(M.CLOTH_DARK, { front: 3.4, fw: 2.6, fm: M.CLOTH_WHITE, side: 2.6 });
     } else if (id === 'oathkeeper') {   // bright plate, blue sleeves and skirt, a cream tabard front
@@ -844,7 +844,7 @@ GEAR_EXTRA.helm.kettle = (r, { hd, fwd, up, sideR, helmF }) => {
 // weapons (art A6b): the crescent axe, the flanged mace and the forge hammer (two-handed, carried across the body)
 GEAR_EXTRA.weapon.caxe = (r, { g, bd, wide, wf }) => {
   r.cone(V.mad(g, bd, 1.2), V.mad(g, bd, 14), 0.9, 0.9, M.WOOD);
-  r.cyl(V.mad(g, bd, 10.2), V.mad(g, bd, 12.6), 1.4, M.PUMPKIN);   // the copper collar
+  r.cyl(V.mad(g, bd, 10.2), V.mad(g, bd, 12.6), 1.4, M.BRONZE);   // the copper collar
   r.group(() => {
     r.box(V.add(V.mad(g, bd, 11.4), V.mul(wide, 3.0)), [2.2, 2.6, 0.5], M.BLADE, wf);
     for (const s2 of [1, -1]) r.cone(V.add(V.mad(g, bd, 11.4), V.mul(wide, 5.0)), V.add(V.mad(g, bd, 11.4 + s2 * 5.0), V.mul(wide, 6.0)), 1.6, 0.4, M.BLADE);   // the crescent's horns
@@ -862,7 +862,7 @@ GEAR_EXTRA.weapon.fmace = (r, { g, bd, wide, wf }) => {
 GEAR_EXTRA.weapon.fhammer = (r, { g, bd, wide, wf }) => {
   r.cone(V.mad(g, bd, -7), V.mad(g, bd, 15), 0.95, 0.95, M.WOOD);
   const hb = V.mad(g, bd, 15.2);
-  r.box(hb, [1.9, 4.0, 2.0], M.PUMPKIN, [bd, wide, wf[2]], { mf: p => Math.abs(V.dot(V.sub(p, hb), wide)) < 2.6 ? M.IRON : 0 });   // copper faces on an iron core
+  r.box(hb, [1.9, 4.0, 2.0], M.BRONZE, [bd, wide, wf[2]], { mf: p => Math.abs(V.dot(V.sub(p, hb), wide)) < 2.6 ? M.IRON : 0 });   // copper faces on an iron core
 };
 GEAR_SWING.caxe = 'heavy'; GEAR_SWING.fmace = 'heavy'; GEAR_SWING.fhammer = 'heavy';
 GEAR_LEN.caxe = 16; GEAR_LEN.fmace = 16; GEAR_LEN.fhammer = 18;
