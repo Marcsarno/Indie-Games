@@ -69,7 +69,7 @@ const ITEM_BASES = {
   drake_hide: { slot: 'chest', look: 'jerkin_drake', name: 'DRAKE HIDE', armor: 14, cls: 'ranger', lvl: 5 },
   hunter_hood: { slot: 'helm', look: 'rhood_hunter', name: "HUNTER'S HOOD", armor: 4, cls: 'ranger', lvl: 3 },
   night_hood: { slot: 'helm', look: 'rhood_night', name: 'NIGHT HOOD', armor: 6, cls: 'ranger', lvl: 4 },
-  deep_quiver: { slot: 'shield', look: 'quiver', name: 'DEEP QUIVER', armor: 5, cls: 'ranger', lvl: 4 },
+  deep_quiver: { slot: 'shield', look: 'quiver_deep', name: 'DEEP QUIVER', armor: 5, cls: 'ranger', lvl: 4 },
   // rings and amulets: every class, no base stat, always at least magic
   ring: { slot: 'ring', look: 'ring', name: 'RING', cls: 'any', lvl: 1, w: 0.065 },
   amulet: { slot: 'amulet', look: 'amulet', name: 'AMULET', cls: 'any', lvl: 2, w: 0.045 },
@@ -288,9 +288,10 @@ function itemIcon(it) {
     if (b.look.startsWith('robe')) r.cone([0, 0, 2], [0, 0, -7], 4.4, 6.6, m, { mf: p => p[2] < -5.4 ? M.GOLD : 0 });   // the robe's skirt
     r.ell([0, 0, 3], [4.6, 6.6, 6.4], m, null, b.look.startsWith('robe') ? { mf: p => p[0] > 2 && Math.abs(p[1]) < 0.8 ? M.GOLD : 0 } : undefined);
     for (const s of [-1, 1]) r.ell([0, s * 7, 6.5], [3.6, 3.4, 3], b.look === 'tunic' ? M.LEATHER : b.look.startsWith('jerkin') ? M.CLOTH_GREEN : m);
-  } else if (b.slot === 'shield' && b.look === 'quiver') {   // a leather quiver with three fletchings
+  } else if (b.slot === 'shield' && b.look.startsWith('quiver')) {   // a leather quiver with three fletchings (the deep one: a gold band, two more)
     r.cone([0, 0, -4], [0, 0, 7], 2.2, 2.6, M.LEATHER, { mf: p => p[2] > 5.6 || Math.abs(p[2] - 0.5) < 0.6 ? M.DARK : 0 });
     for (const [y, m] of [[-1.1, M.CLOTH_WHITE], [0, M.CLOTH_RED], [1.1, M.CLOTH_WHITE]]) r.cone([0, y, 7], [0, y * 1.3, 11], 0.9, 0.4, m, { noShadow: true });
+    if (b.look === 'quiver_deep') { for (const y of [-2.2, 2.2]) r.cone([0, y, 7], [0, y * 1.3, 10.5], 0.9, 0.4, M.CLOTH_RED, { noShadow: true }); r.cyl([0, 0, 2], [0, 0, 3], 2.6, M.GOLD); }
   } else if (b.slot === 'shield') {
     if (b.look === 'tower') { r.box([0, 0, 4], [0.8, 4.4, 7.4], team, null, { mf: p => Math.abs(p[1]) > 3.5 || Math.abs(p[2] - 4) > 6.5 ? M.IRON : Math.abs(p[1]) < 0.8 ? M.GOLD : 0 }); return (iconCache[k] = renderRig(r, Math.PI / 4, 26, 26, 13, 17)); }
     if (b.look === 'targe') { r.ell([0, 0, 4], [1, 5, 5], M.LEATHER, null, { mf: p => { const d2 = (p[1] ** 2 + (p[2] - 4) ** 2) / 25; return d2 > 0.78 ? M.IRON : Math.abs(d2 - 0.42) < 0.08 && Math.abs(Math.sin(Math.atan2(p[2] - 4, p[1]) * 4)) > 0.7 ? M.GOLD : 0; } }); r.cone([0.8, 0, 4], [3.4, 0, 4], 1.3, 0.2, M.STEEL); return (iconCache[k] = renderRig(r, Math.PI / 4, 26, 26, 13, 17)); }

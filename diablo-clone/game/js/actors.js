@@ -684,7 +684,9 @@ function heroRig(eq, st) {
   if (bow) {   // a quiver on the back, from behind the right shoulder down to the left hip, fletchings showing
     const qa = V.add(V.add(V.mad(J.chest, up, 6.4), V.mul(fwd, -4.6)), V.mul(sideR, 3.0)), qb = V.add(V.add(V.mad(J.chest, up, -4.4), V.mul(fwd, -4.0)), V.mul(sideR, -2.2));
     const qd = V.norm(V.sub(qa, qb));
-    r.cone(qb, qa, 1.8, 2.2, M.LEATHER, { mf: p => V.dot(V.sub(p, qa), qd) > -1.0 ? M.DARK : 0 });
+    const deep = eq.shield === 'quiver_deep';   // round 43: the deep quiver: wider, a gold band, five arrows showing
+    r.cone(qb, qa, deep ? 2.2 : 1.8, deep ? 2.7 : 2.2, M.LEATHER, { mf: p => V.dot(V.sub(p, qa), qd) > -1.0 ? M.DARK : deep && Math.abs(V.dot(V.sub(p, qa), qd) + 3.5) < 0.6 ? M.GOLD : 0 });
+    if (deep) for (const [o, m] of [[-1.8, M.CLOTH_RED], [1.8, M.CLOTH_RED]]) { const b0 = V.add(V.mad(qa, qd, 0.2), V.mul(sideR, o)); r.cone(b0, V.mad(b0, qd, 3.2), 0.9, 0.4, m, { noShadow: true }); }
     for (const [o, m] of [[-0.9, M.CLOTH_WHITE], [0.2, M.CLOTH_RED], [1.1, M.CLOTH_WHITE]]) { const b0 = V.add(V.mad(qa, qd, 0.4), V.mul(sideR, o)); r.cone(b0, V.mad(b0, qd, 3.6), 0.9, 0.4, m, { noShadow: true }); }
   }
   const hr0 = r.p.length;
@@ -809,7 +811,7 @@ function heroRig(eq, st) {
     }
   }
   // shield on the left forearm, face turned outward
-  if (eq.shield !== 'none' && eq.shield !== 'quiver') {   // (a quiver is worn on the back, drawn with the bow)
+  if (eq.shield !== 'none' && !eq.shield.startsWith('quiver')) {   // (a quiver is worn on the back, drawn with the bow)
     const n = V.norm(V.add(V.mul(fwd, 0.75), V.mul(sideR, -0.65)));
     const c = V.mad(V.mad(aL.hand, n, 1.6), up, 1.5);
     const ax = [n, V.norm(V.cross(up, n)), up];
