@@ -7,6 +7,7 @@ D, OUT = sys.argv[1], sys.argv[2]
 GAME = os.path.join(os.path.dirname(__file__), '..', '..', 'game', 'sfx')
 c, m, g, d = 'oga2/combat150/04_magic_spells/', 'oga2/magic-spell-sfx/', 'oga2/male-grunts/yelling sounds/', 'oga2/death-male/'
 w, x, r = 'oga2/combat150/01_combat_melee/', 'oga2/combat150/03_explosions_destruction/', 'oga2/combat150/02_combat_ranged/'
+o3 = 'oga3/'
 s, sw, i = 'oga2/sword20/', 'oga2/swishes/swishes/', 'oga2/impact/qubodupImpact/'
 PACKS = {
   'oga2/combat150/': ("150 Combat Sound Effects", "various", "CC0", "https://opengameart.org/content/150-combat-sound-effects"),
@@ -16,10 +17,16 @@ PACKS = {
   s: ("20 Sword Sound Effects", "StarNinjas", "CC0", "https://opengameart.org/content/20-sword-sound-effects-attacks-and-clashes"),
   'oga2/swishes/': ("Swishes Sound Pack", "artisticdude", "CC0", "https://opengameart.org/content/swishes-sound-pack"),
   'oga2/impact/': ("Impact", "qubodup", "CC0", "https://opengameart.org/content/impact"),
+  'oga3/electric-sound-effects-library/': ("Electric Sound Effects Library", "Little Robot Sound Factory", "CC-BY 3.0", "https://opengameart.org/content/electric-sound-effects-library"),
+  'oga3/swish-bamboo-stick-weapon-swhoshes/': ("Swish - bamboo stick weapon swooshes", "qubodup", "CC0", "https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes"),
+  'oga3/air-woosh-move/': ("Air Woosh Move", "OGA", "CC0", "https://opengameart.org/content/air-woosh-move"),
+  'oga3/4-projectile-launches/': ("4 projectile launches", "OGA", "CC-BY 3.0", "https://opengameart.org/content/4-projectile-launches"),
+  'oga/80-cc0-rpg-sfx/': ("80 CC0 RPG SFX", "rubberduck", "CC0", "https://opengameart.org/content/80-cc0-rpg-sfx"),
+  'mix/': ("Layered here: the bamboo swoosh (qubodup, CC0) and the electric whoosh (Little Robot Sound Factory, CC-BY 3.0)", "", "CC-BY 3.0", ""),
 }
 G = [
  ("Spells", [
-  ("missile", "Magic missile", "The mage's basic bolt leaving the staff (you said it needs work)", [r + 'ZapLauncher_01_s01.wav', c + 'EnergyZap_s01.wav', m + 'magical_2.ogg', m + 'magical_5.ogg', c + 'Retro Charge Magic 11_s05.wav']),
+  ("missile", "Magic missile", "The mage's bolt leaving the staff, as a fast whoosh through the air (round 2b: the first five sounded like a tune)", [o3 + 'electric-sound-effects-library/Wav/Whoosh_Electric/Whoosh_Electric_00.wav', r + 'Shoot_02_s01.wav', 'oga/80-cc0-rpg-sfx/80-CC0-RPG-SFX_0/spell_fire_04.ogg', o3 + 'swish-bamboo-stick-weapon-swhoshes/swosh-24.flac', o3 + 'air-woosh-move/air_move.wav', o3 + '4-projectile-launches/launches/iceball.wav', 'mix/air-arcane.wav']),
   ("zap", "Missile hits", "A bolt striking", [c + 'ElectroZap_s01.wav', c + 'HeavyZap_s01.wav', x + 'BlastImpact_01_s01.wav', c + 'Retro Electric Short 03_s05.wav', x + 'GravityBomb_01_s01.wav']),
   ("fireball", "Fireball", "A fireball thrown", [c + 'Fire Spell Impact 3_s06.wav', c + 'Fire Spell Impact 5_s06.wav', m + 'magical_6_0.ogg', x + 'explosion_crunch_000_48kHz_16bit_0.78s_e875be4e_s04.wav']),
   ("boom", "Explosion", "Fireball and meteor blasts", [x + 'explosion_crunch_002_48kHz_16bit_1.26s_e0852ce0_s04.wav', x + 'low_frequency_explosion_000_48kHz_16bit_2s_84586419_s04.wav', x + 'BlastImpact_02_s01.wav', x + 'Retro Explosion Short 01_s05.wav']),
@@ -45,7 +52,7 @@ G = [
   ("splat", "Splat", "Gore and slime", [w + 'slime_000_48kHz_16bit_0.5s_691d3d6e_s04.wav']),
  ]),
 ]
-LONG = {'boom', 'meteor', 'death', 'frost', 'fireball', 'blink'}
+LONG = {'missile', 'boom', 'meteor', 'death', 'frost', 'fireball', 'blink'}
 def peak(f):
     o = subprocess.run(['ffmpeg', '-hide_banner', '-i', f, '-af', 'volumedetect', '-f', 'null', '-'], capture_output=True, text=True).stderr
     mm = re.search(r'max_volume: (-?[0-9.]+) dB', o); return float(mm.group(1)) if mm else 0.0
@@ -68,7 +75,7 @@ for gname, evs in G:
         ev = {'key': key, 'title': title, 'desc': desc, 'now': nowf, 'cands': []}
         for n, p in enumerate(cands):
             pack = next(k for k in sorted(PACKS, key=len, reverse=True) if p.startswith(k)); P = PACKS[pack]
-            fn = f'{key}-{"abcde"[n]}.mp3'; conv(os.path.join(D, p), os.path.join(OUT, 'a', fn), 3.5 if key in LONG else 2.2)
+            fn = f'{key}-{"abcdefg"[n]}.mp3'; conv(os.path.join(D, p), os.path.join(OUT, 'a', fn), 3.5 if key in LONG else 2.2)
             ev['cands'].append({'file': fn, 'src': p, 'pack': P[0], 'author': P[1], 'license': P[2], 'url': P[3]})
         out.append(ev)
     manifest.append((gname, out))
@@ -85,11 +92,11 @@ body = ['<main>', '  <header>', '    <h1>Sound Picks II</h1>',
 for gname, evs in manifest:
     body += ['  <section>', f'    <h2 class="g">{E(gname)}</h2>']
     for ev in evs:
-        k = ev['key']; opts = [('NOW', 'now', ev['now'])] + [("ABCDE"[n], "abcde"[n], cd['file']) for n, cd in enumerate(ev['cands'])]
+        k = ev['key']; opts = [('NOW', 'now', ev['now'])] + [("ABCDEFG"[n], "abcdefg"[n], cd['file']) for n, cd in enumerate(ev['cands'])]
         body += [f'    <div class="ev" data-key="{k}">', f'      <h3>{E(ev["title"])}</h3>', f'      <p class="d">{E(ev["desc"])}</p>', '      <div class="opts">']
         for lab, val, f in opts:
             body.append(f'        <div class="opt"><button class="play" data-src="a/{f}" aria-label="Play {lab} for {E(ev["title"])}">&#9654; {lab}</button><label><input type="radio" name="{k}" value="{val}"> pick</label></div>')
-        body += ['      </div>', '      <p class="credit">' + '; '.join(f'{"ABCDE"[n]}: {E(cd["pack"])} by {E(cd["author"])} ({cd["license"]})' for n, cd in enumerate(ev['cands'])) + '</p>', '    </div>']
+        body += ['      </div>', '      <p class="credit">' + '; '.join(f'{"ABCDEFG"[n]}: {E(cd["pack"])}{" by " + E(cd["author"]) if cd["author"] else ""} ({cd["license"]})' for n, cd in enumerate(ev['cands'])) + '</p>', '    </div>']
     body.append('  </section>')
 body += ['  <section>', '    <h2>Your picks so far</h2>', '    <div id="summary">None yet.</div>', '  </section>', '</main>']
 open(os.path.join(OUT, 'index.html'), 'w').write(head + '\n'.join(body) + '\n' + script)
