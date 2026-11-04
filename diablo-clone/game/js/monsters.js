@@ -947,8 +947,13 @@ function shroomRig(look, st) {
     const a = armTo(J, sh, hand, B, s); r.cone(sh, a.el, 1.0, 0.9, stem); r.cone(a.el, a.hand, 0.9, 0.8, stem); r.sph(a.hand, 1.1, stem);
   }
   const hd = J.head, h0 = r.p.length;
-  r.ell(V.mad(hd, up, -1.6), [3, 3, 2.4], stem, frameAlong(fwd, up), { mf: p => { const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = Math.abs(V.dot(q, sideR)), z2 = V.dot(q, up); return f2 > 1.6 && Math.abs(s2 - 1.1) < 0.45 && Math.abs(z2 + 1.4) < 0.6 ? M.EYE : 0; } });
-  r.ell(V.mad(hd, up, 0.8), [5.4, 5.4, 3.2], cap, frameAlong(fwd, up), { mf: p => { const q = V.sub(p, hd); return V.dot(q, up) > 0.2 && hash(Math.floor(V.dot(q, fwd) * 0.8 + 9), Math.floor(V.dot(q, sideR) * 0.8 + 9), 41) < 0.22 ? M.CLOTH_WHITE : 0; } });
+  r.ell(V.mad(hd, up, -2.1), [3.4, 3.2, 2.7], stem, frameAlong(fwd, up), { mf: p => { const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = Math.abs(V.dot(q, sideR)), z2 = V.dot(q, up); if (f2 > 1.6 && Math.abs(s2 - 1.25) < 0.55 && Math.abs(z2 + 1.6) < 0.75) return M.EYE; return f2 > 2.4 && s2 < 0.8 && Math.abs(z2 + 3.3) < 0.32 ? M.MOUTH : 0; } });   // art B2: the face set lower and bigger, so it shows under the cap
+  // art B2: a broad domed cap over a pale gill skirt, with a few big round spots (fixed, so they never flicker)
+  // the cap tipped back, like a hat pushed up, so the face shows under its front rim
+  const cU = V.norm(V.add(up, V.mul(fwd, -0.42))), cF = V.cross(sideR, cU), capC = V.add(V.mad(hd, cU, 1.6), V.mul(fwd, -0.4)), SPOTS = [[0.55, 0.15, 0.82, 0.30], [-0.1, -0.62, 0.78, 0.27], [-0.15, 0.68, 0.72, 0.25], [0.05, 0, 1, 0.28], [-0.75, -0.1, 0.66, 0.27], [0.62, -0.62, 0.48, 0.22], [0.66, 0.66, 0.36, 0.2], [-0.55, 0.6, 0.55, 0.22], [-0.5, -0.66, 0.5, 0.22]].map(([a, b, c, w]) => [V.norm([a, b, c]), Math.cos(w)]);
+  r.ell(V.mad(capC, cU, -1.2), [5.2, 5.2, 1.2], M.CLOTH_TAN, frameAlong(cF, cU), { mf: p => { const q = V.sub(p, capC); return V.dot(q, cU) < -1.8 && (Math.atan2(V.dot(q, sideR), V.dot(q, cF)) * 4 / Math.PI * 2 + 40) % 2 < 0.7 ? M.WAX : 0; } });   // the gills under the rim
+  r.ell(capC, [6.0, 6.0, 3.9], cap, frameAlong(cF, cU), { mf: p => { const q = V.sub(p, capC), l = [V.dot(q, cF) / 6.0, V.dot(q, sideR) / 6.0, V.dot(q, cU) / 3.9], n = V.norm(l); if (l[2] < -0.05) return 0; for (const [d, c] of SPOTS) if (V.dot(n, d) > c) return M.CLOTH_WHITE; return 0; } });
+  for (const sd of [-1, 1]) r.ell(V.add(V.add(V.mad(hd, fwd, 2.7), V.mul(sideR, sd * 1.3)), V.mul(up, -1.7)), [0.7, 0.75, 1.2], M.DARK, frameAlong(fwd, up), { noShadow: true });   // art B2: two big dark eyes that read under the cap
   bigHead(r, h0, hd, 1.25);
   if (st.clip === 'death') deathTip(r, B, st.f, -1);
   return r;
@@ -961,16 +966,22 @@ function wraithRig(look, st) {
   const sw = st.key || null, reach = clip === 'attack' && sw ? (sw.hit ? 1 : sw.a > 0.8 ? -0.6 : 0.4) : 0;
   const lean = clip === 'walk' ? 0.25 : reach * 0.2, top = [lean * 4, 0, 22 + bob], base = [-2 - lean * 3, 0, 5 + bob];
   r.group(() => { r.cone(base, top, 6.2, 3.4, robe, { mf: p => (p[2] - base[2]) < 2 && hash(Math.floor(Math.atan2(p[1], p[0]) * 5), 1, 3) < 0.5 ? M.CLOTH_DARK : 0 }); });
-  for (const s of [-1, 1]) {   // tattered hem points
-    const a = [base[0] - 1, s * 4, base[2] + 1]; r.cone(a, [a[0] - 2, s * 5, a[2] - 4.5], 1.4, 0.2, robe);
+  // art B2: a ragged hem all the way round: seven torn points of uneven length, trailing back as it glides
+  const trail = clip === 'walk' ? 2.2 : reach * -1.5;
+  for (let k = 0; k < 7; k++) {
+    const an = (k + 0.5) / 7 * Math.PI * 2 + 0.3, d = [Math.cos(an), Math.sin(an), 0], L = [4.6, 3.2, 5.2, 3.6, 4.8, 3.0, 4.2][k];
+    const a = V.add(base, [d[0] * 5.2, d[1] * 5.2, 1.4]), tip = V.add(a, [d[0] * 3.0 - trail * (0.5 - d[0] * 0.5) - (f % 2 && clip === 'walk' ? 0.6 : 0), d[1] * 3.0, -L * 0.85]);
+    r.cone(a, tip, 1.6, 0.25, robe, { mf: p => V.dot(V.sub(p, a), V.sub(tip, a)) > V.dot(V.sub(tip, a), V.sub(tip, a)) * 0.5 ? M.CLOTH_DARK : 0 });   // flaring out past the robe, the torn ends darkening
   }
   const hd = V.add(top, [1.2, 0, 3.6]);
-  r.ell(hd, [4.4, 4.2, 4.6], robe, null, { mf: p => { const q = V.sub(p, hd); if (q[0] > 2.4 && Math.abs(q[2] + 0.3) < 2.4 && Math.abs(q[1]) < 2.6) return (Math.abs(Math.abs(q[1]) - 1.2) < 0.5 && Math.abs(q[2] - 0.2) < 0.5) ? M.FUNGUS2 : M.DARK; return 0; } });
-  r.cone(V.add(hd, [-2, 0, 3]), V.add(hd, [-6, 0, 5.5]), 2, 0.3, robe);   // hood tip
+  r.ell(hd, [4.4, 4.2, 4.6], robe, null, { mf: p => { const q = V.sub(p, hd); if (q[0] > 2.4 && Math.abs(q[2] + 0.3) < 2.4 && Math.abs(q[1]) < 2.6) return (Math.abs(Math.abs(q[1]) - 1.3) < 0.62 && Math.abs(q[2] - 0.1) < 0.62) ? M.FUNGUS2 : M.DARK; return 0; } });
+  r.cone(V.add(hd, [-1.8, 0, 3.2]), V.add(hd, [-4.4, 0, 6.2]), 2.2, 0.3, robe);   // hood tip, short and swept up (art B2: was a long beak in the 3/4 views)
   for (const s of [-1, 1]) {
     const sh = V.add(top, [0, s * 4, -2]), hand = V.add(sh, [3 + reach * 6, s * 2, -5 + reach * 3]);
-    r.cone(sh, hand, 1.4, 1.0, robe);
-    for (let k = -1; k <= 1; k++) r.cone(hand, V.add(hand, [2.4, s * 0.5 + k * 0.7, -1 + k * 0.4]), 0.45, 0.1, M.OLDBONE, { noShadow: true });
+    const cuff = V.add(sh, V.mul(V.sub(hand, sh), 0.82));
+    r.cone(sh, cuff, 1.5, 2.3, robe, { mf: p => V.len(V.sub(p, cuff)) < 1.7 ? M.CLOTH_DARK : 0 });   // a bell sleeve, dark inside its mouth
+    r.sph(hand, 1.0, M.OLDBONE);
+    for (let k = -1; k <= 1; k++) r.cone(hand, V.add(hand, [3.0, s * 0.5 + k * 0.9, -1.4 + k * 0.5]), 0.6, 0.15, M.OLDBONE, { noShadow: true });   // long bony claws
   }
   if (clip === 'death') tipRig(r, [0, 0, 0], 0, 0, [0, 3, 7, 11, 14, 16][f]);   // sinks into the floor
   return r;
@@ -1052,13 +1063,20 @@ function slimeRig(look, st) {
   else if (clip === 'attack') { const k = st.key; sq = k.a > 0.8 ? 0.55 : k.hit ? -0.4 : 0.1; lean = k.hit ? 3 : k.a > 0.8 ? -1 : 0; }
   else if (clip === 'hit') sq = 0.35;
   else if (clip === 'death') sq = 0.3 + f * 0.13;
-  const c = [lean, 0, R0 * (1 - sq * 0.5) + lift];
-  r.ell(c, [R0 * (1 + sq * 0.45), R0 * (1 + sq * 0.45), R0 * (1 - sq * 0.55)], mat, null, { mf: p => {
-    const q = V.sub(p, c);
-    if (q[0] > R0 * 0.5 && Math.abs(Math.abs(q[1]) - R0 * 0.32) < R0 * 0.14 && Math.abs(q[2] - R0 * 0.18) < R0 * 0.2) return q[2] > R0 * 0.3 ? M.CLOTH_WHITE : M.DARK;
-    return 0;
-  } });
-  if (clip !== 'death') r.ell([lean * 0.7, 0, R0 * 0.35 + lift], [R0 * 0.55, R0 * 0.55, R0 * 0.3], mat, null, { noShadow: true });   // the denser core shows through low down
+  const c = [lean, 0, R0 * (1 - sq * 0.5) + lift], rx = R0 * (1 + sq * 0.45), rz = R0 * (1 - sq * 0.55);
+  // art B2: a gumdrop: the round body sits on a wider puddle skirt and rises to a soft drooping tip
+  r.group(() => {
+    r.ell(c, [rx, rx, rz], mat);
+    r.ell([lean * 0.4, 0, R0 * 0.32 * (1 - sq * 0.4) + lift], [rx * 1.18, rx * 1.18, R0 * 0.42], mat);
+    const t0 = V.add(c, [-R0 * 0.1, 0, rz * 0.78]), t1 = V.add(c, [-R0 * 0.45 - lean * 0.3, 0, rz + R0 * 0.38]);
+    if (clip !== 'death' || f < 3) r.cone(t0, t1, R0 * 0.36, R0 * 0.1, mat);
+  });
+  // big round eyes: white with a dark pupil low in front
+  for (const s of [-1, 1]) {
+    const e = V.add(c, [rx * 0.86, s * R0 * 0.36, R0 * 0.14 - (clip === 'death' ? f * 0.3 : 0)]), er = [R0 * 0.16, R0 * 0.23, R0 * 0.31 * (1 - Math.max(0, sq) * 0.6)];
+    r.ell(e, er, M.CLOTH_WHITE, null, { noShadow: true, mf: p => { const q = V.sub(p, e); return q[0] > er[0] * 0.2 && q[2] < er[2] * 0.25 ? M.DARK : 0; } });
+  }
+  if (clip !== 'death') { const m = V.add(c, [rx * 0.9, 0, -R0 * 0.22]); r.ell(m, [R0 * 0.1, R0 * 0.2, R0 * (clip === 'attack' && st.key.hit ? 0.16 : 0.09)], M.DARK, null, { noShadow: true }); }   // a small mouth, wide open on the bite
   if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
   return r;
 }
@@ -1454,13 +1472,16 @@ const MONSTERS = {
   treasure: { family: 'fallen', name: 'TREASURE GOBLIN', look: { skin: M.GOBLIN, goblin: true, sack: true, unarmed: true, scale: 1.1 }, hp: 34, dmg: [0, 0], speed: 46, reach: 1, xp: 45, chest: 16, shadow: 6, flee: true, treasure: true, minLevel: 99 },
   gchief: { family: 'fallen', name: 'GOBLIN CHIEFTAIN', look: { skin: M.GOBLIN, goblin: true, chief: true, scale: 1.45, size: [76, 70, 38, 58] }, hp: 60, dmg: [5, 10], speed: 32, reach: 1.5, leader: true, xp: 70, chest: 22, shadow: 7, where: 'out', elite: true },
   gshaman: { family: 'fallen', name: 'GOBLIN SHAMAN', look: { skin: M.GOBLIN, goblin: true, staff: true }, hp: 9, dmg: [3, 6], speed: 30, reach: 6, ranged: 'firebolt', leader: true, xp: 16, chest: 12, shadow: 5, where: 'out' },
-  brigand: { family: 'hero', name: 'BRIGAND', look: { team: 'tan', helm: 'cap', chest: 'chain', weapon: 'axe', shield: 'none', hair: 'brown', cape: 'red' }, hp: 22, dmg: [3, 7], speed: 30, reach: 1.35, xp: 24, chest: 18, shadow: 7, where: 'out' },
+  brigand: { family: 'hero', name: 'BRIGAND', look: { team: 'tan', helm: 'bhood', chest: 'chain', weapon: 'axe', shield: 'none', hair: 'brown', cape: 'red', bandit: 'brigand' }, hp: 22, dmg: [3, 7], speed: 30, reach: 1.35, xp: 24, chest: 18, shadow: 7, where: 'out' },
+  // art B2: the bandit crossbowman (concept art/progress/concepts/bandit_crossbowman.png); minLevel 99 keeps him out of the
+  // spawn pools until the main chat sets his level, stats and loot (placeholders near the brigand and the grave crossbowman)
+  xbowman: { family: 'hero', name: 'BANDIT CROSSBOWMAN', minLevel: 99, look: { team: 'tan', helm: 'bxcap', chest: 'bxjerkin', weapon: 'bow_bandit', shield: 'none', hair: 'brown', bandit: 'xbow' }, hp: 16, dmg: [3, 6], speed: 28, reach: 6.5, ranged: 'arrow', xp: 22, chest: 18, shadow: 7, where: 'out' },
   wolf: { family: 'hound', name: 'WOLF', look: { skin: M.HIDE, eye: M.EYE_YEL, wolf: true, pale: true, lean: true, bib: true, paws: true, brush: true, b2: 'wolf' }, hp: 14, dmg: [2, 5], speed: 54, reach: 1.35, xp: 15, chest: 12, shadow: 10, pack: true, where: 'out' },
   // round 26: the diggers of the old mine: hunched, snouted, in a dented iron cap, swinging a pick, a lamp at the belt
   digger: { family: 'fallen', name: 'DIGGER', look: { skin: M.LEATHER, digger: true }, hp: 10, dmg: [2, 4], speed: 36, reach: 1.25, xp: 9, chest: 12, shadow: 5, pack: true, where: 'out' },
   // round 26 side-area leaders
   alpha: { family: 'hound', name: 'THE ALPHA', look: { skin: M.CLOTH_SHADOW, eye: M.EYE_RED, wolf: true, brush: true, b2: 'alpha', scale: 1.45, size: [100, 84, 50, 62] }, hp: 70, dmg: [5, 9], speed: 50, reach: 1.6, xp: 80, chest: 14, shadow: 12, elite: true, leader: true, where: 'out' },
-  banditchief: { family: 'hero', name: 'BANDIT CHIEF', look: { team: 'red', helm: 'horned', chest: 'brigandine', weapon: 'axe', shield: 'round', hair: 'brown', cape: 'red' }, hp: 80, dmg: [5, 10], speed: 30, reach: 1.4, xp: 90, chest: 24, shadow: 8, elite: true, leader: true, where: 'out' },
+  banditchief: { family: 'hero', name: 'BANDIT CHIEF', look: { team: 'red', helm: 'horned', chest: 'brigandine', weapon: 'baxe', shield: 'round', hair: 'brown', cape: 'red', bandit: 'chief' }, hp: 80, dmg: [5, 10], speed: 30, reach: 1.4, xp: 90, chest: 24, shadow: 8, elite: true, leader: true, where: 'out' },
   goblin: { family: 'fallen', name: 'GOBLIN', look: { skin: M.GOBLIN, goblin: true }, hp: 9, dmg: [2, 4], speed: 38, reach: 1.15, xp: 8, chest: 12, shadow: 5, pack: true, where: 'out' },
   ghoulhound: { family: 'hound', name: 'HELL HOUND', look: { skin: M.FLESH, eye: M.FIREM, scale: 1.15, ember: true, lean: true, paws: true, brush: true, b2: 'ember' }, hp: 28, dmg: [5, 9], speed: 50, reach: 1.45, xp: 34, chest: 13, shadow: 11, minLevel: 2 },
   spider: { family: 'spider', name: 'CAVE SPIDER', look: { scale: 0.8 }, hp: 10, dmg: [2, 4], speed: 46, reach: 1.3, xp: 10, chest: 8, shadow: 11, pack: true },
