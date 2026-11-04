@@ -393,6 +393,17 @@ const ROBE_STYLE = {
 };
 // round a6b: wizard hats in other colors (the same hat as 'hat', drawn through the conjurer's path)
 const HAT_STYLE = { hat_way: { m: M.LEATHER, band: M.CLOTH_GREEN }, hat_frost: { m: M.CLOTH_SHADOW, band: M.STEEL }, hat_dusk: { m: M.CLOTH_PURPLE, band: M.CLOTH_DARK }, hat_sun: { m: M.STRAWM, band: M.GOLD } };
+// art A8: four wizard sets from the front-and-back sheet (art/concepts/heroes/wizard-front-back.png).
+// hw: a hem band from the robe's lower edge up to hw above the hem's center (not a thin stripe).
+// Substitutes: teal = WATERM; navy = CLOTH_NAVY (reads royal blue); charcoal = CLOTH_DARK; taupe = OLDBONE;
+// rose pink has no cloth: CLOTH_RED (the red ramp's light end); wine = BLOODY. tz: the mantle's trim reaches higher.
+Object.assign(ROBE_STYLE, {
+  robe_tide: { m: M.WATERM, collar: M.CLOTH_WHITE, mantle: M.CLOTH_WHITE, cuff: M.CLOTH_NAVY, buckle: M.GOLD },   // the Tidekeeper
+  robe_cinder: { m: M.CLOTH_DARK, panel: M.HAIR_O, pw: 0.7, wk: 0.5, hem: M.HAIR_O, hw: 0.3, mantle: M.CLOTH_DARK, trim: M.HAIR_O, tz: -0.2, cuff: M.HAIR_O, buckle: M.PUMPKIN },   // the Cinder Sage
+  robe_rune: { m: M.OLDBONE, mantle: M.CLOTH_NAVY, collar: M.CLOTH_NAVY, cuff: M.CLOTH_NAVY, hem: M.CLOTH_NAVY, hw: 1.5, buckle: M.STEEL },   // the Runebinder
+  robe_rose: { m: M.CLOTH_RED, panel: M.CLOTH_WHITE, pw: 1.3, wk: 1.3, hem: M.CLOTH_WHITE, hw: 1.0, mantle: M.BLOODY, collar: M.BLOODY, buckle: M.GOLD },   // the Rose Oracle
+});
+Object.assign(HAT_STYLE, { hat_tide: { m: M.CLOTH_NAVY, band: M.WATERM }, hat_cinder: { m: M.AUTUMNM, band: M.AUTUMNM }, hat_rune: { m: M.OLDBONE, band: M.CLOTH_NAVY }, hat_rose: { m: M.BLOODY, band: M.CLOTH_WHITE } });
 const TEAM = { red: M.CLOTH_RED, blue: M.CLOTH_BLUE, green: M.CLOTH_GREEN, tan: M.CLOTH_TAN, purple: M.CLOTH_PURPLE, white: M.CLOTH_WHITE };
 // townsfolk share the hero's rig: hair color, a beard, or no weapon at all
 const HAIRM = { orange: M.HAIR_O, brown: M.HAIR, blond: M.STRAWM, grey: M.CLOTH_WHITE };
@@ -557,6 +568,40 @@ const STAFF_HEAD = {
     r.sph(c, 1.9, M.EYE_RED, { noShadow: true });
   },
 };
+// art A8: the four staves of the front-and-back sheet. STAFF_SPAN: a shorter shaft [from, to] along
+// bd from the grip, and where an enchantment burns (the wand)
+Object.assign(STAFF_SHAFT, { staff_pearl: M.BARK, staff_cage: M.CLOTH_DARK, staff_runestone: M.BARK, staff_rose: M.GOLD });
+const STAFF_SPAN = { staff_rose: [-3.5, 8, 11] };
+Object.assign(STAFF_HEAD, {
+  staff_pearl: (r, g, bd, wide) => {   // Pearlwood: a silver fork holding a teal-green pearl
+    r.cyl(V.mad(g, bd, 16.4), V.mad(g, bd, 17.6), 1.5, M.STEEL);
+    r.group(() => { for (const sd of [-1, 1]) { const a = V.mad(g, bd, 17.4), b = V.add(V.mad(g, bd, 19.2), V.mul(wide, sd * 2.6)); r.cone(a, b, 0.95, 0.9, M.STEEL); r.cone(b, V.add(V.mad(g, bd, 22.4), V.mul(wide, sd * 2.4)), 0.9, 0.6, M.STEEL); } });
+    r.sph(V.mad(g, bd, 20.6), 1.9, M.FUNGUS, { noShadow: true });
+  },
+  staff_cage: (r, g, bd, wide) => {   // Cinder Cage: a gold hexagon round an amber gem
+    r.cyl(V.mad(g, bd, 16.2), V.mad(g, bd, 17.4), 1.5, M.GOLD);
+    const c = V.mad(g, bd, 21.2), p = k => V.add(V.mad(c, bd, -Math.cos(k * Math.PI / 3) * 3.4), V.mul(wide, Math.sin(k * Math.PI / 3) * 3.4));
+    r.group(() => { for (let k = 0; k < 6; k++) r.cone(p(k), p(k + 1), 0.9, 0.9, M.GOLD); });
+    gemOn(r, c, bd, -2.2, 2.2, 1.6, M.PUMPKIN, M.FIREM);
+  },
+  staff_runestone: (r, g, bd, wide) => {   // Runestone: a grey stone block on the shaft's end, a cyan rune glowing on its faces
+    const wf2 = V.norm(V.cross(bd, wide)), c = V.mad(g, bd, 20.4), h = [2.6, 2.3, 2.3];
+    r.cyl(V.mad(g, bd, 16.6), V.mad(g, bd, 17.8), 1.4, M.IRON);
+    r.box(c, h, M.ROCK, [bd, wide, wf2], { mf: p => {
+      const q = V.sub(p, c), v = V.dot(q, bd), a = V.dot(q, wide), b = V.dot(q, wf2);
+      const u = Math.abs(a) > h[1] - 0.4 ? b : Math.abs(b) > h[2] - 0.4 ? a : null;
+      if (u === null || Math.abs(v) > 1.7) return 0;
+      if (v < 0.1) return Math.abs(u) < 0.45 ? M.ICE : 0;   // a Y: the stem, then two arms
+      return Math.abs(Math.abs(u) - v * 0.85) < 0.45 ? M.ICE : 0;
+    } });
+  },
+  staff_rose: (r, g, bd, wide) => {   // Roseglass: a short gold wand, a pink crystal in a gold cradle
+    r.sph(V.mad(g, bd, -3.8), 1.2, M.GOLD);
+    r.cyl(V.mad(g, bd, 7.4), V.mad(g, bd, 8.4), 1.3, M.GOLD);
+    r.group(() => { for (const sd of [-1, 1]) r.cone(V.mad(g, bd, 8), V.add(V.mad(g, bd, 10.6), V.mul(wide, sd * 2.2)), 0.9, 0.6, M.GOLD); });
+    gemOn(r, g, bd, 8.8, 14.2, 1.8, M.MARKB, M.MAGIC);
+  },
+});
 const GEAR_EXTRA = { helm: {}, chest: {}, weapon: {} }, GEAR_SWING = {}, GEAR_LEN = {};
 // art A6: the warrior's seven armor sets (art/concepts/heroes/warrior-sets.png). Each chest look is
 // drawn as an existing one (base) and then retouched by warriorSet(): parts recolored, the belt
@@ -873,7 +918,7 @@ function heroRig(eq, st) {
   // a robe's front trim on a skirt cone a->b: the panel or the stripes down the front, the hem band
   const robeFront = (a, b, w0, w1, hemAt) => { const d = V.norm(V.sub(b, a)), L = V.len(V.sub(b, a)); return p => {
     const t = Math.max(0, Math.min(1, V.dot(V.sub(p, a), d) / L)), n = V.sub(p, V.mad(a, d, t * L)), s = Math.abs(V.dot(n, sideR)), w = w0 + (w1 - w0) * t;
-    if (hemAt !== undefined && RS.hem && Math.abs(t * L - hemAt) < 0.45) return RS.hem;
+    if (hemAt !== undefined && RS.hem && (RS.hw !== undefined ? p[2] < b[2] + RS.hw : Math.abs(t * L - hemAt) < 0.45)) return RS.hem;
     if (V.dot(n, fwd) <= 0.5) return 0;
     if (RS.panel && s < w) return RS.panel;
     if (RS.stripes && Math.abs(s - w) < 0.5) return RS.stripes;
@@ -1116,7 +1161,7 @@ function heroRig(eq, st) {
   }
   if (robe && RS.mantle) for (const [sh, sd] of [[J.shL, -1], [J.shR, 1]]) {   // round a6: a mantle: a broad collar flaring over each shoulder (trimmed at its lower edge)
     const c = V.add(V.mad(sh, up, 1.2), V.mul(sideR, sd * -0.6));
-    r.ell(c, [4.4, 4.4, 2.9], RS.mantle, frameAlong(fwd, up), { mf: RS.trim ? (p => V.dot(V.sub(p, c), up) < -0.9 ? RS.trim : 0) : null });
+    r.ell(c, [4.4, 4.4, 2.9], RS.mantle, frameAlong(fwd, up), { mf: RS.trim ? (p => V.dot(V.sub(p, c), up) < (RS.tz || -0.9) ? RS.trim : 0) : null });
   }
   if (wset) warriorSet(r, wset, J);
   // slim every body part made so far (centers stay put), then build the head at normal size and
@@ -1344,7 +1389,8 @@ function heroRig(eq, st) {
   }
   if (staff) {   // a long wooden staff with gold prongs cradling a glowing orb (color by staff)
     const cinder = hasFx(eq, 'cinder');   // round 43: Staff of Cinders: charred, embers in the wood, a flame over the orb
-    r.cone(V.mad(g, bd, -9), V.mad(g, bd, 18), 0.9, 1.0, cinder ? M.BARK : STAFF_SHAFT[eq.weapon] || M.WOOD, cinder ? { mf: p => Math.abs((V.dot(V.sub(p, g), bd) * 0.9) % 5) < 0.5 ? M.FIREM : 0 } : undefined);
+    const span = STAFF_SPAN[eq.weapon] || [-9, 18, 21];   // art A8: the wand is shorter
+    r.cone(V.mad(g, bd, span[0]), V.mad(g, bd, span[1]), 0.9, 1.0, cinder ? M.BARK : STAFF_SHAFT[eq.weapon] || M.WOOD, cinder ? { mf: p => Math.abs((V.dot(V.sub(p, g), bd) * 0.9) % 5) < 0.5 ? M.FIREM : 0 } : undefined);
     const orbM = eq.weapon === 'staff_fire' ? M.FIREM : eq.weapon === 'staff_ice' || eq.weapon === 'staff_rune' ? M.ICE : M.ARCANE, top = V.mad(g, bd, 21);
     if (eq.weapon === 'staff_rune') {   // round a6: the runed staff: a pale-blue crystal held point-up in a four-fingered gold claw
       const wf2 = V.norm(V.cross(bd, wide));
@@ -1358,7 +1404,7 @@ function heroRig(eq, st) {
       r.sph(top, 2.7, orbM, { noShadow: true });
     }
     if (cinder) { r.cone(V.mad(top, bd, 2), V.mad(top, bd, 6.5), 1.8, 0.2, M.FIREM, { noShadow: true }); }
-    if (eq.ench) enchantGlow(r, eq, g, bd, wide, st, 21);
+    if (eq.ench) enchantGlow(r, eq, g, bd, wide, st, span[2]);
     if (eq.weapon === 'staff_rune') for (const z of [8, 12.5]) r.cyl(V.mad(g, bd, z), V.mad(g, bd, z + 0.9), 1.5, M.GOLD);   // round 43: gold bands (round a6: the motes that circled the orb are gone; the crystal carries it)
     if (st.clip === 'death') deathTip(r, B, st.f, -1);
     return r;
