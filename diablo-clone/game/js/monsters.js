@@ -324,11 +324,12 @@ function skeletonRig(look, st) {
 const FALLEN_B = { hipH: 9.5, thigh: 5.2, shin: 5, ankle: 1, spine: 6.5, shW: 4.6, shZ: 2, neck: 7.8, upper: 4.6, fore: 4.4, hipW: 2.2, stride: 4.5, lift: 2.6, hunch: 0.35, duty: 0.42, bob: 0.6, sway: 0.35, runLean: 0.1, counter: 0.18 };
 function fallenRig(look, st) {
   const B = FALLEN_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J;
-  const skin = look.skin || M.FLESH;
   // imps (the fallen one and its shaman; art pass from the "FALLEN KIN" concepts): wiry limbs, a lean
   // body, a belted ragged loincloth, grey hooves, and a squarer head with swept ears and horns
   const imp = !look.goblin && !look.digger;
-  const lg = imp ? [1.45, 1.15, 0.95] : [1.8, 1.4, 1.0];
+  const skin = look.skin || (imp ? M.CLOTH_RED : M.FLESH);   // art A4: the concepts' brighter brick red (FLESH read near-black at this size)
+  const chunk = imp && !look.ember && !look.sling;   // art A4: the spearling's and knifer's limbs are chunkier, as in their concepts (tried on the acolyte and slinger and lost there)
+  const lg = chunk ? [1.75, 1.4, 1.05] : imp ? [1.45, 1.15, 0.95] : [1.8, 1.4, 1.0];
   for (const [hip, knee, ank] of [[J.hipL, J.kneeL, J.ankL], [J.hipR, J.kneeR, J.ankR]]) {
     r.cone(hip, knee, lg[0], lg[1], skin); r.cone(knee, ank, lg[1], lg[2], skin);
     r.ell(V.add(ank, [1.4, 0, -0.5]), imp ? [2.0, 1.2, 0.85] : [2.2, 1.2, 0.8], imp ? M.HIDE : M.HORN);
@@ -350,11 +351,12 @@ function fallenRig(look, st) {
     r.ell(cp, [3.6, 4.6, 2.2], M.CLOTH_PURPLE, lf);   // capelet over the shoulders
     r.sph(V.add(V.mad(cp, fwd, 3.5), V.mul(up, -0.3)), 0.8, M.BONE, { bias: 1 });   // bone clasp
   } else if (imp) {
-    r.group(() => { r.ell(J.pelvis, [2.6, 3.0, 2.4], skin); r.ell(V.lerp(J.pelvis, J.chest, 0.6), [2.9, 3.4, 3.9], skin, frameAlong(fwd, up)); });
+    r.group(() => { r.ell(J.pelvis, chunk ? [2.8, 3.2, 2.5] : [2.6, 3.0, 2.4], skin); r.ell(V.lerp(J.pelvis, J.chest, 0.6), chunk ? [3.2, 3.8, 4.1] : [2.9, 3.4, 3.9], skin, frameAlong(fwd, up)); });
     const bc = V.mad(J.pelvis, up, 0.9), lf = frameAlong(fwd, up);
-    r.ell(bc, [2.9, 3.3, 0.9], M.LEATHER, lf);   // belt
-    r.box(V.mad(bc, fwd, 2.8), [0.35, 0.95, 0.75], M.IRON, lf, { bias: 1 });   // square buckle
-    const lc = V.add(V.mad(J.pelvis, fwd, 2.2), V.mul(up, -2.2));   // a ragged flap that ends in a point
+    const bk = chunk ? 0.25 : 0;   // the gear grows with the chunkier body so the belt still shows
+    r.ell(bc, [2.9 + bk, 3.3 + bk, 0.9 + bk * 0.4], M.LEATHER, lf);   // belt
+    r.box(V.mad(bc, fwd, 2.8 + bk), [0.35, 0.95 + bk, 0.75 + bk], M.IRON, lf, { bias: 1 });   // square buckle
+    const lc = V.add(V.mad(J.pelvis, fwd, 2.2 + bk * 1.6), V.mul(up, -2.2));   // a ragged flap that ends in a point
     r.box(lc, [0.45, 2.1, 2.4], M.LEATHER, lf);
     r.cone(V.add(lc, V.mul(up, -1.6)), V.add(V.mad(lc, up, -4.2), V.mul(fwd, 0.3)), 1.4, 0.3, M.LEATHER);
     const spearling = !look.knife && !look.sling && !look.staff && !look.unarmed;
@@ -367,12 +369,12 @@ function fallenRig(look, st) {
       r.cone(V.mad(s0, fwd, -2.2), V.mad(s1, fwd, -2.2), 0.55, 0.55, M.LEATHER);
     }
     if (look.sling) {   // art A3, the slinger: a ragged leather capelet with a bone clasp, and a pouch of stones at the left hip
-      const cp = V.mad(J.chest, up, 2.8);
-      r.ell(cp, [3.2, 4.2, 1.9], M.LEATHER, lf);
+      const cp = V.mad(J.chest, up, 2.6);   // art A4: a bigger capelet, broad over the shoulders as in the concept
+      r.ell(cp, [3.7, 4.9, 2.3], M.LEATHER, lf);
       r.sph(V.add(V.mad(cp, fwd, 3.1), V.mul(up, -0.3)), 0.7, M.BONE, { bias: 1 });
       const pp = V.add(V.add(J.pelvis, V.mul(sideR, -3.6)), V.add(V.mul(up, -1.6), V.mul(fwd, 1.0)));
       r.cyl(V.mad(pp, up, -1.4), V.mad(pp, up, 1.0), 2.3, M.LEATHER);
-      for (const [u, v] of [[-0.6, -0.5], [0.7, 0.2], [0, 0.8]]) r.sph(V.add(V.mad(pp, up, 1.2), V.add(V.mul(fwd, u), V.mul(sideR, v))), 0.95, M.STONE);
+      for (const [u, v] of [[-0.6, -0.5], [0.7, 0.2], [0, 0.8]]) r.sph(V.add(V.mad(pp, up, 1.2), V.add(V.mul(fwd, u), V.mul(sideR, v))), 0.95, M.ROCK);
     }
   } else {
     r.group(() => { r.ell(J.pelvis, [3.2, 3.6, 2.8], skin); r.ell(V.lerp(J.pelvis, J.chest, 0.6), [3.6, 4.0, 4.2], skin, frameAlong(fwd, up)); });
@@ -418,7 +420,8 @@ function fallenRig(look, st) {
     handL = V.add(V.add(J.shL, V.mul(fwd, 4.2 + ca * 2.5)), V.add(V.mul(up, -2.6 + ca * 1.5), V.mul(sideR, -1.6)));
   }
   const aR = armTo(J, J.shR, handR, B, 1), aL = armTo(J, J.shL, handL, B, -1);
-  for (const [sh, a] of [[J.shR, aR], [J.shL, aL]]) { r.cone(sh, a.el, imp ? 1.15 : 1.4, imp ? 0.95 : 1.1, skin); r.cone(a.el, a.hand, imp ? 0.95 : 1.1, 0.9, skin); r.sph(a.hand, imp ? 1.25 : 1.3, skin); }
+  const ar = chunk ? [1.45, 1.15, 1.0, 1.5] : imp ? [1.15, 0.95, 0.9, 1.25] : [1.4, 1.1, 0.9, 1.3];
+  for (const [sh, a] of [[J.shR, aR], [J.shL, aL]]) { r.cone(sh, a.el, ar[0], ar[1], skin); r.cone(a.el, a.hand, ar[1], ar[2], skin); r.sph(a.hand, ar[3], skin); }
   // weapon: spear (warrior) or a staff with a glowing head (shaman)
   const g = aR.hand;
   if (look.sack) {   // a bulging sack on its back with coins spilling over the top
@@ -434,24 +437,27 @@ function fallenRig(look, st) {
     r.box(lp, [1.1, 1.1, 1.4], M.LAMP, null, { noShadow: true }); r.box(V.mad(lp, up, 1.8), [0.8, 0.8, 0.4], M.IRON);
   } else if (look.unarmed) { /* both hands free to clutch the sack */ }
   else if (look.knife) {   // a short broad knife with a leather-wrapped grip
-    r.cone(V.mad(g, bd, -1.4), V.mad(g, bd, 0.8), 0.6, 0.6, M.LEATHER);
+    r.cone(V.mad(g, bd, -1.6), V.mad(g, bd, 0.9), 0.75, 0.75, M.LEATHER);
     const kf = [bd, V.norm(V.cross(bd, up)), V.norm(V.cross(bd, V.cross(bd, up)))];
-    r.group(() => { r.box(V.mad(g, bd, 3.0), [2.2, 0.35, 1.0], M.STEEL, kf); r.cone(V.mad(g, bd, 5.0), V.mad(g, bd, 7.4), 1.0, 0.15, M.STEEL); });
+    r.sph(V.mad(g, bd, 1.2), 0.9, M.IRON);   // art A4: a guard, then a bigger pale leaf blade
+    r.group(() => { r.ell(V.mad(g, bd, 4.2), [3.0, 0.6, 1.6], M.BLADE, kf); r.cone(V.mad(g, bd, 6.4), V.mad(g, bd, 8.8), 1.15, 0.15, M.BLADE); });
   } else if (look.sling) {   // two cords from the fist to a leather cup holding a stone
     let cup;
-    if (slingA < 0) cup = V.add(V.mad(g, up, -4.4), V.add(V.mul(fwd, 2.6), V.mul(sideR, 1.2)));   // dangling ahead of the body, clear of it
+    if (slingA < 0) cup = V.add(V.mad(g, up, -7.2), V.add(V.mul(fwd, 2.8), V.mul(sideR, 1.4)));   // dangling ahead of the body, clear of it
     else if (slingA > 0.9) cup = V.add(V.mad(g, up, 2.4), V.add(V.mul(fwd, -2.6), V.mul(sideR, 4.2)));   // whirling high beside the head
     else cup = V.add(V.mad(g, fwd, 4.4), V.mul(up, 0.6));   // let fly
-    const sideC = V.norm(V.cross(V.norm(V.sub(cup, g)), fwd));
-    for (const sd of [-1, 1]) r.cone(g, V.mad(cup, sideC, sd * 1.0), 0.5, 0.5, M.LEATHER, { noShadow: true });
-    r.ell(cup, [1.6, 1.6, 1.1], M.LEATHER);
-    if (!(st.clip === 'shoot' && sw && sw.hit)) r.sph(V.mad(cup, up, 0.8), 1.35, M.STONE);
+    // art A4: the cords bow out into a wide teardrop loop (thick enough to hold at 1x) round a grey stone
+    const ax = V.norm(V.sub(cup, g)), sideC = V.norm(V.cross(ax, Math.abs(V.dot(ax, fwd)) > 0.9 ? up : fwd)), L = V.len(V.sub(cup, g));
+    for (const sd of [-1, 1]) { const m = V.add(V.mad(g, ax, L * 0.6), V.mul(sideC, sd * 2.5)); r.cone(g, m, 0.9, 0.9, M.LEATHER, { noShadow: true }); r.cone(m, V.mad(cup, sideC, sd * 1.6), 0.9, 0.9, M.LEATHER, { noShadow: true }); }
+    r.ell(cup, [1.8, 1.8, 1.2], M.LEATHER);
+    if (!(st.clip === 'shoot' && sw && sw.hit)) r.sph(V.mad(cup, up, 0.8), 1.5, M.ROCK);
   }
   else if (look.staff && look.ember) {
     // a crooked staff: it kinks twice on the way up and ends in a hook that cradles a glowing orb
     const s0 = V.mad(g, bd, -8.5), s1 = V.mad(g, bd, 6), s2 = V.add(V.mad(g, bd, 11), V.mul(fwd, -1)), s3 = V.add(V.mad(g, bd, 15.5), V.mul(fwd, 0.6));
-    const h1 = V.add(V.mad(g, bd, 17), V.mul(fwd, 3)), h2 = V.add(V.mad(g, bd, 14.6), V.mul(fwd, 4.6));
-    r.group(() => { r.cone(s0, s1, 0.7, 0.7, M.WOOD); r.cone(s1, s2, 0.7, 0.68, M.WOOD); r.cone(s2, s3, 0.68, 0.65, M.WOOD); r.cone(s3, h1, 0.65, 0.6, M.WOOD); r.cone(h1, h2, 0.6, 0.5, M.WOOD); });
+    // art A4: a stouter staff whose hook curls right round the orb and down its front
+    const h1 = V.add(V.mad(g, bd, 17.4), V.mul(fwd, 2.6)), h2 = V.add(V.mad(g, bd, 16.4), V.mul(fwd, 5.2)), h3 = V.add(V.mad(g, bd, 13.4), V.mul(fwd, 5.4));
+    r.group(() => { r.cone(s0, s1, 0.95, 0.95, M.WOOD); r.cone(s1, s2, 0.95, 0.92, M.WOOD); r.cone(s2, s3, 0.92, 0.9, M.WOOD); r.cone(s3, h1, 0.9, 0.9, M.WOOD); r.cone(h1, h2, 0.9, 0.9, M.WOOD); r.cone(h2, h3, 0.9, 0.7, M.WOOD); });
     const orb = V.add(V.mad(g, bd, 13.6), V.mul(fwd, 2.8)), fl = st.f || 0;
     r.sph(orb, 1.75, M.FIREM, { noShadow: true, mf: p => V.dot(V.sub(p, orb), V.norm(V.add(up, V.mul(sideR, -0.5)))) > 0.5 ? M.LAMP : 0 });
     // the flame in the off hand: a yellow heart in an orange tongue that flickers, and grows to cast
@@ -462,6 +468,11 @@ function fallenRig(look, st) {
   } else if (look.staff) {
     r.cone(V.mad(g, bd, -7), V.mad(g, bd, 7), 0.65, 0.65, M.WOOD);
     r.sph(V.mad(g, bd, 8.2), 1.5, M.MAGIC, { noShadow: true });
+  } else if (imp) {   // art A4, the spearling's spear: a stouter haft bound with leather under a broad pale leaf-shaped head
+    r.cone(V.mad(g, bd, -6.5), V.mad(g, bd, 9), 0.75, 0.75, M.WOOD);
+    r.sph(V.mad(g, bd, 9), 0.95, M.LEATHER);
+    const sf = [bd, V.norm(V.cross(bd, up)), V.norm(V.cross(bd, V.cross(bd, up)))];
+    r.group(() => { r.ell(V.mad(g, bd, 11.4), [2.4, 1.6, 0.9], M.BLADE, sf); r.cone(V.mad(g, bd, 12.6), V.mad(g, bd, 15), 1.0, 0.15, M.BLADE); });
   } else {
     r.cone(V.mad(g, bd, -6), V.mad(g, bd, 9), 0.6, 0.6, M.WOOD);
     r.cone(V.mad(g, bd, 9), V.mad(g, bd, 12.5), 1.1, 0.25, M.IRON);
@@ -481,9 +492,9 @@ function fallenRig(look, st) {
       r.ell(e, [0.4, 0.95, 0.55], M.EYE_YEL, [fwd, V.norm(V.add(sideR, V.mul(up, s * 0.35))), V.norm(V.sub(up, V.mul(sideR, s * 0.35)))], { noShadow: true, bias: 1 });
       // big grey ears swept out and back, and a pale horn rising from the top of the head
       const ea = V.add(V.mad(hd, up, 1.0), V.mul(sideR, s * 3.0)), eb = V.add(V.add(V.mad(hd, up, 2.6), V.mul(sideR, s * 6.4)), V.mul(fwd, -2.6));
-      r.cone(ea, eb, 1.5, 0.25, M.HIDE);
-      const ha = V.add(V.mad(hd, up, 3.0), V.mul(sideR, s * 1.6)), hb = V.add(V.add(V.mad(hd, up, 6.2), V.mul(sideR, s * 2.4)), V.mul(fwd, -0.8));
-      r.cone(ha, hb, 0.95, 0.2, M.HORN);
+      r.cone(ea, eb, look.ember ? 1.8 : 1.5, 0.25, look.ember ? M.CLOTH_PURPLE : M.HORN);   // art A4: dusty mauve, not blue-grey; the acolyte's ears are sleeved in its hood
+      const ha = V.add(V.mad(hd, up, 3.0), V.mul(sideR, s * 1.6)), hb = V.add(V.add(V.mad(hd, up, 6.6), V.mul(sideR, s * 2.4)), V.mul(fwd, -1.0));
+      r.cone(ha, hb, 1.25, 0.2, M.BONE);   // art A4: cream horns, thick at the root
     }
   } else r.ell(hd, [3.8, 3.6, 3.4], skin, frameAlong(fwd, up), { mf: p => { const q = V.sub(p, hd); return V.dot(q, fwd) > 2.4 && Math.abs(V.dot(q, up) + 1.5) < 0.5 && Math.abs(V.dot(q, sideR)) < 1.6 ? M.DARK : 0; } });
   if (!imp) for (const s of [-1, 1]) {
