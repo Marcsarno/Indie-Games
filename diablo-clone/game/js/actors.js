@@ -363,7 +363,7 @@ function bigHead(r, from, hd, HK) {
 const HERO_B = { hipH: 11.5, thigh: 6.2, shin: 5.6, ankle: 1.3, spine: 6, shW: 5.4, shZ: 3, neck: 10.5, upper: 4.8, fore: 4.4, hipW: 2.4, stride: 6.4, lift: 4.0, stance: 1.2,
   duty: 0.34, bob: 1.0, sway: 0.35, runLean: 0.18, counter: 0.22 };   // round 15: longer stride, more air, higher knees
 const CAPE_M = M.CLOTH_GREEN;   // a green cloak, like the heroes in the references
-const HERO_HK = 1.5, HERO_BK = 0.8;
+const HERO_HK = 1.2, HERO_BK = 0.8;   // art A7 (the user): the head drawn 1.2x (was 1.5x, a bobblehead), with everything on it
 const HERO_GAIT = gaitFrameTiles(HERO_B);
 // in a robe: a lighter, gliding stride (lower knees, less bounce, a shorter flight) so the legs
 // don't kick out under the skirt
@@ -527,7 +527,7 @@ function setHead(r, eq, hd, fwd, up, sideR, helmF) {
   if (eq.set === 'ranger') { const a = V.add(V.mad(hd, up, 3.4), V.mul(sideR, -4.0)), b = V.add(V.add(V.mad(hd, up, 8.5), V.mul(sideR, -5.2)), V.mul(fwd, -3)); r.cone(a, b, 1.1, 0.4, M.CLOTH_RED, { noShadow: true }); }
   if (eq.set === 'stalker') r.ell(V.add(V.mad(hd, up, -2.0), V.mul(fwd, 1.6)), [3.0, 4.1, 1.9], M.CLOTH_RED, helmF);
   if (hasFx(eq, 'seer') && eq.helm === 'hat') { const e = V.add(V.mad(hd, up, 5.4), V.mul(fwd, 4.4)); r.ell(e, [0.6, 1.8, 1.1], M.CLOTH_WHITE, frameAlong(fwd, up)); r.sph(V.mad(e, fwd, 0.5), 0.9, M.ARCANE, { noShadow: true }); }   // Seer's Peak: an open eye on the hat
-  if (eq.set === 'magus' && eq.helm === 'hat') r.sph(V.add(V.mad(hd, up, 12), V.mul(fwd, -4.6)), 1.4, M.GOLD, { noShadow: true });
+  if (eq.set === 'magus' && eq.helm === 'hat') r.sph(V.add(V.mad(hd, up, 10.8), V.mul(fwd, -3.9)), 1.3, M.GOLD, { noShadow: true });
 }
 // round a6b: the new staves' heads (the shaft is drawn first, to 18 along bd from the grip g)
 const STAFF_SHAFT = { staff_frost: M.IRON, staff_moon: M.CLOTH_DARK };
@@ -1035,10 +1035,10 @@ function heroRig(eq, st) {
     if (eq.helm === 'hat' || eq.helm === 'hat_conj') {   // wizard hat: a wide brim, a tall crown that bends back to a point, gold band (round 43: the conjurer's in navy)
       const hm = eq.hatV ? eq.hatV.m : eq.helm === 'hat_conj' ? M.CLOTH_NAVY : M.CLOTH_PURPLE, base = V.add(V.mad(hd, up, 3.3), V.mul(fwd, -0.8));   // set high and tipped back so the eyes show
       r.group(() => {
-        r.cyl(base, V.mad(base, up, 0.7), 5.9, hm);
-        const sway = headSway(st), mid = V.add(V.mad(base, up, 4.6), V.mul(fwd, -1.0 - sway[0] * 0.3)), tip = V.add(V.mad(base, up, 8.4 + sway[1]), V.add(V.mul(fwd, -3.6 - sway[0]), V.mul(sideR, sway[2])));   // round 43: the tip lags behind the head
-        r.cone(V.mad(base, up, 0.5), mid, 3.9, 2.2, hm, { mf: p => V.dot(V.sub(p, base), up) < 1.6 ? (eq.hatV ? eq.hatV.band : M.GOLD) : 0 });
-        r.cone(mid, tip, 2.2, 0.5, hm);
+        r.cyl(base, V.mad(base, up, 0.7), 5.2, hm);   // art A7: a narrower brim and a shorter crown for the smaller head
+        const sway = headSway(st), mid = V.add(V.mad(base, up, 4.0), V.mul(fwd, -0.9 - sway[0] * 0.3)), tip = V.add(V.mad(base, up, 7.3 + sway[1]), V.add(V.mul(fwd, -3.1 - sway[0]), V.mul(sideR, sway[2])));   // round 43: the tip lags behind the head
+        r.cone(V.mad(base, up, 0.5), mid, 3.6, 2.0, hm, { mf: p => V.dot(V.sub(p, base), up) < 1.5 ? (eq.hatV ? eq.hatV.band : M.GOLD) : 0 });
+        r.cone(mid, tip, 2.0, 0.5, hm);
       });
     }
     if (eq.helm === 'spangen') {   // round 43: the spangenhelm: a riveted cone with gold ribs and a nasal bar over the face
@@ -1049,13 +1049,13 @@ function heroRig(eq, st) {
     }
     if (eq.helm === 'hood' || eq.helm === 'hood_sage') {   // a deep hood: a shell over the back and top of the head, face left open (the sage's: sage green with a gold hem)
       const hc = V.add(V.mad(hd, up, 0.7), V.mul(fwd, -1.3)), sage = eq.helm === 'hood_sage';
-      r.ell(hc, [4.6, 5.0, 5.0], sage ? M.CLOTH_GREEN : M.CLOTH_BLUE, helmF, sage ? { mf: p => V.dot(V.sub(p, hc), fwd) > 3.2 ? M.GOLD : 0 } : undefined);
+      r.ell(hc, [4.5, 4.6, 4.75], sage ? M.CLOTH_GREEN : M.CLOTH_BLUE, helmF, sage ? { mf: p => V.dot(V.sub(p, hc), fwd) > 3.2 ? M.GOLD : 0 } : undefined);
       r.cone(V.add(V.mad(hd, up, 2.6), V.mul(fwd, -4.0)), V.add(V.mad(hd, up, 0.2), V.mul(fwd, -7.2)), 2.0, 0.5, sage ? M.CLOTH_GREEN : M.CLOTH_BLUE);   // the point falls behind
     }
     if (eq.helm.startsWith('rhood')) {   // the ranger's hood: a shell over the head with the face open, a pointed back and a cowl on the shoulders
       const hm = eq.helm === 'rhood_dark' ? M.CLOTH_SHADOW : eq.helm === 'rhood_night' ? M.CLOTH_NAVY : M.CLOTH_GREEN, fur = eq.helm === 'rhood_hunter', hc = V.add(V.mad(hd, up, 0.8), V.mul(fwd, -1.0));
       r.group(() => {
-        r.ell(hc, [4.7, 5.1, 5.1], hm, helmF);   // set back, so the face stands out of its opening
+        r.ell(hc, [4.55, 4.65, 4.8], hm, helmF);   // art A7: hugging the head; set back, so the face stands out of its opening
         { const sw = headSway(st); r.cone(V.add(V.mad(hd, up, 3.0), V.mul(fwd, -3.4)), V.add(V.add(V.mad(hd, up, 1.0 + sw[1] * 0.8), V.mul(fwd, -6.6 - sw[0] * 1.2)), V.mul(sideR, sw[2])), 2.2, 0.5, hm); }   // round 43: the hood's point streams back
         r.ell(V.add(V.mad(hd, up, -4.2), V.mul(fwd, -1.2)), [3.3, 4.5, 1.3], fur ? M.FUR : hm, helmF);   // the cowl, kept small so the jerkin shows (the hunter's: a fur mantle)
       });

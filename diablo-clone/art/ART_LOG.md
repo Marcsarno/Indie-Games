@@ -169,3 +169,12 @@ Substitutes for colors the palette lacks: teal = WATERM, copper = PUMPKIN, ember
 Tracker) = slate (CLOTH_NAVY rendered royal blue), plum (Magus) = the existing violet.
 Still off: mage cuffs read as mitts; flanged mace looks like a fork from behind; skirts are fixed to the hips so thighs
 pass through them when walking; the 1.5x head hides much of the front chest from front-right (mantles, neck trim).
+
+## A7: smaller hero heads (2026-11-04)
+Review page: https://claude.ai/artifact/WBJFUa3CPmMKgXQAG1Qua5 (source `art/review/a7-heads/`).
+**Changed existing art, at the user's request:** `HERO_HK` 1.5 -> 1.2 in `game/js/actors.js` (the head and
+everything on it: face, hair, beard, helms, hats, hoods, set crests). Tried 1.5/1.3/1.2/1.1 at phone size: 1.3 still
+read as a bobblehead, 1.1 lost the eyes. Then the wizard/conjurer hat (and all colored hats through it) got a
+narrower brim (5.9 -> 5.2) and a shorter crown (tip 8.4 -> 7.3); the mage and ranger hoods hug the head
+([4.6,5.0,5.0] -> [4.5,4.6,4.75], [4.7,5.1,5.1] -> [4.55,4.65,4.8]); the Magus set's gold ball moved down to the new tip.
+Affects every hero look, the townsfolk, the Brigand and the Bandit Chief; every other monster renders identically.
