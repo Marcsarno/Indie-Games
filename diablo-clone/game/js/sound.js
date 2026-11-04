@@ -55,8 +55,8 @@ function audioInit() {
 // parts alternate with the forest song in forests and with the camp song in towns).
 const MUSIC = { forest: 'music/forest.mp3', camp: 'music/camp.mp3', dungeon: 'music/dungeon.mp3', lair: 'music/lair.mp3',
   title: 'music/title.mp3', enter: 'music/enter.mp3', set1: 'music/set1.mp3', set2: 'music/set2.mp3', set3: 'music/set3.mp3' }, MUSIC_VOL = 0.5;
-// round 53: the user's favorite (the title song) also comes round in the camp and the woods, first in each
-const PLAYLISTS = { title: ['title'], forest: ['title', 'forest', 'set1', 'forest', 'set2', 'forest', 'set3'], camp: ['camp', 'title', 'camp', 'set2', 'camp', 'set3', 'camp', 'set1'],
+// (round 53 tried the title song in the camp and woods too; the user wants it on the title screens only)
+const PLAYLISTS = { title: ['title'], forest: ['forest', 'set1', 'forest', 'set2', 'forest', 'set3'], camp: ['camp', 'set2', 'camp', 'set3', 'camp', 'set1'],
   dungeon: ['enter', 'dungeon'], lair: ['lair'] };
 const MUS = { decks: [], cur: null, inWoods: false, pos: {}, duck: 1, idx: {}, place: null };
 // round 45: the song keeps playing under the dialogue, the bag and the skills screen, 40% quieter
