@@ -65,3 +65,18 @@ stone/rock projectile exists: `slinger` and `orockthrower`.
 
 All monsters outside this list render pixel-identical to before A3 (Warlord, Alpha, Bear and Boar
 included); no new monster clips its sprite box in any frame. Progress page updated (18 done).
+
+## A4 imps: three more passes on the fallen family (2026-11-04)
+Images in `art/review/a4-passes/imps/` (`<id>.png` before/after, `<id>-passN.png` each pass, A = previous best, B = the pass).
+All in `fallenRig` behind `imp` (not goblin, not digger), so the goblins, chieftain, goblin shaman, treasure goblin and digger are unchanged.
+
+| Monster | Pass 1 | Pass 2 | Pass 3 | Pass 4 |
+|---|---|---|---|---|
+| `fallen` | skin on the RED ramp (brick red; FLESH read near-black), cream BONE horns thicker at the root, mauve ears (HORN) instead of blue-grey: new won both orders, kept | stouter spear haft, leather binding, broad pale leaf head (BLADE): kept | chunkier limbs and body, belt/buckle/flap scaled with it: kept | - |
+| `knifer` | same as above: kept | bigger pale leaf knife (BLADE) with an iron guard: kept | chunkier limbs: kept | - |
+| `shaman` | same as above (the face now reads red under the hood): kept | stouter staff whose hook curls round the orb and down its front: kept | chunkier limbs + shorter flared robe: old won both orders (rope belt swallowed, legs speckled through the hem), reverted | ears sleeved in the hood's purple: kept |
+| `slinger` | same as above: kept | sling cords bow out into a wide teardrop loop, bigger cup and stone, stones grey ROCK (STONE read brown): kept | chunkier limbs: orders disagreed (tie), reverted | bigger capelet, longer sling loop: kept |
+
+Order disagreements: 1 of 14 comparisons. Lint (rig-sheet): light 0.22-0.55, noise < 3.4%. No frame of
+idle/walk/attack/hit/death in 8 directions touches the sprite box edge. Every other monster renders
+pixel-identical to before (zoom-1 strips `cmp` equal).
