@@ -1,0 +1,88 @@
+<title>Snug Warrior Helms</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+/* layout: one column of monsters; each shows the concept, then before/after strips that scroll sideways on phones. Single dark look to match the game's dungeon. */
+:root {
+  --bg: #17120f; --panel: #211a16; --ink: #ece2cf; --dim: #a8987f; --rule: #3a2f27; --ember: #e8902f;
+  --display: 'Pixelify Sans', 'Courier New', monospace; --body: 'IBM Plex Sans', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--body); line-height: 1.55; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 44px; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 5vw, 44px); line-height: 1.1; margin: 0; letter-spacing: 0.02em; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--ember); }
+h2 { font-family: var(--display); font-weight: 700; font-size: 26px; margin: 0; letter-spacing: 0.03em; }
+.lede { max-width: 66ch; color: var(--dim); margin: 10px 0 0; }
+.lede b { color: var(--ink); font-weight: 600; }
+section { display: grid; gap: 14px; border-top: 1px solid var(--rule); padding-top: 26px; }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.tag { font-family: var(--mono); font-size: 12px; color: var(--dim); letter-spacing: 0.06em; text-transform: uppercase; }
+.row { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 760px) { .row { grid-template-columns: minmax(0, 1fr); } .concept { max-width: 420px; } }
+.concept { margin: 0; background: var(--panel); border: 1px solid var(--rule); }
+.concept img { display: block; width: 100%; image-rendering: pixelated; }
+figcaption { font-family: var(--mono); font-size: 11px; color: var(--dim); padding: 6px 8px; }
+.notes { min-width: 0; display: grid; gap: 8px; }
+.notes ul { margin: 0; padding-left: 18px; max-width: 70ch; }
+.notes li { margin: 2px 0; }
+.verdict { font-family: var(--mono); font-size: 12.5px; color: var(--dim); }
+.strip { overflow-x: auto; border: 1px solid var(--rule); background: #000; }
+.strip img { display: block; max-width: none; height: auto; image-rendering: pixelated; }
+.strip.fit img { max-width: 100%; }
+details { border: 1px solid var(--rule); background: var(--panel); }
+summary { cursor: pointer; padding: 8px 12px; font-family: var(--mono); font-size: 12.5px; color: var(--dim); }
+summary:focus-visible { outline: 2px solid var(--ember); }
+details .strip { border: 0; border-top: 1px solid var(--rule); }
+.ask { background: var(--panel); border: 1px solid var(--rule); padding: 16px 18px; max-width: 72ch; }
+.ask h2 { font-size: 20px; margin-bottom: 6px; }
+.ask ol { margin: 0; padding-left: 20px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Snug warrior helms <em>A5</em></h1>
+    <p class="lede">All seven warrior helms rebuilt to your snug-fit mock-up, in two rounds: the closed helms (great helm, barbute, crown, bascinet, horned) now fit about the size of the bare head instead of a bucket half again as big, now upright like yours rather than round, with bold grilles and a big face plate, a bold T on the barbute, breathing holes on the bascinet, a dark blued-steel horned helm and a bolder crown. The cap and spangenhelm sit a little snugger too. Nothing else on the hero changed, and no frame clips.</p>
+  </header>
+
+  <section>
+    <div class="head"><h2>Your mock-up</h2><span class="tag">the target</span></div>
+    <div class="strip fit"><img src="mockup.png" alt="The user's snug-fit warrior helm mock-up"></div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Before</h2><span class="tag">front-right and back, 2x detail, enlarged 3x</span></div>
+    <div class="strip"><img src="before/warrior-helms.png" alt="Warrior helms before"></div>
+  </section>
+
+  <section>
+    <div class="head"><h2>After</h2><span class="tag">front-right and back, 2x detail, enlarged 3x</span></div>
+    <div class="strip"><img src="after/warrior-helms.png" alt="Warrior helms after"></div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Full outfits at phone size</h2><span class="tag">1x world detail, enlarged 3x: facings, walk, attacks</span></div>
+    <p class="verdict" style="margin:0">Before:</p>
+    <div class="strip"><img src="outfits-before.png" alt="Warrior outfits before, at game size"></div>
+    <p class="verdict" style="margin:0">After:</p>
+    <div class="strip"><img src="outfits-after.png" alt="Warrior outfits after, at game size"></div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Brigand and Bandit Chief</h2><span class="tag">monsters drawn with the hero body</span></div>
+    <p class="verdict" style="margin:0;max-width:72ch">These two wear the same helms (a cap and a horned helm), so they change with it.</p>
+    <div class="strip"><img src="bandits.png" alt="Brigand and Bandit Chief, before and after"></div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Every pass</h2><span class="tag">6 passes over two rounds</span></div>
+    <p class="verdict" style="max-width:72ch;margin:0">Pass 1 shrank every shell and its details, but the closed helms were still about 1.2x the bare head, with a fin-like ridge at the back. Pass 2 brought them to head size and cut the ridges, spike and horns down. Pass 3 gave the horns back a little length so they still read as horns at phone size.</p>
+    <details><summary>Pass 1 (top: before, bottom: pass 1)</summary><div class="strip"><img src="pass1.png" alt="Pass 1"></div></details>
+    <details><summary>Pass 2 (top: pass 1, bottom: pass 2)</summary><div class="strip"><img src="pass2.png" alt="Pass 2"></div></details>
+    <details><summary>Pass 3, horns at game size (top: pass 2, bottom: pass 3)</summary><div class="strip"><img src="pass3-horns.png" alt="Pass 3"></div></details>
+    <p class="verdict" style="max-width:72ch;margin:0">Round 2 (you asked for more). Pass 4: the closed shells made upright and a little narrower, like your mock-up, instead of round balls; a bigger, bolder grille; a bold T on the barbute; breathing holes on the bascinet snout; the horned helm in dark blued steel. Pass 5: a brighter face plate came out cream like the sword (lost, reverted) and a bolder crown (kept). Pass 6: the bigger face plate in steel (kept).</p>
+    <details><summary>Pass 4, zoomed: great helm, barbute, bascinet (top: pass 3, bottom: pass 4)</summary><div class="strip"><img src="pass4-zoom.png" alt="Pass 4"></div></details>
+    <details><summary>Pass 5, zoomed: the cream plate that lost, and the crown that won</summary><div class="strip"><img src="pass5-zoom.png" alt="Pass 5"></div></details>
+    <details><summary>Pass 6, zoomed (top: pass 4, bottom: pass 6)</summary><div class="strip"><img src="pass6-zoom.png" alt="Pass 6"></div></details>
+  </section>
+</div>

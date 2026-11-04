@@ -1,0 +1,196 @@
+<title>Refinement Round A4</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+/* layout: one column of monsters; each shows the concept, then before/after strips that scroll sideways on phones. Single dark look to match the game's dungeon. */
+:root {
+  --bg: #17120f; --panel: #211a16; --ink: #ece2cf; --dim: #a8987f; --rule: #3a2f27; --ember: #e8902f;
+  --display: 'Pixelify Sans', 'Courier New', monospace; --body: 'IBM Plex Sans', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--body); line-height: 1.55; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 44px; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 5vw, 44px); line-height: 1.1; margin: 0; letter-spacing: 0.02em; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--ember); }
+h2 { font-family: var(--display); font-weight: 700; font-size: 26px; margin: 0; letter-spacing: 0.03em; }
+.lede { max-width: 66ch; color: var(--dim); margin: 10px 0 0; }
+.lede b { color: var(--ink); font-weight: 600; }
+section { display: grid; gap: 14px; border-top: 1px solid var(--rule); padding-top: 26px; }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.tag { font-family: var(--mono); font-size: 12px; color: var(--dim); letter-spacing: 0.06em; text-transform: uppercase; }
+.row { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 760px) { .row { grid-template-columns: minmax(0, 1fr); } .concept { max-width: 420px; } }
+.concept { margin: 0; background: var(--panel); border: 1px solid var(--rule); }
+.concept img { display: block; width: 100%; image-rendering: pixelated; }
+figcaption { font-family: var(--mono); font-size: 11px; color: var(--dim); padding: 6px 8px; }
+.notes { min-width: 0; display: grid; gap: 8px; }
+.notes ul { margin: 0; padding-left: 18px; max-width: 70ch; }
+.notes li { margin: 2px 0; }
+.verdict { font-family: var(--mono); font-size: 12.5px; color: var(--dim); }
+.strip { overflow-x: auto; border: 1px solid var(--rule); background: #000; }
+.strip img { display: block; max-width: none; height: auto; image-rendering: pixelated; }
+.strip.fit img { max-width: 100%; }
+details { border: 1px solid var(--rule); background: var(--panel); }
+summary { cursor: pointer; padding: 8px 12px; font-family: var(--mono); font-size: 12.5px; color: var(--dim); }
+summary:focus-visible { outline: 2px solid var(--ember); }
+details .strip { border: 0; border-top: 1px solid var(--rule); }
+.ask { background: var(--panel); border: 1px solid var(--rule); padding: 16px 18px; max-width: 72ch; }
+.ask h2 { font-size: 20px; margin-bottom: 6px; }
+.ask ol { margin: 0; padding-left: 20px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Three more passes on every monster <em>A4</em></h1>
+    <p class="lede">All 18 monsters built or refined so far, each given at least 3 new passes against your concept. Every pass was judged side by side against the best so far, in both left/right orders, and kept only if it won both. Each strip shows <b>before this round</b> on top and <b>after</b> below. Every other monster renders exactly as before, and no frame clips.</p>
+  </header>
+
+  <h2 style="margin-top:8px;font-size:22px;color:var(--dim)">Skeletons</h2>
+  <section>
+    <div class="head"><h2>Burning Dead</h2><span class="tag">3 passes: 2 kept; a wider helm brim lost (mushroom cap from the side).</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concepts/burning.png" alt="Concept: Burning Dead"><figcaption>your concept</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">Sword now held low and forward, point down, as in the concept; a broader dark blued-steel blade; bones 1.2x thicker.</p></div>
+    </div>
+    <div class="strip"><img src="final-burning.png" alt="Burning Dead: before and after this round"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Crypt Spearman</h2><span class="tag">3 passes, all kept.</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concepts/spearman.png" alt="Concept: Crypt Spearman"><figcaption>your concept</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">Spear angled up across the body with a thicker shaft and a bigger leaf head; the blue rag now hangs at the back too, like your back view.</p></div>
+    </div>
+    <div class="strip"><img src="final-spearman.png" alt="Crypt Spearman: before and after this round"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Bone Axeman</h2><span class="tag">3 passes, all kept. Cheek guards still flare a little from the front.</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concepts/axeman.png" alt="Concept: Bone Axeman"><figcaption>your concept</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">A broad axe head about skull-size; the helm raised so the eyes show; cheek and neck guards angled to catch the light.</p></div>
+    </div>
+    <div class="strip"><img src="final-axeman.png" alt="Bone Axeman: before and after this round"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Grave Crossbowman</h2><span class="tag">3 passes: 1 kept; two quiver tries lost (bolts blend into the bones at this size).</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concepts/gravebow.png" alt="Concept: Grave Crossbowman"><figcaption>your concept</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">A longer, thicker stock and a wide bent steel prod.</p></div>
+    </div>
+    <div class="strip"><img src="final-gravebow.png" alt="Grave Crossbowman: before and after this round"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Tomb Guard</h2><span class="tag">3 passes: 2 kept, 1 tie.</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concepts/tombguard.png" alt="Concept: Tomb Guard"><figcaption>your concept</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">A taller, wider tower shield; a longer mace with a bigger nine-spiked ball.</p></div>
+    </div>
+    <div class="strip"><img src="final-tombguard.png" alt="Tomb Guard: before and after this round"></div>
+  </section>
+  <h2 style="margin-top:8px;font-size:22px;color:var(--dim)">Imps</h2>
+  <section>
+    <div class="head"><h2>Fallen One (Spearling)</h2><span class="tag">3 passes, all kept.</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concepts/fallen.png" alt="Concept: Fallen One (Spearling)"><figcaption>your concept</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">Brick-red skin (the old flesh read near-black), cream horns, mauve ears; a stouter spear with a broad pale head; chunkier limbs and body.</p></div>
+    </div>
+    <div class="strip"><img src="final-fallen.png" alt="Fallen One (Spearling): before and after this round"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Fallen Shaman (Ember Acolyte)</h2><span class="tag">4 passes: 3 kept; a shorter flared robe lost.</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concepts/shaman.png" alt="Concept: Fallen Shaman (Ember Acolyte)"><figcaption>your concept</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">The same red skin; a stouter staff whose hook curls round the orb; ears in the hood purple, as in the concept.</p></div>
+    </div>
+    <div class="strip"><img src="final-shaman.png" alt="Fallen Shaman (Ember Acolyte): before and after this round"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Fallen Knifer</h2><span class="tag">3 passes, all kept.</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concepts/knifer.png" alt="Concept: Fallen Knifer"><figcaption>your concept</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">The new colors; a bigger pale leaf knife with an iron guard; chunkier limbs.</p></div>
+    </div>
+    <div class="strip"><img src="final-knifer.png" alt="Fallen Knifer: before and after this round"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Fallen Slinger</h2><span class="tag">4 passes: 3 kept. Still a thin line in the pure side views.</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concepts/slinger.png" alt="Concept: Fallen Slinger"><figcaption>your concept</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">The new colors; the sling bows into a wide loop with a bigger cup; grey stones; a bigger capelet.</p></div>
+    </div>
+    <div class="strip"><img src="final-slinger.png" alt="Fallen Slinger: before and after this round"></div>
+  </section>
+  <h2 style="margin-top:8px;font-size:22px;color:var(--dim)">Hounds</h2>
+  <section>
+    <div class="head"><h2>Wolf (Grey Pack Hunter)</h2><span class="tag">3 passes, all kept.</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concepts/wolf.png" alt="Concept: Wolf (Grey Pack Hunter)"><figcaption>your concept</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">A lean, long-legged body; slate-blue hide with a pale throat, belly and toes; a bushy pale-tipped tail.</p></div>
+    </div>
+    <div class="strip"><img src="final-wolf.png" alt="Wolf (Grey Pack Hunter): before and after this round"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Bone Hound</h2><span class="tag">5 passes: 3 kept; pale chest (hidden by the scarf) and crescent horns lost.</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concepts/hound.png" alt="Concept: Bone Hound"><figcaption>your concept</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">The lean body; broad bone slabs lying across the back; a bushy tail.</p></div>
+    </div>
+    <div class="strip"><img src="final-hound.png" alt="Bone Hound: before and after this round"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Hell Hound (Ember Hound)</h2><span class="tag">3 passes, all kept.</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concepts/ghoulhound.png" alt="Concept: Hell Hound (Ember Hound)"><figcaption>your concept</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">The lean body with refitted ember slashes; cream toes; a cream skull; a bushy tail.</p></div>
+    </div>
+    <div class="strip"><img src="final-ghoulhound.png" alt="Hell Hound (Ember Hound): before and after this round"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Brigand Mastiff</h2><span class="tag">4 passes: 3 kept; longer legs were a tie.</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concepts/mastiff.png" alt="Concept: Brigand Mastiff"><figcaption>your concept</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">A bigger head with heavier droopy ears; cream toes; a broader, darker studded collar.</p></div>
+    </div>
+    <div class="strip"><img src="final-mastiff.png" alt="Brigand Mastiff: before and after this round"></div>
+  </section>
+  <h2 style="margin-top:8px;font-size:22px;color:var(--dim)">Ogres and the Treant</h2>
+  <section>
+    <div class="head"><h2>Ogre Clubber</h2><span class="tag">3 passes, all kept.</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concepts/oclubber.png" alt="Concept: Ogre Clubber"><figcaption>your concept</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">Top-heavy: slimmer belly, broader chest, bigger shoulders and arms; head hunched forward into a hump; a thicker log club.</p></div>
+    </div>
+    <div class="strip"><img src="final-oclubber.png" alt="Ogre Clubber: before and after this round"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Ogre Rockthrower</h2><span class="tag">3 passes, all kept.</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concepts/orockthrower.png" alt="Concept: Ogre Rockthrower"><figcaption>your concept</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">The same build; a bigger rock lifted overhead and a fuller rock bag.</p></div>
+    </div>
+    <div class="strip"><img src="final-orockthrower.png" alt="Ogre Rockthrower: before and after this round"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Ogre Shieldbearer</h2><span class="tag">3 passes, all kept.</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concepts/oshield.png" alt="Concept: Ogre Shieldbearer"><figcaption>your concept</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">The same build; a grey slate helm instead of near-black; a bigger plank shield with steel bands.</p></div>
+    </div>
+    <div class="strip"><img src="final-oshield.png" alt="Ogre Shieldbearer: before and after this round"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Ogre Enforcer</h2><span class="tag">3 passes, all kept.</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concepts/oenforcer.png" alt="Concept: Ogre Enforcer"><figcaption>your concept</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">The same build; the cleaver shows its broad face; bigger spiked pads; bracers over the thicker forearms.</p></div>
+    </div>
+    <div class="strip"><img src="final-oenforcer.png" alt="Ogre Enforcer: before and after this round"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Treant Elder</h2><span class="tag">3 passes: 2 kept; blunter roots lost (the base read as a bell).</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concepts/treant.png" alt="Concept: Treant Elder"><figcaption>your concept</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">The crown rebuilt as three big lobes; hands held out from the trunk with bigger, longer claws.</p></div>
+    </div>
+    <div class="strip"><img src="final-treant.png" alt="Treant Elder: before and after this round"></div>
+  </section>
+</div>

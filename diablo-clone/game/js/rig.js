@@ -105,6 +105,7 @@ defMat('EYE', [2], 0, { flat: true });
 defMat('MOUTH', [61], 0, { flat: true });
 defMat('GOBLIN', [52, 53, 54, 55, 97], 2, { span: 0.9 });
 defMat('FUR', [2, 65, 66, 67, 68, 69], 4, { span: 0.9 });   // wolf grey
+defMat('SLATE', [2, 28, 29, 30, 31], 2, { shiny: true, span: 1.2, spec: [0.95, 31] });   // art A2: blued steel, between PLATE and IRON (the skeleton field variants' armor)
 
 // ---------------------------------------------------------------- rig builder
 class Rig {

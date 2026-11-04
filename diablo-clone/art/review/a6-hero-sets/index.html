@@ -1,0 +1,85 @@
+<title>Hero Armor Sets</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+/* layout: one column of monsters; each shows the concept, then before/after strips that scroll sideways on phones. Single dark look to match the game's dungeon. */
+:root {
+  --bg: #17120f; --panel: #211a16; --ink: #ece2cf; --dim: #a8987f; --rule: #3a2f27; --ember: #e8902f;
+  --display: 'Pixelify Sans', 'Courier New', monospace; --body: 'IBM Plex Sans', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--body); line-height: 1.55; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 44px; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 5vw, 44px); line-height: 1.1; margin: 0; letter-spacing: 0.02em; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--ember); }
+h2 { font-family: var(--display); font-weight: 700; font-size: 26px; margin: 0; letter-spacing: 0.03em; }
+.lede { max-width: 66ch; color: var(--dim); margin: 10px 0 0; }
+.lede b { color: var(--ink); font-weight: 600; }
+section { display: grid; gap: 14px; border-top: 1px solid var(--rule); padding-top: 26px; }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.tag { font-family: var(--mono); font-size: 12px; color: var(--dim); letter-spacing: 0.06em; text-transform: uppercase; }
+.row { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 760px) { .row { grid-template-columns: minmax(0, 1fr); } .concept { max-width: 420px; } }
+.concept { margin: 0; background: var(--panel); border: 1px solid var(--rule); }
+.concept img { display: block; width: 100%; image-rendering: pixelated; }
+figcaption { font-family: var(--mono); font-size: 11px; color: var(--dim); padding: 6px 8px; }
+.notes { min-width: 0; display: grid; gap: 8px; }
+.notes ul { margin: 0; padding-left: 18px; max-width: 70ch; }
+.notes li { margin: 2px 0; }
+.verdict { font-family: var(--mono); font-size: 12.5px; color: var(--dim); }
+.strip { overflow-x: auto; border: 1px solid var(--rule); background: #000; }
+.strip img { display: block; max-width: none; height: auto; image-rendering: pixelated; }
+.strip.fit img { max-width: 100%; }
+details { border: 1px solid var(--rule); background: var(--panel); }
+summary { cursor: pointer; padding: 8px 12px; font-family: var(--mono); font-size: 12.5px; color: var(--dim); }
+summary:focus-visible { outline: 2px solid var(--ember); }
+details .strip { border: 0; border-top: 1px solid var(--rule); }
+.ask { background: var(--panel); border: 1px solid var(--rule); padding: 16px 18px; max-width: 72ch; }
+.ask h2 { font-size: 20px; margin-bottom: 6px; }
+.ask ol { margin: 0; padding-left: 20px; }
+.concepts { display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 12px; } .concepts img { width:100%; display:block; border:1px solid var(--rule); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Hero armor sets <em>A6</em></h1>
+    <p class="lede">Your six hero concept sheets built into the game: 11 new warrior sets, 4 new ranger sets with the 5 jerkins refined, 4 new wizard sets with the 3 robes refined. Every piece was judged pass by pass against your concept in both left/right orders. The new sets are <b>looks only</b> for now: they need item entries before they can drop. Every other look and every monster renders exactly as before, and no frame clips.</p>
+  </header>
+
+  <section>
+    <div class="head"><h2>Warrior: seven armor sets</h2><span class="tag">new looks · 2x detail, enlarged</span></div>
+    <p style="margin:0;max-width:72ch">Militia (plaid tunic, baldric), Iron Guard (plate, blue skirt), Warbringer (blackened plate, gold-rimmed pauldrons, red skirt), Vanguard (teal tabard stripe), Crown Guard (gold-trimmed plate, red-and-cream tabard), Border Warden (leather lamellar over green), Steel Knight (full plate, purple sash). Each worn with its helm.</p>
+    <div class="concepts"><figure class="concept" style="max-width:none"><img src="concepts/warrior-sets.png" alt="Concept: warrior-sets.png"><figcaption>your concept</figcaption></figure></div>
+    <p class="verdict" style="margin:0">The seven sets: front-right, front and back</p><div class="strip"><img src="warrior/sets.png" alt="The seven sets: front-right, front and back"></div><p class="verdict" style="margin:0">At phone size</p><div class="strip"><img src="warrior/sets-1x.png" alt="At phone size"></div><p class="verdict" style="margin:0">Walk, attack and death</p><div class="strip"><img src="warrior/walk-attack-death.png" alt="Walk, attack and death"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Warrior: four upgrade sets</h2><span class="tag">new looks, new weapons, helms and a shield</span></div>
+    <p style="margin:0;max-width:72ch">Roadwarden (new open kettle helm with a nasal bar, harness and chest plate, arming sword, round shield), Copper Raider (copper armor, dark barbute, crescent axe), Oathkeeper (bright plate in blue and cream, flanged mace, striped heater), Ember Forged (blackened plate with gold bands, gold-banded bascinet, two-handed forge hammer).</p>
+    <div class="concepts"><figure class="concept" style="max-width:none"><img src="concepts/warrior-upgrades.png" alt="Concept: warrior-upgrades.png"><figcaption>your concept</figcaption></figure></div>
+    <p class="verdict" style="margin:0">The four sets: front-right, front and back</p><div class="strip"><img src="warrior-upgrades/sets.png" alt="The four sets: front-right, front and back"></div><p class="verdict" style="margin:0">At phone size</p><div class="strip"><img src="warrior-upgrades/sets-1x.png" alt="At phone size"></div><p class="verdict" style="margin:0">Walk, attack and death</p><div class="strip"><img src="warrior-upgrades/walk-attack-death.png" alt="Walk, attack and death"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Ranger: the five jerkins</h2><span class="tag">refined · before and after</span></div>
+    <p style="margin:0;max-width:72ch">Leather (tan vest over green), Studded (silver studs, shoulder pad), Hide coat (slate with a fur collar, strap, coat tails), Scale (green with gold bands), Drake hide (maroon with a red mantle and a green sash). The cloak is gone so the quiver shows on the back, as in your back views.</p>
+    <div class="concepts"><figure class="concept" style="max-width:none"><img src="concepts/ranger-chests.png" alt="Concept: ranger-chests.png"><figcaption>your concept</figcaption></figure></div>
+    <p class="verdict" style="margin:0">Before (front-right and back, no helm)</p><div class="strip"><img src="ranger/before.png" alt="Before (front-right and back, no helm)"></div><p class="verdict" style="margin:0">After</p><div class="strip"><img src="ranger/after.png" alt="After"></div><p class="verdict" style="margin:0">At game size, before and after</p><div class="strip"><img src="ranger/game-scale-before-after.png" alt="At game size, before and after"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Ranger: four upgrade sets</h2><span class="tag">new looks and bows</span></div>
+    <p style="margin:0;max-width:72ch">Bramble Scout (hooded green capelet, ash shortbow), Ashwood Hunter (studded vest, fur collar, ironwood longbow), Night Tracker (slate coat and cowl, a working steel crossbow), Thorn Sentinel (leaf armor, horn recurve).</p>
+    <div class="concepts"><figure class="concept" style="max-width:none"><img src="concepts/ranger-upgrades.png" alt="Concept: ranger-upgrades.png"><figcaption>your concept</figcaption></figure></div>
+    <p class="verdict" style="margin:0">The four sets in several facings</p><div class="strip"><img src="ranger-upgrades/after.png" alt="The four sets in several facings"></div><p class="verdict" style="margin:0">At game size</p><div class="strip"><img src="ranger-upgrades/after-game-scale.png" alt="At game size"></div><p class="verdict" style="margin:0">The crossbow: hold, shoot, volley and the sky shot</p><div class="strip"><img src="ranger-upgrades/crossbow-clips.png" alt="The crossbow: hold, shoot, volley and the sky shot"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Wizard: the three robes</h2><span class="tag">refined · before and after</span></div>
+    <p style="margin:0;max-width:72ch">Starter (the robe back now covers the legs), Magus (cream front panel, teal mantle and cuffs, gold medallion), Archmage (gold stripes, navy mantle edged in gold, gold cuffs) and the runed staff as a pale-blue crystal in a gold claw.</p>
+    <div class="concepts"><figure class="concept" style="max-width:none"><img src="concepts/wizard-robes.png" alt="Concept: wizard-robes.png"><figcaption>your concept</figcaption></figure></div>
+    <p class="verdict" style="margin:0">Before</p><div class="strip"><img src="mage/before.png" alt="Before"></div><p class="verdict" style="margin:0">After</p><div class="strip"><img src="mage/after.png" alt="After"></div><p class="verdict" style="margin:0">At game size, before and after</p><div class="strip"><img src="mage/game-before-after.png" alt="At game size, before and after"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Wizard: four upgrade sets</h2><span class="tag">new robes, hats and staves</span></div>
+    <p style="margin:0;max-width:72ch">Wayfarer (green, cream hood-collar, amber staff), Frost Scholar (pale blue with a white panel and navy mantle, ice-crystal staff), Duskweaver (purple and slate, cream collar, crescent moonstone rod), Sunwarden (orange over cream, straw-gold hat, sunstone scepter).</p>
+    <div class="concepts"><figure class="concept" style="max-width:none"><img src="concepts/wizard-upgrades.png" alt="Concept: wizard-upgrades.png"><figcaption>your concept</figcaption></figure></div>
+    <p class="verdict" style="margin:0">The four sets: front-right, front and back</p><div class="strip"><img src="wizard-upgrades/after.png" alt="The four sets: front-right, front and back"></div><p class="verdict" style="margin:0">At game size</p><div class="strip"><img src="wizard-upgrades/game-scale.png" alt="At game size"></div>
+  </section>
+</div>

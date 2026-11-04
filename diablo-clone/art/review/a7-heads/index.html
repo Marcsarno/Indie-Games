@@ -1,0 +1,82 @@
+<title>Smaller Hero Heads</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+/* layout: one column of monsters; each shows the concept, then before/after strips that scroll sideways on phones. Single dark look to match the game's dungeon. */
+:root {
+  --bg: #17120f; --panel: #211a16; --ink: #ece2cf; --dim: #a8987f; --rule: #3a2f27; --ember: #e8902f;
+  --display: 'Pixelify Sans', 'Courier New', monospace; --body: 'IBM Plex Sans', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--body); line-height: 1.55; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 44px; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 5vw, 44px); line-height: 1.1; margin: 0; letter-spacing: 0.02em; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--ember); }
+h2 { font-family: var(--display); font-weight: 700; font-size: 26px; margin: 0; letter-spacing: 0.03em; }
+.lede { max-width: 66ch; color: var(--dim); margin: 10px 0 0; }
+.lede b { color: var(--ink); font-weight: 600; }
+section { display: grid; gap: 14px; border-top: 1px solid var(--rule); padding-top: 26px; }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.tag { font-family: var(--mono); font-size: 12px; color: var(--dim); letter-spacing: 0.06em; text-transform: uppercase; }
+.row { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 760px) { .row { grid-template-columns: minmax(0, 1fr); } .concept { max-width: 420px; } }
+.concept { margin: 0; background: var(--panel); border: 1px solid var(--rule); }
+.concept img { display: block; width: 100%; image-rendering: pixelated; }
+figcaption { font-family: var(--mono); font-size: 11px; color: var(--dim); padding: 6px 8px; }
+.notes { min-width: 0; display: grid; gap: 8px; }
+.notes ul { margin: 0; padding-left: 18px; max-width: 70ch; }
+.notes li { margin: 2px 0; }
+.verdict { font-family: var(--mono); font-size: 12.5px; color: var(--dim); }
+.strip { overflow-x: auto; border: 1px solid var(--rule); background: #000; }
+.strip img { display: block; max-width: none; height: auto; image-rendering: pixelated; }
+.strip.fit img { max-width: 100%; }
+details { border: 1px solid var(--rule); background: var(--panel); }
+summary { cursor: pointer; padding: 8px 12px; font-family: var(--mono); font-size: 12.5px; color: var(--dim); }
+summary:focus-visible { outline: 2px solid var(--ember); }
+details .strip { border: 0; border-top: 1px solid var(--rule); }
+.ask { background: var(--panel); border: 1px solid var(--rule); padding: 16px 18px; max-width: 72ch; }
+.ask h2 { font-size: 20px; margin-bottom: 6px; }
+.ask ol { margin: 0; padding-left: 20px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Smaller hero heads <em>A7</em></h1>
+    <p class="lede">The hero's head was drawn 1.5x its natural size, with every helm, hat, hood and hairdo on it. It's now 1.2x, and everything on the head shrinks with it. The wizard hats and the hoods were then trimmed further to fit the smaller head. All three classes, the townsfolk, the Brigand and the Bandit Chief share this body. Every other monster is unchanged.</p>
+  </header>
+
+  <section>
+    <div class="head"><h2>Choosing the size</h2><span class="tag">phone size, enlarged</span></div>
+    <p class="verdict" style="margin:0;max-width:72ch">The same outfits with the head at 1.5x (before), 1.3x, 1.2x and 1.1x. At 1.3x it still reads as a bobblehead; at 1.1x the faces lose their eyes. 1.2x is the pick.</p>
+    <div class="strip"><img src="head-sizes-1x.png" alt="Head sizes compared"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Outfits from this session</h2><span class="tag">2x detail: front-right, front, back</span></div><p class="verdict" style="margin:0;max-width:72ch">The new armor sets now show: the chest, pauldrons and tabards are no longer hidden under the head.</p>
+    <p class="verdict" style="margin:0">Before:</p><div class="strip"><img src="outfits-before.png" alt="Outfits from this session before"></div>
+    <p class="verdict" style="margin:0">After:</p><div class="strip"><img src="outfits-after.png" alt="Outfits from this session after"></div>
+  </section>
+  <section>
+    <div class="head"><h2>At phone size</h2><span class="tag">facings, walk and attacks</span></div>
+    <p class="verdict" style="margin:0">Before:</p><div class="strip"><img src="game-before.png" alt="At phone size before"></div>
+    <p class="verdict" style="margin:0">After:</p><div class="strip"><img src="game-after.png" alt="At phone size after"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Warrior helms</h2><span class="tag">2x detail, front-right and back</span></div>
+    <p class="verdict" style="margin:0">Before:</p><div class="strip"><img src="before/warrior-helms.png" alt="Warrior helms before"></div>
+    <p class="verdict" style="margin:0">After:</p><div class="strip"><img src="after/warrior-helms.png" alt="Warrior helms after"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Mage hats and hoods</h2><span class="tag">2x detail, front-right and back</span></div><p class="verdict" style="margin:0;max-width:72ch">The hats got a narrower brim and a shorter crown, and the hoods now hug the head.</p>
+    <p class="verdict" style="margin:0">Before:</p><div class="strip"><img src="before/mage-helms.png" alt="Mage hats and hoods before"></div>
+    <p class="verdict" style="margin:0">After:</p><div class="strip"><img src="after/mage-helms.png" alt="Mage hats and hoods after"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Ranger hoods</h2><span class="tag">2x detail, front-right and back</span></div>
+    <p class="verdict" style="margin:0">Before:</p><div class="strip"><img src="before/ranger-helms.png" alt="Ranger hoods before"></div>
+    <p class="verdict" style="margin:0">After:</p><div class="strip"><img src="after/ranger-helms.png" alt="Ranger hoods after"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Brigand and Bandit Chief</h2><span class="tag">monsters drawn with the hero body</span></div>
+    <div class="strip"><img src="bandits.png" alt="Brigand and Bandit Chief before and after"></div>
+  </section>
+</div>
