@@ -34,3 +34,14 @@ The game's sound effects (game/sfx/) come from these free packs on OpenGameArt; 
   block.mp3 (impact.4.ogg)
 - **Fleshy Fight Sounds** by Will Leamon, OGA-BY 3.0: https://opengameart.org/content/fleshy-fight-sounds
   hit.mp3 (sword-1a.wav), hit_2.mp3 (sword-1b.wav), crit.mp3 (hammer-1a.wav), kill.mp3 (punch_alt-2a.wav), kill_2.mp3 (punch_alt-2b.wav), thunk.mp3 (piercing-1b.wav), thunk_2.mp3 (piercing-1a.wav)
+
+## Round 2 (round 58)
+
+- missile.mp3 (air_move.wav): **Air Woosh Move** by OGA, CC0: https://opengameart.org/content/air-woosh-move
+- zap.mp3 (BlastImpact_01_s01.wav): **150 Combat Sound Effects** by various, CC0: https://opengameart.org/content/150-combat-sound-effects
+- frost.mp3 (Ice Spell Impact 1_s06.wav): **150 Combat Sound Effects** by various, CC0: https://opengameart.org/content/150-combat-sound-effects
+- hurt.mp3 (3grunt1.wav): **Male Grunt/Yelling sounds** by HaelDB, CC0: https://opengameart.org/content/male-gruntyelling-sounds
+- death.mp3 (05.wav): **DEATH SOUNDS (Male)** by VoiceBosch, CC-BY-SA 4.0: https://opengameart.org/content/death-sounds-male-audio-pack
+- block.mp3 (sword_clash.5.ogg): **20 Sword Sound Effects** by StarNinjas, CC0: https://opengameart.org/content/20-sword-sound-effects-attacks-and-clashes
+- clank.mp3 (sword_clash.3.ogg): **20 Sword Sound Effects** by StarNinjas, CC0: https://opengameart.org/content/20-sword-sound-effects-attacks-and-clashes
+- barrel.mp3 (qubodupImpactWood.ogg): **Impact** by qubodup, CC0: https://opengameart.org/content/impact

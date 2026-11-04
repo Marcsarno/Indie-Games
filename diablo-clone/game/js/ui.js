@@ -456,7 +456,7 @@ function drawTitle() {
   textC('LEFT THUMB MOVES. RIGHT BUTTONS FIGHT.', W / 2, H - 32, 25);
   textC('ALL ART IS DRAWN IN CODE', W / 2, H - 24, 24);
   textC('SOUNDS: KENNEY, ARTISTICDUDE, RUBBERDUCK, QUBODUP,', W / 2, H - 15, 24);   // round 44: the sound packs' credits (sfx/CREDITS.md)
-  textC('LITTLE ROBOT SOUND FACTORY, WILL LEAMON, BART + MORE', W / 2, H - 8, 24);
+  textC('LITTLE ROBOT SOUND FACTORY, WILL LEAMON, BART, VOICEBOSCH + MORE', W / 2, H - 8, 24);
 }
 // round 42b: a small speech bubble (over the attack button when a tap would talk)
 function talkBubble(x, y) {

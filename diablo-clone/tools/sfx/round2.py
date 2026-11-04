@@ -3,7 +3,7 @@
 # from new packs (CC0 unless noted). Builds the clips and the listening page.
 #   python3 tools/sfx/round2.py <downloads dir> <out dir>
 import os, sys, subprocess, re, json, html
-D, OUT = sys.argv[1], sys.argv[2]
+D = OUT = None   # (set when run as a script; apply_round2.py imports the lists)
 GAME = os.path.join(os.path.dirname(__file__), '..', '..', 'game', 'sfx')
 c, m, g, d = 'oga2/combat150/04_magic_spells/', 'oga2/magic-spell-sfx/', 'oga2/male-grunts/yelling sounds/', 'oga2/death-male/'
 w, x, r = 'oga2/combat150/01_combat_melee/', 'oga2/combat150/03_explosions_destruction/', 'oga2/combat150/02_combat_ranged/'
@@ -63,41 +63,43 @@ def conv(src, dst, maxlen):
     gain = -1.0 - peak(tmp)
     subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-i', tmp, '-af', f'volume={gain:.2f}dB,afade=t=out:st={max(0, maxlen - 0.15)}:d=0.15', '-codec:a', 'libmp3lame', '-b:a', '96k', dst], check=True)
     os.remove(tmp)
-os.makedirs(os.path.join(OUT, 'a'), exist_ok=True)
-manifest = []
-for gname, evs in G:
-    out = []
-    for key, title, desc, cands in evs:
-        now = os.path.join(GAME, key + '.mp3')
-        if not os.path.exists(now): now = os.path.join(sys.argv[3], key + '-now.mp3') if len(sys.argv) > 3 else None
-        nowf = f'{key}-now.mp3'
-        if now and os.path.exists(now): subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-i', now, '-ac', '1', '-codec:a', 'libmp3lame', '-b:a', '96k', os.path.join(OUT, 'a', nowf)], check=True)
-        ev = {'key': key, 'title': title, 'desc': desc, 'now': nowf, 'cands': []}
-        for n, p in enumerate(cands):
-            pack = next(k for k in sorted(PACKS, key=len, reverse=True) if p.startswith(k)); P = PACKS[pack]
-            fn = f'{key}-{"abcdefg"[n]}.mp3'; conv(os.path.join(D, p), os.path.join(OUT, 'a', fn), 3.5 if key in LONG else 2.2)
-            ev['cands'].append({'file': fn, 'src': p, 'pack': P[0], 'author': P[1], 'license': P[2], 'url': P[3]})
-        out.append(ev)
-    manifest.append((gname, out))
-json.dump(manifest, open(os.path.join(OUT, 'manifest.json'), 'w'), indent=1)
-# the page: the same frame as round 1's (tools/pages/soundpicks.html); picks saved in its own db at picks/main
-old = open(os.path.join(os.path.dirname(__file__), '..', 'pages', 'soundpicks.html')).read()
-head = old[:old.index('<main>')].replace('<title>Sound Picks</title>', '<title>Sound Picks II</title>').replace('repeat(4, minmax(0, 1fr))', 'repeat(3, minmax(0, 1fr))')
-script = old[old.index('<script>'):].replace("'sound-picks'", "'sound-picks-2'")
-E = html.escape
-body = ['<main>', '  <header>', '    <h1>Sound Picks II</h1>',
-  '    <p class="lede">Dungeon of Bones, round 2. For each sound: NOW is what the game plays today, and the letters are new recordings from free packs I hadn\'t used yet. Tap to listen, then pick. Pick NOW to keep a sound as it is. Your picks save as you go, and I read them from here.</p>',
-  '    <p class="lede">The magic missile, the hurt and the death sounds come first. Headphones or a phone held close help: the new ones are level-matched, NOW is at its in-game volume.</p>',
-  '  </header>', '  <p class="status" id="status">Loading your picks&hellip;</p>']
-for gname, evs in manifest:
-    body += ['  <section>', f'    <h2 class="g">{E(gname)}</h2>']
-    for ev in evs:
-        k = ev['key']; opts = [('NOW', 'now', ev['now'])] + [("ABCDEFG"[n], "abcdefg"[n], cd['file']) for n, cd in enumerate(ev['cands'])]
-        body += [f'    <div class="ev" data-key="{k}">', f'      <h3>{E(ev["title"])}</h3>', f'      <p class="d">{E(ev["desc"])}</p>', '      <div class="opts">']
-        for lab, val, f in opts:
-            body.append(f'        <div class="opt"><button class="play" data-src="a/{f}" aria-label="Play {lab} for {E(ev["title"])}">&#9654; {lab}</button><label><input type="radio" name="{k}" value="{val}"> pick</label></div>')
-        body += ['      </div>', '      <p class="credit">' + '; '.join(f'{"ABCDEFG"[n]}: {E(cd["pack"])}{" by " + E(cd["author"]) if cd["author"] else ""} ({cd["license"]})' for n, cd in enumerate(ev['cands'])) + '</p>', '    </div>']
-    body.append('  </section>')
-body += ['  <section>', '    <h2>Your picks so far</h2>', '    <div id="summary">None yet.</div>', '  </section>', '</main>']
-open(os.path.join(OUT, 'index.html'), 'w').write(head + '\n'.join(body) + '\n' + script)
-print(sum(len(e['cands']) for _, evs in manifest for e in evs), 'candidates,', sum(len(evs) for _, evs in manifest), 'sounds')
+if __name__ == '__main__':
+    D, OUT = sys.argv[1], sys.argv[2]
+    os.makedirs(os.path.join(OUT, 'a'), exist_ok=True)
+    manifest = []
+    for gname, evs in G:
+        out = []
+        for key, title, desc, cands in evs:
+            now = os.path.join(GAME, key + '.mp3')
+            if not os.path.exists(now): now = os.path.join(sys.argv[3], key + '-now.mp3') if len(sys.argv) > 3 else None
+            nowf = f'{key}-now.mp3'
+            if now and os.path.exists(now): subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-i', now, '-ac', '1', '-codec:a', 'libmp3lame', '-b:a', '96k', os.path.join(OUT, 'a', nowf)], check=True)
+            ev = {'key': key, 'title': title, 'desc': desc, 'now': nowf, 'cands': []}
+            for n, p in enumerate(cands):
+                pack = next(k for k in sorted(PACKS, key=len, reverse=True) if p.startswith(k)); P = PACKS[pack]
+                fn = f'{key}-{"abcdefg"[n]}.mp3'; conv(os.path.join(D, p), os.path.join(OUT, 'a', fn), 3.5 if key in LONG else 2.2)
+                ev['cands'].append({'file': fn, 'src': p, 'pack': P[0], 'author': P[1], 'license': P[2], 'url': P[3]})
+            out.append(ev)
+        manifest.append((gname, out))
+    json.dump(manifest, open(os.path.join(OUT, 'manifest.json'), 'w'), indent=1)
+    # the page: the same frame as round 1's (tools/pages/soundpicks.html); picks saved in its own db at picks/main
+    old = open(os.path.join(os.path.dirname(__file__), '..', 'pages', 'soundpicks.html')).read()
+    head = old[:old.index('<main>')].replace('<title>Sound Picks</title>', '<title>Sound Picks II</title>').replace('repeat(4, minmax(0, 1fr))', 'repeat(3, minmax(0, 1fr))')
+    script = old[old.index('<script>'):].replace("'sound-picks'", "'sound-picks-2'")
+    E = html.escape
+    body = ['<main>', '  <header>', '    <h1>Sound Picks II</h1>',
+      '    <p class="lede">Dungeon of Bones, round 2. For each sound: NOW is what the game plays today, and the letters are new recordings from free packs I hadn\'t used yet. Tap to listen, then pick. Pick NOW to keep a sound as it is. Your picks save as you go, and I read them from here.</p>',
+      '    <p class="lede">The magic missile, the hurt and the death sounds come first. Headphones or a phone held close help: the new ones are level-matched, NOW is at its in-game volume.</p>',
+      '  </header>', '  <p class="status" id="status">Loading your picks&hellip;</p>']
+    for gname, evs in manifest:
+        body += ['  <section>', f'    <h2 class="g">{E(gname)}</h2>']
+        for ev in evs:
+            k = ev['key']; opts = [('NOW', 'now', ev['now'])] + [("ABCDEFG"[n], "abcdefg"[n], cd['file']) for n, cd in enumerate(ev['cands'])]
+            body += [f'    <div class="ev" data-key="{k}">', f'      <h3>{E(ev["title"])}</h3>', f'      <p class="d">{E(ev["desc"])}</p>', '      <div class="opts">']
+            for lab, val, f in opts:
+                body.append(f'        <div class="opt"><button class="play" data-src="a/{f}" aria-label="Play {lab} for {E(ev["title"])}">&#9654; {lab}</button><label><input type="radio" name="{k}" value="{val}"> pick</label></div>')
+            body += ['      </div>', '      <p class="credit">' + '; '.join(f'{"ABCDEFG"[n]}: {E(cd["pack"])}{" by " + E(cd["author"]) if cd["author"] else ""} ({cd["license"]})' for n, cd in enumerate(ev['cands'])) + '</p>', '    </div>']
+        body.append('  </section>')
+    body += ['  <section>', '    <h2>Your picks so far</h2>', '    <div id="summary">None yet.</div>', '  </section>', '</main>']
+    open(os.path.join(OUT, 'index.html'), 'w').write(head + '\n'.join(body) + '\n' + script)
+    print(sum(len(e['cands']) for _, evs in manifest for e in evs), 'candidates,', sum(len(evs) for _, evs in manifest), 'sounds')
