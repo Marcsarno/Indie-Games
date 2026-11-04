@@ -404,10 +404,10 @@ function weaponSwing(eq, combo = 0) {
   if (isBow(eq.weapon)) return RANGER_BOW;
   const S = FEEL_OLD ? SWINGS : HERO_SWINGS;
   if (combo === 3) return FEEL_OLD ? S.heavy : S.gslam;   // the ground slam (round 40a: a hop and a crash; ?feel=old keeps the old chop)
-  return (eq.weapon === 'sword' || GEAR_SWING[eq.weapon] === 'light' ? [S.light, S.light2, S.thrust] : [S.heavy, S.heavy2, S.slam])[combo] || S.light;
+  return (eq.weapon === 'sword' || eq.weapon === 'bsword' || GEAR_SWING[eq.weapon] === 'light' ? [S.light, S.light2, S.thrust] : [S.heavy, S.heavy2, S.slam])[combo] || S.light;
 }
 // how far the weapon's tip is from the swing pivot (smears and reach)
-const WEAPON_LEN = { sword: 21, axe: 16, mace: 16, flail: 17, greatsword: 27 };
+const WEAPON_LEN = { sword: 21, axe: 16, mace: 16, flail: 17, greatsword: 27, bsword: 24, mstar: 17, baxe: 19 };
 
 function heroRig(eq, st) {
   const volley = st.clip === 'volley'; if (volley) st = Object.assign({}, st, { clip: 'shoot' });   // round 43: Multishot draws like a shot, the bow canted over and three arrows on the string
@@ -418,7 +418,7 @@ function heroRig(eq, st) {
   // mage robes: one design in three colors (look 'robe_blue' / 'robe_purple' / 'robe_red')
   const robe = eq.chest.startsWith('robe'), robeM = robe ? (TEAM[eq.chest.slice(5)] || M.CLOTH_BLUE) : null;
   // the ranger's jerkins (round 33): leather over a green shirt; studded, or dark hide
-  const jerk = eq.chest.startsWith('jerkin'), jerkM = eq.chest === 'jerkin_hide' ? M.HIDE : M.LEATHER, bow = isBow(eq.weapon);
+  const jerk = eq.chest.startsWith('jerkin'), jerkM = eq.chest === 'jerkin_hide' ? M.HIDE : eq.chest === 'jerkin_drake' ? M.BLOODY : M.LEATHER, bow = isBow(eq.weapon);   // round 43: drake hide, dark scaled
   const legM = plate ? PL : M.LEATHER, torsoM = plate ? PL : chain ? M.CHAIN : robe ? robeM : jerk ? jerkM : team;
   const { fwd, sideR, up } = J;
   // a lean body underneath; armor adds its own bulk on top (chain a little, plate the most)
@@ -638,7 +638,7 @@ function heroRig(eq, st) {
   const helmF = frameAlong(fwd, up), hairM = HAIRM[eq.hair] || M.HAIR_O, bald = eq.hair === 'bald';
   const xHelm = GEAR_EXTRA.helm[eq.helm];
   if (xHelm) xHelm(r, { hd, fwd, up, sideR, helmF, eq, st, J });
-  else if (eq.helm === 'none' || eq.helm === 'cap' || eq.helm === 'hat' || eq.helm === 'hood' || eq.helm.startsWith('rhood')) {
+  else if (eq.helm === 'none' || eq.helm === 'cap' || eq.helm === 'spangen' || eq.helm === 'hat' || eq.helm.startsWith('hood') || eq.helm.startsWith('rhood')) {
     // chibi face (round 13 pass 2): light, nearly flat skin; small dark eyes under short brows, a
     // tiny mouth; the hairline is painted on the head and the hair mass sits on top
     r.ell(hd, [4.3, 4.3, 4.5], M.FACE, helmF, { mf: p => {
@@ -658,17 +658,23 @@ function heroRig(eq, st) {
         r.cone(mid, tip, 2.2, 0.5, hm);
       });
     }
-    if (eq.helm === 'hood') {   // a deep hood: a shell over the back and top of the head, face left open
-      const hc = V.add(V.mad(hd, up, 0.7), V.mul(fwd, -1.3));
-      r.ell(hc, [4.6, 5.0, 5.0], M.CLOTH_BLUE, helmF);
-      r.cone(V.add(V.mad(hd, up, 2.6), V.mul(fwd, -4.0)), V.add(V.mad(hd, up, 0.2), V.mul(fwd, -7.2)), 2.0, 0.5, M.CLOTH_BLUE);   // the point falls behind
+    if (eq.helm === 'spangen') {   // round 43: the spangenhelm: a riveted cone with gold ribs and a nasal bar over the face
+      const hc = V.mad(hd, up, 2.4);
+      r.ell(hc, [5.0, 4.9, 3.8], M.STEEL, helmF, { mf: p => { const q = V.sub(p, hc); return Math.abs(V.dot(q, sideR)) < 0.5 || Math.abs(V.dot(q, fwd)) < 0.5 || V.dot(q, up) < -2.4 ? M.GOLD : 0; } });
+      r.cone(V.mad(hc, up, 2.6), V.mad(hc, up, 6.4), 2.6, 0.3, M.STEEL);
+      r.box(V.add(V.mad(hd, up, 0.2), V.mul(fwd, 4.5)), [0.5, 0.6, 2.0], M.STEEL, helmF);
+    }
+    if (eq.helm === 'hood' || eq.helm === 'hood_sage') {   // a deep hood: a shell over the back and top of the head, face left open (the sage's: sage green with a gold hem)
+      const hc = V.add(V.mad(hd, up, 0.7), V.mul(fwd, -1.3)), sage = eq.helm === 'hood_sage';
+      r.ell(hc, [4.6, 5.0, 5.0], sage ? M.CLOTH_GREEN : M.CLOTH_BLUE, helmF, sage ? { mf: p => V.dot(V.sub(p, hc), fwd) > 3.2 ? M.GOLD : 0 } : undefined);
+      r.cone(V.add(V.mad(hd, up, 2.6), V.mul(fwd, -4.0)), V.add(V.mad(hd, up, 0.2), V.mul(fwd, -7.2)), 2.0, 0.5, sage ? M.CLOTH_GREEN : M.CLOTH_BLUE);   // the point falls behind
     }
     if (eq.helm.startsWith('rhood')) {   // the ranger's hood: a shell over the head with the face open, a pointed back and a cowl on the shoulders
-      const hm = eq.helm === 'rhood_dark' ? M.CLOTH_SHADOW : eq.helm === 'rhood_night' ? M.CLOTH_NAVY : M.CLOTH_GREEN, hc = V.add(V.mad(hd, up, 0.8), V.mul(fwd, -1.0));
+      const hm = eq.helm === 'rhood_dark' ? M.CLOTH_SHADOW : eq.helm === 'rhood_night' ? M.CLOTH_NAVY : M.CLOTH_GREEN, fur = eq.helm === 'rhood_hunter', hc = V.add(V.mad(hd, up, 0.8), V.mul(fwd, -1.0));
       r.group(() => {
         r.ell(hc, [4.7, 5.1, 5.1], hm, helmF);   // set back, so the face stands out of its opening
         r.cone(V.add(V.mad(hd, up, 3.0), V.mul(fwd, -3.4)), V.add(V.mad(hd, up, 1.0), V.mul(fwd, -6.6)), 2.2, 0.5, hm);
-        r.ell(V.add(V.mad(hd, up, -4.2), V.mul(fwd, -1.2)), [3.3, 4.5, 1.3], hm, helmF);   // the cowl, kept small so the jerkin shows
+        r.ell(V.add(V.mad(hd, up, -4.2), V.mul(fwd, -1.2)), [3.3, 4.5, 1.3], fur ? M.FUR : hm, helmF);   // the cowl, kept small so the jerkin shows (the hunter's: a fur mantle)
       });
     }
     if (eq.beard) r.ell(V.add(V.mad(hd, up, -3.2), V.mul(fwd, 2.4)), [2.6, 3.3, 2.3], bald ? M.HAIR : hairM, helmF, { noShadow: true });   // a big round beard
@@ -790,9 +796,10 @@ function heroRig(eq, st) {
   }
   if (staff) {   // a long wooden staff with gold prongs cradling a glowing orb (color by staff)
     r.cone(V.mad(g, bd, -9), V.mad(g, bd, 18), 0.9, 1.0, M.WOOD);
-    const orbM = eq.weapon === 'staff_fire' ? M.FIREM : eq.weapon === 'staff_ice' ? M.ICE : M.ARCANE, top = V.mad(g, bd, 21);
+    const orbM = eq.weapon === 'staff_fire' ? M.FIREM : eq.weapon === 'staff_ice' || eq.weapon === 'staff_rune' ? M.ICE : M.ARCANE, top = V.mad(g, bd, 21);
     for (const sd of [-1, 1]) r.cone(V.mad(g, bd, 17.5), V.add(V.mad(g, bd, 21.8), V.mul(wide, sd * 2.6)), 0.7, 0.4, M.GOLD);
     r.sph(top, 2.7, orbM, { noShadow: true });
+    if (eq.weapon === 'staff_rune') { for (const z of [8, 12.5]) r.cyl(V.mad(g, bd, z), V.mad(g, bd, z + 0.9), 1.5, M.GOLD); for (let k = 0; k < 3; k++) { const a = k / 3 * 6.283 + st.f * 0.5; r.sph(V.add(V.mad(top, bd, 1 + Math.sin(a)), V.add(V.mul(wide, Math.cos(a) * 4.6), V.mul(wf[2], Math.sin(a) * 4.6))), 0.9, M.ICE, { noShadow: true }); } }   // round 43: gold bands and motes circling the orb
     if (st.clip === 'death') deathTip(r, B, st.f, -1);
     return r;
   }
@@ -804,6 +811,11 @@ function heroRig(eq, st) {
     r.box(V.mad(g, bd, 1.8), [0.7, 3.4, 0.8], M.GOLD, wf);
     r.box(V.mad(g, bd, 11.4), [9.2, 1.15, 0.4], hasFx(eq, 'ember') ? M.FIREM : M.BLADE, wf);   // Emberbrand glows
     r.cone(V.mad(g, bd, 20.4), V.mad(g, bd, 21.8), 0.9, 0.3, M.BLADE);
+  } else if (eq.weapon === 'bsword') {   // round 43: the bastard sword: a hand-and-a-half grip, a swept gold guard, a longer blade with a fuller
+    r.cone(V.mad(g, bd, -4.4), V.mad(g, bd, -2.6), 0.9, 0.9, M.LEATHER);
+    for (const s of [-1, 1]) r.cone(V.mad(g, bd, 1.6), V.add(V.mad(g, bd, 3), V.mul(wide, s * 4.2)), 0.8, 0.5, M.GOLD);
+    r.box(V.mad(g, bd, 13), [10.8, 1.25, 0.4], M.BLADE, wf, { mf: p => Math.abs(V.dot(V.sub(p, g), wide)) < 0.35 && V.dot(V.sub(p, g), bd) < 20 ? M.STEEL : 0 });
+    r.cone(V.mad(g, bd, 23.6), V.mad(g, bd, 25), 1.0, 0.3, M.BLADE);
   } else if (eq.weapon === 'greatsword') {   // two-handed: long grip, wide guard, long broad blade
     r.box(V.mad(g, bd, 2), [0.8, 4.6, 0.9], M.IRON, wf);
     r.box(V.mad(g, bd, 14.2), [11.6, 1.5, 0.45], hasFx(eq, 'blood') ? M.BLOODY : M.BLADE, wf);   // Blooddrinker is red
@@ -819,6 +831,15 @@ function heroRig(eq, st) {
     r.cone(V.mad(g, bd, 1.2), V.mad(g, bd, 13), 0.9, 0.9, M.WOOD);
     if (eq.weapon === 'axe') {
       r.box(V.add(V.mad(g, bd, 11.5), V.mul(wide, 3.2)), [2.8, 3.0, 0.5], hasFx(eq, 'maul') ? M.GOLD : M.BLADE, wf);
+    } else if (eq.weapon === 'baxe') {   // round 43: the battle axe: a longer haft, two crescent blades, a spike on top
+      r.cone(V.mad(g, bd, 12), V.mad(g, bd, 15.5), 0.9, 0.9, M.WOOD);
+      for (const s of [-1, 1]) r.group(() => { r.box(V.add(V.mad(g, bd, 13), V.mul(wide, s * 3.4)), [3.6, 2.6, 0.5], M.BLADE, wf); r.cone(V.add(V.mad(g, bd, 13), V.mul(wide, s * 5.6)), V.add(V.mad(g, bd, 17), V.mul(wide, s * 5.2)), 1.1, 0.3, M.BLADE); r.cone(V.add(V.mad(g, bd, 13), V.mul(wide, s * 5.6)), V.add(V.mad(g, bd, 9), V.mul(wide, s * 5.2)), 1.1, 0.3, M.BLADE); });
+      r.cone(V.mad(g, bd, 15.5), V.mad(g, bd, 19), 0.8, 0.2, M.STEEL);
+    } else if (eq.weapon === 'mstar') {   // round 43: the morning star: an iron ball bristling with spikes on a banded haft
+      const hb = V.mad(g, bd, 14.2);
+      r.sph(hb, 3.2, M.IRON);
+      for (const d of [bd, V.mul(bd, -1), wide, V.mul(wide, -1), wf[2], V.mul(wf[2], -1), V.norm(V.add(bd, wide)), V.norm(V.sub(bd, wide))]) r.cone(V.mad(hb, d, 2.6), V.mad(hb, d, 5), 0.8, 0.15, M.STEEL, { noShadow: true });
+      r.cyl(V.mad(g, bd, 9.5), V.mad(g, bd, 10.5), 1.2, M.IRON);
     } else {
       r.sph(V.mad(g, bd, 13.5), 3.0, M.IRON);
       for (const s of [-1, 1]) r.cone(V.mad(g, bd, 13.5), V.add(V.mad(g, bd, 13.5), V.mul(wide, s * 4.2)), 1.2, 0.4, M.IRON);
