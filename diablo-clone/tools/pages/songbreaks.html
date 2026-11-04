@@ -1,0 +1,109 @@
+<title>Song Breaks</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  /* layout: one narrow column, one section per part with its picture first */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul { margin: 0; max-width: 64ch; }
+  ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .frame img.smooth { image-rendering: auto; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .tw { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+  .clip { display: grid; gap: 6px; padding: 12px; background: var(--panel); border: 1px solid var(--rule); }
+  .clip h3 { margin: 0; font: 600 1rem/1.3 var(--display); color: var(--ember); letter-spacing: 0.04em; }
+  .clip p { color: var(--dim); font-size: 0.92rem; }
+  audio { width: 100%; }
+  .tag { font: 600 0.75rem/1 var(--body); padding: 3px 7px; border-radius: 3px; margin-left: 8px; vertical-align: middle; }
+  .strong { background: #5a3a1a; color: #f0d6a8; } .maybe { background: #2b2520; color: var(--dim); }
+  figure img { image-rendering: auto; }
+</style>
+<main>
+  <header>
+    <h1>Song Breaks</h1>
+    <p class="lede">Your 23-minute recording, with the places where one song might end and the next begin. There's no silence between the songs, so I found these by loudness and by how much the sound changes. Each clip is 20 seconds: 10 before the spot and 10 after.</p>
+  </header>
+  <section>
+    <h2>The whole recording</h2>
+    <figure>
+      <div class="frame"><img src="song2-map.png" alt="A strip of the whole 23 minutes: the sound's frequencies on top, the loudness line below, and a line showing how different the sound is just before and just after each moment, with tall peaks near 5:20, 7:00 and 17:05" width="1600" height="358"></div>
+      <figcaption>Top: the sound. Blue: loudness. Orange: how different the sound is just before and just after each moment. The three tall orange peaks are the clear changes.</figcaption>
+    </figure>
+  </section>
+  <section>
+    <h2>Listen to each spot</h2>
+    <p>Tell me the numbers that are real song changes, for example "2, 3, 5, 8, 10". If a song starts somewhere I didn't list, tell me roughly when and I'll find the exact spot.</p>
+    <div class="clip">
+      <h3>1. At 4:33<span class="tag maybe">possible</span></h3>
+      <p>A dip in loudness. The moment is at 0:10 in this clip.</p>
+      <audio controls preload="none" src="clip01.mp3"></audio>
+    </div>
+    <div class="clip">
+      <h3>2. At 5:22<span class="tag strong">clear change</span></h3>
+      <p>The sound changes sharply and gets sparser. The moment is at 0:10 in this clip.</p>
+      <audio controls preload="none" src="clip02.mp3"></audio>
+    </div>
+    <div class="clip">
+      <h3>3. At 6:57<span class="tag strong">clear change</span></h3>
+      <p>The sparse section ends and a full, loud part starts. The moment is at 0:10 in this clip.</p>
+      <audio controls preload="none" src="clip03.mp3"></audio>
+    </div>
+    <div class="clip">
+      <h3>4. At 8:21<span class="tag maybe">possible</span></h3>
+      <p>A deep dip in loudness. The moment is at 0:10 in this clip.</p>
+      <audio controls preload="none" src="clip04.mp3"></audio>
+    </div>
+    <div class="clip">
+      <h3>5. At 11:11<span class="tag maybe">possible</span></h3>
+      <p>The level steps down and stays lower. The moment is at 0:10 in this clip.</p>
+      <audio controls preload="none" src="clip05.mp3"></audio>
+    </div>
+    <div class="clip">
+      <h3>6. At 15:19<span class="tag maybe">possible</span></h3>
+      <p>A dip, then the level shifts. The moment is at 0:10 in this clip.</p>
+      <audio controls preload="none" src="clip06.mp3"></audio>
+    </div>
+    <div class="clip">
+      <h3>7. At 16:26<span class="tag maybe">possible</span></h3>
+      <p>A deep dip. The moment is at 0:10 in this clip.</p>
+      <audio controls preload="none" src="clip07.mp3"></audio>
+    </div>
+    <div class="clip">
+      <h3>8. At 17:05<span class="tag strong">clear change</span></h3>
+      <p>The biggest change in the whole recording. The moment is at 0:10 in this clip.</p>
+      <audio controls preload="none" src="clip08.mp3"></audio>
+    </div>
+    <div class="clip">
+      <h3>9. At 18:05<span class="tag maybe">possible</span></h3>
+      <p>A quieter stretch ends and a loud part starts. The moment is at 0:10 in this clip.</p>
+      <audio controls preload="none" src="clip09.mp3"></audio>
+    </div>
+    <div class="clip">
+      <h3>10. At 19:33<span class="tag maybe">possible</span></h3>
+      <p>A deep dip. The moment is at 0:10 in this clip.</p>
+      <audio controls preload="none" src="clip10.mp3"></audio>
+    </div>
+    <div class="clip">
+      <h3>11. At 21:28<span class="tag maybe">possible</span></h3>
+      <p>A deep dip. The moment is at 0:10 in this clip.</p>
+      <audio controls preload="none" src="clip11.mp3"></audio>
+    </div>
+  </section>
+</main>
