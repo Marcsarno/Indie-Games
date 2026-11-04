@@ -52,7 +52,7 @@ const ITEM_BASES = {
   battle_axe: { slot: 'weapon', look: 'baxe', name: 'BATTLE AXE', dmg: [10, 21], cls: 'warrior', lvl: 5, slow: true },
   spangenhelm: { slot: 'helm', look: 'spangen', name: 'SPANGENHELM', armor: 6, cls: 'warrior', lvl: 3 },
   bascinet: { slot: 'helm', look: 'bascinet', name: 'BASCINET', armor: 8, cls: 'warrior', lvl: 5 },
-  scale_mail: { slot: 'chest', look: 'chain', name: 'SCALE MAIL', armor: 9, cls: 'warrior', lvl: 3 },
+  scale_mail: { slot: 'chest', look: 'scale', name: 'SCALE MAIL', armor: 9, cls: 'warrior', lvl: 3 },
   gothic_plate: { slot: 'chest', look: 'gothic', name: 'GOTHIC PLATE', armor: 18, cls: 'warrior', lvl: 5 },
   targe: { slot: 'shield', look: 'targe', name: 'TARGE', armor: 5, block: 17, cls: 'warrior', lvl: 3 },
   heater_shield: { slot: 'shield', look: 'heater', name: 'HEATER SHIELD', armor: 8, block: 22, cls: 'warrior', lvl: 4 },
@@ -60,11 +60,11 @@ const ITEM_BASES = {
   runed_staff: { slot: 'weapon', look: 'staff_rune', name: 'RUNED STAFF', dmg: [13, 22], cls: 'mage', lvl: 5 },
   silk_robe: { slot: 'chest', look: 'robe_purple', name: 'SILK ROBE', armor: 10, cls: 'mage', lvl: 4 },
   sorcerer_robe: { slot: 'chest', look: 'robe_red', name: "SORCERER'S ROBE", armor: 13, cls: 'mage', lvl: 5 },
-  conjurer_hat: { slot: 'helm', look: 'hat', name: "CONJURER'S HAT", armor: 3, cls: 'mage', lvl: 3 },
+  conjurer_hat: { slot: 'helm', look: 'hat_conj', name: "CONJURER'S HAT", armor: 3, cls: 'mage', lvl: 3 },
   sage_hood: { slot: 'helm', look: 'hood_sage', name: "SAGE'S HOOD", armor: 5, cls: 'mage', lvl: 4 },
   ash_bow: { slot: 'weapon', look: 'bow', name: 'ASH BOW', dmg: [3, 8], cls: 'ranger', lvl: 2 },
   recurve_bow: { slot: 'weapon', look: 'bow_horn', name: 'RECURVE BOW', dmg: [9, 17], cls: 'ranger', lvl: 4 },
-  war_bow: { slot: 'weapon', look: 'bow_long', name: 'WAR BOW', dmg: [11, 20], cls: 'ranger', lvl: 5 },
+  war_bow: { slot: 'weapon', look: 'bow_war', name: 'WAR BOW', dmg: [11, 20], cls: 'ranger', lvl: 5 },
   scale_jerkin: { slot: 'chest', look: 'jerkin_stud', name: 'SCALE JERKIN', armor: 11, cls: 'ranger', lvl: 4 },
   drake_hide: { slot: 'chest', look: 'jerkin_drake', name: 'DRAKE HIDE', armor: 14, cls: 'ranger', lvl: 5 },
   hunter_hood: { slot: 'helm', look: 'rhood_hunter', name: "HUNTER'S HOOD", armor: 4, cls: 'ranger', lvl: 3 },
@@ -250,7 +250,7 @@ function itemIcon(it) {
       r.cone(V.mad(g, bd, -1), V.mad(g, bd, 14), 0.9, 1.0, M.WOOD); r.sph(V.mad(g, bd, 16), 2.8, orb, { noShadow: true });
       for (const s of [-1, 1]) r.cone(V.mad(g, bd, 13), V.add(V.mad(g, bd, 16.6), V.mul(wide, s * 2.6)), 0.7, 0.4, M.GOLD);
     } else if (b.look.startsWith('bow')) {   // a bow standing on its end, strung
-      const lm = b.look === 'bow_horn' ? M.HORN : M.WOOD, L = b.look === 'bow_long' ? 10 : 8.5;
+      const lm = b.look === 'bow_horn' ? M.HORN : b.look === 'bow_war' ? M.BARK : M.WOOD, L = b.look === 'bow_long' || b.look === 'bow_war' ? 10 : 8.5;
       r.p.length = 0;   // no grip and pommel for a bow
       r.cone([0, 0, 4], [-2, 0, 4 + L * 0.6], 1.1, 0.9, lm); r.cone([-2, 0, 4 + L * 0.6], [0.6, 0, 4 + L * 1.1], 0.9, 0.5, lm);
       r.cone([0, 0, 4], [-2, 0, 4 - L * 0.6], 1.1, 0.9, lm); r.cone([-2, 0, 4 - L * 0.6], [0.6, 0, 4 - L * 1.1], 0.9, 0.5, lm);
@@ -270,7 +270,7 @@ function itemIcon(it) {
   } else if (b.slot === 'helm') {
     const hd = [0, 0, 4], fwd = [1, 0, 0], up = [0, 0, 1], sd = [0, 1, 0];
     if (b.look === 'cap') r.ell([0, 0, 3], [5.2, 5.1, 4.0], M.IRON);
-    else if (b.look === 'hat') { r.cyl([0, 0, 0], [0, 0, 0.8], 7, M.CLOTH_PURPLE); r.cone([0, 0, 0.5], [-1.2, 0, 6], 4.6, 2.4, M.CLOTH_PURPLE, { mf: p => p[2] < 2 ? M.GOLD : 0 }); r.cone([-1.2, 0, 6], [-4.5, 0, 10.5], 2.4, 0.5, M.CLOTH_PURPLE); }
+    else if (b.look === 'hat' || b.look === 'hat_conj') { r.cyl([0, 0, 0], [0, 0, 0.8], 7, (b.look === 'hat_conj' ? M.CLOTH_NAVY : M.CLOTH_PURPLE)); r.cone([0, 0, 0.5], [-1.2, 0, 6], 4.6, 2.4, (b.look === 'hat_conj' ? M.CLOTH_NAVY : M.CLOTH_PURPLE), { mf: p => p[2] < 2 ? M.GOLD : 0 }); r.cone([-1.2, 0, 6], [-4.5, 0, 10.5], 2.4, 0.5, (b.look === 'hat_conj' ? M.CLOTH_NAVY : M.CLOTH_PURPLE)); }
     else if (b.look.startsWith('rhood')) { const hm = b.look === 'rhood_dark' ? M.CLOTH_SHADOW : b.look === 'rhood_night' ? M.CLOTH_NAVY : M.CLOTH_GREEN; r.ell([0, 0, 4], [5.4, 5.6, 5.8], hm, null, { mf: p => p[0] > 3 && Math.abs(p[1]) < 3 && p[2] < 5 ? M.DARK : 0 }); r.cone([-4, 0, 7], [-8, 0, 4], 2.2, 0.5, hm); r.ell([0, 0, -1.5], [4, 5.4, 1.6], hm); }
     else if (b.look === 'spangen') { r.ell([0, 0, 3], [5.2, 5.1, 4.0], M.STEEL, null, { mf: p => Math.abs(p[1]) < 0.6 || p[2] < 0.6 ? M.GOLD : 0 }); r.cone([0, 0, 5], [0, 0, 9.5], 3, 0.3, M.STEEL); }
     else if (b.look === 'hood_sage') { r.ell([0, 0, 4], [5.4, 5.6, 5.8], M.CLOTH_GREEN, null, { mf: p => p[0] > 3 && Math.abs(p[1]) < 3 && p[2] < 5 ? M.DARK : p[0] > 3 && Math.abs(p[1]) < 4 && p[2] < 6.2 ? M.GOLD : 0 }); r.cone([-4, 0, 6], [-8, 0, 2], 2.2, 0.5, M.CLOTH_GREEN); }
@@ -284,7 +284,7 @@ function itemIcon(it) {
       void fwd; void up; void sd;
     }
   } else if (b.slot === 'chest') {
-    const m = b.look === 'jerkin_hide' ? M.HIDE : b.look === 'jerkin_drake' ? M.BLOODY : b.look.startsWith('jerkin') ? M.LEATHER : b.look === 'plate' ? M.PLATE : b.look === 'darkplate' || b.look === 'gothic' ? M.DSTEEL : b.look === 'chain' ? M.CHAIN : b.look.startsWith('robe') ? (TEAM[b.look.slice(5)] || team) : team;
+    const m = b.look === 'jerkin_hide' ? M.HIDE : b.look === 'jerkin_drake' ? M.BLOODY : b.look.startsWith('jerkin') ? M.LEATHER : b.look === 'plate' ? M.PLATE : b.look === 'darkplate' || b.look === 'gothic' ? M.DSTEEL : b.look === 'chain' ? M.CHAIN : b.look === 'scale' ? M.GOLD : b.look.startsWith('robe') ? (TEAM[b.look.slice(5)] || team) : team;
     if (b.look.startsWith('robe')) r.cone([0, 0, 2], [0, 0, -7], 4.4, 6.6, m, { mf: p => p[2] < -5.4 ? M.GOLD : 0 });   // the robe's skirt
     r.ell([0, 0, 3], [4.6, 6.6, 6.4], m, null, b.look.startsWith('robe') ? { mf: p => p[0] > 2 && Math.abs(p[1]) < 0.8 ? M.GOLD : 0 } : undefined);
     for (const s of [-1, 1]) r.ell([0, s * 7, 6.5], [3.6, 3.4, 3], b.look === 'tunic' ? M.LEATHER : b.look.startsWith('jerkin') ? M.CLOTH_GREEN : m);
