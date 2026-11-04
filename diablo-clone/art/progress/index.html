@@ -45,7 +45,7 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 5vw, 
 <div class="wrap">
   <header>
     <h1>Bestiary progress</h1>
-    <p class="lede">Every concept from your seven sheets beside how the game draws it today. Green has been refined to the concept. Amber is in the game but not refined yet. Blue isn't built yet: where a close relative exists, its sprite is shown so you can see the starting point.</p>
+    <p class="lede">Every concept from your seven sheets beside how the game draws it today. Green is done: refined to the concept, or built new from it. Amber is in the game but not refined yet. Blue isn't built yet: where a close relative exists, its sprite is shown so you can see the starting point.</p>
   </header>
 
   <div style="display:grid;gap:10px">
@@ -53,7 +53,7 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 5vw, 
     <div class="bar" id="bar" aria-hidden="true"></div>
     <div class="filters" role="group" aria-label="Filter by status">
       <button type="button" id="f-all" data-f="all" aria-pressed="true">All</button>
-      <button type="button" id="f-done" data-f="done" aria-pressed="false">Refined</button>
+      <button type="button" id="f-done" data-f="done" aria-pressed="false">Done</button>
       <button type="button" id="f-todo" data-f="todo" aria-pressed="false">To refine</button>
       <button type="button" id="f-new" data-f="new" aria-pressed="false">Not built yet</button>
     </div>
@@ -65,7 +65,7 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 5vw, 
 </div>
 
 <script>
-const LABEL = { done: 'Refined', todo: 'To refine', new: 'Not built yet' };
+const LABEL = { done: 'Done', todo: 'To refine', new: 'Not built yet' };
 // s: status; cur: game monster id drawn now (or the nearest relative for a new one); note: one line
 const SHEETS = [
   ['Existing monsters: refinement targets', [
@@ -93,10 +93,10 @@ const SHEETS = [
     { n: 'Brigand Mastiff', c: 'brigand_mastiff', s: 'new', cur: null, note: 'New: a heavy jowled dog in a spiked collar.' },
   ]],
   ['Skeletons: field variants', [
-    { n: 'Crypt Spearman', c: 'crypt_spearman', s: 'new', cur: 'skeleton', note: 'New: spear, one pauldron, blue rag.' },
-    { n: 'Bone Axeman', c: 'bone_axeman', s: 'new', cur: 'skeleton', note: 'New: open helm, two-handed axe.' },
-    { n: 'Grave Crossbowman', c: 'grave_crossbowman', s: 'new', cur: 'archer', note: 'New: crossbow and quiver; the Skeleton Archer is nearest.' },
-    { n: 'Tomb Guard', c: 'tomb_guard', s: 'new', cur: 'skeleton', note: 'New: breastplate, mace and tower shield.' },
+    { n: 'Crypt Spearman', c: 'crypt_spearman', s: 'done', cur: 'spearman', note: 'A2: built from your front/back pair. Not spawning yet.' },
+    { n: 'Bone Axeman', c: 'bone_axeman', s: 'done', cur: 'axeman', note: 'A2: built from your front/back pair. Not spawning yet.' },
+    { n: 'Grave Crossbowman', c: 'grave_crossbowman', s: 'done', cur: 'gravebow', note: 'A2: built from your front/back pair. Not spawning yet.' },
+    { n: 'Tomb Guard', c: 'tomb_guard', s: 'done', cur: 'tombguard', note: 'A2: built from your front/back pair. Not spawning yet.' },
   ]],
   ['Ogres: warlord’s kin', [
     { n: 'Ogre Clubber', c: 'ogre_clubber', s: 'new', cur: 'warlord', note: 'New grunt; the Ogre Warlord boss is the only ogre now.' },

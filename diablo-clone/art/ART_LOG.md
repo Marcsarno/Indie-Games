@@ -22,3 +22,26 @@ Tool added: `tools/capture/artcompare.cjs` (before/after strips of the Bestiary 
 
 All 25 other monsters (everything but these four) render pixel-identical to `main` (checked with artcompare at 1x). Monster
 stats, spawns and loot are untouched.
+
+## A2: four new skeleton field variants from front/back concepts (2026-11-04)
+The user sent "SKELETONS - FIELD VARIANTS" as front + back pairs (the first turnaround concepts).
+Review page: https://claude.ai/artifact/UkpQ7XVjb62LPbpvNJBjKE (source and images in `art/review/a2-skeletons/`).
+**For the main chat:** the four are new MONSTERS entries with `minLevel: 99`, so they are in no spawn
+pool yet (same trick as the Treant Elder). Their hp/dmg/speed/reach/xp are placeholders copied near the
+skeleton and archer; set real levels, stats, packs and loot when wiring them in.
+
+| Id (name) | Look (in `skeletonRig`) | Notes |
+|---|---|---|
+| `spearman` (CRYPT SPEARMAN) | `weapon: 'spear', chunky, pauldron: 'one', rag: M.CLOTH_BLUE` | Two-handed spear held low across the body; reach 1.6 placeholder |
+| `axeman` (BONE AXEMAN) | `weapon: 'axe', chunky, helm: 'open', rag: M.CLOTH_RED` | Open helm with cheek and neck guards; long two-handed axe |
+| `gravebow` (GRAVE CROSSBOWMAN) | `weapon: 'crossbow', chunky, pauldron: 'leather', quiver` | Ranged `'arrow'`; aims from the hip to the shoulder on the bow swing (FAMILIES.skeleton swing now also maps `crossbow` to SWINGS.bow) |
+| `tombguard` (TOMB GUARD) | `weapon: 'mace', chunky, helm: 'kettle', pauldron: 'both', breastplate, towerShield, rag: M.CLOTH_RED` | Spiked mace, tall red tower shield |
+
+New look options (all off for existing monsters): `chunky` (bones 1.3x thicker), weapons `spear`/`axe`/`crossbow`/`mace`,
+`pauldron` (`'one'`/`'both'`/`'leather'`), `breastplate`, `quiver`, `rag` (a cloth material), `towerShield`, helms `'open'`/`'kettle'`.
+New material `M.SLATE` (blued steel, steel ramp 28-31 with mid 29), appended at the end of the
+defMat list in `rig.js` so no existing material index moves.
+Review: 3 passes (pass 1 armor too pale and the axeman's helm a square bucket; pass 2 helm fixed but IRON
+went near-black and lost the floor, so pass 1's color was kept; pass 3 SLATE won both orders).
+Spearman and axeman use the skeletons' overhead chop; a thrust and a two-handed swing are possible follow-ups.
+All 25 pre-existing monsters except the four changed in A1 still render pixel-identical; crossbow aim frames don't clip.

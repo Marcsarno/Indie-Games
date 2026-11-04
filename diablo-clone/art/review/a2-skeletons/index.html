@@ -1,0 +1,100 @@
+<title>Skeleton Field Variants</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+/* layout: one column of monsters; each shows the concept, then before/after strips that scroll sideways on phones. Single dark look to match the game's dungeon. */
+:root {
+  --bg: #17120f; --panel: #211a16; --ink: #ece2cf; --dim: #a8987f; --rule: #3a2f27; --ember: #e8902f;
+  --display: 'Pixelify Sans', 'Courier New', monospace; --body: 'IBM Plex Sans', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--body); line-height: 1.55; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 44px; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 5vw, 44px); line-height: 1.1; margin: 0; letter-spacing: 0.02em; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--ember); }
+h2 { font-family: var(--display); font-weight: 700; font-size: 26px; margin: 0; letter-spacing: 0.03em; }
+.lede { max-width: 66ch; color: var(--dim); margin: 10px 0 0; }
+.lede b { color: var(--ink); font-weight: 600; }
+section { display: grid; gap: 14px; border-top: 1px solid var(--rule); padding-top: 26px; }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.tag { font-family: var(--mono); font-size: 12px; color: var(--dim); letter-spacing: 0.06em; text-transform: uppercase; }
+.row { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 760px) { .row { grid-template-columns: minmax(0, 1fr); } .concept { max-width: 420px; } }
+.concept { margin: 0; background: var(--panel); border: 1px solid var(--rule); }
+.concept img { display: block; width: 100%; image-rendering: pixelated; }
+figcaption { font-family: var(--mono); font-size: 11px; color: var(--dim); padding: 6px 8px; }
+.notes { min-width: 0; display: grid; gap: 8px; }
+.notes ul { margin: 0; padding-left: 18px; max-width: 70ch; }
+.notes li { margin: 2px 0; }
+.verdict { font-family: var(--mono); font-size: 12.5px; color: var(--dim); }
+.strip { overflow-x: auto; border: 1px solid var(--rule); background: #000; }
+.strip img { display: block; max-width: none; height: auto; image-rendering: pixelated; }
+.strip.fit img { max-width: 100%; }
+details { border: 1px solid var(--rule); background: var(--panel); }
+summary { cursor: pointer; padding: 8px 12px; font-family: var(--mono); font-size: 12.5px; color: var(--dim); }
+summary:focus-visible { outline: 2px solid var(--ember); }
+details .strip { border: 0; border-top: 1px solid var(--rule); }
+.ask { background: var(--panel); border: 1px solid var(--rule); padding: 16px 18px; max-width: 72ch; }
+.ask h2 { font-size: 20px; margin-bottom: 6px; }
+.ask ol { margin: 0; padding-left: 20px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Skeleton field variants <em>A2</em></h1>
+    <p class="lede">Four new skeletons, built from your front and back concepts with thicker bones to match their chunky proportions. Each shows your concept pair, then the game sprite in six facings, walk, attack, hit and death. They're in the game's monster list but <b>don't spawn yet</b>: the main chat sets where they appear and their stats. Existing monsters are unchanged.</p>
+  </header>
+
+  <section>
+    <div class="head"><h2>Crypt Spearman</h2><span class="tag">new · skeleton family · game id spearman</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concept-crypt_spearman.png" alt="Concept: Crypt Spearman, front and back"><figcaption>your concept, front and back</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">Long spear held low across the body in both hands, a leaf-shaped head; one round slate pauldron with a gold rivet on the right shoulder; a torn blue rag at the hips.</p></div>
+    </div>
+    <div class="strip"><img src="spearman.png" alt="Crypt Spearman in the game: six facings, walk, attack, hit, death"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Bone Axeman</h2><span class="tag">new · skeleton family · game id axeman</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concept-bone_axeman.png" alt="Concept: Bone Axeman, front and back"><figcaption>your concept, front and back</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">Open slate helm with cheek guards and a neck guard, the face showing; a long-hafted axe with a broad flared head held across the body; a torn red rag.</p></div>
+    </div>
+    <div class="strip"><img src="axeman.png" alt="Bone Axeman in the game: six facings, walk, attack, hit, death"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Grave Crossbowman</h2><span class="tag">new · skeleton family · game id gravebow</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concept-grave_crossbowman.png" alt="Concept: Grave Crossbowman, front and back"><figcaption>your concept, front and back</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">Crossbow with a wooden stock and a slate prod, held at the hip and raised level to shoot; a leather pauldron, a strap across the chest, and a bolt quiver on the left hip (seen from behind too).</p></div>
+    </div>
+    <div class="strip"><img src="gravebow.png" alt="Grave Crossbowman in the game: six facings, walk, attack, hit, death"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Tomb Guard</h2><span class="tag">new · skeleton family · game id tombguard</span></div>
+    <div class="row">
+      <figure class="concept"><img src="concept-tomb_guard.png" alt="Concept: Tomb Guard, front and back"><figcaption>your concept, front and back</figcaption></figure>
+      <div class="notes"><p style="margin:0;max-width:66ch">Round kettle helm with a brim, slate cuirass and both pauldrons; a spiked mace low at its side and a tall red tower shield with a slate rim on the other arm; red rag.</p></div>
+    </div>
+    <div class="strip"><img src="tombguard.png" alt="Tomb Guard in the game: six facings, walk, attack, hit, death"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Silhouettes</h2><span class="tag">flat black</span></div>
+    <div class="strip"><img src="silhouettes.png" alt="Silhouettes of all four"></div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Every pass</h2><span class="tag">3 passes</span></div>
+    <p class="verdict" style="max-width:72ch;margin:0">Pass 1: the armor came out pale silver, and the axeman's helm was a big square bucket. Pass 2: the helm was fixed, but the darker metal went near-black and lost the dark floor, so pass 1's color was kept. Pass 3: a new blued-steel material between the two, closer to your slate blue; it won both orders.</p>
+    <details><summary>Pass 1</summary><div class="strip"><img src="pass-1.png" alt="Pass 1"></div></details>
+    <details><summary>Pass 2</summary><div class="strip"><img src="pass-2.png" alt="Pass 2"></div></details>
+    <details><summary>Pass 1 vs pass 3</summary><div class="strip"><img src="pass-1-vs-3.png" alt="Pass 1 against pass 3"></div></details>
+  </section>
+
+  <div class="ask">
+    <h2>Notes</h2>
+    <ol>
+      <li>Attacks: the spearman and axeman use the skeletons' overhead chop for now. A spear thrust and a two-handed axe swing are a follow-up if you want them.</li>
+      <li>Keep, tweak or reject each one. Name the frame or part if something's off.</li>
+    </ol>
+  </div>
+</div>
