@@ -415,7 +415,7 @@ const GEAR_LOOKS = {
   weapon: ['sword', 'axe', 'mace', 'flail', 'greatsword'],
   shield: ['none', 'buckler', 'round', 'kite', 'tower', 'targe', 'heater'],
 };
-const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}.${eq.cape || ''}.${eq.lgd || ''}.${eq.set || ''}.${eq.ench || ''}`;
+const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}.${eq.cape || ''}.${eq.lgd || ''}.${eq.set || ''}.${eq.ench || ''}` + (eq.bandit ? '.b' + eq.bandit : '');   // art B2: the bandits' own looks
 const hasFx = (eq, k) => !!eq.lgd && eq.lgd.split('|').includes(k);
 // combo 1 = the second swing of a quick pair (a backhand)
 // a quick string of swings: forehand, backhand, then a finisher (sword thrust or heavy slam)
@@ -494,6 +494,7 @@ Object.assign(BOWX, { bow_swamp: { m: M.HAIR, L: 10, grip: M.CLOTH_GREEN, cap: M
   bow_thorn: { m: M.CHITIN, L: 14.5, grip: M.CLOTH_PURPLE, cap: M.STEEL, bands: M.STEEL } });
 // the crossbows (a6 steel, a8 Bronze Arbalest): stock, prod, fittings
 const XBOW = { bow_cross: { stock: M.WOOD, prod: M.STEEL }, bow_arbalest: { stock: M.WOOD, prod: M.PUMPKIN, fit: M.GOLD } };
+XBOW.bow_bandit = { stock: M.WOOD, prod: M.BONE };   // art B2: the bandit crossbowman's (a pale horn prod, as in his concept)
 // the parts a jerkin adds over the torso (built before the body is slimmed, like the torso)
 function jerkinChest(r, eq, J, fwd, up, sideR) {
   const K = JERKIN[eq.chest] || JERKIN.jerkin, k = eq.chest, B = HERO_B;
@@ -1060,6 +1061,87 @@ function warriorSetA8(r, id, J, S) {
     belt(M.LEATHER); skirt(M.CLOTH_WHITE, { front: 4.2, fw: 3.0, fm: M.CLOTH_NAVY, side: 4.0, back: 4.2, bw: 3.4 });
   }
 }
+// ---------------------------------------------------------------- art B2: the human bandits
+// Only the brigand, the bandit chief and the bandit crossbowman set `look.bandit` or these helm keys,
+// so none of this reaches the player heroes.
+const banditFace = (r, hd, fwd, up, sideR, helmF, mask) => r.ell(hd, [4.3, 4.3, 4.5], M.FACE, helmF, { mf: p => {
+  const q = V.sub(p, hd), f2 = V.dot(q, fwd), as = Math.abs(V.dot(q, sideR)), z2 = V.dot(q, up);
+  if (f2 > 2.3 && Math.abs(as - 1.6) < 0.5 && z2 > -1.0 && z2 < 0.7) return M.EYE;
+  if (mask && z2 < -0.9 + Math.max(0, -f2) * 0.2) return mask;   // a scarf pulled up over the nose and mouth
+  if (f2 > 3.2 && as < 0.45 && Math.abs(z2 + 1.9) < 0.22) return M.MOUTH;
+  return 0;
+} });
+// the brigand: a dark leather hood over a red scarf mask, the eyes in the gap
+GEAR_EXTRA.helm.bhood = (r, { hd, fwd, up, sideR, helmF, st }) => {
+  banditFace(r, hd, fwd, up, sideR, helmF, M.CLOTH_RED);
+  const hc = V.add(V.mad(hd, up, 0.8), V.mul(fwd, -1.0)), hm = M.CLOTH_DARK;   // dark cloth, so it stands off the leather pads
+  r.group(() => {
+    r.ell(hc, [4.6, 4.7, 4.85], hm, helmF);
+    const sw = headSway(st); r.cone(V.add(V.mad(hd, up, 3.0), V.mul(fwd, -3.4)), V.add(V.add(V.mad(hd, up, 1.2 + sw[1] * 0.8), V.mul(fwd, -6.4 - sw[0] * 1.2)), V.mul(sideR, sw[2])), 2.2, 0.5, hm);
+    r.ell(V.add(V.mad(hd, up, -4.2), V.mul(fwd, -1.0)), [3.6, 4.8, 1.4], hm, helmF);   // the cowl on the shoulders
+  });
+};
+// the bandit chief: an open iron cap with a fur rim and big horns, the face bare: a bushy beard and an eye patch
+GEAR_EXTRA.helm.bchief = (r, { hd, fwd, up, sideR, helmF }) => {
+  r.ell(hd, [4.3, 4.3, 4.5], M.FACE, helmF, { mf: p => {
+    const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), as = Math.abs(s2), z2 = V.dot(q, up);
+    if (f2 > 1.5 && Math.abs(z2 - 0.4 - s2 * 0.55) < 0.42) return M.DARK;   // the patch's strap, across the brow
+    if (f2 > 2.3 && Math.abs(s2 + 1.6) < 0.75 && z2 > -1.2 && z2 < 0.9) return M.DARK;   // the patch over the left eye
+    if (f2 > 2.3 && Math.abs(s2 - 1.6) < 0.5 && z2 > -1.0 && z2 < 0.7) return M.EYE;
+    return as > 3.6 && z2 < 0.4 ? M.HAIR : 0;   // sideburns
+  } });
+  r.ell(V.add(V.mad(hd, up, -2.9), V.mul(fwd, 2.4)), [2.8, 3.6, 2.7], M.HAIR, helmF);   // a big bushy beard
+  const hc = V.mad(hd, up, 2.0);
+  r.ell(hc, [4.7, 4.6, 3.5], M.SLATE, helmF, { mf: p => Math.abs(V.dot(V.sub(p, hc), sideR)) < 0.5 ? M.IRON : 0 });   // the cap, an iron ridge down the middle
+  r.cyl(V.mad(hd, up, 1.0), V.mad(hd, up, 2.1), 5.0, M.FUR);   // the fur rim
+  for (const s of [-1, 1]) {
+    const a = V.add(V.mad(hd, up, 3.0), V.mul(sideR, s * 4.0)), b = V.add(V.mad(hd, up, 4.6), V.mul(sideR, s * 6.2)), c = V.add(V.add(V.mad(hd, up, 7.6), V.mul(sideR, s * 6.4)), V.mul(fwd, 1.0));
+    r.group(() => { r.cone(a, b, 1.35, 1.0, M.HORN); r.cone(b, c, 1.0, 0.35, M.HORN); });
+  }
+};
+// the crossbowman: a round blued-steel skullcap with a rolled brim, the face open
+GEAR_EXTRA.helm.bxcap = (r, { hd, fwd, up, sideR, helmF }) => {
+  banditFace(r, hd, fwd, up, sideR, helmF, 0);
+  const hc = V.add(V.mad(hd, up, 2.5), V.mul(fwd, -0.7));   // set high and back, so the eyes show under the brim
+  r.group(() => { r.ell(hc, [4.8, 4.7, 3.7], M.SLATE, helmF); r.cyl(V.mad(hc, up, -1.2), V.mad(hc, up, -0.6), 5.0, M.SLATE); });
+};
+// body pieces drawn before the body is slimmed (aL, aR: the arms)
+function banditBody(r, eq, J, st, aL, aR) {
+  const { fwd, up, sideR } = J, K = 1 / HERO_BK;   // radii are given at their final (slimmed) size
+  // the chest's front surface (torso and belly, as slimmed) at side offset s and height z from the chest
+  const tr = [(3.8 + 0.55 * 1.4) * HERO_BK, (5.0 + 0.55 * 1.8) * HERO_BK, (4.6 + 0.55 * 1.6) * HERO_BK], ab = [(3.2 + 0.55 * 1.6) * HERO_BK, (4.0 + 0.55 * 2.2) * HERO_BK, (3.4 + 0.55 * 0.8) * HERO_BK];
+  const front = (s, z) => Math.max(...[[tr, 0.8], [ab, -3.6]].map(([R, dz]) => { const v = 1 - (s / R[1]) ** 2 - ((z - dz) / R[2]) ** 2; return v > 0 ? R[0] * Math.sqrt(v) : 0; }));
+  const on = (s, z, o = 0.35) => V.add(V.add(V.mad(J.chest, fwd, front(s, z) + o), V.mul(sideR, s)), V.mul(up, z));
+  if (eq.bandit === 'brigand') {
+    // a dark baldric from the right shoulder to the left hip, a brass buckle on the breast
+    const pts = [[3.6, 3.4], [1.8, 1.2], [0, -0.9], [-1.8, -2.8], [-3.4, -4.4]].map(([s, z]) => on(s, z));
+    r.group(() => { for (let k = 0; k < pts.length - 1; k++) r.cone(pts[k], pts[k + 1], 0.75 * K, 0.75 * K, M.HIDE); });
+    r.box(on(0.9, 0.2, 0.7), [0.4 * K, 0.8 * K, 0.8 * K], M.GOLD, frameAlong(fwd, up));
+    // a long knife in the free left hand, point forward
+    const g = aL.hand, bd = st.clip === 'death' ? V.norm(V.add(fwd, V.mul(up, -0.4))) : V.norm(V.add(V.add(fwd, V.mul(up, 0.35)), V.mul(sideR, -0.15)));
+    const wide = V.norm(V.cross(bd, up)), wf = [bd, wide, V.cross(bd, wide)];
+    r.cone(V.mad(g, bd, -1.6), V.mad(g, bd, 0.9), 0.75 * K, 0.75 * K, M.LEATHER);
+    r.box(V.mad(g, bd, 1.3), [0.4 * K, 1.5 * K, 0.5 * K], M.IRON, wf);
+    r.box(V.mad(g, bd, 4.4), [2.9 * K, 0.85 * K, 0.35 * K], M.BLADE, wf);
+    r.cone(V.mad(g, bd, 7.2), V.mad(g, bd, 8.4), 0.8 * K, 0.25 * K, M.BLADE);
+  }
+  if (eq.bandit === 'xbow') {
+    // a brown leather jerkin over the tan shirt, laced up the front, a strap from the left shoulder to the right hip
+    const c = V.mad(J.chest, up, 0.8), tf = frameAlong(fwd, up), abd = V.mad(J.chest, up, -3.6);
+    const lace = p => { const q = V.sub(p, J.chest), s2 = V.dot(q, sideR), z2 = V.dot(q, up); if (V.dot(q, fwd) > 1.5 && Math.abs(s2) < 0.45 && z2 < 3 && z2 > -6) return M.DARK; return Math.abs(-s2 - z2 * 0.85 + 0.6) < 0.8 ? M.HIDE : 0; };
+    r.group(() => { r.ell(c, [3.95 * K * HERO_BK, 5.15 * K * HERO_BK, 4.4 * K * HERO_BK], M.LEATHER, tf, { mf: lace }); r.ell(abd, [3.35 * K * HERO_BK, 4.15 * K * HERO_BK, 3.5 * K * HERO_BK], M.LEATHER, tf, { mf: lace }); });
+  }
+  if (eq.bandit === 'chief') {
+    // a thick fur mantle over the shoulders and round the neck
+    r.ell(V.add(V.mad(J.chest, up, 3.3), V.mul(fwd, -0.6)), [4.6 * K, 6.6 * K, 2.5 * K], M.FUR, frameAlong(fwd, up));
+    // blackened iron pauldrons over the pads, each with a short spike, a fur trim at the neck side
+    for (const [sh, sd] of [[J.shL, -1], [J.shR, 1]]) {
+      const c = V.add(V.mad(sh, up, 1.5), V.mul(sideR, sd * 0.9));
+      r.ell(c, [4.3 * K, 4.1 * K, 3.4 * K], M.SLATE, frameAlong(fwd, up), { mf: p => V.dot(V.sub(p, c), up) < -1.5 * K ? M.IRON : 0 });
+      r.cone(V.add(V.mad(c, up, 2.4), V.mul(sideR, sd * 1.0)), V.add(V.mad(c, up, 6.4), V.mul(sideR, sd * 3.0)), 1.4 * K, 0.25 * K, M.SLATE);
+    }
+  }
+}
 function weaponSwing(eq, combo = 0) {
   if (isBow(eq.weapon)) return RANGER_BOW;
   const S = FEEL_OLD ? SWINGS : HERO_SWINGS;
@@ -1252,9 +1334,14 @@ function heroRig(eq, st) {
   if (xbHold) {
     const raised = st.clip === 'shoot';
     bd = st.sky ? V.norm(V.add(V.mul(up, 0.78), V.mul(fwd, 0.63))) : V.norm(V.add(fwd, V.mul(sideR, -0.08)));
-    const ctr = V.add(V.add(J.chest, V.mul(fwd, raised ? 5 : 4)), V.add(V.mul(up, st.sky ? 3.5 : raised ? 2.2 : -2.2 + Math.abs(J.swingArm) * 0.4), V.mul(sideR, raised ? 0.8 : 0.3)));
+    const bx = eq.bandit === 'xbow';   // art B2: the bandit crossbowman shoulders it higher, the stock at his cheek
+    const ctr = V.add(V.add(J.chest, V.mul(fwd, raised ? 5 : 4)), V.add(V.mul(up, st.sky ? 3.5 : raised ? (bx ? 4.0 : 2.2) : (bx ? -1.0 : -2.2) + Math.abs(J.swingArm) * 0.4), V.mul(sideR, raised ? (bx ? 1.4 : 0.8) : 0.3)));
     handR = V.add(V.mad(ctr, bd, -2.5), V.mul(sideR, 1.2));
     xbL = V.add(V.add(V.mad(ctr, bd, 2.5), V.mul(sideR, -1.0)), V.mul(up, -0.6));
+    if (bx && raised && !st.sky) {   // art B2: shouldered, the stock at his cheek, level at the target
+      const ctr2 = V.add(V.add(J.chest, V.mul(fwd, 5.5)), V.add(V.mul(up, 5.2), V.mul(sideR, 1.2)));
+      handR = V.add(V.mad(ctr2, bd, -2.5), V.mul(sideR, 1.2)); xbL = V.add(V.add(V.mad(ctr2, bd, 2.5), V.mul(sideR, -1.0)), V.mul(up, -0.6));
+    }
   }
   const aR = armTo(J, J.shR, handR, B, 1);
   const armM = plate ? PL : chain ? (scale ? M.GOLD : M.CHAIN) : M.LEATHER;
@@ -1333,12 +1420,13 @@ function heroRig(eq, st) {
     r.ell(c, [4.4, 4.4, 2.9], RS.mantle, frameAlong(fwd, up), { mf: RS.trim ? (p => V.dot(V.sub(p, c), up) < (RS.tz || -0.9) ? RS.trim : 0) : null });
   }
   if (wset) warriorSet(r, wset, J);
+  if (eq.bandit) banditBody(r, eq, J, st, aL, aR);   // art B2
   // slim every body part made so far (centers stay put), then build the head at normal size and
   // scale it up about its center
   for (const q of r.p) { if (q.a) { q.ra *= HERO_BK; q.rb *= HERO_BK; } if (q.r) q.r *= HERO_BK; if (q.rad) q.rad = V.mul(q.rad, HERO_BK); if (q.half) q.half = V.mul(q.half, HERO_BK); }
   // a short cloak hanging from the shoulders: it streams back and flutters when he runs, swings
   // forward when he stops, and follows the shoulders through a swing (secondary motion)
-  if (!robe && !(jerk && !SET_CAPE[eq.set]) && !(wset && !SET_CAPE[eq.set])) {   // a6: a plain jerkin wears no cloak (the quiver shows); art A8: nor does a warrior set (its back shows)
+  if (!robe && !(jerk && !SET_CAPE[eq.set]) && !(wset && !SET_CAPE[eq.set]) && eq.bandit !== 'xbow') {   // art B2: the bandit crossbowman wears none   // a6: a plain jerkin wears no cloak (the quiver shows); art A8: nor does a warrior set (its back shows)
     const c = st.clip, ph = st.f / 8 * Math.PI * 2;
     let th = 0.14, side = 0;
     if (c === 'walk') { th = 0.62 + 0.12 * Math.sin(ph * 2); side = J.swingArm * 0.18; }
@@ -1539,8 +1627,14 @@ function heroRig(eq, st) {
     if (eq.ench) for (const t of [tipL, tipR]) r.sph(t, 1.3, eq.ench === 'fire' ? M.FIREM : M.ICE, { noShadow: true });
     // a bolt case at the right hip, three bolts showing
     const bc = V.add(V.add(V.mad(J.pelvis, sideR, 4.3), V.mul(fwd, 0.6)), V.mul(up, -1.2));
+    if (eq.bandit === 'xbow') {   // art B2: a bigger bolt case, tipped back, five pale fletchings (as in his concept)
+      const qd = V.norm(V.add(up, V.mul(fwd, -0.35))), qf = frameAlong(V.cross(sideR, qd), qd), q0 = V.add(V.mad(J.pelvis, sideR, 4.6), V.mul(up, -1.6));
+      r.box(V.mad(q0, qd, 0.4), [1.9, 1.4, 3.0], M.LEATHER, qf, { mf: p => V.dot(V.sub(p, q0), qd) > 2.7 ? M.IRON : 0 });
+      for (const [o, s2] of [[-1.0, -0.45], [0, -0.45], [1.0, -0.45], [-0.5, 0.5], [0.5, 0.5]]) { const b0 = V.add(V.add(V.mad(q0, qd, 3.2), V.mul(qf[0], o)), V.mul(sideR, s2)); r.cone(b0, V.mad(b0, qd, 3.0), 0.9, 0.35, M.CLOTH_WHITE, { noShadow: true }); }
+    } else {
     r.box(bc, [1.5, 1.1, 2.2], M.LEATHER, frameAlong(fwd, up));
     for (const o of [-0.8, 0, 0.8]) { const b0 = V.add(V.mad(bc, up, 2.0), V.mul(fwd, o)); r.cone(b0, V.mad(b0, up, 2.2), 0.8, 0.4, M.CLOTH_WHITE, { noShadow: true }); }
+    }
     if (st.clip === 'death') deathTip(r, B, st.f, -1);
     return r;
   }
