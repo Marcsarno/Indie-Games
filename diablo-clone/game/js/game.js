@@ -42,6 +42,7 @@ function recalcHero() {
     const n = Object.values(e).filter(it => it && it.set === k).length;
     SETS[k].bonus.forEach((bn, i) => { if (n >= i + 2) for (const m in bn) mods[m] = (mods[m] || 0) + bn[m]; });
   }
+  for (const k in OUTFITS) { const n = outfitCount(k, e); OUTFITS[k].bonus.forEach((bn, i) => { if (n >= i + 2) for (const m in bn) mods[m] = (mods[m] || 0) + bn[m]; }); }   // round 56: outfits (matching pieces of the art chat's sets)
   const w = it('weapon');
   const base = w ? w.dmg : [1, 3];
   const pct = 1 + (mods.dmgPct || 0) / 100 + hero.lvl * 0.03;

@@ -198,6 +198,45 @@ const SETS = {
   stalker: { name: "STALKER'S", cls: 'ranger', pieces: [['shadow_hood', "STALKER'S COWL"], ['studded_jerkin', "STALKER'S HIDE"], ['war_quiver', "STALKER'S QUIVER"]],
     bonus: [{ crit: 8 }, { atkSpeed: 25, dmgPct: 20 }], lines: ['2: +8% CRIT', '3: +25% ATTACK SPEED, +20% DAMAGE'] },
 };
+// round 56: outfits. The art chat's sets are ordinary drops, and wearing matching pieces of one gives a
+// bonus that grows with each piece (2, then 3, then 4 worn), themed to the set. A piece is any of the
+// listed bases (some helms and weapons belong to more than one outfit). The old SETS (green set items)
+// are separate and work as before.
+const OUTFITS = {
+  militia: { name: 'MILITIA', pieces: ['militia_mail', 'cap'], bonus: [{ hp: 15 }], lines: ['2: +15 LIFE'] },
+  roadwarden: { name: 'ROADWARDEN', pieces: ['roadwarden_mail', 'roadwarden_helm', 'long_sword', 'round_shield'], bonus: [{ armorFlat: 4 }, { regen: 2 }, { speed: 10 }], lines: ['2: +4 ARMOR', '3: +2 LIFE/S', '4: +10% MOVE SPEED'] },
+  border_warden: { name: 'BORDER WARDEN', pieces: ['border_warden_mail', 'spangenhelm'], bonus: [{ atkSpeed: 10 }], lines: ['2: +10% ATTACK SPEED'] },
+  gatewatch: { name: 'GATEWATCH', pieces: ['gatewatch_mail', 'gatewatch_helm', 'gatewatch_weapon', 'gatewatch_shield'], bonus: [{ armorFlat: 6 }, { dmgPct: 15 }, { crit: 5 }], lines: ['2: +6 ARMOR', '3: +15% DAMAGE', '4: +5% CRIT'] },
+  copper_raider: { name: 'COPPER RAIDER', pieces: ['copper_raider_mail', 'copper_raider_helm', 'copper_raider_weapon'], bonus: [{ dmgPct: 15 }, { hpKill: 3 }], lines: ['2: +15% DAMAGE', '3: +3 LIFE PER KILL'] },
+  iron_guard: { name: 'IRON GUARD', pieces: ['iron_guard_mail', 'great_helm'], bonus: [{ armorFlat: 10 }], lines: ['2: +10 ARMOR'] },
+  vanguard: { name: 'VANGUARD', pieces: ['vanguard_mail', 'barbute'], bonus: [{ speed: 10 }], lines: ['2: +10% MOVE SPEED'] },
+  dusk_duelist: { name: 'DUSK DUELIST', pieces: ['dusk_duelist_mail', 'dusk_duelist_helm', 'dusk_duelist_weapon', 'dusk_duelist_shield'], bonus: [{ crit: 6 }, { atkSpeed: 15 }, { leech: 4 }], lines: ['2: +6% CRIT', '3: +15% ATTACK SPEED', '4: +4% LIFE STOLEN'] },
+  warbringer: { name: 'WARBRINGER', pieces: ['warbringer_mail', 'horned_helm'], bonus: [{ dmgPct: 20 }], lines: ['2: +20% DAMAGE'] },
+  oathkeeper: { name: 'OATHKEEPER', pieces: ['oathkeeper_mail', 'great_helm', 'oathkeeper_weapon', 'oathkeeper_shield'], bonus: [{ armorFlat: 10 }, { thorns: 25 }, { regen: 3 }], lines: ['2: +10 ARMOR', '3: 25% DAMAGE RETURNED', '4: +3 LIFE/S'] },
+  winter_bulwark: { name: 'WINTER BULWARK', pieces: ['winter_bulwark_mail', 'winter_bulwark_helm', 'winter_bulwark_weapon', 'winter_bulwark_shield'], bonus: [{ armorFlat: 12 }, { chill: 15 }, { dr: 3 }], lines: ['2: +12 ARMOR', '3: 15% CHANCE TO CHILL', '4: -3 DAMAGE TAKEN'] },
+  steel_knight: { name: 'STEEL KNIGHT', pieces: ['steel_knight_mail', 'bascinet'], bonus: [{ armorFlat: 15 }], lines: ['2: +15 ARMOR'] },
+  crown_guard: { name: 'CROWN GUARD', pieces: ['crown_guard_mail', 'crown_helm'], bonus: [{ hp: 25, armorFlat: 10 }], lines: ['2: +25 LIFE, +10 ARMOR'] },
+  ember_forged: { name: 'EMBER FORGED', pieces: ['ember_forged_mail', 'ember_forged_helm', 'ember_forged_weapon'], bonus: [{ fireDmg: 4 }, { dmgPct: 20 }], lines: ['2: +4 FIRE DAMAGE', '3: +20% DAMAGE'] },
+  royal_executor: { name: 'ROYAL EXECUTOR', pieces: ['royal_executor_mail', 'royal_executor_helm', 'royal_executor_weapon'], bonus: [{ crit: 8 }, { dmgPct: 30 }], lines: ['2: +8% CRIT', '3: +30% DAMAGE'] },
+  bramble_scout: { name: 'BRAMBLE SCOUT', pieces: ['bramble_scout_jerkin', 'bramble_scout_bow'], bonus: [{ speed: 10 }], lines: ['2: +10% MOVE SPEED'] },
+  marsh_runner: { name: 'MARSH RUNNER', pieces: ['marsh_runner_jerkin', 'marsh_runner_bow'], bonus: [{ regen: 2 }], lines: ['2: +2 LIFE/S'] },
+  ashwood_hunter: { name: 'ASHWOOD HUNTER', pieces: ['ashwood_hunter_jerkin', 'ashwood_hunter_bow'], bonus: [{ dmgPct: 15 }], lines: ['2: +15% DAMAGE'] },
+  dune_strider: { name: 'DUNE STRIDER', pieces: ['dune_strider_jerkin', 'dune_strider_bow'], bonus: [{ atkSpeed: 15 }], lines: ['2: +15% ATTACK SPEED'] },
+  night_tracker: { name: 'NIGHT TRACKER', pieces: ['night_tracker_jerkin', 'night_tracker_bow', 'night_hood'], bonus: [{ crit: 8 }, { dmgPct: 15 }], lines: ['2: +8% CRIT', '3: +15% DAMAGE'] },
+  thorn_sentinel: { name: 'THORN SENTINEL', pieces: ['thorn_sentinel_jerkin', 'thorn_sentinel_bow'], bonus: [{ thorns: 25, armorFlat: 6 }], lines: ['2: 25% DAMAGE RETURNED, +6 ARMOR'] },
+  frostpath_stalker: { name: 'FROSTPATH STALKER', pieces: ['frostpath_stalker_jerkin', 'frostpath_stalker_bow'], bonus: [{ chill: 15, dmgPct: 10 }], lines: ['2: 15% CHANCE TO CHILL, +10% DAMAGE'] },
+  blackthorn_warden: { name: 'BLACKTHORN WARDEN', pieces: ['blackthorn_warden_jerkin', 'blackthorn_warden_bow'], bonus: [{ dmgPct: 20, crit: 6 }], lines: ['2: +20% DAMAGE, +6% CRIT'] },
+  wayfarer: { name: 'WAYFARER', pieces: ['wayfarer_robe', 'wayfarer_hat', 'wayfarer_staff'], bonus: [{ mana: 20 }, { speed: 10 }], lines: ['2: +20 MANA', '3: +10% MOVE SPEED'] },
+  tidekeeper: { name: 'TIDEKEEPER', pieces: ['tidekeeper_robe', 'tidekeeper_hat', 'tidekeeper_staff'], bonus: [{ mana: 25 }, { manaKill: 3 }], lines: ['2: +25 MANA', '3: +3 MANA PER KILL'] },
+  frost_scholar: { name: 'FROST SCHOLAR', pieces: ['frost_scholar_robe', 'frost_scholar_hat', 'frost_scholar_staff'], bonus: [{ chill: 15 }, { dmgPct: 20 }], lines: ['2: 15% CHANCE TO CHILL', '3: +20% DAMAGE'] },
+  rose_oracle: { name: 'CRIMSON ORACLE', pieces: ['rose_oracle_robe', 'rose_oracle_hat', 'rose_oracle_staff'], bonus: [{ leech: 3 }, { crit: 8 }], lines: ['2: +3% LIFE STOLEN', '3: +8% CRIT'] },
+  duskweaver: { name: 'DUSKWEAVER', pieces: ['duskweaver_robe', 'duskweaver_hat', 'duskweaver_staff'], bonus: [{ manaKill: 3 }, { dmgPct: 20 }], lines: ['2: +3 MANA PER KILL', '3: +20% DAMAGE'] },
+  cinder_sage: { name: 'CINDER SAGE', pieces: ['cinder_sage_robe', 'cinder_sage_hat', 'cinder_sage_staff'], bonus: [{ fireDmg: 4 }, { dmgPct: 20 }], lines: ['2: +4 FIRE DAMAGE', '3: +20% DAMAGE'] },
+  runebinder: { name: 'RUNEBINDER', pieces: ['runebinder_robe', 'runebinder_hat', 'runebinder_staff'], bonus: [{ mana: 30 }, { crit: 8, dmgPct: 15 }], lines: ['2: +30 MANA', '3: +8% CRIT, +15% DAMAGE'] },
+  sunwarden: { name: 'SUNWARDEN', pieces: ['sunwarden_robe', 'sunwarden_hat', 'sunwarden_staff'], bonus: [{ hp: 25 }, { dmgPct: 25, regen: 2 }], lines: ['2: +25 LIFE', '3: +25% DAMAGE, +2 LIFE/S'] },
+};
+const outfitsOf = base => Object.keys(OUTFITS).filter(k => OUTFITS[k].pieces.includes(base));
+function outfitCount(k, equip) { const e = equip || (typeof hero !== 'undefined' ? hero.equip : {}); return Object.values(e).filter(it => it && OUTFITS[k].pieces.includes(it.base)).length; }
 // the hero's class decides which gear drops (game.js sets hero.cls; warrior when unset)
 const heroCls = () => (typeof hero !== 'undefined' && hero.cls) || 'warrior';
 const forCls = o => o.cls === 'any' || (o.cls || 'warrior') === heroCls();
@@ -304,6 +343,7 @@ function itemLines(it) {
   if (m.dr) L.push(`-${m.dr} DAMAGE TAKEN PER HIT`);
   if (it.lore) L.push(it.lore);
   if (it.set) { const S = SETS[it.set]; L.push(`${S.name} SET (${setCount(it.set)}/3 WORN)`); L.push(...S.lines); }
+  for (const k of outfitsOf(it.base)) { const O = OUTFITS[k]; L.push(`${O.name} OUTFIT (${outfitCount(k)}/${O.pieces.length} WORN)`); L.push(...O.lines); }   // round 56
   return L;
 }
 
@@ -336,7 +376,8 @@ function itemIcon(it) {
     else if (b.look === 'flail') { r.cone(V.mad(g, bd, 1.2), V.mad(g, bd, 7), 0.9, 0.9, M.WOOD); r.sph(V.mad(V.mad(g, bd, 9), [0, 0, -1], 3), 2.6, M.IRON); }
     else {
       r.cone(V.mad(g, bd, 1.2), V.mad(g, bd, 13), 0.9, 0.9, M.WOOD);
-      if (b.look === 'axe') r.box(V.add(V.mad(g, bd, 11.5), V.mul(wide, 3)), [2.8, 3.0, 0.5], M.BLADE, wf);
+      if (b.look === 'spear') { r.cone(V.mad(g, bd, 12.5), V.mad(g, bd, 17.5), 1.6, 0.2, M.BLADE); r.cyl(V.mad(g, bd, 12), V.mad(g, bd, 12.8), 1.2, M.GOLD); }   // round 56: a leaf blade on a long haft
+      else if (b.look === 'axe') r.box(V.add(V.mad(g, bd, 11.5), V.mul(wide, 3)), [2.8, 3.0, 0.5], M.BLADE, wf);
       else if (b.look === 'baxe') for (const s of [-1, 1]) r.box(V.add(V.mad(g, bd, 11.5), V.mul(wide, s * 3)), [3.2, 2.6, 0.5], M.BLADE, wf);
       else if (b.look === 'mstar') { const hb = V.mad(g, bd, 13.5); r.sph(hb, 3.0, M.IRON); for (const d of [bd, wide, V.mul(wide, -1), wf[2], V.mul(wf[2], -1)]) r.cone(V.mad(hb, d, 2.4), V.mad(hb, d, 4.6), 0.8, 0.15, M.STEEL); }
       else r.sph(V.mad(g, bd, 13.5), 3.0, M.IRON);
