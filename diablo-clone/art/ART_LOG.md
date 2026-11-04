@@ -225,3 +225,10 @@ keeps it for the warden/ranger/stalker item sets); five A6 sets got a back panel
 Palette gaps (no new materials were added): pink reads red (Rose Oracle), navy reads royal blue (CLOTH_NAVY),
 teal reads blue-green (WATERM), taupe reads pale grey (OLDBONE). Adding a pink and a true navy cloth ramp would
 fix several sets at once; that is a palette change for the user to approve.
+
+## A9: hero head 1.0x and a playable test copy (2026-11-04)
+`HERO_HK` 1.2 -> 1.0 at the user's request (1.2 still read wider than the shoulders). Everything on the head scales
+with it. Test copy of the art branch for play-testing: https://claude.ai/artifact/GAaWc5wJU5BP7HeVK9YxLG (source
+`art/test-build/`: the game page plus `art-test.js`, a TEST-ONLY script, not part of the game, that gives every new
+set look temporary item entries and an OUTFIT button cycling the hero through them). The main game artifact was not
+touched. Republish the test copy from `art/test-build/index.html` with the files map in the A9 commit message notes.

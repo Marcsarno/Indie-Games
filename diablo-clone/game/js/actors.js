@@ -363,7 +363,7 @@ function bigHead(r, from, hd, HK) {
 const HERO_B = { hipH: 11.5, thigh: 6.2, shin: 5.6, ankle: 1.3, spine: 6, shW: 5.4, shZ: 3, neck: 10.5, upper: 4.8, fore: 4.4, hipW: 2.4, stride: 6.4, lift: 4.0, stance: 1.2,
   duty: 0.34, bob: 1.0, sway: 0.35, runLean: 0.18, counter: 0.22 };   // round 15: longer stride, more air, higher knees
 const CAPE_M = M.CLOTH_GREEN;   // a green cloak, like the heroes in the references
-const HERO_HK = 1.2, HERO_BK = 0.8;   // art A7 (the user): the head drawn 1.2x (was 1.5x, a bobblehead), with everything on it
+const HERO_HK = 1.0, HERO_BK = 0.8;   // art A7/A9 (the user): the head drawn 1.0x (was 1.5x, a bobblehead; 1.2x still too big), with everything on it
 const HERO_GAIT = gaitFrameTiles(HERO_B);
 // in a robe: a lighter, gliding stride (lower knees, less bounce, a shorter flight) so the legs
 // don't kick out under the skirt
