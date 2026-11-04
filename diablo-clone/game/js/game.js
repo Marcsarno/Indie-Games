@@ -1318,8 +1318,9 @@ function keyLight(c, kx, ky) {
     const dx = lx - x, dy = (ly - y) * 2, d2 = dx * dx + dy * dy; if (d2 >= r * r) return;
     const w = i * (1 - d2 / (r * r)); if (w > bw) { bw = w; const d = Math.sqrt(d2) || 1; best = { gx: dx / d, gy: dy / d, w, sx: lx - x, sy: ly - lz - (y - 14) }; }
   };
-  for (const L of lights) test(L.x, L.y, L.z, L.r, L.i);
-  if (c !== hero && !LV.outdoor) test(kx, ky, 34, 145, 0.62 * 0.8);
+  const tr = LV.outdoor ? 1 : DLIGHT.tr, ti = LV.outdoor ? 1 : DLIGHT.ti;
+  for (const L of lights) test(L.x, L.y, L.z, L.r * tr, L.i * ti);
+  if (c !== hero && !LV.outdoor) test(kx, ky, 34, DLIGHT.hr, DLIGHT.hi * 0.8);
   return best;
 }
 // the cast shadow: an ellipse on the ground stretched away from the light, longer when the light
@@ -1570,7 +1571,15 @@ function drawHudLayer() {
 // ambient so a far room still reads; what has been seen is still tracked for the map. ?fog=1 brings
 // the old black-until-seen, dim-when-out-of-sight view back for comparison.
 const VIEW_FOG = typeof location !== 'undefined' && new URLSearchParams(location.search).get('fog') === '1';
-const DUNGEON_AMB = 0.2;
+// round 47: dungeon light presets for the blind A/B (?dl=a|b|c); 'now' is the round 38 look.
+// amb: the base light everywhere; hr/hi: the hero's light radius and strength; tr/ti: every torch's
+// radius and strength multiplied (outdoors is never touched)
+const DLIGHTS = { now: { amb: 0.2, hr: 145, hi: 0.62, tr: 1, ti: 1 }, a: { amb: 0.32, hr: 160, hi: 0.6, tr: 1, ti: 1 },
+  b: { amb: 0.26, hr: 150, hi: 0.56, tr: 1.35, ti: 1.15 }, c: { amb: 0.32, hr: 165, hi: 0.6, tr: 1.3, ti: 1.1 },
+  d: { amb: 0.44, hr: 190, hi: 0.45, tr: 1.2, ti: 0.95 } };
+let DLIGHT = DLIGHTS.now;
+try { const q = new URLSearchParams(location.search).get('dl'); if (q && DLIGHTS[q]) DLIGHT = DLIGHTS[q]; } catch (e) { /* ignore */ }
+const setDLight = k => { DLIGHT = DLIGHTS[k] || DLIGHTS.now; };
 function envCol(x, y, v, tile) {
   if (x < 0 || y < 0 || x >= W || y >= H) return 0;
   if (v & EMIS) return PAL32[CYCLE[v & 127]];
@@ -1750,8 +1759,8 @@ function lightPass(chars, kx, ky) {
   // outdoors: flat daylight at the identity level (the ramps as drawn), no hero light
   // night outdoors (every third town and forest): dim moonlight, the hero carries a light, and the
   // lanterns, fires and windows matter
-  const amb = LV.outdoor ? (LV.night ? 0.3 : 0.6) : VIEW_FOG ? 0 : DUNGEON_AMB;
-  const dyn = LV.outdoor && !LV.night ? [] : [{ x: kx, y: ky, z: 34, r: LV.night ? 120 : 145, i: LV.night ? 0.42 : 0.62 }];
+  const amb = LV.outdoor ? (LV.night ? 0.3 : 0.6) : VIEW_FOG ? 0 : DLIGHT.amb;
+  const dyn = LV.outdoor && !LV.night ? [] : [{ x: kx, y: ky, z: 34, r: LV.night ? 120 : LV.outdoor ? 145 : DLIGHT.hr, i: LV.night ? 0.42 : LV.outdoor ? 0.62 : DLIGHT.hi }];
   for (const p of projectiles) if (p.kind !== 'arrow' && dyn.length < 5) { const [x, y] = iso(p.fi, p.fj); dyn.push({ x, y, z: p.z, r: p.kind === 'missile' ? 45 : 70, i: 0.8 }); }
   if (G.tp) { const [x, y] = iso(G.tp.fi, G.tp.fj); dyn.push({ x, y, z: 20, r: 80, i: 0.7 * Math.min(1, G.tp.t / 0.45) }); }   // the portal's blue glow (brightness only)
   for (const f of G.flashes) if (dyn.length < 7) { const [x, y] = iso(f.fi, f.fj); dyn.push({ x, y, z: 24, r: f.r, i: 1.1 * f.t / f.t0 }); }   // explosions light the room

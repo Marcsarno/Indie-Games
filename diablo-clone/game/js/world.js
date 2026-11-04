@@ -1021,15 +1021,16 @@ function buildWorld() {
 // static lights never move: each one's falloff over the baked scenery is computed once
 const ZMAX = 90;
 function bakeLightMaps() {
+  const tr = LV.outdoor || typeof DLIGHT === 'undefined' ? 1 : DLIGHT.tr, ti = LV.outdoor || typeof DLIGHT === 'undefined' ? 1 : DLIGHT.ti;   // round 47: the dungeon light presets
   for (const L of lights) {
-    const r = L.r, ox = Math.floor(L.x - r), oy = Math.floor(L.y - r / 2 - ZMAX), mw = Math.ceil(2 * r), mh = Math.ceil(r + ZMAX);
+    const r = L.r * tr, Li = L.i * ti, ox = Math.floor(L.x - r), oy = Math.floor(L.y - r / 2 - ZMAX), mw = Math.ceil(2 * r), mh = Math.ceil(r + ZMAX);
     const map = new Float32Array(mw * mh), r2 = r * r;
     for (let my = 0; my < mh; my++) {
       const wy = oy + my; if (wy < 0 || wy >= WH) continue;
       for (let mx = 0; mx < mw; mx++) {
         const wx = ox + mx; if (wx < 0 || wx >= WW) continue;
         const z = wZ[wy * WW + wx], dx = wx - L.x, dy = (wy + z - L.y) * 2, dz = z - L.z, d2 = dx * dx + dy * dy + dz * dz;
-        if (d2 < r2) { const f = 1 - d2 / r2; map[my * mw + mx] = f * f * L.i; }
+        if (d2 < r2) { const f = 1 - d2 / r2; map[my * mw + mx] = f * f * Li; }
       }
     }
     L.map = { ox, oy, mw, mh, map };

@@ -1,0 +1,71 @@
+<title>Dungeon Light Test</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  :root { --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b; --pick: #e0b25a;
+    --display: 'Cinzel', Georgia, serif; --body: 'Source Sans 3', system-ui, sans-serif; color-scheme: dark; }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding: 28px max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px)); }
+  main { max-width: 900px; margin: 0 auto; display: grid; gap: 34px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: .04em; }
+  h2 { font: 600 1.1rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: .05em; }
+  p { margin: 0; max-width: 64ch; } .lede { color: var(--dim); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  label { display: grid; gap: 6px; cursor: pointer; }
+  label input { position: absolute; opacity: 0; pointer-events: none; }
+  label img { width: 100%; height: auto; display: block; image-rendering: pixelated; border: 3px solid var(--rule); border-radius: 4px; }
+  label span { text-align: center; font-weight: 600; color: var(--dim); }
+  label input:checked + img { border-color: var(--pick); }
+  label input:checked ~ span { color: var(--pick); }
+  label input:focus-visible + img { outline: 2px solid var(--bone); outline-offset: 2px; }
+  #status { color: var(--dim); font-size: .92rem; white-space: pre-line; }
+</style>
+<main>
+  <header>
+    <h1>Dungeon Light Test</h1>
+    <p class="lede">The same three dungeon spots under five lightings, in a different shuffled order in each scene. One of them is the lighting the game uses now. Tap the one you like best in each scene. Your picks are saved here for Claude to read.</p>
+  </header>
+  <section><h2>Crypt</h2><div class="grid" data-scene="crypt"></div></section>
+  <section><h2>Caves</h2><div class="grid" data-scene="caves"></div></section>
+  <section><h2>Hell</h2><div class="grid" data-scene="hell"></div></section>
+  <section><h2>Your picks</h2><p id="status">None yet.</p></section>
+</main>
+<script>
+  const SCENES = ['crypt', 'caves', 'hell'];
+  let picks = {};
+  try { picks = JSON.parse(localStorage.getItem('light-picks') || '{}') || {}; } catch (e) { picks = {}; }
+  for (const sc of SCENES) {
+    const g = document.querySelector(`[data-scene=${sc}]`);
+    for (let n = 1; n <= 5; n++) {
+      const l = document.createElement('label');
+      l.innerHTML = `<input type="radio" name="${sc}" value="${n}"><img src="light-${sc}-${n}.png" alt="${sc} lighting option ${n}" width="540" height="604"><span>${n}</span>`;
+      g.appendChild(l);
+    }
+  }
+  const status = document.getElementById('status');
+  let db = null, ref = null, dbOk = false, dbTried = false;
+  function show() {
+    for (const sc of SCENES) { const r = document.querySelector(`input[name=${sc}][value="${picks[sc]}"]`); if (r) r.checked = true; }
+    const done = SCENES.filter(s => picks[s]).map(s => `${s[0].toUpperCase() + s.slice(1)}: option ${picks[s]}`).join('\n');
+    status.textContent = (done || 'None yet.') + (dbTried ? (dbOk ? '\nSaved.' : (db ? '\nCould not save here: tell Claude the numbers.' : '\nSaving is not available here: tell Claude the numbers.')) : '');
+  }
+  document.querySelectorAll('input[type=radio]').forEach(i => i.addEventListener('change', async () => {
+    picks[i.name] = i.value;
+    try { localStorage.setItem('light-picks', JSON.stringify(picks)); } catch (e) { /* storage blocked */ }
+    show();
+    if (ref) { try { await ref.set(picks); dbOk = true; } catch (e) { dbOk = false; } show(); }
+  }));
+  show();
+  (async () => {
+    try { db = window.claude && claude.use ? await claude.use('db') : null; } catch (e) { db = null; }
+    dbTried = true;
+    if (!db) { show(); return; }
+    ref = db.doc('picks/main');
+    const t = setTimeout(() => show(), 10000);
+    try { const s = await ref.get(); clearTimeout(t); const d = s.exists ? s.data() : null; if (d) picks = Object.assign({}, d, picks); dbOk = true; if (Object.keys(picks).length) await ref.set(picks); }
+    catch (e) { clearTimeout(t); dbOk = false; }
+    show();
+  })();
+</script>
