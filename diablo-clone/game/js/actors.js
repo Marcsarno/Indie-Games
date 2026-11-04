@@ -224,6 +224,9 @@ function bipedJoints(B, st) {
       else { bob = -0.9; lean = 0.12; twist = 0.3; footL = [B.stride * 0.85, -B.hipW - 0.4, 0]; }
     }
   }
+  if (clip === 'storm') {   // round 43: Arcane Storm: floating, feet hanging, staff and free hand raised, rising and sinking a little
+    footL = [0.8, -B.hipW + 0.2, 1.6 + (f % 2) * 0.4]; footR = [-0.6, B.hipW - 0.2, 1.1 + ((f + 1) % 2) * 0.4]; bob = 0.6 + [0, 0.5, 0.8, 0.5][f % 4]; lean = -0.1; twist = 0;
+  }
   if (clip === 'vault') {   // round 43: the ranger's evasive leap: a crouch, a tucked jump back, a landing that sits into it
     if (f === 0) { footL = [1.2, -B.hipW - 0.3, 0]; footR = [-1.2, B.hipW + 0.3, 0]; bob = -2.4; lean = 0.22; twist = 0.1; }
     else if (f === 1) { footL = [2.6, -B.hipW, B.lift * 1.7]; footR = [0.8, B.hipW, B.lift * 2.0]; bob = 0.4; lean = -0.24; twist = -0.08; }
@@ -252,7 +255,7 @@ function bipedJoints(B, st) {
       footL = [3, -B.hipW - 0.5, 0]; footR = [-2.5, B.hipW + 0.5, 0];
       bob = k.hit ? -1.4 : k.a > 1.5 ? 0.4 : -0.6;
     }
-    if (clip === 'shoot' || clip === 'cast') { twist = 0.25 * k.a; lean = 0.02; }
+    if (clip === 'shoot' || clip === 'cast') { twist = 0.25 * k.a; lean = st.sky ? -0.24 : 0.02; }
   }
   // round 40a: the hero's new poses
   if (clip === 'hit') {   // knocked from where the blow came: 0 front, 1 left, 2 right, 3 behind
@@ -410,7 +413,7 @@ function weaponSwing(eq, combo = 0) {
 const WEAPON_LEN = { sword: 21, axe: 16, mace: 16, flail: 17, greatsword: 27, bsword: 24, mstar: 17, baxe: 19 };
 
 function heroRig(eq, st) {
-  const volley = st.clip === 'volley'; if (volley) st = Object.assign({}, st, { clip: 'shoot' });   // round 43: Multishot draws like a shot, the bow canted over and three arrows on the string
+  const volley = st.clip === 'volley', skyShot = st.clip === 'skyshot'; if (volley || skyShot) st = Object.assign({}, st, { clip: 'shoot', sky: skyShot });   // round 43: the volley and Rain of Arrows' shot into the sky   // round 43: Multishot draws like a shot, the bow canted over and three arrows on the string
   const B = robed(eq) ? MAGE_B : HERO_B, J = bipedJoints(B, st), r = new Rig();
   const team = TEAM[eq.team] || M.CLOTH_RED;
   const gothic = eq.chest === 'gothic', plate = eq.chest === 'plate' || eq.chest === 'darkplate' || gothic, chain = eq.chest === 'chain', brig = eq.chest === 'brigandine';
@@ -526,7 +529,7 @@ function heroRig(eq, st) {
   } else if (bow && st.clip === 'vault') {   // in the air the free arm flies out for balance
     handR = V.add(V.add(J.shR, V.mul(fwd, st.f === 1 ? -2 : 2)), V.add(V.mul(up, st.f === 1 ? -2 : -6.5), V.mul(sideR, st.f === 1 ? 5 : 2))); bd = fwd;
   } else if (bow && st.clip === 'shoot') {   // drawing: the string hand comes back to the cheek
-    handR = V.add(V.add(J.shR, V.mul(fwd, 9 - draw * 7.5)), V.add(V.mul(up, -0.6), V.mul(sideR, -2.6))); bd = fwd;
+    handR = st.sky ? V.add(V.add(J.shR, V.mul(fwd, 7 - draw * 6)), V.add(V.mul(up, 5.5 - draw * 4.8), V.mul(sideR, -2.4))) : V.add(V.add(J.shR, V.mul(fwd, 9 - draw * 7.5)), V.add(V.mul(up, -0.6), V.mul(sideR, -2.6))); bd = fwd;
   } else if (bow && st.clip !== 'death') {   // walking: the free right hand pumps with the stride
     handR = V.add(V.add(J.shR, V.mul(fwd, 3.5 + J.swingArm * 3)), V.add(V.mul(up, -7.5 + Math.max(0, J.swingArm) * 0.8), V.mul(sideR, 0.6))); bd = fwd;
   } else if (staff && st.clip === 'channel') {   // casting: gather (staff drawn back), release (thrust at the target), follow-through
@@ -540,6 +543,8 @@ function heroRig(eq, st) {
     else if (ph === 1 && sky) { handR = V.add(V.add(J.shR, V.mul(fwd, 2)), V.add(V.mul(up, 2.5), V.mul(sideR, 1.2))); bd = V.norm(V.add(V.mul(fwd, 0.25), up)); }   // raised to the sky
     else if (ph === 1) { handR = V.add(V.add(J.shR, V.mul(fwd, 6.5)), V.add(V.mul(up, -2.5), V.mul(sideR, 1.0))); bd = V.norm(V.add(V.mul(fwd, 0.95), up)); }   // thrust at the target
     else { handR = V.add(V.add(J.shR, V.mul(fwd, 4.5)), V.add(V.mul(up, -3.5), V.mul(sideR, 1.8))); bd = V.norm(V.add(V.mul(fwd, 0.5), up)); }
+  } else if (staff && st.clip === 'storm') {   // the staff held high overhead
+    handR = V.add(V.add(J.shR, V.mul(fwd, 2)), V.add(V.mul(up, 5), V.mul(sideR, 3))); bd = V.norm(V.add(V.add(up, V.mul(fwd, 0.15)), V.mul(sideR, 0.35)));   // out to the side so it clears the hat
   } else if (staff && st.clip !== 'death') {   // carried at the side, swinging with the walk like a walking stick
     handR = V.add(V.add(J.shR, V.mul(fwd, 2.0 + J.swingArm * 1.8)), V.add(V.mul(up, -7.5 + Math.abs(J.swingArm) * 0.6), V.mul(sideR, 3.4)));
     bd = V.norm(V.add(V.add(V.mul(fwd, 0.04 + J.swingArm * 0.18), up), V.mul(sideR, 0.2)));   // leaning out, clear of the face
@@ -569,7 +574,8 @@ function heroRig(eq, st) {
   // shield only rocks
   const offSw = -J.swingArm * (eq.shield === 'none' ? 3.6 : 1.6);
   let handL = V.add(V.add(J.shL, V.mul(fwd, 5.5 + offSw)), V.add(V.mul(up, -7.5 + Math.max(0, offSw) * (eq.shield === 'none' ? 0.7 : 0.3)), V.mul(sideR, -0.5)));
-  if (bow && st.clip !== 'death') handL = st.clip === 'shoot' ? V.add(V.add(J.shL, V.mul(fwd, 9.5)), V.add(V.mul(up, -0.6), V.mul(sideR, 0.6)))   // bow arm straight at the target
+  if (bow && st.clip !== 'death') handL = st.clip === 'shoot' && st.sky ? V.add(V.add(J.shL, V.mul(fwd, 7)), V.add(V.mul(up, 5.5), V.mul(sideR, 0.8)))   // Rain of Arrows: the bow arm up at the sky
+    : st.clip === 'shoot' ? V.add(V.add(J.shL, V.mul(fwd, 9.5)), V.add(V.mul(up, -0.6), V.mul(sideR, 0.6)))   // bow arm straight at the target
     : V.add(V.add(J.shL, V.mul(fwd, 3.2 - J.swingArm * 1.2)), V.add(V.mul(up, -7.2), V.mul(sideR, -3.2)));   // bow carried at the side, held out from the leg
   if (st.clip === 'death') handL = V.add(J.shL, [2, -3, -9]);
   if (st.clip === 'bash') handL = V.add(V.add(J.shL, V.mul(fwd, 7.5)), V.add(V.mul(up, -3), V.mul(sideR, 1.5)));   // shield driven forward
@@ -584,6 +590,9 @@ function heroRig(eq, st) {
     if (set === 2 && staff) handL = V.mad(handR, bd, ph === 0 ? -2.8 : 3.2);   // both hands on the staff
     if (set === 3) handL = ph === 0 ? V.add(V.add(J.shL, V.mul(fwd, -3)), V.add(V.mul(up, 1), V.mul(sideR, -2.5))) : V.add(V.add(J.shL, V.mul(fwd, ph === 1 ? 9.5 : 7.5)), V.add(V.mul(up, ph === 1 ? 0.5 : -2), V.mul(sideR, 1)));
   }
+  if (st.clip === 'storm') {   // round 43: the free hand raised, crackling
+    handL = V.add(V.add(J.shL, V.mul(fwd, 1.5)), V.add(V.mul(up, 6), V.mul(sideR, -2.5)));
+  }
   if (sw) {
     if (list.twoHand && (eq.shield === 'none' || eq.weapon === 'greatsword')) handL = V.mad(handR, bd, -2.6);   // lower on the haft
     else {   // counterbalance: the off arm reaches toward the target in the wind-up, pulls back on the strike
@@ -595,6 +604,7 @@ function heroRig(eq, st) {
   if (st.clip === 'drink') flask(drinkR ? aR.hand : aL.hand);
   r.cone(J.shL, aL.el, ar[0], ar[1], sleeve); r.cone(aL.el, aL.hand, ar[1], ar[2], foreM);
   r.sph(aL.hand, ar[3], handM);
+  if (st.clip === 'storm') r.sph(V.mad(aL.hand, up, 1.6), 1.9, M.ARCANE, { noShadow: true });   // round 43: the storm crackling in the raised hand
   if (st.clip === 'channel' && st.f >= 9) { if (st.f === 9) { const fb = V.add(V.mad(aL.hand, up, 2.6), V.mul(fwd, 0.8)); r.sph(fb, 3.3, M.FIREM, { noShadow: true }); r.sph(V.mad(fb, up, 2.6), 1.6, M.FIREM, { noShadow: true }); } }   // the hurl: a fireball held in the cocked hand, gone once thrown
   else if (st.clip === 'channel' && st.f >= 6) { if (st.f === 7) { const ft = V.add(V.mad(aR.hand, up, -12), V.mul(fwd, 1.5)); for (const [s, h] of [[-1, 2.2], [0, 3.4], [1, 2.2]]) r.cone(V.add(ft, V.mul(sideR, s * 3.6)), V.add(V.mad(ft, up, h + 2.5), V.mul(sideR, s * 5)), 1.6, 0.4, M.ICE, { noShadow: true }); } }   // ice shards spring up round the staff's foot   // the slam: frost bursting at the staff's foot
   else if (st.clip === 'channel' && st.f % 3 !== 0) r.sph(V.mad(aL.hand, fwd, 2.2), st.f % 3 === 1 ? 1.9 : 1.4, staff ? M.ARCANE : M.HOLY, { noShadow: true });
@@ -781,16 +791,17 @@ function heroRig(eq, st) {
   const g = aR.hand;
   const wide = V.norm(V.cross(bd, V.len(V.cross(bd, up)) > 0.3 ? up : fwd));
   const wf = [bd, wide, V.cross(bd, wide)];
-  const bowUp = volley ? V.norm(V.add(V.mul(up, 0.5), V.mul(sideR, -0.87))) : up;   // round 43: canted over for the volley
+  const aim = skyShot ? V.norm(V.add(V.mul(up, 0.78), V.mul(fwd, 0.63))) : fwd;   // where the arrow points
+  const bowUp = volley ? V.norm(V.add(V.mul(up, 0.5), V.mul(sideR, -0.87))) : skyShot ? V.norm(V.sub(up, V.mul(aim, V.dot(up, aim) * 1.0)).map((v, i) => v + (i === 2 ? 0 : 0))) : up;   // round 43: canted over for the volley
   if (bow) {   // the bow in the left hand: two curved limbs and the string, pulled back to the right hand while drawing
-    const c = aL.hand, back = V.mul(fwd, -1), lm = eq.weapon === 'bow_horn' ? M.HORN : M.WOOD, L = eq.weapon === 'bow_long' ? 12.5 : 10;
+    const c = aL.hand, back = V.mul(aim, -1), lm = eq.weapon === 'bow_horn' ? M.HORN : M.WOOD, L = eq.weapon === 'bow_long' ? 12.5 : 10;
     const bend = 1.8 + draw * 1.6;   // the limbs bend further at full draw
     const tip = sd2 => V.add(V.mad(c, bowUp, sd2 * L), V.mul(back, bend + (eq.weapon === 'bow_horn' ? -1.6 : 0))), mid = sd2 => V.add(V.mad(c, bowUp, sd2 * L * 0.55), V.mul(back, -0.6));
     r.group(() => { for (const sd2 of [1, -1]) { r.cone(c, mid(sd2), 1.3, 1.1, lm); r.cone(mid(sd2), tip(sd2), 1.1, 0.6, lm); } });
     r.cone(V.mad(c, bowUp, -1.2), V.mad(c, bowUp, 1.2), 1.15, 1.15, M.LEATHER);   // grip
     const nock = st.clip === 'shoot' ? aR.hand : V.add(c, V.mul(back, bend + 0.4));
     r.cone(tip(1), nock, 0.3, 0.3, M.CLOTH_WHITE, { noShadow: true }); r.cone(nock, tip(-1), 0.3, 0.3, M.CLOTH_WHITE, { noShadow: true });
-    if (st.clip === 'shoot' && draw > 0.5) for (const fan of volley ? [-0.28, 0, 0.28] : [0]) { const ad = V.norm(V.add(fwd, V.mul(bowUp, fan))); r.cone(aR.hand, V.mad(aR.hand, ad, 12), 0.4, 0.4, M.WOOD, { noShadow: true }); r.cone(V.mad(aR.hand, ad, 11.5), V.mad(aR.hand, ad, 13.2), 0.7, 0.2, M.STEEL, { noShadow: true }); }
+    if (st.clip === 'shoot' && draw > 0.5) for (const fan of volley ? [-0.28, 0, 0.28] : [0]) { const ad = V.norm(V.add(aim, V.mul(bowUp, fan))); r.cone(aR.hand, V.mad(aR.hand, ad, 12), 0.4, 0.4, M.WOOD, { noShadow: true }); r.cone(V.mad(aR.hand, ad, 11.5), V.mad(aR.hand, ad, 13.2), 0.7, 0.2, M.STEEL, { noShadow: true }); }
     if (st.clip === 'death') deathTip(r, B, st.f, -1);
     return r;
   }

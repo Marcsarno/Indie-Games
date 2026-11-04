@@ -1466,7 +1466,8 @@ function updateStorm(dt) {
       G.strikes.push({ fi: p[0], fj: p[1], z: 0, t: 0.16, t0: 0.16, seed: (Math.random() * 1e6) | 0 }); sfx('zap');
     }
   }
-  if (U.t >= STORM_T) { hero.ultOn = null; for (const e of enemies) e.stormN = 0; }
+  if (!FEEL_OLD) hero.leapZ = U.t < STORM_T - 0.3 ? Math.min(1, U.t / 0.3) * (4 + Math.sin(U.t * 5) * 1.2) : Math.max(0, (STORM_T - U.t) / 0.3) * 4;   // round 43: lifted off the ground while it rages
+  if (U.t >= STORM_T) { hero.ultOn = null; hero.leapZ = 0; for (const e of enemies) e.stormN = 0; }
 }
 function updateUlt(dt) {
   for (const s of G.strikes) s.t -= dt; G.strikes = G.strikes.filter(s => s.t > 0);
@@ -1654,7 +1655,7 @@ function startRain() {
     at = [g.reduce((a, o) => a + o.fi, 0) / g.length, g.reduce((a, o) => a + o.fj, 0) / g.length];
   }
   G.rain.push({ fi: at[0], fj: at[1], t: 3, next: 0, r: 3.0 });
-  hero.dir = dirFrom(at[0] - hero.fi, at[1] - hero.fj); hero.combo = 0; hero.atk = 0; hero.hitDone = true;   // loosed into the sky
+  hero.dir = dirFrom(at[0] - hero.fi, at[1] - hero.fj); hero.combo = 0; hero.atk = 0; hero.hitDone = true; hero.skyT = 0.45;   // loosed into the sky (round 43: the bow raised to it)
   say('RAIN OF ARROWS!', 55, 1.6); sfx('twang'); sfx('whoomp');
   for (let k = 0; k < 12; k++) { const [x, y] = screenOf(hero); pspawn(4, x, y, 30, (Math.random() - 0.5) * 20, 0, 180 + Math.random() * 60, 0.3, 27); }   // a sheaf sent straight up
 }
