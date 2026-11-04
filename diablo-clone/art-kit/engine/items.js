@@ -65,7 +65,7 @@ const ITEM_BASES = {
   ash_bow: { slot: 'weapon', look: 'bow', name: 'ASH BOW', dmg: [3, 8], cls: 'ranger', lvl: 2 },
   recurve_bow: { slot: 'weapon', look: 'bow_horn', name: 'RECURVE BOW', dmg: [9, 17], cls: 'ranger', lvl: 4 },
   war_bow: { slot: 'weapon', look: 'bow_war', name: 'WAR BOW', dmg: [11, 20], cls: 'ranger', lvl: 5 },
-  scale_jerkin: { slot: 'chest', look: 'jerkin_stud', name: 'SCALE JERKIN', armor: 11, cls: 'ranger', lvl: 4 },
+  scale_jerkin: { slot: 'chest', look: 'jerkin_scale', name: 'SCALE JERKIN', armor: 11, cls: 'ranger', lvl: 4 },
   drake_hide: { slot: 'chest', look: 'jerkin_drake', name: 'DRAKE HIDE', armor: 14, cls: 'ranger', lvl: 5 },
   hunter_hood: { slot: 'helm', look: 'rhood_hunter', name: "HUNTER'S HOOD", armor: 4, cls: 'ranger', lvl: 3 },
   night_hood: { slot: 'helm', look: 'rhood_night', name: 'NIGHT HOOD', armor: 6, cls: 'ranger', lvl: 4 },

@@ -514,6 +514,7 @@ function heroRig(eq, st) {
     const q = V.sub(p, J.chest), sd = Math.abs(V.dot(q, sideR)), z = V.dot(q, up), f = V.dot(q, fwd);
     if (f > 1.5 && z > 2.2 && sd < (z - 2.2) * 0.9 + 0.7) return M.CLOTH_GREEN;
     if (f > 2.4 && sd < 0.5 && z > -3 && z < 2.4) return M.DARK;
+    if (eq.chest === 'jerkin_scale') { const v = z * 0.62 + (Math.floor(V.dot(q, sideR) * 0.5) % 2) * 0.5; if (sd > 0.9 && Math.abs(v - Math.round(v)) < 0.2) return M.GOLD; }   // round 43: the scale jerkin: rows of bronze scales on the leather
     if (eq.chest === 'jerkin_stud') { const u = V.dot(q, sideR) * 0.55, v = z * 0.55; if (sd > 1.2 && Math.abs(u - Math.round(u)) < 0.2 && Math.abs(v - Math.round(v)) < 0.2) return M.IRON; }
     return 0;
   };
