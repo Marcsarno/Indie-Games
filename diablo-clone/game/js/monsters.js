@@ -972,6 +972,203 @@ function spiderRig(look, st) {
   return r;
 }
 
+// ---------------------------------------------------------------- art B2: new monsters
+// Cave Bat, Bog Toad and Restless Dead, built from the user's concept sheets. Each has its own rig;
+// nothing here is reached by any other monster.
+
+// cave bat: one membrane wing. root = the shoulder, s = side (+1 right), lift = how far the wing is
+// raised (radians, + up), fold = 0 spread .. 1 half folded, sweep = how far it is swept back.
+// The membrane is three lobes fanned from the wrist along the fingers (so the trailing edge is
+// scalloped between the finger tips) and an inner panel back to the body; the finger bones are
+// painted onto it, and a thick arm bone runs along the leading edge.
+function batWing(r, root, s, lift, fold, sweep, bone, mem) {
+  const span = V.norm([-sweep, s * Math.cos(lift), Math.sin(lift)]);
+  const chord = V.norm(V.mad([1, 0, 0], span, -span[0])), nrm = V.cross(span, chord);
+  const P = (u, v) => V.add(V.mad(root, span, u), V.mul(chord, v));
+  const k = 1 - 0.4 * fold, wrist = P(8 * (1 - 0.25 * fold), 1.2);
+  const tips = [P(18 * k, 0.6), P(15.5 * k, -5.5), P(10.5 * k, -8.5)];
+  const segD = (p, a, b) => { const ab = V.sub(b, a), t = clamp(V.dot(V.sub(p, a), ab) / V.dot(ab, ab), 0, 1); return V.len(V.sub(p, V.mad(a, ab, t))); };
+  const fingers = { mf: p => tips.some(t => segD(p, wrist, t) < 0.6) ? bone : 0 };
+  r.group(() => {
+    for (const t of tips) {
+      const ax = V.norm(V.sub(t, wrist)), L = V.len(V.sub(t, wrist)) / 2 + 0.4;
+      r.ell(V.lerp(wrist, t, 0.46), [L * 0.92, 1.85, 0.8], mem, [ax, V.norm(V.cross(nrm, ax)), nrm], fingers);
+    }
+    r.ell(P(4.6 * k, -3.2), [4.8 * k, 4.2, 0.8], mem, [span, chord, nrm], fingers);
+  });
+  r.cone(root, wrist, 1.25, 0.95, bone);
+  r.cone(wrist, tips[0], 0.95, 0.5, bone);
+  for (const t of tips.slice(1)) r.cone(V.lerp(wrist, t, 0.7), V.mad(t, V.norm(V.sub(t, wrist)), 0.6), 0.75, 0.2, bone);   // the finger tips poke out past the membrane in points
+  r.cone(wrist, V.add(wrist, V.add(V.mul(chord, 1.6), V.mul(nrm, 0.6))), 0.7, 0.3, M.OLDBONE, { noShadow: true });   // thumb claw
+}
+// cave bat: a furry brown body with tall ears and yellow eyes between two wide wings. It hovers
+// above the floor (the game draws its shadow there), flaps on idle and walk, climbs and swoops on
+// the attack, and crumples to the floor when it dies.
+function batRig(look, st) {
+  const r = new Rig(), { clip, f } = st, fur = M.HAIR, mem = M.LEATHER, bone = M.HAIR;
+  let H = 15, lift = 0.3, fold = 0, sweep = 0.15, pitch = 0, fx = 0, mouth = 0, reach = 0, dead = 0;
+  if (clip === 'idle') { lift = [0.55, -0.25, 0.3, 1.0][f % 4]; fold = [0, 0, 0.1, 0.3][f % 4]; H += [0, 0.9, 0.4, -0.6][f % 4]; }
+  else if (clip === 'walk') { const c = Math.cos(f / 8 * Math.PI * 2); lift = 0.25 + 0.7 * c; fold = Math.max(0, c) * 0.3; H -= c * 0.9; pitch = 0.25; }
+  else if (clip === 'attack') {
+    const k = st.key, a = k.a;
+    if (a > 1) { H += 4; lift = 1.1; fold = 0.2; pitch = -0.3; mouth = 0.5; }                                    // climbing, wings high
+    else if (k.hit || k.mv > 0) { H -= 5; fx = 3; lift = 0.55; sweep = 0.6; pitch = 0.6; mouth = 1; reach = 1; }   // the dive, claws out
+    else { H -= 1; lift = -0.35; pitch = 0.1; mouth = 0.3; }
+  }
+  else if (clip === 'hit') { pitch = -0.45; lift = 0.9; fold = 0.3; fx = -1.5; mouth = 0.6; }
+  else if (clip === 'death') { dead = [0, 0.2, 0.5, 0.8, 1, 1][f]; H = lerp(15, 2.6, dead); lift = lerp(0.8, -0.1, dead); fold = 0.3 * dead; pitch = -0.4 + 1.5 * dead; mouth = 0.6; }
+  const up = V.rotY([0, 0, 1], pitch), fwd = V.rotY([1, 0, 0], pitch), side = [0, 1, 0];
+  const c = [fx, 0, H];
+  r.ell(c, [3.0, 3.2, 3.9], fur, [fwd, side, up], { mf: p => { const q = V.sub(p, c); return V.dot(q, fwd) > 1.6 && V.dot(q, up) < 1.6 ? M.LEATHER : 0; } });   // a lighter chest
+  const hd = V.add(V.mad(c, up, 5.6), V.mul(fwd, 0.8));
+  r.sph(hd, 3.6, fur);
+  const sn = V.add(V.mad(hd, fwd, 2.9), V.mul(up, -1.0));
+  r.ell(sn, [1.5, 1.6, 1.2], fur, [fwd, side, up], { mf: p => V.dot(V.sub(p, sn), fwd) > 1.1 && V.dot(V.sub(p, sn), up) > 0.1 ? M.DARK : 0 });
+  for (const s of [-1, 1]) r.sph(V.add(V.add(V.mad(hd, fwd, 2.9), V.mul(side, s * 1.45)), V.mul(up, 0.6)), 0.8, M.EYE_YEL, { noShadow: true });
+  if (mouth > 0) {
+    const mo = V.add(V.mad(sn, up, -1.1), V.mul(fwd, 0.2));
+    r.ell(mo, [0.9, 1.1, 0.5 + 0.5 * mouth], M.DARK, [fwd, side, up], { noShadow: true });
+    for (const s of [-1, 1]) r.cone(V.add(V.mad(mo, side, s * 0.6), V.mul(up, 0.4)), V.add(V.add(V.mad(mo, side, s * 0.6), V.mul(up, -0.9)), V.mul(fwd, 0.5)), 0.45, 0.15, M.CLOTH_WHITE, { noShadow: true });
+  }
+  for (const s of [-1, 1]) {   // tall pointed ears, pink inside
+    const b = V.add(V.mad(hd, side, s * 2.0), V.mul(up, 1.8)), t = V.add(V.add(V.mad(hd, side, s * 3.8), V.mul(up, 7.6)), V.mul(fwd, -0.6));
+    r.cone(b, t, 1.9, 0.25, fur, { mf: p => V.dot(V.sub(p, b), fwd) > 0.5 && V.dot(V.sub(p, b), up) > 0.8 ? M.SKIN : 0 });
+  }
+  for (const s of [-1, 1]) {   // little feet hanging under the body, claws out on the dive
+    const a = V.add(V.mad(c, up, -2.8), V.mul(side, s * 1.3)), b = V.add(V.add(V.mad(a, up, -2.6 + reach), V.mul(fwd, 0.5 + reach * 2.6)), V.mul(side, s * 0.3));
+    r.cone(a, b, 0.95, 0.7, fur);
+    for (const k of [-1, 1]) r.cone(b, V.add(V.add(V.mad(b, up, -1.1), V.mul(fwd, 0.6 + reach)), V.mul(side, k * 0.45)), 0.45, 0.2, M.OLDBONE, { noShadow: true });
+  }
+  for (const s of [-1, 1]) batWing(r, V.add(V.mad(c, up, 1.5), V.mul(side, s * 2.2)), s, lift, fold, sweep, bone, mem);
+  if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
+  return r;
+}
+// bog toad: a big squat olive toad, warty back, pale throat, heavy-browed orange eyes. Idles with a
+// pulsing throat, hops to move, and lashes its tongue out on the attack; dies rolled onto its back.
+const TOAD_LASH = [{ a: 1.3, ms: 280, tele: true }, { a: 1.35, ms: 100 }, { a: 0.2, ms: 70, mv: 0.3 }, { a: 0, ms: 90, hit: true }, { a: 0.3, ms: 260, open: true }, { a: 0.7, ms: 110 }];
+const TOAD_WARTS = [[-3, 2.6, 1.3], [-1, -3, 1.4], [1.2, 1.6, 1.1], [-4.8, -1, 1.2], [2.4, -1.8, 1.0], [-2, 0, 1.3], [0, 3.8, 1.0], [-5.5, 3, 1.0], [-3.4, -4.2, 1.1], [0.4, -0.2, 1.0]];
+function toadRig(look, st) {
+  const r = new Rig(), { clip, f } = st, hide = M.OGRE, pale = M.STRAWM;
+  let Z = 0, sq = 0, lean = 0, mouth = 0, tongue = 0, throat = 0, ext = 0, dead = 0;
+  if (clip === 'idle') throat = [0, 0.5, 1, 0.5][f % 4];
+  else if (clip === 'walk') { const g = f % 8; Z = [0, 1.5, 4.5, 5.5, 4, 1.5, 0, 0][g]; sq = [0.25, 0, -0.1, -0.1, 0, 0.1, 0.3, 0.12][g]; ext = [0, 0.6, 1, 0.8, 0.4, 0.1, 0, 0][g]; lean = [0.05, -0.12, -0.08, 0, 0.08, 0.12, 0.05, 0][g]; }
+  else if (clip === 'attack') {
+    const k = st.key;
+    if (k.a > 1) { lean = -0.24; throat = 1.4; sq = 0.25; }
+    else if (k.hit || k.mv > 0) { lean = 0.16; mouth = 1.2; tongue = k.hit ? 16 : 8; }
+    else { mouth = 0.5; tongue = 3; }
+  }
+  else if (clip === 'hit') { lean = -0.22; sq = 0.3; mouth = 0.4; }
+  else if (clip === 'death') { dead = [0, 0.2, 0.5, 0.85, 1, 1][f]; mouth = 0.6; ext = 0.5 * dead; }
+  const up = V.rotY([0, 0, 1], lean), fwd = V.rotY([1, 0, 0], lean), side = [0, 1, 0], ax = [fwd, side, up];
+  const base = [0, 0, Z], at = (x, y, z) => V.add(V.add(V.add(base, V.mul(fwd, x)), V.mul(side, y)), V.mul(up, z * (1 - sq * 0.35)));
+  const bc = at(-1.5, 0, 6.2), BR = [7.2, 6.6, 5.2 * (1 - sq * 0.3)], hc = at(4.2, 0, 7.6);
+  r.group(() => {
+    r.ell(bc, BR, hide, ax);
+    for (const [x, y, rr] of TOAD_WARTS) { const h = 1 - (x / BR[0]) ** 2 - (y / BR[1]) ** 2; r.sph(V.add(V.add(V.mad(bc, fwd, x), V.mul(side, y)), V.mul(up, BR[2] * Math.sqrt(Math.max(0, h)) - 0.4)), rr, hide); }
+    r.ell(hc, [4.2, 5.6, 3.4], hide, ax, { mf: p => { const q = V.sub(p, hc); return mouth === 0 && V.dot(q, fwd) > 1.8 && Math.abs(V.dot(q, up) + 1.0) < 0.35 ? M.DARK : 0; } });
+    for (const s of [-1, 1]) r.ell(V.add(V.mad(hc, side, s * 3.0), V.add(V.mul(up, 2.5), V.mul(fwd, 0.4))), [1.9, 1.6, 1.3], hide, ax);   // heavy brows over the eyes
+  });
+  for (const s of [-1, 1]) {   // orange eyes with a dark slit, under the brow
+    const e = V.add(V.mad(hc, side, s * 3.3), V.add(V.mul(up, 1.7), V.mul(fwd, 1.9)));
+    r.sph(e, 1.45, M.FIREM, { noShadow: true, mf: p => Math.abs(V.dot(V.sub(p, e), up)) < 0.3 && V.dot(V.sub(p, e), fwd) > 0.6 ? M.DARK : 0 });
+  }
+  const jaw = V.add(at(5.2, 0, 4.2), V.mul(up, -mouth * 1.6));
+  if (mouth > 0) r.ell(V.lerp(hc, jaw, 0.5), [3.4, 4.6, 1.2 + mouth], M.DARK, ax, { noShadow: true });
+  r.ell(jaw, [3.8 + throat * 0.5, 4.8 + throat * 0.5, 3.2 + throat * 0.6], pale, ax);   // pale throat that swells on the idle
+  if (tongue > 0) {
+    // the tongue whips out level and straight, a fat sticky club at the end
+    const t0 = V.lerp(hc, jaw, 0.5), t1 = [t0[0] + tongue + 3, 0, Math.max(3, t0[2] - 0.6)];
+    r.group(() => { r.cone(t0, t1, 1.2, 1.0, M.CLOTH_RED); r.ell(t1, [2.0, 1.8, 1.5], M.CLOTH_RED); });
+  }
+  const toes = (ft, dir, s) => { for (const k of [-1, 0, 1]) r.cone(ft, V.add(V.mad(ft, dir, 2.0), V.mul(side, s * 0.2 + k * 1.0)), 0.75, 0.4, M.BONE, { noShadow: true }); };
+  const fz = Math.max(0, Z - 2.5);
+  for (const s of [-1, 1]) {
+    // front legs: short and bowed, planted wide in front of the throat
+    const sh = at(3.0, s * 4.6, 4.8), el = V.add(at(4.4, s * 6.4, 2.6), [0, 0, 0]), ft = [5.8 + ext * 1.5, s * 6.0, fz + 0.6];
+    r.cone(sh, el, 1.7, 1.4, hide); r.cone(el, ft, 1.4, 1.1, hide);
+    toes(ft, [1, 0, 0], s);
+    // hind legs: a big folded thigh at the flank, the shin and long foot tucked under it; kicked back on the hop
+    const th = at(-4.6, s * 5.8, 4.3), kn = V.lerp(at(-1.4, s * 7.2, 2.4), at(-7.5, s * 6.6, 2.6), ext), an = V.lerp([-5.2, s * 6.6, fz + 0.7], V.add(base, [-12, s * 5.4, 1.6]), ext);
+    r.ell(th, [4.0, 2.5, 3.3], hide, ax);
+    r.cone(kn, an, 1.5, 1.1, hide);
+    const fd = V.norm(V.lerp([1, 0, 0], [-1, 0, -0.2], ext));
+    toes(an, fd, s);
+  }
+  if (clip === 'death') tipRig(r, [0, 0, 6], 0, dead * 2.5, dead * 0.5);   // rolls onto its back, legs up
+  if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
+  return r;
+}
+// restless dead: a hunched, shambling corpse with a big bald head, rotten green-grey flesh, red eyes in
+// sunken sockets and a hanging jaw; a torn brown tunic and ragged dark trousers, bare feet. One arm
+// reaches out ahead, the other hangs; it lurches, dragging the left foot. Both arms come down on the attack.
+const ZOMBIE_B = { hipH: 11.5, thigh: 6, shin: 5.6, ankle: 1.2, spine: 7, shW: 4.6, shZ: 2.6, neck: 8.6, upper: 5.6, fore: 5.2, hipW: 2.6, stride: 3.4, lift: 1.6, duty: 0.66, bob: 0.9, sway: 1.1, runLean: 0.1, counter: 0.12, hunch: 0.28 };
+const ZOMBIE_GRAB = [{ a: 1.6, ms: 320, tele: true }, { a: 1.7, ms: 120 }, { a: 0.6, ms: 80, mv: 0.3 }, { a: -0.3, ms: 70, hit: true }, { a: -0.5, ms: 320, open: true }, { a: 0, ms: 130 }];
+function zombieRig(look, st) {
+  const B = ZOMBIE_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J, { clip, f } = st;
+  const flesh = M.GRASSM, rag = M.LEATHER, pants = M.CLOTH_SHADOW;
+  if (clip === 'walk') {   // the lurch: the left foot drags, barely leaving the floor
+    const g = gaitFoot(B, f / 8), L = ik(J.hipL, [g[0], -B.hipW, g[1] * 0.2 + B.ankle], B.thigh, B.shin, [1, 0, 0.1]);
+    J.kneeL = L.joint; J.ankL = L.end;
+  }
+  for (const [hip, knee, ank] of [[J.hipL, J.kneeL, J.ankL], [J.hipR, J.kneeR, J.ankR]]) {
+    const cuff = V.lerp(knee, ank, 0.55);
+    r.group(() => { r.cone(hip, knee, 1.8, 1.55, pants); r.cone(knee, cuff, 1.55, 1.5, pants); });
+    r.cone(cuff, ank, 1.15, 1.0, flesh);
+    r.ell(V.add(ank, [1.3, 0, -0.6]), [2.4, 1.3, 0.9], flesh);
+  }
+  r.ell(J.pelvis, [3.0, 4.0, 2.4], pants);
+  // the tunic: a torn sack from the hips to the shoulders, with ragged tails hanging below the hem
+  const hem = V.mad(J.pelvis, up, 1.2), top = V.mad(J.chest, up, 2.6);
+  r.group(() => {
+    r.cone(hem, top, 3.7, 4.2, rag, { mf: p => { const q = V.sub(p, J.chest); return [[1.5, 3.4, -2], [-2, 3.8, 1.5], [3.6, -1.8, -4]].some(([x, y, z]) => (V.dot(q, fwd) - x) ** 2 + (V.dot(q, sideR) - y) ** 2 + (V.dot(q, up) - z) ** 2 < 1.3) ? M.DARK : 0; } });
+    for (const [a, l] of [[0.3, 3.4], [1.5, 2.2], [2.6, 3.6], [3.7, 2.4], [4.8, 3.2], [5.8, 2.0]]) {
+      const d = V.add(V.mul(fwd, Math.cos(a)), V.mul(sideR, Math.sin(a))), p0 = V.mad(hem, d, 3.2);
+      r.cone(p0, V.add(V.mad(p0, up, -l), V.mul(d, 0.7)), 1.3, 0.3, rag);
+    }
+  });
+  // arms: the right reaches straight ahead, the left hangs low and forward; both come up and down on the attack
+  const sw = st.key || null, sh = J.swingArm || 0;
+  let hR = V.add(V.mad(J.shR, fwd, 9.5 + sh), V.add(V.mul(up, -1.5), V.mul(sideR, -0.8)));
+  let hL = V.add(V.mad(J.shL, fwd, 4.5 - sh), V.mul(up, -7.5));
+  if (clip === 'attack' && sw) {
+    if (sw.a > 1) { hR = V.add(V.mad(J.shR, fwd, 3), V.mul(up, 5)); hL = V.add(V.mad(J.shL, fwd, 3), V.mul(up, 5)); }
+    else if (sw.hit || sw.mv > 0) { hR = V.add(V.mad(J.shR, fwd, 9.5), V.mul(up, -3 - (sw.hit ? 1 : 0))); hL = V.add(V.mad(J.shL, fwd, 9.5), V.mul(up, -3 - (sw.hit ? 1 : 0))); }
+    else { hR = V.add(V.mad(J.shR, fwd, 8), V.mul(up, -5)); hL = V.add(V.mad(J.shL, fwd, 7), V.mul(up, -6)); }
+  }
+  if (clip === 'hit') { hR = V.add(V.mad(J.shR, fwd, 4), V.mul(up, 1)); hL = V.add(V.mad(J.shL, fwd, 3), V.mul(up, -5)); }
+  for (const [s0, hand, s] of [[J.shR, hR, 1], [J.shL, hL, -1]]) {
+    const a = armTo(J, s0, hand, B, s);
+    r.cone(s0, a.el, 1.35, 1.15, flesh); r.cone(a.el, a.hand, 1.15, 1.0, flesh);
+    r.sph(a.hand, 1.4, flesh);
+    const hd2 = V.norm(V.sub(a.hand, a.el));
+    for (const k of [-1, 0, 1]) r.cone(a.hand, V.add(V.mad(a.hand, hd2, 2.2), V.add(V.mul(sideR, k * 0.8), V.mul(up, -0.6))), 0.6, 0.35, flesh);   // bony fingers, curled
+    if (s < 0) r.cone(s0, V.lerp(s0, a.el, 0.55), 1.9, 1.7, rag);   // a torn sleeve stub on the left
+    else r.sph(s0, 1.9, rag);
+  }
+  // neck and the big bald head, thrust forward
+  const hd = V.add(V.mad(J.head, up, 0.6), V.add(V.mul(fwd, 1.4), V.mul(sideR, 0.8)));
+  r.cone(V.mad(J.chest, up, 3), hd, 1.7, 1.6, flesh);
+  // a tall domed cranium with a heavy brow, small ears and gaunt cheekbones
+  r.group(() => {
+    r.ell(hd, [4.3, 4.3, 5.0], flesh, frameAlong(fwd, up), { mf: p => {
+      const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up);
+      if (f2 > 1.4 && (Math.abs(s2) - 1.8) ** 2 + (z2 - 0.2) ** 2 < 1.6) return M.DARK;   // sunken sockets
+      if (f2 > 3 && Math.abs(s2) < 0.5 && z2 < -0.8 && z2 > -1.8) return M.DARK;            // nose hole
+      return 0;
+    } });
+    r.ell(V.add(V.mad(hd, fwd, 2.6), V.mul(up, 1.8)), [1.4, 3.6, 1.0], flesh, frameAlong(fwd, up));   // brow ridge
+    for (const s of [-1, 1]) r.ell(V.add(V.mad(hd, sideR, s * 4.2), V.mul(up, -0.4)), [1.2, 0.7, 1.5], flesh, frameAlong(fwd, up));   // ears
+  });
+  for (const s of [-1, 1]) r.sph(V.add(V.add(V.mad(hd, fwd, 3.6), V.mul(sideR, s * 1.8)), V.mul(up, 0.2)), 0.75, M.EYE_RED, { noShadow: true });
+  const jc = V.add(V.mad(hd, fwd, 2.2), V.mul(up, -3.6));   // the hanging jaw, mouth gaping dark
+  r.ell(V.add(jc, V.mul(up, 1.1)), [1.8, 2.2, 1.0], M.DARK, frameAlong(fwd, up), { noShadow: true });
+  r.ell(jc, [2.6, 2.7, 1.2], flesh, frameAlong(fwd, up), { mf: p => V.dot(V.sub(p, jc), fwd) > 1.6 && V.dot(V.sub(p, jc), up) > 0.4 && (Math.round(V.dot(V.sub(p, jc), sideR) * 1.4) & 1) ? M.CLOTH_WHITE : 0 });
+  if (clip === 'death') deathTip(r, B, f, 1);
+  if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
+  return r;
+}
+
 // ---------------------------------------------------------------- family table
 // size: sprite canvas; swing: attack timing; looks: variants (materials, size, gear) of one body
 const FAMILIES = {
@@ -988,6 +1185,10 @@ const FAMILIES = {
   wraith: { size: [56, 60, 28, 46], gait: 0.2, rig: wraithRig, swing: () => SWINGS.claw },
   treant: { size: [150, 160, 75, 132], gait: gaitFrameTiles(TREANT_B, 1.4), rig: treantRig, swing: () => SWINGS.heavy },
   ogre: { size: [140, 140, 70, 112], gait: gaitFrameTiles(OGRE_B, 1.5), rig: ogreRig, swing: e => e.look.rock ? SWINGS.bow : SWINGS.heavy },
+  // art B2: new families (cave bat, bog toad, restless dead)
+  bat: { size: [84, 72, 42, 56], gait: 0.22, rig: batRig, swing: () => FEEL_OLD ? SWINGS.bite : MON_SWINGS.lunge },
+  toad: { size: [84, 64, 42, 46], gait: 0.2, rig: toadRig, swing: () => FEEL_OLD ? SWINGS.bite : TOAD_LASH },
+  zombie: { size: [72, 78, 36, 55], gait: gaitFrameTiles(ZOMBIE_B), rig: zombieRig, swing: () => FEEL_OLD ? SWINGS.claw : ZOMBIE_GRAB },
 };
 // Variants: same family, different look and stats. `kind` is what the roster ledger counts.
 const MONSTERS = {
@@ -1038,6 +1239,11 @@ const MONSTERS = {
   ghoulhound: { family: 'hound', name: 'HELL HOUND', look: { skin: M.FLESH, eye: M.FIREM, scale: 1.15, ember: true, lean: true, paws: true, brush: true }, hp: 28, dmg: [5, 9], speed: 50, reach: 1.45, xp: 34, chest: 13, shadow: 11, minLevel: 2 },
   spider: { family: 'spider', name: 'CAVE SPIDER', look: { scale: 0.8 }, hp: 10, dmg: [2, 4], speed: 46, reach: 1.3, xp: 10, chest: 8, shadow: 11, pack: true },
   broodmother: { family: 'spider', name: 'BROODMOTHER', title: 'MOTHER OF A THOUSAND LEGS', look: { brood: true, scale: 1.15, size: [128, 84, 64, 60] }, hp: 60, dmg: [6, 12], speed: 34, reach: 1.9, xp: 90, chest: 12, shadow: 17, minLevel: 3, unique: true },
+  // art B2: new monsters from the user's concepts. minLevel 99 keeps them out of the spawn pools until the
+  // main chat sets their levels, stats and loot; stats here are placeholders near a similar monster
+  cavebat: { family: 'bat', name: 'CAVE BAT', minLevel: 99, look: {}, hp: 8, dmg: [1, 4], speed: 50, reach: 1.2, xp: 9, chest: 8, shadow: 6, pack: true },
+  bogtoad: { family: 'toad', name: 'BOG TOAD', minLevel: 99, look: {}, hp: 22, dmg: [3, 6], speed: 26, reach: 1.5, xp: 20, chest: 14, shadow: 10 },
+  restless: { family: 'zombie', name: 'RESTLESS DEAD', minLevel: 99, look: {}, hp: 20, dmg: [3, 6], speed: 18, reach: 1.3, xp: 16, chest: 20, shadow: 7 },
 };
 const lookKey = l => JSON.stringify(l);
 
