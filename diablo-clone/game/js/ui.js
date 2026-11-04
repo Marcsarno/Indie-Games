@@ -474,9 +474,11 @@ function edgeArrow(sx, sy, c0 = 51, c1 = 50) {
   return true;
 }
 // the story's next goal: an arrow at the edge while it is off screen (white, so it is not the stairs' gold)
+const QUEST_ARROW_R = 22;   // tiles
 function drawStoryMark() {
   if (G.mode !== 'play' || hero.dead) return;
   const t = storyTarget(); if (!t) return;
+  if (Math.hypot(t[0] - hero.fi, t[1] - hero.fj) > QUEST_ARROW_R) return;   // round 47: only once you're near; landmarks lead you until then
   if (LV.stairs && !LV.outdoor && Math.hypot(t[0] - LV.stairs.i - 0.5, t[1] - LV.stairs.j - 0.5) < 0.6) return;   // the stairs' own arrow already points there
   const [x, y] = iso(t[0], t[1]); edgeArrow(x - camX, y - camY - 16, 27, 26);
 }
@@ -535,6 +537,15 @@ function bestUpgrades() {
   }
   return out;
 }
+// salvage from the bag (round 47): the smith's price in gold, anywhere; SALVAGE WORSE takes every
+// bag item that loses to what is worn (or can't be worn), legendaries and set pieces excepted
+function salvage(items) {
+  let g = 0; for (const it of items) { const k = hero.bag.indexOf(it); if (k < 0) continue; hero.bag.splice(k, 1); g += itemValue(it); }
+  if (!items.length) { INV.flash = { text: 'NOTHING TO SALVAGE', col: 24, t: G.t }; return; }
+  hero.gold += g; INV.sel = null; sfx('gold'); INV.flash = { text: `SALVAGED ${items.length} FOR ${g} GOLD`, col: 50, t: G.t };
+  const m0 = G.mode; G.mode = 'play'; saveGame(); G.mode = m0;
+}
+const junk = () => hero.bag.filter(it => ITEM_BASES[it.base].slot !== 'potion' && it.rarity !== 'legend' && it.rarity !== 'set' && (!canWear(it) || upgradeOf(it) < 0));
 function wearBest() {
   const ups = bestUpgrades();
   for (const it of ups) equipItem(it);
@@ -557,6 +568,7 @@ function invLayout() {
   L.tabs = { inv: { x: W / 2 - 64, y: 5, w: 62, h: 16 }, skills: { x: W / 2 + 2, y: 5, w: 62, h: 16 } };
   L.color = { x: W - 66, y: 150, w: 54, h: 14 };
   L.best = { x: W - 66, y: 130, w: 54, h: 14 };
+  L.junk = { x: W - 66, y: 110, w: 54, h: 14 };
   L.card = { x: 8, y: 282, w: W - 16, h: H - 290 };
   return L;
 }
@@ -601,6 +613,7 @@ function drawInventory() {
   text(`LEVEL ${hero.lvl}`, 54, 66, 51); text(`GOLD ${hero.gold}`, 54, 74, 50);
   { const r = L.best, any = bestUpgrades().length > 0;   // lit green when the bag holds an upgrade
     fillRect(r.x, r.y, r.w, r.h, any ? 53 : 4); frame(r.x, r.y, r.w, r.h, any ? (pulse ? 55 : 54) : 8, 3); textC('WEAR BEST', r.x + r.w / 2, r.y + 5, any ? 27 : 24); }
+  { const r = L.junk, n = junk().length; fillRect(r.x, r.y, r.w, r.h, 4); frame(r.x, r.y, r.w, r.h, n ? 50 : 8, 3); textC(n ? `SALVAGE ${n}` : 'SALVAGE', r.x + r.w / 2, r.y + 5, n ? 50 : 24); }
   frame(L.color.x, L.color.y, L.color.w, L.color.h, 8, 3); textC('COLOR', L.color.x + 27, L.color.y + 5, hero.team === 'red' ? 22 : 39);
   L.bag.forEach((r, n) => {
     const it = hero.bag[n];
@@ -644,6 +657,7 @@ function drawInventory() {
       const ch = compareLines(it, cur).slice(0, -1), cy = vy + 70;
       if (ch.length) { textC('IF YOU WEAR IT', W / 2, cy, 24); ch.slice(0, 3).forEach(([l, c], n) => textC(l, W / 2, cy + 10 + n * 9, c)); }
     }
+    if (fromBag && ITEM_BASES[it.base].slot !== 'potion') mk('SALVAGE', C.x + C.w / 2 - bw / 2, () => salvage([it]));   // round 47: break it down for gold, anywhere
     if (fromBag) mk('EQUIP', C.x + 6, () => { if (!canWear(it)) { sfx('tap'); return; } const up = upgradeOf(it) > 0; equipItem(it); INV.sel = null; INV.flash = { text: up ? 'BETTER!' : 'EQUIPPED', col: up ? 55 : 26, t: G.t }; sfx('clink'); }, canWear(it) && u > 0);
     else mk('REMOVE', C.x + 6, () => { unequip(INV.sel.slot); INV.sel = null; });
     mk('DROP', C.x + C.w - bw - 6, () => {
@@ -671,6 +685,7 @@ function invTap(p) {
   for (const b of UI.invBtns || []) if (inRect(p, b)) { b.on(); return; }
   if (tabTap(p, L)) return;
   if (inRect(p, L.best)) { wearBest(); return; }
+  if (inRect(p, L.junk)) { salvage(junk()); return; }
   if (inRect(p, L.color)) { hero.team = hero.team === 'red' ? 'blue' : 'red'; recalcHero(); prewarmHero(); return; }
   for (const s of SLOTS) if (inRect(p, L.slots[s])) { INV.sel = hero.equip[s] ? { item: hero.equip[s], from: 'equip', slot: s } : null; return; }
   for (let n = 0; n < L.bag.length; n++) if (inRect(p, L.bag[n])) {
@@ -856,7 +871,7 @@ const SKILL_TEXT = {
   'mark/death': 'THE MARKED TAKE 70% MORE DAMAGE, BUT THE MARK LASTS ONLY 5 SECONDS.',
   'mark/blood': 'YOUR HITS ON THE MARKED FOE HEAL YOU.',
 };
-function wrapText(s, n) {
+function wrapText(s, n = 56) {   // (also the dialogue box's: one wrapper for both)
   const out = []; let line = '';
   for (const w of s.split(' ')) { if (line && (line + ' ' + w).length > n) { out.push(line); line = w; } else line = line ? line + ' ' + w : w; }
   if (line) out.push(line);

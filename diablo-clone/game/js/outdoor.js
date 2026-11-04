@@ -1128,6 +1128,8 @@ function nearTrader() {
   for (const n of npcs) if (TRADER_ROLES[n.role] && n.leaving === undefined) { const d = Math.hypot(n.fi - hero.fi, n.fj - hero.fj); if (d < bd) { bd = d; best = n; } }
   return best;
 }
+// what an item fetches at the smith, or salvaged from the bag (round 47)
+const itemValue = it => Math.max(3, Math.round((it.lvl || 1) * ({ normal: 4, magic: 10, rare: 25, legend: 80, set: 45 }[it.rarity] || 4)));
 function trade(n) {
   if (TALKERS[n.role]) { talkTo(n); return; }
   if (n.role === 'merchant') {
@@ -1138,7 +1140,7 @@ function trade(n) {
     const items = hero.bag.filter(it => !Object.values(hero.equip).includes(it));
     if (!items.length) { say('NOTHING TO SELL', 26, 1.5); return; }
     let g = 0;
-    for (const it of items) g += Math.max(3, Math.round((it.lvl || 1) * ({ normal: 4, magic: 10, rare: 25, legend: 80, set: 45 }[it.rarity] || 4)));
+    for (const it of items) g += itemValue(it);
     hero.bag = hero.bag.filter(it => !items.includes(it)); hero.gold += g; sfx('gold'); say(`SOLD ${items.length} FOR ${g} GOLD`, 51, 2);
   }
   saveGame();

@@ -13,7 +13,7 @@ const ITEM_BASES = {
   horned_helm: { slot: 'helm', look: 'horned', name: 'HORNED HELM', armor: 4, cls: 'warrior', lvl: 1 },
   tunic: { slot: 'chest', look: 'tunic', name: 'TUNIC', armor: 1, cls: 'warrior', lvl: 1 },
   chain_mail: { slot: 'chest', look: 'chain', name: 'CHAIN MAIL', armor: 6, cls: 'warrior', lvl: 1 },
-  plate_mail: { slot: 'chest', look: 'plate', name: 'PLATE MAIL', armor: 11, cls: 'warrior', lvl: 2 },
+  plate_mail: { slot: 'chest', look: 'plate', name: 'PLATE MAIL', armor: 11, cls: 'warrior', lvl: 4 },
   buckler: { slot: 'shield', look: 'buckler', name: 'BUCKLER', armor: 3, block: 10, cls: 'warrior', lvl: 1 },
   kite_shield: { slot: 'shield', look: 'kite', name: 'KITE SHIELD', armor: 6, block: 20, cls: 'warrior', lvl: 2 },
   flail: { slot: 'weapon', look: 'flail', name: 'FLAIL', dmg: [5, 13], cls: 'warrior', lvl: 2, slow: true },
@@ -21,7 +21,7 @@ const ITEM_BASES = {
   barbute: { slot: 'helm', look: 'barbute', name: 'BARBUTE', armor: 4, cls: 'warrior', lvl: 2 },
   crown_helm: { slot: 'helm', look: 'crown', name: 'CROWNED HELM', armor: 7, cls: 'warrior', lvl: 4 },
   brigandine: { slot: 'chest', look: 'brigandine', name: 'BRIGANDINE', armor: 8, cls: 'warrior', lvl: 2 },
-  dark_plate: { slot: 'chest', look: 'darkplate', name: 'DARK PLATE', armor: 15, cls: 'warrior', lvl: 4 },
+  dark_plate: { slot: 'chest', look: 'darkplate', name: 'DARK PLATE', armor: 15, cls: 'warrior', lvl: 5 },
   round_shield: { slot: 'shield', look: 'round', name: 'ROUND SHIELD', armor: 4, block: 15, cls: 'warrior', lvl: 1 },
   tower_shield: { slot: 'shield', look: 'tower', name: 'TOWER SHIELD', armor: 10, block: 28, cls: 'warrior', lvl: 3 },
   // mage gear (round 18): robes are one design in three colors; staves differ by the orb's color

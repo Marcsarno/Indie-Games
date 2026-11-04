@@ -64,35 +64,35 @@ function questKill(id) {
 }
 // ---------------------------------------------------------------- the dialogue box
 // G.talk = { pages: [[who, text]], k, btn: 'ACCEPT' | 'COLLECT' | null, on: fn, reward: [items] }
-// It pauses the game. A tap turns the page (all at once if the text is still typing); on the last
-// page the button (or, with a reward, one of the three items) finishes it.
+// Round 47: everything on one screen, shown at once: each speaker's lines, then the reward choice
+// (if any) and the button. One tap on the button (or anywhere, when there's nothing to choose) ends it.
 function openTalk(pages, btn = null, on = null, reward = null) {
-  G.talk = { pages, k: 0, t: 0, btn, on, reward, pick: reward ? -1 : null }; G.mode = 'talk'; clearInput(); sfx('tap');
+  G.talk = { pages, k: pages.length - 1, t: 99, typed: true, btn, on, reward, pick: reward ? -1 : null }; G.mode = 'talk'; clearInput(); sfx('tap');
 }
-function wrapText(s, n = 56) {
-  const out = []; let line = '';
-  for (const w of s.split(' ')) { if ((line + ' ' + w).trim().length > n) { out.push(line.trim()); line = w; } else line += ' ' + w; }
-  if (line.trim()) out.push(line.trim()); return out;
+// the lines of the whole talk: [text, color] with a name line wherever the speaker changes
+function talkLines() {
+  const T = G.talk, out = []; let prev = null;
+  for (const [who, say_] of T.pages) {
+    if (who !== prev) { if (prev !== null) out.push(['', 0]); out.push([who, 51]); prev = who; }
+    for (const l of wrapText(say_, 60)) out.push([l, 26]);
+  }
+  return out;
 }
 function talkLayout() {
-  const T = G.talk, last = T.k === T.pages.length - 1, h = T.reward && last ? 178 : 84, y = H - h - 8;
-  const L = { box: { x: 6, y, w: W - 12, h }, btn: null, cards: [] };
-  if (last && T.reward) T.reward.forEach((it, n) => L.cards.push({ x: 12 + n * 84, y: y + 88, w: 78, h: 56, it }));
-  if (last && (T.btn || !T.reward)) L.btn = { x: W / 2 - 40, y: y + h - 24, w: 80, h: 18 };
+  const T = G.talk, lines = talkLines(), textH = 14 + lines.length * 8, h = Math.min(H - 40, textH + (T.reward ? 96 : 0) + 30), y = H - h - 8;
+  const L = { box: { x: 6, y, w: W - 12, h }, btn: null, cards: [], lines };
+  if (T.reward) T.reward.forEach((it, n) => L.cards.push({ x: 12 + n * 84, y: y + textH + 14, w: 78, h: 56, it }));
+  L.btn = { x: W / 2 - 40, y: y + h - 24, w: 80, h: 18 };
   return L;
 }
 function drawTalk() {
   const T = G.talk; if (!T) return;
-  T.t += 1 / 60;
   fade(0.35);
-  const L = talkLayout(), b = L.box, [who, say_] = T.pages[T.k], lines = wrapText(say_);
+  const L = talkLayout(), b = L.box;
   fillRect(b.x, b.y, b.w, b.h, 2); frame(b.x, b.y, b.w, b.h, 8, 3); frame(b.x + 2, b.y + 2, b.w - 4, b.h - 4, 5, 2);
-  text(who, b.x + 8, b.y + 7, 51);
-  let shown = Math.floor(T.t * 60);   // letters typed so far
-  lines.forEach((l, n) => { const part = l.slice(0, Math.max(0, shown)); shown -= l.length; text(part, b.x + 8, b.y + 18 + n * 8, 26); });
-  T.typed = shown >= 0;
+  L.lines.forEach(([l, c], n) => { if (l) text(l, b.x + 8, b.y + 7 + n * 8, c); });
   if (L.cards.length) {
-    textC(T.pick >= 0 ? 'TAP COLLECT TO TAKE IT' : 'CHOOSE ONE', W / 2, L.cards[0].y - 9, 25);
+    textC(T.pick >= 0 ? 'TAP ' + (T.btn || 'COLLECT') + ' TO TAKE IT' : 'CHOOSE ONE', W / 2, L.cards[0].y - 9, 25);
     for (const [n, c] of L.cards.entries()) {
       const it = c.it, on = T.pick === n;
       fillRect(c.x, c.y, c.w, c.h, on ? 5 : 4); frame(c.x, c.y, c.w, c.h, on ? 51 : RARITY_COL[it.rarity], 3);
@@ -100,21 +100,17 @@ function drawTalk() {
       const nm = wrapText(itemName(it), 18); nm.slice(0, 2).forEach((l, k) => textC(l, c.x + c.w / 2, c.y + 32 + k * 7, RARITY_COL[it.rarity]));
       textC(ITEM_BASES[it.base].slot === 'shield' ? 'OFF HAND' : ITEM_BASES[it.base].slot.toUpperCase(), c.x + c.w / 2, c.y + 48, 24);
     }
+    if (T.pick >= 0) itemLines(T.reward[T.pick]).slice(0, 2).forEach((l, n) => textC(l, W / 2, L.cards[0].y + 60 + n * 7, 25));
   }
-  if (L.btn) {
-    const ok = !T.reward || T.pick >= 0, r = L.btn;
-    fillRect(r.x, r.y, r.w, r.h, ok ? 5 : 3); frame(r.x, r.y, r.w, r.h, ok ? 51 : 6, 2); textC(T.btn || 'OK', r.x + r.w / 2, r.y + 6, ok ? 27 : 24);
-  } else if (T.typed) textC('TAP', b.x + b.w - 16, b.y + b.h - 10, 24 + (Math.floor(G.t * 3) % 2));
-  if (T.reward && T.k === T.pages.length - 1 && T.pick >= 0) { const it = T.reward[T.pick]; itemLines(it).slice(0, 3).forEach((l, n) => text(l, b.x + 8, b.y + 18 + (lines.length + n) * 8 + 2, 25)); }
+  const ok = !T.reward || T.pick >= 0, r = L.btn;
+  fillRect(r.x, r.y, r.w, r.h, ok ? 5 : 3); frame(r.x, r.y, r.w, r.h, ok ? 51 : 6, 2); textC(T.btn || 'OK', r.x + r.w / 2, r.y + 6, ok ? 27 : 24);
 }
 function talkTap(p) {
   const T = G.talk; if (!T) return;
-  if (!T.typed) { T.t = 99; return; }   // the first tap shows the whole page
-  if (T.k < T.pages.length - 1) { T.k++; T.t = 0; sfx('tap'); return; }
   const L = talkLayout();
   for (const [n, c] of L.cards.entries()) if (inRect(p, c)) { T.pick = n; sfx('tap'); return; }
   if (T.reward && T.pick < 0) return;
-  if (L.btn && !inRect(p, L.btn) && T.reward) return;   // with a choice on screen, only the button takes it
+  if (T.reward && !inRect(p, L.btn)) return;   // with a choice on screen, only the button takes it
   closeTalk();
 }
 function closeTalk() {
@@ -124,10 +120,13 @@ function closeTalk() {
   saveGame();
 }
 // three rewards from different slots, rare or better, a level above the area
-function rewardChoice() {
+function rewardChoice() {   // round 47: magic items at the area's level (rares made the game too easy too soon)
   const R = rng((Math.random() * 1e9) | 0), out = [], used = {};
-  for (let t = 0; t < 200 && out.length < 3; t++) { const it = rollRare(R, LV.diff + 1), sl = ITEM_BASES[it.base].slot; if (used[sl] || it.rarity === 'legend') continue; used[sl] = 1; out.push(it); }
-  while (out.length < 3) out.push(rollRare(R, LV.diff + 1));
+  for (let t = 0; t < 400 && out.length < 3; t++) {
+    const it = rollItem(R, LV.diff); if (it.rarity !== 'magic') continue;
+    const sl = ITEM_BASES[it.base].slot; if (used[sl] || sl === 'potion') continue; used[sl] = 1; out.push(it);
+  }
+  while (out.length < 3) { const it = rollItem(R, LV.diff); if (it.rarity !== 'legend' && ITEM_BASES[it.base].slot !== 'potion') out.push(it); }
   return out;
 }
 function payQuest(id) {

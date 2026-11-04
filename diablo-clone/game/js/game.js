@@ -536,7 +536,7 @@ function gainXp(x) {
     const [x, y] = screenOf(hero); burst(4, x, y, 10, 24, 40, 51);
   }
 }
-const GREY_KEEP = 0.25;   // share of rolled grey items that actually drop
+const GREY_KEEP = 0.4;   // round 47: a few more greys now they can be salvaged from the bag (was 0.25)   // share of rolled grey items that actually drop
 function dropLoot(fi, fj, n, rich) {
   const R = rng((Math.random() * 1e9) | 0);
   for (let k = 0; k < n; k++) {
