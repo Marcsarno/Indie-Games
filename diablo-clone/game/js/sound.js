@@ -49,7 +49,9 @@ function audioInit() {
 // (phones ignore an element's own volume) and follow the mute button. A song that fades out is
 // remembered where it was, so coming back picks it up there.
 const MUSIC = { forest: 'music/forest.mp3', camp: 'music/camp.mp3', dungeon: 'music/dungeon.mp3', lair: 'music/lair.mp3' }, MUSIC_VOL = 0.5;
-const MUS = { decks: [], cur: null, inWoods: false, pos: {} };
+const MUS = { decks: [], cur: null, inWoods: false, pos: {}, duck: 1 };
+// round 45: the song keeps playing under the dialogue, the bag and the skills screen, 40% quieter
+const MUSIC_MODES = { play: 1, talk: 0.6, inv: 0.6, skills: 0.6 };
 function musicUnlock() {
   if (!SFX.ctx || MUS.unlocked) return;
   MUS.unlocked = true;
@@ -64,7 +66,7 @@ function musicUnlock() {
   }
 }
 function musicWanted() {
-  if (SFX.muted || G.mode !== 'play' || typeof LV === 'undefined' || !LV.area) return null;
+  if (SFX.muted || !MUSIC_MODES[G.mode] || typeof LV === 'undefined' || !LV.area) return null;
   if (LV.area === 'forest' && !LV.side) return 'forest';
   if (LV.side || LV.arena) return 'lair';
   if (LV.area === 'dungeon') return 'dungeon';
@@ -77,7 +79,8 @@ function musicWanted() {
 }
 function updateMusic(dt) {
   if (!MUS.unlocked || !MUS.decks.length) return;
-  const want = musicWanted();
+  const want = musicWanted(), duck = MUSIC_MODES[G.mode] || 1;
+  MUS.duck += (duck - MUS.duck) * Math.min(1, dt * 4);   // dip and come back smoothly
   let on = MUS.decks.find(d => d.track === want && want);
   if (want && !on) {   // start the wanted song on the quieter deck
     on = MUS.decks.slice().sort((a, b) => a.v - b.v)[0];
@@ -91,7 +94,7 @@ function updateMusic(dt) {
     d.v = up ? Math.min(1, d.v + dt / 2) : Math.max(0, d.v - dt / 1.5);
     if (up && !d.playing) { d.playing = true; const p = d.el.play(); if (p && p.catch) p.catch(() => { d.playing = false; }); }
     if (!up && d.playing && d.v <= 0) { d.playing = false; d.el.pause(); if (d.track) MUS.pos[d.track] = d.el.currentTime; }
-    d.g.gain.value = d.v * d.v * MUSIC_VOL;   // an eased fade
+    d.g.gain.value = d.v * d.v * MUSIC_VOL * MUS.duck;   // an eased fade
   }
 }
 function setMuted(m) { SFX.muted = m; try { localStorage.setItem('dcg-mute', m ? '1' : '0'); } catch (e) { /* ignore */ } }

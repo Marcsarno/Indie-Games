@@ -1,0 +1,99 @@
+<title>Bag, Guides and Previews</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul { margin: 0; max-width: 64ch; }
+  ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .gifs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
+  .gifs figure { gap: 4px; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+</style>
+<main>
+  <header>
+    <h1>Bag, Guides and Previews</h1>
+    <p class="lede">Dungeon of Bones, round 45: quality-of-life changes. The music keeps playing in menus, the bag shows upgrades at a glance, the first new weapon and the first skill modifier are walked through once, and the skills screen plays each skill live before you pick it.</p>
+  </header>
+  <section>
+    <h2>The bag</h2>
+    <figure>
+      <div class="frame"><img src="bag.png" alt="Two bag screens side by side. Before: a small upgrade mark on each item and a short text comparison. Now: GEAR and SKILLS tabs at the top, a green WEAR BEST button, big green up-arrows on better items and red down-arrows on worse ones, a NEW label, the slot the item goes in glowing, and a card at the bottom headed UPGRADE that shows the new staff next to the worn one and a lit EQUIP button" width="1092" height="840"></div>
+      <figcaption>Before (left) and now (right).</figcaption>
+    </figure>
+    <ul>
+      <li><strong>Tabs:</strong> GEAR and SKILLS at the top, so the skills screen is easy to find. A tab shows a mark when it has something new: a green arrow for an upgrade, a purple dot for a new skill modifier.</li>
+      <li><strong>Markers on bag items:</strong> a big green ▲ when the item beats what you wear, a red ▼ when it&rsquo;s worse, and NEW on items picked up since you last opened the bag. Gear for another class is greyed out.</li>
+      <li><strong>Tapping an item:</strong> the slot it goes in glows. A card shows the verdict in large letters (UPGRADE, WORSE, ABOUT THE SAME or EMPTY SLOT), the item beside the one you wear, and what changes if you wear it, in green and red.</li>
+      <li><strong>Faster equipping:</strong> double-tap an item to wear it. WEAR BEST lights up when the bag holds any upgrade and wears the best item for each slot.</li>
+    </ul>
+    <figure>
+      <div class="frame"><img src="badge.png" alt="The top-right buttons in play, zoomed in: a green round badge with a white up-arrow under the bag button" width="480" height="270"></div>
+      <figcaption>In play, the bag button gets a green badge when an upgrade is waiting. It turns purple for a new skill power, or yellow when you just have new items.</figcaption>
+    </figure>
+  </section>
+  <section>
+    <h2>The first new weapon, walked through</h2>
+    <figure>
+      <div class="frame"><img src="guide-gear.png" alt="Four screens. 1: play dimmed and stopped, NEW WEAPON! in the middle and an arrow pointing at the bag button. 2: the bag, with an arrow under the new axe and TAP THE NEW WEAPON. 3: the upgrade card, with an arrow at EQUIP. 4: the axe worn, with BETTER! DAMAGE 2-6 > 4-13" width="1092" height="1692"></div>
+      <figcaption>The warrior&rsquo;s first new weapon, from pickup to equipped.</figcaption>
+    </figure>
+    <ul>
+      <li>The second wolf you kill (or your eighth kill of anything, at level 4 or below) always drops a weapon for your class that beats your starting one.</li>
+      <li>Picking it up slows the game to a stop and dims everything except the bag button, which gets a bouncing arrow. Only the bag button works until you open it.</li>
+      <li>In the bag the arrow moves to the new weapon, then to EQUIP. When it&rsquo;s on, a line shows your damage before and after.</li>
+      <li>This happens once per hero and is saved. Old saves past level 4 never see it.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>The first skill modifier, walked through</h2>
+    <figure>
+      <div class="frame"><img src="guide-mod.png" alt="Four screens. 1: play stopped with NEW SKILL POWER! and an arrow at the bag button. 2: the skills screen, with an arrow pointing at the SEEKERS chip. 3: SEEKERS playing in the preview, with an arrow at the CHOOSE SEEKERS button. 4: SEEKERS in use" width="1092" height="1692"></div>
+      <figcaption>The mage at level 3: the same stop, then the bag, the SKILLS tab, the new modifier, and CHOOSE.</figcaption>
+    </figure>
+    <ul>
+      <li>Every class opens its first modifier at level 3, and that level-up stops the game the same way.</li>
+      <li>The arrow then leads to the bag, the SKILLS tab and the new modifier, where its preview plays, and then to CHOOSE.</li>
+      <li>Later modifiers don&rsquo;t stop the game. You just get the purple badge and the tab dot.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>The skills screen, with live previews</h2>
+    <figure>
+      <div class="frame"><img src="skills.png" alt="Two skills screens. Before: four rows of three small text chips. Now: a row of four skill buttons, GROUND SLAM in large letters with its cost and cooldown, a window showing the warrior slamming three practice dummies in a lit crypt, then BASIC, FULL CIRCLE, FISSURE and AFTERSHOCK chips, a longer description, and a CHOOSE FULL CIRCLE button" width="1092" height="840"></div>
+      <figcaption>Before (left) and now (right).</figcaption>
+    </figure>
+    <ul>
+      <li>Tap a skill button, then the plain skill or any of its three modifiers. The window above plays it on three practice dummies, on a loop, with the damage numbers. Locked modifiers can be watched too; they show the level they open at.</li>
+      <li>Each choice has a longer explanation of what it does and when to pick it. The screen also shows its cost and cooldown, and the damage one loop deals with your current gear.</li>
+      <li><strong>It&rsquo;s the real skill code, not a recording:</strong> a second, sealed-off copy of the game runs in the background with your hero, gear and level, in a small lit practice yard. That copy never saves, plays no sound, and can&rsquo;t touch your game. All 52 skills and modifiers across the three classes play in it without errors.</li>
+      <li><strong>Speed:</strong> on a desktop CPU slowed to a quarter, the skills screen takes about the same time per frame as normal play (34 to 48 ms against 26 to 38 ms), because the game world behind the bag and skills screens is no longer drawn.</li>
+    </ul>
+    <div class="gifs">
+      <figure><div class="frame"><img src="gif-slam-fissure.gif" alt="The warrior's Fissure: a crack races out through the dummies" width="508" height="300"></div><figcaption>Ground Slam: Fissure</figcaption></figure>
+      <figure><div class="frame"><img src="gif-whirl-devil.gif" alt="The warrior spins and throws out small whirlwinds" width="508" height="300"></div><figcaption>Whirlwind: Dust Devils</figcaption></figure>
+      <figure><div class="frame"><img src="gif-fireball-split.gif" alt="The mage throws three small fireballs in a spread" width="508" height="300"></div><figcaption>Fireball: Split</figcaption></figure>
+      <figure><div class="frame"><img src="gif-meteor-shower.gif" alt="Three meteors fall around the dummies" width="508" height="300"></div><figcaption>Meteor: Shower</figcaption></figure>
+      <figure><div class="frame"><img src="gif-multi-fire.gif" alt="The ranger looses a fan of burning arrows" width="508" height="300"></div><figcaption>Multishot: Fire Arrows</figcaption></figure>
+      <figure><div class="frame"><img src="gif-trap-net.gif" alt="The ranger throws a wide net trap and the dummies walking in are snared" width="508" height="300"></div><figcaption>Snare Trap: Wide Net</figcaption></figure>
+    </div>
+  </section>
+  <section>
+    <h2>Music</h2>
+    <p>The song no longer stops when dialogue, the bag or the skills screen opens. It keeps playing about 40% quieter, dipping and coming back smoothly.</p>
+  </section>
+</main>

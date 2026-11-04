@@ -69,6 +69,11 @@ const xpFor = l => Math.round(60 * Math.pow(l, 1.6));
 function say(text, col = 26, t = 2.5) { G.msg.push({ text, col, t }); if (G.msg.length > 3) G.msg.shift(); }
 
 // ---------------------------------------------------------------- level setup
+// everything a fight leaves in the air: missiles, effects, particles, floaters (the skill preview
+// clears it between loops too)
+function resetFx() {
+  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; G.debris = []; G.eliteFire = []; G.frostOrbs = []; G.summons = []; G.eliteBursts = []; G.blinkFx = []; G.leech = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
+}
 function startLevel(level, seed, side = null) {
   genLevel(level, seed, side);
   buildWorld();
@@ -78,7 +83,7 @@ function startLevel(level, seed, side = null) {
     if (LV.champsPlanned) LV.spawns.forEach((sp, n) => { if (sp.champ) makeChampion(enemies[n], R); });
     else for (const e of enemies) if (!e.def.unique && R() < champChance(LV.diff)) makeChampion(e, R); }
   setupElites(); makeNpcs(); resetSkills(); setupBoss(); setupRoutines(seed);
-  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; G.debris = []; G.eliteFire = []; G.frostOrbs = []; G.summons = []; G.eliteBursts = []; G.blinkFx = []; G.leech = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
+  resetFx();
   updateFov(hero.fi, hero.fj);
   flowT = 0; computeFlow();
   warmStep(1e9, prewarm());   // idle poses + the hero's walk now, behind the level fade; the rest during play
@@ -336,7 +341,7 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
     else if (bony) shatter(e, fromFi, fromFj);   // skeletons burst apart into a heap of bones
     else stampBlood(Math.round(ex), Math.round(ey), e.def.unique ? 6 : 3, (Math.random() * 1e6) | 0, e.fam === 'spider' ? GREEN : RED);
     const streak = killStreak();
-    questKill(e.id);
+    questKill(e.id); guideKill(e);
     if (e.pw) eliteDeath(e);
     gainXp(e.def.xp * (1 + (LV.diff - 1) * 0.3) * (e.champ ? 3 + (e.pw ? e.pw.length - 1 : 0) : 1) * (e.summonedBy ? 0.2 : 1) * (1 + Math.max(0, streak - 2) * 0.1));
     if (STAT.hpKill) hero.hp = Math.min(STAT.maxHp, hero.hp + STAT.hpKill);
@@ -519,7 +524,7 @@ function gainXp(x) {
   hero.xp += Math.round(x);
   while (hero.xp >= xpFor(hero.lvl)) {
     hero.xp -= xpFor(hero.lvl); hero.lvl++; recalcHero(); hero.hp = STAT.maxHp; hero.mana = STAT.maxMana;
-    say(`LEVEL UP! LEVEL ${hero.lvl}`, 51, 3); sfx('levelUp');
+    say(`LEVEL UP! LEVEL ${hero.lvl}`, 51, 3); sfx('levelUp'); guideLevel();
     const [x, y] = screenOf(hero); burst(4, x, y, 10, 24, 40, 51);
   }
 }
@@ -551,7 +556,7 @@ function pickup(g) {
   if (b.mana) { hero.mana = Math.min(STAT.maxMana, hero.mana + b.mana); sfx('potion'); floater('+' + b.mana + ' MANA', g.fi, g.fj, 12, 39); const [x, y] = screenOf(hero); burst(4, x, y, 20, 10, 30, 40); return true; }
   if (b.slot === 'potion') { if (hero.potions >= 8) return false; hero.potions++; sfx('pickup'); say('HEALING POTION', 22, 1.2); return true; }
   if (hero.bag.length >= BAG_SIZE) { if (!g.warned) say('YOUR BAG IS FULL', 22, 1.5); g.warned = true; return false; }
-  hero.bag.push(g.item); say((g.item.rarity === 'legend' ? 'LEGENDARY: ' : g.item.rarity === 'set' ? 'SET ITEM: ' : '') + itemName(g.item), RARITY_COL[g.item.rarity], g.item.rarity === 'legend' ? 3.5 : 2); sfx(g.item.rarity === 'legend' ? 'levelUp' : 'pickup');
+  g.item.isNew = true; hero.bag.push(g.item); if (g.guide && !hero.tut.gear) startGuide('gear', g.item); say((g.item.rarity === 'legend' ? 'LEGENDARY: ' : g.item.rarity === 'set' ? 'SET ITEM: ' : '') + itemName(g.item), RARITY_COL[g.item.rarity], g.item.rarity === 'legend' ? 3.5 : 2); sfx(g.item.rarity === 'legend' ? 'levelUp' : 'pickup');
   // an empty slot is filled right away so the new look shows immediately
   if (!hero.equip[b.slot]) equipItem(g.item);
   return true;
@@ -587,7 +592,10 @@ function update(dt) {
   for (const m of G.msg) m.t -= dt; G.msg = G.msg.filter(m => m.t > 0);
   if (G.fadeTo) { G.fade = Math.min(1, G.fade + dt * 2.5); if (G.fade >= 1) { const f = G.fadeTo; G.fadeTo = null; f(); } }
   else G.fade = Math.max(0, G.fade - dt * 2);
+  updateGuide(dt);
+  if (G.mode === 'skills' && !PREVIEW) pvTick(dt);   // round 45: the skill preview runs while its screen is open
   if (G.mode !== 'play' || G.paused) return;
+  if (guideFrozen()) { const k = 1 - G.guide.t / 0.4; if (k <= 0) return; dt *= k; }   // round 45: slow to a stop for the guide
   G.saveT += dt; if (G.saveT > 20) { G.saveT = 0; saveGame(); }
   G.trauma = Math.max(0, G.trauma - dt * 1.4);
   updateHero(dt);
@@ -829,6 +837,7 @@ function updateEnemy(e, dt) {
     if (Math.random() < dt * 10) { const [x, y] = screenOf(e), a = G.t * 9; pspawn(4, x + Math.cos(a) * 5, y + Math.sin(a) * 2, e.def.chest + 14, 0, 0, 0, 0.25, 51); }
     return;
   }
+  if (e.dummy) { e.clip = 'idle'; return; }   // a skill preview's target: it reacts to blows but never acts
   const m = e.def, dx = hero.fi - e.fi, dy = hero.fj - e.fj, d = Math.hypot(dx, dy);
   if (e === boss && e.state !== 'sleep' && !hero.dead && updateBoss(e, dt * (e.slowT > 0 ? 0.6 : 1), d, dx, dy)) return;   // slowed bosses wind up their specials slower too
   if (e.state === 'sleep') {
@@ -1387,13 +1396,14 @@ function flame(wx, wy, hgt, wid, t, seed, blue = false) {
   }
 }
 function render() {
+  if ((G.mode === 'inv' || G.mode === 'skills') && G.fade <= 0) { drawHudLayer(); return; }   // round 45: the bag and skills screens cover the world: don't draw it
   const t = G.t;
   buildBudget.used = 0; buildBudget.ms = 2;
-  const [kx, ky] = screenOf(hero);
+  const [kx, ky] = screenOf(hero), [vx0, vy0] = G.camAt ? screenOf(G.camAt) : [kx, ky];   // (the skill preview frames the hero and the dummies)
   const sh = G.trauma * G.trauma * 5;
   const shx = Math.round(sh * (Math.sin(t * 61) * 0.6 + Math.sin(t * 97 + 1) * 0.4)), shy = Math.round(sh * (Math.sin(t * 73 + 2) * 0.6 + Math.sin(t * 89 + 3) * 0.4));
   // the camera in detail pixels; the world layer uses the whole-pixel part and is shifted by the rest
-  cam2x = Math.round((kx - W / 2) * SPX) + shx * SPX; cam2y = Math.round((ky - H * 0.47) * SPX) + shy * SPX;
+  cam2x = Math.round((vx0 - W / 2) * SPX) + shx * SPX; cam2y = Math.round((vy0 - H * 0.47) * SPX) + shy * SPX;
   camX = Math.floor(cam2x / SPX); camY = Math.floor(cam2y / SPX); hx = cam2x - camX * SPX; hy = cam2y - camY * SPX;
   shd.fill(0); cid.fill(0);
   for (let y = 0; y < H; y++) {
@@ -1530,7 +1540,10 @@ function render() {
   }
   drawImpactFlashes();
   if (GLOW) drawGlows();
-  // the HUD, drawn at the world's scale into its own buffer, merged on top as blocks
+  drawHudLayer();
+}
+// the HUD, drawn at the world's scale into its own buffer, merged on top as blocks
+function drawHudLayer() {
   hud32.fill(0); out32 = hud32;
   drawHud();
   out32 = base32;
@@ -1540,6 +1553,7 @@ function render() {
     for (let b = 0; b < SPX; b++) for (let a = 0; a < SPX; a++) ov32[d + b * OW + a] = c;
   }
   ctx.putImageData(ovImg, 0, 0);
+  if (G.mode === 'skills' && UI.pvRect) pvBlit(UI.pvRect);   // round 45: the skill preview's picture in its window
 }
 // the lit color of a palette index at world-layer pixel (x, y), as the world's light pass would
 // light it there (light, fog, dither); 0 where the floor there is unseen. tile -2 = use the pixel's own tile
@@ -1859,8 +1873,8 @@ function drawPortal() {
   }
 }
 function saveGame() {
-  if (G.mode !== 'play' || hero.dead) return;
-  const data = { v: SAVE_V, level: LV.level, seed: LV.seed, hero: { cls: hero.cls, hp: Math.ceil(hero.hp), mana: Math.ceil(hero.mana), gold: hero.gold, xp: hero.xp, lvl: hero.lvl, potions: hero.potions, team: hero.team, equip: hero.equip, bag: hero.bag, mods: hero.mods || {}, ult: Math.floor(hero.ult || 0) }, serial: itemSerial,
+  if (G.mode !== 'play' || hero.dead || PREVIEW) return;   // (the skill preview's copy of the game never saves)
+  const data = { v: SAVE_V, level: LV.level, seed: LV.seed, hero: { cls: hero.cls, hp: Math.ceil(hero.hp), mana: Math.ceil(hero.mana), gold: hero.gold, xp: hero.xp, lvl: hero.lvl, potions: hero.potions, team: hero.team, equip: hero.equip, bag: hero.bag, mods: hero.mods || {}, ult: Math.floor(hero.ult || 0), modSeen: hero.modSeen || 0, tut: hero.tut || {} }, serial: itemSerial,
     story: G.story || null, gates: G.gates || null, town: G.town || null, portal: G.portal ? { level: G.portal.level, seed: G.portal.seed, fi: G.portal.fi, fj: G.portal.fj } : null };
   try { localStorage.setItem(saveKey(hero.cls), JSON.stringify(data)); } catch (e) { /* storage can be unavailable; the game still runs */ }
 }
@@ -1873,7 +1887,7 @@ function loadSave(cls = 'warrior') {
   } catch (e) { return null; }
 }
 function newHero(cls = 'warrior') {
-  Object.assign(hero, { cls, hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, bag: [], mods: {}, ult: 0, equip: { weapon: null, helm: null, chest: null, shield: null, ring: null, amulet: null } });
+  Object.assign(hero, { cls, hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, bag: [], mods: {}, ult: 0, modSeen: 0, tut: {}, equip: { weapon: null, helm: null, chest: null, shield: null, ring: null, amulet: null } });
   const R = rng(5);
   const kit = cls === 'mage' ? ['oak_staff', 'apprentice_robe', 'wizard_hat'] : cls === 'ranger' ? ['hunting_bow', 'leather_jerkin', 'ranger_hood', 'quiver'] : ['short_sword', 'tunic'];
   for (const b of kit) { const it = rollItem(R, 1, b); it.rarity = 'normal'; it.mods = {}; hero.equip[ITEM_BASES[b].slot] = it; }

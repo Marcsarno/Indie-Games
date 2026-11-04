@@ -201,6 +201,7 @@ const glyphPortal = (cx, cy) => { for (let y = -7; y <= 7; y++) for (let x = -5;
 const glyphMap = (cx, cy) => { fillRect(cx - 6, cy - 5, 13, 11, 26); frame(cx - 6, cy - 5, 13, 11, 27, 24); line(cx - 4, cy + 3, cx - 1, cy - 1, 22); line(cx - 1, cy - 1, cx + 4, cy + 2, 22); put(cx + 4, cy - 3, 22); };
 
 function drawHud() {
+  if (PREVIEW) { pvHud(); return; }
   drawNpcLabels(); drawQuestTracker();
   // a boss's title card when it first wakes: a dark band slides open with its name and epithet
   if (G.actCard > 0 && G.mode === 'play') {   // entering an act: ACT II / THE BURNING DEEP / the town's name
@@ -270,6 +271,9 @@ function drawHud() {
   }
   drawEliteLabels(champs);
   drawButton(UI.bag, [33, 34, 35], false, glyphBag);
+  { const [bx, by] = UI.bag;   // round 45: an upgrade waits in the bag (green arrow), something new (yellow), a new skill power (purple)
+    const ups = bagUpgrades().length, bob = Math.round(Math.sin(G.t * 5) * 1.2);
+    if (ups) badge(bx + 6, by + 11 + bob, 54, true); else if (modsUnseen()) badge(bx + 6, by + 11 + bob, 58, false); else if (hero.bag.some(it => it.isNew)) badge(bx + 6, by + 11, 50, false); }
   drawButton(UI.map, [4, 5, 6, 7], showMap, glyphMap);
   drawButton(UI.sound, [4, 5, 6, 7], false, glyphSound);
   drawButton(UI.portal, LV.area === 'town' && !G.portal ? [4, 5, 6, 7] : [37, 38, 39], !!G.tp, glyphPortal);
@@ -312,6 +316,7 @@ function drawHud() {
   if (G.mode === 'inv') drawInventory();
   if (G.mode === 'skills') drawSkills();
   if (G.mode === 'talk') drawTalk();
+  drawGuide();   // round 45
   if (G.paused) { fade(0.6); textC('PAUSED', W / 2, H * 0.4, 26, 2); textC('TAP TO RESUME', W / 2, H * 0.4 + 16, 25); }
   if (G.fade > 0) fade(G.fade);
   if (params.get('fps') === '1') text(`${fpsShown} FPS ${spriteBuilds} SPR`, 4, 20, 31);
@@ -484,124 +489,462 @@ const budgetOff = () => { const s = buildBudget.ms; buildBudget.ms = Infinity; r
 const budgetOn = s => { buildBudget.ms = s; };
 
 // ---------------------------------------------------------------- inventory
-const INV = { sel: null };   // {item, from: 'bag'|'equip', slot}
+// round 45: GEAR and SKILLS tabs; big green/red arrows on what beats or loses to what is worn;
+// the slot an item would go in glows; a card compares it side by side with the worn one; double
+// tap or EQUIP to wear it, WEAR BEST to wear every upgrade; NEW on what was picked up since the
+// bag was last open; the bag button in play shows an arrow when an upgrade waits.
+const INV = { sel: null, tapT: 0, tapIt: null, flash: null };   // sel: {item, from: 'bag'|'equip', slot}
 const SLOTS = ['helm', 'chest', 'weapon', 'shield', 'ring', 'amulet'];
+const canWear = it => { const b = ITEM_BASES[it.base]; return b.slot !== 'potion' && forCls(b); };
+// +1 better than worn (or the slot is empty), -1 worse, 0 about the same
+function upgradeOf(it) {
+  if (!canWear(it)) return 0;
+  const cur = hero.equip[ITEM_BASES[it.base].slot];
+  if (!cur) return 1;
+  const d = itemScore(it) - itemScore(cur);
+  return d > 0.5 ? 1 : d < -0.5 ? -1 : 0;
+}
+const bagUpgrades = () => hero.bag.filter(it => upgradeOf(it) > 0);
+// the best wearable bag item for each slot that beats what is worn
+function bestUpgrades() {
+  const out = [];
+  for (const s of SLOTS) {
+    const cur = hero.equip[s];
+    let best = null;
+    for (const it of hero.bag) if (ITEM_BASES[it.base].slot === s && canWear(it) && (!best || itemScore(it) > itemScore(best))) best = it;
+    if (best && (!cur || itemScore(best) > itemScore(cur) + 0.5)) out.push(best);
+  }
+  return out;
+}
+function wearBest() {
+  const ups = bestUpgrades();
+  for (const it of ups) equipItem(it);
+  INV.sel = null; INV.flash = { text: ups.length ? `WORE ${ups.length} UPGRADE${ups.length > 1 ? 'S' : ''}` : 'NOTHING BETTER IN THE BAG', col: ups.length ? 55 : 24, t: G.t };
+  if (ups.length) sfx('clink');
+}
+// skill modifiers that opened since the skills screen was last looked at
+function modsUnseen() {
+  let n = 0;
+  for (const sk of skillsScreenList()) (SKILL_MODS[sk.id] || []).forEach((m, k) => { const lv = modUnlock(sk.id, k); if (lv <= hero.lvl && lv > (hero.modSeen || 0)) n++; });
+  return n;
+}
+function openInv(tab = 'inv') { G.mode = tab; INV.sel = null; clearInput(); if (tab === 'skills') { SKV.sel = null; SKV.view = null; SKV.seen0 = hero.modSeen || 0; hero.modSeen = hero.lvl; } }
+function closeInv() { G.mode = 'play'; INV.sel = null; for (const it of hero.bag) delete it.isNew; }
 function invLayout() {
   const L = { slots: {}, bag: [], btns: [] };
   SLOTS.forEach((s, n) => L.slots[s] = n < 4 ? { x: 14, y: 30 + n * 34, w: 30, h: 30 } : { x: W - 44, y: 30 + (n - 4) * 34, w: 30, h: 30 });   // jewelry on the right (round 42a)
   for (let n = 0; n < BAG_SIZE; n++) L.bag.push({ x: 15 + (n % 6) * 41, y: 176 + Math.floor(n / 6) * 34, w: 34, h: 30 });
   L.close = { x: W - 30, y: 6, w: 24, h: 14 };
+  L.tabs = { inv: { x: W / 2 - 64, y: 5, w: 62, h: 16 }, skills: { x: W / 2 + 2, y: 5, w: 62, h: 16 } };
   L.color = { x: W - 66, y: 150, w: 54, h: 14 };
-  L.skills = { x: W - 66, y: 130, w: 54, h: 14 };
+  L.best = { x: W - 66, y: 130, w: 54, h: 14 };
+  L.card = { x: 8, y: 282, w: W - 16, h: H - 290 };
   return L;
 }
+// the two tabs at the top of the bag and the skills screens, and the close button
+function drawTabs(L, on) {
+  for (const k of ['inv', 'skills']) {
+    const r = L.tabs[k], sel = k === on;
+    fillRect(r.x, r.y, r.w, r.h, sel ? 5 : 3); frame(r.x, r.y, r.w, r.h, sel ? 51 : 8, sel ? 50 : 3);
+    textC(k === 'inv' ? 'GEAR' : 'SKILLS', r.x + r.w / 2, r.y + 6, sel ? 27 : 25);
+    if (k === 'skills' && !sel && modsUnseen()) dot(r.x + r.w - 5, r.y + 4, 59);
+    if (k === 'inv' && !sel && bagUpgrades().length) arrowUp(r.x + r.w - 6, r.y + 3, 55, 3);
+  }
+  frame(L.close.x, L.close.y, L.close.w, L.close.h, 8, 3); textC('X', L.close.x + 12, L.close.y + 5, 27);
+}
+// a round badge with a white up-arrow (or a plain colored dot)
+function badge(cx, cy, c, arrow) { for (let y = -5; y <= 5; y++) for (let x = -5; x <= 5; x++) { const d = Math.hypot(x, y); if (d <= 5.2) put(cx + x, cy + y, d > 4.2 ? BLK : (x + y < -2 ? c + 1 : c)); } if (arrow) { arrowUp(cx, cy - 3, 27, 3); fillRect(cx - 1, cy, 3, 3, 27); } else fillRect(cx - 1, cy - 1, 3, 3, 27); }
+function dot(cx, cy, c) { for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) { const d = x * x + y * y; if (d <= 5) put(cx + x, cy + y, d > 2 ? BLK : c); } }
+// a solid arrow head n rows tall, tip at (x, y)
+function arrowUp(x, y, c, n = 4) { for (let k = 0; k < n; k++) for (let d = -k; d <= k; d++) put(x + d, y + k, c); for (let d = -n; d <= n; d++) put(x + d, y + n, BLK); }
+function arrowDown(x, y, c, n = 3) { for (let k = 0; k < n; k++) for (let d = -k; d <= k; d++) put(x + d, y - k, c); }
 function drawInventory() {
   fillRect(0, 0, W, H, 2);
   for (let y = 0; y < H; y += 2) for (let x = (y >> 1) & 1; x < W; x += 4) put(x, y, 3);
-  const L = invLayout();
-  textC('INVENTORY', W / 2, 8, 26, 2);
-  frame(L.close.x, L.close.y, L.close.w, L.close.h, 8, 3); textC('X', L.close.x + 12, L.close.y + 5, 27);
-  fillRect(L.skills.x, L.skills.y, L.skills.w, L.skills.h, 5); frame(L.skills.x, L.skills.y, L.skills.w, L.skills.h, 8, 3); textC('SKILLS', L.skills.x + L.skills.w / 2, L.skills.y + 5, 51);
+  const L = invLayout(), pulse = Math.floor(G.t * 4) % 2;
+  drawTabs(L, 'inv');
   // paper doll: the real hero sprite at 2x, so gear changes show here too
   const doll = getSprite('hero', hero.look, 1, 'idle', Math.floor(G.t / 0.2) % 4, hero, 1);
   sprite(doll, 150, 148, 2, 4);
   const nm = { helm: 'HEAD', chest: 'BODY', weapon: 'HAND', shield: 'OFF', ring: 'RING', amulet: 'NECK' };
+  const target = INV.sel && INV.sel.from === 'bag' ? ITEM_BASES[INV.sel.item.base].slot : null;   // where the chosen bag item would go
   for (const s of SLOTS) {
     const r = L.slots[s], it = hero.equip[s];
     const special = it && (it.rarity === 'legend' || it.rarity === 'set') ? RARITY_COL[it.rarity] : 8;
-    fillRect(r.x, r.y, r.w, r.h, 4); frame(r.x, r.y, r.w, r.h, INV.sel && INV.sel.slot === s ? 51 : special, 3);
+    fillRect(r.x, r.y, r.w, r.h, 4);
+    if (s === target) { frame(r.x - 2, r.y - 2, r.w + 4, r.h + 4, pulse ? 55 : 54, pulse ? 54 : 53); frame(r.x - 1, r.y - 1, r.w + 2, r.h + 2, 53, 53); }
+    frame(r.x, r.y, r.w, r.h, INV.sel && INV.sel.slot === s ? 51 : special, 3);
     if (it) sprite(itemIcon(it), r.x + 15, r.y + 21, 1, 4); else textC(nm[s], r.x + 15, r.y + 13, 6);
     if (it) put(r.x + 2, r.y + 2, RARITY_COL[it.rarity]);
   }
   text(`DMG ${STAT.dmg[0]}-${STAT.dmg[1]}`, 54, 34, 26); text(`ARMOR ${STAT.armor}`, 54, 42, 26);
   text(`LIFE ${STAT.maxHp}`, 54, 50, 22); text(`MANA ${STAT.maxMana}`, 54, 58, 39);
   text(`LEVEL ${hero.lvl}`, 54, 66, 51); text(`GOLD ${hero.gold}`, 54, 74, 50);
+  { const r = L.best, any = bestUpgrades().length > 0;   // lit green when the bag holds an upgrade
+    fillRect(r.x, r.y, r.w, r.h, any ? 53 : 4); frame(r.x, r.y, r.w, r.h, any ? (pulse ? 55 : 54) : 8, 3); textC('WEAR BEST', r.x + r.w / 2, r.y + 5, any ? 27 : 24); }
   frame(L.color.x, L.color.y, L.color.w, L.color.h, 8, 3); textC('COLOR', L.color.x + 27, L.color.y + 5, hero.team === 'red' ? 22 : 39);
   L.bag.forEach((r, n) => {
     const it = hero.bag[n];
     // legendaries and set pieces get a border in their color so they stand out in the bag
     const special = it && (it.rarity === 'legend' || it.rarity === 'set') ? RARITY_COL[it.rarity] : 6;
     fillRect(r.x, r.y, r.w, r.h, 4); frame(r.x, r.y, r.w, r.h, INV.sel && INV.sel.item === it && it ? 51 : special, 3);
-    if (it) {
-      sprite(itemIcon(it), r.x + 17, r.y + 21, 1, 4); put(r.x + 2, r.y + 2, RARITY_COL[it.rarity]); put(r.x + 3, r.y + 2, RARITY_COL[it.rarity]);
-      const b = ITEM_BASES[it.base], cur = hero.equip[b.slot];
-      if (b.slot !== 'potion' && (!cur || itemScore(it) > itemScore(cur) + 0.5)) for (let k = 0; k < 3; k++) for (let x = -k; x <= k; x++) put(r.x + r.w - 6 + x, r.y + 3 + k, 55);   // upgrade arrow
-    }
+    if (!it) return;
+    sprite(itemIcon(it), r.x + 17, r.y + 21, 1, 4);
+    fillRect(r.x + 2, r.y + r.h - 3, 4, 1, RARITY_COL[it.rarity]);
+    if (!canWear(it)) { if (ITEM_BASES[it.base].slot !== 'potion') for (let y = r.y + 1; y < r.y + r.h - 1; y++) for (let x = r.x + 1 + (y & 1); x < r.x + r.w - 1; x += 2) put(x, y, 3); return; }   // not for this class: greyed
+    const u = upgradeOf(it);
+    if (u > 0) arrowUp(r.x + r.w - 6, r.y + 3, 55, 4);
+    else if (u < 0) arrowDown(r.x + r.w - 6, r.y + 5, 23, 3);
+    if (it.isNew) text('NEW', r.x + 2, r.y + 2, 51);
   });
-  // detail panel
-  const py = 176 + 3 * 34 + 6;
+  // the detail card
+  const C = L.card; L.btns = [];
+  fillRect(C.x, C.y, C.w, C.h, 3); frame(C.x, C.y, C.w, C.h, 8, 4);
+  const bw = 76, bh = 22, by = C.y + C.h - bh - 6;
+  const mk = (label, x, on, lit) => { fillRect(x, by, bw, bh, lit ? 53 : 5); frame(x, by, bw, bh, lit ? (pulse ? 55 : 54) : 8, 2); textC(label, x + bw / 2, by + 8, 27); L.btns.push({ x, y: by, w: bw, h: bh, on, label }); };
   if (INV.sel && INV.sel.item) {
-    const it = INV.sel.item, b = ITEM_BASES[it.base];
-    text(itemName(it), 12, py, RARITY_COL[it.rarity]);
-    itemLines(it).forEach((l, n) => text(l, 12, py + 9 + n * 7, 25));
-    const cur = INV.sel.from === 'bag' ? hero.equip[b.slot] : null;
-    if (cur) {   // what equipping it would change, against what is worn now
-      const y0 = py + 9 + 7 * itemLines(it).length + 3;
-      text(`VS ${itemName(cur)}`, 12, y0, 24);
-      compareLines(it, cur).forEach(([l, c], n) => text(l, 130, py + 9 + n * 7, c));
+    const it = INV.sel.item, b = ITEM_BASES[it.base], fromBag = INV.sel.from === 'bag';
+    const cur = fromBag && b.slot !== 'potion' ? hero.equip[b.slot] : null, u = fromBag ? upgradeOf(it) : 0;
+    const col = C.w / 2 - 6, cut = s => s.length * 4 > col ? s.slice(0, Math.floor(col / 4)) : s;
+    // the verdict on top
+    let vy = C.y + 6;
+    if (fromBag && !canWear(it)) textC(b.slot === 'potion' ? 'A POTION' : 'NOT FOR YOUR CLASS', W / 2, vy, 23);
+    else if (fromBag) { const v = !cur ? 'EMPTY SLOT' : u > 0 ? 'UPGRADE' : u < 0 ? 'WORSE' : 'ABOUT THE SAME', vc = u > 0 ? 55 : u < 0 ? 23 : 25; textC(v, W / 2, vy, vc, 2); const hw = textWidth(v, 2) / 2; if (u > 0) { arrowUp(W / 2 - hw - 10, vy + 1, 55, 5); arrowUp(W / 2 + hw + 9, vy + 1, 55, 5); } else if (u < 0) { arrowDown(W / 2 - hw - 10, vy + 7, 23, 5); arrowDown(W / 2 + hw + 9, vy + 7, 23, 5); } }
+    else textC('WORN', W / 2, vy, 25, 2);
+    vy += 18;
+    // this item on the left, the worn one on the right
+    text(cut(itemName(it)), C.x + 6, vy, RARITY_COL[it.rarity]);
+    itemLines(it).slice(0, 7).forEach((l, n) => text(cut(l), C.x + 6, vy + 9 + n * 7, 26));
+    if (cur) {
+      const x2 = C.x + C.w / 2 + 2;
+      for (let y = vy - 2; y < vy + 64; y++) put(C.x + C.w / 2 - 2, y, 5);
+      text('WORN NOW', x2, vy - 0, 24);
+      text(cut(itemName(cur)), x2, vy + 9, RARITY_COL[cur.rarity]);
+      itemLines(cur).slice(0, 6).forEach((l, n) => text(cut(l), x2, vy + 18 + n * 7, 24));
+      // the changes, in a row of green gains and red losses
+      const ch = compareLines(it, cur).slice(0, -1), cy = vy + 70;
+      if (ch.length) { textC('IF YOU WEAR IT', W / 2, cy, 24); ch.slice(0, 3).forEach(([l, c], n) => textC(l, W / 2, cy + 10 + n * 9, c)); }
     }
-    L.btns = [];
-    const bw = 70, by = Math.min(H - 26, py + 64);
-    const mk = (label, x, on) => { fillRect(x, by, bw, 18, 5); frame(x, by, bw, 18, 8, 2); textC(label, x + bw / 2, by + 6, 27); L.btns.push({ x, y: by, w: bw, h: 18, on }); };
-    if (INV.sel.from === 'bag') mk('EQUIP', 12, () => { equipItem(it); INV.sel = null; });
-    else mk('REMOVE', 12, () => { unequip(INV.sel.slot); INV.sel = null; });
-    mk('DROP', 92, () => {
+    if (fromBag) mk('EQUIP', C.x + 6, () => { if (!canWear(it)) { sfx('tap'); return; } const up = upgradeOf(it) > 0; equipItem(it); INV.sel = null; INV.flash = { text: up ? 'BETTER!' : 'EQUIPPED', col: up ? 55 : 26, t: G.t }; sfx('clink'); }, canWear(it) && u > 0);
+    else mk('REMOVE', C.x + 6, () => { unequip(INV.sel.slot); INV.sel = null; });
+    mk('DROP', C.x + C.w - bw - 6, () => {
       if (INV.sel.from === 'bag') hero.bag.splice(hero.bag.indexOf(it), 1); else { hero.equip[INV.sel.slot] = null; recalcHero(); }
       groundItems.push({ item: it, fi: hero.fi + 0.4, fj: hero.fj + 0.4, t: 0 }); INV.sel = null;
     });
-    UI.invBtns = L.btns;
-  } else { textC('TAP AN ITEM', W / 2, py + 6, 24); UI.invBtns = []; }
+  } else {
+    const ups = bagUpgrades().length;
+    textC('TAP AN ITEM TO SEE IT', W / 2, C.y + 14, 25);
+    textC('DOUBLE TAP TO WEAR IT', W / 2, C.y + 24, 24);
+    if (ups) { arrowUp(W / 2 - 52, C.y + 40, 55, 4); textC(`${ups} UPGRADE${ups > 1 ? 'S' : ''} IN YOUR BAG`, W / 2 + 4, C.y + 40, 55); }
+  }
+  UI.invBtns = L.btns;
+  if (INV.flash && G.t - INV.flash.t < 1.6) textC(INV.flash.text, W / 2, 168, INV.flash.col, 1);
 }
 const inRect = (p, r) => p[0] >= r.x && p[0] < r.x + r.w && p[1] >= r.y && p[1] < r.y + r.h;
+function tabTap(p, L) {
+  if (inRect(p, L.close)) { closeInv(); return true; }
+  if (inRect(p, L.tabs.inv)) { if (G.mode !== 'inv') openInv('inv'); return true; }
+  if (inRect(p, L.tabs.skills)) { if (G.mode !== 'skills') openInv('skills'); return true; }
+  return false;
+}
 function invTap(p) {
   const L = invLayout();
   for (const b of UI.invBtns || []) if (inRect(p, b)) { b.on(); return; }
-  if (inRect(p, L.close)) { G.mode = 'play'; INV.sel = null; return; }
-  if (inRect(p, L.skills)) { G.mode = 'skills'; SKV.sel = null; return; }
+  if (tabTap(p, L)) return;
+  if (inRect(p, L.best)) { wearBest(); return; }
   if (inRect(p, L.color)) { hero.team = hero.team === 'red' ? 'blue' : 'red'; recalcHero(); prewarmHero(); return; }
   for (const s of SLOTS) if (inRect(p, L.slots[s])) { INV.sel = hero.equip[s] ? { item: hero.equip[s], from: 'equip', slot: s } : null; return; }
-  for (let n = 0; n < L.bag.length; n++) if (inRect(p, L.bag[n])) { INV.sel = hero.bag[n] ? { item: hero.bag[n], from: 'bag' } : null; return; }
+  for (let n = 0; n < L.bag.length; n++) if (inRect(p, L.bag[n])) {
+    const it = hero.bag[n];
+    if (it && INV.tapIt === it && G.t - INV.tapT < 0.4 && canWear(it)) {   // double tap: wear it
+      const up = upgradeOf(it) > 0; equipItem(it); INV.sel = null; INV.tapIt = null; INV.flash = { text: up ? 'BETTER!' : 'EQUIPPED', col: up ? 55 : 26, t: G.t }; sfx('clink'); return;
+    }
+    INV.tapIt = it; INV.tapT = G.t;
+    INV.sel = it ? { item: it, from: 'bag' } : null; return;
+  }
 }
 
-// ---------------------------------------------------------------- skills screen (round 29)
-// one row per skill: its name, then its three modifiers; tap one to choose it (tap again for none).
-// Locked ones show the level they open at. The chosen one's line describes it.
-const SKV = { sel: null };
+// ---------------------------------------------------------------- guided steps (round 45)
+// Two moments are walked through once, the first time they happen (saved in hero.tut):
+// 'gear' - the second wolf killed (or the eighth kill of anything) at level 4 or under drops a
+//          weapon for the class that is sure to beat the one worn. Picking it up slows the game to
+//          a stop, dims all but the bag button and points at it; in the bag the arrow moves to the
+//          new weapon, then to EQUIP.
+// 'mod'  - the level the first skill modifier opens (3 for every class): the same freeze, then
+//          the bag, the SKILLS tab and the new modifier.
+// Each step is read off the game's state every frame, so going back or out of order never strands it.
+function guideKill(e) {
+  if (!hero.tut || hero.tut.gearDrop || hero.lvl > 4) return;
+  hero.tut.kills = (hero.tut.kills || 0) + 1; if (e.id === 'wolf') hero.tut.wolves = (hero.tut.wolves || 0) + 1;
+  if ((hero.tut.wolves || 0) < 2 && hero.tut.kills < 8) return;
+  hero.tut.gearDrop = true;
+  const cur = hero.equip.weapon, need = cur ? itemScore(cur) + 2 : 0;
+  const bases = Object.keys(ITEM_BASES).filter(k => ITEM_BASES[k].slot === 'weapon' && forCls(ITEM_BASES[k]) && ITEM_BASES[k].lvl <= 3)
+    .sort((a, b) => ITEM_BASES[a].lvl - ITEM_BASES[b].lvl || ITEM_BASES[a].dmg[1] - ITEM_BASES[b].dmg[1]);
+  for (const k of bases) {
+    const it = { id: itemSerial++, base: k, rarity: 'magic', prefix: 'SHARP', mods: { dmgPct: 25 } };
+    if (itemScore(it) < need) continue;
+    groundItems.push({ item: it, fi: e.fi, fj: e.fj, t: 0, guide: true }); say('SOMETHING FELL. PICK IT UP!', 51, 2.5); return;
+  }
+  hero.tut.gear = true;   // already better armed than anything we'd give: nothing to show
+}
+function guideLevel() {
+  if (!hero.tut || hero.tut.mod) return;
+  const opens = skillsScreenList().some(sk => (SKILL_MODS[sk.id] || []).some((m, k) => modUnlock(sk.id, k) === hero.lvl));
+  if (!opens) return;
+  if (G.guide) { G.guideNext = 'mod'; return; }
+  startGuide('mod');
+}
+function startGuide(kind, item) {
+  G.guide = { kind, item, t: 0, frozen: G.mode === 'play', dmg0: STAT.dmg.slice() }; if (G.mode === 'play') clearInput();
+  if (kind === 'mod') say('NEW SKILL POWER UNLOCKED', 59, 3);
+  sfx('levelUp');
+}
+// the step the guide is on, from what the game shows now
+function guideStep() {
+  const g = G.guide; if (!g) return null;
+  if (g.kind === 'gear') {
+    if (Object.values(hero.equip).includes(g.item)) return 'done';
+    if (!hero.bag.includes(g.item)) return 'done';   // dropped it: leave them be
+    if (G.mode === 'play') return 'bag';
+    if (G.mode === 'skills') return 'geartab';
+    if (G.mode === 'inv') return INV.sel && INV.sel.item === g.item ? 'equip' : 'item';
+    return 'wait';
+  }
+  if (Object.values(hero.mods || {}).some(Boolean)) return 'done';
+  if (G.mode === 'play') return 'bag';
+  if (G.mode === 'inv') return 'tab';
+  if (G.mode === 'skills') { const g = skillsGuideMod(), v = skillsView(); return g && v.n === g.n && v.k === g.k ? 'choose' : 'chip'; }
+  return 'wait';
+}
+const guideFrozen = () => !!(G.guide && G.guide.frozen && G.mode === 'play' && guideStep() === 'bag');
+function updateGuide(dt) {
+  const g = G.guide; if (!g) return;
+  g.t += dt;
+  if (G.mode !== 'play') g.frozen = false;   // once the bag is open, play is never frozen again for it
+  const s = guideStep();
+  if (s !== 'done') return;
+  hero.tut[g.kind] = true; G.guide = null;
+  if (g.kind === 'gear') { const d = STAT.dmg; INV.flash = { text: `BETTER! DAMAGE ${g.dmg0[0]}-${g.dmg0[1]} > ${d[0]}-${d[1]}`, col: 55, t: G.t }; sfx('levelUp'); }
+  else { SKV.flash = { text: 'CHOSEN! CHANGE IT HERE ANY TIME', col: 55, t: G.t }; }
+  if (G.guideNext) { const k = G.guideNext; G.guideNext = null; startGuide(k); G.guide.frozen = G.mode === 'play'; }
+}
+// where the arrow points: a rect {x, y, w, h}
+function guideRect(s) {
+  const L = invLayout();
+  if (s === 'bag') { const [x, y, r] = UI.bag; return { x: x - r, y: y - r, w: r * 2, h: r * 2, round: true }; }
+  if (s === 'item') { const n = hero.bag.indexOf(G.guide.item); return n >= 0 ? L.bag[n] : null; }
+  if (s === 'equip') return (UI.invBtns || []).find(b => b.label === 'EQUIP') || null;
+  if (s === 'tab') return L.tabs.skills;
+  if (s === 'geartab') return L.tabs.inv;
+  if (s === 'chip') return skillsGuideRect();
+  if (s === 'choose') return skillsLayout().act;
+  return null;
+}
+const GUIDE_TEXT = {
+  gear: { bag: ['NEW WEAPON!', 'OPEN YOUR BAG TO WEAR IT'], item: [null, 'TAP THE NEW WEAPON'], equip: [null, 'TAP EQUIP TO WEAR IT'], geartab: [null, 'BACK TO YOUR GEAR'] },
+  mod: { bag: ['NEW SKILL POWER!', 'OPEN YOUR BAG TO CHOOSE IT'], tab: [null, 'TAP SKILLS'], chip: [null, 'TAP IT TO WATCH IT'], choose: [null, 'TAP TO USE IT'] },
+};
+function drawGuide() {
+  const g = G.guide; if (!g) return;
+  const s = guideStep(), r = guideRect(s); if (!r) return;
+  const [big, small] = (GUIDE_TEXT[g.kind] || {})[s] || [];
+  const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+  if (G.mode === 'play') {   // dim all but the button: a dither of black, darker the longer it has stopped
+    const k = Math.min(1, g.t / 0.4), rr = r.w / 2 + 4;
+    for (let y = 0; y < H; y++) for (let x = (y & 1); x < W; x += 2) if (k > 0.5 || ((x + y) & 3) === 0) { if (Math.hypot(x - cx, y - cy) > rr) out32[y * W + x] = PAL32[BLK]; }
+    if (g.frozen) for (let a = 0; a < 40; a++) { const t = a / 40 * 6.283; put(cx + Math.cos(t) * rr, cy + Math.sin(t) * rr, Math.floor(G.t * 6) % 2 ? 51 : 50); }
+  } else {   // a pulsing frame round the target
+    const c = Math.floor(G.t * 6) % 2 ? 51 : 50;
+    frame(r.x - 2, r.y - 2, r.w + 4, r.h + 4, c, c); frame(r.x - 3, r.y - 3, r.w + 6, r.h + 6, BLK, BLK);
+  }
+  // the bouncing arrow, under targets in the top half (pointing up) and over the rest (pointing down)
+  const up = cy < H / 2, bob = Math.round(Math.abs(Math.sin(G.t * 5)) * 4);
+  const tipY = up ? r.y + r.h + 4 + bob : r.y - 4 - bob, ax = Math.round(Math.min(W - 10, Math.max(10, cx)));
+  bigArrow(ax, tipY, up);
+  const ty = up ? tipY + 18 : tipY - 26, tx = Math.min(W - 6 - textWidth(small || '') / 2, Math.max(6 + textWidth(small || '') / 2, cx));
+  if (big) textC(big, W / 2, H * 0.42, 51, 2);
+  if (small) { const w = textWidth(small) + 8; fillRect(Math.round(tx - w / 2), ty - 3, w, 11, BLK); frame(Math.round(tx - w / 2), ty - 3, w, 11, 50, 49); textC(small, tx, ty, 27); }
+}
+function bigArrow(x, tip, up) {
+  const d = up ? 1 : -1;
+  for (let k = 0; k < 7; k++) for (let o = -k - 1; o <= k + 1; o++) put(x + o, tip + d * k, BLK);
+  for (let k = 0; k < 6; k++) for (let o = -k; o <= k; o++) put(x + o, tip + d * k, k < 2 ? 27 : 51);
+  for (let k = 6; k < 13; k++) for (let o = -3; o <= 3; o++) put(x + o, tip + d * k, Math.abs(o) === 3 ? BLK : 50);
+  for (let o = -3; o <= 3; o++) put(x + o, tip + d * 13, BLK);
+}
+
+// ---------------------------------------------------------------- skills screen (round 29, redone in round 45)
+// The class's skills as a row of buttons; the chosen one shows its live preview (preview.js: the
+// real skill on three dummies), its cost, and four chips: the plain skill and its three
+// modifiers. Tapping a chip plays it in the preview and explains it; CHOOSE puts it in use (one per
+// skill). Locked modifiers can be watched too, with the level they open at.
+const SKV = { sel: null, view: null, flash: null };   // view: { n: skill row, k: -1 plain or 0-2 }
+const skillsScreenList = () => (hero.cls === 'mage' ? [{ id: 'missile', name: 'MAGIC MISSILE', lvl: 1, mana: 0, cd: 0 }] : []).concat(SKILLS);
+const RESOURCE = { warrior: 'FURY', mage: 'MANA', ranger: 'FOCUS' };
+// what each skill and modifier does, at more length than the chip has room for
+const SKILL_TEXT = {
+  missile: 'YOUR ATTACK. HOLD IT TO KEEP FIRING ARCANE BOLTS AT THE NEAREST FOE. IT COSTS NOTHING.',
+  'missile/seek': 'THREE SMALL BOLTS, EACH FINDS ITS OWN FOE. BEST AGAINST PACKS OF WEAK ONES.',
+  'missile/pierce': 'A FAST STRAIGHT BOLT THAT GOES THROUGH EVERY FOE IN ITS LINE. LINE THEM UP IN A DOORWAY.',
+  'missile/orb': 'A SLOW ORB THAT ZAPS ALL NEAR IT AS IT FLIES, THEN BURSTS. A SLOWER CAST, BIG ON CROWDS.',
+  fireball: 'A FIREBALL THAT BURSTS ON THE FIRST FOE IT HITS, BURNING ALL AROUND IT.',
+  'fireball/split': 'THREE SMALLER FIREBALLS IN A SPREAD. COVERS A WIDE FRONT, AND ALL THREE CAN HIT ONE BIG FOE.',
+  'fireball/ground': 'LEAVES FIRE ON THE FLOOR FOR 3 SECONDS. GREAT IN DOORWAYS AND ON FOES THAT CHASE YOU.',
+  'fireball/great': 'ONE HUGE, SLOW FIREBALL WITH A MUCH BIGGER BLAST. COSTS 6 MORE MANA.',
+  cone: 'A BLAST OF FROST IN FRONT OF YOU. WHAT IT HITS IS FROZEN FOR A MOMENT.',
+  'cone/nova': 'A RING OF FROST ALL AROUND YOU, SHORTER REACH. FOR WHEN YOU ARE SURROUNDED.',
+  'cone/shards': 'A LONG NARROW CONE THAT HITS HARDER. FREEZE THEM BEFORE THEY REACH YOU.',
+  'cone/deep': 'FREEZES LONGER. FOES KILLED WHILE FROZEN BURST AND HURT THOSE NEAR THEM.',
+  meteor: 'CALLS A METEOR DOWN ON YOUR TARGET AFTER A SHORT DELAY. A HUGE BLAST.',
+  'meteor/shower': 'THREE SMALLER METEORS AROUND THE TARGET. A WIDER SPREAD FOR BIG PACKS.',
+  'meteor/molten': 'THE CRATER BURNS FOR 4 SECONDS. HOLD A CHOKE POINT WITH IT.',
+  'meteor/comet': 'A BALL OF ICE INSTEAD: IT FREEZES WHAT IT HITS RATHER THAN BURNING IT.',
+  blink: 'TELEPORT A SHORT WAY. GET OUT OF A CROWD OR AWAY FROM A BIG HIT.',
+  'blink/burst': 'A BLAST WHERE YOU LAND THAT THROWS FOES BACK. BLINK IN AND KNOCK THEM AWAY.',
+  'blink/double': 'A SECOND BLINK FOR FREE WITHIN 1.5 SECONDS. IN, THEN BACK OUT.',
+  'blink/frost': 'FREEZES WHAT STOOD NEAR YOU WHEN YOU LEFT, SO THEY CANNOT FOLLOW.',
+  slam: 'SLAM THE GROUND: A WAVE THAT HITS EVERY FOE IN AN ARC IN FRONT OF YOU.',
+  'slam/ring': 'HITS ALL AROUND YOU WITH A SHORTER REACH. FOR WHEN THEY SURROUND YOU.',
+  'slam/fissure': 'A LONG NARROW CRACK THAT RACES OUT AHEAD AND HITS FOES FAR AWAY IN A LINE.',
+  'slam/after': 'A SECOND, WEAKER SLAM HALF A SECOND LATER. MORE DAMAGE FOR THE SAME FURY.',
+  hook: 'THROW A CHAIN THAT DRAGS A FOE TO YOU AND DAZES IT. PULL IN ARCHERS AND CASTERS.',
+  'hook/line': 'REACHES FARTHER AND DRAGS IN EVERY FOE IT PASSES.',
+  'hook/barbed': 'HITS HARDER AND DAZES TWICE AS LONG.',
+  'hook/tether': 'HAULS YOU TO THE TARGET INSTEAD, FOR A HEAVY BLOW. GET TO THE ONES AT THE BACK.',
+  whirl: 'SPIN WITH YOUR WEAPON OUT, HITTING ALL AROUND YOU AGAIN AND AGAIN. YOU CAN MOVE AS YOU SPIN.',
+  'whirl/devil': 'THROWS OUT SMALL WHIRLWINDS AS YOU SPIN THAT WANDER OFF AND HIT ON THEIR OWN.',
+  'whirl/long': 'SPINS TWICE AS LONG AND PULLS THE SMALL ONES IN TOWARD THE BLADE. 6 MORE FURY.',
+  'whirl/storm': 'A WIDER REACH AND FASTER HITS.',
+  leap: 'JUMP AT YOUR TARGET AND CRASH DOWN, HITTING ALL AROUND WHERE YOU LAND.',
+  'leap/burn': 'THE LANDING LEAVES FIRE ON THE FLOOR.',
+  'leap/quake': 'A MUCH WIDER LANDING THAT KNOCKS EVERY FOE NEAR IT DOWN.',
+  'leap/pounce': 'A LONGER JUMP THAT ENDS IN ONE HUGE BLOW ON THE TARGET.',
+  multi: 'A FAN OF ARROWS IN FRONT OF YOU. GOOD AGAINST A PACK.',
+  'multi/wide': 'NINE ARROWS IN A WIDE FAN, EACH A LITTLE WEAKER.',
+  'multi/pierce': 'THE ARROWS GO THROUGH EVERY FOE IN THEIR LINE.',
+  'multi/fire': 'BURNING ARROWS THAT SET FOES ALIGHT AND HURT THEM OVER TIME.',
+  trap: 'THROW A SNARE THAT HOLDS THE FOES THAT STEP ON IT. SHOOT THEM WHILE THEY ARE STUCK.',
+  'trap/spike': 'NO SNARE: IT SPRINGS FOR ONE HEAVY BLOW.',
+  'trap/net': 'SNARES EVERYTHING IN A WIDER RING, FOR LONGER.',
+  'trap/triple': 'THROWS THREE SMALLER TRAPS IN A SPREAD.',
+  roll: 'LEAP BACK, AWAY FROM DANGER, TO KEEP YOUR DISTANCE.',
+  'roll/smoke': 'LEAVES SMOKE WHERE YOU STOOD THAT DAZES THE FOES IN IT.',
+  'roll/long': 'JUMPS TWICE AS FAR.',
+  'roll/volley': 'FIVE STRONGER ARROWS AS YOU LAND.',
+  mark: 'MARK A FOE: IT TAKES MORE DAMAGE FROM EVERYTHING FOR A WHILE. MARK THE BIG ONE.',
+  'mark/spread': 'WHEN THE MARKED FOE DIES, THE MARK JUMPS TO THE NEXT.',
+  'mark/death': 'THE MARKED TAKE 70% MORE DAMAGE, BUT THE MARK LASTS ONLY 5 SECONDS.',
+  'mark/blood': 'YOUR HITS ON THE MARKED FOE HEAL YOU.',
+};
+function wrapText(s, n) {
+  const out = []; let line = '';
+  for (const w of s.split(' ')) { if (line && (line + ' ' + w).length > n) { out.push(line); line = w; } else line = line ? line + ' ' + w : w; }
+  if (line) out.push(line);
+  return out;
+}
 function skillsLayout() {
-  const L = { close: { x: W - 30, y: 6, w: 24, h: 14 }, rows: [] };
-  // the mage's attack (magic missile) has modifiers too: its row comes first
-  const list = (hero.cls === 'mage' ? [{ id: 'missile', name: 'MAGIC MISSILE', lvl: 1 }] : []).concat(SKILLS), gap = list.length > 4 ? 66 : 74;
-  list.forEach((sk, n) => { const y = 36 + n * gap; L.rows.push({ sk, y, chips: [0, 1, 2].map(k => ({ k, x: 8 + k * 87, y: y + 13, w: 82, h: 22 })) }); });
+  const list = skillsScreenList(), n = list.length, L = { list, icons: [], chips: [] };
+  const gap = Math.min(54, (W - 20) / n);
+  list.forEach((sk, i) => L.icons.push({ x: Math.round(W / 2 + (i - (n - 1) / 2) * gap) - 14, y: 26, w: 28, h: 28, sk }));
+  L.pv = { x: 8, y: 80, w: PV_W, h: PV_H };
+  for (let k = -1; k < 3; k++) L.chips.push({ k, x: 8 + (k + 1) * 64, y: 248, w: 60, h: 26 });
+  L.text = { x: 10, y: 282 };
+  L.act = { x: W / 2 - 80, y: 334, w: 160, h: 24 };
   return L;
+}
+// the view starts on a skill with a modifier just opened, else the first; on what is in use
+function skillsView() {
+  const list = skillsScreenList();
+  if (!SKV.view || SKV.view.n >= list.length) {
+    let n = list.findIndex(sk => hero.lvl >= sk.lvl && (SKILL_MODS[sk.id] || []).some((m, k) => modUnlock(sk.id, k) === hero.lvl)); if (n < 0) n = 0;
+    const cur = hero.mods && hero.mods[list[n].id], k = cur ? (SKILL_MODS[list[n].id] || []).findIndex(m => m.id === cur) : -1;
+    SKV.view = { n, k };
+  }
+  return SKV.view;
+}
+// the modifier the skill guide points at: the first one open
+function skillsGuideMod() {
+  const list = skillsScreenList();
+  for (let n = 0; n < list.length; n++) for (let k = 0; k < 3; k++) if (SKILL_MODS[list[n].id] && hero.lvl >= list[n].lvl && hero.lvl >= modUnlock(list[n].id, k)) return { n, k };
+  return null;
+}
+function skillsGuideRect() {
+  const g = skillsGuideMod(); if (!g) return null;
+  const L = skillsLayout(), v = skillsView();
+  return v.n !== g.n ? L.icons[g.n] : L.chips[g.k + 1];
+}
+function skillIcon(sk, i, cx, cy, r, locked) {
+  const sl = SPELL_LOOK[sk.id], si = SKILLS.indexOf(sk);
+  if (sk.id === 'missile') drawButton([cx, cy, r], locked ? [3, 4, 5] : [56, 57, 58, 59], false, glyphBolt);
+  else drawButton([cx, cy, r], locked ? [3, 4, 5] : sl ? sl[0] : [[48, 49, 50, 51], [19, 20, 21, 22], [28, 29, 30, 31], [33, 34, 35, 36]][si], false, sl ? sl[1] : si ? SKILL_GLYPH[si] : glyphBolt);
+  if (locked) textC(`LV${sk.lvl}`, cx, cy - 2, 25);
 }
 function drawSkills() {
   fillRect(0, 0, W, H, 2);
   for (let y = 0; y < H; y += 2) for (let x = (y >> 1) & 1; x < W; x += 4) put(x, y, 3);
-  const L = skillsLayout();
-  textC('SKILLS', W / 2, 8, 26, 2);
-  frame(L.close.x, L.close.y, L.close.w, L.close.h, 8, 3); textC('X', L.close.x + 12, L.close.y + 5, 27);
-  for (const row of L.rows) {
-    const sk = row.sk, mods = SKILL_MODS[sk.id], cur = hero.mods && hero.mods[sk.id], open = hero.lvl >= sk.lvl;
-    text(sk.name + (open ? '' : `  (LEVEL ${sk.lvl})`), 8, row.y, open ? 51 : 25);
-    if (!mods) { text('MODIFIERS COMING SOON', 8, row.y + 20, 24); continue; }
-    for (const c of row.chips) {
-      const m = mods[c.k], lv = modUnlock(sk.id, c.k), unlocked = hero.lvl >= lv, on = cur === m.id;
-      fillRect(c.x, c.y, c.w, c.h, on ? 38 : unlocked ? 5 : 3); frame(c.x, c.y, c.w, c.h, on ? 40 : 8, on ? 37 : 3);
-      textC(m.name, c.x + c.w / 2, c.y + 4, unlocked ? (on ? 27 : 26) : 24);
-      textC(unlocked ? (on ? 'CHOSEN' : 'TAP TO CHOOSE') : `LEVEL ${lv}`, c.x + c.w / 2, c.y + 13, on ? 51 : 24);
-    }
-    const show = SKV.sel && SKV.sel.id === sk.id ? mods[SKV.sel.k] : cur ? mods.find(m => m.id === cur) : null;
-    if (show) text(show.desc, 8, row.y + 40, 25);
+  const L = skillsLayout(), v = skillsView(), sk = L.list[v.n], mods = SKILL_MODS[sk.id] || [], pulse = Math.floor(G.t * 4) % 2;
+  drawTabs(invLayout(), 'skills');
+  // the skill buttons
+  L.icons.forEach((r, i) => {
+    const s = r.sk, cx = r.x + 14, cy = r.y + 14;
+    if (i === v.n) for (let a = 0; a < 64; a++) { const t = a / 64 * 6.283; put(cx + Math.cos(t) * 14, cy + Math.sin(t) * 14, 51); put(cx + Math.cos(t) * 15, cy + Math.sin(t) * 15, 49); }
+    skillIcon(s, i, cx, cy, 11, hero.lvl < s.lvl);
+    const fresh = (SKILL_MODS[s.id] || []).some((m, k) => { const lv = modUnlock(s.id, k); return lv <= hero.lvl && lv > (SKV.seen0 || 0); });
+    if (fresh && i !== v.n) dot(cx + 10, cy - 10, 59);
+  });
+  // the name, and what it costs
+  textC(sk.name, W / 2, 58, 51, 2);
+  const res = RESOURCE[hero.cls] || 'MANA', cost = sk.id === 'missile' ? 'NO COST: YOUR ATTACK' : `${sk.mana + (v.k >= 0 && /6 MORE/.test(mods[v.k].desc) ? 6 : 0)} ${res}   ${sk.cd} S COOLDOWN`;
+  textC(hero.lvl < sk.lvl ? `OPENS AT LEVEL ${sk.lvl}   ${cost}` : cost, W / 2, 71, 25);
+  // the preview window (its picture is drawn over this hole after the frame, see pvBlit)
+  const P = L.pv; UI.pvRect = P;
+  frame(P.x - 2, P.y - 2, P.w + 4, P.h + 4, 8, 4); frame(P.x - 1, P.y - 1, P.w + 2, P.h + 2, BLK, BLK); fillRect(P.x, P.y, P.w, P.h, 1);
+  pvShow(sk.id, v.k >= 0 ? mods[v.k].id : null);
+  if (!pvLive()) textC(PVP.failed ? 'NO PREVIEW ON THIS DEVICE' : 'SETTING UP THE PREVIEW...', W / 2, P.y + P.h / 2 - 2, 24);
+  const showing = v.k >= 0 ? mods[v.k].name : sk.name, dmg = pvLive() ? pvDamage() : 0;
+  text(`PREVIEW: ${showing}`, P.x, P.y + P.h + 5, 24);
+  if (dmg) { const s = `${dmg} DAMAGE A LOOP`; text(s, P.x + P.w - textWidth(s), P.y + P.h + 5, 24); }
+  // the chips: the plain skill, then its three modifiers
+  const cur = hero.mods && hero.mods[sk.id];
+  for (const c of L.chips) {
+    const m = c.k >= 0 ? mods[c.k] : null, lv = m ? modUnlock(sk.id, c.k) : sk.lvl, open = hero.lvl >= lv && hero.lvl >= sk.lvl;
+    const inUse = m ? cur === m.id : !cur || !mods.some(x => x.id === cur), viewing = c.k === v.k;
+    fillRect(c.x, c.y, c.w, c.h, inUse ? 53 : open ? 5 : 3);
+    if (viewing) { frame(c.x - 1, c.y - 1, c.w + 2, c.h + 2, pulse ? 51 : 50, pulse ? 51 : 50); frame(c.x, c.y, c.w, c.h, 50, 49); }
+    else frame(c.x, c.y, c.w, c.h, inUse ? 55 : 8, 3);
+    textC(m ? m.name : 'BASIC', c.x + c.w / 2, c.y + 5, open ? 27 : 24);
+    textC(inUse ? 'IN USE' : open ? (viewing ? 'WATCHING' : 'TAP TO WATCH') : `LEVEL ${lv}`, c.x + c.w / 2, c.y + 15, inUse ? 55 : open ? 25 : 24);
+    if (m && open && lv > (SKV.seen0 || 0) && !inUse) dot(c.x + c.w - 4, c.y + 3, 59);
   }
+  if (!mods.length) textC('NO MODIFIERS FOR THIS SKILL YET', W / 2, L.chips[0].y + 9, 24);
+  // what it does
+  const key = v.k >= 0 ? sk.id + '/' + mods[v.k].id : sk.id, desc = SKILL_TEXT[key] || (v.k >= 0 ? mods[v.k].desc : '');
+  wrapText(desc, 61).slice(0, 5).forEach((l, i) => text(l, L.text.x, L.text.y + i * 9, 26));
+  // the button: choose what is being watched
+  const m = v.k >= 0 ? mods[v.k] : null, lv = m ? modUnlock(sk.id, v.k) : sk.lvl, open = hero.lvl >= lv && hero.lvl >= sk.lvl;
+  const inUse = m ? cur === m.id : !cur || !mods.some(x => x.id === cur), A = L.act;
+  const label = !open ? `OPENS AT LEVEL ${Math.max(lv, sk.lvl)}` : inUse ? 'IN USE' : m ? `CHOOSE ${m.name}` : 'GO BACK TO BASIC';
+  const lit = open && !inUse;
+  fillRect(A.x, A.y, A.w, A.h, lit ? 53 : 4); frame(A.x, A.y, A.w, A.h, lit ? (pulse ? 55 : 54) : 8, 3); textC(label, A.x + A.w / 2, A.y + 9, lit ? 27 : 24);
+  if (SKV.flash && G.t - SKV.flash.t < 2) textC(SKV.flash.text, W / 2, A.y + A.h + 8, SKV.flash.col);
+  else textC('ONE MODIFIER PER SKILL. CHANGE IT ANY TIME.', W / 2, A.y + A.h + 8, 24);
 }
 function skillsTap(p) {
-  const L = skillsLayout();
-  if (inRect(p, L.close)) { G.mode = 'inv'; return; }
-  for (const row of L.rows) for (const c of row.chips) {
-    if (!inRect(p, c) || !SKILL_MODS[row.sk.id]) continue;
-    const m = SKILL_MODS[row.sk.id][c.k]; SKV.sel = { id: row.sk.id, k: c.k };
-    if (hero.lvl < modUnlock(row.sk.id, c.k)) { sfx('tap'); return; }
-    hero.mods = hero.mods || {}; hero.mods[row.sk.id] = hero.mods[row.sk.id] === m.id ? null : m.id; const m0 = G.mode; G.mode = 'play'; saveGame(); G.mode = m0; return;
+  if (tabTap(p, invLayout())) return;
+  const L = skillsLayout(), v = skillsView();
+  for (let i = 0; i < L.icons.length; i++) if (inRect(p, L.icons[i])) {
+    const sk = L.list[i], cur = hero.mods && hero.mods[sk.id];
+    SKV.view = { n: i, k: cur ? (SKILL_MODS[sk.id] || []).findIndex(m => m.id === cur) : -1 }; return;
+  }
+  const sk = L.list[v.n], mods = SKILL_MODS[sk.id] || [];
+  for (const c of L.chips) if (inRect(p, c) && (c.k < 0 || mods[c.k])) { v.k = c.k; return; }
+  if (inRect(p, L.act)) {
+    const m = v.k >= 0 ? mods[v.k] : null, lv = m ? modUnlock(sk.id, v.k) : sk.lvl;
+    if (hero.lvl < lv || hero.lvl < sk.lvl) { sfx('tap'); return; }
+    hero.mods = hero.mods || {}; hero.mods[sk.id] = m ? m.id : null;
+    SKV.flash = { text: m ? `${m.name} IS IN USE` : `BACK TO THE PLAIN ${sk.name}`, col: 55, t: G.t };
+    sfx('clink'); const m0 = G.mode; G.mode = 'play'; saveGame(); G.mode = m0;
   }
 }
 
@@ -619,7 +962,8 @@ cvs.addEventListener('pointerdown', e => {
   if (G.mode === 'talk') { talkTap(p); return; }
   if (G.mode === 'skills') { sfx('tap'); skillsTap(p); return; }
   if (hero.dead > 2) { respawn(); return; }
-  if (hitCircle(p, UI.bag)) { G.mode = 'inv'; clearInput(); return; }
+  if (hitCircle(p, UI.bag)) { openInv('inv'); return; }
+  if (guideFrozen()) return;   // round 45: stopped to show the bag button; only it answers
   if (hitCircle(p, UI.sound)) { setMuted(!SFX.muted); sfx('tap'); return; }
   if (hitCircle(p, UI.map)) { showMap = !showMap; return; }
   if (hitCircle(p, UI.portal)) { usePortal(); return; }
@@ -652,6 +996,7 @@ addEventListener('keydown', e => {
   if (G.mode === 'talk') { if (k === 'enter' || k === ' ' || k === 'j') { const L = talkLayout(); talkTap(L.btn ? [L.btn.x + 2, L.btn.y + 2] : [W / 2, 10]); } else if (G.talk && G.talk.reward && (k === '1' || k === '2' || k === '3')) talkTap([talkLayout().cards[+k - 1].x + 2, talkLayout().cards[+k - 1].y + 2]); e.preventDefault(); return; }
   if (G.mode === 'title' && (k === 'enter' || k === ' ')) { const c = TITLE.sel || 'warrior'; beginGame(!!loadSave(c), c); return; }
   if (G.mode === 'title' && (k === 'arrowleft' || k === 'arrowright')) { const L = ['warrior', 'mage', 'ranger'], n = L.indexOf(TITLE.sel || 'warrior'); titlePick(L[(n + (k === 'arrowleft' ? 2 : 1)) % 3]); return; }
+  if (guideFrozen() && k !== 'i' && k !== 'b') { e.preventDefault(); return; }   // round 45: stopped for the guide
   input.keys.add(k);
   if (k === ' ' || k === 'j') input.attack = true;
   if (k === 'k' || k === '1') useSkill(0);
@@ -661,10 +1006,10 @@ addEventListener('keydown', e => {
   if (k === '5' || k === 'r') useUlt();
   if (k === 'q') drinkPotion();
   if (k === 'e' || k === 'f') { const a = actionTarget(); if (a) doAction(a); }   // round 43b: the action key
-  if (k === 'i' || k === 'b') { G.mode = G.mode === 'inv' ? 'play' : 'inv'; INV.sel = null; }
+  if (k === 'i' || k === 'b') { if (G.mode === 'inv' || G.mode === 'skills') closeInv(); else if (G.mode === 'play') openInv('inv'); }
   if (k === 'm' || k === 'tab') showMap = !showMap;
   if (k === 'c') { hero.team = hero.team === 'red' ? 'blue' : 'red'; recalcHero(); prewarmHero(); }
-  if (k === 'escape' && G.mode === 'inv') G.mode = 'play';
+  if (k === 'escape' && (G.mode === 'inv' || G.mode === 'skills')) closeInv();
   if (hero.dead > 2 && k === 'enter') respawn();
   if (k.startsWith('arrow') || k === ' ' || k === 'tab') e.preventDefault();
 });
@@ -676,6 +1021,7 @@ addEventListener('pagehide', saveGame);
 
 // ---------------------------------------------------------------- loop
 function fitCanvas() {
+  if (PREVIEW) { if (!scr || W !== PV_W) allocBuffers(PV_W, PV_H); return; }   // the skill preview's frame is a fixed size
   // fit the stage element when the page provides one (an embedded frame may pad the window)
   const st = document.getElementById('stage'), vw = st ? st.clientWidth : innerWidth, vh = st ? st.clientHeight : innerHeight;
   const aspect = vh / Math.max(1, vw);
