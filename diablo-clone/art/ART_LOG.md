@@ -29,9 +29,7 @@ MONSTERS levels / ITEM_BASES (tables in each section below).
 pass on specific pieces (weakest: epic ranger helms at game size, wizard cuffs read as mitts, flanged mace
 looks like a fork from behind, skirts fixed at the hips). Palette gaps (no pink, true navy, indigo, bronze,
 teal): adding cloth ramps needs the user's OK. Not yet done from earlier asks: true BACK views of the A6 sets
-(user would need to give ChatGPT the old concept image itself); remaining monster concepts on the progress
-page (Skeleton, Goblin, Cave Skitter to refine; Venom Spitter, Stoneback, Brood Guard, Restless Dead, Cave
-Bat, Bandit Crossbowman, Bog Toad to build); the main chat should also update `NOTES.md` when it merges.
+(user would need to give ChatGPT the old concept image itself); (B1/B2 done: Mastiff removed, every monster passed again, all concept monsters built; see B2); the main chat should also update `NOTES.md` when it merges.
 
 ## A1: refine three existing monsters to the user's concept sheets (2026-11-04)
 The user's concept sheets ("EXISTING MONSTERS - REFINEMENT TARGETS", "IMPS - FALLEN KIN") asked to
@@ -319,3 +317,43 @@ The user didn't like the Mastiff and asked to remove it from the game. The `mast
 `look.mastiff` branch in `houndRig` are gone (it never spawned: it was `minLevel: 99`). **For the main chat:**
 drop any mastiff item/spawn wiring if you had started it. All 39 remaining monsters render pixel-identical to
 before (artcompare zoom 1, `cmp` equal). Its card is off the progress page.
+
+## B2: another pass on all 39 monsters, and seven new ones (2026-11-04)
+The user asked for another pass on every monster ("even the ones you think are done") and to build the missing ones.
+Seven parallel reviewers (one per family, worktrees reset to 5d022a4), 3+ passes per monster, pairwise judged in both
+orders; merged into `art` (merges 55bc01c .. b2-new round 2). After every merge each family was re-verified
+pixel-identical to its own branch; player heroes hash-identical to before the round (3 classes, all clips).
+Review page: https://claude.ai/artifact/2jxgvecw5Ay861S1hw1g8d (source `art/review/b2-passes/`, `build_page.py`
+regenerates it; every pass image is in the per-family folders). Progress page updated (all concepts now done).
+Test copy republished with this round's `monsters.js`/`actors.js` (new monsters don't spawn there either).
+
+**Passes (look changes only, each behind flags only that monster sets):**
+- Skeletons (`skeletonRig`): skeleton toward its concept (SLATE pauldron, red skull shield, torn loincloth, sash;
+  flag `sk`); spearman spear across the body, navy rag; axeman diagonal axe; gravebow pauldron + thigh quiver;
+  tombguard rolled brim; archer longer bow held out + back quiver; burning taller flared helm; lich bell robe + hood;
+  skelking draped cloak, fur collar, greatsword.
+- Fallen (`fallenRig`): goblin toward its concept (lean, vest, dagger instead of spear, nose, cap; flags `gob*`,
+  `FALLEN_GOB_B`); chieftain, goblin shaman, treasure goblin, digger refined; imps get purple bat ears, pale hooves,
+  bigger heads; shaman hood set back.
+- Hounds (`houndRig`, `look.b2`): wolf, alpha (silver crest), bone/hell hound crescent horns, bear, boar (rebuilt).
+- Ogres (`ogreRig`) and treant: grunt tusks/arms/belts, shield, cleaver, warlord crown; treant crown and eyes.
+- Spiders (`spiderRig`, now table-driven `SPIDER_V`): cave spider toward cave_skitter, broodmother egg sacs, knee spurs.
+- Shroom/sporecap, slime/blueslime, wraith rebuilt shapes and faces. Brigand (hood + scarf mask, helm `bhood`),
+  bandit chief (fur collar, weapon `baxe`, spiked pauldrons); hero-rig changes gated by `look.bandit`.
+
+**For the main chat: new MONSTERS entries (all `minLevel: 99`, placeholder stats; set levels, packs, loot):**
+
+| Id | Name | Family | Notes |
+|---|---|---|---|
+| `cavebat` | CAVE BAT | `bat` (new `batRig`) | hovers, dive attack; `pack: true` |
+| `bogtoad` | BOG TOAD | `toad` (new `toadRig`) | hop walk, tongue-lash swing |
+| `restless` | RESTLESS DEAD | `zombie` (new `zombieRig`) | slow shamble, grab swing |
+| `spitter` | VENOM SPITTER | `spider`, `look.spit` | ranged `'arrow'` until a venom projectile exists (rears up and spits a green glob) |
+| `stoneback` | STONEBACK SPIDER | `spider`, `look.stone` | slow and heavy |
+| `broodguard` | BROOD GUARD | `spider`, `look.guard` | stilt-legged |
+| `xbowman` | BANDIT CROSSBOWMAN | `hero`, `bandit: 'xbow'` | ranged `'arrow'`; crossbow `XBOW.bow_bandit` |
+
+**Known weak spots:** bone/hell hound horns read a little like ears from behind; the Alpha is very dark; ogre backs
+show flat shading bands; enforcer cleaver very pale from the front; gravebow's quiver hidden in the pure front view;
+cave bat membrane shows thin CHITIN highlights; Restless Dead's pale flesh is close to skeleton bone at 1x; bog toad
+throat is ochre (no pale green in the palette); crossbowman's bone prod reads paler than the concept's wood.

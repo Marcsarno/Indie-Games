@@ -69,8 +69,8 @@ const LABEL = { done: 'Done', todo: 'To refine', new: 'Not built yet' };
 // s: status; cur: game monster id drawn now (or the nearest relative for a new one); note: one line
 const SHEETS = [
   ['Existing monsters: refinement targets', [
-    { n: 'Skeleton', c: 'skeleton', s: 'todo', cur: 'skeleton', note: 'Close already: round pauldron, skull shield, red loincloth.' },
-    { n: 'Goblin', c: 'goblin', s: 'todo', cur: 'goblin', note: 'Close: concept is leaner, with a dagger and a leather vest.' },
+    { n: 'Skeleton', c: 'skeleton', s: 'done', cur: 'skeleton', note: 'B2: steel pauldron, red skull shield, long torn loincloth.' },
+    { n: 'Goblin', c: 'goblin', s: 'done', cur: 'goblin', note: 'B2: leaner, leather vest, dagger, long nose.' },
     { n: 'Burning Dead', c: 'burning_dead', s: 'done', cur: 'burning', note: 'A1: open kettle helm, flames, ember ribs, steel blade.' },
     { n: 'Treant Elder', c: 'treant_elder', s: 'done', cur: 'treant', note: 'A1: root-flared trunk, scowling face, clover crown, claws.' },
   ]],
@@ -81,10 +81,10 @@ const SHEETS = [
     { n: 'Ember Acolyte', c: 'ember_acolyte', s: 'done', cur: 'shaman', note: 'A1: the Fallen Shaman, rebuilt as the acolyte.' },
   ]],
   ['Spiders: cavern brood', [
-    { n: 'Cave Skitter', c: 'cave_skitter', s: 'todo', cur: 'spider', note: 'The Cave Spider; already close.' },
-    { n: 'Venom Spitter', c: 'venom_spitter', s: 'new', cur: null, note: 'New: olive body with pale spots, green eyes.' },
-    { n: 'Stoneback Spider', c: 'stoneback_spider', s: 'new', cur: null, note: 'New: a grey stone shell over its back.' },
-    { n: 'Brood Guard', c: 'brood_guard', s: 'new', cur: 'broodmother', note: 'New: a long-legged guard; the Broodmother is the nearest.' },
+    { n: 'Cave Skitter', c: 'cave_skitter', s: 'done', cur: 'spider', note: 'B2: the Cave Spider, with pale spots, white fangs, red feet.' },
+    { n: 'Venom Spitter', c: 'venom_spitter', s: 'done', cur: 'spitter', note: 'B2: built; rears up and spits. Not spawning yet.' },
+    { n: 'Stoneback Spider', c: 'stoneback_spider', s: 'done', cur: 'stoneback', note: 'B2: built; heavy and slow. Not spawning yet.' },
+    { n: 'Brood Guard', c: 'brood_guard', s: 'done', cur: 'broodguard', note: 'B2: built on stilt legs. Not spawning yet.' },
   ]],
   ['Hounds: pack variants', [
     { n: 'Grey Pack Hunter', c: 'grey_pack_hunter', s: 'done', cur: 'wolf', note: 'A3: the Wolf, with a pale muzzle (it was already close).' },
@@ -104,10 +104,10 @@ const SHEETS = [
     { n: 'Ogre Enforcer', c: 'ogre_enforcer', s: 'done', cur: 'oenforcer', note: 'A3: built from your front/back pair. Not spawning yet.' },
   ]],
   ['Bestiary additions', [
-    { n: 'Restless Dead', c: 'restless_dead', s: 'new', cur: null, note: 'New: a shambling zombie in rags.' },
-    { n: 'Cave Bat', c: 'cave_bat', s: 'new', cur: null, note: 'New: a flying bat.' },
-    { n: 'Bandit Crossbowman', c: 'bandit_crossbowman', s: 'new', cur: 'brigand', note: 'New: the Brigand is the nearest relative.' },
-    { n: 'Bog Toad', c: 'bog_toad', s: 'new', cur: null, note: 'New: a big warty toad.' },
+    { n: 'Restless Dead', c: 'restless_dead', s: 'done', cur: 'restless', note: 'B2: built; pale corpse, drags a foot. Not spawning yet.' },
+    { n: 'Cave Bat', c: 'cave_bat', s: 'done', cur: 'cavebat', note: 'B2: built; hovers, dives. Not spawning yet.' },
+    { n: 'Bandit Crossbowman', c: 'bandit_crossbowman', s: 'done', cur: 'xbowman', note: 'B2: built; aims a shouldered crossbow. Not spawning yet.' },
+    { n: 'Bog Toad', c: 'bog_toad', s: 'done', cur: 'bogtoad', note: 'B2: built; hops, tongue lash. Not spawning yet.' },
   ]],
 ];
 const all = SHEETS.flatMap(s => s[1]);
