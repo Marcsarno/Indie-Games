@@ -988,7 +988,7 @@ function batWing(r, root, s, lift, fold, sweep, bone, mem) {
   const k = 1 - 0.4 * fold, wrist = P(8 * (1 - 0.25 * fold), 1.2);
   const tips = [P(18 * k, 0.6), P(15.5 * k, -5.5), P(10.5 * k, -8.5)];
   const segD = (p, a, b) => { const ab = V.sub(b, a), t = clamp(V.dot(V.sub(p, a), ab) / V.dot(ab, ab), 0, 1); return V.len(V.sub(p, V.mad(a, ab, t))); };
-  const fingers = { mf: p => tips.some(t => segD(p, wrist, t) < 0.6) ? bone : 0 };
+  const fingers = { mf: p => tips.some(t => segD(p, wrist, t) < 0.6) ? M.CLOTH_DARK : 0 };
   r.group(() => {
     for (const t of tips) {
       const ax = V.norm(V.sub(t, wrist)), L = V.len(V.sub(t, wrist)) / 2 + 0.4;
@@ -1005,8 +1005,8 @@ function batWing(r, root, s, lift, fold, sweep, bone, mem) {
 // above the floor (the game draws its shadow there), flaps on idle and walk, climbs and swoops on
 // the attack, and crumples to the floor when it dies.
 function batRig(look, st) {
-  const r = new Rig(), { clip, f } = st, fur = M.HAIR, mem = M.LEATHER, bone = M.HAIR;
-  let H = 15, lift = 0.3, fold = 0, sweep = 0.15, pitch = 0, fx = 0, mouth = 0, reach = 0, dead = 0;
+  const r = new Rig(), { clip, f } = st, fur = M.HAIR, mem = M.CHITIN, bone = M.HAIR;
+  let H = 15, lift = 0.3, fold = 0, sweep = 0.55, pitch = 0, fx = 0, mouth = 0, reach = 0, dead = 0;
   if (clip === 'idle') { lift = [0.55, -0.25, 0.3, 1.0][f % 4]; fold = [0, 0, 0.1, 0.3][f % 4]; H += [0, 0.9, 0.4, -0.6][f % 4]; }
   else if (clip === 'walk') { const c = Math.cos(f / 8 * Math.PI * 2); lift = 0.25 + 0.7 * c; fold = Math.max(0, c) * 0.3; H -= c * 0.9; pitch = 0.25; }
   else if (clip === 'attack') {
@@ -1031,8 +1031,8 @@ function batRig(look, st) {
     for (const s of [-1, 1]) r.cone(V.add(V.mad(mo, side, s * 0.6), V.mul(up, 0.4)), V.add(V.add(V.mad(mo, side, s * 0.6), V.mul(up, -0.9)), V.mul(fwd, 0.5)), 0.45, 0.15, M.CLOTH_WHITE, { noShadow: true });
   }
   for (const s of [-1, 1]) {   // tall pointed ears, pink inside
-    const b = V.add(V.mad(hd, side, s * 2.0), V.mul(up, 1.8)), t = V.add(V.add(V.mad(hd, side, s * 3.8), V.mul(up, 7.6)), V.mul(fwd, -0.6));
-    r.cone(b, t, 1.9, 0.25, fur, { mf: p => V.dot(V.sub(p, b), fwd) > 0.5 && V.dot(V.sub(p, b), up) > 0.8 ? M.SKIN : 0 });
+    const b = V.add(V.mad(hd, side, s * 2.0), V.mul(up, 1.8)), t = V.add(V.add(V.mad(hd, side, s * 4.3), V.mul(up, 8.9)), V.mul(fwd, -0.6));
+    r.cone(b, t, 2.3, 0.2, fur, { mf: p => V.dot(V.sub(p, b), fwd) > 0.5 && V.dot(V.sub(p, b), up) > 0.8 ? M.SKIN : 0 });
   }
   for (const s of [-1, 1]) {   // little feet hanging under the body, claws out on the dive
     const a = V.add(V.mad(c, up, -2.8), V.mul(side, s * 1.3)), b = V.add(V.add(V.mad(a, up, -2.6 + reach), V.mul(fwd, 0.5 + reach * 2.6)), V.mul(side, s * 0.3));
@@ -1106,7 +1106,7 @@ const ZOMBIE_B = { hipH: 11.5, thigh: 6, shin: 5.6, ankle: 1.2, spine: 7, shW: 4
 const ZOMBIE_GRAB = [{ a: 1.6, ms: 320, tele: true }, { a: 1.7, ms: 120 }, { a: 0.6, ms: 80, mv: 0.3 }, { a: -0.3, ms: 70, hit: true }, { a: -0.5, ms: 320, open: true }, { a: 0, ms: 130 }];
 function zombieRig(look, st) {
   const B = ZOMBIE_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J, { clip, f } = st;
-  const flesh = M.GRASSM, rag = M.LEATHER, pants = M.CLOTH_SHADOW;
+  const flesh = M.OLDBONE, bony = M.BONE, rag = M.LEATHER, pants = M.CLOTH_SHADOW;   // pale grey corpse flesh, paler bony hands and feet
   if (clip === 'walk') {   // the lurch: the left foot drags, barely leaving the floor
     const g = gaitFoot(B, f / 8), L = ik(J.hipL, [g[0], -B.hipW, g[1] * 0.2 + B.ankle], B.thigh, B.shin, [1, 0, 0.1]);
     J.kneeL = L.joint; J.ankL = L.end;
@@ -1115,7 +1115,7 @@ function zombieRig(look, st) {
     const cuff = V.lerp(knee, ank, 0.55);
     r.group(() => { r.cone(hip, knee, 1.8, 1.55, pants); r.cone(knee, cuff, 1.55, 1.5, pants); });
     r.cone(cuff, ank, 1.15, 1.0, flesh);
-    r.ell(V.add(ank, [1.3, 0, -0.6]), [2.4, 1.3, 0.9], flesh);
+    r.ell(V.add(ank, [1.3, 0, -0.6]), [2.4, 1.3, 0.9], bony);
   }
   r.ell(J.pelvis, [3.0, 4.0, 2.4], pants);
   // the tunic: a torn sack from the hips to the shoulders, with ragged tails hanging below the hem
@@ -1140,9 +1140,9 @@ function zombieRig(look, st) {
   for (const [s0, hand, s] of [[J.shR, hR, 1], [J.shL, hL, -1]]) {
     const a = armTo(J, s0, hand, B, s);
     r.cone(s0, a.el, 1.35, 1.15, flesh); r.cone(a.el, a.hand, 1.15, 1.0, flesh);
-    r.sph(a.hand, 1.4, flesh);
+    r.sph(a.hand, 1.4, bony);
     const hd2 = V.norm(V.sub(a.hand, a.el));
-    for (const k of [-1, 0, 1]) r.cone(a.hand, V.add(V.mad(a.hand, hd2, 2.2), V.add(V.mul(sideR, k * 0.8), V.mul(up, -0.6))), 0.6, 0.35, flesh);   // bony fingers, curled
+    for (const k of [-1, 0, 1]) r.cone(a.hand, V.add(V.mad(a.hand, hd2, 2.2), V.add(V.mul(sideR, k * 0.8), V.mul(up, -0.6))), 0.6, 0.35, bony);   // bony fingers, curled
     if (s < 0) r.cone(s0, V.lerp(s0, a.el, 0.55), 1.9, 1.7, rag);   // a torn sleeve stub on the left
     else r.sph(s0, 1.9, rag);
   }
@@ -1151,19 +1151,34 @@ function zombieRig(look, st) {
   r.cone(V.mad(J.chest, up, 3), hd, 1.7, 1.6, flesh);
   // a tall domed cranium with a heavy brow, small ears and gaunt cheekbones
   r.group(() => {
-    r.ell(hd, [4.3, 4.3, 5.0], flesh, frameAlong(fwd, up), { mf: p => {
+    // the cranium sits high and swells to the back; the face below it is narrower
+    const cr = V.add(V.mad(hd, up, 0.8), V.mul(fwd, -0.5));
+    r.ell(cr, [4.6, 4.1, 4.5], flesh, frameAlong(fwd, up), { mf: p => {
+      const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up);
+      if (f2 > 1.4 && (Math.abs(s2) - 1.8) ** 2 + (z2 - 0.2) ** 2 < 1.6) return M.DARK;   // sunken sockets
+      // a dark, balding scalp over the crown and the back of the head, with a ragged edge
+      if (f2 < -1.0 + Math.sin(s2 * 2.3) * 0.7 && z2 > 0.4 + f2 * 0.3 + Math.cos(s2 * 3.1) * 0.5) return M.HAIR;   // (behind the crown only: the dome stays bald from the front)
+      return 0;
+    } });
+    r.ell(V.add(V.mad(hd, fwd, 1.4), V.mul(up, -1.4)), [3.0, 3.1, 2.8], flesh, frameAlong(fwd, up), { mf: p => {
       const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up);
       if (f2 > 1.4 && (Math.abs(s2) - 1.8) ** 2 + (z2 - 0.2) ** 2 < 1.6) return M.DARK;   // sunken sockets
       if (f2 > 3 && Math.abs(s2) < 0.5 && z2 < -0.8 && z2 > -1.8) return M.DARK;            // nose hole
+      if (f2 > 2.2 && Math.abs(s2) > 1.6 && z2 < -1.6) return M.HORN;                       // hollow cheeks under the cheekbones
       return 0;
     } });
+    for (const s of [-1, 1]) r.ell(V.add(V.add(V.mad(hd, fwd, 3.0), V.mul(sideR, s * 2.5)), V.mul(up, -1.0)), [1.1, 1.0, 0.9], flesh, frameAlong(fwd, up));   // cheekbones
     r.ell(V.add(V.mad(hd, fwd, 2.6), V.mul(up, 1.8)), [1.4, 3.6, 1.0], flesh, frameAlong(fwd, up));   // brow ridge
     for (const s of [-1, 1]) r.ell(V.add(V.mad(hd, sideR, s * 4.2), V.mul(up, -0.4)), [1.2, 0.7, 1.5], flesh, frameAlong(fwd, up));   // ears
   });
   for (const s of [-1, 1]) r.sph(V.add(V.add(V.mad(hd, fwd, 3.6), V.mul(sideR, s * 1.8)), V.mul(up, 0.2)), 0.75, M.EYE_RED, { noShadow: true });
   const jc = V.add(V.mad(hd, fwd, 2.2), V.mul(up, -3.6));   // the hanging jaw, mouth gaping dark
   r.ell(V.add(jc, V.mul(up, 1.1)), [1.8, 2.2, 1.0], M.DARK, frameAlong(fwd, up), { noShadow: true });
-  r.ell(jc, [2.6, 2.7, 1.2], flesh, frameAlong(fwd, up), { mf: p => V.dot(V.sub(p, jc), fwd) > 1.6 && V.dot(V.sub(p, jc), up) > 0.4 && (Math.round(V.dot(V.sub(p, jc), sideR) * 1.4) & 1) ? M.CLOTH_WHITE : 0 });
+  for (const [a, z, l] of [[2.4, 4.4, 4], [3.0, 3.0, 3.4], [3.6, 4.0, 4.2], [4.2, 2.6, 3.0]]) {   // a few lank hair wisps hanging at the back
+    const d = V.add(V.mul(fwd, Math.cos(a)), V.mul(sideR, Math.sin(a))), p0 = V.add(V.mad(hd, d, 3.6), V.mul(up, z - 1.4));
+    r.cone(p0, V.add(V.mad(p0, up, -l), V.mul(d, 1.2)), 0.8, 0.35, M.HAIR);
+  }
+  r.ell(jc, [2.3, 2.0, 1.3], flesh, frameAlong(fwd, up), { mf: p => V.dot(V.sub(p, jc), fwd) > 1.6 && V.dot(V.sub(p, jc), up) > 0.4 && (Math.round(V.dot(V.sub(p, jc), sideR) * 1.4) & 1) ? M.CLOTH_WHITE : 0 });
   if (clip === 'death') deathTip(r, B, f, 1);
   if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
   return r;
