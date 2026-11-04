@@ -357,11 +357,15 @@ for (const name in HERO_PRE) {
 // round 33: the ranger's shot, a short draw: nock, draw, loose (the arrow leaves on 'hit'), recover
 const RANGER_BOW = [{ a: 0.2, ms: 50 }, { a: 1, ms: 110 }, { a: 1, ms: 40, hit: true }, { a: 0.3, ms: 110 }];
 const isBow = w => typeof w === 'string' && w.startsWith('bow');
+// round 41b: gear looks from outside the hero's body code (the art kit). A helm, chest or weapon
+// look id found here is drawn by its function instead of a built-in one; GEAR_SWING picks a
+// weapon's swing set ('light' = the sword's, else the heavy chops) and GEAR_LEN its reach
+const GEAR_EXTRA = { helm: {}, chest: {}, weapon: {} }, GEAR_SWING = {}, GEAR_LEN = {};
 function weaponSwing(eq, combo = 0) {
   if (isBow(eq.weapon)) return RANGER_BOW;
   const S = FEEL_OLD ? SWINGS : HERO_SWINGS;
   if (combo === 3) return FEEL_OLD ? S.heavy : S.gslam;   // the ground slam (round 40a: a hop and a crash; ?feel=old keeps the old chop)
-  return (eq.weapon === 'sword' ? [S.light, S.light2, S.thrust] : [S.heavy, S.heavy2, S.slam])[combo] || S.light;
+  return (eq.weapon === 'sword' || GEAR_SWING[eq.weapon] === 'light' ? [S.light, S.light2, S.thrust] : [S.heavy, S.heavy2, S.slam])[combo] || S.light;
 }
 // how far the weapon's tip is from the swing pivot (smears and reach)
 const WEAPON_LEN = { sword: 21, axe: 16, mace: 16, flail: 17, greatsword: 27 };
@@ -450,6 +454,7 @@ function heroRig(eq, st) {
       return V.dot(q, fwd) > 1.5 && z > 2.6 && sd < (z - 2.6) * 0.9 + 0.6 ? M.FACE : 0;
     }),
   });
+  { const xc = GEAR_EXTRA.chest[eq.chest]; if (xc) xc(r, { J, fwd, up, sideR, tf, eq, st, bulk }); }   // an art-kit chest look, over the torso
   // arms: right hand holds the weapon, left the shield
   const atk = atkIndex(st.clip) >= 0;
   const sw = atk ? st.key : null, list = atk ? weaponSwing(eq, atkIndex(st.clip)) : null;
@@ -574,7 +579,9 @@ function heroRig(eq, st) {
   // head
   const hd = J.head;
   const helmF = frameAlong(fwd, up), hairM = HAIRM[eq.hair] || M.HAIR_O, bald = eq.hair === 'bald';
-  if (eq.helm === 'none' || eq.helm === 'cap' || eq.helm === 'hat' || eq.helm === 'hood' || eq.helm.startsWith('rhood')) {
+  const xHelm = GEAR_EXTRA.helm[eq.helm];
+  if (xHelm) xHelm(r, { hd, fwd, up, sideR, helmF, eq, st, J });
+  else if (eq.helm === 'none' || eq.helm === 'cap' || eq.helm === 'hat' || eq.helm === 'hood' || eq.helm.startsWith('rhood')) {
     // chibi face (round 13 pass 2): light, nearly flat skin; small dark eyes under short brows, a
     // tiny mouth; the hairline is painted on the head and the hair mass sits on top
     r.ell(hd, [4.3, 4.3, 4.5], M.FACE, helmF, { mf: p => {
@@ -731,7 +738,9 @@ function heroRig(eq, st) {
   }
   r.cone(V.mad(g, bd, -2.6), V.mad(g, bd, 1.2), 0.9, 0.9, M.LEATHER);
   r.sph(V.mad(g, bd, -3.2), 1.2, M.GOLD);
-  if (eq.weapon === 'sword') {
+  const xWeapon = GEAR_EXTRA.weapon[eq.weapon];
+  if (xWeapon) xWeapon(r, { g, bd, wide, wf, fwd, up, sideR, eq, st });
+  else if (eq.weapon === 'sword') {
     r.box(V.mad(g, bd, 1.8), [0.7, 3.4, 0.8], M.GOLD, wf);
     r.box(V.mad(g, bd, 11.4), [9.2, 1.15, 0.4], hasFx(eq, 'ember') ? M.FIREM : M.BLADE, wf);   // Emberbrand glows
     r.cone(V.mad(g, bd, 20.4), V.mad(g, bd, 21.8), 0.9, 0.3, M.BLADE);
@@ -756,7 +765,7 @@ function heroRig(eq, st) {
     }
   }
   if (sw && sw.smear && st.prev) {
-    const reach = (sw.r || 6.5) + (WEAPON_LEN[eq.weapon] || 16);
+    const reach = (sw.r || 6.5) + (WEAPON_LEN[eq.weapon] || GEAR_LEN[eq.weapon] || 16);
     smearArc(r, pivot, F, U, bladeA(st.prev), bladeA(sw), reach - 9, reach);
   }
   if (st.clip === 'death') deathTip(r, B, st.f, -1);

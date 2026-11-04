@@ -1,0 +1,196 @@
+'use strict';
+// characters, projectiles and particles draw at SPX times the world's pixel density (round 21)
+const SPX = 2;
+// Shared foundations: palette, light tables, math, random numbers and the pixel font.
+// Everything the game draws is generated in code; there are no image assets.
+
+// ---------------------------------------------------------------- palette
+// Every color sits on a dark-to-light ramp that leans cool in the darks and warm in the lights,
+// and every ramp fades into the same near-black tail, so darkness reads as one cool shadow.
+const PAL_HEX = [
+  '000000',                                                             // 0  transparent
+  '0a0706', '151013', '1d1619',                                         // 1-3   outline black + shared dark tail
+  '1e171a', '2b2020', '41302a', '584130', '705437', '8a663d', 'a37a45', 'b98d50', 'cfa262', // 4-12 stone
+  '4a1f0e', '8a3a12', 'c4601a', 'ec9a32', 'f8d16a', 'fff4c4',           // 13-18 fire
+  '2c0a16', '4d0f1b', '781a1e', 'a8281f', 'd4473a',                     // 19-23 blood / cloth red
+  '6f6670', 'a49a8a', 'd8ceb0', 'f6efdb',                               // 24-27 bone
+  '262b37', '434e60', '6f7b8c', 'a3adba', 'dbe2e8',                     // 28-32 steel
+  '351d16', '56331f', '7c502e', 'a26e3c',                               // 33-36 wood / leather
+  '0d1640', '1d3592', '3b62d6', '8fb0ff',                               // 37-40 blue
+  '291820', '45282b', '663a2f',                                         // 41-43 spider chitin
+  '3a0f0c', '6e1c14', 'a0301f', 'cf5034',                               // 44-47 demon flesh
+  '5c3610', 'a8781a', 'deae2a', 'f8de6a',                               // 48-51 gold
+  '12261a', '24452a', '3f6e35', '78a84a',                               // 52-55 green (poison, set items)
+  '25123a', '45206a', '7438a8', 'b070e0',                               // 56-59 purple (magic)
+  '4a2a22', '7a4a36', 'b07a58', 'dcae86',                               // 60-63 skin
+  '1a1a1f', '272830', '363844', '4a4c58', '62646e', '7e7f86',           // 64-69 cave rock (cool grey)
+  '1f6f6a', '3fbfae', '9ff5e0',                                         // 70-72 glowing fungus
+  '1f0c0c', '341414', '4d1c18', '6b2a1f', '8c3a26', 'a85232',           // 73-78 hell stone
+  '5a1206', '9a2208', 'd8420c', 'f8781a', 'ffb43a', 'ffe27a',           // 79-84 lava (color-cycled)
+  // outdoors (round 13, sampled from the user's style references): shadows lean blue-green, lights
+  // lean olive-yellow
+  '1f3326', '2b4630', '3d5a35', '55703c', '6f8545', '8f9a55', 'b0ad6a', // 85-91 grass
+  '17291f', '233d2a', '325634', '4a7238', '6a8d40', '93ac58',           // 92-97 leaves / pine
+  '3a2a20', '56402c', '735a3c', '93764e', 'b0935f', 'cbb07a',           // 98-103 dirt / planks
+  '5a4220', '876426', 'b08a34', 'd4b350', 'eed580',                     // 104-108 straw / thatch
+  '5a1f0c', '9a3d12', 'd0661c', 'f29a3a', 'ffc77a',                     // 109-113 orange (hair, pumpkins)
+  '142a44', '1e4566', '2f6a8a', '5b9cb4', 'a8d8e0',                     // 114-118 water
+  '4a1a14', '7a2c1a', 'a8461e', 'cf6e2a',                               // 119-122 autumn leaves
+  '3fae3a', '8af06a',                                                   // 123-124 lime (markers, emissive only)
+  'f2cc9e',                                                             // 125 light skin (top of the skin ramp)
+];
+const NPAL = PAL_HEX.length;
+const PR = new Uint8Array(NPAL), PG = new Uint8Array(NPAL), PB = new Uint8Array(NPAL);
+const PAL32 = new Uint32Array(NPAL);
+PAL_HEX.forEach((h, i) => {
+  PR[i] = parseInt(h.slice(0, 2), 16); PG[i] = parseInt(h.slice(2, 4), 16); PB[i] = parseInt(h.slice(4, 6), 16);
+  PAL32[i] = (255 << 24) | (PB[i] << 16) | (PG[i] << 8) | PR[i];
+});
+const lum = i => (0.299 * PR[i] + 0.587 * PG[i] + 0.114 * PB[i]) / 255;
+const S = [4, 5, 6, 7, 8, 9, 10, 11, 12];
+const FIRE = [13, 14, 15, 16, 17, 18];
+const RED = [19, 20, 21, 22, 23];
+const BONE = [24, 25, 26, 27];
+const STEEL = [28, 29, 30, 31, 32];
+const WOOD = [33, 34, 35, 36];
+const BLUE = [37, 38, 39, 40];
+const CHITIN = [41, 42, 43];
+const FLESH = [44, 45, 46, 47];
+const GOLD = [48, 49, 50, 51];
+const GREEN = [52, 53, 54, 55];
+const PURPLE = [56, 57, 58, 59];
+const SKIN = [60, 61, 62, 63, 125];
+const CAVE = [64, 65, 66, 67, 68, 69];
+const FUNGUS = [70, 71, 72];
+const HELL = [73, 74, 75, 76, 77, 78];
+const LAVA = [79, 80, 81, 82, 83, 84];
+const GRASS = [85, 86, 87, 88, 89, 90, 91];
+const LEAF = [92, 93, 94, 95, 96, 97];
+const DIRT = [98, 99, 100, 101, 102, 103];
+const STRAW = [104, 105, 106, 107, 108];
+const ORANGE = [109, 110, 111, 112, 113];
+const WATER = [114, 115, 116, 117, 118];
+const AUTUMN = [119, 120, 121, 122];
+const BLK = 1, K1 = 2, K2 = 3, EMIS = 128;
+
+// Light tables (Diablo 1's method): lighting never mixes RGB. Level L maps each palette index to
+// another index on its own ramp: below L_ID it steps ~1.8 colors down per level and on into the
+// shared tail; above L_ID it steps up for torch-side over-exposure. Emissive pixels skip the tables.
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const TAIL = [1, 2, 3];
+const PAL_RAMPS = [S, FIRE, RED, BONE, STEEL, WOOD, BLUE, CHITIN, FLESH, GOLD, GREEN, PURPLE, SKIN, CAVE, FUNGUS, HELL, LAVA, GRASS, LEAF, DIRT, STRAW, ORANGE, WATER, AUTUMN];
+const LEVELS = 9, L_ID = 3, BANDS = 5;
+const LTAB = Array.from({ length: LEVELS }, () => new Uint8Array(NPAL));
+for (let i = 1; i < NPAL; i++) {
+  const ramp = PAL_RAMPS.find(r => r.includes(i));
+  const chain = ramp ? [...TAIL, ...ramp] : TAIL, pos = chain.indexOf(i);
+  for (let L = 0; L < LEVELS; L++) {
+    const np = L <= L_ID ? pos - Math.round((L_ID - L) * 1.8) : pos + Math.round((L - L_ID) * 0.4);
+    LTAB[L][i] = pos === 0 ? 0 : chain[clamp(np, 1, chain.length - 1)];
+  }
+}
+// flat lit-color table: LCOL[level * NPAL + index] = RGBA of that index at that light level.
+// Round 28, warm light and cool shadow (the painter's trick): above the identity level (torch-lit)
+// colors lean warm, below it (falling into the dark) they lean blue; the identity level and pure
+// black stay as drawn, so daylight and outlines are untouched. A table built once, per level.
+const LCOL = new Uint32Array(LEVELS * NPAL);
+let HUE_LIGHT = true;
+function buildLcol() {
+  for (let L = 0; L < LEVELS; L++) {
+    const t = !HUE_LIGHT ? 0 : L > L_ID ? (L - L_ID) / (LEVELS - 1 - L_ID) : -(L_ID - L) / L_ID;
+    for (let i = 0; i < NPAL; i++) {
+      const j = LTAB[L][i]; let r = PR[j], g = PG[j], b = PB[j];
+      if (t > 0) { r = r * (1 + 0.16 * t) + 6 * t; g = g * (1 + 0.04 * t); b = b * (1 - 0.24 * t); }
+      else if (t < 0 && j > 1) { const c = -t; r = r * (1 - 0.2 * c); g = g * (1 - 0.08 * c); b = b * (1 + 0.1 * c) + 7 * c; }
+      r = clamp(Math.round(r), 0, 255); g = clamp(Math.round(g), 0, 255); b = clamp(Math.round(b), 0, 255);
+      LCOL[L * NPAL + i] = (255 << 24) | (b << 16) | (g << 8) | r;
+    }
+  }
+}
+try { const q = new URLSearchParams(location.search).get('hue'); HUE_LIGHT = q !== null ? q !== '0' : localStorage.getItem('dcg-light') !== 'old'; } catch (e) { /* storage blocked */ }
+buildLcol();
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => v / 16);
+
+// ---------------------------------------------------------------- random
+function hash(a, b, c = 0) {
+  let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(c | 0, 1274126177);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+function rng(seed) {
+  let a = seed >>> 0;
+  const r = () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  r.int = (lo, hi) => lo + Math.floor(r() * (hi - lo + 1));
+  r.pick = arr => arr[Math.floor(r() * arr.length)];
+  return r;
+}
+// a separate random stream per generation system (layout, props, monsters), so a change to one
+// never reshuffles the others: the same seed always gives the same level
+function subRng(seed, name) { let h = 2166136261; for (let k = 0; k < name.length; k++) h = Math.imul(h ^ name.charCodeAt(k), 16777619); return rng((seed ^ h) >>> 0); }
+
+// ---------------------------------------------------------------- vectors ([x, y, z] arrays)
+const V = {
+  add: (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]],
+  sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
+  mul: (a, s) => [a[0] * s, a[1] * s, a[2] * s],
+  mad: (a, b, s) => [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s],
+  dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+  cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
+  len: a => Math.hypot(a[0], a[1], a[2]),
+  norm: a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; },
+  lerp: (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t],
+  rotZ: (a, t) => { const c = Math.cos(t), s = Math.sin(t); return [a[0] * c - a[1] * s, a[0] * s + a[1] * c, a[2]]; },
+  rotY: (a, t) => { const c = Math.cos(t), s = Math.sin(t); return [a[0] * c + a[2] * s, a[1], -a[0] * s + a[2] * c]; },
+  rotX: (a, t) => { const c = Math.cos(t), s = Math.sin(t); return [a[0], a[1] * c - a[2] * s, a[1] * s + a[2] * c]; },
+};
+// two-bone IK: joint position for a limb from root a to target t with bone lengths l1, l2,
+// bending toward the pole direction
+function ik(a, t, l1, l2, pole) {
+  let d = V.sub(t, a), dl = V.len(d);
+  const reach = (l1 + l2) * 0.999;
+  if (dl > reach) { d = V.mul(d, reach / dl); dl = reach; }
+  dl = Math.max(dl, Math.abs(l1 - l2) + 0.01);
+  const dir = V.mul(d, 1 / dl);
+  const x = (l1 * l1 - l2 * l2 + dl * dl) / (2 * dl), h = Math.sqrt(Math.max(0, l1 * l1 - x * x));
+  let q = V.mad(pole, dir, -V.dot(pole, dir)); q = V.norm(q);
+  return { joint: V.add(V.mad(a, dir, x), V.mul(q, h)), end: V.mad(a, dir, dl) };
+}
+const lerp = (a, b, t) => a + (b - a) * t;
+const ease = t => t * t * (3 - 2 * t);
+
+// ---------------------------------------------------------------- pixel font (3x5)
+const FONT = {};
+(() => {
+  const g = {
+    A: '010101111101101', B: '110101110101110', C: '011100100100011', D: '110101101101110', E: '111100110100111',
+    F: '111100110100100', G: '011100101101011', H: '101101111101101', I: '111010010010111', J: '001001001101010',
+    K: '101101110101101', L: '100100100100111', M: '101111111101101', N: '110101101101101', O: '010101101101010',
+    P: '110101110100100', Q: '010101101110011', R: '110101110101101', S: '011100010001110', T: '111010010010010',
+    U: '101101101101111', V: '101101101101010', W: '101101111111101', X: '101101010101101', Y: '101101010010010',
+    Z: '111001010100111', 0: '111101101101111', 1: '010110010010111', 2: '110001010100111', 3: '110001010001110',
+    4: '101101111001001', 5: '111100110001110', 6: '011100110101010', 7: '111001010010010', 8: '010101010101010',
+    9: '010101011001110', '+': '000010111010000', '-': '000000111000000', '%': '101001010100101', ':': '000010000010000',
+    '.': '000000000000010', ',': '000000000010100', '!': '010010010000010', '/': '001001010100100', '(': '010100100100010',
+    ')': '010001001001010', ' ': '000000000000000', '?': '110001010000010', "'": '010010000000000', '>': '100010001010100',
+    '<': '001010100010001', '=': '000111000111000', '*': '000101010101000', '#': '101111101111101',
+  };
+  for (const k in g) FONT[k] = g[k];
+})();
+const textWidth = (s, z = 1) => s.length * 4 * z - z;
+
+// palette color cycling (Diablo's lava and fire trick): emissive lava pixels are drawn through this
+// table, which rotates the lava ramp every frame, so molten cracks flow without redrawing anything
+const CYCLE = new Uint8Array(NPAL).map((_, i) => i);
+function cyclePalette(t) {
+  const s = Math.floor(t * 7);
+  for (let k = 0; k < LAVA.length; k++) {
+    const w = (k + s) % 10, j = w < 6 ? w : 10 - w;   // ping-pong through the ramp so it pulses
+    CYCLE[LAVA[k]] = LAVA[clamp(j, 0, 5)];
+  }
+}

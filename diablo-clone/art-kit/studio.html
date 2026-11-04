@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Art Studio</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (the same frame as the round pages) */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b; --bad: #e0705a; --good: #9cc07a;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif; --mono: ui-monospace, 'SF Mono', Menlo, monospace;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 48px; }
+  main { max-width: 900px; margin: 0 auto; display: grid; gap: 20px; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.04em; }
+  h2 { font: 600 1.02rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; }
+  p { margin: 0; max-width: 70ch; }
+  .lede { color: var(--dim); }
+  section { display: grid; gap: 10px; min-width: 0; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  select, button { font: 600 0.95rem var(--body); color: var(--bone); background: var(--panel); border: 1px solid var(--rule); padding: 8px 12px; border-radius: 4px; }
+  button.go { background: #4a3416; border-color: #8c6a33; color: #f4dfae; }
+  button:active { transform: translateY(1px); }
+  textarea { width: 100%; box-sizing: border-box; min-height: 260px; font: 13px/1.45 var(--mono); color: var(--bone); background: var(--panel); border: 1px solid var(--rule); padding: 10px; border-radius: 4px; tab-size: 2; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; overflow-x: auto; }
+  .frame img { display: block; max-width: none; image-rendering: pixelated; }
+  #msg { font: 14px/1.45 var(--mono); white-space: pre-wrap; }
+  #msg.bad { color: var(--bad); } #msg.good { color: var(--good); }
+  table { border-collapse: collapse; font-size: 0.92rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 3px 12px 3px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+  .warn { color: var(--bad); }
+  input[type=file] { color: var(--dim); max-width: 100%; }
+  a { color: var(--ember); }
+  .files { margin: 0; padding-left: 1.2em; display: grid; gap: 2px; font-size: 0.95rem; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Art Studio</h1>
+    <p class="lede">Dungeon of Bones. Paste an asset's code (from ChatGPT, or written by hand), press Render, and see it the way the game draws it: every facing, every pose, at three light levels, beside the hero for size. Nothing here is uploaded anywhere.</p>
+  </header>
+  <section>
+    <h2>Files for ChatGPT</h2>
+    <p>Download these two files and upload them to ChatGPT at the start of a chat, then ask for what you want (for example "Read ART_KIT.md and examples.txt, then make a skeleton mage that throws frostbolts").</p>
+    <div class="row"><button id="dlKit">Download ART_KIT.md</button><button id="dlEx">Download the examples (examples.txt)</button></div>
+    <p class="lede" id="dlNote"></p>
+  </section>
+  <section>
+    <h2>The code</h2>
+    <div class="row">
+      <select id="ex" aria-label="Examples"><option value="">Start from an example...</option></select>
+      <input id="file" type="file" accept=".js,.txt" aria-label="Open a .js file">
+    </div>
+    <textarea id="code" spellcheck="false" placeholder="ART.monster({ ... })  or  ART.prop({ ... })  or  ART.gear({ ... })"></textarea>
+    <div class="row">
+      <button class="go" id="render">Render</button>
+      <button id="save">Save this asset</button>
+      <button id="clear">Clear</button>
+    </div>
+    <div id="msg" role="status"></div>
+  </section>
+  <section id="out" hidden>
+    <h2>How the game draws it</h2>
+    <p class="lede">Each row is a pose or facing. Below: on the floor at five light levels, at the game's real size, and as silhouettes. Screenshot this and show it to ChatGPT when something looks wrong.</p>
+    <div class="frame"><img id="sheet" alt="The rendered sheet of the asset"></div>
+    <h2>Automatic checks</h2>
+    <div class="frame"><table id="lint"></table></div>
+    <p class="lede">Light direction should be above 0.15 (lit from the upper left). Noise should stay under 12% (lone pixels that flicker). Black inside should be small (dark holes inside the shape).</p>
+  </section>
+</main>
+<!-- the game's own drawing code (copied by tools/artkit-sync.py), then the kit's registry -->
+<script src="engine/core.js"></script><script src="engine/rig.js"></script><script src="engine/actors.js"></script><script src="engine/monsters.js"></script>
+<script src="engine/items.js"></script><script src="engine/world.js"></script><script src="engine/outdoor.js"></script><script src="engine/review.js"></script>
+<script src="engine/artkit.js"></script><script src="engine/examples.js"></script>
+<script>
+  const $ = id => document.getElementById(id), msg = (t, cls) => { $('msg').textContent = t; $('msg').className = cls || ''; };
+  for (const k in ART_EXAMPLES) { const o = document.createElement('option'); o.value = k; o.textContent = k.replace(/_/g, ' '); $('ex').appendChild(o); }
+  $('ex').onchange = () => { if ($('ex').value) { $('code').value = ART_EXAMPLES[$('ex').value]; render(); } };
+  $('file').onchange = async () => { const f = $('file').files[0]; if (f) { $('code').value = await f.text(); render(); } };
+  try { const saved = localStorage.getItem('artstudio-code'); if (saved) $('code').value = saved; } catch (e) { /* storage blocked */ }
+  $('clear').onclick = () => { $('code').value = ''; $('out').hidden = true; msg(''); };
+  // saving: through the viewer's download prompt when published, a plain download when opened as a file.
+  // (The published page may only offer .md, .txt and similar files, so assets save as <id>.txt.)
+  let DL = null;
+  if (window.claude && claude.use) claude.use('downloads').then(d => { DL = d; }).catch(() => {});
+  async function offer(filename, text) {
+    if (DL) {
+      try { await DL.save({ filename, data: text }); $('dlNote').textContent = 'Saved ' + filename + '.'; }
+      catch (e) { $('dlNote').textContent = e && e.code === 'declined' ? 'Not saved.' : 'This view cannot save files (' + (e && e.code || 'unavailable') + ').'; }
+      return;
+    }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' })); a.download = filename; a.click();
+  }
+  const examplesText = () => Object.entries(ART_EXAMPLES).map(([n, c]) => '// ===== ' + n + '.js =====\n' + c).join('\n\n');
+  $('dlEx').onclick = () => offer('examples.txt', examplesText());
+  $('dlKit').onclick = async () => {
+    let t = null; try { const r = await fetch('ART_KIT.md'); if (r.ok) t = await r.text(); } catch (e) { /* opened as a file: ART_KIT.md is in the same folder */ }
+    if (!t) { $('dlNote').textContent = 'ART_KIT.md is in the same folder as this page.'; return; }
+    offer('ART_KIT.md', t);
+  };
+  $('save').onclick = () => {
+    const code = $('code').value; if (!code.trim()) return;
+    const id = (code.match(/id:\s*['"]([a-z0-9_]+)['"]/) || [, 'asset'])[1];
+    offer(id + '.txt', code);
+  };
+  $('render').onclick = () => render();
+  async function render() {
+    const code = $('code').value;
+    try { localStorage.setItem('artstudio-code', code); } catch (e) { /* storage blocked */ }
+    if (!code.trim()) { msg('Paste some code first, or pick an example.', 'bad'); return; }
+    msg('Rendering...');
+    await new Promise(r => setTimeout(r, 20));
+    let items;
+    try { items = runSubmission(code); }
+    catch (e) { msg('The code did not run:\n' + (e && e.message ? e.message : e) + (e && e.stack ? '\n\n' + e.stack.split('\n').slice(1, 4).join('\n') : ''), 'bad'); $('out').hidden = true; return; }
+    try {
+      const rows = items.flatMap(previewRows);
+      const res = await renderSheet(rows);
+      $('sheet').src = res.url; $('out').hidden = false;
+      const t = $('lint'); t.innerHTML = '<tr><th>Row</th><th>Light direction</th><th>Noise %</th><th>Black inside</th><th>Pixels</th></tr>';
+      for (const [k, v] of Object.entries(res.lint)) {
+        const tr = document.createElement('tr');
+        const cell = (x, bad) => { const td = document.createElement('td'); td.textContent = x === null ? '-' : x; if (bad) td.className = 'warn'; tr.appendChild(td); };
+        cell(k); cell(v.lightDirection, v.lightDirection !== null && v.lightDirection < 0.15); cell(v.noisePct, v.noisePct > 12); cell(v.blackInside, v.blackInside > 6); cell(v.px);
+        t.appendChild(tr);
+      }
+      msg('Rendered ' + items.map(i => i.kind + ' "' + i.id + '"').join(', ') + '.', 'good');
+    } catch (e) { msg('It registered, but drawing it failed:\n' + (e && e.message ? e.message : e) + (e && e.stack ? '\n\n' + e.stack.split('\n').slice(1, 4).join('\n') : ''), 'bad'); $('out').hidden = true; }
+  }
+</script>
+</body>
+</html>
