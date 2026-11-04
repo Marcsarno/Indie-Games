@@ -1,0 +1,138 @@
+<title>Bestiary Progress</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* layout: a tally bar and filters, then one card per concept grouped by concept sheet; each card puts the concept beside the game's current sprite. Single dark look to match the dungeon. */
+:root {
+  --bg: #15110e; --panel: #1f1915; --well: #211b17; --ink: #ece2cf; --dim: #a39279; --rule: #352a22;
+  --done: #7fb069; --todo: #e8a33a; --new: #8a9bd6;
+  --display: 'Pixelify Sans', 'Courier New', monospace; --body: 'IBM Plex Sans', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--body); line-height: 1.5; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 26px 70px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 30px; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 5vw, 42px); margin: 0; letter-spacing: 0.02em; }
+.lede { color: var(--dim); max-width: 68ch; margin: 6px 0 0; }
+.tally { display: flex; flex-wrap: wrap; gap: 10px 22px; font-family: var(--mono); font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.tally b { color: var(--ink); font-weight: 500; }
+.bar { display: flex; height: 8px; border-radius: 2px; overflow: hidden; background: var(--rule); max-width: 520px; }
+.bar span { display: block; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.filters button { font: 500 13px var(--mono); color: var(--dim); background: var(--panel); border: 1px solid var(--rule); padding: 7px 12px; border-radius: 3px; cursor: pointer; }
+.filters button[aria-pressed="true"] { color: var(--bg); background: var(--ink); border-color: var(--ink); }
+.filters button:focus-visible { outline: 2px solid var(--todo); outline-offset: 2px; }
+.sheet { display: grid; gap: 12px; }
+.sheet h2 { font-family: var(--display); font-weight: 500; font-size: 20px; margin: 0; letter-spacing: 0.04em; color: var(--dim); text-transform: uppercase; border-bottom: 1px solid var(--rule); padding-bottom: 6px; }
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--panel); border: 1px solid var(--rule); border-left: 4px solid var(--c); display: grid; gap: 8px; padding: 10px 10px 12px; min-width: 0; }
+.card[data-s="done"] { --c: var(--done); } .card[data-s="todo"] { --c: var(--todo); } .card[data-s="new"] { --c: var(--new); }
+.top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.name { font-family: var(--display); font-weight: 700; font-size: 18px; letter-spacing: 0.03em; }
+.chip { font: 500 11px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--c); border: 1px solid var(--c); padding: 2px 7px; border-radius: 2px; white-space: nowrap; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pair figure { margin: 0; background: var(--well); border: 1px solid var(--rule); display: grid; grid-template-rows: 140px auto; min-width: 0; }
+.pair img { width: 100%; height: 140px; object-fit: contain; display: block; }
+.pair .cur img { image-rendering: pixelated; }
+.pair figcaption { font: 11px var(--mono); color: var(--dim); padding: 4px 6px; border-top: 1px solid var(--rule); }
+.empty { display: grid; place-items: center; height: 140px; font: 12px var(--mono); color: var(--dim); text-align: center; padding: 0 10px; }
+.note { font-size: 13px; color: var(--dim); margin: 0; }
+.how { background: var(--panel); border: 1px solid var(--rule); padding: 14px 16px; max-width: 72ch; font-size: 14px; }
+.how b { color: var(--ink); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Bestiary progress</h1>
+    <p class="lede">Every concept from your seven sheets beside how the game draws it today. Green has been refined to the concept. Amber is in the game but not refined yet. Blue isn't built yet: where a close relative exists, its sprite is shown so you can see the starting point.</p>
+  </header>
+
+  <div style="display:grid;gap:10px">
+    <div class="tally" id="tally"></div>
+    <div class="bar" id="bar" aria-hidden="true"></div>
+    <div class="filters" role="group" aria-label="Filter by status">
+      <button type="button" id="f-all" data-f="all" aria-pressed="true">All</button>
+      <button type="button" id="f-done" data-f="done" aria-pressed="false">Refined</button>
+      <button type="button" id="f-todo" data-f="todo" aria-pressed="false">To refine</button>
+      <button type="button" id="f-new" data-f="new" aria-pressed="false">Not built yet</button>
+    </div>
+  </div>
+
+  <div id="sheets" style="display:grid;gap:30px"></div>
+
+  <p class="how"><b>Picking the next one:</b> tell me its name in chat (for example "Bone Hound and Goblin next"). Each finished piece moves to green here, with its before/after on its own review page.</p>
+</div>
+
+<script>
+const LABEL = { done: 'Refined', todo: 'To refine', new: 'Not built yet' };
+// s: status; cur: game monster id drawn now (or the nearest relative for a new one); note: one line
+const SHEETS = [
+  ['Existing monsters: refinement targets', [
+    { n: 'Skeleton', c: 'skeleton', s: 'todo', cur: 'skeleton', note: 'Close already: round pauldron, skull shield, red loincloth.' },
+    { n: 'Goblin', c: 'goblin', s: 'todo', cur: 'goblin', note: 'Close: concept is leaner, with a dagger and a leather vest.' },
+    { n: 'Burning Dead', c: 'burning_dead', s: 'done', cur: 'burning', note: 'A1: open kettle helm, flames, ember ribs, steel blade.' },
+    { n: 'Treant Elder', c: 'treant_elder', s: 'done', cur: 'treant', note: 'A1: root-flared trunk, scowling face, clover crown, claws.' },
+  ]],
+  ['Imps: fallen kin', [
+    { n: 'Fallen Spearling', c: 'fallen_spearling', s: 'done', cur: 'fallen', note: 'A1: the Fallen One (it carries the spear).' },
+    { n: 'Fallen Knifer', c: 'fallen_knifer', s: 'new', cur: 'fallen', note: 'Same body as the Fallen One; needs a knife variant.' },
+    { n: 'Fallen Slinger', c: 'fallen_slinger', s: 'new', cur: 'fallen', note: 'New ranged imp: sling and a pouch of stones.' },
+    { n: 'Ember Acolyte', c: 'ember_acolyte', s: 'done', cur: 'shaman', note: 'A1: the Fallen Shaman, rebuilt as the acolyte.' },
+  ]],
+  ['Spiders: cavern brood', [
+    { n: 'Cave Skitter', c: 'cave_skitter', s: 'todo', cur: 'spider', note: 'The Cave Spider; already close.' },
+    { n: 'Venom Spitter', c: 'venom_spitter', s: 'new', cur: null, note: 'New: olive body with pale spots, green eyes.' },
+    { n: 'Stoneback Spider', c: 'stoneback_spider', s: 'new', cur: null, note: 'New: a grey stone shell over its back.' },
+    { n: 'Brood Guard', c: 'brood_guard', s: 'new', cur: 'broodmother', note: 'New: a long-legged guard; the Broodmother is the nearest.' },
+  ]],
+  ['Hounds: pack variants', [
+    { n: 'Grey Pack Hunter', c: 'grey_pack_hunter', s: 'todo', cur: 'wolf', note: 'The Wolf.' },
+    { n: 'Bone Hound', c: 'bone_hound', s: 'todo', cur: 'hound', note: 'Bone skull mask, spine ridge, red collar.' },
+    { n: 'Ember Hound', c: 'ember_hound', s: 'todo', cur: 'ghoulhound', note: 'The Hell Hound: red body, skull mask, ember stripes.' },
+    { n: 'Brigand Mastiff', c: 'brigand_mastiff', s: 'new', cur: null, note: 'New: a heavy jowled dog in a spiked collar.' },
+  ]],
+  ['Skeletons: field variants', [
+    { n: 'Crypt Spearman', c: 'crypt_spearman', s: 'new', cur: 'skeleton', note: 'New: spear, one pauldron, blue rag.' },
+    { n: 'Bone Axeman', c: 'bone_axeman', s: 'new', cur: 'skeleton', note: 'New: open helm, two-handed axe.' },
+    { n: 'Grave Crossbowman', c: 'grave_crossbowman', s: 'new', cur: 'archer', note: 'New: crossbow and quiver; the Skeleton Archer is nearest.' },
+    { n: 'Tomb Guard', c: 'tomb_guard', s: 'new', cur: 'skeleton', note: 'New: breastplate, mace and tower shield.' },
+  ]],
+  ['Ogres: warlord’s kin', [
+    { n: 'Ogre Clubber', c: 'ogre_clubber', s: 'new', cur: 'warlord', note: 'New grunt; the Ogre Warlord boss is the only ogre now.' },
+    { n: 'Ogre Rockthrower', c: 'ogre_rockthrower', s: 'new', cur: 'warlord', note: 'New: throws rocks from a shoulder bag.' },
+    { n: 'Ogre Shieldbearer', c: 'ogre_shieldbearer', s: 'new', cur: 'warlord', note: 'New: plank shield and a kettle helm.' },
+    { n: 'Ogre Enforcer', c: 'ogre_enforcer', s: 'new', cur: 'warlord', note: 'New: leather pauldron and a cleaver.' },
+  ]],
+  ['Bestiary additions', [
+    { n: 'Restless Dead', c: 'restless_dead', s: 'new', cur: null, note: 'New: a shambling zombie in rags.' },
+    { n: 'Cave Bat', c: 'cave_bat', s: 'new', cur: null, note: 'New: a flying bat.' },
+    { n: 'Bandit Crossbowman', c: 'bandit_crossbowman', s: 'new', cur: 'brigand', note: 'New: the Brigand is the nearest relative.' },
+    { n: 'Bog Toad', c: 'bog_toad', s: 'new', cur: null, note: 'New: a big warty toad.' },
+  ]],
+];
+const all = SHEETS.flatMap(s => s[1]);
+const counts = { done: 0, todo: 0, new: 0 }; all.forEach(e => counts[e.s]++);
+document.getElementById('tally').innerHTML = `<span><b>${all.length}</b> concepts</span>` + ['done', 'todo', 'new'].map(k => `<span style="color:var(--${k})"><b style="color:inherit">${counts[k]}</b> ${LABEL[k].toLowerCase()}</span>`).join('');
+document.getElementById('bar').innerHTML = ['done', 'todo', 'new'].map(k => `<span style="width:${counts[k] / all.length * 100}%;background:var(--${k})"></span>`).join('');
+const esc = t => t.replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+document.getElementById('sheets').innerHTML = SHEETS.map(([title, items]) => `<section class="sheet"><h2>${esc(title)}</h2><div class="grid">${items.map(e => `
+  <article class="card" data-s="${e.s}">
+    <div class="top"><span class="name">${esc(e.n)}</span><span class="chip">${LABEL[e.s]}</span></div>
+    <div class="pair">
+      <figure><img src="concepts/${e.c}.png" alt="Concept art: ${esc(e.n)}" loading="lazy"><figcaption>concept</figcaption></figure>
+      <figure class="cur">${e.cur ? `<img src="current/${e.cur}.png" alt="In game now: ${esc(e.cur)}" loading="lazy">` : `<div class="empty">nothing in the game yet</div>`}<figcaption>${e.s === 'new' ? (e.cur ? 'nearest in game' : 'in game') : 'in game now'}</figcaption></figure>
+    </div>
+    <p class="note">${esc(e.note)}</p>
+  </article>`).join('')}</div></section>`).join('');
+const btns = [...document.querySelectorAll('.filters button')];
+function apply(f) {
+  btns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.f === f)));
+  document.querySelectorAll('.card').forEach(c => { c.hidden = f !== 'all' && c.dataset.s !== f; });
+  document.querySelectorAll('.sheet').forEach(s => { s.hidden = ![...s.querySelectorAll('.card')].some(c => !c.hidden); });
+  try { localStorage.setItem('bp-filter', f); } catch (e) {}
+}
+btns.forEach(b => b.addEventListener('click', () => apply(b.dataset.f)));
+let saved = 'all'; try { saved = localStorage.getItem('bp-filter') || 'all'; } catch (e) {}
+apply(LABEL[saved] || saved === 'all' ? saved : 'all');
+</script>

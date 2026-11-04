@@ -221,7 +221,23 @@ function fallenRig(look, st) {
     r.cone(hip, knee, lg[0], lg[1], skin); r.cone(knee, ank, lg[1], lg[2], skin);
     r.ell(V.add(ank, [1.4, 0, -0.5]), imp ? [2.0, 1.2, 0.85] : [2.2, 1.2, 0.8], imp ? M.HIDE : M.HORN);
   }
-  if (imp) {
+  if (imp && look.ember) {
+    // the ember acolyte (concept "EMBER ACOLYTE"): a ragged brown robe from chest to knee, tied
+    // with a rope belt whose ends hang in front, under a purple capelet with a bone clasp
+    const lf = frameAlong(fwd, up), top = V.lerp(J.pelvis, J.chest, 0.7), hem = V.add(J.pelvis, [0, 0, -4.2]);   // hangs straight down whatever the hunch
+    const ax = V.norm(V.sub(hem, top)), Lr = V.len(V.sub(hem, top));
+    r.cone(top, hem, 2.9, 3.7, M.LEATHER, { mf: p => {
+      const q = V.sub(p, top), t = V.dot(q, ax), ang = Math.atan2(V.dot(q, sideR), V.dot(q, fwd));
+      if (t > Lr - 1.3 + Math.abs(Math.sin(ang * 4.5)) * 1.1) return M.DARK;   // jagged, torn hem
+      return 0;
+    } });
+    const bc = V.mad(J.pelvis, up, 1.2);
+    r.ell(bc, [3.5, 3.9, 0.75], M.CLOTH_TAN, lf);   // rope belt
+    for (const sd of [-0.6, 0.5]) r.cone(V.add(V.mad(bc, fwd, 3.2), V.mul(sideR, sd)), V.add(V.add(V.mad(bc, fwd, 3.7), V.mul(sideR, sd * 1.4)), V.mul(up, -3.6)), 0.6, 0.45, M.CLOTH_TAN);
+    const cp = V.mad(J.chest, up, 3.2);
+    r.ell(cp, [3.6, 4.6, 2.2], M.CLOTH_PURPLE, lf);   // capelet over the shoulders
+    r.sph(V.add(V.mad(cp, fwd, 3.5), V.mul(up, -0.3)), 0.8, M.BONE, { bias: 1 });   // bone clasp
+  } else if (imp) {
     r.group(() => { r.ell(J.pelvis, [2.6, 3.0, 2.4], skin); r.ell(V.lerp(J.pelvis, J.chest, 0.6), [2.9, 3.4, 3.9], skin, frameAlong(fwd, up)); });
     const bc = V.mad(J.pelvis, up, 0.9), lf = frameAlong(fwd, up);
     r.ell(bc, [2.9, 3.3, 0.9], M.LEATHER, lf);   // belt
@@ -248,6 +264,10 @@ function fallenRig(look, st) {
   } else {
     handR = V.add(V.add(J.shR, V.mul(fwd, 2.5 + J.swingArm * 1.5)), V.mul(up, -5)); bd = V.norm(V.add(V.mul(fwd, 0.35), up));
   }
+  if (look.ember) {   // the off hand held out palm-up with a flame on it; thrust forward to cast
+    const ca = st.clip === 'cast' && sw ? sw.a : 0;
+    handL = V.add(V.add(J.shL, V.mul(fwd, 4.2 + ca * 2.5)), V.add(V.mul(up, -2.6 + ca * 1.5), V.mul(sideR, -1.6)));
+  }
   const aR = armTo(J, J.shR, handR, B, 1), aL = armTo(J, J.shL, handL, B, -1);
   for (const [sh, a] of [[J.shR, aR], [J.shL, aL]]) { r.cone(sh, a.el, imp ? 1.15 : 1.4, imp ? 0.95 : 1.1, skin); r.cone(a.el, a.hand, imp ? 0.95 : 1.1, 0.9, skin); r.sph(a.hand, imp ? 1.25 : 1.3, skin); }
   // weapon: spear (warrior) or a staff with a glowing head (shaman)
@@ -264,7 +284,19 @@ function fallenRig(look, st) {
     const lp = V.add(V.mad(J.pelvis, sideR, -3.4), V.mul(fwd, 0.6));
     r.box(lp, [1.1, 1.1, 1.4], M.LAMP, null, { noShadow: true }); r.box(V.mad(lp, up, 1.8), [0.8, 0.8, 0.4], M.IRON);
   } else if (look.unarmed) { /* both hands free to clutch the sack */ }
-  else if (look.staff) {
+  else if (look.staff && look.ember) {
+    // a crooked staff: it kinks twice on the way up and ends in a hook that cradles a glowing orb
+    const s0 = V.mad(g, bd, -8.5), s1 = V.mad(g, bd, 6), s2 = V.add(V.mad(g, bd, 11), V.mul(fwd, -1)), s3 = V.add(V.mad(g, bd, 15.5), V.mul(fwd, 0.6));
+    const h1 = V.add(V.mad(g, bd, 17), V.mul(fwd, 3)), h2 = V.add(V.mad(g, bd, 14.6), V.mul(fwd, 4.6));
+    r.group(() => { r.cone(s0, s1, 0.7, 0.7, M.WOOD); r.cone(s1, s2, 0.7, 0.68, M.WOOD); r.cone(s2, s3, 0.68, 0.65, M.WOOD); r.cone(s3, h1, 0.65, 0.6, M.WOOD); r.cone(h1, h2, 0.6, 0.5, M.WOOD); });
+    const orb = V.add(V.mad(g, bd, 13.6), V.mul(fwd, 2.8)), fl = st.f || 0;
+    r.sph(orb, 1.75, M.FIREM, { noShadow: true, mf: p => V.dot(V.sub(p, orb), V.norm(V.add(up, V.mul(sideR, -0.5)))) > 0.5 ? M.LAMP : 0 });
+    // the flame in the off hand: a yellow heart in an orange tongue that flickers, and grows to cast
+    const hp = V.mad(aL.hand, up, 1.0), ca = st.clip === 'cast' && sw ? sw.a : 0, fh = (2.8 + [0, 0.6, 0.2, -0.3][fl % 4]) * (1 + ca * 0.5);
+    const fm = V.add(V.mad(hp, up, fh * 0.45), V.mul(sideR, 0.4)), ft = V.add(V.mad(hp, up, fh), V.mul(sideR, [-0.5, 0.3, 0.6, -0.2][fl % 4]));
+    const core = { noShadow: true, mf: p => V.dot(V.sub(p, hp), up) < fh * 0.42 ? M.LAMP : 0 };
+    r.group(() => { r.cone(hp, fm, 1.3 * (1 + ca * 0.3), 1.0, M.FIREM, core); r.cone(fm, ft, 1.0, 0.2, M.FIREM, core); });
+  } else if (look.staff) {
     r.cone(V.mad(g, bd, -7), V.mad(g, bd, 7), 0.65, 0.65, M.WOOD);
     r.sph(V.mad(g, bd, 8.2), 1.5, M.MAGIC, { noShadow: true });
   } else {
@@ -303,7 +335,14 @@ function fallenRig(look, st) {
     r.ell(V.mad(hd, up, 2.0), [3.9, 3.7, 2.2], M.IRON, frameAlong(fwd, up));
     r.cyl(V.mad(hd, up, 1.0), V.mad(hd, up, 1.5), 4.6, M.IRON);
   }
-  if (look.hood) r.ell(V.add(V.mad(hd, up, 0.8), V.mul(fwd, -0.8)), [4.2, 4.2, 3.8], M.CLOTH_PURPLE, frameAlong(fwd, up));
+  if (look.hood && look.ember) {   // a deep purple hood pulled forward over the brow, open at the face
+    const hf = frameAlong(fwd, up);
+    r.group(() => {
+      r.ell(V.add(V.mad(hd, up, 1.1), V.mul(fwd, -1.0)), [4.0, 4.1, 3.8], M.CLOTH_PURPLE, hf);
+      r.ell(V.add(V.mad(hd, up, 2.4), V.mul(fwd, 1.4)), [2.4, 3.2, 1.4], M.CLOTH_PURPLE, hf);   // the peak over the brow
+      r.cone(V.add(V.mad(hd, up, 2.2), V.mul(fwd, -3.4)), V.add(V.mad(hd, up, 0.6), V.mul(fwd, -5.6)), 1.6, 0.4, M.CLOTH_PURPLE);   // the hood's tail behind
+    });
+  } else if (look.hood) r.ell(V.add(V.mad(hd, up, 0.8), V.mul(fwd, -0.8)), [4.2, 4.2, 3.8], M.CLOTH_PURPLE, frameAlong(fwd, up));
   if (look.goblin && !look.chief) r.ell(V.mad(hd, up, 2.2), [3.6, 3.4, 1.8], M.LEATHER, frameAlong(fwd, up));   // a leather cap
   if (look.chief) {   // the chieftain: a crude gold crown and a bone necklace
     const cc = V.mad(hd, up, 2.4);
@@ -701,7 +740,7 @@ const MONSTERS = {
   archer: { family: 'skeleton', name: 'SKELETON ARCHER', look: { weapon: 'bow', bone: M.OLDBONE }, hp: 10, dmg: [2, 4], speed: 24, reach: 6.5, ranged: 'arrow', xp: 14, chest: 22, shadow: 7 },
   burning: { family: 'skeleton', name: 'BURNING DEAD', look: { weapon: 'sword', shield: false, helm: true, burn: true, bone: M.OLDBONE, eye: M.FIREM }, hp: 24, dmg: [4, 8], speed: 30, reach: 1.25, xp: 30, chest: 22, shadow: 7, minLevel: 2 },
   fallen: { family: 'fallen', name: 'FALLEN ONE', look: {}, hp: 7, dmg: [1, 3], speed: 40, reach: 1.15, xp: 6, chest: 12, shadow: 5, pack: true },
-  shaman: { family: 'fallen', name: 'FALLEN SHAMAN', look: { staff: true, hood: true, skin: M.SKIN }, hp: 9, dmg: [3, 6], speed: 28, reach: 6, ranged: 'firebolt', leader: true, xp: 16, chest: 12, shadow: 5 },
+  shaman: { family: 'fallen', name: 'FALLEN SHAMAN', look: { staff: true, hood: true, ember: true }, hp: 9, dmg: [3, 6], speed: 28, reach: 6, ranged: 'firebolt', leader: true, xp: 16, chest: 12, shadow: 5 },
   hound: { family: 'hound', name: 'BONE HOUND', look: {}, hp: 16, dmg: [3, 6], speed: 52, reach: 1.35, xp: 18, chest: 12, shadow: 10 },
   lich: { family: 'skeleton', name: 'THE LICH', title: 'WHO DIED AND WOULD NOT STAY DEAD', look: { lich: true, eye: M.EYE_GRN, bone: M.OLDBONE, scale: 1.6, size: [124, 140, 62, 112] }, hp: 260, dmg: [8, 14], speed: 22, reach: 7, ranged: 'frostbolt', xp: 400, chest: 46, shadow: 11, unique: true, boss: 'lich', minLevel: 99 },
   skelking: { family: 'skeleton', name: 'SKELETON KING', title: 'LORD OF THE RESTLESS DEAD', look: { weapon: 'sword', shield: false, armored: true, crown: true, eye: M.FIREM, scale: 1.6, size: [124, 132, 62, 104] }, hp: 170, dmg: [9, 16], speed: 24, reach: 1.9, xp: 200, chest: 42, shadow: 11, unique: true, boss: 'king', minLevel: 99 },
