@@ -223,7 +223,7 @@ function drawHud() {
   if (hero.cls === 'mage') drawButton(UI.attack, [37, 38, 39, 40], !!press.attack, glyphMissile);   // magic missiles
   else if (hero.cls === 'ranger') drawButton(UI.attack, [33, 34, 35, 36], !!press.attack, (x, y) => glyphBowAtk(x, y));   // arrows
   else drawButton(UI.attack, [28, 29, 30, 31], !!press.attack, glyphSword);
-  if (LV.outdoor && nearTrader()) talkBubble(UI.attack[0] + 14, UI.attack[1] - 20);   // round 42b: a tap here talks
+  drawActionButton();   // round 43b: talk, trade, free, unlock
   drawStoryMark();
   SKILLS.forEach((sk, i) => {
     const fx = btnFx(i), dtu = 1 / 60;
@@ -453,6 +453,30 @@ function drawStoryMark() {
   if (LV.stairs && !LV.outdoor && Math.hypot(t[0] - LV.stairs.i - 0.5, t[1] - LV.stairs.j - 0.5) < 0.6) return;   // the stairs' own arrow already points there
   const [x, y] = iso(t[0], t[1]); edgeArrow(x - camX, y - camY - 16, 27, 26);
 }
+// round 43b: the action button, above the health bars at the bottom middle. It shows only when
+// there is something to do in reach (talk, buy, sell, free Aldo, unlock the mine) and says what
+const ACT_POS = () => [W / 2 - 16, H - 76];
+function actionTarget() {
+  if (G.mode !== 'play' || hero.dead || G.fadeTo) return null;
+  const n = nearTrader();
+  if (n) return { n, label: n.role === 'merchant' ? `BUY POTION ${potionPrice()}G` : n.role === 'smith' ? 'SELL LOOT' : n.role === 'aldo' && LV.side === 'den' && G.story && G.story.f.alphaDead && !G.story.f.aldoFree ? 'FREE ALDO' : 'TALK' };
+  const m = mineAction(); if (m) return m;
+  return null;
+}
+function doAction(a) {
+  if (G.t < (hero.tradeT || 0)) return;
+  hero.tradeT = G.t + 0.35; sfx('tap');
+  if (a.n) trade(a.n); else a.go();
+}
+function drawActionButton() {
+  UI.act = null;
+  const a = actionTarget(); if (!a) return;
+  const [cx, cy] = ACT_POS(), w = textWidth(a.label) + 26, h = 20, x = Math.round(cx - w / 2), y = Math.round(cy - h / 2), pulse = Math.floor(G.t * 3) % 2;
+  UI.act = { x: x - 6, y: y - 6, w: w + 12, h: h + 12 };   // a forgiving hit area for thumbs
+  fillRect(x, y, w, h, 5); frame(x, y, w, h, pulse ? 51 : 50, 3); frame(x + 1, y + 1, w - 2, h - 2, 4, 2);
+  talkBubble(x + 11, y + 10);
+  text(a.label, x + 21, y + 8, 27);
+}
 const budgetOff = () => { const s = buildBudget.ms; buildBudget.ms = Infinity; return s; };
 const budgetOn = s => { buildBudget.ms = s; };
 
@@ -599,7 +623,8 @@ cvs.addEventListener('pointerdown', e => {
   if (hitCircle(p, UI.potion)) { drinkPotion(); return; }
   for (let i = 0; i < UI.skills.length; i++) if (hitCircle(p, UI.skills[i], 5)) { press.skill = i; useSkill(i); return; }
   if (ULTS[hero.cls] && hitCircle(p, UI.ult, 4)) { useUlt(); return; }
-  { const n = LV.outdoor && npcAtScreen(p); if (n) { hero.goTalk = n; hero.goTalkT = 6; return; } }   // round 42b: tap a person to walk over and talk
+  { const a = actionTarget(); if (a && UI.act && inRect(p, UI.act)) { doAction(a); return; } }   // round 43b: the action button
+  { const n = npcAtScreen(p); if (n) { hero.goTalk = n; hero.goTalkT = 6; return; } }   // round 42b: tap a person to walk over and talk
   if (hitCircle(p, UI.attack, 10) || (p[0] > W * 0.55 && p[1] > H * 0.3)) { press.attack = e.pointerId; input.attack = true; heroAttack(); capture(e); return; }
   if (p[0] < W * 0.55 && stick.id === null) { stick.id = e.pointerId; stick.ox = p[0]; stick.oy = p[1]; stick.x = p[0]; stick.y = p[1]; capture(e); }
 }, { passive: false });
@@ -632,6 +657,7 @@ addEventListener('keydown', e => {
   if (k === '4') useSkill(3);
   if (k === '5' || k === 'r') useUlt();
   if (k === 'q') drinkPotion();
+  if (k === 'e' || k === 'f') { const a = actionTarget(); if (a) doAction(a); }   // round 43b: the action key
   if (k === 'i' || k === 'b') { G.mode = G.mode === 'inv' ? 'play' : 'inv'; INV.sel = null; }
   if (k === 'm' || k === 'tab') showMap = !showMap;
   if (k === 'c') { hero.team = hero.team === 'red' ? 'blue' : 'red'; recalcHero(); prewarmHero(); }

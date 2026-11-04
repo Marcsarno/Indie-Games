@@ -14,6 +14,7 @@ const leave = () => { goTo(LV.stairs.i + 2.5, LV.stairs.j + 2.5); goTo(LV.stairs
 const kill = e => { damageEnemy(e, 99999, e.fi - 1, e.fj); run(2); };
 newHero('warrior'); hero.lvl = 8; recalcHero(); hero.hp = STAT.maxHp = 99999; G.mode = 'play'; G.story = null; startLevel(1, 4242); G.actCard = 0;
 const st = () => storyStage();
+{ const sm = npcs.find(n => n.role === 'merchant'); goTo(sm.fi + 1.1, sm.fj); L.push({ merchantButton: (actionTarget() || {}).label }); goTo(HUB.camp[0] + 6, HUB.camp[1] + 6); L.push({ nothingNear: actionTarget() === null }); }
 L.push({ start: st(), people: npcs.filter(n => n.name).map(n => n.name).join(','), mineBarredSprite: LV.decor.some(d => d.kind === 'minebarred'), osricMark: storyMark('priest'), tracker: stageText(st()) });
 // the first words, on screen
 { const n = who('priest'); goTo(n.fi + 1.1, n.fj); run(10); shot('osric-near'); talkTo(n); G.talk.t = 99; render(); shots['talk'] = cvs.toDataURL(); }
@@ -24,7 +25,9 @@ L.push({ wren: finish(), next: st(), tracker: stageText(st()), target: (storyTar
 shot('tracker');
 // the den: Aldo in his cage won't go until the Alpha is dead
 const hubAlive = enemies.filter(alive).length; enter('den'); L.push({ inDen: LV.side, aldoCaged: !!who('aldo'), cage: dynProps.filter(p => p.kind === 'cage').length });
-{ const a = enemies.find(e => e.id === 'alpha'), al = who('aldo'); for (const e of enemies) if (e !== a) { e.state = 'sleep'; } goTo(al.fi + 1.2, al.fj + 0.3); run(20); shot('cage'); talkTo(al); L.push({ beforeAlpha: finish(), stillCaged: !storyF().aldoFree }); kill(a); L.push({ afterAlpha: st() }); talkTo(al); L.push({ free: finish(), next: st() }); run(90); shot('cage-open'); L.push({ aldoGone: !who('aldo'), cageOpen: dynProps.find(p => p.kind === 'cage').open }); }
+{ const a = enemies.find(e => e.id === 'alpha'), al = who('aldo'); for (const e of enemies) if (e !== a) { e.state = 'sleep'; } goTo(al.fi + 1.2, al.fj + 0.3); run(20); shot('cage'); talkTo(al); L.push({ beforeAlpha: finish(), stillCaged: !storyF().aldoFree }); kill(a); L.push({ afterAlpha: st() }); goTo(al.fi + 1.2, al.fj + 0.3); run(2); render(); const act = actionTarget(); shot('free-button'); L.push({ denButton: act && act.label, buttonArea: !!UI.act });
+  { const r = UI.act, ev = new PointerEvent('pointerdown', { clientX: 0, clientY: 0, pointerId: 9 }); const b = cvs.getBoundingClientRect(); cvs.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 9, clientX: b.left + (r.x + r.w / 2) / W * b.width, clientY: b.top + (r.y + r.h / 2) / H * b.height })); cvs.dispatchEvent(new PointerEvent('pointerup', { pointerId: 9 })); void ev; L.push({ tappedButtonOpensTalk: G.mode === 'talk' }); }
+  L.push({ free: finish(), next: st() }); run(90); shot('cage-open'); L.push({ aldoGone: !who('aldo'), cageOpen: dynProps.find(p => p.kind === 'cage').open }); }
 leave(); L.push({ back: !!LV.hub, aldoHome: !!who('aldo'), hubKeptAsLeft: enemies.filter(alive).length === hubAlive });
 const items0 = hero.bag.length, gold0 = hero.gold;
 { const n = who('wren'); goTo(n.fi + 1.1, n.fj); talkTo(n); const T = G.talk; T.t = 99; T.typed = true; T.k = T.pages.length - 1; T.pick = 1; render(); shots['reward'] = cvs.toDataURL(); T.pick = 0; L.push({ rewardChoice: T.reward.map(it => itemName(it) + ' (' + ITEM_BASES[it.base].slot + ')').join(' | ') }); }
@@ -43,7 +46,7 @@ leave();
 L.push({ hollisCollect: talk('hollis'), next: st(), potion: potionPrice() });
 L.push({ letter: talk('priest'), next: st() });
 // the key opens the mine
-{ const s = LV.stairs; goTo(s.i + 1.5, s.j + 1.5); goTo(s.i + 0.5, s.j + 0.5); run(70); L.push({ down: !LV.hub, area: areaName(), next: st() }); }
+{ const s = LV.stairs; goTo(s.i + 1.5, s.j + 1.5); const ma = actionTarget(); L.push({ mineButton: ma && ma.label }); doAction(ma); run(5); L.push({ mineSprite: LV.decor.some(d => d.kind === 'mine'), stillBarred: LV.decor.some(d => d.kind === 'minebarred') }); goTo(s.i + 0.5, s.j + 0.5); run(70); L.push({ down: !LV.hub, area: areaName(), next: st() }); }
 // the King falls (the hall's stairs take you home with the gate open), then Osric
 G.gates = { 0: true }; startLevel(1, 4242); run(5);
 L.push({ homeStage: st(), hollisAtCart: Math.hypot(who('hollis').fi - 43.8, who('hollis').fj - 35.6) < 0.5, kingCollect: talk('priest'), end: st() });

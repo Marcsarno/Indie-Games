@@ -1514,8 +1514,6 @@ function rangerTarget(range = ARROW_RANGE) {
   return m || nearestEnemy(range, true);
 }
 function rangerShoot() {
-  const tr = LV.outdoor && nearTrader();
-  if (tr) { if (G.t > (hero.tradeT || 0)) { hero.tradeT = G.t + 0.6; trade(tr); } return; }
   if (heroBusy()) { hero.buf = G.t + 0.3; return; }
   hero.buf = 0;
   const t = rangerTarget(); hero.shotAt = t;

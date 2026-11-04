@@ -214,14 +214,29 @@ function updateStory(dt) {
 function mineBarred() {
   if (!LV.hub || mineOpen()) return false;
   const f = storyF();
-  if (f.chiefDead) {   // the key turns: the chains fall and the way down opens
-    f.mineOpen = true; sfx('chest'); sfx('stairs'); say('THE KEY TURNS. THE CHAINS FALL AWAY', 51, 3); saveGame(); return false;
-  }
+  if (f.chiefDead) { unlockMine(); return true; }   // the key turns (round 43b: the chains fall now, the stairs take you next step)
   if (!(G.sealT > 0)) {
     say('THE MINE IS CHAINED SHUT', 22, 2.5); say('THE BANDITS TOOK THE KEY', 26, 2.5); G.sealT = 3;
     if (!f.sawChain && storyOn()) { f.sawChain = true; saveGame(); }
   }
   return true;
+}
+// round 43b: the action button at the mine: UNLOCK with the chief's key, else LOOK at the chains
+function mineAction() {
+  if (!LV.hub || !LV.stairs || !LV.stairs.mine || mineOpen()) return null;
+  const s = LV.stairs; if (Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) > 2.6) return null;
+  return storyF().chiefDead ? { label: 'UNLOCK', go: unlockMine } : { label: 'LOOK', go: () => { G.sealT = 0; mineBarred(); } };
+}
+// the key turns: the chains fall, and the mine mouth is rebuilt open (what is broken or opened in
+// the hub stays so)
+function unlockMine() {
+  const f = storyF(); if (f.mineOpen) return;
+  f.mineOpen = true; sfx('chest'); sfx('stairs'); say('THE KEY TURNS. THE CHAINS FALL AWAY', 51, 3);
+  for (const d of LV.decor) if (d.kind === 'minebarred') d.kind = 'mine';
+  const keep = dynProps.map(p => ({ open: p.open, broken: p.broken, hp: p.hp, hatch: p.hatch }));
+  buildWorld(); keep.forEach((q, n) => { if (dynProps[n]) Object.assign(dynProps[n], q); });
+  const s = LV.stairs, [x, y] = iso(s.i + 0.5, s.j + 0.5); for (let k = 0; k < 14; k++) pspawn(5, x + (Math.random() - 0.5) * 20, y - 10, 10 + Math.random() * 20, (Math.random() - 0.5) * 40, -20, 30, 0.6, 30);   // dust and links falling
+  saveGame();
 }
 // where the next goal is, for the marker at the screen's edge: [fi, fj] or null
 function storyTarget() {

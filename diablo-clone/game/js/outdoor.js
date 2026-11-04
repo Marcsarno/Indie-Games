@@ -1096,7 +1096,7 @@ const TALKERS = { priest: 1, wren: 1, hollis: 1, aldo: 1 };
 const potionPrice = () => G.story && G.story.f.farmPaid ? 15 : 25;
 const traderLabel = n => n.role === 'merchant' ? `TAP: POTION ${potionPrice()} GOLD` : n.role === 'aldo' && LV.side === 'den' && G.story && G.story.f.alphaDead ? 'TAP: FREE ALDO' : TRADER_ROLES[n.role];
 function nearTrader() {
-  let best = null, bd = 1.6;
+  let best = null, bd = 1.8;
   for (const n of npcs) if (TRADER_ROLES[n.role] && n.leaving === undefined) { const d = Math.hypot(n.fi - hero.fi, n.fj - hero.fj); if (d < bd) { bd = d; best = n; } }
   return best;
 }
@@ -1123,7 +1123,7 @@ function drawNpcLabels() {
     const [x, y] = iso(n.fi, n.fj), sx = Math.round(x - camX), sy = Math.round(y - camY) - 58;
     if (sx < -40 || sx > W + 40 || sy < -10 || sy > H) continue;
     const near = Math.hypot(n.fi - hero.fi, n.fj - hero.fj) < 1.6;
-    textC(near ? traderLabel(n) : n.name, sx, sy, near ? 51 : 27);
+    textC(n.name, sx, sy, near ? 51 : 27);   // round 43b: what to do is on the action button now
     const by = sy + 9 + Math.round(Math.sin(G.t * 4) * 1.5);
     if (priestMark(n, sx, by)) continue;
     for (let r = 0; r < 4; r++) for (let c = -3 + r; c <= 3 - r; c++) { const xx = sx + c, yy = by + r; if (xx >= 0 && yy >= 0 && xx < W && yy < H) out32[yy * W + xx] = PAL32[r === 0 || Math.abs(c) === 3 - r ? 123 : 124]; }

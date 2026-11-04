@@ -215,8 +215,6 @@ const canChain = () => !FEEL_OLD && hero.atk >= 0 && hero.hitDone && hero.cast <
 function heroAttack() {
   if (G.mode !== 'play' || hero.dead) return;
   if (hero.cls === 'mage') {   // the mage's attack: magic missiles, held to keep firing
-    const tr = LV.outdoor && nearTrader();
-    if (tr) { if (G.t > (hero.tradeT || 0)) { hero.tradeT = G.t + 0.6; trade(tr); } return; }
     if (heroBusy()) { hero.buf = G.t + 0.3; return; }
     hero.buf = 0; castMissiles(); return;
   }
@@ -224,9 +222,7 @@ function heroAttack() {
   if (heroBusy() && !canChain()) { if (!FEEL_OLD) hero.buf = G.t + 0.45; return; }   // a tap mid-swing is kept until the swing can chain (a heavy one takes longest)
   hero.buf = 0;
   if (hero.atk >= 0) hero.swingEnd = G.t;   // chained: the combo carries on
-  // beside a trader in town, a tap trades instead of swinging
-  const tr = LV.outdoor && nearTrader();
-  if (tr) { if (G.t > (hero.tradeT || 0)) { hero.tradeT = G.t + 0.6; trade(tr); } return; }
+  // (round 43b: talking and trading moved to the action button, so attack always attacks)
   // target assist: face the nearest enemy within reach of a step or two
   let best = null, bd = 4.2;
   for (const e of enemies) { if (!alive(e) || LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] < 0.3) continue; const d = Math.hypot(e.fi - hero.fi, e.fj - hero.fj); if (d < bd) { bd = d; best = e; } }
