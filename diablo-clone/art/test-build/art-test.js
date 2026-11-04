@@ -35,6 +35,19 @@
     ['FROSTPATH STALKER', 'ranger', { chest: 'jerkin_frost', weapon: 'bow_silver' }],
     ['DUNE STRIDER', 'ranger', { chest: 'jerkin_dune', weapon: 'bow_arbalest' }],
     ['BLACKTHORN WARDEN', 'ranger', { chest: 'jerkin_warden', weapon: 'bow_thorn' }],
+    // art A10: ranger headpieces (helm only: the rest of the outfit stays as worn)
+    ['TRAIL BANDANA', 'ranger', { helm: 'bandana' }],
+    ['GREENWOOD CAP', 'ranger', { helm: 'greenwood' }],
+    ['SHADOW HOOD', 'ranger', { helm: 'shadowhood' }],
+    ['HAWK SCOUT CIRCLET', 'ranger', { helm: 'circlet' }],
+    ['HAWKWARD HELM', 'ranger', { helm: 'hawkward' }],
+    ['MOONSTALKER COWL', 'ranger', { helm: 'moonstalker' }],
+    ['WYRMHIDE SALLET', 'ranger', { helm: 'wyrmhide' }],
+    ['SUNFALCON CROWNHELM', 'ranger', { helm: 'sunfalcon' }],
+    ['LEATHER SCOUT CAP', 'ranger', { helm: 'scoutcap' }],
+    ['WOODSMAN HAT', 'ranger', { helm: 'woodsman' }],
+    ['WINTER TRACKER CAP', 'ranger', { helm: 'wintercap' }],
+    ['TRAILGUARD HELM', 'ranger', { helm: 'trailguard' }],
     ['STARTER', 'mage', { chest: 'robe_blue', helm: 'hat', weapon: 'staff' }],
     ['MAGUS', 'mage', { chest: 'robe_purple', helm: 'hat', weapon: 'staff' }],
     ['ARCHMAGE', 'mage', { chest: 'robe_red', helm: 'hat_conj', weapon: 'staff_rune' }],
@@ -62,7 +75,8 @@
     const [name, cls, parts] = list[idx[hero.cls]];
     for (const slot of ['chest', 'helm', 'weapon', 'shield']) {
       if (cls === 'ranger' && slot === 'shield') continue;   // keep the quiver
-      if (cls === 'ranger' && slot === 'helm') continue;     // keep whatever hood is worn
+      if (cls === 'ranger' && slot === 'helm' && !parts.helm) continue;     // keep whatever hood is worn (unless the entry is a headpiece)
+      if (!parts.chest && slot !== 'helm') continue;   // a headpiece entry changes only the helm
       hero.equip[slot] = parts[slot] ? itemFor(cls, slot, parts[slot], name) : (slot === 'shield' || slot === 'helm' ? null : hero.equip[slot]);
     }
     recalcHero(); prewarmHero();
