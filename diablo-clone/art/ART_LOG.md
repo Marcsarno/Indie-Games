@@ -256,3 +256,30 @@ Test copy: `art/test-build/art-test.js` has helm-only OUTFIT entries (TRAIL BAND
 Still off: the circlet's leather band and ear guards are close in tone to the orange hair's shadow and the jerkin, so
 they read weakly at 1x; one pixel of fringe can show at the top of the shadow hood from the back; the greenwood cap
 reads rounder than the concept's peaked felt cap.
+
+### A10b: eight more ranger headpieces
+From `art/concepts/heroes/ranger-epic-helms.png` and `ranger-more-headpieces.png`. Review images in the same folder:
+`epic.png`, `more.png` (concept beside front-right/front/back), `epic-1x.png`, `more-1x.png`, `passes-*.png`, and the
+both-order pair sheets `pairs-epic-p1-p2.png`, `pairs-more-p1-p2.png`, `pairs-p2-p3.png`. Same code path
+(`Object.assign(RANGER_HEAD, ...)` after the A10 table); hair mode 'lowf' (hair at the back, lowered fringe, no crown
+spikes) added, and the lowered fringe is used under every helm so no lock pokes through a shell. Helmets sit back from
+the face like the hoods, so the face stands out of the opening. Same checks as A10, all clean (429 existing looks and
+40 monsters identical to c5d6b3e; 1152 frames per headpiece, none clipped).
+
+| Headpiece | Helm look | Passes (kept) |
+|---|---|---|
+| Hawkward Helm | hawkward | 3 (p2: shell set back from the face, smaller bronze wings; p3 gold wings lost both orders) |
+| Moonstalker Cowl | moonstalker | 2 (p2: CLOTH_SHADOW indigo; p1's CLOTH_NAVY read royal blue) |
+| Wyrmhide Sallet | wyrmhide | 3 (p2: rows of scales, low crest; p3 bigger tipped brim showed as an arc from behind, tied/lost) |
+| Sunfalcon Crownhelm | sunfalcon | 2 (p2: IRON for dark steel; p1's DSTEEL read light grey and covered the face) |
+| Leather Scout Cap | scoutcap | 3 (p3: dark bill further out, bigger ear flaps with a dark rim) |
+| Woodsman Hat | woodsman | 3 (p3: no hair mass, so no orange ring between brim and crown) |
+| Winter Tracker Cap | wintercap | 2 (p2: lowered fringe stays under the fur rim) |
+| Trailguard Helm | trailguard | 3 (p3: no hair mass, so no orange ring on the brim) |
+
+Substitutes: bronze = PUMPKIN, blue-grey steel = SLATE, dark steel = IRON, indigo = CLOTH_SHADOW, violet gem = MAGIC
+(glows), scaled green = OGRE with GOBLIN rows, cream fur = WAX, dark leather (panels, bill, flap rims) = HAIR, hat band
+= CLOTH_DARK, leaf badge = GOLD. Test copy: eight more helm-only OUTFIT entries.
+Still off: the hawk wings read as orange flames more than feathers; the sallet's bronze brim is thin from the front
+and its crest reads as a spike; the woodsman's pinched crown and leaf badge are small at 1x; the winter cap's fur rim
+reads as a white headband across the brow; the scout cap's ear flaps are faint against the jerkin.
