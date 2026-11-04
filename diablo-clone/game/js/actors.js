@@ -374,6 +374,25 @@ const MAGE_GAIT = gaitFrameTiles(MAGE_B);
 // where an exact plant gave 5 and 6.8 steps/s and looked like a frantic wiggle
 const HERO_STEP = HERO_GAIT / 0.72, MAGE_STEP = MAGE_GAIT / 0.62;
 const robed = eq => !!eq.chest && eq.chest.startsWith('robe');
+// round a6: the wizard's three robes after the concept sheet (art/concepts/heroes/wizard-robes.png):
+// the apprentice's blue with a gold hem and placket; the magus' plum with a cream front panel, a
+// teal mantle and gloves (teal has no cloth: WATERM, the nearest blue-green); the archmage's red
+// with gold stripes down the front, a navy mantle edged in gold and gold cuffs. Both upper robes
+// wear a gold medallion at the belt.
+const ROBE_STYLE = {
+  robe_blue: { hem: M.GOLD, placket: M.GOLD },
+  robe_purple: { panel: M.CLOTH_WHITE, mantle: M.WATERM, cuff: M.WATERM, glove: M.WATERM, medal: M.GOLD },
+  robe_red: { hem: M.GOLD, stripes: M.GOLD, mantle: M.CLOTH_NAVY, trim: M.GOLD, cuff: M.GOLD, medal: M.GOLD },
+  // round a6b: four more sets (art/concepts/heroes/wizard-upgrades.png). m: the robe's cloth; pw /
+  // wk: the front panel's width on the chest / its scale on the skirt; sleeve: sleeves of their own;
+  // collar: a collar round the neck (hood: with a hood hanging down the back); buckle: a square one
+  robe_way: { m: M.CLOTH_GREEN, collar: M.CLOTH_WHITE, hood: true, cuff: M.CLOTH_WHITE, buckle: M.GOLD },   // the Wayfarer
+  robe_frost: { m: M.SLIME_B, panel: M.CLOTH_WHITE, mantle: M.CLOTH_NAVY, trim: M.STEEL, cuff: M.STEEL, medal: M.STEEL },   // the Frost Scholar (pale blue: SLIME_B's ramp, the nearest)
+  robe_dusk: { m: M.CLOTH_PURPLE, panel: M.CLOTH_SHADOW, sleeve: M.CLOTH_SHADOW, collar: M.CLOTH_WHITE, medal: M.CLOTH_WHITE },   // the Duskweaver
+  robe_sun: { m: M.AUTUMNM, panel: M.CLOTH_WHITE, pw: 2.2, wk: 1.75, stripes: M.GOLD, hem: M.GOLD, sleeve: M.CLOTH_WHITE, mantle: M.AUTUMNM, trim: M.GOLD, cuff: M.GOLD, medal: M.GOLD },   // the Sunwarden (red-orange: the autumn ramp)
+};
+// round a6b: wizard hats in other colors (the same hat as 'hat', drawn through the conjurer's path)
+const HAT_STYLE = { hat_way: { m: M.LEATHER, band: M.CLOTH_GREEN }, hat_frost: { m: M.CLOTH_SHADOW, band: M.STEEL }, hat_dusk: { m: M.CLOTH_PURPLE, band: M.CLOTH_DARK }, hat_sun: { m: M.STRAWM, band: M.GOLD } };
 const TEAM = { red: M.CLOTH_RED, blue: M.CLOTH_BLUE, green: M.CLOTH_GREEN, tan: M.CLOTH_TAN, purple: M.CLOTH_PURPLE, white: M.CLOTH_WHITE };
 // townsfolk share the hero's rig: hair color, a beard, or no weapon at all
 const HAIRM = { orange: M.HAIR_O, brown: M.HAIR, blond: M.STRAWM, grey: M.CLOTH_WHITE };
@@ -510,6 +529,34 @@ function setHead(r, eq, hd, fwd, up, sideR, helmF) {
   if (hasFx(eq, 'seer') && eq.helm === 'hat') { const e = V.add(V.mad(hd, up, 5.4), V.mul(fwd, 4.4)); r.ell(e, [0.6, 1.8, 1.1], M.CLOTH_WHITE, frameAlong(fwd, up)); r.sph(V.mad(e, fwd, 0.5), 0.9, M.ARCANE, { noShadow: true }); }   // Seer's Peak: an open eye on the hat
   if (eq.set === 'magus' && eq.helm === 'hat') r.sph(V.add(V.mad(hd, up, 12), V.mul(fwd, -4.6)), 1.4, M.GOLD, { noShadow: true });
 }
+// round a6b: the new staves' heads (the shaft is drawn first, to 18 along bd from the grip g)
+const STAFF_SHAFT = { staff_frost: M.IRON, staff_moon: M.CLOTH_DARK };
+const gemOn = (r, a, bd, lo, hi, w, mLo, mHi) => r.group(() => { r.cone(V.mad(a, bd, lo), V.mad(a, bd, (lo + hi) / 2), 0.4, w, mLo, { noShadow: true }); r.cone(V.mad(a, bd, (lo + hi) / 2), V.mad(a, bd, hi), w, 0.3, mHi, { noShadow: true }); });
+const STAFF_HEAD = {
+  staff_amber: (r, g, bd, wide) => {   // Amberwood: the shaft bound in leather near the top, an amber gem set on its end
+    for (const z of [13.6, 15.4]) r.cyl(V.mad(g, bd, z), V.mad(g, bd, z + 1.0), 1.4, M.CLOTH_TAN);
+    r.cyl(V.mad(g, bd, 17.4), V.mad(g, bd, 18.4), 1.5, M.LEATHER);
+    gemOn(r, g, bd, 18.2, 23.4, 2.0, M.PUMPKIN, M.FIREM);
+  },
+  staff_frost: (r, g, bd, wide) => {   // Frostglass: a silver claw holding an ice-blue crystal
+    const wf2 = V.norm(V.cross(bd, wide));
+    r.cyl(V.mad(g, bd, 16.6), V.mad(g, bd, 17.8), 1.5, M.STEEL);
+    for (const v of [wide, V.mul(wide, -1), wf2, V.mul(wf2, -1)]) r.cone(V.mad(g, bd, 17.2), V.add(V.mad(g, bd, 20.6), V.mul(v, 2.3)), 0.8, 0.45, M.STEEL);
+    gemOn(r, g, bd, 18.6, 25.6, 2.2, M.WATERM, M.ICE);
+  },
+  staff_moon: (r, g, bd, wide) => {   // Moonstone: a cream crescent cradling a violet gem
+    r.cyl(V.mad(g, bd, 16.8), V.mad(g, bd, 18), 1.4, M.BONE);
+    const c = V.mad(g, bd, 21.6);
+    for (let k = 0; k < 6; k++) { const a0 = 0.5 + k * 0.62, a1 = a0 + 0.62, p = a => V.add(V.mad(c, bd, -Math.cos(a) * 3.2), V.mul(wide, Math.sin(a) * 3.2)); r.cone(p(a0), p(a1), 0.95 - Math.abs(k - 2.5) * 0.08, 0.95 - Math.abs(k + 1 - 2.5) * 0.08, M.BONE); }
+    r.sph(c, 1.6, M.MAGIC, { noShadow: true });
+  },
+  staff_sun: (r, g, bd, wide) => {   // Sunstone: gold fittings, a gold diamond frame round an orange-red gem
+    r.cyl(V.mad(g, bd, 14.6), V.mad(g, bd, 15.6), 1.4, M.GOLD); r.cyl(V.mad(g, bd, 17), V.mad(g, bd, 18.2), 1.5, M.GOLD);
+    const c = V.mad(g, bd, 22), pts = [V.mad(c, bd, -4), V.mad(c, wide, 3.6), V.mad(c, bd, 4), V.mad(c, wide, -3.6)];
+    r.group(() => { for (let k = 0; k < 4; k++) r.cone(pts[k], pts[(k + 1) % 4], 0.9, 0.9, M.GOLD); });
+    r.sph(c, 1.9, M.EYE_RED, { noShadow: true });
+  },
+};
 const GEAR_EXTRA = { helm: {}, chest: {}, weapon: {} }, GEAR_SWING = {}, GEAR_LEN = {};
 function weaponSwing(eq, combo = 0) {
   if (isBow(eq.weapon)) return RANGER_BOW;
@@ -522,12 +569,23 @@ const WEAPON_LEN = { sword: 21, axe: 16, mace: 16, flail: 17, greatsword: 27, bs
 
 function heroRig(eq, st) {
   const volley = st.clip === 'volley', skyShot = st.clip === 'skyshot'; if (volley || skyShot) st = Object.assign({}, st, { clip: 'shoot', sky: skyShot });   // round 43: the volley and Rain of Arrows' shot into the sky   // round 43: Multishot draws like a shot, the bow canted over and three arrows on the string
+  if (HAT_STYLE[eq.helm]) eq = Object.assign({}, eq, { helm: 'hat_conj', hatV: HAT_STYLE[eq.helm] });   // round a6b: a colored wizard hat
   const B = robed(eq) ? MAGE_B : HERO_B, J = bipedJoints(B, st), r = new Rig();
   const team = TEAM[eq.team] || M.CLOTH_RED;
   const gothic = eq.chest === 'gothic', plate = eq.chest === 'plate' || eq.chest === 'darkplate' || gothic, scale = eq.chest === 'scale', chain = eq.chest === 'chain' || scale, brig = eq.chest === 'brigandine';
   const PL = eq.chest === 'darkplate' || gothic ? M.DSTEEL : M.PLATE;   // round 43: gothic plate is blackened steel with gold edges and spiked pauldrons
   // mage robes: one design in three colors (look 'robe_blue' / 'robe_purple' / 'robe_red')
-  const robe = eq.chest.startsWith('robe'), robeM = robe ? (TEAM[eq.chest.slice(5)] || M.CLOTH_BLUE) : null;
+  const robe = eq.chest.startsWith('robe'), robeM = robe ? ((ROBE_STYLE[eq.chest] || {}).m || TEAM[eq.chest.slice(5)] || M.CLOTH_BLUE) : null;
+  const RS = robe ? ROBE_STYLE[eq.chest] || ROBE_STYLE.robe_blue : null;
+  // a robe's front trim on a skirt cone a->b: the panel or the stripes down the front, the hem band
+  const robeFront = (a, b, w0, w1, hemAt) => { const d = V.norm(V.sub(b, a)), L = V.len(V.sub(b, a)); return p => {
+    const t = Math.max(0, Math.min(1, V.dot(V.sub(p, a), d) / L)), n = V.sub(p, V.mad(a, d, t * L)), s = Math.abs(V.dot(n, sideR)), w = w0 + (w1 - w0) * t;
+    if (hemAt !== undefined && RS.hem && Math.abs(t * L - hemAt) < 0.45) return RS.hem;
+    if (V.dot(n, fwd) <= 0.5) return 0;
+    if (RS.panel && s < w) return RS.panel;
+    if (RS.stripes && Math.abs(s - w) < 0.5) return RS.stripes;
+    return 0;
+  }; };
   // the ranger's jerkins (round 33): leather over a green shirt; studded, or dark hide
   const jerk = eq.chest.startsWith('jerkin'), jerkM = jerk ? (JERKIN[eq.chest] || JERKIN.jerkin).m : M.LEATHER, bow = isBow(eq.weapon);   // round 43: drake hide, dark scaled
   const legM = plate ? PL : M.LEATHER, torsoM = plate ? PL : chain ? (scale ? M.GOLD : M.CHAIN) : robe ? robeM : jerk ? jerkM : team;
@@ -555,12 +613,15 @@ function heroRig(eq, st) {
     const hem = V.add(V.add([knee[0], knee[1], hemZ], V.mul(fwd, trail + lead * 0.15)), V.mul(sideR, J.swingArm * 0.9));
     const ax = V.norm(V.sub(hem, knee)), Lh = V.len(V.sub(hem, knee));
     r.group(() => {
-      r.cone(top, knee, 4.4, 5.4, robeM);
-      r.cone(knee, hem, 5.4, 6.9, robeM, { mf: p => Math.abs(V.dot(V.sub(p, knee), ax) - (Lh - 1.3)) < 0.45 ? M.GOLD : 0 });   // gold band near the hem
-    });   // a gold band just above the hem
+      r.cone(top, knee, 4.4, 5.4, robeM, { mf: robeFront(top, knee, 1.3 * (RS.wk || 1), 1.6 * (RS.wk || 1)) });
+      r.cone(knee, hem, 5.4, 6.9, robeM, { mf: robeFront(knee, hem, 1.6 * (RS.wk || 1), 2.1 * (RS.wk || 1), Lh - 1.3) });   // the front trim and a band near the hem
+      const back = V.mad(top, fwd, -1.2); r.cone(back, V.mad(knee, fwd, -1.6), 4.6, 5.2, robeM);   // the back hangs over the seat, so the trousers don't show from behind
+    });
   }
   const belt = V.mad(J.pelvis, up, 3.0);
   if (!plate) { r.ell(belt, [3.8 + bulk * 1.4, 4.6 + bulk * 1.6, 1.1], M.LEATHER, frameAlong(fwd, up)); r.sph(V.mad(belt, fwd, 3.8 + bulk * 1.4), 1.0, M.GOLD); }
+  if (robe && RS.medal) r.cyl(V.mad(belt, fwd, 3.5), V.mad(belt, fwd, 4.3), 1.8, RS.medal);   // a round medallion for a buckle
+  if (robe && RS.buckle) r.box(V.mad(belt, fwd, 3.7), [0.5, 1.5, 1.2], RS.buckle, frameAlong(fwd, up));
   if (chain) r.box(V.add(V.mad(J.pelvis, fwd, 4.3), [0, 0, -2.5]), [0.5, 3.0, 5.2], team, frameAlong(fwd, up));
   if (plate) {   // faulds: a pointed front plate and two tassets over the thighs, plus a leather strap
     const fr = frameAlong(V.norm(V.add(fwd, V.mul(up, -0.35))), up);
@@ -586,7 +647,9 @@ function heroRig(eq, st) {
   const robeMf = p => {   // robe: a V of skin at the neck and a gold stripe down the front
     const q = V.sub(p, J.chest), sd = Math.abs(V.dot(q, sideR)), z = V.dot(q, up), f = V.dot(q, fwd);
     if (f > 1.5 && z > 2.6 && sd < (z - 2.6) * 0.9 + 0.6) return M.FACE;
-    return f > 2 && sd < 0.6 ? M.GOLD : 0;
+    if (f > 1.5 && RS.panel && sd < (RS.pw || 1.3)) return RS.panel;
+    if (f > 1.5 && RS.stripes && Math.abs(sd - (RS.pw || 1.3) - 0.1) < 0.5) return RS.stripes;
+    return RS.placket && f > 2 && sd < 0.6 ? RS.placket : 0;
   };
   r.ell(V.mad(J.chest, up, 0.8), [3.8 + bulk * 1.4, 5.0 + bulk * 1.8, 4.6 + bulk * 1.6], torsoM, tf, {
     mf: robe ? robeMf : jerk ? jerkMf : brig ? (p => {   // brigandine: cloth over plates, rows of gold rivets
@@ -690,6 +753,14 @@ function heroRig(eq, st) {
   if (robe) ar[2] += 1.1;   // bell sleeves widen toward the wrist
   r.cone(J.shR, aR.el, ar[0], ar[1], sleeve); r.cone(aR.el, aR.hand, ar[1], ar[2], foreM);
   r.sph(aR.hand, ar[3], handM);
+  const robeCuff = (a, sh) => {   // round a6: a cuff at the bell sleeve's mouth, and gloves (magus)
+    if (!robe) return;
+    const d = V.norm(V.sub(a.hand, a.el));
+    if (RS.sleeve) { r.cone(sh, a.el, ar[0] + 0.05, ar[1] + 0.05, RS.sleeve); r.cone(a.el, a.hand, ar[1] + 0.05, ar[2] + 0.05, RS.sleeve); }   // sleeves of another cloth over the robe's
+    if (RS.cuff) r.cone(V.mad(a.hand, d, -1.6), V.mad(a.hand, d, -0.2), ar[2] + 0.15, ar[2] + 0.25, RS.cuff);
+    if (RS.glove) r.sph(a.hand, ar[3] + 0.1, RS.glove);
+  };
+  robeCuff(aR, J.shR);
   if (st.clip === 'toss' && st.f === 0) { r.cyl(V.mad(aR.hand, up, -1.6), V.mad(aR.hand, up, -0.8), 2.6, M.IRON); for (const s2 of [-1, 1]) r.cone(V.add(V.mad(aR.hand, up, -1.2), V.mul(sideR, s2 * 2.4)), V.add(V.mad(aR.hand, up, 0.6), V.mul(sideR, s2 * 1.4)), 0.6, 0.3, M.STEEL); }   // round 43: the snare's iron jaws in the hand
   // off hand swings against the sword arm: a free hand pumps (elbow bent, rising forward), a
   // shield only rocks
@@ -727,6 +798,7 @@ function heroRig(eq, st) {
   if (st.clip === 'drink') flask(drinkR ? aR.hand : aL.hand);
   r.cone(J.shL, aL.el, ar[0], ar[1], sleeve); r.cone(aL.el, aL.hand, ar[1], ar[2], foreM);
   r.sph(aL.hand, ar[3], handM);
+  robeCuff(aL, J.shL);
   if (st.clip === 'storm') r.sph(V.mad(aL.hand, up, 1.6), 1.9, M.ARCANE, { noShadow: true });   // round 43: the storm crackling in the raised hand
   if (st.clip === 'channel' && st.f >= 9) { if (st.f === 9) { const fb = V.add(V.mad(aL.hand, up, 2.6), V.mul(fwd, 0.8)); r.sph(fb, 3.3, M.FIREM, { noShadow: true }); r.sph(V.mad(fb, up, 2.6), 1.6, M.FIREM, { noShadow: true }); } }   // the hurl: a fireball held in the cocked hand, gone once thrown
   else if (st.clip === 'channel' && st.f >= 6) { if (st.f === 7) { const ft = V.add(V.mad(aR.hand, up, -12), V.mul(fwd, 1.5)); for (const [s, h] of [[-1, 2.2], [0, 3.4], [1, 2.2]]) r.cone(V.add(ft, V.mul(sideR, s * 3.6)), V.add(V.mad(ft, up, h + 2.5), V.mul(sideR, s * 5)), 1.6, 0.4, M.ICE, { noShadow: true }); } }   // ice shards spring up round the staff's foot   // the slam: frost bursting at the staff's foot
@@ -738,6 +810,14 @@ function heroRig(eq, st) {
     r.ell(c, plate ? [5.0, 5.0, 4.4] : [4.2, 4.0, 3.4], plate ? PL : M.LEATHER, frameAlong(fwd, up), { mf: eq.chest === 'darkplate' ? (p => V.dot(V.sub(p, c), up) < -2.6 ? M.MARKB : 0) : gothic ? (p => V.dot(V.sub(p, c), up) < -1.7 ? M.GOLD : 0) : null });
     if (plate) r.sph(V.add(V.add(c, V.mul(fwd, 4.4)), V.mul(up, -1)), 0.9, gothic ? M.GOLD : M.STEEL);
     if (gothic) r.cone(V.add(V.mad(c, up, 2.6), V.mul(sideR, sd * 1.5)), V.add(V.mad(c, up, 9), V.mul(sideR, sd * 4)), 2.0, 0.3, M.DSTEEL);   // a spike on each shoulder
+  }
+  if (robe && RS.collar) {   // round a6b: a collar round the neck (fur, or a hood lying back on the shoulders)
+    r.ell(V.add(V.mad(J.chest, up, 3.5), V.mul(fwd, 0.2)), [4.3, 5.4, 2.2], RS.collar, frameAlong(fwd, up));
+    if (RS.hood) r.ell(V.add(V.mad(J.chest, up, 2.6), V.mul(fwd, -3.9)), [2.4, 3.9, 3.6], RS.collar, frameAlong(fwd, up));
+  }
+  if (robe && RS.mantle) for (const [sh, sd] of [[J.shL, -1], [J.shR, 1]]) {   // round a6: a mantle: a broad collar flaring over each shoulder (trimmed at its lower edge)
+    const c = V.add(V.mad(sh, up, 1.2), V.mul(sideR, sd * -0.6));
+    r.ell(c, [4.4, 4.4, 2.9], RS.mantle, frameAlong(fwd, up), { mf: RS.trim ? (p => V.dot(V.sub(p, c), up) < -0.9 ? RS.trim : 0) : null });
   }
   // slim every body part made so far (centers stay put), then build the head at normal size and
   // scale it up about its center
@@ -785,11 +865,11 @@ function heroRig(eq, st) {
     } });
     if (eq.helm === 'cap') r.ell(V.mad(hd, up, 2.0), [4.7, 4.6, 3.3], M.STEEL, helmF, { mf: p => V.dot(V.sub(p, hd), up) < 0.6 ? M.LEATHER : 0 });
     if (eq.helm === 'hat' || eq.helm === 'hat_conj') {   // wizard hat: a wide brim, a tall crown that bends back to a point, gold band (round 43: the conjurer's in navy)
-      const hm = eq.helm === 'hat_conj' ? M.CLOTH_NAVY : M.CLOTH_PURPLE, base = V.add(V.mad(hd, up, 3.3), V.mul(fwd, -0.8));   // set high and tipped back so the eyes show
+      const hm = eq.hatV ? eq.hatV.m : eq.helm === 'hat_conj' ? M.CLOTH_NAVY : M.CLOTH_PURPLE, base = V.add(V.mad(hd, up, 3.3), V.mul(fwd, -0.8));   // set high and tipped back so the eyes show
       r.group(() => {
         r.cyl(base, V.mad(base, up, 0.7), 5.9, hm);
         const sway = headSway(st), mid = V.add(V.mad(base, up, 4.6), V.mul(fwd, -1.0 - sway[0] * 0.3)), tip = V.add(V.mad(base, up, 8.4 + sway[1]), V.add(V.mul(fwd, -3.6 - sway[0]), V.mul(sideR, sway[2])));   // round 43: the tip lags behind the head
-        r.cone(V.mad(base, up, 0.5), mid, 3.9, 2.2, hm, { mf: p => V.dot(V.sub(p, base), up) < 1.6 ? M.GOLD : 0 });
+        r.cone(V.mad(base, up, 0.5), mid, 3.9, 2.2, hm, { mf: p => V.dot(V.sub(p, base), up) < 1.6 ? (eq.hatV ? eq.hatV.band : M.GOLD) : 0 });
         r.cone(mid, tip, 2.2, 0.5, hm);
       });
     }
@@ -961,13 +1041,22 @@ function heroRig(eq, st) {
   }
   if (staff) {   // a long wooden staff with gold prongs cradling a glowing orb (color by staff)
     const cinder = hasFx(eq, 'cinder');   // round 43: Staff of Cinders: charred, embers in the wood, a flame over the orb
-    r.cone(V.mad(g, bd, -9), V.mad(g, bd, 18), 0.9, 1.0, cinder ? M.BARK : M.WOOD, cinder ? { mf: p => Math.abs((V.dot(V.sub(p, g), bd) * 0.9) % 5) < 0.5 ? M.FIREM : 0 } : undefined);
+    r.cone(V.mad(g, bd, -9), V.mad(g, bd, 18), 0.9, 1.0, cinder ? M.BARK : STAFF_SHAFT[eq.weapon] || M.WOOD, cinder ? { mf: p => Math.abs((V.dot(V.sub(p, g), bd) * 0.9) % 5) < 0.5 ? M.FIREM : 0 } : undefined);
     const orbM = eq.weapon === 'staff_fire' ? M.FIREM : eq.weapon === 'staff_ice' || eq.weapon === 'staff_rune' ? M.ICE : M.ARCANE, top = V.mad(g, bd, 21);
-    for (const sd of [-1, 1]) r.cone(V.mad(g, bd, 17.5), V.add(V.mad(g, bd, 21.8), V.mul(wide, sd * 2.6)), 0.7, 0.4, M.GOLD);
-    r.sph(top, 2.7, orbM, { noShadow: true });
+    if (eq.weapon === 'staff_rune') {   // round a6: the runed staff: a pale-blue crystal held point-up in a four-fingered gold claw
+      const wf2 = V.norm(V.cross(bd, wide));
+      for (const v of [wide, V.mul(wide, -1), wf2, V.mul(wf2, -1)]) r.cone(V.mad(g, bd, 17.2), V.add(V.mad(g, bd, 20.6), V.mul(v, 2.3)), 0.8, 0.45, M.GOLD);
+      r.cyl(V.mad(g, bd, 16.6), V.mad(g, bd, 17.8), 1.6, M.GOLD);
+      r.group(() => { r.cone(V.mad(g, bd, 18.6), V.mad(g, bd, 21.4), 0.5, 2.2, M.WATERM, { noShadow: true }); r.cone(V.mad(g, bd, 21.4), V.mad(g, bd, 25.6), 2.2, 0.3, M.ICE, { noShadow: true }); });   // shaded below, glowing above
+    } else if (STAFF_HEAD[eq.weapon]) STAFF_HEAD[eq.weapon](r, g, bd, wide);
+    else {
+      for (const sd of [-1, 1]) r.cone(V.mad(g, bd, 17.5), V.add(V.mad(g, bd, 21.8), V.mul(wide, sd * 2.6)), 0.7, 0.4, M.GOLD);
+      if (eq.set === 'magus' && eq.weapon === 'staff') r.cyl(V.mad(g, bd, 16.4), V.mad(g, bd, 17.6), 1.5, M.GOLD);   // round a6: the Magus Rod's gold collar under the orb
+      r.sph(top, 2.7, orbM, { noShadow: true });
+    }
     if (cinder) { r.cone(V.mad(top, bd, 2), V.mad(top, bd, 6.5), 1.8, 0.2, M.FIREM, { noShadow: true }); }
     if (eq.ench) enchantGlow(r, eq, g, bd, wide, st, 21);
-    if (eq.weapon === 'staff_rune') { for (const z of [8, 12.5]) r.cyl(V.mad(g, bd, z), V.mad(g, bd, z + 0.9), 1.5, M.GOLD); for (let k = 0; k < 3; k++) { const a = k / 3 * 6.283 + st.f * 0.5; r.sph(V.add(V.mad(top, bd, 1 + Math.sin(a)), V.add(V.mul(wide, Math.cos(a) * 4.6), V.mul(wf[2], Math.sin(a) * 4.6))), 0.9, M.ICE, { noShadow: true }); } }   // round 43: gold bands and motes circling the orb
+    if (eq.weapon === 'staff_rune') for (const z of [8, 12.5]) r.cyl(V.mad(g, bd, z), V.mad(g, bd, z + 0.9), 1.5, M.GOLD);   // round 43: gold bands (round a6: the motes that circled the orb are gone; the crystal carries it)
     if (st.clip === 'death') deathTip(r, B, st.f, -1);
     return r;
   }
