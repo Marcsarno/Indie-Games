@@ -1,7 +1,7 @@
 Math.random = (() => { let s = 21; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
 const log = [], shots = {};
 const step = n => { for (let i = 0; i < n; i++) { update(1 / 60); warmStep(80); } };
-newHero(); G.mode = 'play'; startLevel(2, 4242);
+newHero(); G.mode = 'play'; startLevel(12, 4242);   // (round 48c: Act I's second area is the Riverlands now; the warlord holds Act III's forest)
 hero.hp = STAT.maxHp = 9999;
 const w = enemies.find(e => e.id === 'warlord');
 log.push({ boss: !!w, bossVar: boss && boss.id, enemies: enemies.length, ponds: LV.ponds.length, tents: LV.decor.filter(d => d.kind === 'tent').length });

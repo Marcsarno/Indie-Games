@@ -78,7 +78,7 @@ function startLevel(level, seed, side = null) {
   genLevel(level, seed, side);
   buildWorld();
   hero.fi = LV.start.cx + 0.5; hero.fj = LV.start.cy + 0.5; hero.atk = -1; hero.clip = 'idle'; hero.dead = 0;
-  enemies = LV.spawns.map((s, n) => makeEnemy(s.id, s.fi, s.fj, n));
+  enemies = LV.spawns.map((s, n) => makeEnemy(s.id, s.fi, s.fj, n, s.lvl));
   { const R = rng(seed ^ 0x5bd1);   // dungeon floors plan their champions (placeSpawns); other areas roll them per monster
     if (LV.champsPlanned) LV.spawns.forEach((sp, n) => { if (sp.champ) makeChampion(enemies[n], R); });
     else for (const e of enemies) if (!e.def.unique && R() < champChance(LV.diff)) makeChampion(e, R); }
@@ -97,13 +97,13 @@ function startLevel(level, seed, side = null) {
   if (LV.area === 'town') { G.town = { level, seed }; if (G.portal) openPortalNear(hero.fi + 1.4, hero.fj + 0.4, true); }
   if (LV.area === 'forest') say(LV.autumn ? 'A TREANT ELDER HOLDS THE WAY DOWN' : 'AN OGRE WARLORD HOLDS THE WAY DOWN', 22, 4);
 }
-function makeEnemy(id, fi, fj, n) {
-  const m = MONSTERS[id], lv = LV.diff;
+function makeEnemy(id, fi, fj, n, lvl) {
+  const m = MONSTERS[id], lv = lvl || LV.diff;   // round 48c: a spawn may carry its own level (the Hollow's clearings climb in bands)
   const scale = 1 + (lv - 1) * 0.22;
   return {
     id, def: m, fam: m.family, look: m.look, fi, fj, home: [fi, fj], dir: (n * 3) % 8, clip: 'idle', clock: n * 0.13, walk: 0,
     hp: Math.round(m.hp * scale), maxHp: Math.round(m.hp * scale), dmg: [Math.round(m.dmg[0] * scale), Math.round(m.dmg[1] * scale)],
-    state: 'sleep', atk: -1, hitDone: false, stop: 0, flash: 0, kb: [0, 0], hurt: 0, dying: -1, cool: 0.5 + hash(n, 3) * 1.5, seed: n,
+    lvl: lv, state: 'sleep', atk: -1, hitDone: false, stop: 0, flash: 0, kb: [0, 0], hurt: 0, dying: -1, cool: 0.5 + hash(n, 3) * 1.5, seed: n,
   };
 }
 // build the sprites the level will need first (idle + walk, all directions) a few per frame
@@ -162,7 +162,9 @@ function flowDir(fi, fj) {
 // door, someone in a doorway) toward the hero, and aims at the farthest step of that path in plain
 // sight, so it bends round walls, trees and houses. { dir: [di, dj], len: steps, around: the way
 // is much longer than the straight line } (dir is straight at the goal when it can't be reached)
-const clearLine = (a, b, c, d) => { const n = Math.ceil(Math.max(Math.abs(c - a), Math.abs(d - b)) * 3) + 1; for (let s = 1; s < n; s++) { const t = s / n, i = Math.floor(a + (c - a) * t), j = Math.floor(b + (d - b) * t); if (tileAt(i, j) !== FLOOR || LV.solid[tIdx(i, j)]) return false; } return true; };
+const clearLine1 = (a, b, c, d) => { const n = Math.ceil(Math.max(Math.abs(c - a), Math.abs(d - b)) * 3) + 1; for (let s = 1; s < n; s++) { const t = s / n, i = Math.floor(a + (c - a) * t), j = Math.floor(b + (d - b) * t); if (tileAt(i, j) !== FLOOR || LV.solid[tIdx(i, j)]) return false; } return true; };
+// (as wide as a body: the middle line and two beside it, so it never aims through a corner two blocks touch at)
+const clearLine = (a, b, c, d) => { const l = Math.hypot(c - a, d - b) || 1, ox = -(d - b) / l * 0.3, oy = (c - a) / l * 0.3; return clearLine1(a, b, c, d) && clearLine1(a + ox, b + oy, c + ox, d + oy) && clearLine1(a - ox, b - oy, c - ox, d - oy); };
 function wayTo(t) {
   const straight = Math.hypot(t[0] - hero.fi, t[1] - hero.fj);
   const ti = Math.floor(t[0]), tj = Math.floor(t[1]);
@@ -243,8 +245,8 @@ function tryMove(e, dfi, dfj, r = 0.28) {
   // round 47: blocked straight ahead: turn up to 70 degrees either way (the nearer way first) and
   // glide past the obstacle instead of stopping on its corner, then fall back to one axis at a time
   const l = Math.hypot(dfi, dfj);
-  if (l > 1e-6) for (const a of [0.45, -0.45, 0.85, -0.85, 1.2, -1.2]) {
-    const c = Math.cos(a), sn = Math.sin(a), k = Math.cos(a) * 0.9, mi = (dfi * c - dfj * sn) * k, mj = (dfi * sn + dfj * c) * k;
+  if (l > 1e-6) for (const a of [0.45, -0.45, 0.85, -0.85, 1.2, -1.2, 1.57, -1.57]) {   // (round 48c: last, straight sideways, so a body pressed into a corner at a shallow angle slides off it)
+    const c = Math.cos(a), sn = Math.sin(a), k = a > 1.5 || a < -1.5 ? 0.6 : Math.cos(a) * 0.9, mi = (dfi * c - dfj * sn) * k, mj = (dfi * sn + dfj * c) * k;
     if (ok(e.fi + mi, e.fj + mj)) { e.fi += mi; e.fj += mj; return true; }
   }
   let moved = false;
@@ -384,7 +386,7 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
     const streak = killStreak();
     questKill(e.id); guideKill(e);
     if (e.pw) eliteDeath(e);
-    gainXp(e.def.xp * (1 + (LV.diff - 1) * 0.3) * (e.champ ? 3 + (e.pw ? e.pw.length - 1 : 0) : 1) * (e.summonedBy ? 0.2 : 1) * (1 + Math.max(0, streak - 2) * 0.1));
+    gainXp(e.def.xp * (1 + ((e.lvl || LV.diff) - 1) * 0.3) * (e.champ ? 3 + (e.pw ? e.pw.length - 1 : 0) : 1) * (e.summonedBy ? 0.2 : 1) * (1 + Math.max(0, streak - 2) * 0.1));
     if (STAT.hpKill) hero.hp = Math.min(STAT.maxHp, hero.hp + STAT.hpKill);
     if (STAT.manaKill) hero.mana = Math.min(STAT.maxMana, hero.mana + STAT.manaKill);
     if (!e.noLoot) dropLoot(e.fi, e.fj, e.def.unique ? 4 : e.champ ? 3 + (e.pw ? e.pw.length - 1 : 0) : e.def.elite ? 3 : 1, e.def.unique || !!e.champ || !!e.def.elite);
@@ -808,13 +810,18 @@ function updateHero(dt) {
     // the hub's mine leads straight to the first floor; Act I's boss hall leads home to the hub,
     // where the south gate now stands open (round 26)
     const A = areaOf(LV.level);
-    if (A.arena && A.act === 0) { G.gates = G.gates || {}; G.gates[A.cyc] = true; const home = LV.level - 4; G.fadeTo = () => { G.portal = null; startLevel(home, (LV.seed * 31 + 17) >>> 0); say('THE ROAD SOUTH IS OPEN', 51, 4); saveGame(); }; }
-    else G.fadeTo = () => { G.portal = null; startLevel(LV.level + (LV.hub ? 2 : 1), (LV.seed * 31 + 17) >>> 0); saveGame(); };
+    if (A.arena && A.act === 0) { G.gates = G.gates || {}; G.gates[A.cyc] = true; const home = LV.level - 4; G.fadeTo = () => { G.portal = null; startLevel(home, (LV.seed * 31 + 17) >>> 0); say('THE ROAD ON IS OPEN, PAST THE RIVERLANDS', 51, 4); saveGame(); }; }
+    else G.fadeTo = () => { G.portal = null; startLevel(LV.level + 1, (LV.seed * 31 + 17) >>> 0); saveGame(); };   // (round 48c: the Hollow's road leads to the Riverlands, level 2)
   }
   G.sealT = (G.sealT || 0) - dt;
   updatePortal(dt); updateSideDoors(); updateStory(dt);
-  if (LV.hub && LV.gateOpen && !G.fadeTo && Math.hypot(Math.floor(HUB.gate[0]) + 1.5 - hero.fi, Math.floor(HUB.gate[1]) + 1.5 - hero.fj) < 0.6) {   // through the open gate: on to the next act
-    sfx('stairs'); G.fadeTo = () => { G.portal = null; startLevel(LV.level + AREA_CYCLE, (LV.seed * 31 + 17) >>> 0); saveGame(); };
+  if (LV.backExit && !G.fadeTo) {   // round 48c: the Riverlands' road back south to the Hollow
+    const d = Math.hypot(LV.backExit[0] - hero.fi, LV.backExit[1] - hero.fj);
+    if (d > 1.4) G.backArmed = true;
+    if (G.backArmed && d < 0.6) { G.backArmed = false; sfx('stairs'); G.fadeTo = () => { G.portal = null; startLevel(LV.level - 1, (LV.seed * 29 + 5) >>> 0); hero.fi = HUB.exit[0] + 3.2; hero.fj = HUB.exit[1] + 1.4; updateFov(hero.fi, hero.fj); saveGame(); }; }
+  }
+  if (LV.gatePos && LV.gateOpen && !G.fadeTo && Math.hypot(LV.gatePos[0] - hero.fi, LV.gatePos[1] - hero.fj) < 0.6) {   // through the open gate: on to the next act
+    sfx('stairs'); G.fadeTo = () => { G.portal = null; startLevel(LV.level - ((LV.level - 1) % AREA_CYCLE) + AREA_CYCLE, (LV.seed * 31 + 17) >>> 0); saveGame(); };   // (to the next act's town, from whichever of this act's areas the gate is in)
   }
   hatchEggs(dt);
   if (!hero.leap && !hero.roll) unstickHero();

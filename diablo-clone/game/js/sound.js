@@ -105,8 +105,8 @@ function musicPlace() {
   if (LV.side || LV.arena) return 'lair';
   if (LV.area === 'dungeon') return 'dungeon';
   if (LV.hub && typeof HUB !== 'undefined') {   // Act I's west woods, with a margin so walking the edge doesn't flip it
-    const d = Math.hypot(hero.fi - HUB.woods[0], hero.fj - HUB.woods[1]);
-    MUS.inWoods = d < (MUS.inWoods ? 19 : 16);
+    const d = Math.hypot(hero.fi - HUB.camp[0], hero.fj - HUB.camp[1]);   // round 48c: out of the camp is the woods
+    MUS.inWoods = d > HUB.wallR + (MUS.inWoods ? 3 : 5);
     if (MUS.inWoods) return 'forest';
   }
   return 'camp';

@@ -1,0 +1,102 @@
+<title>Arrow, Light and Hollow</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 760px; margin: 0 auto; display: grid; gap: 38px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul { margin: 0; max-width: 64ch; }
+  ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
+  .three { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  strong { color: var(--bone); }
+</style>
+<main>
+  <header>
+    <h1>Arrow, Light and Hollow</h1>
+    <p class="lede">Dungeon of Bones, round 48: the three things saved before the break. The quest arrow is always on and leads step by step, the dungeons get new light, and the Act I camp is replaced by The Hollow from the approved layout.</p>
+  </header>
+
+  <section>
+    <h2>1. The quest arrow, always on</h2>
+    <figure>
+      <div class="frame"><img src="arrow.png" alt="Three game screens. In camp, a white arrow at the left edge points west toward the wolf den. In the wolf den, a small white arrow points down at the Alpha, who is still in the dark. On the first mine floor, a small arrow marks the stairs down in the dark" width="1620" height="840"></div>
+      <figcaption>In camp it points the way to the den; in the den it marks the Alpha before you've seen him; in the mine it marks the stairs down.</figcaption>
+    </figure>
+    <ul>
+      <li>There's no distance limit anymore. It always shows the next thing that moves the story on: the person to talk to, the Alpha, Aldo's cage, the nearest bandit, the cellar door, the stairs down, the King himself.</li>
+      <li>It follows the ground, not a straight line. It bends around walls, trees and houses the way you'd actually walk.</li>
+      <li>If you're somewhere that isn't this step's place (in the cellar while you should be in the den, or in the Riverlands while your next step is in camp), it points you to the way out first.</li>
+      <li>When the goal is on screen, a small arrow bobs over it. People who already show a <strong>!</strong> or <strong>?</strong> don't get one.</li>
+      <li>Tested by walking only where the arrow points: it reached the goal at all 24 checkpoints (every story step, the den, the cellar, both mine floors, the King's hall).</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>2. Dungeon light</h2>
+    <p>Before on the left, now on the right. Brightness wasn't the real problem; the light flattened the shading. Near a torch, the game slid every color up its ramp until the top shades merged into one flat color.</p>
+    <figure><div class="frame"><img src="light-crypt.png" alt="A crypt room, before and after. Before: the floor by the brazier is flat orange and the far side is black. After: the pillars keep a lit side and a shadow side, the far floor and a trapdoor are visible, the base of each wall is darker" width="1086" height="460"></div><figcaption>Crypt: shading survives near the brazier, and the far side of the room is no longer a black hole.</figcaption></figure>
+    <div class="two">
+      <figure><div class="frame"><img src="light-torches.png" alt="A small torch-lit room, before and after: after, the corners where the floor meets the walls are darker" width="1086" height="460"></div><figcaption>Corners where the floor meets the wall are darker now.</figcaption></figure>
+      <figure><div class="frame"><img src="light-caves.png" alt="Caves before and after: before, a hard split between bright beige and very dark blue; after, an even gradient with the crack pattern readable throughout" width="1086" height="460"></div><figcaption>Caves: softer pools, the dark floor still readable.</figcaption></figure>
+    </div>
+    <figure><div class="frame"><img src="light-hell.png" alt="A hell level, before and after: after, slightly deeper shadow with the torch pools keeping their brick detail" width="1086" height="460"></div><figcaption>Hell.</figcaption></figure>
+    <ul>
+      <li><strong>Lit areas</strong> brighten and warm up instead of losing their shades, and the brightest spots roll off gently.</li>
+      <li><strong>Dark areas</strong> have a floor, so nothing on screen is pure black, and they fall off more gently.</li>
+      <li><strong>Torch pools</strong> are wider with a softer edge.</li>
+      <li><strong>Shadows from shape:</strong> the floor darkens toward walls, into corners and round the feet of props, and walls darken toward the ground.</li>
+      <li><strong>Compare while you play:</strong> open the map in any dungeon and tap <strong>LIGHT: NEW / OLD</strong>. It's also in OPTIONS on the title screen.</li>
+      <li>Outdoors is unchanged. Frame time is the same; each floor takes 8 to 60 ms longer to load.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>3. The Hollow</h2>
+    <div class="two">
+      <figure><div class="frame"><img src="map-before.png" alt="The old Act I hub from above: a big round camp in the middle with the cathedral, the farm to the east, the mine to the north, woods to the west" width="684" height="366"></div><figcaption>Before: Oakhollow, the big camp in the middle of an 84 by 84 map.</figcaption></figure>
+      <figure><div class="frame"><img src="layout.png" alt="The approved layout image of The Hollow" width="1480" height="840"></div><figcaption>The layout you approved.</figcaption></figure>
+    </div>
+    <figure><div class="frame"><img src="map-now.png" alt="The Hollow in the game from above: the camp at the bottom, roads up to the brook meadow, the wolf glade, the den mouth, Westwood, the hidden grove, the watchtower yard, the graveyard path, the barrow, the fallen tree crossing and the exit to the Riverlands at the top, thick forest between them, red dots for monster packs" width="812" height="430"></div><figcaption>Now, in the game: 100 by 100 tiles, built from the layout. Each label shows the area's monster level.</figcaption></figure>
+    <ul>
+      <li><strong>Always going up:</strong> the camp sits at the bottom. Roads climb to every clearing through open woods with clumps of trees, and thick forest forms the walls between areas.</li>
+      <li><strong>Monster levels by area:</strong> camp safe; the brook meadow and the glade 1 to 2; Westwood and the tower yard 2 to 3; the graveyard path 3. The barrow is danger ground at level 6.</li>
+      <li>The brook (with bridges), the den cliffs and the north crags, the standing stones, the graves, and four treasure caches.</li>
+    </ul>
+    <div class="two">
+      <figure><div class="frame"><img src="camp.png" alt="The compact camp: palisade ring, gate at the top with Wren by it, Osric and his altar on the left, the merchant's wagon on the right, the smith's forge below right, Hollis and a tent below left, the fire in the middle" width="540" height="840"></div><figcaption>The compact camp, as in the concept: one gate north with Wren by it, Osric and his altar on the left, the merchant's wagon on the right, the smith and Hollis below. The cathedral is gone from camp, kept for Act I's finale.</figcaption></figure>
+      <figure><div class="frame"><img src="glade.png" alt="The wolf glade: a wide clearing with the road through it and woods around" width="540" height="840"></div><figcaption>The wolf glade on the road to the den.</figcaption></figure>
+    </div>
+    <figure><div class="frame"><img src="props.png" alt="Three new props in place. A big fallen tree lies across the road with its crown on the ground. A grassy burial mound with a stone doorway, torches and a sign, labelled THE BARROW: DANGER in red. A tall broken stone watchtower labelled OLD WATCHTOWER" width="1268" height="400"></div><figcaption>New art: the fallen tree, the barrow and the old watchtower.</figcaption></figure>
+    <ul>
+      <li><strong>The fallen tree</strong> lies across the road north, with the forest closed right up to it, so it's the only way on. Walk up to it and the game says only a woodcutter could move it. Once Aldo is home it lies cut at the roadside. Tested on 50 seeds: no way round it while it's down.</li>
+      <li><strong>Three doors:</strong> the wolf den (northeast, past the glade); <strong>the barrow</strong> (level 6: skeletons, archers, ghoul hounds and a wraith; one floor for now); <strong>the old watchtower</strong> (goblins and a chieftain, level 3).</li>
+      <li>Directions in the dialogue now match the map (the den is northeast; the farm and the mine are north, past the tree).</li>
+    </ul>
+    <div class="three">
+      <figure><div class="frame"><img src="riv.png" alt="The Riverlands stand-in from above: the farm at the top right, the mine at the top left, the shut road on at the left, the road back to the Hollow at the bottom" width="524" height="286"></div><figcaption>The Riverlands, a stand-in.</figcaption></figure>
+      <figure><div class="frame"><img src="riv-farm.png" alt="The farm in the Riverlands: ploughed fields, fences and hay" width="540" height="840"></div><figcaption>The farm the bandits took.</figcaption></figure>
+      <figure><div class="frame"><img src="riv-mine.png" alt="The old mine in the Riverlands, chained, with crates and a cart" width="540" height="840"></div><figcaption>The old mine.</figcaption></figure>
+    </div>
+    <p><strong>The Riverlands stand-in:</strong> the farm, Hollis's bandits, the cellar and the mine aren't on the Hollow layout, because they belong to region 2. So the story still works until region 2 is drawn, the road north past the tree leads to a small stand-in: the farm and its cellar, the chained mine, the road on to Act II (shut until the King falls), and the road back south. It gets replaced when the Riverlands art and layout come in.</p>
+    <ul>
+      <li>The whole story runs start to finish on the new maps, and every door, person and clearing can be reached from camp on 50 seeds.</li>
+      <li>Walking to every clearing and door from the camp gate gets there 15 of 15 times with no time stuck. On the way I fixed two movement snags: bodies now slide off the corners of the forest's edge, and when pressed into a corner at a shallow angle they slide sideways instead of stopping.</li>
+      <li>Loading the Hollow takes about 18% longer than the old camp did, for a map 42% bigger.</li>
+    </ul>
+  </section>
+</main>

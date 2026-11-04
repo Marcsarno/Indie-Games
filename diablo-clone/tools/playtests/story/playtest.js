@@ -15,7 +15,7 @@ const kill = e => { damageEnemy(e, 99999, e.fi - 1, e.fj); run(2); };
 newHero('warrior'); hero.lvl = 8; recalcHero(); hero.hp = STAT.maxHp = 99999; G.mode = 'play'; G.story = null; startLevel(1, 4242); G.actCard = 0;
 const st = () => storyStage();
 { const sm = npcs.find(n => n.role === 'merchant'); goTo(sm.fi + 1.1, sm.fj); L.push({ merchantButton: (actionTarget() || {}).label }); goTo(HUB.camp[0] + 6, HUB.camp[1] + 6); L.push({ nothingNear: actionTarget() === null }); }
-L.push({ start: st(), people: npcs.filter(n => n.name).map(n => n.name).join(','), mineBarredSprite: LV.decor.some(d => d.kind === 'minebarred'), osricMark: storyMark('priest'), tracker: stageText(st()) });
+L.push({ start: st(), people: npcs.filter(n => n.name).map(n => n.name).join(','), treeDown: !!LV.treeBlock, osricMark: storyMark('priest'), tracker: stageText(st()) });
 // the first words, on screen
 { const n = who('priest'); goTo(n.fi + 1.1, n.fj); run(10); shot('osric-near'); talkTo(n); G.talk.t = 99; render(); shots['talk'] = cvs.toDataURL(); }
 L.push({ osric: finish(), next: st(), wrenMark: storyMark('wren') });
@@ -34,22 +34,25 @@ const items0 = hero.bag.length, gold0 = hero.gold;
 L.push({ wrenCollect: finish(1), gotItem: hero.bag.length > items0 || hero.equip.ring || 0, gold: hero.gold - gold0, next: st() });
 // the campfire heals now
 { goTo(HUB.camp[0] + 1.8, HUB.camp[1] + 1); STAT.maxHp = 1000; hero.hp = 100; run(60); L.push({ fireHealsPerSecond: Math.round(hero.hp - 100) }); hero.hp = STAT.maxHp = 99999; }
-// the mine is chained
-{ const s = LV.stairs; goTo(s.i + 1.5, s.j + 1.5); run(5); shot('mine'); goTo(s.i + 0.5, s.j + 0.5); run(30); L.push({ minebarred: !!LV.hub && !G.fadeTo, msgs: G.msg.map(m => m.text).join(' / '), next: st() }); }
-L.push({ hollis: talk('hollis'), next: st() });
+// the mine is chained (round 48c: north, in the Riverlands)
+startLevel(2, 4242); run(5);
+{ const s = LV.stairs; goTo(s.i + 1.5, s.j + 1.5); run(5); shot('mine'); goTo(s.i + 0.5, s.j + 0.5); run(30); L.push({ minebarred: !!LV.riv && !G.fadeTo, msgs: G.msg.map(m => m.text).join(' / '), next: st() }); }
+startLevel(1, 4242); run(5); L.push({ hollis: talk('hollis'), next: st() });
+startLevel(2, 4242); run(5);
 // four bandits on the farm, then the chief in the cellar (he drops the key and the letter)
 for (const e of enemies.filter(e => e.id === 'brigand' && alive(e)).slice(0, 4)) kill(e);
 L.push({ afterBandits: st(), tracker: stageText(st()) });
 enter('cellar'); L.push({ cellar: LV.side, sacks: LV.decor.filter(d => d.kind === 'sacks').length, msgs: G.msg.map(m => m.text).join(' / ') });
 { const c = enemies.find(e => e.id === 'banditchief'); for (const e of enemies) if (e !== c) e.state = 'sleep'; const sk = LV.decor.find(d => d.kind === 'sacks'); goTo(sk.i + 1.5, sk.j + 1.5); run(20); shot('sacks'); kill(c); L.push({ afterChief: st() }); }
-leave();
+leave(); startLevel(1, 4242); run(5);
 L.push({ hollisCollect: talk('hollis'), next: st(), potion: potionPrice() });
 L.push({ letter: talk('priest'), next: st() });
 // the key opens the mine
+startLevel(2, 4242); run(5);
 { const s = LV.stairs; goTo(s.i + 1.5, s.j + 1.5); const ma = actionTarget(); L.push({ mineButton: ma && ma.label }); doAction(ma); run(5); L.push({ mineSprite: LV.decor.some(d => d.kind === 'mine'), stillBarred: LV.decor.some(d => d.kind === 'minebarred') }); goTo(s.i + 0.5, s.j + 0.5); run(70); L.push({ down: !LV.hub, area: areaName(), next: st() }); }
 // the King falls (the hall's stairs take you home with the gate open), then Osric
 G.gates = { 0: true }; startLevel(1, 4242); run(5);
-L.push({ homeStage: st(), hollisAtCart: Math.hypot(who('hollis').fi - 43.8, who('hollis').fj - 35.6) < 0.5, kingCollect: talk('priest'), end: st() });
+L.push({ homeStage: st(), hollisInCamp: !!who('hollis'), kingCollect: talk('priest'), end: st() });
 // out of order: the Alpha and Aldo before Wren ever asks
 G.story = null; startLevel(1, 4242); talk('priest'); enter('den'); kill(enemies.find(e => e.id === 'alpha')); talkTo(who('aldo')); finish(); leave();
 L.push({ outOfOrder: st(), wrenMark: storyMark('wren') });

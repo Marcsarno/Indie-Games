@@ -47,10 +47,11 @@ function blocked(fi, fj) {
   if (LV.map[k] !== FLOOR) return true;
   const s = LV.solid[k];
   if (s === 2) { const dx = fi - i - 0.5, dy = fj - j - 0.5; return dx * dx + dy * dy < ROUND_R2; }   // round 47: a tree or a rock is round to bump into
+  if (s === 3) { const ax = Math.abs(fi - i - 0.5) - 0.18, ay = Math.abs(fj - j - 0.5) - 0.18; return ax <= 0 || ay <= 0 || ax * ax + ay * ay < 0.1024; }   // round 48c: the thick forest's rim: a square with rounded corners (edges still meet, so nothing slips between; bodies slide along a diagonal edge)
   return s === 1;
 }
 // LV.solid: 1 = the whole tile blocks (walls of props, buildings, the forest edge); 2 = a round
-// obstacle in its middle (trees, rocks) that bodies slide around. Paths and line of sight treat both
+// obstacle in its middle (trees, rocks) that bodies slide around; 3 = the whole tile with its corners rounded (the Hollow's thick forest rim). Paths and line of sight treat both
 // as blocked tiles; only body movement sees the round shape.
 const ROUND_R = 0.36, ROUND_R2 = ROUND_R * ROUND_R;
 // line of sight across tiles (walls block, props don't)
@@ -72,11 +73,11 @@ function resizeWorld(mw, mh) {
 function genLevel(level, seed, side = null) {
   // levels cycle town -> forest -> three dungeon floors (outdoor.js); LV.diff drives difficulty.
   // A side area (quests.js SIDES) is a short dungeon floor hanging off the hub at the hub's level
-  const A0 = areaOf(level), A = side ? { kind: 'dungeon', cyc: A0.cyc, act: A0.act, loop: A0.loop, floor: 1, depth: A0.cyc * 3 + 1, diff: A0.diff } : A0;
+  const A0 = areaOf(level), sd = side && SIDES[side].diff ? SIDES[side].diff + A0.cyc * 3 : A0.diff, A = side ? { kind: 'dungeon', cyc: A0.cyc, act: A0.act, loop: A0.loop, floor: 1, depth: A0.cyc * 3 + 1, diff: sd } : A0;   // (round 48c: a side area may be harder than its hub: the barrow)
   LV.side = side; LV.sideCfg = side ? SIDES[side] : null;
-  { const big = A.kind === 'forest' || A.hub, floorBig = A.kind === 'dungeon' && !side && !A.arena; const hs = A.hub && !side ? 84 : big ? 64 : floorBig ? 56 : 40; resizeWorld(hs, hs); }   // round 41: the hub 84x84   // round 38: dungeon floors 56x56 (were 40)
+  { const big = A.kind === 'forest' || A.hub, floorBig = A.kind === 'dungeon' && !side && !A.arena; const hs = A.hub && !side ? 100 : big ? 64 : floorBig ? 56 : 40; resizeWorld(hs, hs); }   // round 41: the hub 84x84   // round 38: dungeon floors 56x56 (were 40)
   LV.area = A.kind; LV.cyc = A.cyc; LV.act = A.act; LV.loop = A.loop; LV.floor = A.floor || 0; LV.arena = A.arena || null;
-  LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.hub = !!A.hub; LV.gateSign = null; LV.gateOpen = false; LV.autumn = A.act === 1; LV.night = A.kind !== 'dungeon' && A.act === 2; LV.plaza = null; LV.npcs = []; LV.critters = []; LV.champsPlanned = false; LV.genFail = null;
+  LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.hub = !!A.hub; LV.riv = !!A.riv && !side; LV.gateSign = null; LV.gateOpen = false; LV.autumn = A.act === 1; LV.night = A.kind !== 'dungeon' && A.act === 2; LV.plaza = null; LV.npcs = []; LV.critters = []; LV.champsPlanned = false; LV.genFail = null;
   if (typeof syncLightTables === 'function') syncLightTables(LV.outdoor);   // round 48
   if (LV.outdoor) { LV.theme = A.kind; genOutdoor(level, seed, A); LV.level = level; LV.seed = seed; return; }
   LV.theme = LV.sideCfg ? LV.sideCfg.theme : ACTS[A.act].theme;   // each act's dungeon keeps one theme: crypt, caves, hell

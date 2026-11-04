@@ -41,9 +41,9 @@ function storyStage() {
 }
 const STAGE_QUEST = { wren: 'woodcutter', den: 'woodcutter', cage: 'woodcutter', aldoBack: 'woodcutter', mine: 'woodcutter', hollis: 'farm', farm: 'farm', cellar: 'farm', farmBack: 'farm', letter: 'king', unlock: 'king', king: 'king', kingBack: 'king' };
 function stageText(st) {
-  return { meet: 'SPEAK TO BROTHER OSRIC', wren: 'TALK TO WREN BY THE TENTS', den: 'FIND ALDO IN THE WOLF DEN (WEST)', cage: 'FREE ALDO', aldoBack: 'RETURN TO WREN',
-    mine: 'LOOK AT THE OLD MINE (NORTH)', hollis: 'ASK HOLLIS ABOUT THE CHAINS', farm: `DRIVE THE BANDITS FROM THE FARM ${Math.min(4, G.story.n || 0)}/4`, cellar: 'FIND THEIR CHIEF IN THE CELLAR',
-    farmBack: 'RETURN TO HOLLIS', letter: 'SHOW THE LETTER TO BROTHER OSRIC', unlock: 'UNLOCK THE OLD MINE (NORTH)', king: 'PUT THE KING TO REST, BELOW THE MINE', kingBack: 'RETURN TO BROTHER OSRIC', done: 'THE ROAD SOUTH IS OPEN' }[st] || '';
+  return { meet: 'SPEAK TO BROTHER OSRIC', wren: 'TALK TO WREN BY THE TENTS', den: 'FIND ALDO IN THE WOLF DEN (NORTHEAST)', cage: 'FREE ALDO', aldoBack: 'RETURN TO WREN',
+    mine: 'LOOK AT THE OLD MINE (NORTH, THE RIVERLANDS)', hollis: 'ASK HOLLIS ABOUT THE CHAINS', farm: `DRIVE THE BANDITS FROM THE FARM ${Math.min(4, G.story.n || 0)}/4`, cellar: 'FIND THEIR CHIEF IN THE CELLAR',
+    farmBack: 'RETURN TO HOLLIS', letter: 'SHOW THE LETTER TO BROTHER OSRIC', unlock: 'UNLOCK THE OLD MINE (THE RIVERLANDS)', king: 'PUT THE KING TO REST, BELOW THE MINE', kingBack: 'RETURN TO BROTHER OSRIC', done: 'THE ROAD ON IS OPEN (PAST THE RIVERLANDS)' }[st] || '';
 }
 // who has something to say right now: '!' (a new task or news) or '?' (come back for a reward)
 function storyMark(role) {
@@ -139,11 +139,11 @@ function talkTo(n) {
   const f = storyF(), st = storyStage(), on = storyOn();
   const O = 'BROTHER OSRIC', Wn = 'WREN', Ho = 'HOLLIS', Al = 'ALDO';
   if (n.role === 'priest') {
-    if (!on) return openTalk([[O, LV.gateOpen ? 'THE ROAD SOUTH IS OPEN. GO WITH THE LIGHT.' : 'THE LIGHT KEEPS YOU.']]);
+    if (!on) return openTalk([[O, LV.gateOpen ? 'THE ROAD ON IS OPEN, PAST THE RIVERLANDS. GO WITH THE LIGHT.' : 'THE LIGHT KEEPS YOU.']]);
     if (st === 'meet') return openTalk([
-      [O, 'GOD BE THANKED, A BLADE. I AM OSRIC. THIS CAMP IS ALL THAT IS LEFT OF OAKHOLLOW.'],
+      [O, 'GOD BE THANKED, A BLADE. I AM OSRIC. THIS CAMP IN THE HOLLOW IS ALL THAT IS LEFT OF OAKHOLLOW.'],
       [O, 'THE DEAD WALK HERE. AND THE GRAVES BEHIND MY CHURCH WERE NOT CLAWED OPEN FROM BELOW. THEY WERE DUG, WITH SPADES.'],
-      [O, 'ALDO THE WOODCUTTER WENT INTO THE WEST WOODS THREE DAYS AGO AND DID NOT COME BACK. HIS DAUGHTER WREN WAITS BY THE TENTS. SPEAK TO HER.']], 'OK', () => { f.met = true; });
+      [O, 'ALDO THE WOODCUTTER WENT UP TO THE WOLF GLADE THREE DAYS AGO AND DID NOT COME BACK. HIS DAUGHTER WREN WAITS BY THE TENTS. SPEAK TO HER.']], 'OK', () => { f.met = true; });
     if (st === 'letter') return openTalk([
       [O, 'A LETTER? LET ME SEE.'],
       [O, '"EVERY BONE YOU BRING IS PAID IN SILVER. THE KING MUST BE WHOLE. - M."'],
@@ -151,14 +151,14 @@ function talkTo(n) {
       [O, 'HE IS RAISING THE OLD KING UNDER THE MINE. TAKE THE KEY. PUT THE KING BACK IN HIS GRAVE, AND FIND MAELIS IF YOU CAN.']], 'ACCEPT', () => { f.letterRead = true; });
     if (st === 'kingBack') return openTalk([
       [O, 'THE KING IS DUST AGAIN. I FELT IT, LIKE A WINDOW OPENED IN A SICKROOM.'],
-      [O, 'BUT MAELIS IS NOT FINISHED. THE ROAD SOUTH IS OPEN NOW, AND THAT IS THE WAY HE WENT. TAKE THIS, AND MY THANKS.']], 'COLLECT', () => { f.kingPaid = true; payQuest('king'); }, rewardChoice());
-    const hint = { wren: 'WREN IS BY THE TENTS. SHE NEEDS YOU MORE THAN I DO.', den: 'THE DEN IS IN THE WEST WOODS. GO CAREFULLY.', cage: 'THE DEN IS IN THE WEST WOODS. GO CAREFULLY.', aldoBack: 'WREN WILL WANT TO KNOW.', mine: 'ALDO SAW SOMEONE AT THE MINE? THEN LOOK THERE.', hollis: 'HOLLIS SITS BY THE FIRE. HE LOST HIS FARM TO THE BANDITS.', farm: 'THE FARM IS EAST, PAST THE GATE.', cellar: 'THE FARM IS EAST, PAST THE GATE.', farmBack: 'HOLLIS WILL WANT TO KNOW.', unlock: 'THE MINE IS NORTH. THE LIGHT GOES WITH YOU.', king: 'THE MINE IS NORTH. THE LIGHT GOES WITH YOU.' }[st];
+      [O, 'BUT MAELIS IS NOT FINISHED. THE ROAD ON IS OPEN NOW, PAST THE RIVERLANDS, AND THAT IS THE WAY HE WENT. TAKE THIS, AND MY THANKS.']], 'COLLECT', () => { f.kingPaid = true; payQuest('king'); }, rewardChoice());
+    const hint = { wren: 'WREN IS BY THE TENTS. SHE NEEDS YOU MORE THAN I DO.', den: 'THE DEN IS PAST THE WOLF GLADE, NORTHEAST. GO CAREFULLY.', cage: 'THE DEN IS PAST THE WOLF GLADE, NORTHEAST. GO CAREFULLY.', aldoBack: 'WREN WILL WANT TO KNOW.', mine: 'ALDO SAW SOMEONE AT THE MINE? THEN LOOK THERE.', hollis: 'HOLLIS SITS BY THE FIRE. HE LOST HIS FARM TO THE BANDITS.', farm: 'THE FARM IS EAST, PAST THE GATE.', cellar: 'THE FARM IS EAST, PAST THE GATE.', farmBack: 'HOLLIS WILL WANT TO KNOW.', unlock: 'THE MINE IS NORTH. THE LIGHT GOES WITH YOU.', king: 'THE MINE IS NORTH. THE LIGHT GOES WITH YOU.' }[st];
     return openTalk([[O, hint || 'THE LIGHT KEEPS YOU.']]);
   }
   if (n.role === 'wren') {
     if (on && st === 'meet') return openTalk([[Wn, 'BROTHER OSRIC IS ON THE CHURCH STEPS. SPEAK TO HIM FIRST, PLEASE.']]);
     if (on && st === 'wren') return openTalk([
-      [Wn, 'YOU ARE THE ONE OSRIC SENT? MY FATHER IS ALDO. HE WENT TO CUT WOOD IN THE WEST WOODS AND NEVER CAME HOME.'],
+      [Wn, 'YOU ARE THE ONE OSRIC SENT? MY FATHER IS ALDO. HE WENT TO CUT WOOD BY THE WOLF GLADE AND NEVER CAME HOME. THE DEN IS PAST IT, NORTHEAST.'],
       [Wn, 'THE WOLVES HAVE BEEN WRONG ALL MONTH. THEY HOWL IN DAYLIGHT. HE SAID THEY HAD A DEN PAST THE OLD TREES.'],
       [Wn, 'PLEASE. BRING HIM BACK.']], 'ACCEPT', () => { f.woodTold = true; });
     if (on && st === 'aldoBack') return openTalk([
@@ -174,18 +174,18 @@ function talkTo(n) {
       if (!f.alphaDead) return openTalk([[Al, 'BEHIND YOU! THE BIG ONE! KILL IT FIRST, THEN GET ME OUT OF HERE!']]);
       return openTalk([[Al, 'YOU KILLED IT? BLESS YOU. BREAK THE LOCK, QUICK.'], [Al, 'I KNOW THE WAY HOME. TELL WREN I AM COMING.']], 'OK', () => freeAldo(n));
     }
-    return openTalk([[Al, st === 'mine' ? 'THE OLD MINE, NORTH. THAT IS WHERE I SAW HIM. GREEN FIRE.' : 'THE FIRE IS HIGH. SIT A WHILE.']]);
+    return openTalk([[Al, st === 'mine' ? 'THE OLD MINE, NORTH IN THE RIVERLANDS. THAT IS WHERE I SAW HIM. GREEN FIRE. I CLEARED THE TREE OFF THE ROAD FOR YOU.' : 'THE FIRE IS HIGH. SIT A WHILE.']]);
   }
   if (n.role === 'hollis') {
     if (on && (st === 'hollis' || (st === 'mine' && f.sawChain))) return openTalk([
       [Ho, 'CHAINS ON THE MINE? THAT IS THE BANDITS. THEY TOOK MY FARM A WEEK AGO AND PUT ME OUT IN MY NIGHTSHIRT.'],
       [Ho, 'EVERY NIGHT THEY HAUL SACKS IN AND OUT OF MY CELLAR. HEAVY SACKS. I DO NOT WANT TO KNOW WHAT IS IN THEM.'],
-      [Ho, 'THEIR CHIEF WEARS THE MINE KEY ON HIS BELT. THE FARM IS EAST, OUT THE GATE. GET IT BACK FOR ME?']], 'ACCEPT', () => { f.farmTold = true; G.story.n = 0; });
+      [Ho, 'THEIR CHIEF WEARS THE MINE KEY ON HIS BELT. THE FARM IS NORTH, IN THE RIVERLANDS, PAST THE FALLEN TREE. GET IT BACK FOR ME?']], 'ACCEPT', () => { f.farmTold = true; G.story.n = 0; });
     if (on && st === 'farmBack') return openTalk([
       [Ho, 'BONES? MY CELLAR FULL OF BONES. FROM THE GRAVEYARD. GOD HAVE MERCY.'],
       [Ho, 'I AM GOING HOME ALL THE SAME. AND THE POTION WAGON WILL HAVE FRESH HERBS FROM MY FIELDS: POTIONS COST LESS NOW.'],
       [Ho, 'THAT LETTER THE CHIEF HAD. SHOW IT TO BROTHER OSRIC. HE READS BETTER THAN ME.']], 'COLLECT', () => { f.farmPaid = true; payQuest('farm'); }, rewardChoice());
-    return openTalk([[Ho, f.farmPaid ? 'THE FIELDS WILL TAKE A YEAR TO COME BACK. BUT THEY WILL COME BACK.' : 'I HAD A FARM, ONCE. EAST OF HERE.']]);
+    return openTalk([[Ho, f.farmPaid ? 'THE FIELDS WILL TAKE A YEAR TO COME BACK. BUT THEY WILL COME BACK.' : 'I HAD A FARM, ONCE. NORTH, IN THE RIVERLANDS.']]);
   }
 }
 // round 42b: Aldo runs home from the den; the cage door hangs open
@@ -201,6 +201,9 @@ function updateStory(dt) {
   // Aldo leaves the den: he walks off and fades
   for (let k = npcs.length - 1; k >= 0; k--) { const n = npcs[k]; if (n.leaving === undefined) continue; n.leaving -= dt; n.clip = 'walk'; n.walk += dt * 8; tryMove(n, dt * 1.5, -dt * 1.5, 0.2); if (n.leaving <= 0) npcs.splice(k, 1); }
   if (LV.side === 'cellar' && !f.cellarSeen) { f.cellarSeen = true; say('SACKS OF BONES, STACKED TO THE ROOF.', 26, 4); say('THE GRAVES WERE DUG FOR THIS.', 26, 4); }
+  // round 48c: the fallen tree on the road north: a word when one walks up to it; once Aldo is home, it's cleared
+  if (LV.treeBlock && Math.hypot(hero.fi - LV.treeBlock[0], hero.fj - LV.treeBlock[1]) < 3.2 && !(G.sealT > 0)) { say('A FALLEN TREE BLOCKS THE ROAD NORTH', 22, 2.5); if (!f.aldoFree) say('ONLY A WOODCUTTER COULD MOVE IT', 26, 2.5); G.sealT = 3; }
+  if (LV.hub && hollowOpen() && storyOn() && !f.treeCleared) { f.treeCleared = true; say('ALDO HAS CLEARED THE FALLEN TREE', 51, 3.5); say('THE ROAD NORTH IS OPEN', 51, 3.5); }
   if (!LV.hub) return;
   // Aldo's wood feeds the fire: resting by it mends life and mana
   if (f.woodPaid && Math.hypot(hero.fi - HUB.camp[0], hero.fj - HUB.camp[1]) < 3.4 && !hero.dead) {
@@ -211,7 +214,7 @@ function updateStory(dt) {
 }
 // the mine's stairs: chained until the chief's key opens them (game.js asks before going down)
 function mineBarred() {
-  if (!LV.hub || mineOpen()) return false;
+  if (!LV.riv || mineOpen()) return false;
   const f = storyF();
   if (f.chiefDead) { unlockMine(); return true; }   // the key turns (round 43b: the chains fall now, the stairs take you next step)
   if (!(G.sealT > 0)) {
@@ -222,7 +225,7 @@ function mineBarred() {
 }
 // round 43b: the action button at the mine: UNLOCK with the chief's key, else LOOK at the chains
 function mineAction() {
-  if (!LV.hub || !LV.stairs || !LV.stairs.mine || mineOpen()) return null;
+  if (!LV.riv || !LV.stairs || !LV.stairs.mine || mineOpen()) return null;
   const s = LV.stairs; if (Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) > 2.6) return null;
   return storyF().chiefDead ? { label: 'UNLOCK', go: unlockMine } : { label: 'LOOK', go: () => { G.sealT = 0; mineBarred(); } };
 }
@@ -253,15 +256,21 @@ function storyTarget() {
     if (LV.side === 'cellar' && (st === 'farm' || st === 'cellar')) return nearest(live('banditchief')) || stairs();
     return stairs();   // done here (or not this step's place): the way out
   }
+  if (LV.riv) {   // the Riverlands: the farm, its cellar and the mine are here; everything else is back south in the Hollow
+    if (st === 'farm') return nearest(live('brigand')) || [RIV.farm[0], RIV.farm[1] + 2];
+    if (st === 'cellar') return SIDES.cellar.door();
+    if (st === 'mine' || st === 'unlock' || st === 'king') return stairs();
+    if (st === 'done') return LV.gateOpen && LV.gatePos ? LV.gatePos : null;
+    return LV.backExit;
+  }
   if (!LV.hub) {   // below the mine: the King when he is on this floor, else the stairs down (in his hall, home)
     if (LV.act !== 0) return null;
     return boss && alive(boss) ? [boss.fi, boss.fj] : stairs();
   }
-  const mine = stairs();
-  if (st === 'farm') { const b = nearest(live('brigand')); if (b) return b; }
-  if (st === 'done') return LV.gateOpen && HUB.gate ? [Math.floor(HUB.gate[0]) + 1.5, Math.floor(HUB.gate[1]) + 1.5] : null;
-  return { meet: npc('priest'), wren: npc('wren'), aldoBack: npc('wren') || npc('aldo'), den: SIDES.den.door(), cage: SIDES.den.door(), mine, hollis: npc('hollis'), farm: [HUB.farm[0] + 1, HUB.farm[1] + 2],
-    cellar: SIDES.cellar.door(), farmBack: npc('hollis'), letter: npc('priest'), unlock: mine, king: mine, kingBack: npc('priest') }[st] || null;
+  // the Hollow: the camp's people and the den here; the rest is north, past the fallen tree, on the road to the Riverlands
+  const north = stairs();
+  return { meet: npc('priest'), wren: npc('wren'), aldoBack: npc('wren') || npc('aldo'), den: SIDES.den.door(), cage: SIDES.den.door(), mine: north, hollis: npc('hollis'), farm: north,
+    cellar: north, farmBack: npc('hollis'), letter: npc('priest'), unlock: north, king: north, kingBack: npc('priest'), done: north }[st] || null;
 }
 // a rare (or better) item: rerolls until one comes up
 function rollRare(R, level) {
@@ -271,7 +280,7 @@ function rollRare(R, level) {
 // the tracker: the quest's name, and what to do next in words
 function drawQuestTracker() {
   if (G.mode !== 'play' || !storyOn()) return;
-  const st = storyStage(); if (st === 'done' && !(LV.hub && LV.gateOpen)) return;
+  const st = storyStage(); if (st === 'done' && !(G.gates && G.gates[0] && (LV.hub || LV.riv))) return;
   const q = STAGE_QUEST[st];
   if (q) text(STORY_NAMES[q], 4, 68, 24);
   text(stageText(st), 4, q ? 76 : 68, 51);
@@ -332,9 +341,13 @@ PROPS.sacks = v => propSprite('sacks' + v, r => {
 // Each is a short floor generated like a dungeon (few rooms), with its own monsters and a leader
 // in the farthest room. The way out (stairs up) is in the start room.
 const SIDES = {
-  den: { name: 'THE WOLF DEN', theme: 'caves', rooms: 5, pool: ['wolf'], boss: 'alpha', door: () => [HUB.den[0] + 1.6, HUB.den[1] + 0.6], label: 'WOLF DEN' },
-  cellar: { name: 'THE FARM CELLAR', theme: 'crypt', rooms: 5, pool: ['brigand'], boss: 'banditchief', door: () => HUB.cellar, label: 'FARMHOUSE CELLAR' },
+  den: { name: 'THE WOLF DEN', theme: 'caves', rooms: 5, pool: ['wolf'], boss: 'alpha', at: 'hub', door: () => [HUB.den[0] + 1.6, HUB.den[1] + 0.6], label: 'WOLF DEN', seed: 0xd3d },
+  // round 48c: the Hollow's other doors (the barrow: dangerous, level 6; the watchtower: goblins and their shaman)
+  barrow: { name: 'THE BARROW', theme: 'crypt', rooms: 6, pool: ['skeleton', 'archer', 'ghoulhound'], boss: 'wraith', at: 'hub', diff: 6, door: () => [HUB.barrow[0] + 1.6, HUB.barrow[1] + 0.6], label: 'THE BARROW: DANGER', labelCol: 22, seed: 0xba770 },
+  tower: { name: 'THE OLD WATCHTOWER', theme: 'crypt', rooms: 4, pool: ['goblin', 'goblin', 'gshaman'], boss: 'gchief', at: 'hub', diff: 3, door: () => [HUB.tower[0] + 1.6, HUB.tower[1] - 0.4], label: 'OLD WATCHTOWER', seed: 0x70e7 },
+  cellar: { name: 'THE FARM CELLAR', theme: 'crypt', rooms: 5, pool: ['brigand'], boss: 'banditchief', at: 'riv', door: () => RIV.cellar, label: 'FARMHOUSE CELLAR', seed: 0xce11a },
 };
+const sidesHere = () => Object.keys(SIDES).filter(k => (SIDES[k].at === 'hub' && LV.hub) || (SIDES[k].at === 'riv' && LV.riv));
 // round 42b: what the story adds to a side area once it is built: Aldo's cage near the Alpha,
 // the cellar's sacks of bones. A cage tile is one with open floor all round it, so it blocks nothing
 function sideExtras(kind) {
@@ -361,8 +374,8 @@ function sideExtras(kind) {
 }
 // the hub's doors into the side areas: walk onto one to go in
 function updateSideDoors() {
-  if (!LV.hub || G.fadeTo) return;
-  for (const k in SIDES) {
+  if (G.fadeTo || LV.side) return;
+  for (const k of sidesHere()) {
     const [fi, fj] = SIDES[k].door(), d = Math.hypot(fi - hero.fi, fj - hero.fj);
     if (d > 1.2) { G['armed_' + k] = true; continue; }
     if (d < 0.5 && G['armed_' + k] !== false) enterSide(k);
@@ -371,7 +384,7 @@ function updateSideDoors() {
 function enterSide(kind) {
   sfx('stairs');
   const back = { level: LV.level, seed: LV.seed, door: SIDES[kind].door(), snap: { enemies, boss, groundItems, seen: LV.seen.slice(), props: dynProps.map(p => ({ open: p.open, broken: p.broken, hp: p.hp, hatch: p.hatch })) } };
-  G.fadeTo = () => { G.sideBack = back; startLevel(back.level, (back.seed ^ (kind === 'den' ? 0xd3d : 0xce11a)) >>> 0, kind); say(SIDES[kind].name, 51, 3); saveGame(); };
+  G.fadeTo = () => { G.sideBack = back; startLevel(back.level, (back.seed ^ SIDES[kind].seed) >>> 0, kind); say(SIDES[kind].name, 51, 3); saveGame(); };
 }
 function leaveSide() {
   const R0 = G.sideBack; if (!R0) return;
@@ -388,9 +401,9 @@ function leaveSide() {
   };
 }
 function drawSideDoorLabels() {
-  if (!LV.hub) return;
-  for (const k in SIDES) {
+  if (LV.side) return;
+  for (const k of sidesHere()) {
     const [fi, fj] = SIDES[k].door(); if (Math.hypot(fi - hero.fi, fj - hero.fj) > 6) continue;
-    const [x, y] = iso(fi, fj); textC(SIDES[k].label, Math.round(x - camX), Math.round(y - camY) - 30, 51);
+    const [x, y] = iso(fi, fj); textC(SIDES[k].label, Math.round(x - camX), Math.round(y - camY) - 30, SIDES[k].labelCol || 51);
   }
 }
