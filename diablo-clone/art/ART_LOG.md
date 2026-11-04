@@ -80,3 +80,33 @@ All in `fallenRig` behind `imp` (not goblin, not digger), so the goblins, chieft
 Order disagreements: 1 of 14 comparisons. Lint (rig-sheet): light 0.22-0.55, noise < 3.4%. No frame of
 idle/walk/attack/hit/death in 8 directions touches the sprite box edge. Every other monster renders
 pixel-identical to before (zoom-1 strips `cmp` equal).
+
+## A4: three more passes on all 18 (2026-11-04)
+The user asked for at least 3 more passes per monster already built or refined. Four parallel reviewers, one
+per body family, each on its own worktree from the art tip a60c814, merged into `art` (merges f9f04a9 and
+before). All code stays behind each monster's own look flags or code paths.
+Review page: https://claude.ai/artifact/4wfqKxVYEHnsBgCETt5wYM (source `art/review/a4-passes/`: `final-<id>.png`
+= before this round vs after; per-family folders hold every pass in both left/right orders).
+Checks after the merge: the 22 monsters outside these 18 render pixel-identical to a60c814; none of the 18
+touches its sprite box edge in any frame of idle/walk/attack-shoot-cast/hit/death in 8 directions.
+
+- **Skeletons** (`skeletonRig`): burning sword held low point-down, broad SLATE blade, bones 1.2x; spearman spear
+  angled up, thicker shaft, bigger head, rag at the back too; axeman skull-size axe head, helm raised, guards angled
+  to the light; gravebow longer stock and bent prod; tombguard bigger shield, bigger 9-spike mace. 10 of 15 kept.
+- **Imps** (`fallenRig`, imps only): skin `M.CLOTH_RED` (FLESH read near-black), cream BONE horns, mauve HORN ears;
+  spearling stouter spear with a BLADE head and chunkier body; knifer bigger BLADE knife with guard; shaman stouter
+  staff, hook curls round the orb, ears in hood purple; slinger wide sling loop, grey ROCK stones, bigger capelet.
+  12 of 14 kept (see the imp section above for the per-pass table).
+- **Hounds** (`houndRig`, new flags `lean`, `bib`, `paws`, `brush`, `slabs`, `collar` on these entries only): wolf
+  lean long-legged body, skin now HIDE (shared with the Alpha) with pale throat/belly/toes and a bushy tail; bone hound
+  lean body, bone slabs across the back, bushy tail; hell hound lean body, refitted slashes, cream toes, cream skull
+  (entry's `bone: M.OLDBONE` dropped), bushy tail; mastiff head 1.45x, heavier ears, darker broader studded collar.
+  11 of 14 kept.
+- **Ogres + treant** (`ogreRig` grunts, `treantRig`): grunts top-heavy (slimmer belly, broader chest, bigger shoulders,
+  arms 1.35x), head hunched forward into a hump, bigger feet; per grunt thicker club, bigger rock and bag, SLATE helm and
+  bigger banded shield, cleaver shown flat with bigger pads. Treant crown rebuilt as three big lobes; hands held out,
+  bigger claws. 14 of 15 kept (blunter treant roots lost).
+
+Still open: gravebow quiver (no palette color stands off the bones), spear head hidden in the spearman's front view,
+axeman cheek guards flare in front, slinger's sling edge-on in pure side views, mastiff still a little bear-like,
+grunt back views lack muscle definition, treant root feet.
