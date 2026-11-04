@@ -451,7 +451,7 @@ function deathWeight(e, fromFi, fromFj, dmg, crit, pow) {
   // the last one standing of a real fight: a beat of slow motion
   (G.killTimes = G.killTimes || []).push(G.t); G.killTimes = G.killTimes.filter(t => G.t - t < 10);
   const others = enemies.some(o => o !== e && alive(o) && o.state !== 'sleep' && Math.hypot(o.fi - hero.fi, o.fj - hero.fj) < 12);
-  if (!others && G.killTimes.length >= 3 && !(G.slowmo > 0)) { G.slowmo = 0.5; G.killTimes = []; }
+  if (!others && G.killTimes.length >= 3 && !(G.slowmo > 0) && !hero.ultOn && !(G.t - (G.ultAt || -99) < 5)) { G.slowmo = 0.5; G.killTimes = []; }   // (round 52: never during or just after an ultimate: it read as the phone slowing down)
 }
 // an overkill: chunks and a spray of blood (or ichor), no body left
 function gibBurst(e, fromFi, fromFj) {

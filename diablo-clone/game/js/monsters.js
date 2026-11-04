@@ -1097,7 +1097,7 @@ function getSprite(fam, look, dir, clip, f, ent, px = SPX) {
     if (px !== 1) scaleRig(rig, px);
     sp = renderRig(rig, yawOf(dir), Math.round(w * px), Math.round(h * px), Math.round(ax * px), Math.round(ay * px), px); sp.px = px;
     if (px !== 1) sp.z = null;   // detail-layer sprites are never lit per pixel, so they don't keep heights
-    if (spriteCache.size > 2400) spriteCache.clear();
+    if (spriteCache.size > 2400) { let n = 600; for (const key of spriteCache.keys()) { if (n-- <= 0) break; spriteCache.delete(key); } }   // round 52: drop the oldest quarter, not everything (a full clear rebuilt every sprite on screen at once: a stutter)
     spriteCache.set(k, sp); spriteBuilds++;
     buildBudget.used += performance.now() - t0;
   }

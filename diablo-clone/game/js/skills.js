@@ -1349,7 +1349,7 @@ function useUlt() {
   if (hero.ultOn || hero.leap) return;
   if (hero.castKind === 'missile' && hero.cast >= 0) { hero.cast = -1; hero.castFn = null; }
   if (heroBusy()) return;
-  hero.ult = 0; btnFx(9).press = 0.2;
+  hero.ult = 0; btnFx(9).press = 0.2; G.ultAt = G.t;
   if (hero.cls === 'mage') startStorm(); else if (hero.cls === 'ranger') startRain(); else startWrath();
 }
 // Wrath of the Mountain: the warrior leaps straight up, hangs, and drives down; a huge ring of
