@@ -1036,7 +1036,10 @@ cvs.addEventListener('pointerdown', e => {
   for (let i = 0; i < UI.skills.length; i++) if (hitCircle(p, UI.skills[i], 5)) { press.skill = i; useSkill(i); return; }
   if (ULTS[hero.cls] && hitCircle(p, UI.ult, 4)) { useUlt(); return; }
   { const a = actionTarget(); if (a && UI.act && inRect(p, UI.act)) { doAction(a); return; } }   // round 43b: the action button
-  { const n = npcAtScreen(p); if (n) { hero.goTalk = n; hero.goTalkT = 6; return; } }   // round 42b: tap a person to walk over and talk
+  // round 42b: tap a person to walk over and talk. Round 51: on the move side a touch on a person still
+  // starts the stick; it counts as a tap on them only if it lifts quickly without moving (endPointer),
+  // so a thumb landing on someone no longer sends the hero walking off to them
+  { const n = npcAtScreen(p); if (n) { if (p[0] < W * 0.55 && stick.id === null) { stick.tap = { n, id: e.pointerId, t: performance.now(), x: p[0], y: p[1] }; } else { hero.goTalk = n; hero.goTalkT = 6; return; } } }
   if (hitCircle(p, UI.attack, 10) || (p[0] > W * 0.55 && p[1] > H * 0.3)) { press.attack = e.pointerId; input.attack = true; heroAttack(); capture(e); return; }
   if (p[0] < W * 0.55 && stick.id === null) { stick.id = e.pointerId; stick.ox = p[0]; stick.oy = p[1]; stick.x = p[0]; stick.y = p[1]; capture(e); }
 }, { passive: false });
@@ -1048,12 +1051,23 @@ cvs.addEventListener('pointermove', e => {
   stick.x = x; stick.y = y; input.mx = dx / R; input.my = dy / R;
 });
 const endPointer = e => {
+  const T = stick.tap; stick.tap = null;
+  if (T && T.id === e.pointerId && e.type === 'pointerup' && performance.now() - T.t < 300 && Math.hypot(stick.x - T.x, stick.y - T.y) < 4 && npcs.includes(T.n)) { hero.goTalk = T.n; hero.goTalkT = 6; }
   if (e.pointerId === stick.id) { stick.id = null; input.mx = input.my = 0; }
   if (e.pointerId === press.attack) { press.attack = null; input.attack = false; }
   press.skill = -1;
 };
 cvs.addEventListener('pointerup', endPointer);
 cvs.addEventListener('pointercancel', endPointer);
+// round 51: a touch the browser takes over (the iPhone's long-press magnifier, a system gesture) or the
+// page losing focus must never leave the stick held: let everything go
+cvs.addEventListener('lostpointercapture', endPointer);
+const releaseAll = () => { stick.id = null; stick.tap = null; input.mx = input.my = 0; press.attack = null; input.attack = false; press.skill = -1; };
+addEventListener('blur', releaseAll); document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
+// and no long-press magnifier, text selection or callout over the game once past the title screen
+// (the title's first tap still reaches the browser as a normal touch, which turns the sound on)
+for (const ev of ['touchstart', 'touchmove']) cvs.addEventListener(ev, e => { if (G.mode !== 'title') e.preventDefault(); }, { passive: false });
+cvs.addEventListener('contextmenu', e => e.preventDefault());
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   audioInit();

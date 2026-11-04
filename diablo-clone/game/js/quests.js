@@ -143,7 +143,7 @@ function talkTo(n) {
     if (st === 'meet') return openTalk([
       [O, 'GOD BE THANKED, A BLADE. I AM OSRIC. THIS CAMP IN THE HOLLOW IS ALL THAT IS LEFT OF OAKHOLLOW.'],
       [O, 'THE DEAD WALK HERE. AND THE GRAVES BEHIND MY CHURCH WERE NOT CLAWED OPEN FROM BELOW. THEY WERE DUG, WITH SPADES.'],
-      [O, 'ALDO THE WOODCUTTER WENT UP TO THE WOLF GLADE THREE DAYS AGO AND DID NOT COME BACK. HIS DAUGHTER WREN WAITS BY THE TENTS. SPEAK TO HER.']], 'OK', () => { f.met = true; });
+      [O, 'ALDO THE WOODCUTTER WENT UP TO THE WOLF GLADE THREE DAYS AGO AND DID NOT COME BACK. THE WOLVES HAVE A DEN PAST IT, NORTHEAST. FIND HIM, AND BRING HIM HOME TO HIS DAUGHTER WREN.']], 'ACCEPT', () => { f.met = true; f.woodTold = true; });   // round 51: Osric gives the quest himself (no second talk with Wren first)
     if (st === 'letter') return openTalk([
       [O, 'A LETTER? LET ME SEE.'],
       [O, '"EVERY BONE YOU BRING IS PAID IN SILVER. THE KING MUST BE WHOLE. - M."'],
