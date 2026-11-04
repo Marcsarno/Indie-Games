@@ -127,3 +127,45 @@ New tool options: `tools/capture/heroparts.cjs <outDir> [zoom] [gameDir] [helm,c
   a bold barbute T; breathing holes on the bascinet snout; horned helm in M.SLATE; bolder crown circlet and points.
   A BLADE (bright) face plate was tried and reverted (it renders cream like the sword). Still no clipping in 2072
   hero frames; all monsters other than the Brigand and Bandit Chief unchanged.
+
+## A6: hero armor sets from the user's six concept sheets (2026-11-04)
+Review page: https://claude.ai/artifact/VX9GYbxTw3wBsZVBX1Guu3 (source `art/review/a6-hero-sets/`; concepts in
+`art/concepts/heroes/`). Three parallel reviewers (warrior, ranger, wizard), merged into `art` (97eaa3e); after the
+merge each class's looks hash identical to its reviewer's branch, every pre-existing look is unchanged except the
+refined ranger jerkins and mage robes, every monster renders identically to c55865a, and no frame clips.
+All in `game/js/actors.js`. No items.js, rig.js or material changes.
+
+**Refined existing looks (visible in the game as soon as merged):** the five ranger jerkins (`JERKIN` table,
+`jerkinChest()`; the plain jerkins lose their cloak so the quiver shows; the ranger and stalker sets keep theirs);
+the three mage robes (`ROBE_STYLE`; backs now cover the legs; magus cream panel + teal mantle/cuffs; archmage gold
+stripes + navy mantle); the runed staff (`staff_rune`) is now a crystal in a gold claw (its item icon in items.js
+still draws the old orb).
+
+**New looks that need item entries (for the main chat: ITEM_BASES, set definitions, icons, loot):**
+
+| Class | Set | Chest look | Helm look | Weapon / shield look |
+|---|---|---|---|---|
+| warrior | Militia | militia | cap | |
+| warrior | Iron Guard | ironguard | great | |
+| warrior | Warbringer | warbringer | horned | |
+| warrior | Vanguard | vanguard | barbute | |
+| warrior | Crown Guard | crownguard | crown | |
+| warrior | Border Warden | borderwarden | spangen | |
+| warrior | Steel Knight | steelknight | bascinet | |
+| warrior | Roadwarden | roadwarden | kettle (new) | sword (arming sword); round shield |
+| warrior | Copper Raider | copperraider | barbute_dark (new) | caxe (crescent axe, heavy swing) |
+| warrior | Oathkeeper | oathkeeper | great | fmace (flanged mace, heavy); heater_oath (new shield) |
+| warrior | Ember Forged | emberforged | bascinet_gold (new) | fhammer (forge hammer, heavy, two-handed, no shield) |
+| ranger | Bramble Scout | jerkin_bramble | | bow_ash |
+| ranger | Ashwood Hunter | jerkin_ashwood | | bow_iron |
+| ranger | Night Tracker | jerkin_night | | bow_cross (crossbow: own hold/shoot/volley/sky poses, hip bolt case, no back quiver) |
+| ranger | Thorn Sentinel | jerkin_thorn | | bow_recurve |
+| mage | Wayfarer | robe_way | hat_way | staff_amber |
+| mage | Frost Scholar | robe_frost | hat_frost | staff_frost |
+| mage | Duskweaver | robe_dusk | hat_dusk | staff_moon |
+| mage | Sunwarden | robe_sun | hat_sun | staff_sun |
+
+Substitutes for colors the palette lacks: teal = WATERM, copper = PUMPKIN, ember skirt = AUTUMNM, navy (Night
+Tracker) = slate (CLOTH_NAVY rendered royal blue), plum (Magus) = the existing violet.
+Still off: mage cuffs read as mitts; flanged mace looks like a fork from behind; skirts are fixed to the hips so thighs
+pass through them when walking; the 1.5x head hides much of the front chest from front-right (mantles, neck trim).
