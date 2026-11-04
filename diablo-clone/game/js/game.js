@@ -569,6 +569,7 @@ function prewarmHero() { for (let d = 0; d < 8; d++) { warmQueue.unshift([ 'hero
 // ---------------------------------------------------------------- update
 const input = { mx: 0, my: 0, attack: false, keys: new Set() };
 function update(dt) {
+  updateMusic(dt);   // round 39b: the forest song fades in and out by area (sound.js)
   // a boss's death plays in slow motion for a moment
   if (G.slowmo > 0) { G.slowmo -= dt; dt *= 0.35; }
   if (G.bossIntro > 0) G.bossIntro -= dt;
