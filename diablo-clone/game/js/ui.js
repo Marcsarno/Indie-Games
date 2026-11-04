@@ -341,25 +341,73 @@ function drawAutomap() {
   if (LV.seen[tIdx(st.i, st.j)]) { const x = ox + (st.i - st.j) * s - (hero.fi - hero.fj) * s, y = oy + (st.i + st.j) * s / 2 - (hero.fi + hero.fj) * s / 2; fillRect(Math.round(x) - 1, Math.round(y) - 1, 3, 3, 40); }
   fillRect(Math.round(ox) - 1, Math.round(oy) - 1, 3, 3, 23);
 }
+// round 41: the character screen. One card per class: its hero drawn big and slowly turning, its
+// name, how it plays, its four skills and its saved level. Tap a card to pick it (gold frame, the
+// hero swings, the others dim), then the big button starts: CONTINUE when that class has a save,
+// else NEW GAME. START OVER asks for a second tap before it replaces a save. The developer
+// settings sit behind OPTIONS.
+const TITLE = { sel: null, looks: null, opts: false, eraseT: 0, pickT: 0 };
+const CLASS_INFO = {
+  warrior: { name: 'WARRIOR', col: 22, lines: ['BLADE AND ARMOR', 'FIGHTS UP CLOSE'] },
+  mage: { name: 'MAGE', col: 40, lines: ['SPELLS FROM AFAR', 'FRAGILE, DEADLY'] },
+  ranger: { name: 'RANGER', col: 55, lines: ['BOW AND TRAPS', 'QUICK AND NIMBLE'] },
+};
+function titlePick(cls) { if (TITLE.sel !== cls) { TITLE.sel = cls; TITLE.pickT = G.t; TITLE.eraseT = 0; try { localStorage.setItem('dcg-cls', cls); } catch (e) { /* ignore */ } } }
 function drawTitle() {
-  fade(0.55);
-  textC('DUNGEON', W / 2, H * 0.2, 22, 4);
-  textC('OF BONES', W / 2, H * 0.2 + 26, 26, 2);
+  if (!TITLE.looks) {   // each class's starting look (the title's hero is a throwaway)
+    TITLE.looks = {};
+    for (const c of ['ranger', 'mage', 'warrior']) { newHero(c); TITLE.looks[c] = { ...hero.look }; }
+    let last = null; try { last = localStorage.getItem('dcg-cls'); } catch (e) { /* ignore */ }
+    TITLE.sel = CLASS_INFO[last] ? last : 'warrior';
+  }
+  fade(0.7);
+  textC('DUNGEON', W / 2, 34, 22, 4);
+  textC('OF BONES', W / 2, 60, 26, 2);
+  textC('CHOOSE YOUR HERO', W / 2, 86, 25);
   UI.titleBtns = [];
-  const btn = (label, x, y, w, on, col = 27) => { fillRect(x, y, w, 20, 5); frame(x, y, w, 20, 8, 2); textC(label, x + w / 2, y + 7, col); UI.titleBtns.push({ x, y, w, h: 20, on }); };
-  // one column per class: continue its save (if any) or start a new one
-  [['warrior', 'WARRIOR', 22], ['mage', 'MAGE', 40], ['ranger', 'RANGER', 55]].forEach(([cls, name, col], k) => {   // round 33: three classes
-    const x = W / 2 - 130 + k * 88, w = 84, save = loadSave(cls);
-    textC(name, x + w / 2, H * 0.47, col, 2);
-    if (save) btn(`CONTINUE L${save.hero ? save.hero.lvl : save.level}`, x, H * 0.52, w, () => beginGame(true, cls));
-    btn('NEW GAME', x, H * 0.52 + 28, w, () => beginGame(false, cls));
+  const btn = (label, x, y, w, h, on, col = 27, bg = 5, edge = 8) => { fillRect(x, y, w, h, bg); frame(x, y, w, h, edge, 2); textC(label, x + w / 2, y + Math.floor(h / 2) - 2, col); UI.titleBtns.push({ x, y, w, h, on }); };
+  const cw = 84, gap = 5, x0 = Math.round((W - cw * 3 - gap * 2) / 2), y0 = 98, ch = 196;
+  const saved = budgetOff();
+  ['warrior', 'mage', 'ranger'].forEach((cls, k) => {
+    const info = CLASS_INFO[cls], x = x0 + k * (cw + gap), sel = TITLE.sel === cls, save = loadSave(cls), look = TITLE.looks[cls];
+    fillRect(x, y0, cw, ch, sel ? 4 : 2); frame(x, y0, cw, ch, sel ? 51 : 6, sel ? 49 : 3);
+    if (sel) frame(x - 1, y0 - 1, cw + 2, ch + 2, 50, 48);
+    textC(info.name, x + cw / 2, y0 + 7, sel ? info.col : 25, 2);
+    // the hero: turning slowly; once picked it faces you and swings
+    const ent = { look, cls, combo: 0 };
+    let sp;
+    if (sel && G.t - TITLE.pickT < 1.6) {
+      const bow = cls === 'ranger', list = weaponSwing(look, 0), tot = list.reduce((a, q) => a + q.ms, 0), ms = ((G.t - TITLE.pickT) * 1000) % (tot + 500);
+      const f = ms < tot ? swingKey(list, ms) : -1;
+      sp = f >= 0 ? getSprite('hero', look, 1, bow ? 'shoot' : 'attack', f, ent, 1) : getSprite('hero', look, 1, 'idle', Math.floor(G.t / 0.2) % 4, ent, 1);
+    } else sp = getSprite('hero', look, sel ? 1 : Math.floor(G.t / 0.7 + k * 3) % 8, 'idle', Math.floor(G.t / 0.2) % 4, ent, 1);
+    // a pool of light under the picked one
+    if (sel) for (let yy = -5; yy <= 5; yy++) for (let xx = -26; xx <= 26; xx++) if ((xx / 26) ** 2 + (yy / 5) ** 2 <= 1 && ((xx + yy) & 1)) put(x + cw / 2 + xx, y0 + 112 + yy, 6);
+    sprite(sp, x + cw / 2, y0 + 112, 2, sel ? 6 : 4);
+    info.lines.forEach((l, n) => textC(l, x + cw / 2, y0 + 124 + n * 8, sel ? 26 : 24));
+    // its four skills
+    SKILLSETS[cls].forEach((sk, n) => { const sl = SPELL_LOOK[sk.id] || [[48, 49, 50, 51], glyphBolt]; drawButton([x + 12 + n * 20, y0 + 154, 8], sel ? sl[0] : [3, 4, 5, 6], false, sl[1]); });
+    textC(save ? `SAVED: LEVEL ${save.hero ? save.hero.lvl : 1}` : 'NO SAVE YET', x + cw / 2, y0 + 172, save ? (sel ? 51 : 49) : 24);
+    UI.titleBtns.push({ x, y: y0, w: cw, h: ch, on: () => titlePick(cls) });
   });
-  btn(FEEL_OLD ? 'COMBAT: OLD' : 'COMBAT: NEW', W / 2 - 124, H * 0.52 + 62, 120, () => setFeelOld(!FEEL_OLD), 25);
-  btn(WORLD2X ? 'DETAIL: SHARP' : 'DETAIL: CLASSIC', W / 2 + 4, H * 0.52 + 62, 120, () => setWorld2x(!WORLD2X), 25);
-  btn(HUE_LIGHT ? 'LIGHT: NEW' : 'LIGHT: OLD', W / 2 - 60, H * 0.52 + 88, 120, () => setLightNew(!HUE_LIGHT), 25);
-  textC('LEFT THUMB MOVES. RIGHT BUTTONS FIGHT.', W / 2, H * 0.78, 25);
-  textC('ALL ART IS DRAWN IN CODE', W / 2, H * 0.78 + 8, 24);
+  budgetOn(saved);
+  // start: continue the picked class's save, or begin it new
+  const cls = TITLE.sel, save = loadSave(cls), info = CLASS_INFO[cls], by = y0 + ch + 14;
+  btn(save ? `CONTINUE AS ${info.name}` : `NEW GAME AS ${info.name}`, W / 2 - 100, by, 200, 30, () => beginGame(!!save, cls), 51, 6, 51);
+  if (save) btn(TITLE.eraseT > G.t ? 'TAP AGAIN: ERASE LEVEL ' + (save.hero ? save.hero.lvl : 1) : 'START OVER', W / 2 - 100, by + 36, 200, 18, () => { if (TITLE.eraseT > G.t) beginGame(false, cls); else TITLE.eraseT = G.t + 3; }, TITLE.eraseT > G.t ? 22 : 25);
+  // the developer settings, folded away
+  const oy = H - 56;
+  btn(TITLE.opts ? 'OPTIONS  -' : 'OPTIONS  +', W / 2 - 40, oy, 80, 16, () => { TITLE.opts = !TITLE.opts; }, 25, 3, 6);
+  if (TITLE.opts) {
+    btn(FEEL_OLD ? 'COMBAT: OLD' : 'COMBAT: NEW', 6, oy - 22, 84, 16, () => setFeelOld(!FEEL_OLD), 25, 3, 6);
+    btn(WORLD2X ? 'DETAIL: SHARP' : 'DETAIL: CLASSIC', 93, oy - 22, 84, 16, () => setWorld2x(!WORLD2X), 25, 3, 6);
+    btn(HUE_LIGHT ? 'LIGHT: NEW' : 'LIGHT: OLD', 180, oy - 22, 84, 16, () => setLightNew(!HUE_LIGHT), 25, 3, 6);
+  }
+  textC('LEFT THUMB MOVES. RIGHT BUTTONS FIGHT.', W / 2, H - 32, 25);
+  textC('ALL ART IS DRAWN IN CODE', W / 2, H - 24, 24);
 }
+const budgetOff = () => { const s = buildBudget.ms; buildBudget.ms = Infinity; return s; };
+const budgetOn = s => { buildBudget.ms = s; };
 
 // ---------------------------------------------------------------- inventory
 const INV = { sel: null };   // {item, from: 'bag'|'equip', slot}
@@ -524,7 +572,8 @@ addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   audioInit();
   if (k === 'n') setMuted(!SFX.muted);
-  if (G.mode === 'title' && (k === 'enter' || k === ' ')) { beginGame(!!loadSave()); return; }
+  if (G.mode === 'title' && (k === 'enter' || k === ' ')) { const c = TITLE.sel || 'warrior'; beginGame(!!loadSave(c), c); return; }
+  if (G.mode === 'title' && (k === 'arrowleft' || k === 'arrowright')) { const L = ['warrior', 'mage', 'ranger'], n = L.indexOf(TITLE.sel || 'warrior'); titlePick(L[(n + (k === 'arrowleft' ? 2 : 1)) % 3]); return; }
   input.keys.add(k);
   if (k === ' ' || k === 'j') input.attack = true;
   if (k === 'k' || k === '1') useSkill(0);

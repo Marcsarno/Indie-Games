@@ -83,7 +83,7 @@ function priestMark(n, sx, by) {
 // in the farthest room. The way out (stairs up) is in the start room.
 const SIDES = {
   den: { name: 'THE WOLF DEN', theme: 'caves', rooms: 5, pool: ['wolf'], boss: 'alpha', door: () => [HUB.den[0] + 1.6, HUB.den[1] + 0.6], label: 'WOLF DEN' },
-  cellar: { name: 'THE FARM CELLAR', theme: 'crypt', rooms: 5, pool: ['brigand'], boss: 'banditchief', door: () => [54.6, 10.4], label: 'FARMHOUSE CELLAR' },
+  cellar: { name: 'THE FARM CELLAR', theme: 'crypt', rooms: 5, pool: ['brigand'], boss: 'banditchief', door: () => HUB.cellar, label: 'FARMHOUSE CELLAR' },
 };
 // the hub's doors into the side areas: walk onto one to go in
 function updateSideDoors() {

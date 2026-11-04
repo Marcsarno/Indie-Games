@@ -1,0 +1,76 @@
+<title>The New Camp</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  /* layout: one narrow column, one section per part with its picture first */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul { margin: 0; max-width: 64ch; }
+  ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .frame img.smooth { image-rendering: auto; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .tw { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+</style>
+<main>
+  <header>
+    <h1>The New Camp</h1>
+    <p class="lede">Dungeon of Bones, round 41, from your notes: monsters were too close to the camp, the camp was too small and crowded, and the character screen made it hard to tell which hero you were picking.</p>
+  </header>
+  <section>
+    <h2>A walled camp with room</h2>
+    <figure>
+      <div class="frame"><img src="hub-before-after.png" alt="The whole Act I map from above, before and now. Before: a small square map with the camp crowded in front of the cathedral. Now: a bigger map with a ring of wooden wall in the middle, four roads leaving through its gates to the mine, the farm, the woods and the south gate" width="1376" height="384"></div>
+      <figcaption>The whole of Oakhollow from above. The map grew from 64 to 84 tiles a side, so the camp could get bigger and the monsters could move further out.</figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><img src="camp-before-after.png" alt="In camp at the start, before and now. Before: tents, the priest, the smith, the potion seller and villagers crowded round a small fire. Now: an open dirt square round the fire with log benches, the priest at an altar on the cathedral steps, the potion wagon and stall off to the right, the well and the camp wall behind" width="1088" height="718"></div>
+      <figcaption>Where you start, before and now.</figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><img src="camp2-before-after.png" alt="The west side of camp, before and now. Now: a row of tents by the well and the woodcutter&rsquo;s empty woodpile, inside the wooden wall" width="1088" height="718"></div>
+      <figcaption>The west side of camp: the refugees&rsquo; tents and the woodcutter&rsquo;s woodpile.</figcaption>
+    </figure>
+    <ul>
+      <li><strong>A wall of sharpened logs</strong> rings the camp, about three times the old camp&rsquo;s width, with a gate toward each quarter: the mine to the north, the farm to the east, the woods to the west, the road south. Each gate has a lantern on either side.</li>
+      <li><strong>No monster within 26 tiles of the fire</strong>, about two screens away, so none are in view from camp. A test checks this on 50 different maps, along with everything still being reachable.</li>
+      <li><strong>Everyone has their own place</strong> round the fire and its log benches: Brother Osric at a stone altar with candles and a gold cross on the cathedral steps, the smith at his forge with iron and barrels, the potion seller at a covered wagon with a shelf of glowing bottles and a stall, the refugees&rsquo; tents in a row by the well.</li>
+      <li><strong>Two places wait for people the quests will bring back:</strong> the woodcutter&rsquo;s chopping stump with the axe in it and a stack of logs, and the farmer&rsquo;s hay cart. They&rsquo;re empty for now; the quest chain fills them.</li>
+      <li>The graveyard is outside the wall, behind the cathedral. The farm, the mine, the woods and the den moved out with the bigger map.</li>
+      <li>Speed: the same frame time in camp as before. The hub takes about a quarter of a second longer to load on a desktop (the map is 1.7 times bigger).</li>
+    </ul>
+    <figure>
+      <div class="frame"><img src="props.png" alt="The four new props beside the hero, in two rows: on top the third pass (a covered wagon with spoked wheels and a shelf of colored bottles, a stone altar with candles and a gold cross, a woodpile with an axe in its stump, a hay cart), below the second pass for comparison" width="2064" height="840"></div>
+      <figcaption>The four new props beside the hero. Top: the final pass. Bottom: the pass before. The first pass made the wagon too small, the altar mostly white cloth (it looked like a sheep beside Osric), and the woodpile a dark lump.</figcaption>
+    </figure>
+  </section>
+  <section>
+    <h2>The character screen</h2>
+    <figure>
+      <div class="frame"><img src="title-before-after.png" alt="The title screen, before and now. Before: three colored words and three identical NEW GAME buttons over a busy background, with three settings buttons. Now: three cards, each with its hero drawn large, a two-line description and four skill icons; the warrior card has a gold frame; one big NEW GAME AS WARRIOR button below and a small OPTIONS button" width="1088" height="858"></div>
+      <figcaption>Before and now.</figcaption>
+    </figure>
+    <ul>
+      <li>One card per class with its hero drawn big, turning slowly, how it plays in two lines, its four skills, and its saved level.</li>
+      <li>Tap a card to pick it: a gold frame, the hero turns to you and swings, its skill icons light up. It remembers the last class you played.</li>
+      <li>One big button starts: CONTINUE AS ... when that class has a save, else NEW GAME AS .... START OVER (only shown with a save) asks for a second tap before it replaces the save.</li>
+      <li>The developer settings (combat, detail, light) are folded away under OPTIONS.</li>
+    </ul>
+  </section>
+</main>

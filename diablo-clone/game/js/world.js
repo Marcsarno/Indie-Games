@@ -67,7 +67,7 @@ function genLevel(level, seed, side = null) {
   // A side area (quests.js SIDES) is a short dungeon floor hanging off the hub at the hub's level
   const A0 = areaOf(level), A = side ? { kind: 'dungeon', cyc: A0.cyc, act: A0.act, loop: A0.loop, floor: 1, depth: A0.cyc * 3 + 1, diff: A0.diff } : A0;
   LV.side = side; LV.sideCfg = side ? SIDES[side] : null;
-  { const big = A.kind === 'forest' || A.hub, floorBig = A.kind === 'dungeon' && !side && !A.arena; resizeWorld(big ? 64 : floorBig ? 56 : 40, big ? 64 : floorBig ? 56 : 40); }   // round 38: dungeon floors 56x56 (were 40)
+  { const big = A.kind === 'forest' || A.hub, floorBig = A.kind === 'dungeon' && !side && !A.arena; const hs = A.hub && !side ? 84 : big ? 64 : floorBig ? 56 : 40; resizeWorld(hs, hs); }   // round 41: the hub 84x84   // round 38: dungeon floors 56x56 (were 40)
   LV.area = A.kind; LV.cyc = A.cyc; LV.act = A.act; LV.loop = A.loop; LV.floor = A.floor || 0; LV.arena = A.arena || null;
   LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.hub = !!A.hub; LV.gateSign = null; LV.gateOpen = false; LV.autumn = A.act === 1; LV.night = A.kind !== 'dungeon' && A.act === 2; LV.plaza = null; LV.npcs = []; LV.critters = []; LV.champsPlanned = false; LV.genFail = null;
   if (LV.outdoor) { LV.theme = A.kind; genOutdoor(level, seed, A); LV.level = level; LV.seed = seed; return; }

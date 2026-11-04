@@ -1043,7 +1043,7 @@ function setupRoutines(seed) {
   const used = new Set(), fromStart = LV.start ? bfs(Math.floor(LV.start.cx), Math.floor(LV.start.cy)) : null;
   G.routineStart = fromStart;   // (outdoor areas have no LV.dist of their own, so the start's distances are worked out here)
   const okSpot = k => k >= 0 && LV.map[k] === FLOOR && !LV.solid[k] && (!fromStart || fromStart[k] < 0 || fromStart[k] >= 12) &&
-    !(LV.hub && Math.hypot(k % MW + 0.5 - HUB.camp[0], ((k / MW) | 0) + 0.5 - HUB.camp[1]) < 13);
+    !(LV.hub && Math.hypot(k % MW + 0.5 - HUB.camp[0], ((k / MW) | 0) + 0.5 - HUB.camp[1]) < HUB.safe);
   for (const e of free) {
     if (used.has(e)) continue;
     const members = free.filter(o => !used.has(o) && o.id === e.id && Math.hypot(o.fi - e.fi, o.fj - e.fj) < 2.6);

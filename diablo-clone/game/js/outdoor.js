@@ -345,56 +345,93 @@ function genTown(R, A) {
   for (let n = 0; n < 5; n++) LV.critters.push({ kind: 'chicken', fi: cx - 4 + R() * 6, fj: cy + 2 + R() * 3 });
 }
 
-// ---------------------------------------------------------------- the Act I hub (round 26)
+// ---------------------------------------------------------------- the Act I hub (round 26, round 41)
 // Hand-built, not generated: the layout is fixed and only the small scatter (grass, flowers, which
-// trees grow where, rocks) varies per seed. North is up on the screen (-i, -j). The cathedral
-// stands in the middle with its doors to the south-east, the camp before them is the safe spot
-// (no monster within 12 tiles). The mine and the first dungeon are north, bandits hold the farm to
-// the east, wolves the woods to the west (with their den), and the road south is shut by a gate.
+// trees grow where, rocks) varies per seed. North is up on the screen (-i, -j). Round 41 (the user:
+// enemies too close to the camp, the camp too small and crowded, everyone needs their own spot):
+// the map grew from 64 to 84 tiles and the camp is a walled ring of sharpened logs, 13 tiles across
+// the middle, with a gate toward each quarter. Inside, round the campfire and its log benches, each
+// person has a place of their own: Brother Osric at his altar on the cathedral steps, the smith at
+// his forge, the potion seller at her wagon, the refugees' tents by the well, and two places kept
+// empty for people the quests will bring back (the woodcutter's woodpile, the farmer's hay cart).
+// No monster is placed within HUB.safe (26 tiles) of the fire. The mine is north, bandits hold the
+// farm to the east, wolves the woods to the west (with their den), the road south is shut by a gate.
 const HUB = {
-  cathedral: { i: 26, j: 29, w: 6, h: 3 },
-  camp: [37.5, 31.5], start: [38.5, 35],
-  mine: [11, 12], farm: [49, 14], woods: [14, 49], den: [8.5, 53.5], gate: [51.5, 51.5],
+  camp: [42.5, 42.5], start: [44.6, 45.6], wallR: 13, safe: 26,
+  cathedral: { i: 31, j: 37, w: 6, h: 3 },
+  mine: [16, 16], farm: [66, 18], woods: [16, 66], den: [10.5, 70.5], gate: [64.5, 64.5], cellar: [71.6, 14.4],
+  // gates in the camp wall: the angle (in tile space) toward each quarter
+  gates: { north: -2.36, east: -0.83, west: 2.39, south: 0.785 },
 };
 function genHub(R, A) {
-  const autumn = false, H = HUB, [cx, cy] = H.camp;
-  plantEdge(R, autumn);
-  // roads: the camp to each quarter, bending round the cathedral; a loop path behind it
+  const H = HUB, [cx, cy] = H.camp, RAD = H.wallR;
+  plantEdge(R, false);
+  const at = (a, r) => [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+  const gateAt = k => at(H.gates[k], RAD), outside = k => at(H.gates[k], RAD + 3);
+  // roads: from the fire out of each gate and on to its quarter; paths to each person's place
   const road = (pts, w) => { for (let k = 0; k + 1 < pts.length; k++) addPath(pts[k], pts[k + 1], w, R); };
-  road([[cx, cy], [36, 25], [28, 22], [18, 17], [H.mine[0] + 1.5, H.mine[1] + 1.5]], 0.85);   // north to the mine
-  road([[cx, cy], [42, 26], [H.farm[0] - 2, H.farm[1] + 3]], 0.8);                             // east to the farm
-  road([[cx, cy], [33, 38], [24, 43], [H.woods[0] + 3, H.woods[1] - 2]], 0.75);                 // west into the woods
-  road([[H.woods[0] + 3, H.woods[1] - 2], [13.5, 51.5], [H.den[0] + 2.6, H.den[1] + 1.4]], 0.6);   // round 38: a trail on to the den's mouth
-  road([[cx, cy], [43, 39], [H.gate[0] - 1.5, H.gate[1] - 1.5]], 0.85);                         // south to the gate
-  road([[28, 22], [24, 27], [24, 34], [33, 38]], 0.55);                                         // round the back of the cathedral
+  road([[cx, cy], gateAt('north'), outside('north'), [26, 22], [H.mine[0] + 1.5, H.mine[1] + 1.5]], 0.85);
+  road([[cx, cy], gateAt('east'), outside('east'), [58, 28], [H.farm[0] - 2, H.farm[1] + 3]], 0.8);
+  road([[cx, cy], gateAt('west'), outside('west'), [26, 58], [H.woods[0] + 3, H.woods[1] - 2]], 0.75);
+  road([[H.woods[0] + 3, H.woods[1] - 2], [15.5, 68.5], [H.den[0] + 2.6, H.den[1] + 1.4]], 0.6);   // a trail on to the den's mouth
+  road([[cx, cy], gateAt('south'), outside('south'), [H.gate[0] - 1.5, H.gate[1] - 1.5]], 0.85);
+  const C = H.cathedral;
+  const SPOTS = { osric: [C.i + C.w + 1.6, C.j + 1.5], smith: [46.4, 38.6], potions: [48.2, 44.2], tents: [38.5, 48.5], woodcutter: [35.8, 44.6], farmer: [43.8, 35.6] };
+  for (const k in SPOTS) road([[cx, cy], SPOTS[k]], 0.5);
   bakePathField();   // the scatter below asks how far each tile is from a road
-  LV.plaza = { x: cx, y: cy, r: 3.4 };
+  LV.plaza = { x: cx, y: cy, r: 4.6 };
   const solidRect = (i0, j0, w, h) => { for (let j = j0; j < j0 + h; j++) for (let i = i0; i < i0 + w; i++) LV.solid[tIdx(i, j)] = 1; };
   const put = (kind, i, j, w, h, extra = {}) => { solidRect(i, j, w, h); LV.decor.push({ kind, i, j, w, h, ...extra }); };
-  // the cathedral, its steps and a graveyard behind it
-  const C = H.cathedral; put('cathedral', C.i, C.j, C.w, C.h);
-  for (let n = 0; n < 9; n++) { const i = 23 + (n % 3) * 1.6 + R() * 0.4, j = 27 + Math.floor(n / 3) * 1.7 + R() * 0.4; if (!solidAt(Math.floor(i), Math.floor(j))) { LV.solid[tIdx(Math.floor(i), Math.floor(j))] = 1; LV.decor.push({ kind: 'grave', i: Math.floor(i), j: Math.floor(j), seed: n }); } }
-  // the camp: campfire, the smith's forge, the potion seller's stall, tents, supplies, lanterns
+  const small = (kind, i, j, extra = {}) => { if (LV.solid[tIdx(i, j)]) return; LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind, i, j, seed: i * 7 + j, ...extra }); };
+  const lamp = (fi, fj) => LV.decor.push({ kind: 'lantern', fi, fj });
+  // the camp wall: sharpened logs round the ring, a gap at each gate with a lantern either side
+  for (let k = 0; k < 180; k++) {
+    const a = k / 180 * Math.PI * 2;
+    if (Object.values(H.gates).some(g => Math.abs(((a - g + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < 0.125)) continue;
+    const [fi, fj] = at(a, RAD), i = Math.floor(fi), j = Math.floor(fj);
+    if (LV.solid[tIdx(i, j)]) continue;
+    LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'palisade', i, j, a });
+  }
+  for (const g of Object.values(H.gates)) for (const sd of [-1, 1]) { const [fi, fj] = at(g + sd * 0.15, RAD + 0.6); lamp(fi, fj); }
+  // the cathedral, with Osric's altar before its doors; the graveyard outside the wall behind it
+  put('cathedral', C.i, C.j, C.w, C.h);
+  small('altar', 38, 37);
+  lamp(37.6, 41.2);
+  for (let n = 0; n < 12; n++) { const i = Math.floor(22 + (n % 4) * 1.7 + R() * 0.4), j = Math.floor(33 + Math.floor(n / 4) * 1.8 + R() * 0.4); small('grave', i, j, { seed: n }); }
+  // the fire in the middle, log benches round it
   LV.decor.push({ kind: 'campfire', i: Math.floor(cx), j: Math.floor(cy) }); LV.solid[tIdx(Math.floor(cx), Math.floor(cy))] = 1;
-  put('forge', 40, 27, 3, 3); put('stall', 41, 33, 2, 1); put('tent', 34, 35, 2, 2); put('tent', 36, 37.5 | 0, 2, 2);
-  for (const [i, j, k] of [[43, 30, 'barrel'], [43, 31, 'crate'], [33, 33, 'crate'], [40, 36, 'barrel']]) if (!LV.solid[tIdx(i, j)]) { LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: k, i, j, seed: i * 7 + j }); }
-  for (const [x, y] of [[35, 29.6], [40.4, 31], [38.6, 36.6], [34.6, 32.4]]) LV.decor.push({ kind: 'lantern', fi: x, fj: y });
+  for (const [a, yaw] of [[0.4, 2.0], [2.5, 0.9], [4.3, 2.6]]) LV.decor.push({ kind: 'log', fi: cx + Math.cos(a) * 2.3, fj: cy + Math.sin(a) * 2.3, yaw });
+  // the smith's forge, barrels and crates of iron beside it
+  put('forge', 47, 34, 3, 3);
+  for (const [i, j, k] of [[50, 36, 'barrel'], [50, 37, 'crate'], [46, 35, 'crate']]) small(k, i, j);
+  lamp(45.4, 37.4);
+  // the potion seller's wagon, a stall of herbs beside it
+  put('wagon', 50, 43, 2, 2); put('stall', 49, 47, 2, 1);
+  for (const [i, j, k] of [[52, 46, 'crate'], [52, 42, 'barrel']]) small(k, i, j);
+  lamp(48.4, 41.6);
+  // the refugees: tents in a row by the well, supplies
+  put('tent', 34, 47, 2, 2); put('tent', 37, 50, 2, 2); put('tent', 41, 52, 2, 2);
+  small('well', 44, 49);
+  for (const [i, j, k] of [[33, 50, 'barrel'], [36, 53, 'crate'], [44, 53, 'barrel']]) small(k, i, j);
+  lamp(39.6, 47.4);
+  // the two places waiting for people the quests bring back
+  put('woodpile', 33, 43, 2, 1); put('haycart', 43, 32, 2, 1);
   // east: the farm the bandits took: a farmhouse, a windmill, ploughed fields, fences
-  put('cabin', 51, 9, 3, 3); put('windmill', 46, 8, 2, 2);
-  LV.fields = [{ x0: 44.5, y0: 13.5, x1: 54.5, y1: 20.5 }, { x0: 52.5, y0: 22.5, x1: 57.5, y1: 28.5 }];
+  put('cabin', 68, 13, 3, 3); put('windmill', 63, 12, 2, 2);
+  LV.fields = [{ x0: 61.5, y0: 17.5, x1: 71.5, y1: 24.5 }, { x0: 69.5, y0: 26.5, x1: 74.5, y1: 32.5 }];
   for (const f of LV.fields) for (let j = Math.ceil(f.y0); j < f.y1; j++) for (let i = Math.ceil(f.x0); i < f.x1; i++) if (j % 2 === 1 && R() < 0.75) LV.decor.push({ kind: 'crop', fi: i + 0.5 + (R() - 0.5) * 0.3, fj: j + 0.4, seed: R.int(0, 3) });
-  for (let i = 44; i <= 55; i++) if (i !== 49 && i !== 50) { LV.solid[tIdx(i, 21)] = 1; LV.decor.push({ kind: 'fence', i, j: 21, along: 1 }); }
-  for (const [i, j] of [[48, 24], [50, 25], [45, 23]]) if (!LV.solid[tIdx(i, j)]) { LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'hay', i, j }); }
+  for (let i = 61; i <= 72; i++) if (i !== 66 && i !== 67) small('fence', i, 25, { along: 1 });
+  for (const [i, j] of [[65, 28], [67, 29], [62, 27]]) small('hay', i, j);
   // north: the mining camp: the mine mouth in a rock face, carts, crates, a few pines and boulders
   put('mine', H.mine[0] - 2, H.mine[1] - 2, 3, 3);
-  for (const [i, j, k] of [[15, 11, 'crate'], [15, 12, 'barrel'], [10, 16, 'crate'], [16, 16, 'rock'], [8, 17, 'rock'], [18, 9, 'rock']]) if (!LV.solid[tIdx(i, j)]) { LV.solid[tIdx(i, j)] = 1; LV.decor.push(k === 'rock' ? { kind: 'rock', i, j, seed: i % 5 } : { kind: k, i, j, seed: i * 7 + j }); }
-  LV.decor.push({ kind: 'cart', i: 13, j: 15 }); LV.solid[tIdx(13, 15)] = 1;
+  for (const [i, j, k] of [[20, 15, 'crate'], [20, 16, 'barrel'], [15, 20, 'crate'], [21, 20, 'rock'], [13, 21, 'rock'], [23, 13, 'rock']]) small(k, i, j, k === 'rock' ? { seed: i % 5 } : {});
+  small('cart', 18, 19);
   // west: deep woods, and the wolves' den in a rocky mound
   put('den', Math.floor(H.den[0]) - 1, Math.floor(H.den[1]) - 1, 2, 2);
-  // south: a stone wall across the road with a shut gate and a sign
-  for (let k = -10; k <= 10; k++) {   // end to end into the border trees, so the gate is the only way through
-    const i = Math.floor(H.gate[0]) + k, j = Math.floor(H.gate[1]) - k;   // the wall runs along the screen's width
-    if (k === 0) continue;
+  // south: a stone wall across the road with a shut gate and a sign, end to end into the border trees
+  for (let k = -30; k <= 30; k++) {
+    const i = Math.floor(H.gate[0]) + k, j = Math.floor(H.gate[1]) - k;
+    if (k === 0 || i < 0 || j < 0 || i >= MW || j >= MH) continue;
     LV.solid[tIdx(i, j)] = 1; if (!edgeBand(i, j)) LV.decor.push({ kind: 'stonewall', i, j });
   }
   // the gate opens for good once this act's boss is dead (G.gates, saved, one flag per cycle)
@@ -403,13 +440,13 @@ function genHub(R, A) {
   else put('gate', Math.floor(H.gate[0]), Math.floor(H.gate[1]), 1, 1);
   LV.decor.push({ kind: 'signpost', fi: H.gate[0] - 2.2, fj: H.gate[1] - 0.6 });
   LV.gateSign = [H.gate[0] - 1, H.gate[1] - 1];
-  // scatter: trees thicken toward the west woods and thin to meadow round the cathedral and fields
-  // (round 38: and a clearing before the den's mouth)
-  const keepOut = (i, j) => Math.hypot(i - cx, j - cy) < 7 || Math.hypot(i - (H.den[0] + 2), j - (H.den[1] + 1)) < 3.2 || Math.hypot(i - (C.i + 3), j - (C.j + 1.5)) < 6.5 || LV.fields.some(f => i > f.x0 - 1 && i < f.x1 + 1 && j > f.y0 - 1 && j < f.y1 + 1);
+  // scatter: open meadow round the camp, trees thickening toward the west woods, a clearing before the den
+  const keepOut = (i, j) => Math.hypot(i - cx, j - cy) < RAD + 3.5 || Math.hypot(i - (H.den[0] + 2), j - (H.den[1] + 1)) < 3.2 || (i > 20 && i < 30 && j > 31 && j < 41) || LV.fields.some(f => i > f.x0 - 1 && i < f.x1 + 1 && j > f.y0 - 1 && j < f.y1 + 1);
   for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
     if (edgeBand(i, j) || keepOut(i + 0.5, j + 0.5) || LV.solid[tIdx(i, j)] || pathD(i + 0.5, j + 0.5) < 1.1) continue;
-    const west = clamp(1 - Math.hypot(i - H.woods[0], j - H.woods[1]) / 16, 0, 1), north = clamp(1 - Math.hypot(i - H.mine[0], j - H.mine[1]) / 12, 0, 1);
-    const dens = 0.035 + west * 0.34 + north * 0.1 + vnoise(i, j, 5, 31) * 0.05;
+    const west = clamp(1 - Math.hypot(i - H.woods[0], j - H.woods[1]) / 19, 0, 1), north = clamp(1 - Math.hypot(i - H.mine[0], j - H.mine[1]) / 14, 0, 1);
+    const near = clamp(1 - (Math.hypot(i - cx, j - cy) - RAD) / 12, 0, 1);   // the meadow round the wall stays open
+    const dens = (0.04 + west * 0.3 + north * 0.1 + vnoise(i, j, 5, 31) * 0.05) * (1 - near * 0.8);
     if (R() < dens && canTree(i, j)) { LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'tree', i, j, tree: west > 0.2 || north > 0.2 || R() < 0.4 ? 'pine' : 'oak', seed: R.int(0, 5), jx: (R() - 0.5) * 0.4, jy: (R() - 0.5) * 0.4 }); }
     else if (R() < 0.05) LV.decor.push({ kind: R() < 0.7 ? 'bush' : 'fern', fi: i + R(), fj: j + R(), seed: R.int(0, 5) });
     else if (north > 0.1 && R() < 0.04 && canTree(i, j)) { LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'rock', i, j, seed: R.int(0, 5) }); }
@@ -418,19 +455,19 @@ function genHub(R, A) {
   LV.rooms = [{ x: Math.floor(cx - 2), y: Math.floor(cy - 2), w: 4, h: 4, cx: Math.floor(H.start[0]), cy: Math.floor(H.start[1]) }];
   LV.start = LV.rooms[0];
   LV.stairs = { i: H.mine[0] + 1, j: H.mine[1] + 1, room: 0, mine: true };   // the way on: into the mine
-  // the people of the camp
+  // the people of the camp, each at their own place
   LV.npcs = [
-    { role: 'priest', name: 'BROTHER OSRIC', fi: C.i + C.w + 1.6, fj: C.j + 1.5 },
-    { role: 'smith', name: 'SMITHY', fi: 39.4, fj: 30.4 },
-    { role: 'merchant', name: 'POTIONS', fi: 40.6, fj: 34.4 },
-    { role: 'villager', fi: 35.5, fj: 34 }, { role: 'villager', fi: 39, fj: 33.5 },
+    { role: 'priest', name: 'BROTHER OSRIC', fi: SPOTS.osric[0], fj: SPOTS.osric[1] },
+    { role: 'smith', name: 'SMITHY', fi: SPOTS.smith[0], fj: SPOTS.smith[1] },
+    { role: 'merchant', name: 'POTIONS', fi: SPOTS.potions[0], fj: SPOTS.potions[1] },
+    { role: 'villager', fi: 40.5, fj: 46.5 }, { role: 'villager', fi: 44.5, fj: 47.8 },
   ];
-  // monsters by quarter, kept well away from the camp
-  const pack = (id, n, at, spread) => { for (let k = 0; k < n; k++) LV.spawns.push({ id, fi: at[0] + (R() - 0.5) * spread, fj: at[1] + (R() - 0.5) * spread }); };
-  for (const at of [[14, 17], [18, 12], [9, 9], [20, 18]]) pack('digger', R.int(2, 3), at, 2.5);   // north
-  for (const at of [[48, 17], [53, 16], [50, 11], [55, 25]]) pack('brigand', R.int(1, 2), at, 2.5);  // east
-  for (const at of [[12, 45], [17, 52], [10, 50], [20, 47]]) pack('wolf', R.int(2, 3), at, 2.5);     // west
-  LV.spawns = LV.spawns.filter(s => Math.hypot(s.fi - cx, s.fj - cy) > 12);
+  // monsters by quarter, out beyond the camp's meadow
+  const pack = (id, n, p, spread) => { for (let k = 0; k < n; k++) LV.spawns.push({ id, fi: p[0] + (R() - 0.5) * spread, fj: p[1] + (R() - 0.5) * spread }); };
+  for (const p of [[19, 21], [23, 15], [14, 13], [24, 22], [12, 24]]) pack('digger', R.int(2, 3), p, 2.5);   // north
+  for (const p of [[65, 21], [70, 20], [67, 15], [72, 29], [60, 13]]) pack('brigand', R.int(1, 2), p, 2.5);   // east
+  for (const p of [[14, 62], [19, 69], [12, 67], [22, 64], [24, 72]]) pack('wolf', R.int(2, 3), p, 2.5);   // west
+  LV.spawns = LV.spawns.filter(s => Math.hypot(s.fi - cx, s.fj - cy) > H.safe);
 }
 
 // ---------------------------------------------------------------- ground
@@ -845,6 +882,61 @@ const BUILD = {
   // round 38: an A-frame canvas tent (was a cone the user read as an acorn): two sloped panels on a
   // ridge pole, closed gable ends with a dark open flap at the front, seams down the panels, guy
   // ropes out to pegs from both ends of the ridge
+  // round 41, the camp's own places. The potion seller's covered wagon: a plank bed on four
+  // spoked wheels, a canvas hood on hoops, the back open on a shelf of glowing bottles, a shaft out front
+  wagon: () => propSprite('wagon', r => {
+    const HX = 21, HY = 12;
+    r.box([0, 0, 13], [HX, HY, 3.4], M.PLANK, null, { mf: p => Math.abs(((p[0] + 40) % 7) - 3.5) < 0.45 ? M.BARK : 0 });   // the bed
+    for (const sy of [-1, 1]) r.box([0, sy * HY, 17.5], [HX, 0.9, 2.6], M.WOOD);   // its side boards
+    for (const sx of [-14, 14]) for (const sy of [-1, 1]) {   // spoked wheels with an iron rim and a hub
+      r.cyl([sx, sy * (HY + 1.4), 9.5], [sx, sy * (HY + 3.2), 9.5], 9.5, M.WOOD, { mf: p => { const q = Math.hypot(p[0] - sx, p[2] - 9.5); return q > 8 ? M.IRON : q > 2.4 && Math.abs(Math.sin(Math.atan2(p[2] - 9.5, p[0] - sx) * 3)) > 0.5 ? M.BARK : M.PLANK; } });
+      r.cyl([sx, sy * (HY + 2.8), 9.5], [sx, sy * (HY + 4.2), 9.5], 2.2, M.IRON);
+    }
+    // the hood: boards round each hoop with seams, open at the back (-x)
+    for (let k = 0; k < 6; k++) {
+      const a0 = Math.PI * k / 6, a1 = Math.PI * (k + 1) / 6, am = (a0 + a1) / 2, R2 = HY + 1.5;
+      const c = [1.5, Math.cos(am) * R2, 20 + Math.sin(am) * R2 * 1.15];
+      const tg = V.norm([0, -Math.sin(am), Math.cos(am) * 1.15]), nm = V.norm([0, Math.cos(am), Math.sin(am)]);
+      r.box(c, [HX - 1.5, (a1 - a0) * R2 / 2 + 0.8, 0.9], M.CLOTH_WHITE, [[1, 0, 0], tg, nm], { mf: p => Math.abs(((p[0] + 40) % 10) - 5) < 0.55 ? M.CLOTH_TAN : 0 });
+    }
+    r.box([HX - 1, 0, 25], [0.9, HY, 9], M.CLOTH_WHITE);   // the front closed
+    // a shelf of glowing bottles along the side the camera sees, and a lantern hung at the back
+    r.box([-2, HY + 1.4, 22.5], [11, 1.6, 0.6], M.PLANK);
+    [M.EYE_RED, M.MAGIC, M.LEAFM, M.EYE_RED, M.GOLD, M.MAGIC, M.EYE_RED].forEach((m, k) => { const x = -11 + k * 3.4; r.cyl([x, HY + 1.6, 23], [x, HY + 1.6, 25.4], 1.25, m, { noShadow: true }); r.cyl([x, HY + 1.6, 25.4], [x, HY + 1.6, 26.6], 0.5, M.WOOD, { noShadow: true }); });
+    r.box([-HX - 1, HY - 2, 22], [1.4, 1.4, 1.8], M.IRON, null, { mf: p => Math.abs(p[2] - 22) < 1.2 ? M.LAMP : 0 });
+    r.cone([HX, 0, 9], [HX + 18, 0, 5], 1.3, 1.0, M.WOOD);   // the shaft
+  }, [132, 120, 66, 84], -0.55),
+  // Brother Osric's altar: a stone block with a white runner and a gold stripe down it, candles
+  // burning on it and at its feet, a gold cross on a stand
+  altar: () => propSprite('altar', r => {
+    r.box([0, 0, 1], [12, 8, 1], M.STONE);   // the step
+    r.box([0, 0, 8], [10, 6, 6], M.STONE, null, { mf: p => (Math.floor(p[2] / 4) % 2 ? Math.floor((p[0] + p[1] + 30) / 5) : Math.floor((p[0] + p[1] + 30) / 5 + 0.5)) % 3 === 0 ? M.ROCK : 0 });
+    r.box([0, 0, 14.4], [10.6, 6.6, 0.5], M.ROCK);   // the top slab
+    r.box([0, 0, 14.9], [10.8, 1.6, 0.4], M.CLOTH_WHITE, null, { mf: p => Math.abs(p[1]) > 1.1 ? M.GOLD : 0 }); r.box([0, 6.8, 12.6], [2.2, 0.4, 2.6], M.CLOTH_WHITE, null, { mf: p => Math.abs(p[0]) < 0.8 ? M.GOLD : 0 });   // the runner over the top and down the front
+    for (const [x, y, h] of [[-7, -4, 6], [-4, 3.5, 4.4], [6, -3.8, 3.6], [8, 3.6, 5]]) { r.cyl([x, y, 15], [x, y, 15 + h], 1, M.WAX); r.sph([x, y, 16.2 + h], 0.9, M.FIREM, { noShadow: true }); }
+    r.cyl([0, -1, 15], [0, -1, 27], 0.8, M.GOLD); r.box([0, -1, 24], [0.8, 3.4, 0.8], M.GOLD);   // the cross
+    for (const [x, y, h] of [[13, -9, 3.6], [-12, 10, 5], [14, 8, 4.4]]) { r.cyl([x, y, 0], [x, y, h], 1.1, M.WAX); r.sph([x, y, h + 1.1], 1, M.FIREM, { noShadow: true }); }
+  }, [64, 64, 32, 46], 0.4),
+  // the woodcutter's place, empty until he comes back: a chopping stump with the axe in it, split
+  // logs stacked against two posts
+  woodpile: () => propSprite('woodpile', r => {
+    r.cyl([13, 8, 0], [13, 8, 8], 6, M.BARK, { mf: p => p[2] > 7.8 ? (Math.floor(Math.hypot(p[0] - 13, p[1] - 8) * 1.2) % 2 ? M.PLANK : M.STRAWM) : 0 });
+    r.cone([13, 8, 8.5], [7, 12, 22], 0.9, 0.8, M.WOOD);   // the axe: a long haft, the head bitten into the stump
+    r.box([13.2, 8.4, 9.4], [3, 0.7, 2], M.IRON, [V.norm([0.6, -0.4, 0.7]), V.norm([0.5, 0.8, 0]), V.norm([-0.6, 0.4, 0.7])], { mf: p => p[2] < 8.6 ? M.BLADE : 0 });
+    for (const y of [-14, 6]) r.cyl([-5, y, 0], [-5, y, 20], 1.1, M.WOOD);
+    for (let row = 0; row < 4; row++) for (let k = 0; k < 5 - (row === 3 ? 2 : 0); k++) {
+      const y = -12 + k * 3.8 + (row % 2) * 1.9, z = 2.2 + row * 3.8;
+      r.cyl([-10, y, z], [0, y, z], 1.9, M.BARK, { mf: p => p[0] > -0.5 ? (Math.hypot(p[1] - y, p[2] - z) < 1.1 ? M.STRAWM : M.PLANK) : 0 });   // light cut ends toward the camera
+    }
+  }, [80, 64, 40, 44], 0.5 + Math.PI),
+  // the farmer's place, waiting for him: a two-wheeled hay cart tipped on its shafts, a pitchfork
+  haycart: () => propSprite('haycart', r => {
+    const ax = [V.norm([1, 0, -0.18]), [0, 1, 0], V.norm([0.18, 0, 1])];
+    r.box([0, 0, 9], [11, 7, 2], M.PLANK, ax, { mf: p => Math.abs(((p[1] + 30) % 5) - 2.5) < 0.4 ? M.BARK : 0 });
+    for (const sy of [-1, 1]) { r.cyl([1, sy * 8, 7.5], [1, sy * 9.4, 7.5], 7.5, M.WOOD, { mf: p => Math.hypot(p[0] - 1, p[2] - 7.5) > 6.4 ? M.IRON : 0 }); r.cone([10, sy * 6, 7], [21, sy * 5, 1], 0.9, 0.7, M.WOOD); }
+    r.ell([-0.5, 0, 14.5], [10, 6.4, 5.2], M.STRAWM, null, { mf: p => hash(Math.floor(p[0] * 1.5), Math.floor(p[1] + p[2] * 2), 3) < 0.2 ? M.WOOD : 0 });
+    r.cone([-14, 8, 0], [-9, 4, 22], 0.6, 0.5, M.WOOD); for (const d of [-0.9, 0, 0.9]) r.cone([-9 + d * 0.3, 4 + d, 22], [-8.4 + d * 0.3, 3.6 + d, 26], 0.35, 0.2, M.IRON);
+  }, [64, 60, 32, 42], -0.6),
   tent: () => propSprite('tent', r => {
     const HW = 16, HT = 25, HL = 13, L = Math.hypot(HW, HT);   // half width at the base, height, half length
     for (const s of [-1, 1]) {   // the two sloped panels
