@@ -1,0 +1,715 @@
+{
+ "monsters": [
+  {
+   "id": "skeleton",
+   "name": "SKELETON",
+   "title": "",
+   "family": "skeleton",
+   "hp": 14,
+   "boss": false
+  },
+  {
+   "id": "archer",
+   "name": "SKELETON ARCHER",
+   "title": "",
+   "family": "skeleton",
+   "hp": 10,
+   "boss": false
+  },
+  {
+   "id": "burning",
+   "name": "BURNING DEAD",
+   "title": "",
+   "family": "skeleton",
+   "hp": 24,
+   "boss": false
+  },
+  {
+   "id": "fallen",
+   "name": "FALLEN ONE",
+   "title": "",
+   "family": "fallen",
+   "hp": 7,
+   "boss": false
+  },
+  {
+   "id": "shaman",
+   "name": "FALLEN SHAMAN",
+   "title": "",
+   "family": "fallen",
+   "hp": 9,
+   "boss": false
+  },
+  {
+   "id": "hound",
+   "name": "BONE HOUND",
+   "title": "",
+   "family": "hound",
+   "hp": 16,
+   "boss": false
+  },
+  {
+   "id": "lich",
+   "name": "THE LICH",
+   "title": "WHO DIED AND WOULD NOT STAY DEAD",
+   "family": "skeleton",
+   "hp": 260,
+   "boss": true
+  },
+  {
+   "id": "skelking",
+   "name": "SKELETON KING",
+   "title": "LORD OF THE RESTLESS DEAD",
+   "family": "skeleton",
+   "hp": 170,
+   "boss": true
+  },
+  {
+   "id": "treant",
+   "name": "TREANT ELDER",
+   "title": "THE WOOD THAT WALKS",
+   "family": "treant",
+   "hp": 170,
+   "boss": true
+  },
+  {
+   "id": "warlord",
+   "name": "OGRE WARLORD",
+   "title": "TYRANT OF THE DEEP WOODS",
+   "family": "ogre",
+   "hp": 140,
+   "boss": true
+  },
+  {
+   "id": "shroom",
+   "name": "SHROOMLING",
+   "title": "",
+   "family": "shroom",
+   "hp": 10,
+   "boss": false
+  },
+  {
+   "id": "sporecap",
+   "name": "SPORECAP",
+   "title": "",
+   "family": "shroom",
+   "hp": 16,
+   "boss": false
+  },
+  {
+   "id": "wraith",
+   "name": "WRAITH",
+   "title": "",
+   "family": "wraith",
+   "hp": 18,
+   "boss": false
+  },
+  {
+   "id": "slime",
+   "name": "SLIME",
+   "title": "",
+   "family": "slime",
+   "hp": 8,
+   "boss": false
+  },
+  {
+   "id": "blueslime",
+   "name": "BIG BLUE SLIME",
+   "title": "",
+   "family": "slime",
+   "hp": 30,
+   "boss": false
+  },
+  {
+   "id": "bear",
+   "name": "DIRE BEAR",
+   "title": "",
+   "family": "hound",
+   "hp": 46,
+   "boss": false
+  },
+  {
+   "id": "boar",
+   "name": "BOAR",
+   "title": "",
+   "family": "hound",
+   "hp": 20,
+   "boss": false
+  },
+  {
+   "id": "treasure",
+   "name": "TREASURE GOBLIN",
+   "title": "",
+   "family": "fallen",
+   "hp": 34,
+   "boss": false
+  },
+  {
+   "id": "gchief",
+   "name": "GOBLIN CHIEFTAIN",
+   "title": "",
+   "family": "fallen",
+   "hp": 60,
+   "boss": false
+  },
+  {
+   "id": "gshaman",
+   "name": "GOBLIN SHAMAN",
+   "title": "",
+   "family": "fallen",
+   "hp": 9,
+   "boss": false
+  },
+  {
+   "id": "brigand",
+   "name": "BRIGAND",
+   "title": "",
+   "family": "hero",
+   "hp": 22,
+   "boss": false
+  },
+  {
+   "id": "wolf",
+   "name": "WOLF",
+   "title": "",
+   "family": "hound",
+   "hp": 14,
+   "boss": false
+  },
+  {
+   "id": "digger",
+   "name": "DIGGER",
+   "title": "",
+   "family": "fallen",
+   "hp": 10,
+   "boss": false
+  },
+  {
+   "id": "alpha",
+   "name": "THE ALPHA",
+   "title": "",
+   "family": "hound",
+   "hp": 70,
+   "boss": false
+  },
+  {
+   "id": "banditchief",
+   "name": "BANDIT CHIEF",
+   "title": "",
+   "family": "hero",
+   "hp": 80,
+   "boss": false
+  },
+  {
+   "id": "goblin",
+   "name": "GOBLIN",
+   "title": "",
+   "family": "fallen",
+   "hp": 9,
+   "boss": false
+  },
+  {
+   "id": "ghoulhound",
+   "name": "HELL HOUND",
+   "title": "",
+   "family": "hound",
+   "hp": 28,
+   "boss": false
+  },
+  {
+   "id": "spider",
+   "name": "CAVE SPIDER",
+   "title": "",
+   "family": "spider",
+   "hp": 10,
+   "boss": false
+  },
+  {
+   "id": "broodmother",
+   "name": "BROODMOTHER",
+   "title": "MOTHER OF A THOUSAND LEGS",
+   "family": "spider",
+   "hp": 60,
+   "boss": true
+  }
+ ],
+ "heroes": [
+  {
+   "cls": "warrior",
+   "label": "starter",
+   "file": "heroes/warrior-starter.png",
+   "items": [
+    "short_sword",
+    "tunic"
+   ]
+  },
+  {
+   "cls": "warrior",
+   "label": "chain and kite",
+   "file": "heroes/warrior-chain-and-kite.png",
+   "items": [
+    "long_sword",
+    "chain_mail",
+    "barbute",
+    "kite_shield"
+   ]
+  },
+  {
+   "cls": "warrior",
+   "label": "WARDEN'S set",
+   "file": "heroes/warrior-warden-s-set.png",
+   "items": [
+    "long_sword",
+    "great_helm:warden",
+    "plate_mail:warden",
+    "kite_shield:warden"
+   ]
+  },
+  {
+   "cls": "warrior",
+   "label": "SCOUT'S set",
+   "file": "heroes/warrior-scout-s-set.png",
+   "items": [
+    "hand_axe",
+    "cap:ranger",
+    "brigandine:ranger",
+    "buckler:ranger"
+   ]
+  },
+  {
+   "cls": "warrior",
+   "label": "dark plate",
+   "file": "heroes/warrior-dark-plate.png",
+   "items": [
+    "battle_axe",
+    "dark_plate",
+    "horned_helm",
+    "tower_shield"
+   ]
+  },
+  {
+   "cls": "warrior",
+   "label": "best gear",
+   "file": "heroes/warrior-best-gear.png",
+   "items": [
+    "bastard_sword",
+    "gothic_plate",
+    "bascinet",
+    "heater_shield"
+   ]
+  },
+  {
+   "cls": "warrior",
+   "label": "legendaries",
+   "file": "heroes/warrior-legendaries.png",
+   "items": [
+    "long_sword!",
+    "crown_helm!",
+    "tower_shield!",
+    "brigandine!"
+   ]
+  },
+  {
+   "cls": "mage",
+   "label": "starter",
+   "file": "heroes/mage-starter.png",
+   "items": [
+    "oak_staff",
+    "apprentice_robe",
+    "wizard_hat"
+   ]
+  },
+  {
+   "cls": "mage",
+   "label": "MAGUS set",
+   "file": "heroes/mage-magus-set.png",
+   "items": [
+    "oak_staff:magus",
+    "mystic_robe:magus",
+    "wizard_hat:magus"
+   ]
+  },
+  {
+   "cls": "mage",
+   "label": "fire",
+   "file": "heroes/mage-fire.png",
+   "items": [
+    "battle_staff",
+    "archmage_robe",
+    "hood"
+   ]
+  },
+  {
+   "cls": "mage",
+   "label": "best gear",
+   "file": "heroes/mage-best-gear.png",
+   "items": [
+    "runed_staff",
+    "sorcerer_robe",
+    "conjurer_hat"
+   ]
+  },
+  {
+   "cls": "mage",
+   "label": "legendaries",
+   "file": "heroes/mage-legendaries.png",
+   "items": [
+    "ember_staff!",
+    "archmage_robe!",
+    "wizard_hat!"
+   ]
+  },
+  {
+   "cls": "ranger",
+   "label": "starter",
+   "file": "heroes/ranger-starter.png",
+   "items": [
+    "hunting_bow",
+    "leather_jerkin",
+    "ranger_hood",
+    "quiver"
+   ]
+  },
+  {
+   "cls": "ranger",
+   "label": "STALKER'S set",
+   "file": "heroes/ranger-stalker-s-set.png",
+   "items": [
+    "long_bow",
+    "shadow_hood:stalker",
+    "studded_jerkin:stalker",
+    "war_quiver:stalker"
+   ]
+  },
+  {
+   "cls": "ranger",
+   "label": "best gear",
+   "file": "heroes/ranger-best-gear.png",
+   "items": [
+    "war_bow",
+    "drake_hide",
+    "night_hood",
+    "deep_quiver"
+   ]
+  },
+  {
+   "cls": "ranger",
+   "label": "legendaries",
+   "file": "heroes/ranger-legendaries.png",
+   "items": [
+    "long_bow!",
+    "hide_coat!",
+    "hunter_hood",
+    "deep_quiver"
+   ]
+  }
+ ],
+ "gear": [
+  {
+   "cls": "warrior",
+   "slot": "weapon",
+   "file": "gear/warrior-weapon.png",
+   "bases": [
+    "short_sword",
+    "long_sword",
+    "hand_axe",
+    "war_axe",
+    "mace",
+    "flail",
+    "greatsword",
+    "broadsword",
+    "bastard_sword",
+    "morning_star",
+    "battle_axe"
+   ]
+  },
+  {
+   "cls": "warrior",
+   "slot": "helm",
+   "file": "gear/warrior-helm.png",
+   "bases": [
+    "cap",
+    "great_helm",
+    "horned_helm",
+    "barbute",
+    "crown_helm",
+    "spangenhelm",
+    "bascinet"
+   ]
+  },
+  {
+   "cls": "warrior",
+   "slot": "chest",
+   "file": "gear/warrior-chest.png",
+   "bases": [
+    "tunic",
+    "chain_mail",
+    "plate_mail",
+    "brigandine",
+    "dark_plate",
+    "scale_mail",
+    "gothic_plate"
+   ]
+  },
+  {
+   "cls": "warrior",
+   "slot": "shield",
+   "file": "gear/warrior-shield.png",
+   "bases": [
+    "buckler",
+    "kite_shield",
+    "round_shield",
+    "tower_shield",
+    "targe",
+    "heater_shield"
+   ]
+  },
+  {
+   "cls": "mage",
+   "slot": "weapon",
+   "file": "gear/mage-weapon.png",
+   "bases": [
+    "oak_staff",
+    "ember_staff",
+    "frost_staff",
+    "battle_staff",
+    "runed_staff"
+   ]
+  },
+  {
+   "cls": "mage",
+   "slot": "helm",
+   "file": "gear/mage-helm.png",
+   "bases": [
+    "wizard_hat",
+    "hood",
+    "conjurer_hat",
+    "sage_hood"
+   ]
+  },
+  {
+   "cls": "mage",
+   "slot": "chest",
+   "file": "gear/mage-chest.png",
+   "bases": [
+    "apprentice_robe",
+    "mystic_robe",
+    "archmage_robe",
+    "silk_robe",
+    "sorcerer_robe"
+   ]
+  },
+  {
+   "cls": "ranger",
+   "slot": "weapon",
+   "file": "gear/ranger-weapon.png",
+   "bases": [
+    "hunting_bow",
+    "long_bow",
+    "horn_bow",
+    "ash_bow",
+    "recurve_bow",
+    "war_bow"
+   ]
+  },
+  {
+   "cls": "ranger",
+   "slot": "helm",
+   "file": "gear/ranger-helm.png",
+   "bases": [
+    "ranger_hood",
+    "shadow_hood",
+    "hunter_hood",
+    "night_hood"
+   ]
+  },
+  {
+   "cls": "ranger",
+   "slot": "chest",
+   "file": "gear/ranger-chest.png",
+   "bases": [
+    "leather_jerkin",
+    "studded_jerkin",
+    "hide_coat",
+    "scale_jerkin",
+    "drake_hide"
+   ]
+  },
+  {
+   "cls": "ranger",
+   "slot": "shield",
+   "file": "gear/ranger-shield.png",
+   "bases": [
+    "quiver",
+    "war_quiver",
+    "deep_quiver"
+   ]
+  }
+ ],
+ "items": [
+  {
+   "slot": "weapon",
+   "file": "items/weapon.png",
+   "n": 22
+  },
+  {
+   "slot": "helm",
+   "file": "items/helm.png",
+   "n": 15
+  },
+  {
+   "slot": "chest",
+   "file": "items/chest.png",
+   "n": 17
+  },
+  {
+   "slot": "shield",
+   "file": "items/shield.png",
+   "n": 9
+  },
+  {
+   "slot": "ring",
+   "file": "items/ring.png",
+   "n": 1
+  },
+  {
+   "slot": "amulet",
+   "file": "items/amulet.png",
+   "n": 1
+  },
+  {
+   "slot": "potion",
+   "file": "items/potion.png",
+   "n": 2
+  }
+ ],
+ "palette": [
+  "#000000",
+  "#0a0706",
+  "#151013",
+  "#1d1619",
+  "#1e171a",
+  "#2b2020",
+  "#41302a",
+  "#584130",
+  "#705437",
+  "#8a663d",
+  "#a37a45",
+  "#b98d50",
+  "#cfa262",
+  "#4a1f0e",
+  "#8a3a12",
+  "#c4601a",
+  "#ec9a32",
+  "#f8d16a",
+  "#fff4c4",
+  "#2c0a16",
+  "#4d0f1b",
+  "#781a1e",
+  "#a8281f",
+  "#d4473a",
+  "#6f6670",
+  "#a49a8a",
+  "#d8ceb0",
+  "#f6efdb",
+  "#262b37",
+  "#434e60",
+  "#6f7b8c",
+  "#a3adba",
+  "#dbe2e8",
+  "#351d16",
+  "#56331f",
+  "#7c502e",
+  "#a26e3c",
+  "#0d1640",
+  "#1d3592",
+  "#3b62d6",
+  "#8fb0ff",
+  "#291820",
+  "#45282b",
+  "#663a2f",
+  "#3a0f0c",
+  "#6e1c14",
+  "#a0301f",
+  "#cf5034",
+  "#5c3610",
+  "#a8781a",
+  "#deae2a",
+  "#f8de6a",
+  "#12261a",
+  "#24452a",
+  "#3f6e35",
+  "#78a84a",
+  "#25123a",
+  "#45206a",
+  "#7438a8",
+  "#b070e0",
+  "#4a2a22",
+  "#7a4a36",
+  "#b07a58",
+  "#dcae86",
+  "#1a1a1f",
+  "#272830",
+  "#363844",
+  "#4a4c58",
+  "#62646e",
+  "#7e7f86",
+  "#1f6f6a",
+  "#3fbfae",
+  "#9ff5e0",
+  "#1f0c0c",
+  "#341414",
+  "#4d1c18",
+  "#6b2a1f",
+  "#8c3a26",
+  "#a85232",
+  "#5a1206",
+  "#9a2208",
+  "#d8420c",
+  "#f8781a",
+  "#ffb43a",
+  "#ffe27a",
+  "#1f3326",
+  "#2b4630",
+  "#3d5a35",
+  "#55703c",
+  "#6f8545",
+  "#8f9a55",
+  "#b0ad6a",
+  "#17291f",
+  "#233d2a",
+  "#325634",
+  "#4a7238",
+  "#6a8d40",
+  "#93ac58",
+  "#3a2a20",
+  "#56402c",
+  "#735a3c",
+  "#93764e",
+  "#b0935f",
+  "#cbb07a",
+  "#5a4220",
+  "#876426",
+  "#b08a34",
+  "#d4b350",
+  "#eed580",
+  "#5a1f0c",
+  "#9a3d12",
+  "#d0661c",
+  "#f29a3a",
+  "#ffc77a",
+  "#142a44",
+  "#1e4566",
+  "#2f6a8a",
+  "#5b9cb4",
+  "#a8d8e0",
+  "#4a1a14",
+  "#7a2c1a",
+  "#a8461e",
+  "#cf6e2a",
+  "#3fae3a",
+  "#8af06a",
+  "#f2cc9e"
+ ],
+ "heroHeight": 39
+}

@@ -1,0 +1,164 @@
+<title>Bestiary</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the round pages) */
+  :root { --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', Georgia, serif; --body: 'Source Sans 3', system-ui, sans-serif; color-scheme: dark; }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding: 28px max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px)); }
+  main { max-width: 760px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: .04em; }
+  h2 { font: 600 1.1rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: .05em; }
+  h3 { font: 600 1rem/1.3 var(--body); color: var(--bone); margin: 8px 0 0; }
+  p, ul { margin: 0; max-width: 66ch; } ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); } a { color: var(--ember); }
+  figure { margin: 0; display: grid; gap: 6px; min-width: 0; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .scroll { overflow-x: auto; background: var(--panel); border: 1px solid var(--rule); padding: 6px; }
+  .scroll img { display: block; image-rendering: pixelated; max-width: none; }
+  figcaption { color: var(--dim); font-size: .9rem; }
+  pre { white-space: pre-wrap; background: var(--panel); border: 1px solid var(--rule); padding: 12px; margin: 0; font-size: .9rem; color: var(--bone); }
+  button.save { font: 600 .85rem var(--body); color: var(--crypt); background: var(--ember); border: 0; border-radius: 3px; padding: 2px 8px; cursor: pointer; }
+  button.save.big { font-size: 1rem; padding: 8px 14px; justify-self: start; }
+  .pal img { width: 352px; max-width: 100%; height: auto; image-rendering: pixelated; display: block; }
+</style>
+<main>
+<header>
+  <h1>Bestiary</h1>
+  <p class="lede">Every monster, hero outfit, gear look and item in Dungeon of Bones, exactly as the game draws them. For an image generator or artist to design new ones in the same style.</p>
+</header>
+<section>
+  <h2>How to use it</h2>
+  <ul>
+    <li>Give the generator an overview sheet (heroes or monsters) plus the palette as the style reference, and describe the new design in the prompt below.</li>
+    <li>For new armor, also give it that class&rsquo;s gear row, so it sees how a piece sits on the hero.</li>
+    <li>Bring the result back to the art chat. It rebuilds the design from the game&rsquo;s 3D shapes and runs it through the art review, so ask for clear silhouettes, colors and shapes rather than fine painted detail.</li>
+  </ul>
+</section>
+<section>
+  <h2>The style</h2>
+  <ul>
+    <li><strong>View:</strong> isometric 3/4 view from above, with 2:1 diamond floor tiles (32&times;16 game pixels). Characters have 8 facings.</li>
+    <li><strong>Size:</strong> the screen is 270&times;480 game pixels. A hero is about 39 game pixels tall. Characters are drawn at twice that detail (one sprite pixel is half a game pixel), which is what these sheets show.</li>
+    <li><strong>Proportions:</strong> chibi. A big round head, about a third of the height, on a short, sturdy body. Big readable weapons and helmets.</li>
+    <li><strong>Construction:</strong> every part is a simple 3D shape (spheres, cylinders, boxes, cones) shaded in flat bands of 3 to 5 tones from one color ramp. No gradients, no texture noise, no anti-aliasing.</li>
+    <li><strong>Light:</strong> from the upper left, with darker, slightly cooler shadow sides at the lower right.</li>
+    <li><strong>Outline:</strong> a 1-pixel dark outline around the silhouette, and no black lines inside it.</li>
+    <li><strong>Colors:</strong> only the palette below. Each material (bone, iron, cloth, leather, skin, fur) has its own ramp.</li>
+    <li><strong>Animation:</strong> idle, a walk cycle, attack wind-up and strike, hit and death. The sheets show one frame of each.</li>
+  </ul>
+</section>
+<section>
+  <h2>Prompt template</h2>
+<pre>Pixel art game sprite, same style as the attached reference sheet: chibi proportions (big round head, short sturdy body), isometric 3/4 top-down view, shown from 4 angles (front, front 3/4, side, back) side by side. Built from simple chunky shapes with flat 3-5 tone shading, light from the upper left, a 1-pixel dark outline, no gradients, no anti-aliasing, limited palette (attached), plain dark background, about 80 pixels tall.
+Subject: [describe the new monster / armor / weapon here].</pre>
+</section>
+<section>
+  <h2>Palette</h2>
+  <figure class="pal"><div class="frame"><img src="palette.png" alt="The game palette: 126 numbered color swatches in ramps from dark to light" width="352" height="176" loading="lazy"></div><figcaption>All 126 colors the game uses, numbered. <button class="save" data-src="palette.png" hidden>save PNG</button></figcaption></figure>
+</section>
+<section>
+  <h2>Overview sheets</h2>
+  <figure><div class="frame"><img src="sheet-heroes.png" alt="All hero outfits facing front-right: warriors, mages and rangers" width="903" height="922" loading="lazy"></div><figcaption>The three heroes in every outfit. <button class="save" data-src="sheet-heroes.png" hidden>save PNG</button></figcaption></figure>
+  <figure><div class="frame"><img src="sheet-monsters.png" alt="All ordinary monsters facing front-right at the same scale" width="981" height="1199" loading="lazy"></div><figcaption>The monsters, all at one scale. <button class="save" data-src="sheet-monsters.png" hidden>save PNG</button></figcaption></figure>
+  <figure><div class="frame"><img src="sheet-bosses.png" alt="The bosses and big monsters" width="564" height="640" loading="lazy"></div><figcaption>Bosses and big ones, drawn smaller than the rest. <button class="save" data-src="sheet-bosses.png" hidden>save PNG</button></figcaption></figure>
+</section>
+<section>
+  <h2>Heroes, outfit by outfit</h2>
+  <p class="lede">Six facings, two walk frames and the attack. Scroll each row sideways.</p>
+<figure><div class="scroll"><img src="heroes/warrior-starter.png" alt="warrior starter in six facings, walk and attack" width="1752" height="293" style="height:146px;width:auto" loading="lazy"></div><figcaption>Warrior: starter &middot; <button class="save" data-src="heroes/warrior-starter.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="heroes/warrior-chain-and-kite.png" alt="warrior chain and kite in six facings, walk and attack" width="1782" height="305" style="height:152px;width:auto" loading="lazy"></div><figcaption>Warrior: chain and kite &middot; <button class="save" data-src="heroes/warrior-chain-and-kite.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="heroes/warrior-warden-s-set.png" alt="warrior WARDEN&#x27;S set in six facings, walk and attack" width="1878" height="320" style="height:160px;width:auto" loading="lazy"></div><figcaption>Warrior: WARDEN&#x27;S set &middot; <button class="save" data-src="heroes/warrior-warden-s-set.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="heroes/warrior-scout-s-set.png" alt="warrior SCOUT&#x27;S set in six facings, walk and attack" width="1641" height="323" style="height:161px;width:auto" loading="lazy"></div><figcaption>Warrior: SCOUT&#x27;S set &middot; <button class="save" data-src="heroes/warrior-scout-s-set.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="heroes/warrior-dark-plate.png" alt="warrior dark plate in six facings, walk and attack" width="1929" height="350" style="height:175px;width:auto" loading="lazy"></div><figcaption>Warrior: dark plate &middot; <button class="save" data-src="heroes/warrior-dark-plate.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="heroes/warrior-best-gear.png" alt="warrior best gear in six facings, walk and attack" width="1923" height="326" style="height:163px;width:auto" loading="lazy"></div><figcaption>Warrior: best gear &middot; <button class="save" data-src="heroes/warrior-best-gear.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="heroes/warrior-legendaries.png" alt="warrior legendaries in six facings, walk and attack" width="1830" height="311" style="height:155px;width:auto" loading="lazy"></div><figcaption>Warrior: legendaries &middot; <button class="save" data-src="heroes/warrior-legendaries.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="heroes/mage-starter.png" alt="mage starter in six facings, walk and attack" width="1560" height="365" style="height:182px;width:auto" loading="lazy"></div><figcaption>Mage: starter &middot; <button class="save" data-src="heroes/mage-starter.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="heroes/mage-magus-set.png" alt="mage MAGUS set in six facings, walk and attack" width="1560" height="374" style="height:187px;width:auto" loading="lazy"></div><figcaption>Mage: MAGUS set &middot; <button class="save" data-src="heroes/mage-magus-set.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="heroes/mage-fire.png" alt="mage fire in six facings, walk and attack" width="1551" height="332" style="height:166px;width:auto" loading="lazy"></div><figcaption>Mage: fire &middot; <button class="save" data-src="heroes/mage-fire.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="heroes/mage-best-gear.png" alt="mage best gear in six facings, walk and attack" width="1650" height="365" style="height:182px;width:auto" loading="lazy"></div><figcaption>Mage: best gear &middot; <button class="save" data-src="heroes/mage-best-gear.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="heroes/mage-legendaries.png" alt="mage legendaries in six facings, walk and attack" width="1566" height="365" style="height:182px;width:auto" loading="lazy"></div><figcaption>Mage: legendaries &middot; <button class="save" data-src="heroes/mage-legendaries.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="heroes/ranger-starter.png" alt="ranger starter in six facings, walk and attack" width="1332" height="287" style="height:143px;width:auto" loading="lazy"></div><figcaption>Ranger: starter &middot; <button class="save" data-src="heroes/ranger-starter.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="heroes/ranger-stalker-s-set.png" alt="ranger STALKER&#x27;S set in six facings, walk and attack" width="1359" height="290" style="height:145px;width:auto" loading="lazy"></div><figcaption>Ranger: STALKER&#x27;S set &middot; <button class="save" data-src="heroes/ranger-stalker-s-set.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="heroes/ranger-best-gear.png" alt="ranger best gear in six facings, walk and attack" width="1335" height="299" style="height:149px;width:auto" loading="lazy"></div><figcaption>Ranger: best gear &middot; <button class="save" data-src="heroes/ranger-best-gear.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="heroes/ranger-legendaries.png" alt="ranger legendaries in six facings, walk and attack" width="1335" height="305" style="height:152px;width:auto" loading="lazy"></div><figcaption>Ranger: legendaries &middot; <button class="save" data-src="heroes/ranger-legendaries.png" hidden>save PNG</button></figcaption></figure>
+</section><section><h2>Every gear look, worn</h2><p class="lede">Each piece the hero can wear, on the hero (front-right), class by class.</p>
+<figure><div class="scroll"><img src="gear/warrior-weapon.png" alt="warrior weapons: short_sword, long_sword, hand_axe, war_axe, mace, flail, greatsword, broadsword, bastard_sword, morning_star, battle_axe" width="1485" height="290" style="height:145px;width:auto" loading="lazy"></div><figcaption>Warrior weapons (11) &middot; <button class="save" data-src="gear/warrior-weapon.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="gear/warrior-helm.png" alt="warrior helms: cap, great_helm, horned_helm, barbute, crown_helm, spangenhelm, bascinet" width="963" height="329" style="height:164px;width:auto" loading="lazy"></div><figcaption>Warrior helms (7) &middot; <button class="save" data-src="gear/warrior-helm.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="gear/warrior-chest.png" alt="warrior chests: tunic, chain_mail, plate_mail, brigandine, dark_plate, scale_mail, gothic_plate" width="963" height="290" style="height:145px;width:auto" loading="lazy"></div><figcaption>Warrior chests (7) &middot; <button class="save" data-src="gear/warrior-chest.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="gear/warrior-shield.png" alt="warrior shields: buckler, kite_shield, round_shield, tower_shield, targe, heater_shield" width="867" height="290" style="height:145px;width:auto" loading="lazy"></div><figcaption>Warrior shields (6) &middot; <button class="save" data-src="gear/warrior-shield.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="gear/mage-weapon.png" alt="mage weapons: oak_staff, ember_staff, frost_staff, battle_staff, runed_staff" width="729" height="344" style="height:172px;width:auto" loading="lazy"></div><figcaption>Mage weapons (5) &middot; <button class="save" data-src="gear/mage-weapon.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="gear/mage-helm.png" alt="mage helms: wizard_hat, hood, conjurer_hat, sage_hood" width="576" height="344" style="height:172px;width:auto" loading="lazy"></div><figcaption>Mage helms (4) &middot; <button class="save" data-src="gear/mage-helm.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="gear/mage-chest.png" alt="mage chests: apprentice_robe, mystic_robe, archmage_robe, silk_robe, sorcerer_robe" width="720" height="344" style="height:172px;width:auto" loading="lazy"></div><figcaption>Mage chests (5) &middot; <button class="save" data-src="gear/mage-chest.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="gear/ranger-weapon.png" alt="ranger weapons: hunting_bow, long_bow, horn_bow, ash_bow, recurve_bow, war_bow" width="810" height="281" style="height:140px;width:auto" loading="lazy"></div><figcaption>Ranger weapons (6) &middot; <button class="save" data-src="gear/ranger-weapon.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="gear/ranger-helm.png" alt="ranger helms: ranger_hood, shadow_hood, hunter_hood, night_hood" width="540" height="281" style="height:140px;width:auto" loading="lazy"></div><figcaption>Ranger helms (4) &middot; <button class="save" data-src="gear/ranger-helm.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="gear/ranger-chest.png" alt="ranger chests: leather_jerkin, studded_jerkin, hide_coat, scale_jerkin, drake_hide" width="675" height="281" style="height:140px;width:auto" loading="lazy"></div><figcaption>Ranger chests (5) &middot; <button class="save" data-src="gear/ranger-chest.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="gear/ranger-shield.png" alt="ranger shields: quiver, war_quiver, deep_quiver" width="520" height="281" style="height:140px;width:auto" loading="lazy"></div><figcaption>Ranger shields (3) &middot; <button class="save" data-src="gear/ranger-shield.png" hidden>save PNG</button></figcaption></figure>
+</section><section><h2>Monsters</h2><p class="lede">Six facings, then walk, wind-up, strike, hit and death. Grouped by body family: one body can wear many looks.</p>
+<h3>Skeleton family</h3>
+<figure><div class="scroll"><img src="monsters/skeleton.png" alt="SKELETON in six facings and its action frames" width="2166" height="422" style="height:200px;width:auto" loading="lazy"></div><figcaption>Skeleton &middot; <button class="save" data-src="monsters/skeleton.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="monsters/archer.png" alt="SKELETON ARCHER in six facings and its action frames" width="1581" height="395" style="height:197px;width:auto" loading="lazy"></div><figcaption>Skeleton Archer &middot; <button class="save" data-src="monsters/archer.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="monsters/burning.png" alt="BURNING DEAD in six facings and its action frames" width="1866" height="455" style="height:200px;width:auto" loading="lazy"></div><figcaption>Burning Dead &middot; <button class="save" data-src="monsters/burning.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="monsters/lich.png" alt="THE LICH in six facings and its action frames" width="1764" height="408" style="height:200px;width:auto" loading="lazy"></div><figcaption>The Lich (Who died and would not stay dead) &middot; boss &middot; <button class="save" data-src="monsters/lich.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="monsters/skelking.png" alt="SKELETON KING in six facings and its action frames" width="2034" height="414" style="height:200px;width:auto" loading="lazy"></div><figcaption>Skeleton King (Lord of the restless dead) &middot; boss &middot; <button class="save" data-src="monsters/skelking.png" hidden>save PNG</button></figcaption></figure>
+<h3>Fallen family</h3>
+<figure><div class="scroll"><img src="monsters/fallen.png" alt="FALLEN ONE in six facings and its action frames" width="1476" height="260" style="height:130px;width:auto" loading="lazy"></div><figcaption>Fallen One &middot; <button class="save" data-src="monsters/fallen.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="monsters/shaman.png" alt="FALLEN SHAMAN in six facings and its action frames" width="1428" height="260" style="height:130px;width:auto" loading="lazy"></div><figcaption>Fallen Shaman &middot; <button class="save" data-src="monsters/shaman.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="monsters/treasure.png" alt="TREASURE GOBLIN in six facings and its action frames" width="1767" height="281" style="height:140px;width:auto" loading="lazy"></div><figcaption>Treasure Goblin &middot; <button class="save" data-src="monsters/treasure.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="monsters/gchief.png" alt="GOBLIN CHIEFTAIN in six facings and its action frames" width="2262" height="383" style="height:191px;width:auto" loading="lazy"></div><figcaption>Goblin Chieftain &middot; <button class="save" data-src="monsters/gchief.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="monsters/gshaman.png" alt="GOBLIN SHAMAN in six facings and its action frames" width="1572" height="260" style="height:130px;width:auto" loading="lazy"></div><figcaption>Goblin Shaman &middot; <button class="save" data-src="monsters/gshaman.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="monsters/digger.png" alt="DIGGER in six facings and its action frames" width="1530" height="263" style="height:131px;width:auto" loading="lazy"></div><figcaption>Digger &middot; <button class="save" data-src="monsters/digger.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="monsters/goblin.png" alt="GOBLIN in six facings and its action frames" width="1614" height="260" style="height:130px;width:auto" loading="lazy"></div><figcaption>Goblin &middot; <button class="save" data-src="monsters/goblin.png" hidden>save PNG</button></figcaption></figure>
+<h3>Hound family</h3>
+<figure><div class="scroll"><img src="monsters/hound.png" alt="BONE HOUND in six facings and its action frames" width="2472" height="314" style="height:157px;width:auto" loading="lazy"></div><figcaption>Bone Hound &middot; <button class="save" data-src="monsters/hound.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="monsters/bear.png" alt="DIRE BEAR in six facings and its action frames" width="2066" height="274" style="height:137px;width:auto" loading="lazy"></div><figcaption>Dire Bear &middot; <button class="save" data-src="monsters/bear.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="monsters/boar.png" alt="BOAR in six facings and its action frames" width="2334" height="275" style="height:137px;width:auto" loading="lazy"></div><figcaption>Boar &middot; <button class="save" data-src="monsters/boar.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="monsters/wolf.png" alt="WOLF in six facings and its action frames" width="2319" height="284" style="height:142px;width:auto" loading="lazy"></div><figcaption>Wolf &middot; <button class="save" data-src="monsters/wolf.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="monsters/alpha.png" alt="THE ALPHA in six facings and its action frames" width="3237" height="386" style="height:193px;width:auto" loading="lazy"></div><figcaption>The Alpha &middot; <button class="save" data-src="monsters/alpha.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="monsters/ghoulhound.png" alt="HELL HOUND in six facings and its action frames" width="2793" height="350" style="height:175px;width:auto" loading="lazy"></div><figcaption>Hell Hound &middot; <button class="save" data-src="monsters/ghoulhound.png" hidden>save PNG</button></figcaption></figure>
+<h3>Treant family</h3>
+<figure><div class="scroll"><img src="monsters/treant.png" alt="TREANT ELDER in six facings and its action frames" width="1850" height="298" style="height:149px;width:auto" loading="lazy"></div><figcaption>Treant Elder (The wood that walks) &middot; boss &middot; <button class="save" data-src="monsters/treant.png" hidden>save PNG</button></figcaption></figure>
+<h3>Ogre family</h3>
+<figure><div class="scroll"><img src="monsters/warlord.png" alt="OGRE WARLORD in six facings and its action frames" width="2114" height="322" style="height:161px;width:auto" loading="lazy"></div><figcaption>Ogre Warlord (Tyrant of the deep woods) &middot; boss &middot; <button class="save" data-src="monsters/warlord.png" hidden>save PNG</button></figcaption></figure>
+<h3>Shroom family</h3>
+<figure><div class="scroll"><img src="monsters/shroom.png" alt="SHROOMLING in six facings and its action frames" width="1290" height="200" style="height:110px;width:auto" loading="lazy"></div><figcaption>Shroomling &middot; <button class="save" data-src="monsters/shroom.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="monsters/sporecap.png" alt="SPORECAP in six facings and its action frames" width="1290" height="200" style="height:110px;width:auto" loading="lazy"></div><figcaption>Sporecap &middot; <button class="save" data-src="monsters/sporecap.png" hidden>save PNG</button></figcaption></figure>
+<h3>Wraith family</h3>
+<figure><div class="scroll"><img src="monsters/wraith.png" alt="WRAITH in six facings and its action frames" width="1458" height="317" style="height:158px;width:auto" loading="lazy"></div><figcaption>Wraith &middot; <button class="save" data-src="monsters/wraith.png" hidden>save PNG</button></figcaption></figure>
+<h3>Slime family</h3>
+<figure><div class="scroll"><img src="monsters/slime.png" alt="SLIME in six facings and its action frames" width="1188" height="158" style="height:110px;width:auto" loading="lazy"></div><figcaption>Slime &middot; <button class="save" data-src="monsters/slime.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="monsters/blueslime.png" alt="BIG BLUE SLIME in six facings and its action frames" width="1638" height="200" style="height:110px;width:auto" loading="lazy"></div><figcaption>Big Blue Slime &middot; <button class="save" data-src="monsters/blueslime.png" hidden>save PNG</button></figcaption></figure>
+<h3>Hero family</h3>
+<figure><div class="scroll"><img src="monsters/brigand.png" alt="BRIGAND in six facings and its action frames" width="1887" height="299" style="height:149px;width:auto" loading="lazy"></div><figcaption>Brigand &middot; <button class="save" data-src="monsters/brigand.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="monsters/banditchief.png" alt="BANDIT CHIEF in six facings and its action frames" width="2211" height="350" style="height:175px;width:auto" loading="lazy"></div><figcaption>Bandit Chief &middot; <button class="save" data-src="monsters/banditchief.png" hidden>save PNG</button></figcaption></figure>
+<h3>Spider family</h3>
+<figure><div class="scroll"><img src="monsters/spider.png" alt="CAVE SPIDER in six facings and its action frames" width="2118" height="203" style="height:110px;width:auto" loading="lazy"></div><figcaption>Cave Spider &middot; <button class="save" data-src="monsters/spider.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="monsters/broodmother.png" alt="BROODMOTHER in six facings and its action frames" width="2554" height="234" style="height:117px;width:auto" loading="lazy"></div><figcaption>Broodmother (Mother of a thousand legs) &middot; boss &middot; <button class="save" data-src="monsters/broodmother.png" hidden>save PNG</button></figcaption></figure>
+</section><section><h2>Item icons</h2>
+<figure><div class="scroll"><img src="items/weapon.png" alt="weapon icons" width="1980" height="148" style="height:110px;width:auto" loading="lazy"></div><figcaption>Weapon icons (22) &middot; <button class="save" data-src="items/weapon.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="items/helm.png" alt="helm icons" width="1316" height="136" style="height:110px;width:auto" loading="lazy"></div><figcaption>Helm icons (15) &middot; <button class="save" data-src="items/helm.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="items/chest.png" alt="chest icons" width="1904" height="132" style="height:110px;width:auto" loading="lazy"></div><figcaption>Chest icons (17) &middot; <button class="save" data-src="items/chest.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="items/shield.png" alt="shield icons" width="780" height="132" style="height:110px;width:auto" loading="lazy"></div><figcaption>Shield icons (9) &middot; <button class="save" data-src="items/shield.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="items/ring.png" alt="ring icons" width="520" height="128" style="height:110px;width:auto" loading="lazy"></div><figcaption>Ring icons (1) &middot; <button class="save" data-src="items/ring.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="items/amulet.png" alt="amulet icons" width="520" height="124" style="height:110px;width:auto" loading="lazy"></div><figcaption>Amulet icons (1) &middot; <button class="save" data-src="items/amulet.png" hidden>save PNG</button></figcaption></figure>
+<figure><div class="scroll"><img src="items/potion.png" alt="potion icons" width="520" height="128" style="height:110px;width:auto" loading="lazy"></div><figcaption>Potion icons (2) &middot; <button class="save" data-src="items/potion.png" hidden>save PNG</button></figcaption></figure>
+</section></main>
+<script>
+// the save buttons: the viewer is asked before each file is saved (they stay hidden where saving is not possible)
+(async () => {
+  let dl = null; try { dl = await claude.use('downloads'); } catch (e) { dl = null; }
+  if (!dl) return;
+  for (const b of document.querySelectorAll('button.save')) {
+    b.hidden = false;
+    b.addEventListener('click', async () => {
+      const src = b.dataset.src, t = b.textContent; b.disabled = true; b.textContent = 'preparing...';
+      try { const blob = await (await fetch(src)).blob(); await dl.save({ filename: 'bestiary-' + src.replace(/\//g, '-'), data: blob }); b.textContent = 'saved'; }
+      catch (e) { b.textContent = e && e.code === 'declined' ? t : 'could not save'; }
+      setTimeout(() => { b.textContent = t; b.disabled = false; }, 2000);
+    });
+  }
+})();
+</script>
