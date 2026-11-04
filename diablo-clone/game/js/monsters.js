@@ -695,28 +695,47 @@ function ogreRig(look, st) {
     r.ell(V.mad(J.pelvis, up, 2), look.grunt ? [4.8, 5.6, 4.8] : [6.4, 7.4, 6], skin);
     r.ell(V.mad(J.chest, up, look.grunt ? 1.2 : 0.6), look.grunt ? [6.2, 10.0, 6.4] : [5.6, 8.2, 5.4], skin, frameAlong(fwd, up));
     if (look.grunt) r.ell(V.add(V.mad(J.chest, up, 5.2), V.mul(fwd, -1.6)), [4.2, 7.6, 3.4], skin, frameAlong(fwd, up));   // a hump of trapezius the head hunches into
+    if (look.cleaver) for (const s of [-1, 1]) r.ell(V.add(V.add(V.mad(J.chest, up, 1.8), V.mul(fwd, -3.6)), V.mul(sideR, s * 3.4)), [3.0, 3.6, 4.6], skin, frameAlong(fwd, up));   // art B2: the enforcer's shoulder blades either side of a spine groove (on the vest-wearers they poked through)
   });
   const belt = V.mad(J.pelvis, up, 0.5), grunt = !!look.grunt, lf = frameAlong(fwd, up);
   r.ell(belt, grunt ? [5.8, 6.6, 1.4] : [6.8, 7.8, 1.5], M.LEATHER, lf);
   if (grunt) {
     // art A3, the ogre grunts (clubber, rockthrower, shieldbearer, enforcer): a square iron buckle and a
     // ragged leather skirt to mid-thigh in place of the warlord's skull and apron
-    r.box(V.mad(belt, fwd, 5.9), [0.5, 1.5, 1.1], M.IRON, lf, { bias: 1 });
+    r.cyl(V.mad(belt, up, -0.9), V.mad(belt, up, 0.6), 6.0, M.HAIR);   // art B2: a dark belt band all round, over the skirt
+    r.box(V.mad(belt, fwd, 6.1), [0.5, 1.5, 1.1], M.IRON, lf, { bias: 1 });
     const sk = V.mad(J.pelvis, up, 0.2), hem = V.add(J.pelvis, [0, 0, -3.8]), ax = V.norm(V.sub(hem, sk)), Ls = V.len(V.sub(hem, sk));
-    r.cone(sk, hem, 5.7, 6.7, M.LEATHER, { mf: p => { const q = V.sub(p, sk), t = V.dot(q, ax), ang = Math.atan2(V.dot(q, sideR), V.dot(q, fwd)); return t > Ls - 1.6 + Math.abs(Math.sin(ang * 5)) * 1.5 ? M.HAIR : 0; } });   // torn hem in a darker leather
+    // art B2: a longer skirt that flares wider than the hips and ends in a jagged hem of torn flaps
+    const hem2 = V.add(J.pelvis, [0, 0, -5.0]), ax2 = V.norm(V.sub(hem2, sk)), L2 = V.len(V.sub(hem2, sk));
+    r.group(() => {
+      r.cone(sk, hem2, 5.0, 7.2, M.LEATHER, { mf: p => { const q = V.sub(p, sk), t = V.dot(q, ax2), ang = Math.atan2(V.dot(q, sideR), V.dot(q, fwd)); return t > L2 - 1.4 + Math.abs(Math.sin(ang * 4.5)) * 1.2 ? M.HAIR : 0; } });
+      for (let k = 0; k < 10; k++) {   // torn flaps hanging below the hem
+        const a = (k + 0.5) / 10 * Math.PI * 2, d = V.add(V.mul(fwd, Math.cos(a)), V.mul(sideR, Math.sin(a))), b0 = V.mad(hem2, d, 6.1);
+        const fk = look.cleaver ? 1 : 0;   // the enforcer's flaps are bigger (art B2 pass 3; it lost on the other grunts)
+        r.cone(V.mad(b0, up, 0.8), V.add(V.mad(b0, d, 0.9 + fk * 0.1), V.mul(up, -1.8 - fk * 0.6 - (k % 2) * (0.9 + fk * 0.1))), 1.5 + fk * 0.4, 0.3, M.HAIR);
+      }
+    });
     if (look.vest) {   // a sleeveless leather vest, open at the neck
       const vc = V.mad(J.chest, up, 1.2);
       r.ell(vc, [6.4, 10.2, 6.6], M.LEATHER, lf, { mf: p => { const q = V.sub(p, vc); return V.dot(q, fwd) > 3 && Math.abs(V.dot(q, sideR)) < 2.6 - (3.2 - V.dot(q, up)) * 0.45 && V.dot(q, up) > -1 ? M.OGRE : 0; } });
     }
   } else {
     skullAt(r, V.mad(belt, fwd, 6.6), fwd, sideR, up, M.BONE, M.DARK, 0, 0.75);
+    {   // art B2: a torn leather skirt under the apron fills the dark gap between the legs
+      const sk = V.mad(J.pelvis, up, 0.2), hem = V.add(J.pelvis, [0, 0, -4.6]);
+      r.group(() => {
+        r.cone(sk, hem, 6.6, 7.6, M.LEATHER);
+        for (let k = 0; k < 10; k++) { const a = (k + 0.5) / 10 * Math.PI * 2, d = V.add(V.mul(fwd, Math.cos(a)), V.mul(sideR, Math.sin(a))), b0 = V.mad(hem, d, 6.6); r.cone(V.mad(b0, up, 0.8), V.add(V.mad(b0, d, 1.0), V.mul(up, -2.2 - (k % 2) * 1.0)), 1.9, 0.3, M.HAIR); }
+      });
+    }
     r.box(V.add(V.mad(J.pelvis, fwd, 5.5), V.mul(up, -3.5)), [0.5, 3.6, 3.2], M.LEATHER, lf);
   }
   if (!grunt || look.rock) r.cone(V.add(V.mad(J.chest, up, 4), V.mul(sideR, -6)), V.add(V.mad(J.pelvis, up, 1), V.mul(sideR, 5)), 1.0, 1.0, M.LEATHER);   // strap
   if (look.rock) {   // a bag of rocks at the right hip
     const bg = V.add(V.add(J.pelvis, V.mul(sideR, 7.4)), V.add(V.mul(up, -0.8), V.mul(fwd, 1.5)));
-    r.ell(bg, [3.8, 3.0, 3.0], M.LEATHER);
-    for (const [u, v] of [[-1.3, 0], [1.1, 0.6], [0, -1.1], [0.2, 1.2]]) r.sph(V.add(V.mad(bg, up, 2.5), V.add(V.mul(fwd, u), V.mul(sideR, v))), 1.5, M.ROCK);
+    r.ell(bg, [4.4, 3.6, 3.2], M.LEATHER);   // art B2: a bigger bag with a rolled rim and bigger stones
+    r.cyl(V.mad(bg, up, 1.9), V.mad(bg, up, 2.5), 3.9, M.HAIR);
+    for (const [u, v] of [[-1.4, 0], [1.3, 0.7], [0, -1.3], [0.2, 1.4]]) r.sph(V.add(V.mad(bg, up, 2.8), V.add(V.mul(fwd, u), V.mul(sideR, v))), 1.7, M.ROCK);
   }
   if (!grunt || look.pads) for (const [sh, sd] of [[J.shL, -1], [J.shR, 1]]) {   // shoulder pads with spikes
     const c = grunt ? V.add(V.mad(sh, up, 1.4), V.mul(sideR, sd * 1.2)) : V.mad(sh, up, 1.2), pk = grunt ? 1.25 : 1;
@@ -731,14 +750,14 @@ function ogreRig(look, st) {
   if (look.rock) {   // the rockthrower: a rock held up beside the head; to throw, cocked back, then hurled forward
     const a = st.clip === 'shoot' && st.key ? st.key.a : 0, hit = st.clip === 'shoot' && st.key && st.key.hit;
     handR = hit || (st.clip === 'shoot' && a < 0.6) ? V.add(V.add(J.shR, V.mul(fwd, 8)), V.add(V.mul(up, 0.5), V.mul(sideR, -0.5)))
-      : V.add(V.add(J.shR, V.mul(fwd, 0.5 - a * 3)), V.add(V.mul(up, 8.5 + a * 1.0), V.mul(sideR, 2.0)));
+      : V.add(V.add(J.shR, V.mul(fwd, 0.5 - a * 3)), V.add(V.mul(up, 9.2 + a * 1.0), V.mul(sideR, 3.4)));   // art B2: higher and further out
     bd = up;
     if (!(st.clip === 'shoot' && (hit || a < 0.6)) && st.clip !== 'death') rockAt = V.mad(handR, up, 3.6);
   } else if (sw) { handR = V.mad(pivot, inPlane(sw.a), (sw.r || 6.5) * 1.3); bd = inPlane(sw.a + (sw.ck || 0)); }
-  else { handR = V.add(V.add(J.shR, V.mul(fwd, 3 + J.swingArm * 1.5)), V.add(V.mul(up, -9), V.mul(sideR, 3))); bd = V.norm(V.add(V.add(V.mul(fwd, 0.5), V.mul(up, 0.75)), V.mul(sideR, 0.3))); }
+  else { handR = V.add(V.add(J.shR, V.mul(fwd, 3 + J.swingArm * 1.5)), V.add(V.mul(up, -9), V.mul(sideR, 4.6))); bd = grunt ? V.norm(V.add(V.add(V.mul(fwd, 0.45), V.mul(up, 0.65)), V.mul(sideR, 0.6))) : V.norm(V.add(V.add(V.mul(fwd, 0.5), V.mul(up, 0.75)), V.mul(sideR, 0.3))); }   // art B2: arms out from the body; the grunts' club angled up and out
   if (st.clip === 'death') { handR = V.add(J.shR, [3, 3, -11]); bd = V.norm([1, 0.4, -0.6]); }
   if (look.cleaver && !sw && st.clip !== 'death') bd = V.norm(V.add(V.mul(fwd, 0.55), V.mul(up, -0.7)));   // the enforcer: the cleaver hangs low, edge forward
-  let handL = st.clip === 'death' ? V.add(J.shL, [2, -3, -10]) : V.add(V.add(J.shL, V.mul(fwd, 4 - J.swingArm * 2)), V.add(V.mul(up, -9), V.mul(sideR, -2)));
+  let handL = st.clip === 'death' ? V.add(J.shL, [2, -3, -10]) : V.add(V.add(J.shL, V.mul(fwd, 4 - J.swingArm * 2)), V.add(V.mul(up, -9), V.mul(sideR, -3.8)));
   if (look.plank && st.clip !== 'death') handL = V.add(V.add(J.shL, V.mul(fwd, 6)), V.add(V.mul(up, -5), V.mul(sideR, -0.5)));   // the shield held up in front
   for (const [sh, hand, s] of [[J.shR, handR, 1], [J.shL, handL, -1]]) {
     const a = armTo(J, sh, hand, B, s);
@@ -752,18 +771,20 @@ function ogreRig(look, st) {
   else if (look.cleaver) {   // a heavy square cleaver: short wooden grip, a broad steel blade
     r.cone(V.mad(g, bd, -3), V.mad(g, bd, 2.5), 1.2, 1.2, M.WOOD);
     const fn = V.norm(V.add(fwd, V.mul(sideR, -0.55))), side = V.norm(V.sub(fn, V.mul(bd, V.dot(fn, bd)))), cf = [bd, side, V.norm(V.cross(bd, side))];
-    r.box(V.add(V.mad(g, bd, 7.6), V.mul(side, 1.9)), [5.0, 3.9, 0.6], M.PLATE, cf);
+    r.box(V.add(V.mad(g, bd, 7.6), V.mul(side, 1.9)), [5.0, 3.9, 0.6], M.BLADE, cf);   // art B2: BLADE steel keeps its tone when turned from the light
+    r.box(V.add(V.mad(g, bd, 7.6), V.mul(side, -1.8)), [5.0, 0.5, 0.9], M.IRON, cf);   // the thick back spine
   } else if (grunt) {   // a rough log club, its cut end showing pale wood rings
     const tip = V.mad(g, bd, 12);
     r.cone(V.mad(g, bd, -3), tip, 1.8, 3.8, M.WOOD, { mf: p => V.dot(V.sub(p, tip), bd) > -0.2 ? M.PLANK : 0 });
   }
   if (look.plank) {   // a plank shield: upright boards with two iron bands, held on the left arm
-    const aL2 = armTo(J, J.shL, handL, B, -1), n = V.norm(V.add(V.mul(fwd, 0.9), V.mul(sideR, -0.4))), across = V.norm(V.cross(up, n)), c = V.add(V.mad(aL2.hand, n, 2.0), V.mul(up, 1.4));
-    r.box(c, [0.9, 6.0, 9.4], M.WOOD, [n, across, up], { mf: p => { const q = V.sub(p, c), u = V.dot(q, across), v = Math.abs(V.dot(q, up)); if (v > 5.0 && v < 6.8 && Math.abs(u) < 4.6) return M.PLATE; return Math.abs(((u + 6) % 3) - 1.5) > 1.3 ? M.DARK : 0; } });
+    const aL2 = armTo(J, J.shL, handL, B, -1), n = V.norm(V.add(V.mul(fwd, 0.9), V.mul(sideR, -0.4))), across = V.norm(V.cross(up, n)), c = V.add(V.mad(aL2.hand, n, 3.8), V.mul(up, 1.4));
+    // art B2: a bigger shield of four planks, grooves in dark leather (not black), iron bands with rivets
+    r.box(c, [1.0, 7.0, 10.6], M.WOOD, [n, across, up], { mf: p => { const q = V.sub(p, c), u = V.dot(q, across), v = Math.abs(V.dot(q, up)); if (v > 5.6 && v < 7.8 && Math.abs(u) < 5.6) return Math.abs(Math.abs(u) - 3.6) < 0.7 && Math.abs(v - 6.7) < 0.6 ? M.BONE : M.PLATE; return Math.abs(((u + 7) % 3.5) - 1.75) > 1.3 ? M.HAIR : 0; } });
   }
   // club: a thick haft swelling into a studded head (the warlord)
   if (!grunt) r.cone(V.mad(g, bd, -3), V.mad(g, bd, 12), 1.4, 3.4, M.WOOD);
-  if (!grunt) for (let k = 0; k < 7; k++) { const a = k * 2.4, t = 7 + (k % 3) * 2, ax = V.norm(V.add(V.mul(V.cross(bd, up), Math.cos(a)), V.mul(V.cross(bd, V.norm(V.cross(bd, up))), Math.sin(a)))); const b = V.mad(V.mad(g, bd, t), ax, 2.8); r.cone(b, V.mad(b, ax, 2.4), 0.9, 0.2, M.IRON, { noShadow: true }); }
+  if (!grunt) for (let k = 0; k < 7; k++) { const a = k * 2.4, t = 7 + (k % 3) * 2, ax = V.norm(V.add(V.mul(V.cross(bd, up), Math.cos(a)), V.mul(V.cross(bd, V.norm(V.cross(bd, up))), Math.sin(a)))); const b = V.mad(V.mad(g, bd, t), ax, 2.8); r.cone(b, V.mad(b, ax, 2.4), 0.9, 0.2, M.BLADE, { noShadow: true }); }   // art B2: spikes in pale steel
   if (sw && sw.smear && st.prev) smearArc(r, pivot, fwd, U, st.prev.a + (st.prev.ck || 0), sw.a + (sw.ck || 0), 8, 22);
   // head: big, a heavy brow over small yellow eyes, an underbite with two tusks, a top-knot
   const hd = grunt ? V.add(V.mad(J.head, fwd, 1.4), V.mul(up, -2.0)) : J.head, h0 = r.p.length;   // the grunts hunch, the head thrust forward and low
@@ -771,10 +792,15 @@ function ogreRig(look, st) {
   r.ell(V.add(V.mad(hd, fwd, 2.4), V.mul(up, -2.4)), [2.6, 3.8, 1.8], skin, frameAlong(fwd, up));   // jaw
   for (const s of [-1, 1]) {
     const b = V.add(V.add(V.mad(hd, fwd, 4.2), V.mul(sideR, s * 1.8)), V.mul(up, -2.2));
-    r.cone(b, V.add(b, V.add(V.mul(up, 2.6), V.mul(fwd, 0.4))), 0.8, 0.2, M.BONE, { noShadow: true });
+    r.cone(b, V.add(b, V.add(V.add(V.mul(up, 1.9), V.mul(fwd, 0.7)), V.mul(sideR, s * 0.6))), 1.15, 0.35, M.BONE, { noShadow: true });   // art B2: short thick tusks splayed out
     r.cone(V.add(V.mad(hd, up, 0.6), V.mul(sideR, s * 4.2)), V.add(V.add(V.mad(hd, up, 1.6), V.mul(sideR, s * 6.6)), V.mul(fwd, -1)), 1.4, 0.3, skin);   // ears
   }
   r.cone(V.add(V.mad(hd, up, 3.6), V.mul(fwd, -1)), V.add(V.mad(hd, up, 8), V.mul(fwd, -3)), 1.6, 0.4, M.HAIR);   // top-knot
+  if (!grunt) {   // art B2: the warlord's crude gold war-crown, a band with five spikes round the top-knot
+    const cc = V.add(V.mad(hd, up, 3.0), V.mul(fwd, -0.4));
+    r.cyl(V.mad(cc, up, -0.6), V.mad(cc, up, 0.6), 3.6, M.GOLD);
+    for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2, d = V.add(V.mul(fwd, Math.cos(a)), V.mul(sideR, Math.sin(a))), b0 = V.mad(cc, d, 3.2); r.cone(b0, V.add(V.mad(b0, up, 2.6), V.mul(d, 0.6)), 0.9, 0.2, M.GOLD, { noShadow: true }); }
+  }
   if (look.helm) {   // the shieldbearer's iron kettle helm, the top-knot poking through
     const hc = V.add(V.mad(hd, up, 2.6), V.mul(fwd, -0.3));
     r.ell(hc, [4.9, 5.1, 2.9], M.SLATE, frameAlong(fwd, up));
@@ -854,8 +880,8 @@ function treantRig(look, st) {
   const pivot = V.add(V.add(J.chest, V.mul(sideR, 3.5)), V.add(V.mul(up, 4), V.mul(fwd, 1)));
   const U = V.norm(V.add(V.mul(up, Math.cos(0.4)), V.mul(sideR, Math.sin(0.4)))), inPlane = a => V.norm(V.add(V.mul(fwd, Math.cos(a)), V.mul(U, Math.sin(a))));
   // art A4: hands held out from the trunk, elbows bowed outward, as the concept draws them
-  let handR = sw ? V.mad(pivot, inPlane(sw.a), (sw.r || 6.5) * 1.5) : V.add(V.add(J.shR, V.mul(fwd, 3.5 + J.swingArm * 2)), V.add(V.mul(up, -11), V.mul(sideR, 6.5)));
-  const handL = V.add(V.add(J.shL, V.mul(fwd, 3.5 - J.swingArm * 2)), V.add(V.mul(up, -11), V.mul(sideR, -6.5)));
+  let handR = sw ? V.mad(pivot, inPlane(sw.a), (sw.r || 6.5) * 1.5) : V.add(V.add(J.shR, V.mul(fwd, 3.5 + J.swingArm * 2)), V.add(V.mul(up, -12.5), V.mul(sideR, 6.5)));   // art B2: hands lower, nearer the roots
+  const handL = V.add(V.add(J.shL, V.mul(fwd, 3.5 - J.swingArm * 2)), V.add(V.mul(up, -12.5), V.mul(sideR, -6.5)));
   if (st.clip === 'death') handR = V.add(J.shR, [3, 3, -11]);
   for (const [sh, hand, s] of [[J.shR, handR, 1], [J.shL, handL, -1]]) {
     const a = armTo(J, sh, V.mad(sh, sideR, s * 1.5), B, s), el = armTo(J, sh, hand, B, s);
@@ -877,8 +903,8 @@ function treantRig(look, st) {
   const face = V.add(V.mad(J.chest, up, 3.2), V.mul(fwd, 5.4));
   for (const s of [-1, 1]) {
     const eye = V.add(face, V.mul(sideR, s * 2.1));
-    r.ell(V.mad(eye, fwd, -0.2), [1.0, 1.9, 1.5], M.DARK, frameAlong(fwd, up), { noShadow: true });
-    r.box(V.add(V.mad(eye, fwd, 0.35), V.mul(up, -0.15)), [0.5, 1.1, 0.8], M.EYE_GRN, frameAlong(fwd, up), { noShadow: true, bias: 1 });
+    r.ell(V.mad(eye, fwd, -0.2), [1.1, 2.3, 1.8], M.DARK, frameAlong(fwd, up), { noShadow: true });   // art B2: bigger sockets and eyes
+    r.box(V.add(V.mad(eye, fwd, 0.45), V.mul(up, -0.15)), [0.5, 1.5, 1.0], M.EYE_GRN, frameAlong(fwd, up), { noShadow: true, bias: 1 });
     const br0 = V.add(V.mad(eye, up, 1.7), V.mul(sideR, s * 1.6)), br1 = V.add(V.add(V.mad(eye, up, 1.0), V.mul(sideR, -s * 1.2)), V.mul(fwd, 0.5));
     r.cone(br0, br1, 1.3, 1.5, M.HAIR);   // the brow slants down toward the nose: a scowl
   }
@@ -886,8 +912,10 @@ function treantRig(look, st) {
   for (const s of [-1, 1]) r.cone(V.add(V.mad(mo, up, 0.5), V.mul(sideR, s * 0.2)), V.add(V.mad(mo, up, -0.7), V.mul(sideR, s * 2.8)), 0.95, 0.7, M.DARK, { noShadow: true });
   // crown: three big lobes in a clover with one on top, lifted clear of the face
   // art A4: the concept's crown is three huge lobes, two low in front and a taller one behind them
-  const top = V.mad(J.chest, up, 14.5), leaf = look.green ? M.LEAFM : M.AUTUMNM;
-  for (const [f, s, z, rr] of [[-2.5, 0, 3.6, 8.6], [2, -6.6, -1, 7.6], [2, 6.6, -1, 7.6]]) r.sph(V.add(V.add(V.mad(top, fwd, f), V.mul(sideR, s)), V.mul(up, z)), rr, leaf);
+  // art B2: four smaller lobes (one high behind, two at the sides, one low in front) on a crown lifted
+  // clear of the brow, so the face reads under it as in the concept
+  const top = V.mad(J.chest, up, 15.5), leaf = look.green ? M.LEAFM : M.AUTUMNM;
+  for (const [f, s, z, rr] of [[-1.8, 0, 4.4, 7.4], [0.8, -6.0, 0, 6.6], [0.8, 6.0, 0, 6.6], [3.6, 0, -0.6, 6.0]]) r.sph(V.add(V.add(V.mad(top, fwd, f), V.mul(sideR, s)), V.mul(up, z)), rr, leaf);
   if (st.clip === 'death') deathTip(r, B, st.f, -1);
   if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
   return r;
