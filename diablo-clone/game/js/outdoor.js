@@ -1194,6 +1194,7 @@ function drawStairsMark(s) {
     if (Math.hypot(s.i - hero.fi, s.j - hero.fj) < 7) textC(s.up ? 'WAY OUT' : bossAlive() ? 'SEALED' : LV.arena && LV.act === 0 ? 'HOME TO ' + AREA_NAMES.town[0] : 'STAIRS DOWN', Math.round(sx), Math.round(sy) - 24, bossAlive() ? 22 : 51);
     return;
   }
+  if (typeof storyTarget === 'function' && storyTarget()) return;   // round 48: the story's arrow leads (one arrow, along the ground)
   // from the screen's middle toward the stairs, stopped at the edge of the play area
   const cx = W / 2, cy = (Y0 + Y1) / 2, dx = sx - cx, dy = sy - cy;
   const k = Math.min((dx > 0 ? X1 - cx : cx - X0) / Math.abs(dx || 1e-6), (dy > 0 ? Y1 - cy : cy - Y0) / Math.abs(dy || 1e-6));

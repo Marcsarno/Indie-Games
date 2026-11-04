@@ -157,6 +157,39 @@ function flowDir(fi, fj) {
   return best;
 }
 
+// round 48: the way to a point along the ground: the direction to walk now, or null when it is
+// right here. Follows the flow field back from the goal (or the nearest reachable tile beside it: a
+// door, someone in a doorway) toward the hero, and aims at the farthest step of that path in plain
+// sight, so it bends round walls, trees and houses. { dir: [di, dj], len: steps, around: the way
+// is much longer than the straight line } (dir is straight at the goal when it can't be reached)
+const clearLine = (a, b, c, d) => { const n = Math.ceil(Math.max(Math.abs(c - a), Math.abs(d - b)) * 3) + 1; for (let s = 1; s < n; s++) { const t = s / n, i = Math.floor(a + (c - a) * t), j = Math.floor(b + (d - b) * t); if (tileAt(i, j) !== FLOOR || LV.solid[tIdx(i, j)]) return false; } return true; };
+function wayTo(t) {
+  const straight = Math.hypot(t[0] - hero.fi, t[1] - hero.fj);
+  const ti = Math.floor(t[0]), tj = Math.floor(t[1]);
+  let k = -1, best = 1e9;
+  for (let b = -2; b <= 2; b++) for (let a = -2; a <= 2; a++) {
+    const i = ti + a, j = tj + b; if (i < 0 || j < 0 || i >= MW || j >= MH) continue;
+    const q = tIdx(i, j), d = flow[q]; if (d < 0 || flow.length !== MW * MH) continue;
+    const sc = d + (a * a + b * b) * 4; if (sc < best) { best = sc; k = q; }
+  }
+  if (k < 0) return { dir: [t[0] - hero.fi, t[1] - hero.fj], len: straight, around: false };
+  const len = flow[k], path = [k];
+  for (let d = len; d > 0 && path.length < 6000; d--) {
+    const i = k % MW, j = (k / MW) | 0; let nk = -1;
+    for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const ii = i + a, jj = j + b; if (ii < 0 || jj < 0 || ii >= MW || jj >= MH) continue; const q = tIdx(ii, jj); if (flow[q] === d - 1) { nk = q; break; } }
+    if (nk < 0) break; k = nk; path.push(k);
+  }
+  let aim = null;
+  for (let n = path.length - 1; n >= 0; n--) {
+    const q = path[n], i = q % MW + 0.5, j = ((q / MW) | 0) + 0.5;
+    if (Math.hypot(i - hero.fi, j - hero.fj) > 14) break;
+    if (clearLine(hero.fi, hero.fj, i, j)) aim = [i, j];
+  }
+  if (!aim) aim = path.length > 1 ? [path[path.length - 2] % MW + 0.5, ((path[path.length - 2] / MW) | 0) + 0.5] : [t[0], t[1]];
+  if (Math.hypot(aim[0] - hero.fi, aim[1] - hero.fj) < 0.3) aim = [t[0], t[1]];
+  return { dir: [aim[0] - hero.fi, aim[1] - hero.fj], len, around: len > straight * 1.5 + 4 };
+}
+
 // ---------------------------------------------------------------- particles (pooled typed arrays)
 const PN = 600;
 const px_ = new Float32Array(PN), py_ = new Float32Array(PN), pz_ = new Float32Array(PN), pvx = new Float32Array(PN), pvy = new Float32Array(PN), pvz = new Float32Array(PN), plife = new Float32Array(PN);
@@ -1580,6 +1613,13 @@ const DLIGHTS = { now: { amb: 0.2, hr: 145, hi: 0.62, tr: 1, ti: 1 }, a: { amb: 
 let DLIGHT = DLIGHTS.now;
 try { const q = new URLSearchParams(location.search).get('dl'); if (q && DLIGHTS[q]) DLIGHT = DLIGHTS[q]; } catch (e) { /* ignore */ }
 const setDLight = k => { DLIGHT = DLIGHTS[k] || DLIGHTS.now; };
+// round 48: the new dungeon light on or off (the map screen's LIGHT button, title OPTIONS); rebakes the
+// light maps of the floor in hand so the switch shows at once
+function setDL48(v) {
+  DL48 = v; DLT = !v; syncLightTables(!!LV.outdoor);
+  try { localStorage.setItem('dcg-dlight', v ? 'new' : 'old'); } catch (e) { /* ignore */ }
+  if (LV.map && !LV.outdoor && lights.length) { for (const L of lights) L.map = null; bakeLightMaps(); }
+}
 function envCol(x, y, v, tile) {
   if (x < 0 || y < 0 || x >= W || y >= H) return 0;
   if (v & EMIS) return PAL32[CYCLE[v & 127]];
@@ -1587,7 +1627,9 @@ function envCol(x, y, v, tile) {
   const o = y * W + x, tk = tile === -2 ? tbuf[o] : tile;
   if (tk < 0 ? !LV.outdoor : VIEW_FOG && !LV.seen[tk]) return 0;
   const vv = tk < 0 || !VIEW_FOG ? 1 : LV.vis[tk], top = (LEVELS - 1) * NPAL;
-  const l = (shd[o] ? lbuf[o] * 0.4 : lbuf[o]) * BANDS * vv + 0.9 * (1 - vv) + BAYER[((y & 3) << 2) | (x & 3)];
+  let lr = shd[o] ? lbuf[o] * 0.4 : lbuf[o];
+  if (DL48 && !LV.outdoor && AO) { const wx = camX + x, wy = camY + y; if (wx >= 0 && wy >= 0 && wx < WW && wy < WH) lr *= AO[wy * WW + wx] * (1 / 255); lr = TONE[Math.min(1023, (lr * BANDS * 64) | 0)] / BANDS; }   // round 48: as the light pass
+  const l = lr * BANDS * vv + 0.9 * (1 - vv) + BAYER[((y & 3) << 2) | (x & 3)];
   const L = (l | 0) * NPAL;
   return LCOL[(L < top ? L : top) + v];
 }
@@ -1760,7 +1802,8 @@ function lightPass(chars, kx, ky) {
   // night outdoors (every third town and forest): dim moonlight, the hero carries a light, and the
   // lanterns, fires and windows matter
   const amb = LV.outdoor ? (LV.night ? 0.3 : 0.6) : VIEW_FOG ? 0 : DLIGHT.amb;
-  const dyn = LV.outdoor && !LV.night ? [] : [{ x: kx, y: ky, z: 34, r: LV.night ? 120 : LV.outdoor ? 145 : DLIGHT.hr, i: LV.night ? 0.42 : LV.outdoor ? 0.62 : DLIGHT.hi }];
+  const nl = DL48 && !LV.outdoor && AO, tone = nl ? TONE : null;   // round 48: the new dungeon light
+  const dyn = LV.outdoor && !LV.night ? [] : [{ x: kx, y: ky, z: 34, r: LV.night ? 120 : LV.outdoor ? 145 : DLIGHT.hr * (nl ? 1.2 : 1), i: LV.night ? 0.42 : LV.outdoor ? 0.62 : DLIGHT.hi * (nl ? 1.05 : 1) }];
   for (const p of projectiles) if (p.kind !== 'arrow' && dyn.length < 5) { const [x, y] = iso(p.fi, p.fj); dyn.push({ x, y, z: p.z, r: p.kind === 'missile' ? 45 : 70, i: 0.8 }); }
   if (G.tp) { const [x, y] = iso(G.tp.fi, G.tp.fj); dyn.push({ x, y, z: 20, r: 80, i: 0.7 * Math.min(1, G.tp.t / 0.45) }); }   // the portal's blue glow (brightness only)
   for (const f of G.flashes) if (dyn.length < 7) { const [x, y] = iso(f.fi, f.fj); dyn.push({ x, y, z: 24, r: f.r, i: 1.1 * f.t / f.t0 }); }   // explosions light the room
@@ -1787,13 +1830,14 @@ function lightPass(chars, kx, ky) {
   const charLevel = chars.map(c => {
     const [x, y] = screenOf(c), sx = Math.round(x - camX), sy = Math.round(y - camY - 16);
     const l = (sx >= 0 && sy >= 0 && sx < W && sy < H) ? lbuf[sy * W + sx] : 0.3;
-    return Math.min(L_ID + 2, Math.max(1, Math.round(l * BANDS)));   // capped: torch-side sprites must not blow out
+    const lv = tone ? tone[Math.min(1023, (l * BANDS * 64) | 0)] : l * BANDS;
+    return Math.min(L_ID + 2, Math.max(1, Math.round(lv)));   // capped: torch-side sprites must not blow out
   });
   const vis = LV.vis, seen = LV.seen, black = PAL32[BLK], top = (LEVELS - 1) * NPAL;
   const cl = charLevel.map(L => L * NPAL);
 
   for (let y = 0, o = 0; y < H; y++) {
-    const by = (y & 3) << 2;
+    const by = (y & 3) << 2, wy = camY + y, aoRow = nl && wy >= 0 && wy < WH ? wy * WW + camX : -1;
     for (let x = 0; x < W; x++, o++) {
       const v = scr[o];
       levB[o] = 255;   // the level this pixel was lit at, for the 2x world layer (255: none, show as is)
@@ -1803,7 +1847,9 @@ function lightPass(chars, kx, ky) {
       const ci = cid[o];
       const vv = tk < 0 || !VIEW_FOG ? 1 : vis[tk];
       // remembered areas sit at a dim floor level; visible areas get their real light
-      const l = (shd[o] ? lbuf[o] * 0.4 : lbuf[o]) * BANDS * vv + 0.9 * (1 - vv) + BAYER[by | (x & 3)];
+      let lr = shd[o] ? lbuf[o] * 0.4 : lbuf[o];
+      if (tone) { const wx = camX + x; if (aoRow >= 0 && !ci && wx >= 0 && wx < WW) lr *= AO[aoRow + x] * (1 / 255); lr = tone[Math.min(1023, (lr * BANDS * 64) | 0)] / BANDS; }
+      const l = lr * BANDS * vv + 0.9 * (1 - vv) + BAYER[by | (x & 3)];
       const L = (l | 0) < LEVELS - 1 ? (l | 0) : LEVELS - 1;
       if (!ci) levB[o] = L;
       if (v & EMIS) { out32[o] = PAL32[CYCLE[v & 127]]; continue; }

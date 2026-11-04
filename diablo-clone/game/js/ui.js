@@ -348,6 +348,9 @@ function drawAutomap() {
   const st = LV.stairs;
   if (LV.seen[tIdx(st.i, st.j)]) { const x = ox + (st.i - st.j) * s - (hero.fi - hero.fj) * s, y = oy + (st.i + st.j) * s / 2 - (hero.fi + hero.fj) * s / 2; fillRect(Math.round(x) - 1, Math.round(y) - 1, 3, 3, 40); }
   fillRect(Math.round(ox) - 1, Math.round(oy) - 1, 3, 3, 23);
+  // round 48: compare the dungeon light while playing
+  const b = UI.lightBtn = { x: W / 2 - 44, y: H - 132, w: 88, h: 16 };
+  fillRect(b.x, b.y, b.w, b.h, 3); frame(b.x, b.y, b.w, b.h, DL48 ? 51 : 6, 2); textC(DL48 ? 'LIGHT: NEW' : 'LIGHT: OLD', b.x + b.w / 2, b.y + 6, DL48 ? 51 : 25);
 }
 // round 41: the character screen. One card per class: its hero drawn big and slowly turning, its
 // name, how it plays, its four skills and its saved level. Tap a card to pick it (gold frame, the
@@ -429,6 +432,7 @@ function drawTitle() {
     btn(FEEL_OLD ? 'COMBAT: OLD' : 'COMBAT: NEW', 6, oy - 22, 84, 16, () => setFeelOld(!FEEL_OLD), 25, 3, 6);
     btn(WORLD2X ? 'DETAIL: SHARP' : 'DETAIL: CLASSIC', 93, oy - 22, 84, 16, () => setWorld2x(!WORLD2X), 25, 3, 6);
     btn(HUE_LIGHT ? 'LIGHT: NEW' : 'LIGHT: OLD', 180, oy - 22, 84, 16, () => setLightNew(!HUE_LIGHT), 25, 3, 6);
+    btn(DL48 ? 'DUNGEONS: NEW' : 'DUNGEONS: OLD', 6, oy, 84, 16, () => setDL48(!DL48), 25, 3, 6);   // round 48: the dungeon light
     btn(SFX.synth ? 'SOUND: SYNTH' : 'SOUND: REAL', 180, oy, 84, 16, () => { setSynthSfx(!SFX.synth); sfx('hit'); }, 25, 3, 6);   // round 44: compare the recorded sounds with the old synth
   }
   textC('LEFT THUMB MOVES. RIGHT BUTTONS FIGHT.', W / 2, H - 32, 25);
@@ -463,7 +467,11 @@ function edgeArrow(sx, sy, c0 = 51, c1 = 50) {
   const cx = W / 2, cy = (Y0 + Y1) / 2, dx = sx - cx, dy = sy - cy;
   const k = Math.min((dx > 0 ? X1 - cx : cx - X0) / Math.abs(dx || 1e-6), (dy > 0 ? Y1 - cy : cy - Y0) / Math.abs(dy || 1e-6));
   const bob = Math.sin(G.t * 5) * 1.5, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
-  const ax = cx + dx * k - ux * bob, ay = cy + dy * k - uy * bob;
+  arrowHead(cx + dx * k - ux * bob, cy + dy * k - uy * bob, ux, uy, c0, c1);
+  return true;
+}
+// a filled arrowhead 14 px long pointing along (ux, uy), with a black edge
+function arrowHead(ax, ay, ux, uy, c0, c1) {
   for (let b = -10; b <= 10; b++) for (let a = -10; a <= 10; a++) {
     const f = a * ux + b * uy, g = -a * uy + b * ux;
     if (f < -8 || f > 6) continue;
@@ -471,17 +479,22 @@ function edgeArrow(sx, sy, c0 = 51, c1 = 50) {
     if (Math.abs(g) > half + 1) continue;
     put(Math.round(ax + a), Math.round(ay + b), Math.abs(g) > half || f < -7 ? BLK : (g < 0 ? c0 : c1));
   }
-  return true;
 }
-// the story's next goal: an arrow at the edge while it is off screen (white, so it is not the stairs' gold)
-const QUEST_ARROW_R = 22;   // tiles
+// the story's next goal (white, so it is not the stairs' gold). Round 48: always shown, step by
+// step. Off screen: an arrow at the edge pointing the way to walk (along the ground, round walls and
+// trees). On screen: a small arrow bobbing over it (people with a ! or ? show their own mark), plus
+// the edge arrow when the way there is much longer than the straight line (behind a wall).
 function drawStoryMark() {
-  if (G.mode !== 'play' || hero.dead) return;
+  if (G.mode !== 'play' || hero.dead || G.fadeTo) return;
   const t = storyTarget(); if (!t) return;
-  if (Math.hypot(t[0] - hero.fi, t[1] - hero.fj) > QUEST_ARROW_R) return;   // round 47: only once you're near; landmarks lead you until then
-  if (LV.stairs && !LV.outdoor && Math.hypot(t[0] - LV.stairs.i - 0.5, t[1] - LV.stairs.j - 0.5) < 0.6) return;   // the stairs' own arrow already points there
-  const [x, y] = iso(t[0], t[1]); edgeArrow(x - camX, y - camY - 16, 27, 26);
+  const d = Math.hypot(t[0] - hero.fi, t[1] - hero.fj); if (d < 1.6) return;
+  const w = wayTo(t), [x, y] = iso(t[0], t[1]), sx = x - camX, sy = y - camY - 16;
+  const on = sx > 14 && sx < W - 14 && sy > 40 && sy < Math.round(H * 0.6);
+  if (on && !(t.npc && typeof storyMarkFor === 'function' && storyMarkFor(t))) arrowHead(sx, sy - 14 + Math.sin(G.t * 5) * 2, 0, 1, 27, 26);
+  if (!on || w.around) { const [ax, ay] = iso(hero.fi + w.dir[0] * 80, hero.fj + w.dir[1] * 80); edgeArrow(ax - camX, ay - camY, 27, 26); }
 }
+// the ! or ? a person on the story's next step already shows
+function storyMarkFor(t) { const n = npcs.find(n => Math.abs(n.fi - t[0]) < 0.01 && Math.abs(n.fj - t[1]) < 0.01); return n ? storyMark(n.role) : null; }
 // round 43b: the action button, above the health bars at the bottom middle. It shows only when
 // there is something to do in reach (talk, buy, sell, free Aldo, unlock the mine) and says what
 const ACT_POS = () => [W / 2 - 16, H - 76];
@@ -1000,6 +1013,7 @@ cvs.addEventListener('pointerdown', e => {
   if (guideFrozen()) return;   // round 45: stopped to show the bag button; only it answers
   if (hitCircle(p, UI.sound)) { setMuted(!SFX.muted); sfx('tap'); return; }
   if (hitCircle(p, UI.map)) { showMap = !showMap; return; }
+  if (showMap && !LV.outdoor && UI.lightBtn && inRect(p, UI.lightBtn)) { setDL48(!DL48); sfx('tap'); return; }
   if (hitCircle(p, UI.portal)) { usePortal(); return; }
   if (hitCircle(p, UI.potion)) { drinkPotion(); return; }
   for (let i = 0; i < UI.skills.length; i++) if (hitCircle(p, UI.skills[i], 5)) { press.skill = i; useSkill(i); return; }

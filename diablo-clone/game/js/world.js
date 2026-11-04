@@ -77,6 +77,7 @@ function genLevel(level, seed, side = null) {
   { const big = A.kind === 'forest' || A.hub, floorBig = A.kind === 'dungeon' && !side && !A.arena; const hs = A.hub && !side ? 84 : big ? 64 : floorBig ? 56 : 40; resizeWorld(hs, hs); }   // round 41: the hub 84x84   // round 38: dungeon floors 56x56 (were 40)
   LV.area = A.kind; LV.cyc = A.cyc; LV.act = A.act; LV.loop = A.loop; LV.floor = A.floor || 0; LV.arena = A.arena || null;
   LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.hub = !!A.hub; LV.gateSign = null; LV.gateOpen = false; LV.autumn = A.act === 1; LV.night = A.kind !== 'dungeon' && A.act === 2; LV.plaza = null; LV.npcs = []; LV.critters = []; LV.champsPlanned = false; LV.genFail = null;
+  if (typeof syncLightTables === 'function') syncLightTables(LV.outdoor);   // round 48
   if (LV.outdoor) { LV.theme = A.kind; genOutdoor(level, seed, A); LV.level = level; LV.seed = seed; return; }
   LV.theme = LV.sideCfg ? LV.sideCfg.theme : ACTS[A.act].theme;   // each act's dungeon keeps one theme: crypt, caves, hell
   if (LV.arena) { genArena(LV.arena, seed); LV.level = level; LV.seed = seed; return; }
@@ -1021,7 +1022,8 @@ function buildWorld() {
 // static lights never move: each one's falloff over the baked scenery is computed once
 const ZMAX = 90;
 function bakeLightMaps() {
-  const tr = LV.outdoor || typeof DLIGHT === 'undefined' ? 1 : DLIGHT.tr, ti = LV.outdoor || typeof DLIGHT === 'undefined' ? 1 : DLIGHT.ti;   // round 47: the dungeon light presets
+  const nl = DL48 && !LV.outdoor;   // round 48: wider, gentler pools (the tone curve keeps the middle from burning out)
+  const tr = (LV.outdoor || typeof DLIGHT === 'undefined' ? 1 : DLIGHT.tr) * (nl ? 1.15 : 1), ti = (LV.outdoor || typeof DLIGHT === 'undefined' ? 1 : DLIGHT.ti) * (nl ? 1.12 : 1);   // round 47: the dungeon light presets
   for (const L of lights) {
     const r = L.r * tr, Li = L.i * ti, ox = Math.floor(L.x - r), oy = Math.floor(L.y - r / 2 - ZMAX), mw = Math.ceil(2 * r), mh = Math.ceil(r + ZMAX);
     const map = new Float32Array(mw * mh), r2 = r * r;
@@ -1030,7 +1032,7 @@ function bakeLightMaps() {
       for (let mx = 0; mx < mw; mx++) {
         const wx = ox + mx; if (wx < 0 || wx >= WW) continue;
         const z = wZ[wy * WW + wx], dx = wx - L.x, dy = (wy + z - L.y) * 2, dz = z - L.z, d2 = dx * dx + dy * dy + dz * dz;
-        if (d2 < r2) { const f = 1 - d2 / r2; map[my * mw + mx] = f * f * Li; }
+        if (d2 < r2) { const f = 1 - d2 / r2; map[my * mw + mx] = (nl ? Math.pow(f, 1.6) : f * f) * Li; }
       }
     }
     L.map = { ox, oy, mw, mh, map };
@@ -1048,6 +1050,49 @@ function bakeLightMaps() {
       }
       L.map = null;
     });
+  }
+  bakeAO();
+}
+// round 48: ambient occlusion for the new dungeon light: the floor darkens toward the walls and
+// into corners, round the foot of props, and walls darken toward their base, so rooms get shape
+// from their edges instead of flat light. One byte per world pixel (255 = no darkening), baked with
+// the light maps; null outdoors and with the old light.
+let AO = null;
+function bakeAO() {
+  if (LV.outdoor || !DL48) { AO = null; return; }
+  if (!AO || AO.length !== WW * WH) AO = new Uint8Array(WW * WH);
+  AO.fill(255);
+  const S = 0.46, R = 0.62, sm = d => { const t = d >= R ? 1 : d <= 0 ? 0 : d / R; return t * t * (3 - 2 * t); };
+  const hard = (i, j) => { if (i < 0 || j < 0 || i >= MW || j >= MH) return true; const k = tIdx(i, j); return LV.map[k] !== FLOOR || LV.solid[k] === 1; };
+  const round = (i, j) => i >= 0 && j >= 0 && i < MW && j < MH && LV.solid[tIdx(i, j)] === 2;
+  // per tile, once: which of the 8 neighbors are hard (bits 0-7: W E N S NW NE SW SE) and whether a
+  // round obstacle is near (bit 8); open tiles with none stay 255 and are skipped
+  const OFF = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]], mask = new Uint16Array(MW * MH);
+  for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
+    const k = tIdx(i, j); if (LV.map[k] !== FLOOR) { mask[k] = 0xffff; continue; }
+    let m = 0; OFF.forEach(([a, b], n) => { if (hard(i + a, j + b)) m |= 1 << n; });
+    for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) if (round(i + a, j + b)) m |= 256;
+    mask[k] = m;
+  }
+  for (let y = 0; y < WH; y++) for (let x = 0; x < WW; x++) {
+    const k = y * WW + x, t = wTile[k];
+    if (t < 0) continue;
+    const m = mask[t]; if (!m) continue;
+    const z = wZ[k];
+    if (!wFloor[k] || z > 0) {   // walls (and tall props): darker toward the ground
+      if (LV.map[t] === WALL && z < 18) AO[k] = Math.round(255 * (0.6 + 0.4 * sm(z / 18 * R)));
+      continue;
+    }
+    if (m === 0xffff) continue;
+    const a = (x - WX0) / 16, b = (y - WY0) / 8, fi = (a + b) / 2, fj = (b - a) / 2, i = Math.floor(fi), j = Math.floor(fj), u = fi - i, v = fj - j;
+    let o = 1;
+    if (m & 1) o *= 1 - S * (1 - sm(u)); if (m & 2) o *= 1 - S * (1 - sm(1 - u)); if (m & 4) o *= 1 - S * (1 - sm(v)); if (m & 8) o *= 1 - S * (1 - sm(1 - v));
+    if ((m & 21) === 16) o *= 1 - S * (1 - sm(Math.hypot(u, v)));            // a corner only: NW without W or N
+    if ((m & 38) === 32) o *= 1 - S * (1 - sm(Math.hypot(1 - u, v)));        // NE without E or N
+    if ((m & 73) === 64) o *= 1 - S * (1 - sm(Math.hypot(u, 1 - v)));        // SW without W or S
+    if ((m & 138) === 128) o *= 1 - S * (1 - sm(Math.hypot(1 - u, 1 - v)));  // SE without E or S
+    if (m & 256) for (let b2 = -1; b2 <= 1; b2++) for (let a2 = -1; a2 <= 1; a2++) if (round(i + a2, j + b2)) { const d = Math.hypot(fi - (i + a2 + 0.5), fj - (j + b2 + 0.5)) - ROUND_R; o *= 1 - 0.4 * (1 - sm(Math.max(0, d) * 1.4)); }
+    AO[k] = Math.round(255 * o);
   }
 }
 const staticLight = [new Float32Array(WW * WH), new Float32Array(WW * WH)];

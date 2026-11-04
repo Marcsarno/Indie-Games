@@ -10,7 +10,7 @@ const who = r => npcs.find(n => n.role === r);
   const r = talkLayout().btn; talkTap([r.x + 4, r.y + 4]); L.push({ oneTapClosed: G.mode === 'play', story: storyStage() }); }
 { const n = who('wren'); hero.fi = n.fi + 1.1; hero.fj = n.fj; run(3); talkTo(n); render(); shot('talk-wren'); const r = talkLayout().btn; talkTap([r.x + 4, r.y + 4]); L.push({ wrenAccepted: G.mode === 'play', story: storyStage() }); }
 // the arrow: far from the den, none; near, it shows
-{ const t = storyTarget(); hero.fi = HUB.camp[0]; hero.fj = HUB.camp[1]; L.push({ target: t && t.map(v => +v.toFixed(1)), distFromCamp: t && +Math.hypot(t[0] - hero.fi, t[1] - hero.fj).toFixed(1), arrowR: QUEST_ARROW_R }); }
+{ const t = storyTarget(); hero.fi = HUB.camp[0]; hero.fj = HUB.camp[1]; L.push({ target: t && t.map(v => +v.toFixed(1)), distFromCamp: t && +Math.hypot(t[0] - hero.fi, t[1] - hero.fj).toFixed(1) }); }
 // the reward pick: magic items
 { LV.diff = 1; const rw = rewardChoice(); L.push({ reward: rw.map(it => it.rarity + ' ' + itemName(it)).join(' | ') });
   openTalk([['WREN', 'YOU BROUGHT HIM BACK. TAKE SOMETHING.']], 'COLLECT', null, rw); render(); const c = talkLayout().cards[1]; talkTap([c.x + 4, c.y + 4]); render(); shot('talk-reward'); const r = talkLayout().btn; const b0 = hero.bag.length; talkTap([r.x + 4, r.y + 4]); L.push({ took: G.mode === 'play' && (hero.bag.length > b0 || Object.values(hero.equip).includes(rw[1])) }); }

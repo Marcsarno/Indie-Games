@@ -43,7 +43,7 @@ const STAGE_QUEST = { wren: 'woodcutter', den: 'woodcutter', cage: 'woodcutter',
 function stageText(st) {
   return { meet: 'SPEAK TO BROTHER OSRIC', wren: 'TALK TO WREN BY THE TENTS', den: 'FIND ALDO IN THE WOLF DEN (WEST)', cage: 'FREE ALDO', aldoBack: 'RETURN TO WREN',
     mine: 'LOOK AT THE OLD MINE (NORTH)', hollis: 'ASK HOLLIS ABOUT THE CHAINS', farm: `DRIVE THE BANDITS FROM THE FARM ${Math.min(4, G.story.n || 0)}/4`, cellar: 'FIND THEIR CHIEF IN THE CELLAR',
-    farmBack: 'RETURN TO HOLLIS', letter: 'SHOW THE LETTER TO BROTHER OSRIC', unlock: 'UNLOCK THE OLD MINE (NORTH)', king: 'PUT THE KING TO REST, BELOW THE MINE', kingBack: 'RETURN TO BROTHER OSRIC' }[st] || '';
+    farmBack: 'RETURN TO HOLLIS', letter: 'SHOW THE LETTER TO BROTHER OSRIC', unlock: 'UNLOCK THE OLD MINE (NORTH)', king: 'PUT THE KING TO REST, BELOW THE MINE', kingBack: 'RETURN TO BROTHER OSRIC', done: 'THE ROAD SOUTH IS OPEN' }[st] || '';
 }
 // who has something to say right now: '!' (a new task or news) or '?' (come back for a reward)
 function storyMark(role) {
@@ -237,18 +237,30 @@ function unlockMine() {
   const s = LV.stairs, [x, y] = iso(s.i + 0.5, s.j + 0.5); for (let k = 0; k < 14; k++) pspawn(5, x + (Math.random() - 0.5) * 20, y - 10, 10 + Math.random() * 20, (Math.random() - 0.5) * 40, -20, 30, 0.6, 30);   // dust and links falling
   saveGame();
 }
-// where the next goal is, for the marker at the screen's edge: [fi, fj] or null
+// where the next goal is, for the marker: [fi, fj] or null (.npc set when it is a person, who shows
+// his own ! or ?). Round 48: always on and step by step: whatever moves the story on next, wherever
+// the hero is: the Alpha or the chief even before they are seen, the cage, the nearest bandit at
+// the farm, the way out of a side area that isn't this step's, the stairs down (or the King) below
+// the mine, and once it is all done, the open road south. drawStoryMark leads there along the ground.
 function storyTarget() {
   if (!storyOn()) return null;
-  const st = storyStage(), npc = r => { const n = npcs.find(n => n.role === r); return n ? [n.fi, n.fj] : null; };
+  const st = storyStage(), live = id => enemies.filter(e => e.id === id && alive(e));
+  const nearest = list => { let b = null, bd = 1e9; for (const e of list) { const d = Math.hypot(e.fi - hero.fi, e.fj - hero.fj); if (d < bd) { bd = d; b = [e.fi, e.fj]; } } return b; };
+  const npc = r => { const n = npcs.find(n => n.role === r); if (!n) return null; const p = [n.fi, n.fj]; p.npc = true; return p; };
+  const stairs = () => LV.stairs ? [LV.stairs.i + 0.5, LV.stairs.j + 0.5] : null;
   if (LV.side) {
-    if (LV.side === 'den' && (st === 'den' || st === 'cage')) { const a = enemies.find(e => e.id === 'alpha' && alive(e)); if (a && LV.seen[tIdx(Math.floor(a.fi), Math.floor(a.fj))]) return [a.fi, a.fj]; const al = npc('aldo'); return al && st === 'cage' ? al : null; }
-    if (LV.side === 'cellar' && (st === 'farm' || st === 'cellar')) { const c = enemies.find(e => e.id === 'banditchief' && alive(e)); return c && LV.seen[tIdx(Math.floor(c.fi), Math.floor(c.fj))] ? [c.fi, c.fj] : null; }
-    return LV.seen[tIdx(LV.stairs.i, LV.stairs.j)] ? [LV.stairs.i + 0.5, LV.stairs.j + 0.5] : null;   // done here: the way out
+    if (LV.side === 'den' && (st === 'den' || st === 'cage')) return nearest(live('alpha')) || npc('aldo') || stairs();
+    if (LV.side === 'cellar' && (st === 'farm' || st === 'cellar')) return nearest(live('banditchief')) || stairs();
+    return stairs();   // done here (or not this step's place): the way out
   }
-  if (!LV.hub) return null;
-  const mine = [LV.stairs.i + 0.5, LV.stairs.j + 0.5];
-  return { meet: npc('priest'), wren: npc('wren'), aldoBack: npc('wren'), den: SIDES.den.door(), cage: SIDES.den.door(), mine, hollis: npc('hollis'), farm: [HUB.farm[0] + 1, HUB.farm[1] + 2],
+  if (!LV.hub) {   // below the mine: the King when he is on this floor, else the stairs down (in his hall, home)
+    if (LV.act !== 0) return null;
+    return boss && alive(boss) ? [boss.fi, boss.fj] : stairs();
+  }
+  const mine = stairs();
+  if (st === 'farm') { const b = nearest(live('brigand')); if (b) return b; }
+  if (st === 'done') return LV.gateOpen && HUB.gate ? [Math.floor(HUB.gate[0]) + 1.5, Math.floor(HUB.gate[1]) + 1.5] : null;
+  return { meet: npc('priest'), wren: npc('wren'), aldoBack: npc('wren') || npc('aldo'), den: SIDES.den.door(), cage: SIDES.den.door(), mine, hollis: npc('hollis'), farm: [HUB.farm[0] + 1, HUB.farm[1] + 2],
     cellar: SIDES.cellar.door(), farmBack: npc('hollis'), letter: npc('priest'), unlock: mine, king: mine, kingBack: npc('priest') }[st] || null;
 }
 // a rare (or better) item: rerolls until one comes up
@@ -259,7 +271,7 @@ function rollRare(R, level) {
 // the tracker: the quest's name, and what to do next in words
 function drawQuestTracker() {
   if (G.mode !== 'play' || !storyOn()) return;
-  const st = storyStage(); if (st === 'done') return;
+  const st = storyStage(); if (st === 'done' && !(LV.hub && LV.gateOpen)) return;
   const q = STAGE_QUEST[st];
   if (q) text(STORY_NAMES[q], 4, 68, 24);
   text(stageText(st), 4, q ? 76 : 68, 51);

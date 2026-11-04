@@ -81,14 +81,25 @@ const TAIL = [1, 2, 3];
 const PAL_RAMPS = [S, FIRE, RED, BONE, STEEL, WOOD, BLUE, CHITIN, FLESH, GOLD, GREEN, PURPLE, SKIN, CAVE, FUNGUS, HELL, LAVA, GRASS, LEAF, DIRT, STRAW, ORANGE, WATER, AUTUMN];
 const LEVELS = 9, L_ID = 3, BANDS = 5;
 const LTAB = Array.from({ length: LEVELS }, () => new Uint8Array(NPAL));
-for (let i = 1; i < NPAL; i++) {
-  const ramp = PAL_RAMPS.find(r => r.includes(i));
-  const chain = ramp ? [...TAIL, ...ramp] : TAIL, pos = chain.indexOf(i);
-  for (let L = 0; L < LEVELS; L++) {
-    const np = L <= L_ID ? pos - Math.round((L_ID - L) * 1.8) : pos + Math.round((L - L_ID) * 0.4);
-    LTAB[L][i] = pos === 0 ? 0 : chain[clamp(np, 1, chain.length - 1)];
+// round 48: the new dungeon light (DL48; the user: lit areas too bright and flat, no shading, some
+// areas too dark). Above the identity level colors no longer slide up their ramp (that merged a
+// ramp's top shades into one flat color by the torches); they brighten and warm instead, every
+// shade kept. Below it they fall more gently (1.5 steps a level, was 1.8). OLD keeps round 28's tables.
+let DL48 = true;
+try { const q = new URLSearchParams(location.search).get('dl48'); DL48 = q !== null ? q !== '0' : localStorage.getItem('dcg-dlight') !== 'old'; } catch (e) { /* storage blocked */ }
+let DLT = DL48;   // what the tables are built for now: the new light only underground (syncLightTables)
+function buildLtab() {
+  for (let i = 1; i < NPAL; i++) {
+    const ramp = PAL_RAMPS.find(r => r.includes(i));
+    const chain = ramp ? [...TAIL, ...ramp] : TAIL, pos = chain.indexOf(i);
+    for (let L = 0; L < LEVELS; L++) {
+      const np = DLT ? (L <= L_ID ? pos - Math.round((L_ID - L) * 1.5) : pos + (L - L_ID >= 3 ? 1 : 0))
+        : L <= L_ID ? pos - Math.round((L_ID - L) * 1.8) : pos + Math.round((L - L_ID) * 0.4);
+      LTAB[L][i] = pos === 0 ? 0 : chain[clamp(np, 1, chain.length - 1)];
+    }
   }
 }
+buildLtab();
 // flat lit-color table: LCOL[level * NPAL + index] = RGBA of that index at that light level.
 // Round 28, warm light and cool shadow (the painter's trick): above the identity level (torch-lit)
 // colors lean warm, below it (falling into the dark) they lean blue; the identity level and pure
@@ -100,8 +111,9 @@ function buildLcol() {
     const t = !HUE_LIGHT ? 0 : L > L_ID ? (L - L_ID) / (LEVELS - 1 - L_ID) : -(L_ID - L) / L_ID;
     for (let i = 0; i < NPAL; i++) {
       const j = LTAB[L][i]; let r = PR[j], g = PG[j], b = PB[j];
-      if (t > 0) { r = r * (1 + 0.16 * t) + 6 * t; g = g * (1 + 0.04 * t); b = b * (1 - 0.24 * t); }
-      else if (t < 0 && j > 1) { const c = -t; r = r * (1 - 0.2 * c); g = g * (1 - 0.08 * c); b = b * (1 + 0.1 * c) + 7 * c; }
+      if (t > 0 && DLT) { const k = 1 + 0.045 * (L - L_ID), w = Math.min(1, t * 2.3); r = r * k * (1 + 0.2 * w) + 8 * w; g = g * k * (1 + 0.05 * w); b = b * k * (1 - 0.3 * w); }   // brighter and warmer, each shade kept
+      else if (t > 0) { r = r * (1 + 0.16 * t) + 6 * t; g = g * (1 + 0.04 * t); b = b * (1 - 0.24 * t); }
+      else if (t < 0 && j > 1) { const c = -t * (DLT ? 1.1 : 1); r = r * (1 - 0.2 * c); g = g * (1 - 0.08 * c); b = b * (1 + 0.1 * c) + 7 * c; }   // (new: cooler shadows)
       r = clamp(Math.round(r), 0, 255); g = clamp(Math.round(g), 0, 255); b = clamp(Math.round(b), 0, 255);
       LCOL[L * NPAL + i] = (255 << 24) | (b << 16) | (g << 8) | r;
     }
@@ -109,6 +121,14 @@ function buildLcol() {
 }
 try { const q = new URLSearchParams(location.search).get('hue'); HUE_LIGHT = q !== null ? q !== '0' : localStorage.getItem('dcg-light') !== 'old'; } catch (e) { /* storage blocked */ }
 buildLcol();
+// outdoors keeps the old tables (daylight and the town's lanterns are as drawn); the switch rebuilds
+function syncLightTables(outdoor) { const v = DL48 && !outdoor; if (v !== DLT) { DLT = v; buildLtab(); buildLcol(); } }
+// round 48: the tone curve for the new dungeon light: light (in levels) in, level out. The middle
+// stays as it was; the dark gets a floor (no corner of a room falls below 1.35, so nothing reads as
+// a black hole), and the top rolls off softly toward 5.3 instead of piling up at the top levels, so
+// torch pools keep their shading and their edge.
+const TONE = new Float32Array(1024);
+for (let n = 0; n < 1024; n++) { const lv = n / 64; TONE[n] = lv < 1.5 ? 1.35 + lv * 0.1 : lv <= 3 ? lv : 3 + 2.3 * (1 - Math.exp(-(lv - 3) / 2.3)); }
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => v / 16);
 
 // ---------------------------------------------------------------- random
