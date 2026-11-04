@@ -1,13 +1,13 @@
 // Hero gear one slot at a time, for concept mock-ups: per class, every helm on an unarmored body and
 // every chest piece on a bare head (the class's starter weapon in hand), each in front-right and back.
-//   node tools/capture/heroparts.cjs <outDir> [zoom]   ->  <cls>-helms.png, <cls>-chests.png
+//   node tools/capture/heroparts.cjs <outDir> [zoom] [gameDir] [slots: helm,chest]  ->  <cls>-helms.png, <cls>-chests.png
 const { chromium } = require('playwright'); const fs = require('fs'), path = require('path');
 (async () => {
-  const out = process.argv[2], Z = +(process.argv[3] || 3); fs.mkdirSync(out, { recursive: true });
+  const out = process.argv[2], Z = +(process.argv[3] || 3), gameDir = process.argv[4] || path.resolve(__dirname, '../../game'), slots = (process.argv[5] || 'helm,chest').split(','); fs.mkdirSync(out, { recursive: true });
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.addInitScript(() => { window.requestAnimationFrame = () => 0; });
-  await p.goto('file://' + path.resolve(__dirname, '../../game/index.html'));
-  const files = await p.evaluate(Z => {
+  await p.goto('file://' + path.resolve(gameDir, 'index.html'));
+  const files = await p.evaluate(({ Z, slots }) => {
     const col = v => `rgb(${PR[v]},${PG[v]},${PB[v]})`, BG = col(4), INK = col(26), DIM = col(25);
     buildBudget.ms = Infinity; G.mode = 'play'; newHero('warrior'); startLevel(3, 777);
     const pix = sp => (q => { const v0 = sp.data[q]; return v0 ? ((v0 & 128) ? v0 & 127 : LTAB[4][v0]) : -1; });
@@ -15,7 +15,7 @@ const { chromium } = require('playwright'); const fs = require('fs'), path = req
     let serial = 1e6;
     const mk = base => ({ id: serial++, base, rarity: 'normal', name: base, mods: {} });
     const res = {};
-    for (const cls of ['warrior', 'mage', 'ranger']) for (const slot of ['helm', 'chest']) {
+    for (const cls of ['warrior', 'mage', 'ranger']) for (const slot of slots) {
       const bases = Object.keys(ITEM_BASES).filter(k => ITEM_BASES[k].slot === slot && ITEM_BASES[k].cls === cls);
       const cells = [];
       for (const base of bases) for (const [d, cap] of [[0, base], [5, 'back']]) {
@@ -40,7 +40,7 @@ const { chromium } = require('playwright'); const fs = require('fs'), path = req
       res[`${cls}-${slot}s.png`] = cv.toDataURL();
     }
     return res;
-  }, Z);
+  }, { Z, slots });
   if (errs.length) console.log('errors:', errs.join('\n'));
   for (const [f, u] of Object.entries(files)) { fs.writeFileSync(path.join(out, f), Buffer.from(u.split(',')[1], 'base64')); console.log(path.join(out, f)); }
   await b.close();

@@ -110,3 +110,15 @@ touches its sprite box edge in any frame of idle/walk/attack-shoot-cast/hit/deat
 Still open: gravebow quiver (no palette color stands off the bones), spear head hidden in the spearman's front view,
 axeman cheek guards flare in front, slinger's sling edge-on in pure side views, mastiff still a little bear-like,
 grunt back views lack muscle definition, treant root feet.
+
+## A5: warrior helms refitted to the user's snug-fit mock-up (2026-11-04)
+Review page: https://claude.ai/artifact/FJXpaZRkGFZMyTNP6JkWko (source `art/review/a5-helms/`, with the mock-up).
+**Changed existing art, at the user's request:** the helm code in `heroRig` (`game/js/actors.js`). Closed helms
+(barbute, great, crown, bascinet, horned) were shells ~1.25-1.4x the bare head before the 1.5x head scale
+(HERO_HK, unchanged); now ~[4.5, 4.45, 5.0] radii, about the bare head with hair. Visor plate, bars and rivets,
+the top ridge (now low, no fin), the bascinet spike and snout, the crown circlet and points, the horned helm's
+slits, band and horns all scaled to fit. Cap and spangenhelm a little snugger. Mage hats and ranger hoods
+unchanged. The Brigand (cap) and Bandit Chief (horned) wear these helms and change with them; every other
+monster renders pixel-identical. No hero frame clips (296 frames per helm: idle, walk, atk1-3, hit, death x 8).
+3 passes, each won both orders (pass 3 restored a little horn length so the horns read at 1x).
+New tool options: `tools/capture/heroparts.cjs <outDir> [zoom] [gameDir] [helm,chest]`.

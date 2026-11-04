@@ -706,7 +706,7 @@ function heroRig(eq, st) {
       if (eq.helm === 'none' && !bald && (z2 > 1.55 + Math.max(0, f2 - 2.5) * 0.2 || f2 < -1.2 || (as > 3.4 && z2 > -0.6))) return hairM;
       return 0;
     } });
-    if (eq.helm === 'cap') r.ell(V.mad(hd, up, 2.2), [5.0, 4.9, 3.6], M.STEEL, helmF, { mf: p => V.dot(V.sub(p, hd), up) < 0.6 ? M.LEATHER : 0 });
+    if (eq.helm === 'cap') r.ell(V.mad(hd, up, 2.0), [4.7, 4.6, 3.3], M.STEEL, helmF, { mf: p => V.dot(V.sub(p, hd), up) < 0.6 ? M.LEATHER : 0 });
     if (eq.helm === 'hat' || eq.helm === 'hat_conj') {   // wizard hat: a wide brim, a tall crown that bends back to a point, gold band (round 43: the conjurer's in navy)
       const hm = eq.helm === 'hat_conj' ? M.CLOTH_NAVY : M.CLOTH_PURPLE, base = V.add(V.mad(hd, up, 3.3), V.mul(fwd, -0.8));   // set high and tipped back so the eyes show
       r.group(() => {
@@ -717,10 +717,10 @@ function heroRig(eq, st) {
       });
     }
     if (eq.helm === 'spangen') {   // round 43: the spangenhelm: a riveted cone with gold ribs and a nasal bar over the face
-      const hc = V.mad(hd, up, 2.4);
-      r.ell(hc, [5.0, 4.9, 3.8], M.STEEL, helmF, { mf: p => { const q = V.sub(p, hc); return Math.abs(V.dot(q, sideR)) < 0.5 || Math.abs(V.dot(q, fwd)) < 0.5 || V.dot(q, up) < -2.4 ? M.GOLD : 0; } });
-      r.cone(V.mad(hc, up, 2.6), V.mad(hc, up, 6.4), 2.6, 0.3, M.STEEL);
-      r.box(V.add(V.mad(hd, up, 0.2), V.mul(fwd, 4.5)), [0.5, 0.6, 2.0], M.STEEL, helmF);
+      const hc = V.mad(hd, up, 2.2);   // art A5 (the user's snug-fit mock-up): fitted to the head
+      r.ell(hc, [4.7, 4.6, 3.4], M.STEEL, helmF, { mf: p => { const q = V.sub(p, hc); return Math.abs(V.dot(q, sideR)) < 0.5 || Math.abs(V.dot(q, fwd)) < 0.5 || V.dot(q, up) < -2.1 ? M.GOLD : 0; } });
+      r.cone(V.mad(hc, up, 2.2), V.mad(hc, up, 5.4), 2.3, 0.3, M.STEEL);
+      r.box(V.add(V.mad(hd, up, 0.2), V.mul(fwd, 4.3)), [0.5, 0.6, 1.8], M.STEEL, helmF);
     }
     if (eq.helm === 'hood' || eq.helm === 'hood_sage') {   // a deep hood: a shell over the back and top of the head, face left open (the sage's: sage green with a gold hem)
       const hc = V.add(V.mad(hd, up, 0.7), V.mul(fwd, -1.3)), sage = eq.helm === 'hood_sage';
@@ -759,46 +759,46 @@ function heroRig(eq, st) {
   } else {
     if (eq.helm === 'barbute') {
       // barbute: close round helm with a T-shaped face opening
-      const hc = V.mad(hd, up, 0.4);
-      r.ell(hc, [5.4, 5.3, 6.4], M.STEEL, helmF, { mf: p => {
+      const hc = V.mad(hd, up, 0.4);   // art A5 (the user's snug-fit mock-up): a shell fitted to the head
+      r.ell(hc, [4.45, 4.4, 4.9], M.STEEL, helmF, { mf: p => {
         const q = V.sub(p, hc), f2 = V.dot(q, fwd), s2 = Math.abs(V.dot(q, sideR)), z2 = V.dot(q, up);
-        if (f2 < 1.6) return 0;
-        return (Math.abs(z2 - 1.8) < 1.1 && s2 < 3.8) || (s2 < 1.2 && z2 < 1.8 && z2 > -3.4) ? M.DARK : 0;   // set high and wide so it reads from above
+        if (f2 < 1.3) return 0;
+        return (Math.abs(z2 - 1.3) < 0.9 && s2 < 3.0) || (s2 < 1.0 && z2 < 1.3 && z2 > -2.7) ? M.DARK : 0;   // set high and wide so it reads from above
       } });
-      r.box(V.mad(hc, up, 5.8), [4.6, 0.6, 0.9], M.STEEL, helmF);
+      r.box(V.mad(hc, up, 4.55), [2.6, 0.5, 0.55], M.STEEL, helmF);   // a low ridge, not a fin
     } else if (eq.helm === 'great' || eq.helm === 'crown' || eq.helm === 'bascinet') {
       // great helm: tall dome with a raised crest ridge and a barred visor plate on the front
-      const hc = V.mad(hd, up, 0.6);
-      r.ell(hc, [5.6, 5.4, 7.2], PL, helmF);
-      r.box(V.mad(hc, up, 6.3), [4.4, 0.7, 1.0], PL, helmF);
-      const vc = V.add(V.mad(hd, fwd, 4.9), V.mul(up, 0.2));
+      const hc = V.mad(hd, up, 0.4);   // art A5 (the user's snug-fit mock-up): a shell fitted to the head
+      r.ell(hc, [4.5, 4.45, 5.1], PL, helmF);
+      r.box(V.mad(hc, up, 4.75), [2.6, 0.5, 0.55], PL, helmF);   // a low ridge, not a fin
+      const vc = V.add(V.mad(hd, fwd, 3.95), V.mul(up, 0.2));
       const vf = frameAlong(V.norm(V.add(fwd, V.mul(up, 0.45))), up);   // tipped up toward the light so the plate reads bright
-      r.box(vc, [1.1, 3.4, 2.5], PL, vf, { bias: 1, mf: p => {
+      r.box(vc, [1.0, 2.9, 2.1], PL, vf, { bias: 1, mf: p => {
         const q = V.sub(p, vc), s2 = V.dot(q, sideR), z2 = V.dot(q, vf[2]);
-        if (V.dot(q, vf[0]) < 0.8 || Math.abs(z2) > 1.8) return 0;
-        for (const c of [-1.9, 0, 1.9]) if (Math.abs(s2 - c) < 0.5) return M.DARK;   // three bars, each a full pixel
+        if (V.dot(q, vf[0]) < 0.7 || Math.abs(z2) > 1.6) return 0;
+        for (const c of [-1.6, 0, 1.6]) if (Math.abs(s2 - c) < 0.45) return M.DARK;   // three bars, each a full pixel (at the 1.5x head)
         return 0;
       } });
-      for (const sd of [-1, 1]) r.sph(V.add(V.add(V.mad(hd, fwd, 3.2), V.mul(sideR, sd * 4.4)), V.mul(up, 0.4)), 1.0, M.STEEL);   // visor rivets
-      if (eq.helm === 'bascinet') { r.cone(V.mad(hc, up, 5), V.add(V.mad(hc, up, 10.5), V.mul(fwd, -2)), 3.8, 0.4, PL); r.cone(vc, V.add(V.mad(vc, fwd, 3.4), V.mul(up, -0.6)), 2.4, 0.7, PL); }   // round 43: the bascinet's pointed skull and snouted visor
+      for (const sd of [-1, 1]) r.sph(V.add(V.add(V.mad(hd, fwd, 2.6), V.mul(sideR, sd * 3.6)), V.mul(up, 0.4)), 0.9, M.STEEL);   // visor rivets
+      if (eq.helm === 'bascinet') { r.cone(V.mad(hc, up, 3.6), V.add(V.mad(hc, up, 7.2), V.mul(fwd, -1.3)), 2.8, 0.4, PL); r.cone(vc, V.add(V.mad(vc, fwd, 2.2), V.mul(up, -0.4)), 1.8, 0.6, PL); }   // round 43: the bascinet's pointed skull and snouted visor
       if (eq.helm === 'crown') {   // a gold circlet with points and a red stone
-        r.cyl(V.mad(hc, up, 3.2), V.mad(hc, up, 4.6), 5.0, M.GOLD);
+        r.cyl(V.mad(hc, up, 2.2), V.mad(hc, up, 3.3), 4.1, M.GOLD);
         const oak = hasFx(eq, 'oak');   // the Oak King's crown sprouts leaves and a green stone
-        for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2, b = V.add(V.mad(hc, up, 4.4), V.add(V.mul(fwd, Math.cos(a) * 4.6), V.mul(sideR, Math.sin(a) * 4.6))); r.cone(b, V.mad(b, up, 2.6), oak ? 1.3 : 0.9, 0.2, oak ? M.LEAFM : M.GOLD); }
-        r.sph(V.add(V.mad(hc, up, 3.9), V.mul(fwd, 5.1)), 0.8, oak ? M.EYE_GRN : M.EYE_RED, { noShadow: true });
+        for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2, b = V.add(V.mad(hc, up, 3.1), V.add(V.mul(fwd, Math.cos(a) * 3.8), V.mul(sideR, Math.sin(a) * 3.8))); r.cone(b, V.mad(b, up, 2.0), oak ? 1.2 : 0.9, 0.2, oak ? M.LEAFM : M.GOLD); }
+        r.sph(V.add(V.mad(hc, up, 2.75), V.mul(fwd, 4.2)), 0.8, oak ? M.EYE_GRN : M.EYE_RED, { noShadow: true });
       }
     } else {
-    r.ell(hd, [5.9, 5.7, 6.7], M.STEEL, helmF, { mf: p => {
+    r.ell(hd, [4.5, 4.45, 5.0], M.STEEL, helmF, { mf: p => {   // art A5 (the user's snug-fit mock-up): fitted to the head
       const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up);
-      if (Math.abs(z2 - 2.4) < 0.8) return M.GOLD;
-      if (f2 > 2.6 && Math.abs(z2 - 0.4) < 0.75 && Math.abs(s2) < 4.2) return M.DARK;            // eye slit
-      if (f2 > 3.4 && Math.abs(s2) < 0.6 && z2 < 0 && z2 > -4.5) return M.DARK;                  // breath slit
+      if (Math.abs(z2 - 1.9) < 0.65) return M.GOLD;
+      if (f2 > 2.0 && Math.abs(z2 - 0.3) < 0.65 && Math.abs(s2) < 3.2) return M.DARK;            // eye slit
+      if (f2 > 2.6 && Math.abs(s2) < 0.5 && z2 < 0 && z2 > -3.3) return M.DARK;                 // breath slit
       return 0;
     } });
-    r.box(V.mad(hd, up, 6.4), [3.6, 0.6, 1.0], M.GOLD, helmF);
+    r.box(V.mad(hd, up, 4.7), [2.4, 0.5, 0.55], M.GOLD, helmF);
       for (const s of [-1, 1]) {
-        const a = V.add(V.mad(hd, up, 3), V.mul(sideR, s * 5)), b = V.add(V.mad(hd, up, 6), V.mul(sideR, s * 8.5)), c = V.add(V.add(V.mad(hd, up, 10), V.mul(sideR, s * 8.5)), V.mul(fwd, 1.5));
-        r.group(() => { r.cone(a, b, 1.6, 1.2, M.HORN); r.cone(b, c, 1.2, 0.5, M.HORN); });
+        const a = V.add(V.mad(hd, up, 2.3), V.mul(sideR, s * 3.9)), b = V.add(V.mad(hd, up, 4.2), V.mul(sideR, s * 5.8)), c = V.add(V.add(V.mad(hd, up, 7.2), V.mul(sideR, s * 6.1)), V.mul(fwd, 1.0));
+        r.group(() => { r.cone(a, b, 1.25, 0.95, M.HORN); r.cone(b, c, 0.95, 0.35, M.HORN); });   // big enough to read at 1x
       }
     }
   }
