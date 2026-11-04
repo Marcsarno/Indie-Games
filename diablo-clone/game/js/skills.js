@@ -31,7 +31,7 @@ const CD = { bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, leap: 0, fire
 function resetSkills() { for (const k in CD) CD[k] = 0; hero.whirl = 0; hero.dash = 0; hero.buff = 0; }
 const heroBusy = () => hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0 || !!hero.leap || !!hero.ultOn || !!hero.roll;
 // one hit's damage, with the war cry bonus
-const heroDmg = (k = 1) => Math.max(1, Math.round(roll(STAT.dmg) * k * (hero.buff > 0 ? 1.4 : 1)));
+const heroDmg = (k = 1) => Math.max(1, Math.round((roll(STAT.dmg) + (STAT.fireDmg || 0)) * k * (hero.buff > 0 ? 1.4 : 1)));   // fire damage from gear rides on every hit (round 42a)
 
 // button feedback (round 25): a pulse when a skill fires, a flash when it is ready again, a shake
 // with no mana
@@ -417,7 +417,7 @@ const CAST_RELEASE = 0.06;
 // the missile stays snappy, the big ones are held a beat longer
 const CAST_REL = { missile: 0.07, fireball: 0.13, cone: 0.12, meteor: 0.24 };
 const castRel = k => CAST_REL[k] ?? CAST_RELEASE;
-const spellDmg = k => Math.max(1, Math.round(roll(STAT.dmg) * k * (hero.buff > 0 ? 1.4 : 1)));
+const spellDmg = k => Math.max(1, Math.round((roll(STAT.dmg) + (STAT.fireDmg || 0)) * k * (hero.buff > 0 ? 1.4 : 1)));
 const spellCrit = () => Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100;
 function startCast(kind, dur, target, fn) {
   if (target) hero.dir = dirFrom(target[0] - hero.fi, target[1] - hero.fj);

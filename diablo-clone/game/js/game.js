@@ -30,7 +30,7 @@ const G = { t: 0, mode: 'title', paused: false, trauma: 0, fade: 0, fadeTo: null
 const hero = {
   fam: 'hero', fi: 0, fj: 0, dir: 1, clip: 'idle', clock: 0, walk: 0, runT: 0, goT: 0, stopT: 0, atk: -1, combo: 0, swingEnd: -9, hitDone: false, stop: 0, flash: 0,
   hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, hurtT: 0, cast: -1,
-  equip: { weapon: null, helm: null, chest: null, shield: null }, bag: [],
+  equip: { weapon: null, helm: null, chest: null, shield: null, ring: null, amulet: null }, bag: [],
   look: { team: 'red', helm: 'none', chest: 'tunic', weapon: 'sword', shield: 'none' },
 };
 let enemies = [], groundItems = [], projectiles = [], floaters = [];
@@ -56,6 +56,7 @@ function recalcHero() {
   STAT.leech = mods.leech || 0;
   STAT.crit = mods.crit || 0; STAT.thorns = mods.thorns || 0; STAT.atkSpeed = mods.atkSpeed || 0; STAT.regen = mods.regen || 0; STAT.fireburst = mods.fireburst || 0;
   STAT.speed = 4.2 * (1 + (mods.speed || 0) / 100);
+  for (const k of ['fireDmg', 'chill', 'goldFind', 'find', 'hpKill', 'manaKill', 'potion', 'dr']) STAT[k] = mods[k] || 0;   // round 42a
   STAT.slow = !!w?.slow;
   // legendaries change how their piece looks (glowing ember blade, oak-leaf crown, ...)
   const lgd = ['weapon', 'helm', 'chest', 'shield'].map(s => e[s] && e[s].rarity === 'legend' ? (e[s].fx || (LEGENDARIES.find(L => L.name === e[s].name) || {}).fx) : null).filter(Boolean).join('|');
@@ -267,7 +268,7 @@ function drinkPotion() {
   if (G.mode !== 'play' || hero.dead) return;
   if (hero.potions <= 0) { say('NO POTIONS', 22, 1.2); return; }
   if (hero.hp >= STAT.maxHp) return;
-  hero.potions--; hero.hp = Math.min(STAT.maxHp, hero.hp + 30 + hero.lvl * 3); sfx('potion'); hero.drinkT = 0.5;   // round 40a: the drink pose
+  hero.potions--; hero.hp = Math.min(STAT.maxHp, hero.hp + Math.round((30 + hero.lvl * 3) * (1 + STAT.potion / 100))); sfx('potion'); hero.drinkT = 0.5;   // round 40a: the drink pose
   const [x, y] = screenOf(hero); burst(4, x, y, 20, 10, 30, 22);
 }
 // pow: 0 = light blow (sword swings, spells), 1 = heavy (two-handers), 2 = combo finisher
@@ -297,6 +298,7 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
       }
     }
   }
+  if (STAT.chill && !e.def.unique && Math.random() * 100 < STAT.chill) e.slowT = Math.max(e.slowT || 0, 1.5);   // round 42a: CHILLING gear
   if (e.windT > 0 && (pow >= 1 || dmg >= e.maxHp * 0.18)) e.windT = 0;   // a big hit stops a charge before it starts
   if (pow === 2 && e.look.shield === true) e.guardT = G.t + 2.2;   // a finisher knocks the shield aside
   ultGain(e, Math.min(dmg, Math.max(0, e.hp)), dmg >= e.hp); e.hp -= dmg; e.flash = FEEL_OLD ? (crit ? 0.09 : 0.05) : (crit ? 0.1 : 0.065); if (!FEEL_OLD) e.tint = 0.08;
@@ -339,6 +341,8 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
     questKill(e.id);
     if (e.pw) eliteDeath(e);
     gainXp(e.def.xp * (1 + (LV.diff - 1) * 0.3) * (e.champ ? 3 + (e.pw ? e.pw.length - 1 : 0) : 1) * (e.summonedBy ? 0.2 : 1) * (1 + Math.max(0, streak - 2) * 0.1));
+    if (STAT.hpKill) hero.hp = Math.min(STAT.maxHp, hero.hp + STAT.hpKill);
+    if (STAT.manaKill) hero.mana = Math.min(STAT.maxMana, hero.mana + STAT.manaKill);
     if (!e.noLoot) dropLoot(e.fi, e.fj, e.def.unique ? 4 : e.champ ? 3 + (e.pw ? e.pw.length - 1 : 0) : e.def.elite ? 3 : 1, e.def.unique || !!e.champ || !!e.def.elite);
     if (e.def.unique || (e.champ && Math.random() < 0.08)) groundItems.push({ item: rollLegendary(rng((Math.random() * 1e9) | 0)), fi: e.fi, fj: e.fj, t: 0 });
     if ((e.champ || e.def.elite) && Math.random() < 0.12) groundItems.push({ item: rollSetItem(rng((Math.random() * 1e9) | 0)), fi: e.fi + 0.4, fj: e.fj, t: 0 });
@@ -542,7 +546,8 @@ function dropLoot(fi, fj, n, rich) {
   }
 }
 function pickup(g) {
-  if (g.gem) { const v = Math.round(g.gem.worth * (1 + LV.diff * 0.25)); hero.gold += v; sfx('gold'); floater(`${g.gem.name} +${v}`, g.fi, g.fj, 12, g.gem.cols[2]); return true; }
+  if (g.gold && STAT.goldFind && !g.found) { g.gold = Math.round(g.gold * (1 + STAT.goldFind / 100)); g.found = true; }   // round 42a: GILDED gear
+  if (g.gem) { const v = Math.round(g.gem.worth * (1 + LV.diff * 0.25) * (1 + STAT.goldFind / 100)); hero.gold += v; sfx('gold'); floater(`${g.gem.name} +${v}`, g.fi, g.fj, 12, g.gem.cols[2]); return true; }
   if (g.gold) { sfx('gold'); hero.gold += g.gold; floater(g.gold + ' GOLD', g.fi, g.fj, 10, 50); return true; }
   const b = ITEM_BASES[g.item.base];
   if (b.mana) { hero.mana = Math.min(STAT.maxMana, hero.mana + b.mana); sfx('potion'); floater('+' + b.mana + ' MANA', g.fi, g.fj, 12, 39); const [x, y] = screenOf(hero); burst(4, x, y, 20, 10, 30, 40); return true; }
@@ -968,6 +973,7 @@ function hurtHero(dmg, src) {
   if (hero.dead || hero.leap || hero.roll || (hero.ultOn && hero.ultOn.kind === 'wrath')) return;   // nothing touches him in the air
   if (Math.random() * 100 < STAT.block) { floater('BLOCK', hero.fi, hero.fj, 44, 31); sfx('block'); return; }
   dmg = Math.max(1, Math.round(dmg * 40 / (40 + STAT.armor * (hero.buff > 0 ? 1.5 : 1) * 2.5) * (hero.stoneskin > 0 ? 0.5 : 1)));
+  if (STAT.dr) dmg = Math.max(1, dmg - STAT.dr);   // round 42a: OF THE WALL
   hero.hp -= dmg; hero.flash = 0.06; hero.hurtT = 0.15; sfx('hurt');
   hero.hitF = 0;   // round 40a: which way the blow knocks him (0 front, 1 from his left, 2 from his right, 3 from behind)
   if (src && src.fi !== undefined && !FEEL_OLD) { const [fx, fy] = dirVec(hero.dir), dx = src.fi - hero.fi, dy = src.fj - hero.fj, l = Math.hypot(dx, dy) || 1, dt = (dx * fx + dy * fy) / l, cr = (fx * dy - fy * dx) / l; hero.hitF = dt > 0.5 ? 0 : dt < -0.5 ? 3 : cr > 0 ? 2 : 1; }
@@ -1844,7 +1850,7 @@ function loadSave(cls = 'warrior') {
   } catch (e) { return null; }
 }
 function newHero(cls = 'warrior') {
-  Object.assign(hero, { cls, hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, bag: [], mods: {}, ult: 0, equip: { weapon: null, helm: null, chest: null, shield: null } });
+  Object.assign(hero, { cls, hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, bag: [], mods: {}, ult: 0, equip: { weapon: null, helm: null, chest: null, shield: null, ring: null, amulet: null } });
   const R = rng(5);
   const kit = cls === 'mage' ? ['oak_staff', 'apprentice_robe', 'wizard_hat'] : cls === 'ranger' ? ['hunting_bow', 'leather_jerkin', 'ranger_hood', 'quiver'] : ['short_sword', 'tunic'];
   for (const b of kit) { const it = rollItem(R, 1, b); it.rarity = 'normal'; it.mods = {}; hero.equip[ITEM_BASES[b].slot] = it; }

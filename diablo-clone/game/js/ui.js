@@ -411,10 +411,10 @@ const budgetOn = s => { buildBudget.ms = s; };
 
 // ---------------------------------------------------------------- inventory
 const INV = { sel: null };   // {item, from: 'bag'|'equip', slot}
-const SLOTS = ['helm', 'chest', 'weapon', 'shield'];
+const SLOTS = ['helm', 'chest', 'weapon', 'shield', 'ring', 'amulet'];
 function invLayout() {
   const L = { slots: {}, bag: [], btns: [] };
-  SLOTS.forEach((s, n) => L.slots[s] = { x: 14, y: 30 + n * 34, w: 30, h: 30 });
+  SLOTS.forEach((s, n) => L.slots[s] = n < 4 ? { x: 14, y: 30 + n * 34, w: 30, h: 30 } : { x: W - 44, y: 30 + (n - 4) * 34, w: 30, h: 30 });   // jewelry on the right (round 42a)
   for (let n = 0; n < BAG_SIZE; n++) L.bag.push({ x: 15 + (n % 6) * 41, y: 176 + Math.floor(n / 6) * 34, w: 34, h: 30 });
   L.close = { x: W - 30, y: 6, w: 24, h: 14 };
   L.color = { x: W - 66, y: 150, w: 54, h: 14 };
@@ -431,7 +431,7 @@ function drawInventory() {
   // paper doll: the real hero sprite at 2x, so gear changes show here too
   const doll = getSprite('hero', hero.look, 1, 'idle', Math.floor(G.t / 0.2) % 4, hero, 1);
   sprite(doll, 150, 148, 2, 4);
-  const nm = { helm: 'HEAD', chest: 'BODY', weapon: 'HAND', shield: 'OFF' };
+  const nm = { helm: 'HEAD', chest: 'BODY', weapon: 'HAND', shield: 'OFF', ring: 'RING', amulet: 'NECK' };
   for (const s of SLOTS) {
     const r = L.slots[s], it = hero.equip[s];
     const special = it && (it.rarity === 'legend' || it.rarity === 'set') ? RARITY_COL[it.rarity] : 8;

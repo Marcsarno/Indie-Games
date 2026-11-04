@@ -44,6 +44,35 @@ const ITEM_BASES = {
   shadow_hood: { slot: 'helm', look: 'rhood_dark', name: 'SHADOW HOOD', armor: 4, cls: 'ranger', lvl: 2 },
   quiver: { slot: 'shield', look: 'quiver', name: 'QUIVER', armor: 1, cls: 'ranger', lvl: 1 },
   war_quiver: { slot: 'shield', look: 'quiver', name: 'WAR QUIVER', armor: 3, cls: 'ranger', lvl: 2 },
+  // round 42a: more ordinary bases, so the common drops have range before any more legendaries come.
+  // Tiers by area level; most reuse a look (as Diablo did), only their numbers and names differ.
+  broadsword: { slot: 'weapon', look: 'sword', name: 'BROADSWORD', dmg: [6, 13], cls: 'warrior', lvl: 3 },
+  bastard_sword: { slot: 'weapon', look: 'sword', name: 'BASTARD SWORD', dmg: [8, 17], cls: 'warrior', lvl: 4 },
+  morning_star: { slot: 'weapon', look: 'mace', name: 'MORNING STAR', dmg: [7, 16], cls: 'warrior', lvl: 3, slow: true },
+  battle_axe: { slot: 'weapon', look: 'axe', name: 'BATTLE AXE', dmg: [10, 21], cls: 'warrior', lvl: 5, slow: true },
+  spangenhelm: { slot: 'helm', look: 'barbute', name: 'SPANGENHELM', armor: 6, cls: 'warrior', lvl: 3 },
+  bascinet: { slot: 'helm', look: 'great', name: 'BASCINET', armor: 8, cls: 'warrior', lvl: 5 },
+  scale_mail: { slot: 'chest', look: 'chain', name: 'SCALE MAIL', armor: 9, cls: 'warrior', lvl: 3 },
+  gothic_plate: { slot: 'chest', look: 'darkplate', name: 'GOTHIC PLATE', armor: 18, cls: 'warrior', lvl: 5 },
+  targe: { slot: 'shield', look: 'round', name: 'TARGE', armor: 5, block: 17, cls: 'warrior', lvl: 3 },
+  heater_shield: { slot: 'shield', look: 'kite', name: 'HEATER SHIELD', armor: 8, block: 22, cls: 'warrior', lvl: 4 },
+  battle_staff: { slot: 'weapon', look: 'staff_fire', name: 'BATTLE STAFF', dmg: [10, 18], cls: 'mage', lvl: 4 },
+  runed_staff: { slot: 'weapon', look: 'staff_ice', name: 'RUNED STAFF', dmg: [13, 22], cls: 'mage', lvl: 5 },
+  silk_robe: { slot: 'chest', look: 'robe_purple', name: 'SILK ROBE', armor: 10, cls: 'mage', lvl: 4 },
+  sorcerer_robe: { slot: 'chest', look: 'robe_red', name: "SORCERER'S ROBE", armor: 13, cls: 'mage', lvl: 5 },
+  conjurer_hat: { slot: 'helm', look: 'hat', name: "CONJURER'S HAT", armor: 3, cls: 'mage', lvl: 3 },
+  sage_hood: { slot: 'helm', look: 'hood', name: "SAGE'S HOOD", armor: 5, cls: 'mage', lvl: 4 },
+  ash_bow: { slot: 'weapon', look: 'bow', name: 'ASH BOW', dmg: [3, 8], cls: 'ranger', lvl: 2 },
+  recurve_bow: { slot: 'weapon', look: 'bow_horn', name: 'RECURVE BOW', dmg: [9, 17], cls: 'ranger', lvl: 4 },
+  war_bow: { slot: 'weapon', look: 'bow_long', name: 'WAR BOW', dmg: [11, 20], cls: 'ranger', lvl: 5 },
+  scale_jerkin: { slot: 'chest', look: 'jerkin_stud', name: 'SCALE JERKIN', armor: 11, cls: 'ranger', lvl: 4 },
+  drake_hide: { slot: 'chest', look: 'jerkin_hide', name: 'DRAKE HIDE', armor: 14, cls: 'ranger', lvl: 5 },
+  hunter_hood: { slot: 'helm', look: 'rhood', name: "HUNTER'S HOOD", armor: 4, cls: 'ranger', lvl: 3 },
+  night_hood: { slot: 'helm', look: 'rhood_dark', name: 'NIGHT HOOD', armor: 6, cls: 'ranger', lvl: 4 },
+  deep_quiver: { slot: 'shield', look: 'quiver', name: 'DEEP QUIVER', armor: 5, cls: 'ranger', lvl: 4 },
+  // rings and amulets: every class, no base stat, always at least magic
+  ring: { slot: 'ring', look: 'ring', name: 'RING', cls: 'any', lvl: 1, w: 0.065 },
+  amulet: { slot: 'amulet', look: 'amulet', name: 'AMULET', cls: 'any', lvl: 2, w: 0.045 },
   heal: { slot: 'potion', name: 'HEALING POTION', heal: 30, lvl: 1 },
   mana: { slot: 'potion', name: 'MANA POTION', mana: 25, lvl: 1 },   // drunk on pickup
 };
@@ -51,15 +80,24 @@ const AFFIXES = [
   { pre: 'SHARP', stat: 'dmgPct', roll: [15, 40], slots: ['weapon'] },
   { pre: 'HEAVY', stat: 'dmgFlat', roll: [1, 4], slots: ['weapon'] },
   { pre: 'STURDY', stat: 'armorFlat', roll: [2, 6], slots: ['helm', 'chest', 'shield'] },
-  { suf: 'OF LIFE', stat: 'hp', roll: [5, 15], slots: ['helm', 'chest', 'shield', 'weapon'] },
-  { suf: 'OF MIND', stat: 'mana', roll: [4, 12], slots: ['helm', 'chest', 'weapon'] },
-  { suf: 'OF LEECH', stat: 'leech', roll: [2, 5], slots: ['weapon'] },
-  { suf: 'OF SPEED', stat: 'speed', roll: [5, 12], slots: ['chest', 'helm'] },
+  { suf: 'OF LIFE', stat: 'hp', roll: [5, 15], slots: ['helm', 'chest', 'shield', 'weapon', 'ring', 'amulet'] },
+  { suf: 'OF MIND', stat: 'mana', roll: [4, 12], slots: ['helm', 'chest', 'weapon', 'ring', 'amulet'] },
+  { suf: 'OF LEECH', stat: 'leech', roll: [2, 5], slots: ['weapon', 'ring'] },
+  { suf: 'OF SPEED', stat: 'speed', roll: [5, 12], slots: ['chest', 'helm', 'amulet'] },
   // round 16
-  { suf: 'OF PRECISION', stat: 'crit', roll: [3, 8], slots: ['weapon', 'helm'] },
+  { suf: 'OF PRECISION', stat: 'crit', roll: [3, 8], slots: ['weapon', 'helm', 'ring', 'amulet'] },
   { pre: 'THORNED', stat: 'thorns', roll: [10, 25], slots: ['chest', 'shield'] },
-  { pre: 'SWIFT', stat: 'atkSpeed', roll: [8, 15], slots: ['weapon'] },
-  { suf: 'OF RENEWAL', stat: 'regen', roll: [1, 2], slots: ['helm', 'chest'] },
+  { pre: 'SWIFT', stat: 'atkSpeed', roll: [8, 15], slots: ['weapon', 'ring'] },
+  { suf: 'OF RENEWAL', stat: 'regen', roll: [1, 2], slots: ['helm', 'chest', 'amulet'] },
+  // round 42a: plain, everyday affixes (the common pool, kept apart from legendary powers)
+  { pre: 'BURNING', stat: 'fireDmg', roll: [1, 2], slots: ['weapon', 'ring'] },
+  { pre: 'CHILLING', stat: 'chill', roll: [10, 25], slots: ['weapon', 'amulet'] },
+  { pre: 'GILDED', stat: 'goldFind', roll: [15, 40], slots: ['helm', 'ring', 'amulet'] },
+  { pre: 'LUCKY', stat: 'find', roll: [8, 20], slots: ['ring', 'amulet', 'helm'] },
+  { suf: 'OF THE VULTURE', stat: 'hpKill', roll: [1, 3], slots: ['weapon', 'ring'] },
+  { suf: 'OF SIPHONING', stat: 'manaKill', roll: [1, 3], slots: ['weapon', 'ring', 'amulet'] },
+  { suf: 'OF THE HEALER', stat: 'potion', roll: [15, 35], slots: ['chest', 'amulet'] },
+  { suf: 'OF THE WALL', stat: 'dr', roll: [1, 2], slots: ['chest', 'shield', 'amulet'] },
 ];
 // legendaries (round 16): fixed names and powers, an orange beam; bosses always drop one
 const LEGENDARIES = [
@@ -88,7 +126,10 @@ const SETS = {
 };
 // the hero's class decides which gear drops (game.js sets hero.cls; warrior when unset)
 const heroCls = () => (typeof hero !== 'undefined' && hero.cls) || 'warrior';
-const forCls = o => (o.cls || 'warrior') === heroCls();
+const forCls = o => o.cls === 'any' || (o.cls || 'warrior') === heroCls();
+const JEWELRY = { ring: 1, amulet: 1 };
+// magic find from worn gear (game.js keeps STAT; items.js is also loaded by the art kit without it)
+const findK = () => 1 + ((typeof STAT !== 'undefined' && STAT.find) || 0) / 100;
 function rollSetItem(R) {
   const k = R.pick(Object.keys(SETS).filter(k => forCls(SETS[k]))), [base, name] = R.pick(SETS[k].pieces);
   return { id: itemSerial++, base, rarity: 'set', set: k, name, mods: { [ITEM_BASES[base].slot === 'weapon' ? 'dmgPct' : 'armorFlat']: R.int(3, 6), hp: R.int(8, 16) } };
@@ -101,13 +142,21 @@ const RARITY_COL = { normal: 26, magic: 40, rare: 51, legend: 112, set: 55 };
 let itemSerial = 1;
 function rollItem(R, level, forceBase) {
   const bases = Object.keys(ITEM_BASES).filter(k => ITEM_BASES[k].lvl <= level + 1 && ITEM_BASES[k].slot !== 'potion' && forCls(ITEM_BASES[k]));
-  const baseId = forceBase || R.pick(bases), base = ITEM_BASES[baseId];
+  let baseId = forceBase;
+  if (!baseId) {   // weighted pick: rings and amulets keep a fixed share (about 6% and 4%) however many other bases a class has
+    const nGear = bases.filter(k => !JEWELRY[ITEM_BASES[k].slot]).length, wt = k => JEWELRY[ITEM_BASES[k].slot] ? ITEM_BASES[k].w * nGear : 1;
+    const tot = bases.reduce((a, k) => a + wt(k), 0);
+    let x = R() * tot; baseId = bases[bases.length - 1];
+    for (const k of bases) { x -= wt(k); if (x < 0) { baseId = k; break; } }
+  }
+  const base = ITEM_BASES[baseId], mf = findK();
   const it = { id: itemSerial++, base: baseId, rarity: 'normal', mods: {} };
   if (base.slot === 'potion') return it;
-  if (!forceBase && R() < 0.008 + level * 0.002) return rollLegendary(R);
+  if (!forceBase && R() < (0.008 + level * 0.002) * mf) return rollLegendary(R);
   if (!forceBase && R() < 0.015 + level * 0.002) return rollSetItem(R);
   const q = R();
-  it.rarity = q < 0.06 + level * 0.01 ? 'rare' : q < 0.34 ? 'magic' : 'normal';
+  it.rarity = q < (0.06 + level * 0.01) * mf ? 'rare' : q < 0.34 + (mf - 1) * 0.3 ? 'magic' : 'normal';
+  if (it.rarity === 'normal' && JEWELRY[base.slot]) it.rarity = 'magic';   // a plain ring is nothing
   const n = it.rarity === 'rare' ? R.int(2, 3) : it.rarity === 'magic' ? 1 : 0;
   const pool = AFFIXES.filter(a => a.slots.includes(base.slot));
   const used = [];
@@ -126,7 +175,9 @@ function itemScore(it) {
   const avg = b.dmg ? (b.dmg[0] + b.dmg[1]) / 2 : 0;
   return (avg + (m.dmgFlat || 0)) * (1 + (m.dmgPct || 0) / 100) * (b.slow ? 0.9 : 1) + (b.armor || 0) + (m.armorFlat || 0) + (b.block || 0) * 0.3
     + (m.hp || 0) * 0.25 + (m.mana || 0) * 0.1 + (m.leech || 0) * 0.6 + (m.crit || 0) * 0.5 + (m.atkSpeed || 0) * 0.35 + (m.speed || 0) * 0.3
-    + (m.thorns || 0) * 0.1 + (m.regen || 0) * 3 + (m.fireburst ? 8 : 0);
+    + (m.thorns || 0) * 0.1 + (m.regen || 0) * 3 + (m.fireburst ? 8 : 0)
+    + (m.fireDmg || 0) * 1.2 + (m.chill || 0) * 0.15 + (m.goldFind || 0) * 0.05 + (m.find || 0) * 0.1 + (m.hpKill || 0) * 1.5 + (m.manaKill || 0) * 0.8
+    + (m.potion || 0) * 0.1 + (m.dr || 0) * 2.5;
 }
 // what changes if `it` replaces `cur`: [text, color] lines, green for gains and red for losses
 function compareLines(it, cur) {
@@ -169,6 +220,14 @@ function itemLines(it) {
   if (m.atkSpeed) L.push(`+${m.atkSpeed}% ATTACK SPEED`);
   if (m.regen) L.push(`+${m.regen} LIFE PER SECOND`);
   if (m.fireburst) L.push('KILLS EXPLODE IN FIRE');
+  if (m.fireDmg) L.push(`+${m.fireDmg} FIRE DAMAGE`);
+  if (m.chill) L.push(`${m.chill}% CHANCE TO CHILL`);
+  if (m.goldFind) L.push(`+${m.goldFind}% GOLD FOUND`);
+  if (m.find) L.push(`+${m.find}% BETTER ITEMS`);
+  if (m.hpKill) L.push(`+${m.hpKill} LIFE PER KILL`);
+  if (m.manaKill) L.push(`+${m.manaKill} MANA PER KILL`);
+  if (m.potion) L.push(`POTIONS HEAL ${m.potion}% MORE`);
+  if (m.dr) L.push(`-${m.dr} DAMAGE TAKEN PER HIT`);
   if (it.lore) L.push(it.lore);
   if (it.set) { const S = SETS[it.set]; L.push(`${S.name} SET (${setCount(it.set)}/3 WORN)`); L.push(...S.lines); }
   return L;
@@ -230,6 +289,16 @@ function itemIcon(it) {
     if (b.look === 'round') { r.ell([0, 0, 4], [1, 5, 5], M.WOOD, null, { mf: p => { const d2 = (p[1] ** 2 + (p[2] - 4) ** 2) / 25; return d2 > 0.74 || d2 < 0.06 ? M.IRON : 0; } }); return (iconCache[k] = renderRig(r, Math.PI / 4, 26, 26, 13, 17)); }
     const big = b.look === 'kite', rad = big ? [1, 5, 7] : [1, 4.4, 4.4], ax = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
     r.ell([0, 0, 4], rad, team, ax, { mf: p => { const u = p[1] / rad[1], v = (p[2] - 4) / rad[2]; return u * u + v * v > 0.62 ? M.GOLD : (big && (Math.abs(u) < 0.14 || Math.abs(v - 0.15) < 0.11)) ? M.GOLD : 0; } });
+  } else if (b.slot === 'ring') {   // round 42a: a gold band facing you, tipped back a little, a blue stone in a setting on top
+    const c = [0, 0, 5], u = [0, 1, 0], v = V.norm([-0.35, 0, 0.94]);
+    for (let k = 0; k < 20; k++) { const a = k / 20 * 6.283; r.sph(V.add(c, V.add(V.mul(u, Math.cos(a) * 4.6), V.mul(v, Math.sin(a) * 4.6))), 1.2, M.GOLD); }
+    const top = V.mad(c, v, 5.4);
+    r.cone(top, V.mad(top, v, 1.4), 1.5, 2.3, M.GOLD); r.sph(V.mad(top, v, 2.2), 2.1, M.ICE);
+    return (iconCache[k] = renderRig(r, Math.PI / 4, 26, 26, 13, 21));
+  } else if (b.slot === 'amulet') {   // a chain hanging in a V to a round gold pendant with a red stone
+    for (let k = 0; k <= 12; k++) { const t = k / 12, y = (t - 0.5) * 11, z = 7 + Math.abs(t - 0.5) * 2 * 7; r.sph([-0.5, y, z], 0.95, M.GOLD); }
+    r.ell([0, 0, 3.0], [1.0, 4.4, 4.4], M.GOLD); r.sph([0.9, 0, 3.0], 2.5, M.CLOTH_RED);
+    return (iconCache[k] = renderRig(r, Math.PI / 4, 26, 26, 13, 21));
   } else {   // potion
     const liquid = b.mana ? M.CLOTH_BLUE : M.CLOTH_RED;
     r.cyl([0, 0, -1], [0, 0, 6], 3.4, liquid); r.sph([0, 0, 6], 3.6, liquid);
