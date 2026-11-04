@@ -1,0 +1,93 @@
+<title>Elite Powers</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  /* layout: one narrow column, one section per part with its picture first */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul { margin: 0; max-width: 64ch; }
+  ul { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .frame img.smooth { image-rendering: auto; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .tw { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+</style>
+<main>
+  <header>
+    <h1>Elite Powers</h1>
+    <p class="lede">Dungeon of Bones, round 39. Champions are now elites: each leads a pack and has its own powers. Every power warns you before it hurts and can be beaten, and each one has its own death.</p>
+  </header>
+  <section>
+    <h2>Champion fights, before and now</h2>
+    <figure>
+      <div class="frame"><img src="fights-before-after.png" alt="Three champion fights. Top row, before: a single recolored champion among ordinary monsters, with only its name over it. Bottom row, now: the same fights with the elite leading a pack, a fire trail burning behind a burning elite, a summoner hound with its minions, and the elite's power names in color under its name" width="1620" height="880"></div>
+      <figcaption>Top: before. Bottom: now. The same floors, seeds and timing: a first crypt floor, a second crypt floor and an Act II cave.</figcaption>
+    </figure>
+    <ul>
+      <li><strong>Every elite leads a pack.</strong> It takes up to three monsters of its kind near it. A lone elite gets two at its side, so every elite fight is a pack fight. When the leader dies, the pack falters for a moment.</li>
+      <li><strong>Followers get a weaker copy</strong> of the leader's first power (a shorter fire trail, a smaller shield) and 30% more health, but no name.</li>
+      <li><strong>How many powers:</strong> one in Act I, two from Act II, three on Nightmare. The first floors only use the four simplest powers (burning, shielded, vampiric, summoner). Frozen and blinking appear from the second crypt floor on.</li>
+      <li><strong>The first time you meet a power</strong>, a line names it and says how to beat it, for example "BURNING: STAY OUT OF THE FLAMES".</li>
+      <li><strong>Labels:</strong> only the nearest elite shows its name and powers. The others get a small colored dot per power over their heads, so names never pile up.</li>
+      <li><strong>Quest leaders:</strong> the Alpha is BLINKING and the Bandit Chief is BURNING.</li>
+      <li><strong>Rewards:</strong> each extra power adds loot and experience.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>The six powers</h2>
+    <figure>
+      <div class="frame"><img src="effects-a.png" alt="A grid of close-ups, three animation frames on a crypt floor and three on forest grass. Rows: a fire trail of small flames on scorched ground; frost orbs as floating ice diamonds with a ring closing in; a blue shield bubble around a skeleton; the same bubble cracking into gaps as it wears down" width="1490" height="800"></div>
+      <figcaption>Fire trail, frost orbs, shield, and a shield wearing down. Each row shows three frames on a crypt floor (left) and three on forest grass (right).</figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><img src="effects-b.png" alt="More close-ups in the same layout. Rows: green summoning circles with glowing posts; a stream of red drops from the hero to a vampiric bone hound; a violet column of light where a blinking fallen one lands; an orange warning ring around a burning elite as it dies" width="1490" height="800"></div>
+      <figcaption>Summoning circle, vampiric drops, the blink, and the warning ring of a burning elite's death.</figcaption>
+    </figure>
+    <div class="tw"><table>
+      <tr><th>Power</th><th>What it does</th><th>How to beat it</th><th>Its death</th></tr>
+      <tr><td>BURNING</td><td>Leaves small flames where it walks. They catch after a third of a second and last under 2 seconds.</td><td>Step out of the flames.</td><td>A warning ring, then a burst of fire and a ring of flames.</td></tr>
+      <tr><td>FROZEN</td><td>Drops ice crystals at your feet. A ring closes in over about a second, then the crystal bursts, hurts and slows you.</td><td>Hit the crystal first: a swing, a shot or an explosion breaks it harmlessly.</td><td>A warning ring, then a burst of frost.</td></tr>
+      <tr><td>SHIELDED</td><td>Raises a shield that soaks about a quarter of its health. Light hits only chip the shield.</td><td>Heavy blows count double against the shield: slams, finishers, charged shots, fireballs. When it breaks, the elite reels for over a second.</td><td></td></tr>
+      <tr><td>VAMPIRIC</td><td>Heals itself from the hits it lands on you. Red drops show it feeding.</td><td>Step back: it only drinks while it stays within about two tiles of you, and what it hasn't drunk yet is lost.</td><td>A spray of blood.</td></tr>
+      <tr><td>SUMMONER</td><td>Every few seconds a green circle appears, then two weak minions rise from it (up to four at a time). Skeletons raise skeletons, spiders spiders.</td><td>Go for the summoner: when it dies, its minions crumble. Minions drop no loot.</td><td>Its minions collapse.</td></tr>
+      <tr><td>BLINKING</td><td>If you keep your distance it appears beside you in a violet flash. When it's hurt it blinks away.</td><td>It stands still for over half a second where it lands and takes 30% more damage then.</td><td>A burst of violet sparks.</td></tr>
+    </table></div>
+    <p>Two pairs never appear together: shielded with vampiric (too hard to kill) and blinking with frozen (it keeps landing on top of you while you're slowed). Brigands never get the summoner power.</p>
+  </section>
+  <section>
+    <h2>Is it fair?</h2>
+    <p>Seconds for one elite to kill a hero of the expected level who just stands there, against an ordinary champion. Average of six fights each.</p>
+    <div class="tw"><table>
+      <tr><th>Where</th><th>Hero level</th><th>Powers</th><th>Old champion</th><th>Elite now</th></tr>
+      <tr><td>Act I, first floor</td><td>3</td><td>1</td><td>16.5 s</td><td>14.0 s</td></tr>
+      <tr><td>Act I, deepest floors</td><td>6</td><td>1</td><td>16.9 s</td><td>14.2 s</td></tr>
+      <tr><td>Act II</td><td>10</td><td>2</td><td>17.2 s</td><td>14.1 s</td></tr>
+      <tr><td>Nightmare</td><td>16</td><td>3</td><td>15.8 s</td><td>12.4 s</td></tr>
+    </table></div>
+    <p>An elite is a little more dangerous than an old champion, but nothing kills you in a few seconds. The real difference comes from what each power asks of you. The new test also checks every power and its counter: you only burn while standing in a lit flame; a broken crystal does nothing; one heavy blow breaks the shield and staggers; a vampire you step away from heals nothing; a summoner's minions all crumble with it; a blinker lands beside you and takes 30% more while it stands open; banned pairs never roll together in 2,000 tries.</p>
+  </section>
+  <section>
+    <h2>How the effects were reviewed</h2>
+    <figure>
+      <div class="frame"><img src="pass1-a.png" alt="The first version of the effects in the same grid: the fire trail is a thin glittering line that disappears on the crypt floor, the shield is a faint dashed ring, the frost crystal is a speck, the summoning circles are faint" width="1490" height="1000"></div>
+      <figcaption>The first pass, for comparison. The fire trail, shield bubble, leech drops and blink didn't read, and the crystal and summoning circle were too faint.</figcaption>
+    </figure>
+    <p>Three passes, judged against the rubric on a dark crypt floor and on bright grass, with frames side by side to catch flicker. Pass 2 replaced the glitter with scorched ground and real flames (the same flames as the torches). It gave the shield a dark rim, a bright band lit from the upper left and a light veil, and made the frost crystal a floating ice diamond with an outline. The blink became a white-cored violet column, and the summoning circle got a dark edge and glowing posts. Pass 3 made the vampire's drops twice as big, with a lower arc. Each new pass was picked over the last in both left/right orders.</p>
+  </section>
+</main>

@@ -74,8 +74,8 @@ function startLevel(level, seed, side = null) {
   { const R = rng(seed ^ 0x5bd1);   // dungeon floors plan their champions (placeSpawns); other areas roll them per monster
     if (LV.champsPlanned) LV.spawns.forEach((sp, n) => { if (sp.champ) makeChampion(enemies[n], R); });
     else for (const e of enemies) if (!e.def.unique && R() < champChance(LV.diff)) makeChampion(e, R); }
-  makeNpcs(); resetSkills(); setupBoss(); setupRoutines(seed);
-  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; G.debris = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
+  setupElites(); makeNpcs(); resetSkills(); setupBoss(); setupRoutines(seed);
+  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; G.debris = []; G.eliteFire = []; G.frostOrbs = []; G.summons = []; G.eliteBursts = []; G.blinkFx = []; G.leech = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
   updateFov(hero.fi, hero.fj);
   flowT = 0; computeFlow();
   warmStep(1e9, prewarm());   // idle poses + the hero's walk now, behind the level fade; the rest during play
@@ -273,6 +273,7 @@ function drinkPotion() {
 // pow: 0 = light blow (sword swings, spells), 1 = heavy (two-handers), 2 = combo finisher
 const HITSTOP = [0.045, 0.08, 0.11], KNOCK = [5, 7.7, 11];   // knock speed: tiles/s, ~1/14 of it is the slide
 function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = false) {
+  if (e.pw && !G.pierce) { dmg = eliteDamage(e, dmg, pow, fromFi, fromFj, ranged); if (dmg < 0) { if (e.state === 'sleep') wake(e); return; } }   // round 39: shields, blink openings
   if (e.frozen > 0) dmg = Math.round(dmg * 1.4);   // frozen solid: hits land harder
   if (e.open && e.atk >= 0) { dmg = Math.round(dmg * 1.3); if (!e.def.unique) { e.atk = -1; e.open = false; e.leapZ = 0; e.hurt = Math.max(e.hurt || 0, 0.3); } floater('OPEN', e.fi, e.fj, e.def.chest + 26, 51); }   // round 34: punished in its recovery
   if (e.markT > 0) { dmg = Math.round(dmg * (e.markK || 1.35)); if (e.markLeech) hero.hp = Math.min(STAT.maxHp, hero.hp + dmg * e.markLeech); }   // round 33: Hunter's Mark
@@ -336,8 +337,9 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
     else stampBlood(Math.round(ex), Math.round(ey), e.def.unique ? 6 : 3, (Math.random() * 1e6) | 0, e.fam === 'spider' ? GREEN : RED);
     const streak = killStreak();
     questKill(e.id);
-    gainXp(e.def.xp * (1 + (LV.diff - 1) * 0.3) * (e.champ ? 3 : 1) * (1 + Math.max(0, streak - 2) * 0.1));
-    dropLoot(e.fi, e.fj, e.def.unique ? 4 : e.champ || e.def.elite ? 3 : 1, e.def.unique || !!e.champ || !!e.def.elite);
+    if (e.pw) eliteDeath(e);
+    gainXp(e.def.xp * (1 + (LV.diff - 1) * 0.3) * (e.champ ? 3 + (e.pw ? e.pw.length - 1 : 0) : 1) * (e.summonedBy ? 0.2 : 1) * (1 + Math.max(0, streak - 2) * 0.1));
+    if (!e.noLoot) dropLoot(e.fi, e.fj, e.def.unique ? 4 : e.champ ? 3 + (e.pw ? e.pw.length - 1 : 0) : e.def.elite ? 3 : 1, e.def.unique || !!e.champ || !!e.def.elite);
     if (e.def.unique || (e.champ && Math.random() < 0.08)) groundItems.push({ item: rollLegendary(rng((Math.random() * 1e9) | 0)), fi: e.fi, fj: e.fj, t: 0 });
     if ((e.champ || e.def.elite) && Math.random() < 0.12) groundItems.push({ item: rollSetItem(rng((Math.random() * 1e9) | 0)), fi: e.fi + 0.4, fj: e.fj, t: 0 });
     if (e.def.treasure) {   // the sack bursts: a spray of gold and gems, often a legendary
@@ -484,6 +486,7 @@ function wake(e, seen = false) {
 function heroHitResolve(all = false, pow = 0) {
   const [fx, fy] = dirVec(hero.dir), reach = heroReach() + 0.1;
   let any = false, nHit = 0;
+  if (G.frostOrbs.length) swingBreaksOrbs();   // round 39: a swing breaks a frost orb before it bursts
   for (const e of enemies) {
     if (!alive(e)) continue;
     const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy), rr = reach + (e.def.unique ? 0.5 : 0.2);
@@ -587,7 +590,7 @@ function update(dt) {
   for (const g of groundItems) if (g.item && g.item.rarity === 'legend' && !g.announced) { g.announced = true; say('A LEGENDARY ITEM HAS FALLEN', 112, 3); sfx('levelUp'); }   // never miss one
   if (hero.frenzy > 0) hero.frenzy -= dt; if (hero.stoneskin > 0) hero.stoneskin -= dt;
   separate();
-  updateProjectiles(dt); updateMeteors(dt); updateLichFx(dt); updateWarriorFx(dt); updateImpactFx(dt); updateSlamMods(dt); updateFireGround(dt); updateMods30(dt); updateUlt(dt); updateDebris(dt);
+  updateProjectiles(dt); updateMeteors(dt); updateLichFx(dt); updateWarriorFx(dt); updateImpactFx(dt); updateSlamMods(dt); updateFireGround(dt); updateMods30(dt); updateUlt(dt); updateDebris(dt); updateEliteFx(dt);
   updateParticles(dt);
   ambience(dt);
   for (const f of floaters) { f.t -= dt; f.y -= dt * 18; }
@@ -778,6 +781,7 @@ function updateEnemy(e, dt) {
     if (e.alertT <= 0) e.leapZ = 0;
     return;
   }
+  if (e.pw && updateElite(e, dt, d, dx, dy)) return;   // round 39: a power owns this frame (a blink)
   const atkClip = m.ranged === 'arrow' ? 'shoot' : m.ranged ? 'cast' : 'attack';
   if (e.atk >= 0) {
     e.clip = atkClip; const a0 = e.atk; e.atk += dt * 1000 * (e.slowT > 0 ? 0.55 : 1);
@@ -918,6 +922,7 @@ function hurtHero(dmg, src) {
   if (Math.random() * 100 < STAT.block) { floater('BLOCK', hero.fi, hero.fj, 44, 31); sfx('block'); return; }
   dmg = Math.max(1, Math.round(dmg * 40 / (40 + STAT.armor * (hero.buff > 0 ? 1.5 : 1) * 2.5) * (hero.stoneskin > 0 ? 0.5 : 1)));
   hero.hp -= dmg; hero.flash = 0.06; hero.hurtT = 0.15; sfx('hurt');
+  if (src && src.pw) eliteOnHit(src, dmg);
   floater(String(dmg), hero.fi, hero.fj, 46, 23);
   const [x, y] = screenOf(hero); burst(1, x, y, 24, 6, 40, 22);
   if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.25);
@@ -1120,6 +1125,7 @@ function updateProjectiles(dt) {
       if (p.owner === 'enemy') {
         if (!hero.dead && Math.hypot(hero.fi - p.fi, hero.fj - p.fj) < 0.45) { hurtHero(roll(p.dmg), null); p.life = 0; if (p.kind === 'frostbolt') hero.chillT = 1.5; }
       } else {
+        if (G.frostOrbs.length && breakOrbsAt(p.fi, p.fj, 0.4) && !p.pierce && !p.orb) { p.life = 0; break; }   // round 39: shots break frost orbs
         for (const e of enemies) if (alive(e) && Math.hypot(e.fi - p.fi, e.fj - p.fj) < 0.5 + (e.def.unique ? 0.4 : 0)) {
           if (p.orb) break;   // the orb drifts through, zapping (updateOrb)
           if (p.pierce) {   // the piercing bolt goes on through, hitting each foe once
@@ -1385,7 +1391,7 @@ function render() {
   heroRing(kx, ky + 1);
   base.sort((a, b) => a.depth - b.depth);
   for (const d of base) d.draw();
-  drawTelegraph(); drawImpactFx(); drawRocks(); drawRangerGround(); drawMeteors(); drawLichFx(); drawWarriorFx();
+  drawTelegraph(); drawImpactFx(); drawRocks(); drawRangerGround(); drawEliteGround(); drawMeteors(); drawLichFx(); drawWarriorFx();
   const charLevel = lightPass(chars, kx, ky);
   // the frame: the lit world doubled (shifted by the camera's half pixel), then the detail layer over it
   for (let y = 0; y < H; y++) {
@@ -1424,6 +1430,7 @@ function render() {
   if (WORLD2X) frame2.set(ov32);   // the finished world frame, for 2x props redrawn over bodies
   ov.sort((a, b) => a.depth - b.depth);
   for (const d of ov) d.draw();
+  drawEliteFx();
   for (const g of G.ghosts) ovBlit(g.sp, g.x, g.y, L_ID, 6, 1 - g.t / g.t0, -1);   // blink afterimage, dissolving
   for (let k = 0; k < PN; k++) {
     const kind = pkind[k]; if (!kind) continue;

@@ -256,11 +256,17 @@ function drawHud() {
   }
   // champion names over their heads
   const champs = enemies.filter(e => (e.champ || e.def.treasure || e.def.elite) && alive(e) && LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] >= 0.5 && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 7)
-    .sort((a, b) => Math.hypot(a.fi - hero.fi, a.fj - hero.fj) - Math.hypot(b.fi - hero.fi, b.fj - hero.fj)).slice(0, 2);   // the two nearest, so labels never pile up
+    .sort((a, b) => Math.hypot(a.fi - hero.fi, a.fj - hero.fj) - Math.hypot(b.fi - hero.fi, b.fj - hero.fj)).slice(0, 1);   // round 39: only the nearest is named, so labels never pile up
   for (const e of champs) {
-    const [x, y] = iso(e.fi, e.fj);
-    textC(e.champ ? e.name : e.def.name, Math.round(x - camX), Math.round(y - camY) - e.def.chest * 1.6 - 20, e.champ ? { red: 23, grey: 31, green: 55, purple: 59 }[e.champ.tint] : 51);
+    const [x, y] = iso(e.fi, e.fj), sx = Math.round(x - camX), sy = Math.round(y - camY - e.def.chest * 1.6 - 14 * (e.look.scale || 1)) - 14;
+    textC(e.champ ? e.name : e.def.name, sx, sy, e.champ ? { red: 23, grey: 31, green: 55, purple: 59 }[e.champ.tint] : 51);
+    if (e.pw && !e.pwWeak) {   // its powers on the line below, each in its own color
+      const names = powerLine(e), wsum = names.reduce((a, n) => a + textWidth(n), 0) + (names.length - 1) * 6;
+      let px = Math.round(sx - wsum / 2);
+      for (let k = 0; k < names.length; k++) { text(names[k], px, sy + 7, POWERS[e.pw[k]].col); px += textWidth(names[k]) + 6; if (k < names.length - 1) put(px - 4, sy + 9, 27); }
+    }
   }
+  drawEliteLabels(champs);
   drawButton(UI.bag, [33, 34, 35], false, glyphBag);
   drawButton(UI.map, [4, 5, 6, 7], showMap, glyphMap);
   drawButton(UI.sound, [4, 5, 6, 7], false, glyphSound);

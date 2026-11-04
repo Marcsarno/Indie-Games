@@ -89,6 +89,7 @@ function groundSlamHit() {
 }
 // one slam of the ground from where the hero stands: a cone (or ring) of reach R and half-angle half
 function slamAt(a0, R, half, k, ring = false) {
+  if (G.frostOrbs.length) breakOrbsAt(hero.fi, hero.fj, R);
   const fx = Math.cos(a0), fy = Math.sin(a0);
   G.pierce = true;
   for (const e of enemies) {
@@ -481,6 +482,7 @@ function updateFireGround(dt) {
 // fire explosion shared by the fireball and the meteor: everything in radius r takes k x staff damage
 // (cold: the Comet's ice blast, which freezes instead of burning, in ice colors)
 function explodeAt(fi, fj, r, k, pow, big = false, cold = false) {
+  if (G.frostOrbs.length) breakOrbsAt(fi, fj, r);
   G.pierce = true; G.elem = cold ? 'cold' : 'fire';   // blasts get round shields; fire sets things alight
   for (const e of enemies) {
     if (!alive(e)) continue;
@@ -760,6 +762,7 @@ function makeChampion(e, R) {
   e.speedK = c.speed;
   e.look = { ...e.look, tint: c.tint };   // same body as the base monster, recolored: its sprites are a cheap remap
   e.name = c.prefix + ' ' + e.def.name;
+  givePowers(e, rollPowers(e, R), false);   // round 39: its powers (elites.js)
 }
 // tints remap each lit color to the closest-luminance color of the tint ramp; darks and
 // emissive pixels (eyes, fire) are kept so the outline and glow survive
