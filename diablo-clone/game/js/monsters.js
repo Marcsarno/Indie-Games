@@ -535,6 +535,8 @@ function houndRig(look, st) {
   // with big forward-curving horns, a red scarf with a studded collar, bone claws
   const r = new Rig(), skin = look.skin || M.HIDE, bone = look.bone || M.BONE;
   const { clip, f } = st;
+  // art B2: per-monster refinements, keyed by look.b2 ('wolf', 'alpha', 'hound', 'ember', 'bear', 'boar') so no other look changes
+  const B2 = look.b2 || '', hog = B2 === 'boar';
   let bob = 0, lunge = 0, headDrop = 0, jaw = 0.25, ph = 0, moving = false;
   if (clip === 'idle') bob = [0, -0.3, -0.5, -0.2][f % 4];
   if (clip === 'walk') { ph = f / 8 * Math.PI * 2; moving = true; bob = -0.8 * Math.abs(Math.sin(ph)); }
@@ -545,7 +547,7 @@ function houndRig(look, st) {
   }
   if (clip === 'hit') { lunge = -2; headDrop = -1.5; jaw = 0.6; }
   // art A4: lean (wolf, bone hound, ember hound): a longer, slimmer body set higher on long thin legs, as the concepts draw them
-  const lean = !!look.lean, H = lean ? 13.5 : 11;
+  const lean = !!look.lean, H = lean ? 13.5 : hog ? 10 : 11;
   const back = [(lean ? -6.5 : -4.5) + lunge, 0, H + bob], front = [(lean ? 5.5 : 5) + lunge, 0, H + (lean ? 1.6 : 2.5) + bob];   // compact and front-heavy unless lean
   // art A3 looks (set only on their own entries): plates (bone hound: bone plates down the back, a furred
   // tail), ember (ember hound: glowing slashes on the flanks, dark lower legs), pale (wolf: light muzzle)
@@ -562,8 +564,18 @@ function houndRig(look, st) {
     r.ell(back, [5.2, 5.0, 4.4], skin);
     r.ell(mid, [5.6, 5.2, 4.6], skin, null, emberMf);
     r.ell(front, [5.8, 6.2, 5.8], skin);
+    if (B2 === 'bear') r.ell(V.add(front, [-1.2, 0, 4.2]), [4.6, 4.8, 3.4], skin);   // b2: the bear's shoulder hump
+    if (hog) r.ell(V.add(mid, [0, 0, 0.4]), [6.4, 5.8, 5.0], skin);   // b2: the boar's barrel
     }
   });
+  if (hog) for (let i = 0; i < 6; i++) {   // b2: a dark bristle crest from the nape down the spine
+    const b = V.lerp(front, back, i / 6), base = V.add(b, [0, 0, 4.4 + (i < 3 ? 1 : 0.3) - i * 0.15]);
+    r.cone(base, V.add(base, [-2.0, 0, 3.8 - i * 0.45]), 1.1, 0.2, M.HAIR);
+  }
+  if (B2 === 'alpha') for (let i = 0; i < 4; i++) {   // b2: the Alpha's raised hackles, a crest of big fur tufts over neck and shoulders
+    const b = V.lerp(front, back, i / 5), base = V.add(b, [2, 0, 4.2 - i * 0.3]);
+    r.cone(base, V.add(base, [-3.4, 0, 3.6 - i * 0.6]), 2.0, 0.4, M.HIDE);   // silver-grey: a lighter mane over the dark coat
+  }
   // bone ribs over the barrel of the body and a spiked spine (a wolf has fur instead)
   const fur = !!look.wolf, bare = fur || look.plates || look.ember;   // bare: no ribs, spine or spikes
   for (let i = 0; i < (bare ? 0 : 4); i++) {
@@ -586,6 +598,7 @@ function houndRig(look, st) {
   // tail: bony and spiked
   const t0 = V.add(back, [-5, 0, 1.5]), t1 = V.add(t0, [-4, 0, 2 + Math.sin(ph) * 1.5]), t2 = V.add(t1, [-3, Math.cos(ph) * 1.2, -1]);
   if (fur && look.bear) r.sph(V.add(back, [-5.5, 0, 2.5]), 1.8, skin);   // a bear's stub of a tail
+  else if (hog) r.group(() => { const q0 = V.add(back, [-4.8, 0, 2]), q1 = V.add(q0, [-1.6, 0, -1.6]), q2 = V.add(q1, [-0.6, Math.cos(ph) * 0.8, -1.8]); r.cone(q0, q1, 1.0, 0.9, skin); r.cone(q1, q2, 0.9, 0.9, M.HAIR); });   // b2: a thin tail with a dark tuft
   else if (look.brush) {   // art A4: a bushy tail held out behind, thick in the middle, with a big pale tip
     const b0 = V.add(back, [-4.2, 0, 1.6]), b1 = V.add(b0, [-4, 0, 1.6 + Math.sin(ph) * 1.2]), b2 = V.add(b1, [-4.4, Math.cos(ph) * 1.2, 0.4]);
     r.group(() => { r.cone(b0, b1, 1.5, 2.5, skin); r.cone(b1, b2, 2.5, 1.0, skin, { mf: p => V.dot(V.sub(p, b1), V.sub(b2, b1)) > 9 ? M.CLOTH_WHITE : 0 }); });
@@ -594,7 +607,7 @@ function houndRig(look, st) {
   else if (fur) r.group(() => { r.cone(t0, t1, 1.8, 2.2, skin); r.cone(t1, t2, 2.2, 0.6, skin, { mf: p => V.dot(V.sub(p, t1), V.sub(t2, t1)) > 6 ? M.CLOTH_WHITE : 0 }); });
   else r.group(() => { r.cone(t0, t1, 1.4, 1.0, skin); r.cone(t1, t2, 1.0, 0.5, bone); });
   // legs (trot: diagonal pairs move together); bone caps at the joints and bone claws
-  const lw = lean ? 0.8 : 1, LL = lean ? 6.6 : 5.8;   // lean: legs set closer, longer and thinner
+  const lw = lean ? 0.8 : 1, LL = lean ? 6.6 : hog ? 5.1 : 5.8;   // lean: legs set closer, longer and thinner
   const legs = [[front, -3.6 * lw, 0, 1], [front, 3.6 * lw, Math.PI, 1], [back, -3.4 * lw, Math.PI, -1], [back, 3.4 * lw, 0, -1]];
   for (const [root, y, off, fr] of legs) {
     const hip = V.add(root, [fr > 0 ? 1 : 0, y, -1.5]);
@@ -602,7 +615,7 @@ function houndRig(look, st) {
     let foot = [hip[0] - stride * Math.cos(p) + (fr > 0 ? 0.5 : -0.5), y * 1.15, moving ? 2.2 * Math.max(0, Math.sin(p)) : 0];
     if (clip === 'attack' && fr > 0) foot = [hip[0] + 2, y * 1.15, 0];
     const L = ik(hip, V.add(foot, [0, 0, 1]), LL, LL, [-fr, 0, 0]);
-    const lk = lean ? 0.8 : 1, low = look.ember ? M.HIDE : skin;   // the ember hound's legs darken below the knee
+    const lk = B2 === 'bear' ? 1.2 : lean ? 0.8 : 1, low = look.ember ? M.HIDE : hog || B2 === 'bear' ? M.HAIR : skin;   // the ember hound's legs darken below the knee
     r.cone(hip, L.joint, 2.7 * lk, 2.0 * lk, skin); r.cone(L.joint, L.end, 2.0 * lk, 1.7 * lk, low);
     if (!bare) r.sph(L.joint, 1.8, bone);
     r.ell(V.add(L.end, [1.2, 0, -0.4]), [2.6 * lk, 2.0 * lk, 1.1], low, null, look.paws ? { mf: p => p[0] > L.end[0] + 1.2 ? M.BONE : 0 } : undefined);   // art A4 paws: cream toes
@@ -614,7 +627,7 @@ function houndRig(look, st) {
   const hr0 = r.p.length;   // head parts are scaled up about the head center below
   r.cone(neck, hd, 3.4, 2.8, skin);
   const cc = V.lerp(neck, hd, 0.35);
-  if (!fur && !look.ember) r.ell(cc, [1.6, 4.4, 4.0], look.collar ? M.HAIR : M.LEATHER, frameAlong(V.sub(hd, neck)));
+  if (!fur && !look.ember) r.ell(cc, [1.6, 4.4, 4.0], M.LEATHER, frameAlong(V.sub(hd, neck)));
   if (!fur && !look.ember) for (const a of [-0.9, 0, 0.9]) r.sph(V.add(cc, [0.9, Math.sin(a) * 4.3, -Math.cos(a) * 3.6]), 0.9, M.GOLD, { noShadow: true });
   if (look.ember) { /* no ruff, no scarf */ }
   else if (fur) r.ell(V.add(front, [3.5, 0, 3]), [3.4, 5.4, 3.6], skin, null, { mf: look.bib ? p => p[2] < front[2] + 3.2 && p[0] > front[0] + 4.2 ? M.CLOTH_WHITE : 0 : p => p[2] < front[2] + 1 ? M.CLOTH_WHITE : 0 });   // a ruff of fur
@@ -624,27 +637,39 @@ function houndRig(look, st) {
   });
   // skull head: bone cranium and snout, dark socket with a red eye, jaw with teeth
   const hb = fur ? skin : bone;
-  r.ell(hd, [3.8, 3.3, 3.1], hb, null, { mf: p => { const q = V.sub(p, hd); return q[0] > 1.2 && (Math.abs(q[1]) - 1.8) ** 2 + (q[2] - 0.7) ** 2 < 1.4 ? M.DARK : 0; } });
-  const snoutEnd = V.add(hd, [5.8, 0, -0.9]);
-  r.cone(V.add(hd, [1.5, 0, -0.3]), snoutEnd, 2.3, 1.5, hb, { mf: p => {
-    if (p[0] > snoutEnd[0] - 1 && Math.abs(p[1]) < 0.7 && p[2] > snoutEnd[2]) return M.DARK;
+  const cheek = B2 === 'wolf';   // b2: the wolf's pale cheek under the eye, as the concept paints it
+  r.ell(hd, [3.8, 3.3, 3.1], hb, null, { mf: p => { const q = V.sub(p, hd); if (q[0] > 1.2 && (Math.abs(q[1]) - 1.8) ** 2 + (q[2] - 0.7) ** 2 < 1.4) return M.DARK; return cheek && q[2] < -0.6 && q[0] > -0.5 ? M.CLOTH_WHITE : 0; } });
+  const snL = B2 === 'bear' ? 3.9 : hog ? 4.6 : 5.8, snoutEnd = V.add(hd, [snL, 0, hog ? -0.5 : -0.9]);
+  r.cone(V.add(hd, [1.5, 0, -0.3]), snoutEnd, hog ? 2.5 : 2.3, hog ? 2.0 : B2 === 'bear' ? 1.8 : 1.5, hb, { mf: p => {
+    if (B2 === 'bear' && p[0] > hd[0] + 2.6) return M.CLOTH_TAN;   // b2: the bear's tan muzzle
+    if (!B2 && p[0] > snoutEnd[0] - 1 && Math.abs(p[1]) < 0.7 && p[2] > snoutEnd[2]) return M.DARK;
     return look.pale && p[2] < snoutEnd[2] + 0.3 ? M.CLOTH_WHITE : 0;   // the wolf's pale muzzle
   } });
+  if (hog) r.cyl(V.add(snoutEnd, [-0.2, 0, 0]), V.add(snoutEnd, [0.6, 0, 0]), 1.9, M.SKIN, { mf: p => p[0] > snoutEnd[0] + 0.3 && Math.abs(Math.abs(p[1]) - 0.8) < 0.45 && Math.abs(p[2] - snoutEnd[2]) < 0.6 ? M.DARK : 0 });   // b2: the boar's flat pink snout disc with two nostrils
+  else if (B2) r.sph(V.add(snoutEnd, [0.2, 0, 0.5]), 1.05, M.CLOTH_DARK, { noShadow: true });   // b2: a black nose on the tip
+  const jl = B2 === 'bear' ? 4.4 : hog ? 4.4 : 6;
   const jd = V.norm([Math.cos(jaw), 0, -Math.sin(jaw)]), j0 = V.add(hd, [0.8, 0, -2.2]);
-  r.cone(j0, V.mad(j0, jd, 6), 1.6, 1.0, hb, { bias: -1 });
-  r.box(V.lerp(j0, V.mad(j0, jd, 6), 0.55), [2.2, 1.1, 0.5], M.DARK, frameAlong(jd), { noShadow: true });
-  for (let t = 0; t < 3; t++) for (const s of [-1, 1]) r.cone(V.add(hd, [2.4 + t * 1.3, s * 1.2, -2]), V.add(hd, [2.4 + t * 1.3, s * 1.1, -3]), 0.4, 0.15, M.BONE, { noShadow: true });
+  r.cone(j0, V.mad(j0, jd, jl), 1.6, 1.0, hb, { bias: -1 });
+  r.box(V.lerp(j0, V.mad(j0, jd, jl), 0.55), [2.2 * jl / 6, 1.1, 0.5], M.DARK, frameAlong(jd), { noShadow: true });
+  for (let t = 0; t < (jl < 6 ? 2 : 3); t++) for (const s of [-1, 1]) r.cone(V.add(hd, [2.4 + t * 1.3, s * 1.2, -2]), V.add(hd, [2.4 + t * 1.3, s * 1.1, -3]), 0.4, 0.15, M.BONE, { noShadow: true });
   for (const s of [-1, 1]) {
     r.sph(V.add(hd, [2.7, s * 1.9, 0.8]), 0.65, look.eye || M.EYE_RED, { noShadow: true });
+    if (B2 === 'hound' || B2 === 'ember') {   // b2: one crescent horn per side, rising off the back of the skull and sweeping back, as the concepts draw them
+      const a = V.add(hd, [-0.4, s * 2.0, 2.0]), b = V.add(hd, [0.6, s * 3.8, 4.4]), c = V.add(hd, [-0.6, s * 4.8, 7.0]), e = V.add(hd, [-3.6, s * 4.6, 8.2]);
+      r.group(() => { r.cone(a, b, 1.9, 1.6, bone); r.cone(b, c, 1.6, 1.1, bone); r.cone(c, e, 1.1, 0.3, bone); });
+      continue;
+    }
+    if (B2 === 'wolf' || B2 === 'alpha') { r.cone(V.add(hd, [-0.6, s * 1.9, 2.0]), V.add(hd, [-1.6, s * 2.8, 7.4]), 2.0, 0.3, skin); continue; }   // b2: taller, broader pointed ears
+    if (hog) { r.cone(V.add(hd, [3.4, s * 1.7, -1.9]), V.add(hd, [4.4, s * 3.6, 1.6]), 1.15, 0.25, M.BONE, { noShadow: true }); r.cone(V.add(hd, [-0.6, s * 2.2, 1.6]), V.add(hd, [0.4, s * 3.8, 3.0]), 1.4, 0.3, skin); continue; }   // b2: big up-curved tusks, ears pricked forward
     // horns sweep back, then up and forward like a bull's
-    if (fur && look.bear) { r.sph(V.add(hd, [-0.8, s * 2.4, 2.6]), 1.4, skin); continue; }   // round ears
+    if (fur && look.bear) { r.sph(V.add(hd, [-0.8, s * 2.4, 2.6]), B2 ? 1.8 : 1.4, skin); continue; }   // round ears
     if (fur && look.boar) { r.cone(V.add(hd, [4.6, s * 1.4, -1.4]), V.add(hd, [5.4, s * 2.6, 1.2]), 0.8, 0.2, M.BONE, { noShadow: true }); r.cone(V.add(hd, [-0.6, s * 2.2, 1.6]), V.add(hd, [-1.4, s * 3.4, 3.4]), 1.3, 0.3, skin); continue; }   // tusks, small ears
     if (fur) { r.cone(V.add(hd, [-0.8, s * 1.8, 2.2]), V.add(hd, [-1.6, s * 2.6, 6.4]), 1.6, 0.3, skin); continue; }   // pointed ears
     const a = V.add(hd, [-0.6, s * 2.2, 2]), b = V.add(hd, [-1.8, s * 4.8, 4.2]), c = V.add(hd, [0.6, s * 6.2, 6.8]), e = V.add(hd, [3.8, s * 5.6, 7.6]);
     r.group(() => { r.cone(a, b, 1.5, 1.3, bone); r.cone(b, c, 1.3, 0.9, bone); r.cone(c, e, 0.9, 0.3, bone); });
   }
   // a big skull reads at this size: scale every head part (cranium, snout, jaw, horns) 1.3x about the head
-  const HK = 1.3, sc = q => V.add(hd, V.mul(V.sub(q, hd), HK));
+  const HK = B2 === 'wolf' || B2 === 'hound' || B2 === 'ember' ? 1.45 : 1.3, sc = q => V.add(hd, V.mul(V.sub(q, hd), HK));
   for (const q of r.p.slice(hr0)) {
     if (q.c) q.c = sc(q.c); if (q.a) { q.a = sc(q.a); q.b = sc(q.b); q.ra *= HK; q.rb *= HK; }
     if (q.r) q.r *= HK; if (q.rad) q.rad = V.mul(q.rad, HK); if (q.half) q.half = V.mul(q.half, HK);
@@ -1006,7 +1031,7 @@ const MONSTERS = {
   slinger: { family: 'fallen', name: 'FALLEN SLINGER', minLevel: 99, look: { sling: true }, hp: 6, dmg: [1, 3], speed: 36, reach: 6, ranged: 'arrow', xp: 8, chest: 12, shadow: 5, pack: true },
   fallen: { family: 'fallen', name: 'FALLEN ONE', look: {}, hp: 7, dmg: [1, 3], speed: 40, reach: 1.15, xp: 6, chest: 12, shadow: 5, pack: true },
   shaman: { family: 'fallen', name: 'FALLEN SHAMAN', look: { staff: true, hood: true, ember: true }, hp: 9, dmg: [3, 6], speed: 28, reach: 6, ranged: 'firebolt', leader: true, xp: 16, chest: 12, shadow: 5 },
-  hound: { family: 'hound', name: 'BONE HOUND', look: { plates: true, lean: true, slabs: true, brush: true }, hp: 16, dmg: [3, 6], speed: 52, reach: 1.35, xp: 18, chest: 12, shadow: 10 },
+  hound: { family: 'hound', name: 'BONE HOUND', look: { plates: true, lean: true, slabs: true, brush: true, paws: true, b2: 'hound' }, hp: 16, dmg: [3, 6], speed: 52, reach: 1.35, xp: 18, chest: 12, shadow: 10 },
   lich: { family: 'skeleton', name: 'THE LICH', title: 'WHO DIED AND WOULD NOT STAY DEAD', look: { lich: true, eye: M.EYE_GRN, bone: M.OLDBONE, scale: 1.6, size: [124, 140, 62, 112] }, hp: 260, dmg: [8, 14], speed: 22, reach: 7, ranged: 'frostbolt', xp: 400, chest: 46, shadow: 11, unique: true, boss: 'lich', minLevel: 99 },
   skelking: { family: 'skeleton', name: 'SKELETON KING', title: 'LORD OF THE RESTLESS DEAD', look: { weapon: 'sword', shield: false, armored: true, crown: true, eye: M.FIREM, scale: 1.6, size: [124, 132, 62, 104] }, hp: 170, dmg: [9, 16], speed: 24, reach: 1.9, xp: 200, chest: 42, shadow: 11, unique: true, boss: 'king', minLevel: 99 },
   treant: { family: 'treant', name: 'TREANT ELDER', title: 'THE WOOD THAT WALKS', minLevel: 99, look: { scale: 1.4 }, hp: 170, dmg: [8, 14], speed: 18, reach: 2.3, xp: 190, chest: 54, shadow: 14, unique: true, boss: 'slam', minions: ['shroom', 'sporecap'], calls: 'THE ELDER WAKES THE MUSHROOMS' },
@@ -1022,20 +1047,20 @@ const MONSTERS = {
   wraith: { family: 'wraith', name: 'WRAITH', look: {}, hp: 18, dmg: [4, 8], speed: 34, reach: 1.3, xp: 26, chest: 26, shadow: 6, minLevel: 2 },
   slime: { family: 'slime', name: 'SLIME', look: {}, hp: 8, dmg: [1, 3], speed: 30, reach: 1.15, xp: 6, chest: 9, shadow: 7, pack: true, where: 'out' },
   blueslime: { family: 'slime', name: 'BIG BLUE SLIME', look: { blue: true, big: true }, hp: 30, dmg: [3, 7], speed: 24, reach: 1.4, xp: 30, chest: 14, shadow: 10, where: 'out', minLevel: 2 },
-  bear: { family: 'hound', name: 'DIRE BEAR', look: { skin: M.BOAR, eye: M.EYE_RED, wolf: true, bear: true, scale: 1.55, size: [110, 90, 55, 66] }, hp: 46, dmg: [6, 11], speed: 40, reach: 1.7, charge: true, xp: 50, chest: 20, shadow: 15, where: 'out', minLevel: 4 },
-  boar: { family: 'hound', name: 'BOAR', look: { skin: M.BOAR, eye: M.EYE_RED, wolf: true, boar: true }, hp: 20, dmg: [3, 6], speed: 48, reach: 1.35, charge: true, xp: 18, chest: 12, shadow: 10, where: 'out' },
+  bear: { family: 'hound', name: 'DIRE BEAR', look: { skin: M.BOAR, eye: M.EYE_RED, wolf: true, bear: true, b2: 'bear', scale: 1.55, size: [110, 90, 55, 66] }, hp: 46, dmg: [6, 11], speed: 40, reach: 1.7, charge: true, xp: 50, chest: 20, shadow: 15, where: 'out', minLevel: 4 },
+  boar: { family: 'hound', name: 'BOAR', look: { skin: M.BOAR, eye: M.EYE_RED, wolf: true, boar: true, b2: 'boar' }, hp: 20, dmg: [3, 6], speed: 48, reach: 1.35, charge: true, xp: 18, chest: 12, shadow: 10, where: 'out' },
   treasure: { family: 'fallen', name: 'TREASURE GOBLIN', look: { skin: M.GOBLIN, goblin: true, sack: true, unarmed: true, scale: 1.1 }, hp: 34, dmg: [0, 0], speed: 46, reach: 1, xp: 45, chest: 16, shadow: 6, flee: true, treasure: true, minLevel: 99 },
   gchief: { family: 'fallen', name: 'GOBLIN CHIEFTAIN', look: { skin: M.GOBLIN, goblin: true, chief: true, scale: 1.45, size: [76, 70, 38, 58] }, hp: 60, dmg: [5, 10], speed: 32, reach: 1.5, leader: true, xp: 70, chest: 22, shadow: 7, where: 'out', elite: true },
   gshaman: { family: 'fallen', name: 'GOBLIN SHAMAN', look: { skin: M.GOBLIN, goblin: true, staff: true }, hp: 9, dmg: [3, 6], speed: 30, reach: 6, ranged: 'firebolt', leader: true, xp: 16, chest: 12, shadow: 5, where: 'out' },
   brigand: { family: 'hero', name: 'BRIGAND', look: { team: 'tan', helm: 'cap', chest: 'chain', weapon: 'axe', shield: 'none', hair: 'brown', cape: 'red' }, hp: 22, dmg: [3, 7], speed: 30, reach: 1.35, xp: 24, chest: 18, shadow: 7, where: 'out' },
-  wolf: { family: 'hound', name: 'WOLF', look: { skin: M.HIDE, eye: M.EYE_YEL, wolf: true, pale: true, lean: true, bib: true, paws: true, brush: true }, hp: 14, dmg: [2, 5], speed: 54, reach: 1.35, xp: 15, chest: 12, shadow: 10, pack: true, where: 'out' },
+  wolf: { family: 'hound', name: 'WOLF', look: { skin: M.HIDE, eye: M.EYE_YEL, wolf: true, pale: true, lean: true, bib: true, paws: true, brush: true, b2: 'wolf' }, hp: 14, dmg: [2, 5], speed: 54, reach: 1.35, xp: 15, chest: 12, shadow: 10, pack: true, where: 'out' },
   // round 26: the diggers of the old mine: hunched, snouted, in a dented iron cap, swinging a pick, a lamp at the belt
   digger: { family: 'fallen', name: 'DIGGER', look: { skin: M.LEATHER, digger: true }, hp: 10, dmg: [2, 4], speed: 36, reach: 1.25, xp: 9, chest: 12, shadow: 5, pack: true, where: 'out' },
   // round 26 side-area leaders
-  alpha: { family: 'hound', name: 'THE ALPHA', look: { skin: M.HIDE, eye: M.EYE_RED, wolf: true, scale: 1.45, size: [100, 84, 50, 62] }, hp: 70, dmg: [5, 9], speed: 50, reach: 1.6, xp: 80, chest: 14, shadow: 12, elite: true, leader: true, where: 'out' },
+  alpha: { family: 'hound', name: 'THE ALPHA', look: { skin: M.CLOTH_SHADOW, eye: M.EYE_RED, wolf: true, brush: true, b2: 'alpha', scale: 1.45, size: [100, 84, 50, 62] }, hp: 70, dmg: [5, 9], speed: 50, reach: 1.6, xp: 80, chest: 14, shadow: 12, elite: true, leader: true, where: 'out' },
   banditchief: { family: 'hero', name: 'BANDIT CHIEF', look: { team: 'red', helm: 'horned', chest: 'brigandine', weapon: 'axe', shield: 'round', hair: 'brown', cape: 'red' }, hp: 80, dmg: [5, 10], speed: 30, reach: 1.4, xp: 90, chest: 24, shadow: 8, elite: true, leader: true, where: 'out' },
   goblin: { family: 'fallen', name: 'GOBLIN', look: { skin: M.GOBLIN, goblin: true }, hp: 9, dmg: [2, 4], speed: 38, reach: 1.15, xp: 8, chest: 12, shadow: 5, pack: true, where: 'out' },
-  ghoulhound: { family: 'hound', name: 'HELL HOUND', look: { skin: M.FLESH, eye: M.FIREM, scale: 1.15, ember: true, lean: true, paws: true, brush: true }, hp: 28, dmg: [5, 9], speed: 50, reach: 1.45, xp: 34, chest: 13, shadow: 11, minLevel: 2 },
+  ghoulhound: { family: 'hound', name: 'HELL HOUND', look: { skin: M.FLESH, eye: M.FIREM, scale: 1.15, ember: true, lean: true, paws: true, brush: true, b2: 'ember' }, hp: 28, dmg: [5, 9], speed: 50, reach: 1.45, xp: 34, chest: 13, shadow: 11, minLevel: 2 },
   spider: { family: 'spider', name: 'CAVE SPIDER', look: { scale: 0.8 }, hp: 10, dmg: [2, 4], speed: 46, reach: 1.3, xp: 10, chest: 8, shadow: 11, pack: true },
   broodmother: { family: 'spider', name: 'BROODMOTHER', title: 'MOTHER OF A THOUSAND LEGS', look: { brood: true, scale: 1.15, size: [128, 84, 64, 60] }, hp: 60, dmg: [6, 12], speed: 34, reach: 1.9, xp: 90, chest: 12, shadow: 17, minLevel: 3, unique: true },
 };
