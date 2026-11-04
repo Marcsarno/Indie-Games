@@ -385,7 +385,17 @@ const CLASS_INFO = {
 function titlePick(cls) { if (TITLE.sel !== cls) { TITLE.sel = cls; TITLE.pickT = G.t; TITLE.eraseT = 0; try { localStorage.setItem('dcg-cls', cls); } catch (e) { /* ignore */ } } }
 // the splash: the title over the camp at night, the three heroes, TAP TO BEGIN. Phones play no
 // sound before a tap, so this tap is the one that starts the music for the character screen.
+// round 60: the splash is the user's own picture (game/art/splash.webp, the one image file in the
+// game); the code-drawn splash stays as the fallback while it loads or if it can't load
+const SPLASH_IMG = new Image(); SPLASH_IMG.src = 'art/splash.webp';
+const splashReady = () => SPLASH_IMG.complete && SPLASH_IMG.naturalWidth > 0;
+function drawSplashImage() {   // over the finished frame, at the canvas's full resolution, filling it (cropped to fit)
+  const iw = SPLASH_IMG.naturalWidth, ih = SPLASH_IMG.naturalHeight, k = Math.max(OW / iw, OH / ih), w = iw * k, h = ih * k;
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(SPLASH_IMG, (OW - w) / 2, (OH - h) / 2, w, h);
+}
 function drawSplash() {
+  if (splashReady()) { UI.titleBtns = [{ x: 0, y: 0, w: W, h: H, on: () => { TITLE.splash = false; TITLE.pickT = G.t - 9; } }]; return; }
   fade(0.55);
   const cy = Math.round(H * 0.3);
   textC('DUNGEON', W / 2, cy - 30, 22, 4);
@@ -454,7 +464,7 @@ function drawTitle() {
     btn(SFX.synth ? 'SOUND: SYNTH' : 'SOUND: REAL', 180, oy, 84, 16, () => { setSynthSfx(!SFX.synth); sfx('hit'); }, 25, 3, 6);   // round 44: compare the recorded sounds with the old synth
   }
   textC('LEFT THUMB MOVES. RIGHT BUTTONS FIGHT.', W / 2, H - 32, 25);
-  textC('ALL ART IS DRAWN IN CODE', W / 2, H - 24, 24);
+  textC('THE GAME ART IS DRAWN IN CODE', W / 2, H - 24, 24);
   textC('SOUNDS: KENNEY, ARTISTICDUDE, RUBBERDUCK, QUBODUP,', W / 2, H - 15, 24);   // round 44: the sound packs' credits (sfx/CREDITS.md)
   textC('LITTLE ROBOT SOUND FACTORY, WILL LEAMON, BART, VOICEBOSCH + MORE', W / 2, H - 8, 24);
 }

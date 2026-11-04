@@ -994,7 +994,7 @@ function heroRig(eq, st) {
 
   // legs
   for (const [hip, knee, ank, s] of [[J.hipL, J.kneeL, J.ankL, -1], [J.hipR, J.kneeR, J.ankR, 1]]) {
-    r.cone(hip, knee, 2.3 + bulk, 2.0 + bulk, plate ? PL : M.CLOTH_TAN);   // brown leather trousers
+    r.cone(hip, knee, 2.3 + bulk, 2.0 + bulk, plate ? PL : robe ? robeM : M.CLOTH_TAN);   // brown leather trousers (in a robe the cloth over the thigh: round 60)
     r.cone(knee, ank, 1.9 + bulk * 1.0, 1.6 + bulk * 0.8, legM);
     if (plate) { const kc = V.add(knee, [1.4, 0, 0.3]); r.sph(kc, 2.4, PL); }   // poleyn
     r.ell(V.add(ank, [2.0, 0, -0.9]), plate ? [3.9, 2.4, 1.5] : [4.0, 2.2, 1.6], legM);   // chunky chibi boots
@@ -1007,9 +1007,12 @@ function heroRig(eq, st) {
     const top = V.mad(J.pelvis, up, 1.5), kneeMid = V.mul(V.add(J.kneeL, J.kneeR), 0.5);
     const lead = Math.max(V.dot(V.sub(J.kneeL, J.pelvis), fwd), V.dot(V.sub(J.kneeR, J.pelvis), fwd));
     const moving = st.clip === 'walk' || st.clip === 'go', trail = moving ? -1.4 : st.clip === 'stop' ? 1.0 : 0;
-    const knee = V.add(V.add([kneeMid[0], kneeMid[1], kneeMid[2]], V.mul(fwd, lead * 0.35)), V.mul(sideR, J.swingArm * 0.6));
+    // round 60: the cloth hangs nearly straight from the waist. It used to follow the knees, and the
+    // bent-knee idle stance pushed it ~25 degrees forward, so the hem's round end stuck out like a boulder
+    const kneeF = V.dot(V.sub(kneeMid, J.pelvis), fwd), kneeAt = V.mad(kneeMid, fwd, kneeF * -0.72 + lead * 0.22);
+    const knee = V.add(kneeAt, V.mul(sideR, J.swingArm * 0.6));
     const hemZ = Math.min(J.ankL[2], J.ankR[2]) + 1.9;
-    const hem = V.add(V.add([knee[0], knee[1], hemZ], V.mul(fwd, trail + lead * 0.15)), V.mul(sideR, J.swingArm * 0.9));
+    const hem = V.add(V.add([knee[0], knee[1], hemZ], V.mul(fwd, trail + lead * 0.08)), V.mul(sideR, J.swingArm * 0.9));
     const ax = V.norm(V.sub(hem, knee)), Lh = V.len(V.sub(hem, knee));
     r.group(() => {
       r.cone(top, knee, 4.4, 5.4, robeM, { mf: robeFront(top, knee, 1.3 * (RS.wk || 1), 1.6 * (RS.wk || 1)) });

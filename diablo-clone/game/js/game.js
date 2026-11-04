@@ -1604,6 +1604,7 @@ function drawHudLayer() {
   }
   drawFineQueue();   // round 50: menu characters with their sharp sprites
   ctx.putImageData(ovImg, 0, 0);
+  if (G.mode === 'title' && TITLE.splash && splashReady()) drawSplashImage();   // round 60: the user's splash picture
   if (G.mode === 'skills' && UI.pvRect) pvBlit(UI.pvRect);   // round 45: the skill preview's picture in its window
 }
 // the lit color of a palette index at world-layer pixel (x, y), as the world's light pass would
