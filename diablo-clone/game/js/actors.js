@@ -325,6 +325,17 @@ function deathTip(rig, B, f, dir = -1, side = 1) {
 // round 43: secondary motion for a hat tip or a hood point: [back, up, side] offsets that lag
 // the body (streaming back while walking and bobbing with the stride, flicking forward on a stop,
 // whipping round in a spin, tossed up on a landing)
+// round 43: a Burning weapon licks with little flames along its head, a Chilling one is rimed with
+// ice crystals; they flicker with the frame so they live while idle too
+function enchantGlow(r, eq, g, bd, wide, st, len) {
+  const L = len || WEAPON_LEN[eq.weapon] || GEAR_LEN[eq.weapon] || 16, fire = eq.ench === 'fire', k = (st.f || 0) % 2;
+  const us = len ? [[0.62, 1], [0.74, -1], [0.86, 1]] : [[0.5, 1], [0.7, -1], [0.9, 1]];   // a staff burns near its head
+  for (const [u, s] of us) {
+    const p = V.add(V.mad(g, bd, L * u), V.mul(wide, s * 1.6));
+    if (fire) r.cone(p, V.add(p, V.add(V.mul([0, 0, 1], 3.4 + k * 1.0), V.mul(wide, s * 0.8))), 1.25, 0.2, M.FIREM, { noShadow: true });
+    else r.cone(V.mad(p, wide, -s * 0.6), V.add(V.add(p, V.mul(wide, s * 2.6)), V.mul([0, 0, 1], 0.8)), 1.2, 0.2, M.ICE, { noShadow: true });
+  }
+}
 function headSway(st) {
   const c = st.clip, ph = (st.f || 0) / 8 * Math.PI * 2;
   if (FEEL_OLD) return [0, 0, 0];
@@ -374,7 +385,7 @@ const GEAR_LOOKS = {
   weapon: ['sword', 'axe', 'mace', 'flail', 'greatsword'],
   shield: ['none', 'buckler', 'round', 'kite', 'tower'],
 };
-const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}.${eq.cape || ''}.${eq.lgd || ''}.${eq.set || ''}`;
+const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}.${eq.cape || ''}.${eq.lgd || ''}.${eq.set || ''}.${eq.ench || ''}`;
 const hasFx = (eq, k) => !!eq.lgd && eq.lgd.split('|').includes(k);
 // combo 1 = the second swing of a quick pair (a backhand)
 // a quick string of swings: forehand, backhand, then a finisher (sword thrust or heavy slam)
@@ -834,6 +845,7 @@ function heroRig(eq, st) {
     r.group(() => { for (const sd2 of [1, -1]) { r.cone(c, mid(sd2), 1.3, 1.1, lm); r.cone(mid(sd2), tip(sd2), 1.1, 0.6, lm); } });
     r.cone(V.mad(c, bowUp, -1.2), V.mad(c, bowUp, 1.2), 1.15, 1.15, M.LEATHER);   // grip
     if (hasFx(eq, 'wind')) for (const sd2 of [1, -1]) { const t = tip(sd2); r.cone(t, V.add(V.mad(t, bowUp, -sd2 * 0.5), V.add(V.mul(back, 2.5), V.mul(up, -3.5))), 0.7, 0.3, M.CLOTH_GREEN, { noShadow: true }); }   // round 43: Windrunner: silver limbs, green ribbons at the tips
+    if (eq.ench) for (const sd2 of [1, -1]) r.sph(tip(sd2), 1.3, eq.ench === 'fire' ? M.FIREM : M.ICE, { noShadow: true });   // round 43: Burning or Chilling: the limb tips glow
     const nock = st.clip === 'shoot' ? aR.hand : V.add(c, V.mul(back, bend + 0.4));
     r.cone(tip(1), nock, 0.3, 0.3, M.CLOTH_WHITE, { noShadow: true }); r.cone(nock, tip(-1), 0.3, 0.3, M.CLOTH_WHITE, { noShadow: true });
     if (st.clip === 'shoot' && draw > 0.5) for (const fan of volley ? [-0.28, 0, 0.28] : [0]) { const ad = V.norm(V.add(aim, V.mul(bowUp, fan))); r.cone(aR.hand, V.mad(aR.hand, ad, 12), 0.4, 0.4, M.WOOD, { noShadow: true }); r.cone(V.mad(aR.hand, ad, 11.5), V.mad(aR.hand, ad, 13.2), 0.7, 0.2, M.STEEL, { noShadow: true }); }
@@ -847,6 +859,7 @@ function heroRig(eq, st) {
     for (const sd of [-1, 1]) r.cone(V.mad(g, bd, 17.5), V.add(V.mad(g, bd, 21.8), V.mul(wide, sd * 2.6)), 0.7, 0.4, M.GOLD);
     r.sph(top, 2.7, orbM, { noShadow: true });
     if (cinder) { r.cone(V.mad(top, bd, 2), V.mad(top, bd, 6.5), 1.8, 0.2, M.FIREM, { noShadow: true }); }
+    if (eq.ench) enchantGlow(r, eq, g, bd, wide, st, 21);
     if (eq.weapon === 'staff_rune') { for (const z of [8, 12.5]) r.cyl(V.mad(g, bd, z), V.mad(g, bd, z + 0.9), 1.5, M.GOLD); for (let k = 0; k < 3; k++) { const a = k / 3 * 6.283 + st.f * 0.5; r.sph(V.add(V.mad(top, bd, 1 + Math.sin(a)), V.add(V.mul(wide, Math.cos(a) * 4.6), V.mul(wf[2], Math.sin(a) * 4.6))), 0.9, M.ICE, { noShadow: true }); } }   // round 43: gold bands and motes circling the orb
     if (st.clip === 'death') deathTip(r, B, st.f, -1);
     return r;
@@ -893,6 +906,7 @@ function heroRig(eq, st) {
       for (const s of [-1, 1]) r.cone(V.mad(g, bd, 13.5), V.add(V.mad(g, bd, 13.5), V.mul(wide, s * 4.2)), 1.2, 0.4, M.IRON);
     }
   }
+  if (eq.ench) enchantGlow(r, eq, g, bd, wide, st);   // round 43
   if (sw && sw.smear && st.prev) {
     const reach = (sw.r || 6.5) + (WEAPON_LEN[eq.weapon] || GEAR_LEN[eq.weapon] || 16);
     smearArc(r, pivot, F, U, bladeA(st.prev), bladeA(sw), reach - 9, reach);

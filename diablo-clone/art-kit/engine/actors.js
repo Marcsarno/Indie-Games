@@ -295,7 +295,10 @@ function bipedJoints(B, st) {
     bob = -2.0; lean = -0.2; swingArm = -0.6; twist = 0.1; hipF = -0.5;
   }
   lean += B.hunch || 0;
-  if (clip === 'death') { bob = -[0, 2, 4, 5, 5, 5][f] * B.hipH / 18; lean = 0.15; footL = [2, -B.hipW - 1, 0]; footR = [-1, B.hipW + 1, 0]; }
+  if (clip === 'death') {   // round 43: the blow rocks him back, the knees go, then he falls
+    bob = -(FEEL_OLD ? [0, 2, 4, 5, 5, 5] : [0.4, 5.5, 6, 5, 5, 5])[f] * B.hipH / 18; lean = FEEL_OLD ? 0.15 : [-0.28, 0.22, 0.18, 0.15, 0.15, 0.15][f];
+    footL = FEEL_OLD || f === 0 ? [2, -B.hipW - 1, 0] : [3.5, -B.hipW - 1, 0]; footR = FEEL_OLD || f === 0 ? [-1, B.hipW + 1, 0] : [-4, B.hipW + 1, 0];
+  }
   const pelvis = [0, sway, B.hipH + bob];
   const up = V.rotY([0, 0, 1], lean);
   const chest = V.mad(pelvis, up, B.spine);
@@ -315,10 +318,36 @@ function armTo(J, sh, hand, B, side) {
 function deathTip(rig, B, f, dir = -1, side = 1) {
   // knees buckle, then the body tips over backwards (dir -1) or forwards (+1), twisting onto one
   // side so the fall reads from every camera direction, and settles
-  const k = [0, 0.1, 0.4, 0.78, 0.96, 1][f];
+  const k = (FEEL_OLD ? [0, 0.1, 0.4, 0.78, 0.96, 1] : [0, 0.02, 0.3, 0.76, 0.96, 1])[f];   // round 43: kneeling first, then over
   tipRig(rig, [dir * 2, 0, 0], dir * 1.5 * k, side * 0.55 * k, [0, 0, 0.5, 1.5, 2.2, 2.6][f] * B.hipH / 18);
 }
 
+// round 43: secondary motion for a hat tip or a hood point: [back, up, side] offsets that lag
+// the body (streaming back while walking and bobbing with the stride, flicking forward on a stop,
+// whipping round in a spin, tossed up on a landing)
+// round 43: a Burning weapon licks with little flames along its head, a Chilling one is rimed with
+// ice crystals; they flicker with the frame so they live while idle too
+function enchantGlow(r, eq, g, bd, wide, st, len) {
+  const L = len || WEAPON_LEN[eq.weapon] || GEAR_LEN[eq.weapon] || 16, fire = eq.ench === 'fire', k = (st.f || 0) % 2;
+  const us = len ? [[0.62, 1], [0.74, -1], [0.86, 1]] : [[0.5, 1], [0.7, -1], [0.9, 1]];   // a staff burns near its head
+  for (const [u, s] of us) {
+    const p = V.add(V.mad(g, bd, L * u), V.mul(wide, s * 1.6));
+    if (fire) r.cone(p, V.add(p, V.add(V.mul([0, 0, 1], 3.4 + k * 1.0), V.mul(wide, s * 0.8))), 1.25, 0.2, M.FIREM, { noShadow: true });
+    else r.cone(V.mad(p, wide, -s * 0.6), V.add(V.add(p, V.mul(wide, s * 2.6)), V.mul([0, 0, 1], 0.8)), 1.2, 0.2, M.ICE, { noShadow: true });
+  }
+}
+function headSway(st) {
+  const c = st.clip, ph = (st.f || 0) / 8 * Math.PI * 2;
+  if (FEEL_OLD) return [0, 0, 0];
+  if (c === 'walk') return [1.6 + Math.sin(ph * 2) * 0.5, Math.cos(ph * 2) * 0.7, Math.sin(ph) * 0.6];
+  if (c === 'go') return [1.2, 0, 0];
+  if (c === 'stop' || c === 'skid') return [-1.4, -0.4, 0];
+  if (c === 'spin') return [0.6, 0, [1.8, -1.8, 1.8, -1.8][(st.f || 0) % 4]];
+  if (c === 'vault') return [[0, 2, -1.2][st.f || 0], [0, -1.2, 1.4][st.f || 0], 0];
+  if (c === 'arrive') return [-1.2, st.f === 0 ? 1.4 : 0.4, 0];
+  if (c === 'storm') return [0.3, -0.6 + Math.sin(ph * 2) * 0.4, Math.sin(ph) * 0.8];
+  return [0, 0, 0];
+}
 // chibi heads (round 13): scale every part added since index `from` about the head center
 function bigHead(r, from, hd, HK) {
   const sc = q => V.add(hd, V.mul(V.sub(q, hd), HK));
@@ -356,7 +385,7 @@ const GEAR_LOOKS = {
   weapon: ['sword', 'axe', 'mace', 'flail', 'greatsword'],
   shield: ['none', 'buckler', 'round', 'kite', 'tower'],
 };
-const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}.${eq.cape || ''}.${eq.lgd || ''}.${eq.set || ''}`;
+const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}.${eq.cape || ''}.${eq.lgd || ''}.${eq.set || ''}.${eq.ench || ''}`;
 const hasFx = (eq, k) => !!eq.lgd && eq.lgd.split('|').includes(k);
 // combo 1 = the second swing of a quick pair (a backhand)
 // a quick string of swings: forehand, backhand, then a finisher (sword thrust or heavy slam)
@@ -569,7 +598,7 @@ function heroRig(eq, st) {
     handR = V.add(V.add(J.shR, V.mul(fwd, -1.5)), V.add(V.mul(up, -7), V.mul(sideR, 2.2)));
     bd = V.norm(V.add(V.add(V.mul(fwd, -0.6), V.mul(up, -0.5)), V.mul(sideR, 0.5)));
   } else if (st.clip === 'death') {
-    handR = V.add(J.shR, [3, 2, -10]); bd = V.norm([1, 0.4, -0.6]);
+    handR = !FEEL_OLD && st.f === 0 ? V.add(J.shR, V.add(V.mul(up, 2), V.mul(sideR, 5))) : V.add(J.shR, [3, 2, -10]); bd = V.norm([1, 0.4, -0.6]);
   } else {
     // guard: blade held out at the side, point up and forward, so it reads from the front too
     // the sword arm swings a little (the blade is carried), rising slightly as it comes forward
@@ -592,7 +621,7 @@ function heroRig(eq, st) {
   if (bow && st.clip !== 'death') handL = st.clip === 'shoot' && st.sky ? V.add(V.add(J.shL, V.mul(fwd, 7)), V.add(V.mul(up, 5.5), V.mul(sideR, 0.8)))   // Rain of Arrows: the bow arm up at the sky
     : st.clip === 'shoot' ? V.add(V.add(J.shL, V.mul(fwd, 9.5)), V.add(V.mul(up, -0.6), V.mul(sideR, 0.6)))   // bow arm straight at the target
     : V.add(V.add(J.shL, V.mul(fwd, 3.2 - J.swingArm * 1.2)), V.add(V.mul(up, -7.2), V.mul(sideR, -3.2)));   // bow carried at the side, held out from the leg
-  if (st.clip === 'death') handL = V.add(J.shL, [2, -3, -9]);
+  if (st.clip === 'death') handL = !FEEL_OLD && st.f === 0 ? V.add(J.shL, V.add(V.mul(up, 2), V.mul(sideR, -5))) : V.add(J.shL, [2, -3, -9]);   // round 43: flung out by the blow
   if (st.clip === 'bash') handL = V.add(V.add(J.shL, V.mul(fwd, 7.5)), V.add(V.mul(up, -3), V.mul(sideR, 1.5)));   // shield driven forward
   if (st.clip === 'hook') handL = st.f === 2 ? V.add(V.add(handR, V.mul(sideR, -2.2)), V.add(V.mul(up, -0.8), V.mul(fwd, 0.8)))   // both hands on the chain
     : st.f === 1 ? V.add(V.add(J.shL, V.mul(fwd, -2)), V.add(V.mul(up, -6), V.mul(sideR, -1))) : V.add(V.add(J.shL, V.mul(fwd, 5)), V.add(V.mul(up, -4), V.mul(sideR, 0.5)));
@@ -679,7 +708,7 @@ function heroRig(eq, st) {
       const hm = M.CLOTH_PURPLE, base = V.add(V.mad(hd, up, 3.3), V.mul(fwd, -0.8));   // set high and tipped back so the eyes show
       r.group(() => {
         r.cyl(base, V.mad(base, up, 0.7), 5.9, hm);
-        const mid = V.add(V.mad(base, up, 4.6), V.mul(fwd, -1.0)), tip = V.add(V.mad(base, up, 8.4), V.mul(fwd, -3.6));
+        const sway = headSway(st), mid = V.add(V.mad(base, up, 4.6), V.mul(fwd, -1.0 - sway[0] * 0.3)), tip = V.add(V.mad(base, up, 8.4 + sway[1]), V.add(V.mul(fwd, -3.6 - sway[0]), V.mul(sideR, sway[2])));   // round 43: the tip lags behind the head
         r.cone(V.mad(base, up, 0.5), mid, 3.9, 2.2, hm, { mf: p => V.dot(V.sub(p, base), up) < 1.6 ? M.GOLD : 0 });
         r.cone(mid, tip, 2.2, 0.5, hm);
       });
@@ -699,7 +728,7 @@ function heroRig(eq, st) {
       const hm = eq.helm === 'rhood_dark' ? M.CLOTH_SHADOW : eq.helm === 'rhood_night' ? M.CLOTH_NAVY : M.CLOTH_GREEN, fur = eq.helm === 'rhood_hunter', hc = V.add(V.mad(hd, up, 0.8), V.mul(fwd, -1.0));
       r.group(() => {
         r.ell(hc, [4.7, 5.1, 5.1], hm, helmF);   // set back, so the face stands out of its opening
-        r.cone(V.add(V.mad(hd, up, 3.0), V.mul(fwd, -3.4)), V.add(V.mad(hd, up, 1.0), V.mul(fwd, -6.6)), 2.2, 0.5, hm);
+        { const sw = headSway(st); r.cone(V.add(V.mad(hd, up, 3.0), V.mul(fwd, -3.4)), V.add(V.add(V.mad(hd, up, 1.0 + sw[1] * 0.8), V.mul(fwd, -6.6 - sw[0] * 1.2)), V.mul(sideR, sw[2])), 2.2, 0.5, hm); }   // round 43: the hood's point streams back
         r.ell(V.add(V.mad(hd, up, -4.2), V.mul(fwd, -1.2)), [3.3, 4.5, 1.3], fur ? M.FUR : hm, helmF);   // the cowl, kept small so the jerkin shows (the hunter's: a fur mantle)
       });
     }
@@ -816,6 +845,7 @@ function heroRig(eq, st) {
     r.group(() => { for (const sd2 of [1, -1]) { r.cone(c, mid(sd2), 1.3, 1.1, lm); r.cone(mid(sd2), tip(sd2), 1.1, 0.6, lm); } });
     r.cone(V.mad(c, bowUp, -1.2), V.mad(c, bowUp, 1.2), 1.15, 1.15, M.LEATHER);   // grip
     if (hasFx(eq, 'wind')) for (const sd2 of [1, -1]) { const t = tip(sd2); r.cone(t, V.add(V.mad(t, bowUp, -sd2 * 0.5), V.add(V.mul(back, 2.5), V.mul(up, -3.5))), 0.7, 0.3, M.CLOTH_GREEN, { noShadow: true }); }   // round 43: Windrunner: silver limbs, green ribbons at the tips
+    if (eq.ench) for (const sd2 of [1, -1]) r.sph(tip(sd2), 1.3, eq.ench === 'fire' ? M.FIREM : M.ICE, { noShadow: true });   // round 43: Burning or Chilling: the limb tips glow
     const nock = st.clip === 'shoot' ? aR.hand : V.add(c, V.mul(back, bend + 0.4));
     r.cone(tip(1), nock, 0.3, 0.3, M.CLOTH_WHITE, { noShadow: true }); r.cone(nock, tip(-1), 0.3, 0.3, M.CLOTH_WHITE, { noShadow: true });
     if (st.clip === 'shoot' && draw > 0.5) for (const fan of volley ? [-0.28, 0, 0.28] : [0]) { const ad = V.norm(V.add(aim, V.mul(bowUp, fan))); r.cone(aR.hand, V.mad(aR.hand, ad, 12), 0.4, 0.4, M.WOOD, { noShadow: true }); r.cone(V.mad(aR.hand, ad, 11.5), V.mad(aR.hand, ad, 13.2), 0.7, 0.2, M.STEEL, { noShadow: true }); }
@@ -829,6 +859,7 @@ function heroRig(eq, st) {
     for (const sd of [-1, 1]) r.cone(V.mad(g, bd, 17.5), V.add(V.mad(g, bd, 21.8), V.mul(wide, sd * 2.6)), 0.7, 0.4, M.GOLD);
     r.sph(top, 2.7, orbM, { noShadow: true });
     if (cinder) { r.cone(V.mad(top, bd, 2), V.mad(top, bd, 6.5), 1.8, 0.2, M.FIREM, { noShadow: true }); }
+    if (eq.ench) enchantGlow(r, eq, g, bd, wide, st, 21);
     if (eq.weapon === 'staff_rune') { for (const z of [8, 12.5]) r.cyl(V.mad(g, bd, z), V.mad(g, bd, z + 0.9), 1.5, M.GOLD); for (let k = 0; k < 3; k++) { const a = k / 3 * 6.283 + st.f * 0.5; r.sph(V.add(V.mad(top, bd, 1 + Math.sin(a)), V.add(V.mul(wide, Math.cos(a) * 4.6), V.mul(wf[2], Math.sin(a) * 4.6))), 0.9, M.ICE, { noShadow: true }); } }   // round 43: gold bands and motes circling the orb
     if (st.clip === 'death') deathTip(r, B, st.f, -1);
     return r;
@@ -875,6 +906,7 @@ function heroRig(eq, st) {
       for (const s of [-1, 1]) r.cone(V.mad(g, bd, 13.5), V.add(V.mad(g, bd, 13.5), V.mul(wide, s * 4.2)), 1.2, 0.4, M.IRON);
     }
   }
+  if (eq.ench) enchantGlow(r, eq, g, bd, wide, st);   // round 43
   if (sw && sw.smear && st.prev) {
     const reach = (sw.r || 6.5) + (WEAPON_LEN[eq.weapon] || GEAR_LEN[eq.weapon] || 16);
     smearArc(r, pivot, F, U, bladeA(st.prev), bladeA(sw), reach - 9, reach);

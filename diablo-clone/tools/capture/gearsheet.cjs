@@ -14,7 +14,7 @@ const { chromium } = require('playwright'); const fs = require('fs'), path = req
     const old = buildBudget.ms; buildBudget.ms = Infinity;
     rows.forEach((row, ri) => {
       newHero(row.cls); hero.equip = { weapon: null, helm: null, chest: null, shield: null, ring: null, amulet: null };
-      for (const it of row.items) { const parts = it.split(':'), base = parts[0], set = parts[1]; const item = { id: itemSerial++, base, rarity: set ? 'set' : row.legend ? 'legend' : 'normal', set, name: set ? 'X' : base, mods: {}, fx: row.legend }; hero.equip[ITEM_BASES[base].slot] = item; }
+      for (const it of row.items) { const parts = it.split(':'), base = parts[0], set = parts[1]; const item = { id: itemSerial++, base, rarity: set ? 'set' : row.legend ? 'legend' : 'normal', set, name: set ? 'X' : base, mods: (row.mods && ITEM_BASES[base].slot === 'weapon') ? row.mods : {}, fx: row.legend }; hero.equip[ITEM_BASES[base].slot] = item; }
       recalcHero(); const look = hero.look;
       g.fillStyle = col(26); g.font = `${8 * Z}px monospace`; g.fillText(row.label, 4 * Z, (ri * CH + 34) * Z);
       cols.forEach(([d, clip, f], k) => {

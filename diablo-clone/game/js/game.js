@@ -61,7 +61,8 @@ function recalcHero() {
   // legendaries change how their piece looks (glowing ember blade, oak-leaf crown, ...)
   const lgd = ['weapon', 'helm', 'chest', 'shield'].map(s => e[s] && e[s].rarity === 'legend' ? (e[s].fx || (LEGENDARIES.find(L => L.name === e[s].name) || {}).fx) : null).filter(Boolean).join('|');
   const setOn = Object.keys(SETS).find(k => Object.values(e).filter(it => it && it.set === k).length >= 2) || '';   // round 43: a set's own look from two pieces
-  hero.look = { set: setOn, team: hero.team, helm: it('helm')?.look || 'none', chest: it('chest')?.look || 'tunic', weapon: w?.look || (mage ? 'staff' : ranger ? 'bow' : 'sword'), shield: it('shield')?.look || 'none', lgd };
+  const wm = (e.weapon && e.weapon.mods) || {}, ench = wm.fireDmg ? 'fire' : wm.chill ? 'cold' : '';   // round 43: a Burning or Chilling weapon shows it
+  hero.look = { set: setOn, ench, team: hero.team, helm: it('helm')?.look || 'none', chest: it('chest')?.look || 'tunic', weapon: w?.look || (mage ? 'staff' : ranger ? 'bow' : 'sword'), shield: it('shield')?.look || 'none', lgd };
   hero.hp = Math.min(hero.hp, STAT.maxHp); hero.mana = Math.min(hero.mana, STAT.maxMana);
 }
 const xpFor = l => Math.round(60 * Math.pow(l, 1.6));
