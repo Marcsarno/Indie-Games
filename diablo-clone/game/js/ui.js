@@ -354,13 +354,31 @@ function drawAutomap() {
 // hero swings, the others dim), then the big button starts: CONTINUE when that class has a save,
 // else NEW GAME. START OVER asks for a second tap before it replaces a save. The developer
 // settings sit behind OPTIONS.
-const TITLE = { sel: null, looks: null, opts: false, eraseT: 0, pickT: 0 };
+const TITLE = { sel: null, looks: null, opts: false, eraseT: 0, pickT: 0, splash: true };   // round 46c: a splash screen first (its tap turns the sound on)
 const CLASS_INFO = {
   warrior: { name: 'WARRIOR', col: 22, lines: ['BLADE AND ARMOR', 'FIGHTS UP CLOSE'] },
   mage: { name: 'MAGE', col: 40, lines: ['SPELLS FROM AFAR', 'FRAGILE, DEADLY'] },
   ranger: { name: 'RANGER', col: 55, lines: ['BOW AND TRAPS', 'QUICK AND NIMBLE'] },
 };
 function titlePick(cls) { if (TITLE.sel !== cls) { TITLE.sel = cls; TITLE.pickT = G.t; TITLE.eraseT = 0; try { localStorage.setItem('dcg-cls', cls); } catch (e) { /* ignore */ } } }
+// the splash: the title over the camp at night, the three heroes, TAP TO BEGIN. Phones play no
+// sound before a tap, so this tap is the one that starts the music for the character screen.
+function drawSplash() {
+  fade(0.55);
+  const cy = Math.round(H * 0.3);
+  textC('DUNGEON', W / 2, cy - 30, 22, 4);
+  textC('OF BONES', W / 2, cy - 4, 26, 3);
+  const saved = budgetOff();
+  ['ranger', 'warrior', 'mage'].forEach((cls, k) => {
+    const look = TITLE.looks[cls], ent = { look, cls, combo: 0 };
+    const sp = getSprite('hero', look, 1, 'idle', Math.floor(G.t / 0.2 + k) % 4, ent, 1);
+    sprite(sp, W / 2 + (k - 1) * 74, cy + 140 + (k === 1 ? 8 : 0), 2, 4);
+  });
+  budgetOn(saved);
+  if (Math.floor(G.t * 1.6) % 2 === 0) textC('TAP TO BEGIN', W / 2, Math.round(H * 0.74), 51, 2);
+  textC('SOUND ON FOR THE MUSIC', W / 2, Math.round(H * 0.74) + 20, 24);
+  UI.titleBtns = [{ x: 0, y: 0, w: W, h: H, on: () => { TITLE.splash = false; TITLE.pickT = G.t - 9; } }];
+}
 function drawTitle() {
   if (!TITLE.looks) {   // each class's starting look (the title's hero is a throwaway)
     TITLE.looks = {};
@@ -368,9 +386,9 @@ function drawTitle() {
     let last = null; try { last = localStorage.getItem('dcg-cls'); } catch (e) { /* ignore */ }
     TITLE.sel = CLASS_INFO[last] ? last : 'warrior';
   }
+  if (TITLE.splash) return drawSplash();
   fade(0.7);
   textC('DUNGEON', W / 2, 34, 22, 4);
-  if (!MUS.unlocked && !SFX.muted && Math.floor(G.t * 1.5) % 3) textC('TAP ANYWHERE FOR MUSIC', W / 2, 12, 25);   // round 46b: phones stay silent until a tap
   textC('OF BONES', W / 2, 60, 26, 2);
   textC('CHOOSE YOUR HERO', W / 2, 86, 25);
   UI.titleBtns = [];
@@ -995,6 +1013,7 @@ addEventListener('keydown', e => {
   audioInit();
   if (k === 'n') setMuted(!SFX.muted);
   if (G.mode === 'talk') { if (k === 'enter' || k === ' ' || k === 'j') { const L = talkLayout(); talkTap(L.btn ? [L.btn.x + 2, L.btn.y + 2] : [W / 2, 10]); } else if (G.talk && G.talk.reward && (k === '1' || k === '2' || k === '3')) talkTap([talkLayout().cards[+k - 1].x + 2, talkLayout().cards[+k - 1].y + 2]); e.preventDefault(); return; }
+  if (G.mode === 'title' && TITLE.splash) { TITLE.splash = false; e.preventDefault(); return; }
   if (G.mode === 'title' && (k === 'enter' || k === ' ')) { const c = TITLE.sel || 'warrior'; beginGame(!!loadSave(c), c); return; }
   if (G.mode === 'title' && (k === 'arrowleft' || k === 'arrowright')) { const L = ['warrior', 'mage', 'ranger'], n = L.indexOf(TITLE.sel || 'warrior'); titlePick(L[(n + (k === 'arrowleft' ? 2 : 1)) % 3]); return; }
   if (guideFrozen() && k !== 'i' && k !== 'b') { e.preventDefault(); return; }   // round 45: stopped for the guide
