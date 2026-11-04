@@ -205,7 +205,15 @@ function unstickHero() {
   }
 }
 function tryMove(e, dfi, dfj, r = 0.28) {
-  const ok = (ni, nj) => !(blocked(ni - r, nj - r) || blocked(ni + r, nj - r) || blocked(ni - r, nj + r) || blocked(ni + r, nj + r));
+  const ok = (ni, nj) => !(blocked(ni - r, nj - r) || blocked(ni + r, nj - r) || blocked(ni - r, nj + r) || blocked(ni + r, nj + r) || blocked(ni, nj - r) || blocked(ni, nj + r) || blocked(ni - r, nj) || blocked(ni + r, nj));
+  if (ok(e.fi + dfi, e.fj + dfj)) { e.fi += dfi; e.fj += dfj; return true; }
+  // round 47: blocked straight ahead: turn up to 70 degrees either way (the nearer way first) and
+  // glide past the obstacle instead of stopping on its corner, then fall back to one axis at a time
+  const l = Math.hypot(dfi, dfj);
+  if (l > 1e-6) for (const a of [0.45, -0.45, 0.85, -0.85, 1.2, -1.2]) {
+    const c = Math.cos(a), sn = Math.sin(a), k = Math.cos(a) * 0.9, mi = (dfi * c - dfj * sn) * k, mj = (dfi * sn + dfj * c) * k;
+    if (ok(e.fi + mi, e.fj + mj)) { e.fi += mi; e.fj += mj; return true; }
+  }
   let moved = false;
   if (ok(e.fi + dfi, e.fj)) { e.fi += dfi; moved = true; }
   if (ok(e.fi, e.fj + dfj)) { e.fj += dfj; moved = true; }

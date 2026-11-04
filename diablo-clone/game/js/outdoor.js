@@ -108,9 +108,36 @@ function settleSpawns() {
     return false;
   });
 }
-const solidAt = (i, j) => i < 0 || j < 0 || i >= MW || j >= MH || LV.solid[tIdx(i, j)] === 1;
+const solidAt = (i, j) => i < 0 || j < 0 || i >= MW || j >= MH || LV.solid[tIdx(i, j)] >= 1;
 // a tree may stand on a tile only if no other solid tile touches it, so the gaps between trees
 // always stay walkable and the forest needs no reachability search
+// round 47: trees grow in clumps with walkable gaps between them, never one by one across the map
+// (single trees spaced a tile apart made the open ground a maze). The map is cut into cells; each
+// cell may hold one clump, more likely where densAt is high; a clump is 2-9 touching trees (rocks
+// where rockAt says so), and a tree that would come within `gap` tiles of anything solid outside
+// its own clump is left out, so there is always a way round. ok(i, j) says where trees may stand.
+// Clump trees are round obstacles (LV.solid 2): bodies slide past them.
+function plantClumps(R, ok, densAt, opt = {}) {
+  const cell = opt.cell || 7, gap = opt.gap || 2, autumn = !!opt.autumn, tree = opt.tree || (() => treeKind(R, autumn));
+  const mine = new Set();
+  const clearOf = (i, j) => { for (let b = -gap; b <= gap; b++) for (let a = -gap; a <= gap; a++) { const ii = i + a, jj = j + b; if (ii < 0 || jj < 0 || ii >= MW || jj >= MH) continue; const k = tIdx(ii, jj); if (LV.solid[k] && !mine.has(k)) return false; } return true; };
+  let n = 0;
+  for (let gy = 0; gy < MH; gy += cell) for (let gx = 0; gx < MW; gx += cell) {
+    const cx = gx + 1.5 + R() * (cell - 3), cy = gy + 1.5 + R() * (cell - 3), d = clamp(densAt(cx, cy), 0, 1);
+    if (R() >= d) continue;
+    mine.clear();
+    const want = 2 + Math.round(R() * 3 + d * d * 9), rad = 0.8 + want * 0.16, rock = opt.rockAt ? opt.rockAt(cx, cy) : 0;
+    for (let t = 0; t < want * 6 && mine.size < want; t++) {
+      const a = R() * 6.283, r = Math.sqrt(R()) * rad, i = Math.floor(cx + Math.cos(a) * r), j = Math.floor(cy + Math.sin(a) * r);
+      if (i < 1 || j < 1 || i >= MW - 1 || j >= MH - 1) continue;
+      const k = tIdx(i, j); if (mine.has(k) || LV.solid[k] || !ok(i, j) || !clearOf(i, j)) continue;
+      mine.add(k); LV.solid[k] = 2; n++;
+      if (R() < rock) LV.decor.push({ kind: 'rock', i, j, seed: R.int(0, 5) });
+      else LV.decor.push({ kind: 'tree', i, j, ...tree(i, j), jx: (R() - 0.5) * 0.4, jy: (R() - 0.5) * 0.4 });
+    }
+  }
+  return n;
+}
 function canTree(i, j) {
   if (i < 1 || j < 1 || i >= MW - 1 || j >= MH - 1) return false;
   for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) if (LV.solid[tIdx(i + a, j + b)]) return false;
@@ -177,13 +204,9 @@ function genForest(R, A) {
     LV.ponds.push({ x, y, rx, ry, seed: R.int(1, 1e6) });
     for (let j = Math.floor(y - ry - 1); j <= y + ry + 1; j++) for (let i = Math.floor(x - rx - 1); i <= x + rx + 1; i++) if (i > 0 && j > 0 && i < MW && j < MH && pondD(i + 0.5, j + 0.5) < 1.1) LV.solid[tIdx(i, j)] = 1;
   }
-  // interior trees, thicker away from paths and clearings
-  for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
-    if (edgeBand(i, j) || inClearing(i, j)) continue;
-    const pd = pathD(i + 0.5, j + 0.5); if (pd < 0.9) continue;
-    const dens = 0.18 + clamp(pd - 1, 0, 3) * 0.08 + vnoise(i, j, 5, 31) * 0.15;
-    if (R() < dens && canTree(i, j)) { LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'tree', i, j, ...treeKind(R, autumn), jx: (R() - 0.5) * 0.4, jy: (R() - 0.5) * 0.4 }); }
-  }
+  // interior trees in clumps (round 47), thicker away from paths, none in the clearings or on the roads
+  plantClumps(R, (i, j) => !edgeBand(i, j) && !inClearing(i, j) && pathD(i + 0.5, j + 0.5) >= 1.6,
+    (x, y) => 0.3 + clamp(pathD(x, y) - 3, 0, 4) * 0.08 + vnoise(Math.floor(x), Math.floor(y), 5, 31) * 0.15, { cell: 6, gap: 2, autumn });
   // undergrowth and clutter: bushes, rocks, stumps, logs, mushrooms, ferns
   for (let n = 0; n < 150 * area; n++) {
     const fi = 3 + R() * (MW - 6), fj = 3 + R() * (MH - 6), i = Math.floor(fi), j = Math.floor(fj);
@@ -356,6 +379,9 @@ function genTown(R, A) {
 // empty for people the quests will bring back (the woodcutter's woodpile, the farmer's hay cart).
 // No monster is placed within HUB.safe (26 tiles) of the fire. The mine is north, bandits hold the
 // farm to the east, wolves the woods to the west (with their den), the road south is shut by a gate.
+// the monster packs round the hub (round 47: listed up here so the trees leave a clearing round each)
+const HUB_PACKS = [[19, 21], [23, 15], [14, 13], [24, 22], [12, 24]].map(p => ['digger', p])
+  .concat([[65, 21], [70, 20], [67, 15], [72, 29], [60, 13]].map(p => ['brigand', p]), [[14, 62], [19, 69], [12, 67], [22, 64], [24, 72]].map(p => ['wolf', p]));
 const HUB = {
   camp: [42.5, 42.5], start: [44.6, 45.6], wallR: 13, safe: 26,
   cathedral: { i: 31, j: 37, w: 6, h: 3 },
@@ -440,16 +466,20 @@ function genHub(R, A) {
   else put('gate', Math.floor(H.gate[0]), Math.floor(H.gate[1]), 1, 1);
   LV.decor.push({ kind: 'signpost', fi: H.gate[0] - 2.2, fj: H.gate[1] - 0.6 });
   LV.gateSign = [H.gate[0] - 1, H.gate[1] - 1];
-  // scatter: open meadow round the camp, trees thickening toward the west woods, a clearing before the den
-  const keepOut = (i, j) => Math.hypot(i - cx, j - cy) < RAD + 3.5 || Math.hypot(i - (H.den[0] + 2), j - (H.den[1] + 1)) < 3.2 || (i > 20 && i < 30 && j > 31 && j < 41) || LV.fields.some(f => i > f.x0 - 1 && i < f.x1 + 1 && j > f.y0 - 1 && j < f.y1 + 1);
-  for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
-    if (edgeBand(i, j) || keepOut(i + 0.5, j + 0.5) || LV.solid[tIdx(i, j)] || pathD(i + 0.5, j + 0.5) < 1.1) continue;
-    const west = clamp(1 - Math.hypot(i - H.woods[0], j - H.woods[1]) / 19, 0, 1), north = clamp(1 - Math.hypot(i - H.mine[0], j - H.mine[1]) / 14, 0, 1);
-    const near = clamp(1 - (Math.hypot(i - cx, j - cy) - RAD) / 12, 0, 1);   // the meadow round the wall stays open
-    const dens = (0.04 + west * 0.3 + north * 0.1 + vnoise(i, j, 5, 31) * 0.05) * (1 - near * 0.8);
-    if (R() < dens && canTree(i, j)) { LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'tree', i, j, tree: west > 0.2 || north > 0.2 || R() < 0.4 ? 'pine' : 'oak', seed: R.int(0, 5), jx: (R() - 0.5) * 0.4, jy: (R() - 0.5) * 0.4 }); }
-    else if (R() < 0.05) LV.decor.push({ kind: R() < 0.7 ? 'bush' : 'fern', fi: i + R(), fj: j + R(), seed: R.int(0, 5) });
-    else if (north > 0.1 && R() < 0.04 && canTree(i, j)) { LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'rock', i, j, seed: R.int(0, 5) }); }
+  // scatter (round 47): open meadow round the camp; trees in clumps with walkable gaps, thicker toward
+  // the west woods and the mine; an open clearing round every monster pack, so fights have room
+  const keepOut0 = (i, j) => Math.hypot(i - cx, j - cy) < RAD + 3.5 || Math.hypot(i - (H.den[0] + 2), j - (H.den[1] + 1)) < 3.2 || (i > 20 && i < 30 && j > 31 && j < 41) || LV.fields.some(f => i > f.x0 - 1 && i < f.x1 + 1 && j > f.y0 - 1 && j < f.y1 + 1);
+  const packClear = (i, j) => HUB_PACKS.some(([, p]) => Math.hypot(i - p[0], j - p[1]) < 4.2);
+  const keepOut = (i, j) => keepOut0(i, j) || packClear(i, j);
+  const west = (x, y) => clamp(1 - Math.hypot(x - H.woods[0], y - H.woods[1]) / 19, 0, 1), north = (x, y) => clamp(1 - Math.hypot(x - H.mine[0], y - H.mine[1]) / 14, 0, 1);
+  const near = (x, y) => clamp(1 - (Math.hypot(x - cx, y - cy) - RAD) / 12, 0, 1);   // the meadow round the wall stays open
+  plantClumps(R, (i, j) => !edgeBand(i, j) && !keepOut(i + 0.5, j + 0.5) && pathD(i + 0.5, j + 0.5) >= 1.8,
+    (x, y) => (0.22 + west(x, y) * 0.6 + north(x, y) * 0.3 + vnoise(Math.floor(x), Math.floor(y), 5, 31) * 0.15) * (1 - near(x, y) * 0.85),
+    { cell: 7, gap: 2, rockAt: (x, y) => north(x, y) > 0.1 ? 0.35 : 0.05, tree: (i, j) => ({ tree: west(i, j) > 0.2 || north(i, j) > 0.2 || R() < 0.4 ? 'pine' : 'oak', seed: R.int(0, 5) }) });
+  for (let n = 0; n < MW * MH * 0.03; n++) {   // undergrowth: bushes and ferns (nothing that blocks)
+    const fi = 2 + R() * (MW - 4), fj = 2 + R() * (MH - 4), i = Math.floor(fi), j = Math.floor(fj);
+    if (edgeBand(i, j) || keepOut0(fi, fj) || LV.solid[tIdx(i, j)] || pathD(fi, fj) < 1.1) continue;
+    LV.decor.push({ kind: R() < 0.7 ? 'bush' : 'fern', fi, fj, seed: R.int(0, 5) });
   }
   LV.decor.push({ kind: 'meadow', seed: R.int(1, 1e6) });
   LV.rooms = [{ x: Math.floor(cx - 2), y: Math.floor(cy - 2), w: 4, h: 4, cx: Math.floor(H.start[0]), cy: Math.floor(H.start[1]) }];
@@ -469,9 +499,7 @@ function genHub(R, A) {
     if (f.aldoFree || A.loop > 0 || (G.gates && G.gates[0])) LV.npcs.push({ role: 'aldo', name: 'ALDO', fi: SPOTS.woodcutter[0], fj: SPOTS.woodcutter[1] }); }
   // monsters by quarter, out beyond the camp's meadow
   const pack = (id, n, p, spread) => { for (let k = 0; k < n; k++) LV.spawns.push({ id, fi: p[0] + (R() - 0.5) * spread, fj: p[1] + (R() - 0.5) * spread }); };
-  for (const p of [[19, 21], [23, 15], [14, 13], [24, 22], [12, 24]]) pack('digger', R.int(2, 3), p, 2.5);   // north
-  for (const p of [[65, 21], [70, 20], [67, 15], [72, 29], [60, 13]]) pack('brigand', R.int(1, 2), p, 2.5);   // east
-  for (const p of [[14, 62], [19, 69], [12, 67], [22, 64], [24, 72]]) pack('wolf', R.int(2, 3), p, 2.5);   // west
+  for (const [id, p] of HUB_PACKS) pack(id, id === 'brigand' ? R.int(1, 2) : R.int(2, 3), p, 2.5);   // diggers north, brigands east, wolves west
   LV.spawns = LV.spawns.filter(s => Math.hypot(s.fi - cx, s.fj - cy) > H.safe);
 }
 

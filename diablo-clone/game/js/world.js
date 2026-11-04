@@ -44,8 +44,15 @@ function blocked(fi, fj) {
   const i = Math.floor(fi), j = Math.floor(fj);
   if (i < 0 || j < 0 || i >= MW || j >= MH) return true;
   const k = j * MW + i;
-  return LV.map[k] !== FLOOR || LV.solid[k] === 1;
+  if (LV.map[k] !== FLOOR) return true;
+  const s = LV.solid[k];
+  if (s === 2) { const dx = fi - i - 0.5, dy = fj - j - 0.5; return dx * dx + dy * dy < ROUND_R2; }   // round 47: a tree or a rock is round to bump into
+  return s === 1;
 }
+// LV.solid: 1 = the whole tile blocks (walls of props, buildings, the forest edge); 2 = a round
+// obstacle in its middle (trees, rocks) that bodies slide around. Paths and line of sight treat both
+// as blocked tiles; only body movement sees the round shape.
+const ROUND_R = 0.36, ROUND_R2 = ROUND_R * ROUND_R;
 // line of sight across tiles (walls block, props don't)
 function los(a, b, c, d) {
   const n = Math.ceil(Math.max(Math.abs(c - a), Math.abs(d - b)) * 3) + 1;
