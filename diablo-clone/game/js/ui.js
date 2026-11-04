@@ -22,6 +22,25 @@ function text(s, x, y, col, z = 1, shadow = true) {
   }
 }
 const textC = (s, cx, y, col, z = 1) => text(s, Math.round(cx - textWidth(String(s), z) / 2), y, col, z);
+// round 50: a character drawn big on a menu with its sharp (2x-detail) sprite: queued here, drawn onto
+// the sharp layer after the HUD is merged (game.js drawHudLayer), each of its pixels one game pixel
+// (the 1x sprite doubled made blocks four phone pixels wide). Same calls as getSprite.
+const FINE_Q = [];
+function bigHero(look, dir, clip, frame, ent, x, y, L = 4) {
+  const sp = getSprite('hero', look, dir, clip, frame, ent, SPX);
+  FINE_Q.push({ sp, x, y, L });
+}
+function drawFineQueue() {
+  for (const { sp, x, y, L } of FINE_Q) {
+    const X0 = x * SPX - sp.ax * 2, Y0 = y * SPX - sp.ay * 2;
+    for (let yy = 0; yy < sp.h; yy++) for (let xx = 0; xx < sp.w; xx++) {
+      const v = sp.data[yy * sp.w + xx]; if (!v) continue;
+      const c = PAL32[(v & EMIS) ? v & 127 : LTAB[L][v]];
+      for (let b = 0; b < 2; b++) for (let a = 0; a < 2; a++) { const X = X0 + xx * 2 + a, Y = Y0 + yy * 2 + b; if (X >= 0 && Y >= 0 && X < OW && Y < OH) ov32[Y * OW + X] = c; }
+    }
+  }
+  FINE_Q.length = 0;
+}
 function sprite(sp, x, y, z = 1, L = 4) {
   for (let yy = 0; yy < sp.h; yy++) for (let xx = 0; xx < sp.w; xx++) {
     const v = sp.data[yy * sp.w + xx]; if (!v) continue;
@@ -374,8 +393,7 @@ function drawSplash() {
   const saved = budgetOff();
   ['ranger', 'warrior', 'mage'].forEach((cls, k) => {
     const look = TITLE.looks[cls], ent = { look, cls, combo: 0 };
-    const sp = getSprite('hero', look, 1, 'idle', Math.floor(G.t / 0.2 + k) % 4, ent, 1);
-    sprite(sp, W / 2 + (k - 1) * 74, cy + 140 + (k === 1 ? 8 : 0), 2, 4);
+    bigHero(look, 1, 'idle', Math.floor(G.t / 0.2 + k) % 4, ent, W / 2 + (k - 1) * 74, cy + 140 + (k === 1 ? 8 : 0), 4);
   });
   budgetOn(saved);
   if (Math.floor(G.t * 1.6) % 2 === 0) textC('TAP TO BEGIN', W / 2, Math.round(H * 0.74), 51, 2);
@@ -409,11 +427,11 @@ function drawTitle() {
     if (sel && G.t - TITLE.pickT < 1.6) {
       const bow = cls === 'ranger', list = weaponSwing(look, 0), tot = list.reduce((a, q) => a + q.ms, 0), ms = ((G.t - TITLE.pickT) * 1000) % (tot + 500);
       const f = ms < tot ? swingKey(list, ms) : -1;
-      sp = f >= 0 ? getSprite('hero', look, 1, bow ? 'shoot' : 'attack', f, ent, 1) : getSprite('hero', look, 1, 'idle', Math.floor(G.t / 0.2) % 4, ent, 1);
-    } else sp = getSprite('hero', look, sel ? 1 : Math.floor(G.t / 0.7 + k * 3) % 8, 'idle', Math.floor(G.t / 0.2) % 4, ent, 1);
+      sp = f >= 0 ? [look, 1, bow ? 'shoot' : 'attack', f, ent] : [look, 1, 'idle', Math.floor(G.t / 0.2) % 4, ent];
+    } else sp = [look, sel ? 1 : Math.floor(G.t / 0.7 + k * 3) % 8, 'idle', Math.floor(G.t / 0.2) % 4, ent];
     // a pool of light under the picked one
     if (sel) for (let yy = -5; yy <= 5; yy++) for (let xx = -26; xx <= 26; xx++) if ((xx / 26) ** 2 + (yy / 5) ** 2 <= 1 && ((xx + yy) & 1)) put(x + cw / 2 + xx, y0 + 112 + yy, 6);
-    sprite(sp, x + cw / 2, y0 + 112, 2, sel ? 6 : 4);
+    bigHero(...sp, x + cw / 2, y0 + 112, sel ? 6 : 4);   // (round 50: the sharp sprite)
     info.lines.forEach((l, n) => textC(l, x + cw / 2, y0 + 124 + n * 8, sel ? 26 : 24));
     // its four skills
     SKILLSETS[cls].forEach((sk, n) => { const sl = SPELL_LOOK[sk.id] || [[48, 49, 50, 51], glyphBolt]; drawButton([x + 12 + n * 20, y0 + 154, 8], sel ? sl[0] : [3, 4, 5, 6], false, sl[1]); });
@@ -608,8 +626,7 @@ function drawInventory() {
   const L = invLayout(), pulse = Math.floor(G.t * 4) % 2;
   drawTabs(L, 'inv');
   // paper doll: the real hero sprite at 2x, so gear changes show here too
-  const doll = getSprite('hero', hero.look, 1, 'idle', Math.floor(G.t / 0.2) % 4, hero, 1);
-  sprite(doll, 150, 148, 2, 4);
+  bigHero(hero.look, 1, 'idle', Math.floor(G.t / 0.2) % 4, hero, 150, 148, 4);   // (round 50: the sharp sprite)
   const nm = { helm: 'HEAD', chest: 'BODY', weapon: 'HAND', shield: 'OFF', ring: 'RING', amulet: 'NECK' };
   const target = INV.sel && INV.sel.from === 'bag' ? ITEM_BASES[INV.sel.item.base].slot : null;   // where the chosen bag item would go
   for (const s of SLOTS) {

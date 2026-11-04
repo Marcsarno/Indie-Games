@@ -1601,6 +1601,7 @@ function drawHudLayer() {
     const d = y * SPX * OW + x * SPX;
     for (let b = 0; b < SPX; b++) for (let a = 0; a < SPX; a++) ov32[d + b * OW + a] = c;
   }
+  drawFineQueue();   // round 50: menu characters with their sharp sprites
   ctx.putImageData(ovImg, 0, 0);
   if (G.mode === 'skills' && UI.pvRect) pvBlit(UI.pvRect);   // round 45: the skill preview's picture in its window
 }
