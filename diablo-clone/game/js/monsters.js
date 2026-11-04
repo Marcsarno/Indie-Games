@@ -920,53 +920,103 @@ function chickenRig(look, st) {
   r.ell(V.add(hd, [1.6, 0, -1.6]), [0.6, 0.5, 0.9], M.CLOTH_RED, null, { noShadow: true });
   return r;
 }
+// art B2: one body, five spiders. Per-variant proportions (the cave spider and broodmother keep theirs):
+// H body height, abd abdomen offset [x, z] and radii, hk head scale, reach foot spread, ik thigh/shin
+// lengths, up knee bend direction, th/sh thigh and shin radii, kn knee bead radius
+const SPIDER_V = {
+  skit: { H: 7, curl: 4.5, abdO: [-7.2, 3.4], abdR: [7.6, 7, 6.6], hk: 1, reach: 19.5, ik: [11.5, 12], up: 0.3, th: [1.4, 1.15], sh: [1.3, 0.6], kn: 1.3 },
+  brood: { H: 5.5, curl: 3.5, abdO: [-8, 3.2], abdR: [9.2, 8, 6.8], hk: 1.35, reach: 24, ik: [17, 17], up: 0.25, th: [1.9, 1.6], sh: [1.6, 0.6], kn: 1.6 },
+  // Venom Spitter: a big swollen olive-patched abdomen on short thick legs
+  spit: { H: 6, curl: 4, abdO: [-8.4, 4.6], abdR: [8.8, 8, 7.6], hk: 1.22, reach: 16.5, ik: [9.5, 10], up: 0.35, th: [1.7, 1.4], sh: [1.45, 0.75], kn: 1.45 },
+  // Stoneback: low and heavy, thick legs, a banded grey stone shell over the back
+  stone: { H: 5.2, curl: 3.6, abdO: [-7, 3.2], abdR: [8.2, 7.4, 6], hk: 1.12, reach: 18.5, ik: [11, 11.5], up: 0.3, th: [2, 1.7], sh: [1.7, 0.85], kn: 1.7 },
+  // Brood Guard: a tall sentry on long stilt legs, a lean striped abdomen, long fangs
+  guard: { H: 13.5, curl: 10, abdO: [-7.2, 3.4], abdR: [8, 5.8, 5], hk: 1, reach: 20, ik: [16, 16.5], up: 0.1, th: [1.3, 1.05], sh: [1.1, 0.55], kn: 1.25 },
+};
 function spiderRig(look, st) {
-  const r = new Rig(), ch = look.chitin || M.CHITIN;
+  const kind = look.brood ? 'brood' : look.spit ? 'spit' : look.stone ? 'stone' : look.guard ? 'guard' : 'skit', P = SPIDER_V[kind];
+  const brood = kind === 'brood', skit = kind === 'skit', spit = kind === 'spit', stone = kind === 'stone', guard = kind === 'guard';
+  const r = new Rig(), ch = look.chitin || (spit ? M.LEATHER : stone ? M.HAIR : M.CHITIN);
   const { clip, f } = st;
-  let bob = 0, rear = 0, ph = 0, moving = false, curl = 0;
+  let bob = 0, rear = 0, ph = 0, moving = false, curl = 0, aim = 0, spat = false;
   if (clip === 'idle') bob = [0, -0.3, -0.4, -0.2][f % 4];
   if (clip === 'walk') { ph = f / 8 * Math.PI * 2; moving = true; bob = -0.4 * Math.abs(Math.sin(ph * 2)); }
   let strike = false;
   if (clip === 'attack') { const a = st.key.a; rear = a > 0.5 ? 1.6 : st.key.hit ? -0.3 : 0.5; strike = !!st.key.hit || st.key.mv > 0; }   // round 34: reared high, then driven down
+  if (clip === 'shoot' || clip === 'cast') { aim = Math.min(1, st.key.a); spat = !!st.key.hit; }   // art B2: the spitter rears back on its hind legs, then spits
   if (clip === 'hit') rear = -0.3;
   if (clip === 'death') curl = [0, 0.25, 0.55, 0.85, 1, 1][f];
   // the broodmother: low heavy body, long sprawling legs, red chevrons down the abdomen
-  const brood = !!look.brood;
-  const H = (brood ? 5.5 : 7) + rear * 2.5 - curl * (brood ? 3.5 : 4.5);
-  const ceph = [3.5, 0, H + bob + rear * 1.5], abd = brood ? [-8, 0, H + 3.2 + bob - rear] : [-6.5, 0, H + 2.2 + bob - rear * 1];
-  r.ell(abd, brood ? [9.2, 8, 6.8] : [7.2, 6.2, 5.8], ch, null, { mf: brood ? (p => {
+  const H = P.H + rear * 2.5 + aim * 3.4 - curl * P.curl;
+  const ceph = [3.5, 0, H + bob + rear * 1.5 + aim * 4.5], abd = [P.abdO[0] - aim * 1.6, 0, H + P.abdO[1] + bob - rear - aim * 4];
+  const mfAbd = brood ? (p => {
     const q = V.sub(p, abd);
     if (q[2] < 1.5) return 0;
     const u = q[0], v = Math.abs(q[1]);
     if (v < 0.8 && u > -6.5 && u < 6.5) return M.MARKB;                                 // spine stripe
     for (const c of [3, -0.8, -4.6]) if (Math.abs((u - c) + v * 0.8) < 0.8 && v < 4) return M.MARKB;   // chevrons
     return 0;
-  }) : (p => {   // pale skull marking on top of the abdomen
+  }) : spit ? (p => {   // the spitter: big pale olive blotches over the top and flanks
     const q = V.sub(p, abd);
-    if (q[2] < 3) return 0;
-    const u = q[0] + 1, v = q[1];
-    return (u * u / 9 + v * v / 5 < 1 && !(Math.abs(Math.abs(v) - 1.2) < 0.6 && Math.abs(u - 0.4) < 0.6)) ? M.MARK : 0;
-  }) });
-  const hk = brood ? 1.35 : 1;   // the broodmother's head is bigger, with a heavier eye cluster and fangs
-  r.ell(ceph, [4.4 * hk, 4.2 * hk, 3.2 * hk], ch);
-  // eyes: a cluster of red beads on the front
-  for (const [y, z, s] of [[-1, 0.8, 0.6], [1, 0.8, 0.6], [-2, 1.4, 0.45], [2, 1.4, 0.45], [-0.6, 1.8, 0.4], [0.6, 1.8, 0.4]]) r.sph(V.add(ceph, [3.7 * hk, y * hk, z * hk]), s * hk, M.EYE_RED, { noShadow: true });
-  // fangs
-  for (const s of [-1, 1]) r.cone(V.add(ceph, [3.6 * hk, s * 1.1 * hk, -1.2 * hk]), V.add(ceph, [4.6 * hk + rear, s * 0.7 * hk, -4 * hk + rear]), 0.8 * hk, 0.25, M.HORN);
+    if (q[2] < -2.2) return 0;
+    const u = q[0], v = q[1];
+    for (const [cu, cv, ru, rv] of [[2.6, 0, 3.6, 3.1], [-2.6, 3.8, 3.4, 2.7], [-2.6, -3.8, 3.4, 2.7], [-7, 0, 2.4, 2.6]]) if ((u - cu) * (u - cu) / (ru * ru) + (v - cv) * (v - cv) / (rv * rv) < 1) return M.SLIME;
+    return 0;
+  }) : guard ? (p => {   // the guard: three red stripes running down the abdomen
+    const q = V.sub(p, abd);
+    if (q[2] < 0) return 0;
+    const v = Math.abs(q[1]);
+    return v < 0.7 || Math.abs(v - 2.9 + q[0] * 0.05) < 0.6 ? M.MARKB : 0;
+  }) : stone ? null : (p => {   // art B2: the cave skitter's pale tan spots (a big one on the crest, a small one behind)
+    const q = V.sub(p, abd);
+    if (q[2] < 2) return 0;
+    const u = q[0], v = q[1];
+    if ((u - 0.8) * (u - 0.8) / 6.2 + v * v / 3.6 < 1) return M.WAX;
+    if ((u + 3.6) * (u + 3.6) / 1.6 + (v - 1.4) * (v - 1.4) / 1.3 < 1) return M.WAX;
+    return 0;
+  });
+  const tilt = guard ? 0.4 : 0;   // the guard carries its abdomen cocked up behind it
+  r.ell(abd, P.abdR, spit ? M.HAIR : ch, tilt ? [[Math.cos(tilt), 0, -Math.sin(tilt)], [0, 1, 0], [Math.sin(tilt), 0, Math.cos(tilt)]] : null, mfAbd ? { mf: mfAbd } : {});   // the spitter's abdomen is a darker brown under its blotches
+  if (stone) for (const [x, z, rx, ry, rz] of [[6.4, 0.6, 3.8, 6.6, 4], [2.8, 1.8, 4.2, 8.4, 5.4], [-1.4, 2, 4.4, 8.8, 5.6], [-5.6, 1, 4, 7.8, 4.8]])
+    r.ell(V.add(abd, [x, 0, z]), [rx, ry, rz], M.ROCK, null, { mf: p => {   // a broad shell of overlapping stone plates, each its own part so the seams show; a few dark cracks
+      const q = V.sub(p, abd), y = q[1] + x * 0.7, k = Math.abs(((y % 5.2) + 5.2) % 5.2 - 2.6 + Math.abs(((q[0] - x) * 1.1) % 2 - 1) * 1.2);
+      return k < 0.42 && q[2] > z ? M.ROCKRISE : 0;
+    } });
+  if (brood) r.group(() => {   // art B2: a clutch of pale egg sacs webbed to the back of her abdomen
+    for (const [x, y, z, rr] of [[-8.6, -2, 1.6, 1.7], [-8.6, 2, 1.6, 1.7], [-9.3, 0, 0, 1.8], [-8.2, 0, 3.4, 1.8], [-9.2, -1, 3, 1.4], [-9.2, 1, 3, 1.4]]) r.sph(V.add(abd, [x, y, z]), rr, M.OLDBONE);
+  });
+  const hk = P.hk;   // the broodmother's head is bigger, with a heavier eye cluster and fangs
+  r.ell(ceph, [4.4 * hk, 4.2 * hk, 3.2 * hk], ch, null, skit ? { mf: p => { const q = V.sub(p, ceph); return q[2] > 2.2 && (q[0] + 0.6) * (q[0] + 0.6) + q[1] * q[1] < 1.6 ? M.WAX : 0; } } : {});
+  // eyes: a cluster of beads on the front (the skitter and spitter: two big front eyes over the fangs)
+  const eyes = brood ? [[-1, 0.8, 0.6], [1, 0.8, 0.6], [-2, 1.4, 0.45], [2, 1.4, 0.45], [-0.6, 1.8, 0.4], [0.6, 1.8, 0.4]] : [[-1.1, 0.7, 0.85], [1.1, 0.7, 0.85], [-2, 1.5, 0.45], [2, 1.5, 0.45], [-0.6, 1.9, 0.4], [0.6, 1.9, 0.4]];
+  if (spit || stone) { eyes[0][2] = eyes[1][2] = 1.05; eyes[2][2] = eyes[3][2] = 0.6; }   // the spitter's big green eyes, the stoneback's orange ones
+  for (const [y, z, s] of eyes) r.sph(V.add(ceph, [3.7 * hk, y * hk, z * hk]), s * hk, spit ? M.EYE_GRN : stone ? M.FIREM : M.EYE_RED, { noShadow: true });
+  // fangs (the skitter's are white, the spitter's venom green); the spitter's gape on the spit
+  const gape = spit ? aim * 0.8 : 0;
+  for (const s of [-1, 1]) r.cone(V.add(ceph, [3.6 * hk, s * 1.1 * hk, -1.2 * hk]), V.add(ceph, [4.6 * hk + rear + aim * 0.6, s * (0.7 + gape) * hk, (guard ? -5.6 : -4) * hk + rear]), (brood ? 0.8 : 0.9) * hk, brood ? 0.25 : 0.35, brood ? M.HORN : spit ? M.SLIME : M.BONE);
+  if (spit && !curl) {   // a bead of venom hangs between the fangs; on the spit a glob leaves the mouth
+    if (spat) { r.sph(V.add(ceph, [8.6 * hk, 0, -1.4 * hk]), 2.1, M.SLIME, { noShadow: true }); r.sph(V.add(ceph, [5.6 * hk, 0, -2.4 * hk]), 1, M.SLIME, { noShadow: true }); }
+    else r.sph(V.add(ceph, [4.4 * hk, 0, -3.6 * hk]), 0.8 + aim * 0.4, M.SLIME, { noShadow: true });
+  }
   // legs: 4 per side, knees high; alternating tetrapod gait
   const ang = [0.55, 1.15, 1.85, 2.45];
   for (let i = 0; i < 4; i++) for (const s of [-1, 1]) {
     const a = ang[i], hip = V.add(ceph, [Math.cos(a) * 2.2 - 0.5, s * Math.sin(a) * 2.6, -0.4]);
     const grp = (i + (s > 0 ? 1 : 0)) % 2, p = ph + grp * Math.PI;
-    const reach = (brood ? 24 : 17.5) - Math.abs(i - 1.5) * 1.2;
+    const reach = P.reach - Math.abs(i - 1.5) * 1.2;
     let foot = [ceph[0] + Math.cos(a) * reach - 1.5 - (moving ? 2.4 * Math.cos(p) : 0), s * Math.sin(a) * reach, moving ? 1.8 * Math.max(0, Math.sin(p)) : 0];
+    if (aim && i === 0) foot = [ceph[0] + 5 + aim * 2.5, s * (6.5 + aim * 2.5), aim * 9];
+    if (aim > 0.5 && i === 1) foot = [ceph[0] + 6, s * 11, 2.5];   // the spitter: front legs lifted and spread, braced on the rest
     if (rear > 0.4 && i === 0) foot = [ceph[0] + 8, s * 6, 8 * rear];   // front legs raised, fangs bared
     if (rear > 1.2 && i === 1) foot = [ceph[0] + 11, s * 9, 5];
     if (strike && i === 0) foot = [ceph[0] + 13, s * 2.5, 0];   // driving the front legs into the target
     if (curl) foot = V.lerp(foot, [ceph[0] - 1, s * 3, H + 5], curl * 0.85);
-    const L = brood ? ik(hip, foot, 17, 17, [0, s * 0.25, 1]) : ik(hip, foot, 10, 11, [0, s * 0.3, 1]);
-    r.cone(hip, L.joint, brood ? 1.9 : 1.6, brood ? 1.6 : 1.3, ch); r.cone(L.joint, L.end, brood ? 1.6 : 1.3, 0.6, ch);
-    r.sph(L.joint, brood ? 1.6 : 1.4, M.MARK);
+    const L = ik(hip, foot, P.ik[0], P.ik[1], [0, s * P.up, 1]);
+    r.cone(hip, L.joint, P.th[0], P.th[1], ch);
+    if (skit || guard) { const m = V.lerp(L.joint, L.end, skit ? 0.62 : 0.7); r.cone(L.joint, m, skit ? 1.15 : P.sh[0], skit ? 0.9 : 0.8, ch); r.cone(m, L.end, skit ? 0.9 : 0.8, skit ? 0.6 : 0.5, M.MARK); }   // red-tipped feet
+    else r.cone(L.joint, L.end, P.sh[0], P.sh[1], ch);
+    r.sph(L.joint, P.kn, spit || stone ? ch : guard ? M.MARKB : M.MARK);
+    if (brood && !curl) r.cone(L.joint, V.add(L.joint, [0.6, s * 0.9, 3.2]), 1.1, 0.3, M.MARKB);   // art B2: a red spur on every knee
   }
   if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
   return r;
@@ -979,7 +1029,7 @@ const FAMILIES = {
   skeleton: { size: [72, 78, 36, 55], gait: gaitFrameTiles(SKEL_B, 1.1), rig: skeletonRig, swing: e => e.look.weapon === 'bow' || e.look.weapon === 'crossbow' ? SWINGS.bow : e.look.lich ? SWINGS.cast : FEEL_OLD ? SWINGS.light : MON_SWINGS.chop },
   fallen: { size: [52, 48, 26, 40], gait: gaitFrameTiles(FALLEN_B), rig: fallenRig, swing: e => e.look.staff ? SWINGS.cast : e.look.sling ? SWINGS.bow : FEEL_OLD ? SWINGS.claw : MON_SWINGS.pounce },
   hound: { size: [80, 64, 38, 50], rig: houndRig, swing: () => FEEL_OLD ? SWINGS.bite : MON_SWINGS.lunge },
-  spider: { size: [80, 60, 40, 46], rig: spiderRig, swing: () => FEEL_OLD ? SWINGS.bite : MON_SWINGS.rear },
+  spider: { size: [80, 60, 40, 46], rig: spiderRig, swing: e => e.look.spit ? SWINGS.bow : FEEL_OLD ? SWINGS.bite : MON_SWINGS.rear },
   chicken: { size: [28, 28, 14, 22], rig: chickenRig, swing: () => SWINGS.bite },
   sheep: { size: [36, 32, 18, 22], rig: sheepRig, swing: () => SWINGS.bite },
   pig: { size: [36, 30, 18, 20], rig: pigRig, swing: () => SWINGS.bite },
@@ -1038,6 +1088,10 @@ const MONSTERS = {
   ghoulhound: { family: 'hound', name: 'HELL HOUND', look: { skin: M.FLESH, eye: M.FIREM, scale: 1.15, ember: true, lean: true, paws: true, brush: true }, hp: 28, dmg: [5, 9], speed: 50, reach: 1.45, xp: 34, chest: 13, shadow: 11, minLevel: 2 },
   spider: { family: 'spider', name: 'CAVE SPIDER', look: { scale: 0.8 }, hp: 10, dmg: [2, 4], speed: 46, reach: 1.3, xp: 10, chest: 8, shadow: 11, pack: true },
   broodmother: { family: 'spider', name: 'BROODMOTHER', title: 'MOTHER OF A THOUSAND LEGS', look: { brood: true, scale: 1.15, size: [128, 84, 64, 60] }, hp: 60, dmg: [6, 12], speed: 34, reach: 1.9, xp: 90, chest: 12, shadow: 17, minLevel: 3, unique: true },
+  // art B2: new spiders from the user's concepts; minLevel 99 keeps them out of the spawn pools, stats are placeholders
+  spitter: { family: 'spider', name: 'VENOM SPITTER', minLevel: 99, look: { spit: true, scale: 0.85 }, hp: 9, dmg: [2, 5], speed: 40, reach: 6, ranged: 'arrow', xp: 13, chest: 8, shadow: 11 },
+  stoneback: { family: 'spider', name: 'STONEBACK SPIDER', minLevel: 99, look: { stone: true, size: [96, 70, 48, 52] }, hp: 26, dmg: [4, 8], speed: 30, reach: 1.5, xp: 24, chest: 8, shadow: 13 },
+  broodguard: { family: 'spider', name: 'BROOD GUARD', minLevel: 99, look: { guard: true, size: [100, 92, 50, 72] }, hp: 20, dmg: [4, 7], speed: 44, reach: 1.7, xp: 20, chest: 8, shadow: 13 },
 };
 const lookKey = l => JSON.stringify(l);
 
