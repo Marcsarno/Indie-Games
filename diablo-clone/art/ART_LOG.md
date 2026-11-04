@@ -198,3 +198,30 @@ near-black coat = CLOTH_SHADOW, violet = CLOTH_PURPLE, rust = AUTUMNM sleeves + 
 bronze = PUMPKIN prod with GOLD fittings, dark bow woods = HAIR (swamp) and CHITIN (blackthorn), cream recurve = WAX.
 Still off: the teal reads green; the pale coat is slate rather than sky blue; the Warden's tabard is square, not
 pointed; shin bands read a little like socks from front-right; the head hides the chest details from front-right.
+
+## A8: twelve more hero sets from front-and-back concepts; no cloak on warrior sets (2026-11-04)
+Review page: https://claude.ai/artifact/A1wxCsVvkZgwSqe9cTGcpo (source `art/review/a8-front-back/`; concepts
+`art/concepts/heroes/*-front-back.png`). Three parallel reviewers merged into `art` (262c5fe); each class hashes
+identical to its reviewer's branch after the merge; every monster renders identically to 5bc96ed; no frame clips.
+**Changed existing looks:** the green base-outfit cloak no longer draws on the 15 warrior set looks (`SET_CAPE`
+keeps it for the warden/ranger/stalker item sets); five A6 sets got a back panel (`SET_BACK`).
+**New looks that need item entries (for the main chat):**
+
+| Class | Set | Chest | Helm | Weapon / shield |
+|---|---|---|---|---|
+| warrior | Gatewatch | gatewatch | nasal | spear (Leafblade Spear, light, reach 26); board (shield) |
+| warrior | Dusk Duelist | duskduelist | skullcap | sabre (Silver Sabre, light, 20); buckler_steel |
+| warrior | Winter Bulwark | winterbulwark | great_flat | faxe (Froststeel Axe, heavy, 16); heater_frost |
+| warrior | Royal Executor | royalexecutor | helm_royal | kgsword (Kingsguard Greatsword, heavy, 27, no shield) |
+| ranger | Marsh Runner | jerkin_marsh | | bow_swamp |
+| ranger | Frostpath Stalker | jerkin_frost | | bow_silver |
+| ranger | Dune Strider | jerkin_dune | | bow_arbalest (crossbow look, via XBOW) |
+| ranger | Blackthorn Warden | jerkin_warden | | bow_thorn |
+| mage | Tidekeeper | robe_tide | hat_tide | staff_pearl |
+| mage | Cinder Sage | robe_cinder | hat_cinder | staff_cage |
+| mage | Runebinder | robe_rune | hat_rune | staff_runestone |
+| mage | Rose Oracle | robe_rose | hat_rose | staff_rose (a short wand) |
+
+Palette gaps (no new materials were added): pink reads red (Rose Oracle), navy reads royal blue (CLOTH_NAVY),
+teal reads blue-green (WATERM), taupe reads pale grey (OLDBONE). Adding a pink and a true navy cloth ramp would
+fix several sets at once; that is a palette change for the user to approve.

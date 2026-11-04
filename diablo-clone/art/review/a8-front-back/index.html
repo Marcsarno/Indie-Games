@@ -1,0 +1,67 @@
+<title>Front and Back Sets</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+/* layout: one column of monsters; each shows the concept, then before/after strips that scroll sideways on phones. Single dark look to match the game's dungeon. */
+:root {
+  --bg: #17120f; --panel: #211a16; --ink: #ece2cf; --dim: #a8987f; --rule: #3a2f27; --ember: #e8902f;
+  --display: 'Pixelify Sans', 'Courier New', monospace; --body: 'IBM Plex Sans', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--body); line-height: 1.55; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 44px; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 5vw, 44px); line-height: 1.1; margin: 0; letter-spacing: 0.02em; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--ember); }
+h2 { font-family: var(--display); font-weight: 700; font-size: 26px; margin: 0; letter-spacing: 0.03em; }
+.lede { max-width: 66ch; color: var(--dim); margin: 10px 0 0; }
+.lede b { color: var(--ink); font-weight: 600; }
+section { display: grid; gap: 14px; border-top: 1px solid var(--rule); padding-top: 26px; }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.tag { font-family: var(--mono); font-size: 12px; color: var(--dim); letter-spacing: 0.06em; text-transform: uppercase; }
+.row { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 760px) { .row { grid-template-columns: minmax(0, 1fr); } .concept { max-width: 420px; } }
+.concept { margin: 0; background: var(--panel); border: 1px solid var(--rule); }
+.concept img { display: block; width: 100%; image-rendering: pixelated; }
+figcaption { font-family: var(--mono); font-size: 11px; color: var(--dim); padding: 6px 8px; }
+.notes { min-width: 0; display: grid; gap: 8px; }
+.notes ul { margin: 0; padding-left: 18px; max-width: 70ch; }
+.notes li { margin: 2px 0; }
+.verdict { font-family: var(--mono); font-size: 12.5px; color: var(--dim); }
+.strip { overflow-x: auto; border: 1px solid var(--rule); background: #000; }
+.strip img { display: block; max-width: none; height: auto; image-rendering: pixelated; }
+.strip.fit img { max-width: 100%; }
+details { border: 1px solid var(--rule); background: var(--panel); }
+summary { cursor: pointer; padding: 8px 12px; font-family: var(--mono); font-size: 12.5px; color: var(--dim); }
+summary:focus-visible { outline: 2px solid var(--ember); }
+details .strip { border: 0; border-top: 1px solid var(--rule); }
+.ask { background: var(--panel); border: 1px solid var(--rule); padding: 16px 18px; max-width: 72ch; }
+.ask h2 { font-size: 20px; margin-bottom: 6px; }
+.ask ol { margin: 0; padding-left: 20px; }
+.concepts { display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 12px; } .concepts img { width:100%; display:block; border:1px solid var(--rule); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Front and back sets <em>A8</em></h1>
+    <p class="lede">Twelve new hero sets from your front-and-back sheets, matched to both views, with the smaller 1.2x head. Each set was judged pass by pass against your concept, in both left/right orders. They are looks only until the main chat gives them item entries. Every other look and every monster renders exactly as before, and no frame clips.</p>
+  </header>
+
+  <section>
+    <div class="head"><h2>Warrior</h2><span class="tag">4 new sets · capes removed</span></div>
+    <p style="margin:0;max-width:72ch">Gatewatch (nasal helm, leaf spear, plank shield), Dusk Duelist (skullcap, wine tabard, sabre, steel buckler), Winter Bulwark (flat-top great helm, fur mantle, frost axe, striped heater), Royal Executor (gold-banded helm, navy and gold plate, greatsword in both hands). Your back views show no cape on any set, so the green cloak is gone from all 15 warrior sets; five of the earlier ones got a back panel in their color.</p>
+    <div class="concepts"><figure class="concept" style="max-width:none"><img src="concepts/warrior-front-back.png" alt="Concept Warrior"><figcaption>your concept, front and back</figcaption></figure></div>
+    <p class="verdict" style="margin:0">The four new sets: front-right, front and back</p><div class="strip"><img src="warrior/new-sets.png" alt="The four new sets: front-right, front and back"></div><p class="verdict" style="margin:0">At phone size</p><div class="strip"><img src="warrior/new-sets-1x.png" alt="At phone size"></div><p class="verdict" style="margin:0">Backs of the earlier warrior sets, before and after the cloak came off</p><div class="strip"><img src="warrior/sets-backs-before-after.png" alt="Backs of the earlier warrior sets, before and after the cloak came off"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Ranger</h2><span class="tag">4 new sets</span></div>
+    <p style="margin:0;max-width:72ch">Marsh Runner (brown hooded capelet, teal tunic, swampwood bow), Frostpath Stalker (pale coat with buttons, fur collar and tails, silver recurve), Dune Strider (rust scarf, quilted vest, belt pouches, bronze arbalest on the crossbow animations), Blackthorn Warden (green capelet, black coat with a violet tabard front and back, banded longbow).</p>
+    <div class="concepts"><figure class="concept" style="max-width:none"><img src="concepts/ranger-front-back.png" alt="Concept Ranger"><figcaption>your concept, front and back</figcaption></figure></div>
+    <p class="verdict" style="margin:0">The four new sets beside your front and back</p><div class="strip"><img src="ranger/new-sets.png" alt="The four new sets beside your front and back"></div><p class="verdict" style="margin:0">At phone size</p><div class="strip"><img src="ranger/new-sets-1x.png" alt="At phone size"></div><p class="verdict" style="margin:0">Shooting</p><div class="strip"><img src="ranger/anim-shoot.png" alt="Shooting"></div>
+  </section>
+  <section>
+    <div class="head"><h2>Wizard</h2><span class="tag">4 new sets</span></div>
+    <p style="margin:0;max-width:72ch">Tidekeeper (teal robe, cream capelet, pearl staff), Cinder Sage (charcoal robe with orange trim, rust hat, gold cage rod), Runebinder (taupe robe, navy mantle and hem, glowing rune-stone staff), Rose Oracle (rose robe with a cream panel, wine mantle and hat, gold crystal wand).</p>
+    <div class="concepts"><figure class="concept" style="max-width:none"><img src="concepts/wizard-front-back.png" alt="Concept Wizard"><figcaption>your concept, front and back</figcaption></figure></div>
+    <p class="verdict" style="margin:0">The four new sets: front-right, front and back, plus phone size</p><div class="strip"><img src="wizard/new-sets.png" alt="The four new sets: front-right, front and back, plus phone size"></div>
+  </section>
+</div>
