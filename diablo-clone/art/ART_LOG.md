@@ -3,6 +3,36 @@
 Each entry is art the main chat can merge from `art` into `main`. Stats, spawns and loot are the
 main chat's; the art chat only changes how things look.
 
+## Resume here (art chat state, saved 2026-11-04 before a context compaction)
+**Role:** the ART chat. Only art: monsters, hero armor/weapons/headgear, icons, props. Work on branch `art`
+(never `main`, no PRs); the main chat merges, wires items/spawns/stats, and republishes the real game
+(https://claude.ai/artifact/7EX2mEMH4cSGuKC2c3K29g, never republish it from here). `.claude/worktrees/` is
+excluded locally in `.git/info/exclude` (reviewer worktrees; never commit them).
+**How the user works:** sends concept sheets from ChatGPT (front + back views work best); I rebuild them in the
+rig, judge each pass side by side vs the best so far in BOTH left/right orders (rubric in `art/RUBRIC.md`),
+at least 3 passes when asked, check regressions (other monsters/looks pixel-identical via
+`tools/capture/artcompare.cjs`, frame hashes) and clipping, then publish a review page and log here.
+For big batches: one reviewer agent per body family/class in its own worktree, each told to
+`git reset --hard <art tip>` FIRST (worktrees start from `main` otherwise), merge into `art`, re-verify
+each class/family against its branch after the merge, push.
+**Pages:** progress (every monster concept vs game) https://claude.ai/artifact/UvkjQNh5GRCUcxMagioEcM
+(source `art/progress/`, statuses in its index.html; not yet updated for hero work) ·
+**test copy of the art branch to play** https://claude.ai/artifact/GAaWc5wJU5BP7HeVK9YxLG (source
+`art/test-build/`: `index.html` = `tools/pages/game-artifact.html` + `art-test.js`, a TEST-ONLY OUTFIT button
+cycling every new set and ranger headpiece; republish with `js/*` from `game/js`, `sfx/*`, music copied from
+the main game artifact; for small updates republish just the changed files) · review pages per round below.
+**Done (A1-A10):** 18 monsters refined/built with 3+ passes each (A1-A4); warrior helms snug (A5); hero head
+1.5x -> 1.0x (A7, A9; `HERO_HK` in actors.js); 31 new hero sets + refined ranger jerkins and mage robes
+(A6, A8); 12 ranger headpieces (A10). New monsters and all new hero looks need the main chat to add
+MONSTERS levels / ITEM_BASES (tables in each section below).
+**Open / next:** user is play-testing the 1.0x head and the outfits in the test copy and may ask for another
+pass on specific pieces (weakest: epic ranger helms at game size, wizard cuffs read as mitts, flanged mace
+looks like a fork from behind, skirts fixed at the hips). Palette gaps (no pink, true navy, indigo, bronze,
+teal): adding cloth ramps needs the user's OK. Not yet done from earlier asks: true BACK views of the A6 sets
+(user would need to give ChatGPT the old concept image itself); remaining monster concepts on the progress
+page (Skeleton, Goblin, Cave Skitter to refine; Venom Spitter, Stoneback, Brood Guard, Restless Dead, Cave
+Bat, Bandit Crossbowman, Bog Toad to build); the main chat should also update `NOTES.md` when it merges.
+
 ## A1: refine three existing monsters to the user's concept sheets (2026-11-04)
 The user's concept sheets ("EXISTING MONSTERS - REFINEMENT TARGETS", "IMPS - FALLEN KIN") asked to
 bring existing monsters closer to them, starting with the weakest. Picked by comparing the
