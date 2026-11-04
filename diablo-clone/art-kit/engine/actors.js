@@ -383,7 +383,7 @@ const GEAR_LOOKS = {
   helm: ['none', 'cap', 'great', 'horned', 'barbute', 'crown', 'bascinet'],
   chest: ['tunic', 'chain', 'brigandine', 'plate', 'darkplate', 'gothic'],
   weapon: ['sword', 'axe', 'mace', 'flail', 'greatsword'],
-  shield: ['none', 'buckler', 'round', 'kite', 'tower'],
+  shield: ['none', 'buckler', 'round', 'kite', 'tower', 'targe', 'heater'],
 };
 const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}.${eq.cape || ''}.${eq.lgd || ''}.${eq.set || ''}.${eq.ench || ''}`;
 const hasFx = (eq, k) => !!eq.lgd && eq.lgd.split('|').includes(k);
@@ -818,6 +818,13 @@ function heroRig(eq, st) {
       const tc = V.mad(c, up, 0.8);
       const grave = hasFx(eq, 'grave');   // Gravewarden: dark hide, bone rim and stripe
       r.box(tc, [0.8, 4.4, 8.2], grave ? M.HIDE : team, ax, { mf: p => { const q = V.sub(p, tc), u = Math.abs(V.dot(q, ax[1])), v = Math.abs(V.dot(q, ax[2])); return u > 3.5 || v > 7.3 ? (grave ? M.BONE : M.IRON) : u < 0.8 ? (grave ? M.BONE : M.GOLD) : 0; } });
+    } else if (eq.shield === 'targe') {   // round 43: the targe: dark leather over wood, a ring of brass studs, a spiked boss
+      r.ell(c, [1.1, 5.0, 5.0], M.LEATHER, ax, { mf: p => { const q = V.sub(p, c), a = V.dot(q, ax[1]), b = V.dot(q, ax[2]), d2 = (a * a + b * b) / 25; if (d2 > 0.8) return M.IRON; if (Math.abs(d2 - 0.42) < 0.07 && Math.abs(Math.sin(Math.atan2(b, a) * 4)) > 0.75) return M.GOLD; return 0; } });
+      r.cone(V.mad(c, ax[0], 0.8), V.mad(c, ax[0], 3.4), 1.3, 0.2, M.STEEL);
+    } else if (eq.shield === 'heater') {   // round 43: the heater: a flat top, a pointed foot, a gold chevron on the team field
+      const hc = V.mad(c, up, 0.6), rad = [1.0, 4.8, 6.4];
+      r.ell(hc, rad, team, ax, { mf: p => { const q = V.sub(p, hc), u = V.dot(q, ax[1]) / rad[1], v = V.dot(q, ax[2]) / rad[2]; if (v > 0.62) return M.IRON; if (u * u + v * v > 0.66) return M.GOLD; if (Math.abs(v + Math.abs(u) * 1.1 - 0.15) < 0.13) return M.GOLD; return 0; } });
+      r.box(V.mad(hc, ax[2], 5.6), [1.1, 4.9, 0.9], M.IRON, ax);   // the flat top edge
     } else if (eq.shield === 'round') {   // wooden round shield, iron rim and boss
       r.ell(c, [1.1, 5.3, 5.3], M.WOOD, ax, { mf: p => { const q = V.sub(p, c), d2 = (V.dot(q, ax[1]) ** 2 + V.dot(q, ax[2]) ** 2) / 28; return d2 > 0.74 || d2 < 0.06 ? M.IRON : 0; } });
     } else {

@@ -54,8 +54,8 @@ const ITEM_BASES = {
   bascinet: { slot: 'helm', look: 'bascinet', name: 'BASCINET', armor: 8, cls: 'warrior', lvl: 5 },
   scale_mail: { slot: 'chest', look: 'chain', name: 'SCALE MAIL', armor: 9, cls: 'warrior', lvl: 3 },
   gothic_plate: { slot: 'chest', look: 'gothic', name: 'GOTHIC PLATE', armor: 18, cls: 'warrior', lvl: 5 },
-  targe: { slot: 'shield', look: 'round', name: 'TARGE', armor: 5, block: 17, cls: 'warrior', lvl: 3 },
-  heater_shield: { slot: 'shield', look: 'kite', name: 'HEATER SHIELD', armor: 8, block: 22, cls: 'warrior', lvl: 4 },
+  targe: { slot: 'shield', look: 'targe', name: 'TARGE', armor: 5, block: 17, cls: 'warrior', lvl: 3 },
+  heater_shield: { slot: 'shield', look: 'heater', name: 'HEATER SHIELD', armor: 8, block: 22, cls: 'warrior', lvl: 4 },
   battle_staff: { slot: 'weapon', look: 'staff_fire', name: 'BATTLE STAFF', dmg: [10, 18], cls: 'mage', lvl: 4 },
   runed_staff: { slot: 'weapon', look: 'staff_rune', name: 'RUNED STAFF', dmg: [13, 22], cls: 'mage', lvl: 5 },
   silk_robe: { slot: 'chest', look: 'robe_purple', name: 'SILK ROBE', armor: 10, cls: 'mage', lvl: 4 },
@@ -293,6 +293,8 @@ function itemIcon(it) {
     for (const [y, m] of [[-1.1, M.CLOTH_WHITE], [0, M.CLOTH_RED], [1.1, M.CLOTH_WHITE]]) r.cone([0, y, 7], [0, y * 1.3, 11], 0.9, 0.4, m, { noShadow: true });
   } else if (b.slot === 'shield') {
     if (b.look === 'tower') { r.box([0, 0, 4], [0.8, 4.4, 7.4], team, null, { mf: p => Math.abs(p[1]) > 3.5 || Math.abs(p[2] - 4) > 6.5 ? M.IRON : Math.abs(p[1]) < 0.8 ? M.GOLD : 0 }); return (iconCache[k] = renderRig(r, Math.PI / 4, 26, 26, 13, 17)); }
+    if (b.look === 'targe') { r.ell([0, 0, 4], [1, 5, 5], M.LEATHER, null, { mf: p => { const d2 = (p[1] ** 2 + (p[2] - 4) ** 2) / 25; return d2 > 0.78 ? M.IRON : Math.abs(d2 - 0.42) < 0.08 && Math.abs(Math.sin(Math.atan2(p[2] - 4, p[1]) * 4)) > 0.7 ? M.GOLD : 0; } }); r.cone([0.8, 0, 4], [3.4, 0, 4], 1.3, 0.2, M.STEEL); return (iconCache[k] = renderRig(r, Math.PI / 4, 26, 26, 13, 17)); }
+    if (b.look === 'heater') { r.ell([0, 0, 4], [1, 4.8, 6.4], team, null, { mf: p => { const u = p[1] / 4.8, v = (p[2] - 4) / 6.4; return v > 0.62 ? M.IRON : u * u + v * v > 0.66 ? M.GOLD : Math.abs(v + Math.abs(u) * 1.1 - 0.15) < 0.13 ? M.GOLD : 0; } }); return (iconCache[k] = renderRig(r, Math.PI / 4, 26, 26, 13, 17)); }
     if (b.look === 'round') { r.ell([0, 0, 4], [1, 5, 5], M.WOOD, null, { mf: p => { const d2 = (p[1] ** 2 + (p[2] - 4) ** 2) / 25; return d2 > 0.74 || d2 < 0.06 ? M.IRON : 0; } }); return (iconCache[k] = renderRig(r, Math.PI / 4, 26, 26, 13, 17)); }
     const big = b.look === 'kite', rad = big ? [1, 5, 7] : [1, 4.4, 4.4], ax = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
     r.ell([0, 0, 4], rad, team, ax, { mf: p => { const u = p[1] / rad[1], v = (p[2] - 4) / rad[2]; return u * u + v * v > 0.62 ? M.GOLD : (big && (Math.abs(u) < 0.14 || Math.abs(v - 0.15) < 0.11)) ? M.GOLD : 0; } });
