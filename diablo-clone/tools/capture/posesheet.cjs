@@ -8,7 +8,7 @@ const { chromium } = require('playwright'); const fs = require('fs'), path = req
   const url = await p.evaluate(([cls, dirs]) => {
     newHero(cls); recalcHero(); buildBudget.ms = Infinity; buildBudget.used = 0;
     const DS = dirs.split(',').map(Number);
-    const rows = [['idle', [0, 1, 2, 3]], ['walk', [0, 1, 2, 3, 4, 5, 6, 7]], ['go', [0]], ['stop', [0]], ['skid', [0]], ['pivot', [0]], ['hit', [0, 1, 2, 3]], ['drink', [0, 2, 4, 8]], ['fidget', [0, 1, 2, 4, 5, 6, 8, 9, 10]],
+    const rows = [['death', [0, 1, 2, 3, 4, 5]], ['idle', [0, 1, 2, 3]], ['walk', [0, 1, 2, 3, 4, 5, 6, 7]], ['go', [0]], ['stop', [0]], ['skid', [0]], ['pivot', [0]], ['hit', [0, 1, 2, 3]], ['drink', [0, 2, 4, 8]], ['fidget', [0, 1, 2, 4, 5, 6, 8, 9, 10]],
       ...(cls === 'warrior' ? [['hook', [0, 1, 2]], ['spin', [0, 1, 2, 3]], ['attack4', [0, 1, 2, 3, 4, 5]]] : []), ...(cls === 'mage' ? [['channel', [0, 1, 2, 3, 4, 5]], ['channel', [6, 7, 8, 9, 10, 11]], ['storm', [0, 1, 2, 3]], ['arrive', [0, 1]]] : []), ...(cls === 'ranger' ? [['shoot', [0, 1, 2, 3]], ['vault', [0, 1, 2]], ['toss', [0, 1]], ['volley', [0, 1, 2, 3]], ['skyshot', [0, 1, 2, 3]]] : [])];
     const Z = 3, cw = 76, ch = 80;
     const ncol = Math.max(...rows.map(r => r[1].length)) * DS.length;

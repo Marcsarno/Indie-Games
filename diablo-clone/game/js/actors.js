@@ -295,7 +295,10 @@ function bipedJoints(B, st) {
     bob = -2.0; lean = -0.2; swingArm = -0.6; twist = 0.1; hipF = -0.5;
   }
   lean += B.hunch || 0;
-  if (clip === 'death') { bob = -[0, 2, 4, 5, 5, 5][f] * B.hipH / 18; lean = 0.15; footL = [2, -B.hipW - 1, 0]; footR = [-1, B.hipW + 1, 0]; }
+  if (clip === 'death') {   // round 43: the blow rocks him back, the knees go, then he falls
+    bob = -(FEEL_OLD ? [0, 2, 4, 5, 5, 5] : [0.4, 5.5, 6, 5, 5, 5])[f] * B.hipH / 18; lean = FEEL_OLD ? 0.15 : [-0.28, 0.22, 0.18, 0.15, 0.15, 0.15][f];
+    footL = FEEL_OLD || f === 0 ? [2, -B.hipW - 1, 0] : [3.5, -B.hipW - 1, 0]; footR = FEEL_OLD || f === 0 ? [-1, B.hipW + 1, 0] : [-4, B.hipW + 1, 0];
+  }
   const pelvis = [0, sway, B.hipH + bob];
   const up = V.rotY([0, 0, 1], lean);
   const chest = V.mad(pelvis, up, B.spine);
@@ -315,7 +318,7 @@ function armTo(J, sh, hand, B, side) {
 function deathTip(rig, B, f, dir = -1, side = 1) {
   // knees buckle, then the body tips over backwards (dir -1) or forwards (+1), twisting onto one
   // side so the fall reads from every camera direction, and settles
-  const k = [0, 0.1, 0.4, 0.78, 0.96, 1][f];
+  const k = (FEEL_OLD ? [0, 0.1, 0.4, 0.78, 0.96, 1] : [0, 0.02, 0.3, 0.76, 0.96, 1])[f];   // round 43: kneeling first, then over
   tipRig(rig, [dir * 2, 0, 0], dir * 1.5 * k, side * 0.55 * k, [0, 0, 0.5, 1.5, 2.2, 2.6][f] * B.hipH / 18);
 }
 
@@ -569,7 +572,7 @@ function heroRig(eq, st) {
     handR = V.add(V.add(J.shR, V.mul(fwd, -1.5)), V.add(V.mul(up, -7), V.mul(sideR, 2.2)));
     bd = V.norm(V.add(V.add(V.mul(fwd, -0.6), V.mul(up, -0.5)), V.mul(sideR, 0.5)));
   } else if (st.clip === 'death') {
-    handR = V.add(J.shR, [3, 2, -10]); bd = V.norm([1, 0.4, -0.6]);
+    handR = !FEEL_OLD && st.f === 0 ? V.add(J.shR, V.add(V.mul(up, 2), V.mul(sideR, 5))) : V.add(J.shR, [3, 2, -10]); bd = V.norm([1, 0.4, -0.6]);
   } else {
     // guard: blade held out at the side, point up and forward, so it reads from the front too
     // the sword arm swings a little (the blade is carried), rising slightly as it comes forward
@@ -592,7 +595,7 @@ function heroRig(eq, st) {
   if (bow && st.clip !== 'death') handL = st.clip === 'shoot' && st.sky ? V.add(V.add(J.shL, V.mul(fwd, 7)), V.add(V.mul(up, 5.5), V.mul(sideR, 0.8)))   // Rain of Arrows: the bow arm up at the sky
     : st.clip === 'shoot' ? V.add(V.add(J.shL, V.mul(fwd, 9.5)), V.add(V.mul(up, -0.6), V.mul(sideR, 0.6)))   // bow arm straight at the target
     : V.add(V.add(J.shL, V.mul(fwd, 3.2 - J.swingArm * 1.2)), V.add(V.mul(up, -7.2), V.mul(sideR, -3.2)));   // bow carried at the side, held out from the leg
-  if (st.clip === 'death') handL = V.add(J.shL, [2, -3, -9]);
+  if (st.clip === 'death') handL = !FEEL_OLD && st.f === 0 ? V.add(J.shL, V.add(V.mul(up, 2), V.mul(sideR, -5))) : V.add(J.shL, [2, -3, -9]);   // round 43: flung out by the blow
   if (st.clip === 'bash') handL = V.add(V.add(J.shL, V.mul(fwd, 7.5)), V.add(V.mul(up, -3), V.mul(sideR, 1.5)));   // shield driven forward
   if (st.clip === 'hook') handL = st.f === 2 ? V.add(V.add(handR, V.mul(sideR, -2.2)), V.add(V.mul(up, -0.8), V.mul(fwd, 0.8)))   // both hands on the chain
     : st.f === 1 ? V.add(V.add(J.shL, V.mul(fwd, -2)), V.add(V.mul(up, -6), V.mul(sideR, -1))) : V.add(V.add(J.shL, V.mul(fwd, 5)), V.add(V.mul(up, -4), V.mul(sideR, 0.5)));
