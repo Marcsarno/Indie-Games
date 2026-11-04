@@ -629,6 +629,13 @@ function updateHero(dt) {
     else if (d <= heroReach() + (a.def.unique ? 0.4 : 0.1)) { hero.approach = null; heroAttack(); }
     else { const g = flowDir(hero.fi, hero.fj); vx = (dx - dy) / d; vy = (dx + dy) / d; void g; }
   } else if (Math.hypot(vx, vy) >= 0.18) hero.approach = null;
+  if (hero.goTalk && Math.hypot(vx, vy) < 0.18) {   // round 42b: a tapped person: walk over and talk
+    const n = hero.goTalk, dx = n.fi - hero.fi, dy = n.fj - hero.fj, d = Math.hypot(dx, dy);
+    hero.goTalkT -= dt;
+    if (hero.goTalkT <= 0 || !npcs.includes(n)) hero.goTalk = null;
+    else if (d < 1.4) { hero.goTalk = null; hero.tradeT = G.t + 0.6; trade(n); }
+    else { vx = (dx - dy) / d; vy = (dx + dy) / d; }
+  } else if (Math.hypot(vx, vy) >= 0.18) hero.goTalk = null;
   const l = Math.hypot(vx, vy);
   // once the blow has landed, pushing the stick cancels the rest of the swing
   if (!FEEL_OLD && l > 0.18 && hero.atk >= 0 && hero.hitDone && hero.stop <= 0 && hero.atk >= weaponSwing(hero.look, hero.combo).free) {
@@ -744,7 +751,7 @@ function updateHero(dt) {
     const d = Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj);
     if (d > 1.2) G.upArmed = true;
     if (!G.fadeTo && G.upArmed && d < 0.55) { G.upArmed = false; leaveSide(); }
-  } else if (!G.fadeTo && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55) {
+  } else if (!G.fadeTo && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55 && !(s.mine && mineBarred())) {   // round 42b: the mine is chained until the key
     sfx('stairs');
     // the hub's mine leads straight to the first floor; Act I's boss hall leads home to the hub,
     // where the south gate now stands open (round 26)
@@ -753,7 +760,7 @@ function updateHero(dt) {
     else G.fadeTo = () => { G.portal = null; startLevel(LV.level + (LV.hub ? 2 : 1), (LV.seed * 31 + 17) >>> 0); saveGame(); };
   }
   G.sealT = (G.sealT || 0) - dt;
-  updatePortal(dt); updateSideDoors();
+  updatePortal(dt); updateSideDoors(); updateStory(dt);
   if (LV.hub && LV.gateOpen && !G.fadeTo && Math.hypot(Math.floor(HUB.gate[0]) + 1.5 - hero.fi, Math.floor(HUB.gate[1]) + 1.5 - hero.fj) < 0.6) {   // through the open gate: on to the next act
     sfx('stairs'); G.fadeTo = () => { G.portal = null; startLevel(LV.level + AREA_CYCLE, (LV.seed * 31 + 17) >>> 0); saveGame(); };
   }
@@ -1418,7 +1425,16 @@ function render() {
   }
   for (const p of dynProps) {
     if (p.broken) continue;
-    const sp = p.kind === 'barrel' ? PROPS.barrel() : p.kind === 'egg' ? PROPS.egg() : PROPS.chest(p.open);
+    if (p.kind === 'cage') {   // round 42b: the back bars behind whoever is inside, the front bars and lid over them
+      for (const h of ['b', 'f']) {
+        const sp = PROPS.cage(p.open, h), dd = p.depth + (h === 'f' ? 0.6 : -0.6);
+        base.push({ depth: dd, draw: () => blit(sp, p.wx, p.wy, false, 0, p.tile) });
+        const clip = h === 'f' && inFront(dd, p.wx - sp.ax, p.wy - sp.ay, sp.w, sp.h);
+        if (clip) ov.push({ depth: dd, draw: () => ovBlit(sp, p.wx, p.wy, -1, 0, 0, p.tile, clip) });
+      }
+      continue;
+    }
+    const sp = p.kind === 'barrel' ? PROPS.barrel() : p.kind === 'egg' ? PROPS.egg() : p.kind === 'cage' ? PROPS.cage(p.open) : PROPS.chest(p.open);
     if (p.flash > 0) p.flash -= 1 / 60;
     if (WORLD2X && sp.sp2) { ov.push({ depth: p.depth, draw: () => ovBlit(sp.sp2d, p.wx, p.wy, -1, p.flash > 0 ? 1 : 0, 0, p.tile) }); continue; }   // barrels and chests at full detail, depth-sorted with the bodies
     base.push({ depth: p.depth, draw: () => blit(sp, p.wx, p.wy, p.flash > 0, 0, p.tile) });
@@ -1838,7 +1854,7 @@ function drawPortal() {
 function saveGame() {
   if (G.mode !== 'play' || hero.dead) return;
   const data = { v: SAVE_V, level: LV.level, seed: LV.seed, hero: { cls: hero.cls, hp: Math.ceil(hero.hp), mana: Math.ceil(hero.mana), gold: hero.gold, xp: hero.xp, lvl: hero.lvl, potions: hero.potions, team: hero.team, equip: hero.equip, bag: hero.bag, mods: hero.mods || {}, ult: Math.floor(hero.ult || 0) }, serial: itemSerial,
-    quests: G.quests || null, gates: G.gates || null, town: G.town || null, portal: G.portal ? { level: G.portal.level, seed: G.portal.seed, fi: G.portal.fi, fj: G.portal.fj } : null };
+    story: G.story || null, gates: G.gates || null, town: G.town || null, portal: G.portal ? { level: G.portal.level, seed: G.portal.seed, fi: G.portal.fi, fj: G.portal.fj } : null };
   try { localStorage.setItem(saveKey(hero.cls), JSON.stringify(data)); } catch (e) { /* storage can be unavailable; the game still runs */ }
 }
 function loadSave(cls = 'warrior') {
@@ -1861,9 +1877,9 @@ function beginGame(fromSave, cls = 'warrior') {
   const d = fromSave ? loadSave(cls) : null;
   if (d) {
     newHero(cls); Object.assign(hero, d.hero); hero.cls = cls; itemSerial = d.serial || 100; recalcHero();
-    G.mode = 'play'; G.town = d.town || null; G.portal = d.portal || null; G.quests = d.quests || null; G.gates = d.gates || null; G.sideBack = null; startLevel(d.level, d.seed);
+    G.mode = 'play'; G.town = d.town || null; G.portal = d.portal || null; G.gates = d.gates || null; G.story = d.story || convertQuests(d.quests, d.gates); G.sideBack = null; startLevel(d.level, d.seed);
   } else {
-    G.town = null; G.portal = null; G.quests = null; G.gates = null; G.sideBack = null;
+    G.town = null; G.portal = null; G.story = null; G.gates = null; G.sideBack = null;
     newHero(cls); G.mode = 'play'; startLevel(1, (Math.random() * 1e9) >>> 0);
   }
 }

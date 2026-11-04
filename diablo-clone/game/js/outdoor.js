@@ -423,7 +423,7 @@ function genHub(R, A) {
   for (let i = 61; i <= 72; i++) if (i !== 66 && i !== 67) small('fence', i, 25, { along: 1 });
   for (const [i, j] of [[65, 28], [67, 29], [62, 27]]) small('hay', i, j);
   // north: the mining camp: the mine mouth in a rock face, carts, crates, a few pines and boulders
-  put('mine', H.mine[0] - 2, H.mine[1] - 2, 3, 3);
+  put(mineOpen() ? 'mine' : 'minebarred', H.mine[0] - 2, H.mine[1] - 2, 3, 3);   // round 42b: chained shut until the key
   for (const [i, j, k] of [[20, 15, 'crate'], [20, 16, 'barrel'], [15, 20, 'crate'], [21, 20, 'rock'], [13, 21, 'rock'], [23, 13, 'rock']]) small(k, i, j, k === 'rock' ? { seed: i % 5 } : {});
   small('cart', 18, 19);
   // west: deep woods, and the wolves' den in a rocky mound
@@ -462,6 +462,11 @@ function genHub(R, A) {
     { role: 'merchant', name: 'POTIONS', fi: SPOTS.potions[0], fj: SPOTS.potions[1] },
     { role: 'villager', fi: 40.5, fj: 46.5 }, { role: 'villager', fi: 44.5, fj: 47.8 },
   ];
+  // round 42b: Wren by the tents; Hollis by the fire until his farm is back, then at his hay cart; Aldo home at his woodpile once freed
+  { const f = (G.story && G.story.f) || {}, home = f.farmPaid || A.loop > 0 || (G.gates && G.gates[0]);
+    LV.npcs.push({ role: 'wren', name: 'WREN', fi: SPOTS.tents[0] - 1.2, fj: SPOTS.tents[1] - 1.6 });
+    LV.npcs.push({ role: 'hollis', name: 'HOLLIS', fi: home ? SPOTS.farmer[0] : cx + 0.6, fj: home ? SPOTS.farmer[1] : cy + 3.1 });   // by the fire's south bench
+    if (f.aldoFree || A.loop > 0 || (G.gates && G.gates[0])) LV.npcs.push({ role: 'aldo', name: 'ALDO', fi: SPOTS.woodcutter[0], fj: SPOTS.woodcutter[1] }); }
   // monsters by quarter, out beyond the camp's meadow
   const pack = (id, n, p, spread) => { for (let k = 0; k < n; k++) LV.spawns.push({ id, fi: p[0] + (R() - 0.5) * spread, fj: p[1] + (R() - 0.5) * spread }); };
   for (const p of [[19, 21], [23, 15], [14, 13], [24, 22], [12, 24]]) pack('digger', R.int(2, 3), p, 2.5);   // north
@@ -761,6 +766,23 @@ function gableRoof(r, hx, hy, z0, rise, mat, stripe) {
   }
 }
 let TENT_YAW = 5.9;
+// a mine mouth cut into a rock face: a heavy timber frame, a lamp, rails running out (barred: two planks
+// nailed across the mouth and a chain with a padlock, until the bandit chief's key opens it)
+function mineRig(r, barred) {
+    for (const [x, y, z, a, b, c] of [[-12, -2, 13, 16, 26, 20], [-6, 18, 8, 12, 10, 11], [-6, -22, 8, 12, 10, 10], [-18, 8, 22, 10, 12, 12]]) r.ell([x, y, z], [a, b, c], M.ROCK, null, { mf: p => hash(Math.floor(p[0] / 2), Math.floor(p[1] / 2 + p[2] / 3), 3) < 0.06 ? M.LEAFM : 0 });
+    r.box([4, 0, 10], [3, 7, 10], M.VOID);   // the dark mouth
+    for (const sy of [-1, 1]) { r.box([7, sy * 8.4, 10], [1.8, 1.8, 10], M.WOOD, null, { mf: p => Math.abs(p[2] - 5) < 0.4 || Math.abs(p[2] - 14) < 0.4 ? M.BARK : 0 }); }
+    r.box([7.4, 0, 21], [2.2, 11, 1.8], M.WOOD, null, { mf: p => Math.abs(p[1]) > 9.6 ? M.BARK : 0 });
+    r.box([9.4, -5, 21], [0.4, 3.6, 1.2], M.PLANK);   // a plank nailed over the lintel
+    r.box([9.2, 7.2, 15], [1, 1.2, 1.6], M.LAMP, null, { noShadow: true }); r.box([9.2, 7.2, 17], [0.7, 0.7, 0.4], M.IRON);
+    for (const sy of [-3, 3]) r.box([16, sy, 0.5], [10, 0.5, 0.5], M.IRON);
+    for (let k = 0; k < 5; k++) r.box([8 + k * 4, 0, 0.3], [0.8, 4.4, 0.4], M.WOOD);
+  if (barred) {
+    for (const s2 of [-1, 1]) { const a = s2 * 0.62, u = [0, Math.cos(a), Math.sin(a)], v = [0, -Math.sin(a), Math.cos(a)]; r.box([8.2, 0, 10], [9.4, 2.0, 0.7], M.WOOD, [u, v, [1, 0, 0]], { mf: p => Math.abs(V.dot(V.sub(p, [8.2, 0, 10]), u)) > 8.4 ? M.IRON : 0 }); }
+    for (let k = 0; k <= 12; k++) { const t = k / 12, y = (t - 0.5) * 15, z = 11 - Math.sin(t * Math.PI) * 3.5; r.sph([9.4, y, z], 1.25, M.STEEL); }
+    r.box([9.8, 0, 6.6], [1.0, 2.0, 2.2], M.GOLD, null, { mf: p => p[2] < 6 && Math.abs(p[1]) < 0.4 ? M.DARK : 0 });
+  }
+}
 const BUILD = {
 
   // round 26, the hub. The cathedral: pale stone nave under a slate roof, buttresses and tall
@@ -804,16 +826,8 @@ const BUILD = {
     for (const sy of [-1, 1]) { r.box([0, sy * 14, 15], [6, 5, 15], M.RUIN, null, { mf: p => Math.floor(p[2] / 5) % 2 && Math.abs(p[0] % 6) < 0.5 ? M.STONE : 0 }); r.cone([0, sy * 14, 30], [0, sy * 14, 40], 7, 0.6, M.IRON); }
     for (const sy of [-1, 1]) r.box([5, sy * 8, 10], [4.5, 0.9, 10], M.WOOD, null, { mf: p => Math.abs(p[2] - 6) < 0.6 || Math.abs(p[2] - 15) < 0.6 ? M.IRON : 0 });
   }, [64, 72, 32, 56]),
-  mine: () => propSprite('mine', r => {   // a mine mouth cut into a rock face: a heavy timber frame, a lamp, rails running out
-    for (const [x, y, z, a, b, c] of [[-12, -2, 13, 16, 26, 20], [-6, 18, 8, 12, 10, 11], [-6, -22, 8, 12, 10, 10], [-18, 8, 22, 10, 12, 12]]) r.ell([x, y, z], [a, b, c], M.ROCK, null, { mf: p => hash(Math.floor(p[0] / 2), Math.floor(p[1] / 2 + p[2] / 3), 3) < 0.06 ? M.LEAFM : 0 });
-    r.box([4, 0, 10], [3, 7, 10], M.VOID);   // the dark mouth
-    for (const sy of [-1, 1]) { r.box([7, sy * 8.4, 10], [1.8, 1.8, 10], M.WOOD, null, { mf: p => Math.abs(p[2] - 5) < 0.4 || Math.abs(p[2] - 14) < 0.4 ? M.BARK : 0 }); }
-    r.box([7.4, 0, 21], [2.2, 11, 1.8], M.WOOD, null, { mf: p => Math.abs(p[1]) > 9.6 ? M.BARK : 0 });
-    r.box([9.4, -5, 21], [0.4, 3.6, 1.2], M.PLANK);   // a plank nailed over the lintel
-    r.box([9.2, 7.2, 15], [1, 1.2, 1.6], M.LAMP, null, { noShadow: true }); r.box([9.2, 7.2, 17], [0.7, 0.7, 0.4], M.IRON);
-    for (const sy of [-3, 3]) r.box([16, sy, 0.5], [10, 0.5, 0.5], M.IRON);
-    for (let k = 0; k < 5; k++) r.box([8 + k * 4, 0, 0.3], [0.8, 4.4, 0.4], M.WOOD);
-  }, [100, 96, 50, 72]),
+  mine: () => propSprite('mine', r => mineRig(r, false), [100, 96, 50, 72]),
+  minebarred: () => propSprite('minebarred', r => mineRig(r, true), [100, 96, 50, 72]),   // round 42b: planks and a chain across the mouth
   den: () => propSprite('den', r => {   // the wolves' den: a mossy mound of rock with a low dark opening, bones outside
     r.ell([-4, -2, 6], [16, 14, 11], M.ROCK, null, { mf: p => p[2] > 9 && hash(Math.floor(p[0] / 2), Math.floor(p[1] / 2), 5) < 0.3 ? M.LEAFM : 0 });
     r.ell([9, 3, 4], [4, 6, 5], M.VOID);
@@ -1041,6 +1055,10 @@ const NPC_LOOKS = {
     { team: 'blue', helm: 'none', chest: 'tunic', weapon: 'none', shield: 'none', hair: 'brown' }],
   priest: { team: 'white', helm: 'hood', chest: 'robe_white', weapon: 'none', shield: 'none', hair: 'grey', beard: true },
   farmer: { team: 'tan', helm: 'none', chest: 'tunic', weapon: 'none', shield: 'none', hair: 'brown', beard: true },
+  // round 42b: the story's people. Wren in purple, Hollis the farmer, Aldo with his axe
+  wren: { team: 'purple', helm: 'none', chest: 'tunic', weapon: 'none', shield: 'none', hair: 'brown' },
+  hollis: { team: 'tan', helm: 'none', chest: 'tunic', weapon: 'none', shield: 'none', hair: 'grey', beard: true },
+  aldo: { team: 'green', helm: 'none', chest: 'tunic', weapon: 'axe', shield: 'none', hair: 'brown', beard: true },
 };
 let npcs = [];
 function makeNpcs() {
@@ -1054,7 +1072,8 @@ function updateNpcs(dt) {
   for (const n of npcs) {
     n.clock += dt;
     const dh = Math.hypot(hero.fi - n.fi, hero.fj - n.fj);
-    if (n.role === 'merchant' || n.role === 'smith' || n.role === 'priest') {   // face the hero when close
+    if (n.leaving !== undefined) continue;   // Aldo running home from the den (quests.js)
+    if (n.role === 'merchant' || n.role === 'smith' || n.role === 'priest' || TALKERS[n.role]) {   // face the hero when close
       if (dh < 3) n.dir = dirFrom(hero.fi - n.fi, hero.fj - n.fj);
       continue;
     }
@@ -1071,18 +1090,22 @@ function updateNpcs(dt) {
     }
   }
 }
-const TRADER_ROLES = { merchant: 'TAP: POTION 25 GOLD', smith: 'TAP: SELL BAG LOOT', priest: 'TAP: TALK' };
+const TRADER_ROLES = { merchant: 'TAP: POTION 25 GOLD', smith: 'TAP: SELL BAG LOOT', priest: 'TAP: TALK', wren: 'TAP: TALK', hollis: 'TAP: TALK', aldo: 'TAP: TALK' };
+const TALKERS = { priest: 1, wren: 1, hollis: 1, aldo: 1 };
+// potions cost less once Hollis is home (round 42b)
+const potionPrice = () => G.story && G.story.f.farmPaid ? 15 : 25;
+const traderLabel = n => n.role === 'merchant' ? `TAP: POTION ${potionPrice()} GOLD` : n.role === 'aldo' && LV.side === 'den' && G.story && G.story.f.alphaDead ? 'TAP: FREE ALDO' : TRADER_ROLES[n.role];
 function nearTrader() {
   let best = null, bd = 1.6;
-  for (const n of npcs) if (TRADER_ROLES[n.role]) { const d = Math.hypot(n.fi - hero.fi, n.fj - hero.fj); if (d < bd) { bd = d; best = n; } }
+  for (const n of npcs) if (TRADER_ROLES[n.role] && n.leaving === undefined) { const d = Math.hypot(n.fi - hero.fi, n.fj - hero.fj); if (d < bd) { bd = d; best = n; } }
   return best;
 }
 function trade(n) {
-  if (n.role === 'priest') { talkPriest(); return; }
+  if (TALKERS[n.role]) { talkTo(n); return; }
   if (n.role === 'merchant') {
-    if (hero.gold < 25) { say('NOT ENOUGH GOLD', 23, 1.5); return; }
+    if (hero.gold < potionPrice()) { say('NOT ENOUGH GOLD', 23, 1.5); return; }
     if (hero.potions >= 9) { say('YOUR BELT IS FULL', 26, 1.5); return; }
-    hero.gold -= 25; hero.potions++; sfx('gold'); say('BOUGHT A POTION', 51, 1.5);
+    hero.gold -= potionPrice(); hero.potions++; sfx('gold'); say('BOUGHT A POTION', 51, 1.5);
   } else {
     const items = hero.bag.filter(it => !Object.values(hero.equip).includes(it));
     if (!items.length) { say('NOTHING TO SELL', 26, 1.5); return; }
@@ -1100,7 +1123,7 @@ function drawNpcLabels() {
     const [x, y] = iso(n.fi, n.fj), sx = Math.round(x - camX), sy = Math.round(y - camY) - 58;
     if (sx < -40 || sx > W + 40 || sy < -10 || sy > H) continue;
     const near = Math.hypot(n.fi - hero.fi, n.fj - hero.fj) < 1.6;
-    textC(near ? TRADER_ROLES[n.role] : n.name, sx, sy, near ? 51 : 27);
+    textC(near ? traderLabel(n) : n.name, sx, sy, near ? 51 : 27);
     const by = sy + 9 + Math.round(Math.sin(G.t * 4) * 1.5);
     if (priestMark(n, sx, by)) continue;
     for (let r = 0; r < 4; r++) for (let c = -3 + r; c <= 3 - r; c++) { const xx = sx + c, yy = by + r; if (xx >= 0 && yy >= 0 && xx < W && yy < H) out32[yy * W + xx] = PAL32[r === 0 || Math.abs(c) === 3 - r ? 123 : 124]; }

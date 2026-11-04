@@ -6,77 +6,301 @@
 // entered from the hub (the wolf den in the west woods, the cellar under the farmhouse). Leaving
 // one puts you back at its door with the hub as you left it.
 
-const QUESTS = [
-  { id: 'wolves', name: 'THE WOLF DEN', steps: [{ kill: 'wolf', n: 6, text: 'WOLVES' }, { kill: 'alpha', n: 1, text: 'THE ALPHA IN THE DEN' }],
-    give: ['WOLVES HAVE COME OUT OF THE WEST WOODS.', 'THIN THEM OUT, THEN FIND THE ALPHA IN ITS DEN.'] },
-  { id: 'bandits', name: 'THE STOLEN FARM', steps: [{ kill: 'brigand', n: 4, text: 'BANDITS' }, { kill: 'banditchief', n: 1, text: 'THEIR CHIEF IN THE CELLAR' }],
-    give: ['BANDITS HOLD THE FARM TO THE EAST.', 'DRIVE THEM OFF. THEIR CHIEF HIDES IN THE CELLAR.'] },
-  { id: 'mine', name: 'THE OLD MINE', steps: [{ kill: 'skelking', n: 1, text: 'THE KING BELOW THE MINE' }],
-    give: ['THE DEAD WALK UNDER THE OLD MINE TO THE NORTH.', 'GO DOWN AND PUT THEIR KING TO REST.'] },
-];
-// G.quests: { [id]: { step, n, done, paid } } once given
-function questState(id) { return G.quests && G.quests[id]; }
-function questsGiven() { return !!G.quests && Object.keys(G.quests).length > 0; }
-function questReady() { return QUESTS.some(q => { const s = questState(q.id); return s && s.done && !s.paid; }); }
+// Round 42b: the Act I story as one chain. Each step unlocks the next and leaves a mark on the
+// camp; people other than Osric give quests; a dialogue box with ACCEPT or COLLECT (pick one of
+// three rewards); a marker at the screen edge points at the next goal.
+//   Osric (the graves were dug up; Aldo the woodcutter is missing) -> Wren, his daughter, at the
+//   tents -> the wolf den: the Alpha, then the cage -> back to Wren; Aldo tells of a hooded man with
+//   a green lantern at the mine (his wood keeps the campfire: rest by it to heal) -> the mine is
+//   chained -> Hollis the farmer: the bandits took his farm and the key -> four bandits, their chief
+//   in the cellar (sacks of bones; he drops the key and a letter signed M.) -> back to Hollis
+//   (potions cheaper, he goes home to his hay cart) -> Osric reads the letter and knows the hand:
+//   Maelis -> unlock the mine -> the King -> back to Osric.
+// G.story = { f: { flags }, n: bandits killed }. The stage is worked out from the flags, so things
+// done out of order (the Alpha killed before Wren asks) still count.
+const STORY_NAMES = { woodcutter: 'THE MISSING WOODCUTTER', farm: 'THE STOLEN FARM', king: 'THE KING BELOW' };
+function storyF() { if (!G.story) G.story = { f: {}, n: 0 }; return G.story.f; }
+const storyOn = () => LV.act === 0 && !(LV.loop > 0);   // the story is Act I's, first time through
+const mineOpen = () => { const f = storyF(); return !!(f.mineOpen || f.kingDead || (G.gates && G.gates[0]) || LV.loop > 0); };
+function storyStage() {
+  const f = storyF();
+  if (G.gates && G.gates[0]) f.kingDead = true;
+  if (!f.met) return 'meet';
+  if (!f.woodTold && !f.aldoFree) return 'wren';
+  if (!f.aldoFree) return f.alphaDead ? 'cage' : 'den';
+  if (!f.woodPaid) return 'aldoBack';
+  if (!f.sawChain && !f.farmTold && !f.chiefDead) return 'mine';
+  if (!f.farmTold && !f.chiefDead) return 'hollis';
+  if (!f.chiefDead) return (G.story.n || 0) >= 4 ? 'cellar' : 'farm';
+  if (!f.farmPaid) return 'farmBack';
+  if (!f.letterRead) return 'letter';
+  if (!f.mineOpen && !f.kingDead) return 'unlock';
+  if (!f.kingDead) return 'king';
+  if (!f.kingPaid) return 'kingBack';
+  return 'done';
+}
+const STAGE_QUEST = { wren: 'woodcutter', den: 'woodcutter', cage: 'woodcutter', aldoBack: 'woodcutter', mine: 'woodcutter', hollis: 'farm', farm: 'farm', cellar: 'farm', farmBack: 'farm', letter: 'king', unlock: 'king', king: 'king', kingBack: 'king' };
+function stageText(st) {
+  return { meet: 'SPEAK TO BROTHER OSRIC', wren: 'TALK TO WREN BY THE TENTS', den: 'FIND ALDO IN THE WOLF DEN (WEST)', cage: 'FREE ALDO', aldoBack: 'RETURN TO WREN',
+    mine: 'LOOK AT THE OLD MINE (NORTH)', hollis: 'ASK HOLLIS ABOUT THE CHAINS', farm: `DRIVE THE BANDITS FROM THE FARM ${Math.min(4, G.story.n || 0)}/4`, cellar: 'FIND THEIR CHIEF IN THE CELLAR',
+    farmBack: 'RETURN TO HOLLIS', letter: 'SHOW THE LETTER TO BROTHER OSRIC', unlock: 'UNLOCK THE OLD MINE (NORTH)', king: 'PUT THE KING TO REST, BELOW THE MINE', kingBack: 'RETURN TO BROTHER OSRIC' }[st] || '';
+}
+// who has something to say right now: '!' (a new task or news) or '?' (come back for a reward)
+function storyMark(role) {
+  if (!storyOn()) return null;
+  const st = storyStage();
+  if (role === 'priest') return st === 'meet' || st === 'letter' ? '!' : st === 'kingBack' ? '?' : null;
+  if (role === 'wren') return st === 'wren' ? '!' : st === 'aldoBack' ? '?' : null;
+  if (role === 'hollis') return st === 'hollis' ? '!' : st === 'farmBack' ? '?' : null;
+  return null;
+}
 function questKill(id) {
-  if (!G.quests) return;
-  for (const q of QUESTS) {
-    const s = G.quests[q.id]; if (!s || s.done) continue;
-    const st = q.steps[s.step]; if (st.kill !== id) continue;
-    s.n++;
-    if (s.n >= st.n) {
-      s.step++; s.n = 0;
-      if (s.step >= q.steps.length) { s.done = true; say(`${q.name}: DONE. RETURN TO BROTHER OSRIC`, 51, 3); sfx('levelUp'); }
-      else say(`${q.name}: ${q.steps[s.step].text}`, 51, 2.5);
+  if (!storyOn()) return;
+  const f = storyF();
+  if (id === 'alpha' && !f.alphaDead) { f.alphaDead = true; if (!f.aldoFree) say('THE ALPHA IS DEAD. FREE ALDO', 51, 3); }
+  if (id === 'brigand' && f.farmTold && !f.chiefDead) { G.story.n = (G.story.n || 0) + 1; if (G.story.n === 4) say('THE FARM IS CLEAR. THEIR CHIEF IS IN THE CELLAR', 51, 3); }
+  if (id === 'banditchief' && !f.chiefDead) { f.chiefDead = true; say('THE CHIEF DROPS THE MINE KEY', 51, 3.5); say('AND A LETTER, SIGNED M.', 51, 3.5); sfx('levelUp'); }
+  saveGame();
+}
+// ---------------------------------------------------------------- the dialogue box
+// G.talk = { pages: [[who, text]], k, btn: 'ACCEPT' | 'COLLECT' | null, on: fn, reward: [items] }
+// It pauses the game. A tap turns the page (all at once if the text is still typing); on the last
+// page the button (or, with a reward, one of the three items) finishes it.
+function openTalk(pages, btn = null, on = null, reward = null) {
+  G.talk = { pages, k: 0, t: 0, btn, on, reward, pick: reward ? -1 : null }; G.mode = 'talk'; clearInput(); sfx('tap');
+}
+function wrapText(s, n = 56) {
+  const out = []; let line = '';
+  for (const w of s.split(' ')) { if ((line + ' ' + w).trim().length > n) { out.push(line.trim()); line = w; } else line += ' ' + w; }
+  if (line.trim()) out.push(line.trim()); return out;
+}
+function talkLayout() {
+  const T = G.talk, last = T.k === T.pages.length - 1, h = T.reward && last ? 178 : 84, y = H - h - 8;
+  const L = { box: { x: 6, y, w: W - 12, h }, btn: null, cards: [] };
+  if (last && T.reward) T.reward.forEach((it, n) => L.cards.push({ x: 12 + n * 84, y: y + 88, w: 78, h: 56, it }));
+  if (last && (T.btn || !T.reward)) L.btn = { x: W / 2 - 40, y: y + h - 24, w: 80, h: 18 };
+  return L;
+}
+function drawTalk() {
+  const T = G.talk; if (!T) return;
+  T.t += 1 / 60;
+  fade(0.35);
+  const L = talkLayout(), b = L.box, [who, say_] = T.pages[T.k], lines = wrapText(say_);
+  fillRect(b.x, b.y, b.w, b.h, 2); frame(b.x, b.y, b.w, b.h, 8, 3); frame(b.x + 2, b.y + 2, b.w - 4, b.h - 4, 5, 2);
+  text(who, b.x + 8, b.y + 7, 51);
+  let shown = Math.floor(T.t * 60);   // letters typed so far
+  lines.forEach((l, n) => { const part = l.slice(0, Math.max(0, shown)); shown -= l.length; text(part, b.x + 8, b.y + 18 + n * 8, 26); });
+  T.typed = shown >= 0;
+  if (L.cards.length) {
+    textC(T.pick >= 0 ? 'TAP COLLECT TO TAKE IT' : 'CHOOSE ONE', W / 2, L.cards[0].y - 9, 25);
+    for (const [n, c] of L.cards.entries()) {
+      const it = c.it, on = T.pick === n;
+      fillRect(c.x, c.y, c.w, c.h, on ? 5 : 4); frame(c.x, c.y, c.w, c.h, on ? 51 : RARITY_COL[it.rarity], 3);
+      sprite(itemIcon(it), c.x + c.w / 2, c.y + 24, 1, 4);
+      const nm = wrapText(itemName(it), 18); nm.slice(0, 2).forEach((l, k) => textC(l, c.x + c.w / 2, c.y + 32 + k * 7, RARITY_COL[it.rarity]));
+      textC(ITEM_BASES[it.base].slot === 'shield' ? 'OFF HAND' : ITEM_BASES[it.base].slot.toUpperCase(), c.x + c.w / 2, c.y + 48, 24);
     }
-    saveGame();
+  }
+  if (L.btn) {
+    const ok = !T.reward || T.pick >= 0, r = L.btn;
+    fillRect(r.x, r.y, r.w, r.h, ok ? 5 : 3); frame(r.x, r.y, r.w, r.h, ok ? 51 : 6, 2); textC(T.btn || 'OK', r.x + r.w / 2, r.y + 6, ok ? 27 : 24);
+  } else if (T.typed) textC('TAP', b.x + b.w - 16, b.y + b.h - 10, 24 + (Math.floor(G.t * 3) % 2));
+  if (T.reward && T.k === T.pages.length - 1 && T.pick >= 0) { const it = T.reward[T.pick]; itemLines(it).slice(0, 3).forEach((l, n) => text(l, b.x + 8, b.y + 18 + (lines.length + n) * 8 + 2, 25)); }
+}
+function talkTap(p) {
+  const T = G.talk; if (!T) return;
+  if (!T.typed) { T.t = 99; return; }   // the first tap shows the whole page
+  if (T.k < T.pages.length - 1) { T.k++; T.t = 0; sfx('tap'); return; }
+  const L = talkLayout();
+  for (const [n, c] of L.cards.entries()) if (inRect(p, c)) { T.pick = n; sfx('tap'); return; }
+  if (T.reward && T.pick < 0) return;
+  if (L.btn && !inRect(p, L.btn) && T.reward) return;   // with a choice on screen, only the button takes it
+  closeTalk();
+}
+function closeTalk() {
+  const T = G.talk; G.talk = null; G.mode = 'play';
+  if (T.reward) { const it = T.reward[T.pick]; if (hero.bag.length < BAG_SIZE) { hero.bag.push(it); if (!hero.equip[ITEM_BASES[it.base].slot]) equipItem(it); } else groundItems.push({ item: it, fi: hero.fi + 0.6, fj: hero.fj + 0.6, t: 0 }); say(itemName(it), RARITY_COL[it.rarity], 2.5); }
+  if (T.on) T.on();
+  saveGame();
+}
+// three rewards from different slots, rare or better, a level above the area
+function rewardChoice() {
+  const R = rng((Math.random() * 1e9) | 0), out = [], used = {};
+  for (let t = 0; t < 200 && out.length < 3; t++) { const it = rollRare(R, LV.diff + 1), sl = ITEM_BASES[it.base].slot; if (used[sl] || it.rarity === 'legend') continue; used[sl] = 1; out.push(it); }
+  while (out.length < 3) out.push(rollRare(R, LV.diff + 1));
+  return out;
+}
+function payQuest(id) {
+  const gold = 60 * LV.diff, xp = 140 * LV.diff;
+  hero.gold += gold; gainXp(xp); sfx('gold');
+  say(`${STORY_NAMES[id]}: DONE`, 51, 3); say(`+${gold} GOLD, +${xp} XP`, 51, 3);
+}
+// ---------------------------------------------------------------- what each person says
+function talkTo(n) {
+  const f = storyF(), st = storyStage(), on = storyOn();
+  const O = 'BROTHER OSRIC', Wn = 'WREN', Ho = 'HOLLIS', Al = 'ALDO';
+  if (n.role === 'priest') {
+    if (!on) return openTalk([[O, LV.gateOpen ? 'THE ROAD SOUTH IS OPEN. GO WITH THE LIGHT.' : 'THE LIGHT KEEPS YOU.']]);
+    if (st === 'meet') return openTalk([
+      [O, 'GOD BE THANKED, A BLADE. I AM OSRIC. THIS CAMP IS ALL THAT IS LEFT OF OAKHOLLOW.'],
+      [O, 'THE DEAD WALK HERE. AND THE GRAVES BEHIND MY CHURCH WERE NOT CLAWED OPEN FROM BELOW. THEY WERE DUG, WITH SPADES.'],
+      [O, 'ALDO THE WOODCUTTER WENT INTO THE WEST WOODS THREE DAYS AGO AND DID NOT COME BACK. HIS DAUGHTER WREN WAITS BY THE TENTS. SPEAK TO HER.']], 'OK', () => { f.met = true; });
+    if (st === 'letter') return openTalk([
+      [O, 'A LETTER? LET ME SEE.'],
+      [O, '"EVERY BONE YOU BRING IS PAID IN SILVER. THE KING MUST BE WHOLE. - M."'],
+      [O, 'I KNOW THIS HAND. MAELIS. HE WAS A BROTHER OF MY ORDER, UNTIL WE CAST HIM OUT FOR THE BOOKS HE READ. I SHOULD HAVE BURNED THEM MYSELF.'],
+      [O, 'HE IS RAISING THE OLD KING UNDER THE MINE. TAKE THE KEY. PUT THE KING BACK IN HIS GRAVE, AND FIND MAELIS IF YOU CAN.']], 'ACCEPT', () => { f.letterRead = true; });
+    if (st === 'kingBack') return openTalk([
+      [O, 'THE KING IS DUST AGAIN. I FELT IT, LIKE A WINDOW OPENED IN A SICKROOM.'],
+      [O, 'BUT MAELIS IS NOT FINISHED. THE ROAD SOUTH IS OPEN NOW, AND THAT IS THE WAY HE WENT. TAKE THIS, AND MY THANKS.']], 'COLLECT', () => { f.kingPaid = true; payQuest('king'); }, rewardChoice());
+    const hint = { wren: 'WREN IS BY THE TENTS. SHE NEEDS YOU MORE THAN I DO.', den: 'THE DEN IS IN THE WEST WOODS. GO CAREFULLY.', cage: 'THE DEN IS IN THE WEST WOODS. GO CAREFULLY.', aldoBack: 'WREN WILL WANT TO KNOW.', mine: 'ALDO SAW SOMEONE AT THE MINE? THEN LOOK THERE.', hollis: 'HOLLIS SITS BY THE FIRE. HE LOST HIS FARM TO THE BANDITS.', farm: 'THE FARM IS EAST, PAST THE GATE.', cellar: 'THE FARM IS EAST, PAST THE GATE.', farmBack: 'HOLLIS WILL WANT TO KNOW.', unlock: 'THE MINE IS NORTH. THE LIGHT GOES WITH YOU.', king: 'THE MINE IS NORTH. THE LIGHT GOES WITH YOU.' }[st];
+    return openTalk([[O, hint || 'THE LIGHT KEEPS YOU.']]);
+  }
+  if (n.role === 'wren') {
+    if (on && st === 'meet') return openTalk([[Wn, 'BROTHER OSRIC IS ON THE CHURCH STEPS. SPEAK TO HIM FIRST, PLEASE.']]);
+    if (on && st === 'wren') return openTalk([
+      [Wn, 'YOU ARE THE ONE OSRIC SENT? MY FATHER IS ALDO. HE WENT TO CUT WOOD IN THE WEST WOODS AND NEVER CAME HOME.'],
+      [Wn, 'THE WOLVES HAVE BEEN WRONG ALL MONTH. THEY HOWL IN DAYLIGHT. HE SAID THEY HAD A DEN PAST THE OLD TREES.'],
+      [Wn, 'PLEASE. BRING HIM BACK.']], 'ACCEPT', () => { f.woodTold = true; });
+    if (on && st === 'aldoBack') return openTalk([
+      [Wn, 'FATHER! YOU BROUGHT HIM BACK!'],
+      [Al, 'THEY HAD ME IN A CAGE. A CAGE, LIKE A HEN FOR THE POT. WOLVES DO NOT BUILD CAGES.'],
+      [Al, 'AND THEY WERE NOT HUNTING. THEY WERE RUNNING. SOMETHING IN THE NORTH HILLS DROVE THEM OUT.'],
+      [Al, 'BEFORE THEY TOOK ME I SAW A HOODED MAN AT THE OLD MINE, WITH A LANTERN THAT BURNED GREEN. LOOK THERE.'],
+      [Wn, 'TAKE SOMETHING. AND FATHER WILL KEEP THE CAMPFIRE HIGH: REST BY IT AND IT WILL MEND YOU.']], 'COLLECT', () => { f.woodPaid = true; payQuest('woodcutter'); say('REST BY THE CAMPFIRE TO HEAL', 26, 3); }, rewardChoice());
+    return openTalk([[Wn, f.aldoFree ? 'FATHER IS HOME. I CAN SLEEP AGAIN.' : 'PLEASE FIND HIM.']]);
+  }
+  if (n.role === 'aldo') {   // in the den's cage, or at home by his woodpile
+    if (LV.side === 'den') {
+      if (!f.alphaDead) return openTalk([[Al, 'BEHIND YOU! THE BIG ONE! KILL IT FIRST, THEN GET ME OUT OF HERE!']]);
+      return openTalk([[Al, 'YOU KILLED IT? BLESS YOU. BREAK THE LOCK, QUICK.'], [Al, 'I KNOW THE WAY HOME. TELL WREN I AM COMING.']], 'OK', () => freeAldo(n));
+    }
+    return openTalk([[Al, st === 'mine' ? 'THE OLD MINE, NORTH. THAT IS WHERE I SAW HIM. GREEN FIRE.' : 'THE FIRE IS HIGH. SIT A WHILE.']]);
+  }
+  if (n.role === 'hollis') {
+    if (on && (st === 'hollis' || (st === 'mine' && f.sawChain))) return openTalk([
+      [Ho, 'CHAINS ON THE MINE? THAT IS THE BANDITS. THEY TOOK MY FARM A WEEK AGO AND PUT ME OUT IN MY NIGHTSHIRT.'],
+      [Ho, 'EVERY NIGHT THEY HAUL SACKS IN AND OUT OF MY CELLAR. HEAVY SACKS. I DO NOT WANT TO KNOW WHAT IS IN THEM.'],
+      [Ho, 'THEIR CHIEF WEARS THE MINE KEY ON HIS BELT. THE FARM IS EAST, OUT THE GATE. GET IT BACK FOR ME?']], 'ACCEPT', () => { f.farmTold = true; G.story.n = 0; });
+    if (on && st === 'farmBack') return openTalk([
+      [Ho, 'BONES? MY CELLAR FULL OF BONES. FROM THE GRAVEYARD. GOD HAVE MERCY.'],
+      [Ho, 'I AM GOING HOME ALL THE SAME. AND THE POTION WAGON WILL HAVE FRESH HERBS FROM MY FIELDS: POTIONS COST LESS NOW.'],
+      [Ho, 'THAT LETTER THE CHIEF HAD. SHOW IT TO BROTHER OSRIC. HE READS BETTER THAN ME.']], 'COLLECT', () => { f.farmPaid = true; payQuest('farm'); }, rewardChoice());
+    return openTalk([[Ho, f.farmPaid ? 'THE FIELDS WILL TAKE A YEAR TO COME BACK. BUT THEY WILL COME BACK.' : 'I HAD A FARM, ONCE. EAST OF HERE.']]);
   }
 }
-// talking to the priest: the first time he gives the quests; after that he pays for finished ones
-function talkPriest() {
-  if (!questsGiven()) {
-    G.quests = {};
-    for (const q of QUESTS) G.quests[q.id] = { step: 0, n: 0, done: false, paid: false };
-    say('BLESS YOU FOR COMING. WE NEED A BLADE.', 26, 3);
-    for (const q of QUESTS) say(q.give[0], 25, 4);
-    sfx('levelUp'); saveGame(); return;
+// round 42b: Aldo runs home from the den; the cage door hangs open
+function freeAldo(n) {
+  const f = storyF(); f.aldoFree = true;
+  for (const p of dynProps) if (p.kind === 'cage') p.open = true;
+  n.leaving = 1.2; sfx('chest'); say('ALDO IS FREE. RETURN TO WREN', 51, 3);
+}
+// ---------------------------------------------------------------- the camp and the mine
+function updateStory(dt) {
+  if (!storyOn()) return;
+  const f = storyF();
+  // Aldo leaves the den: he walks off and fades
+  for (let k = npcs.length - 1; k >= 0; k--) { const n = npcs[k]; if (n.leaving === undefined) continue; n.leaving -= dt; n.clip = 'walk'; n.walk += dt * 8; tryMove(n, dt * 1.5, -dt * 1.5, 0.2); if (n.leaving <= 0) npcs.splice(k, 1); }
+  if (LV.side === 'cellar' && !f.cellarSeen) { f.cellarSeen = true; say('SACKS OF BONES, STACKED TO THE ROOF.', 26, 4); say('THE GRAVES WERE DUG FOR THIS.', 26, 4); }
+  if (!LV.hub) return;
+  // Aldo's wood feeds the fire: resting by it mends life and mana
+  if (f.woodPaid && Math.hypot(hero.fi - HUB.camp[0], hero.fj - HUB.camp[1]) < 3.4 && !hero.dead) {
+    const was = hero.hp < STAT.maxHp || hero.mana < STAT.maxMana;
+    hero.hp = Math.min(STAT.maxHp, hero.hp + STAT.maxHp * 0.12 * dt); hero.mana = Math.min(STAT.maxMana, hero.mana + STAT.maxMana * 0.12 * dt);
+    if (was && Math.random() < dt * 3) { const [x, y] = screenOf(hero); pspawn(5, x + (Math.random() - 0.5) * 12, y - 4, 2 + Math.random() * 20, 0, -18, 0.6, 51); }
   }
-  let paid = 0;
-  for (const q of QUESTS) {
-    const s = G.quests[q.id]; if (!s.done || s.paid) continue;
-    s.paid = true; paid++;
-    const gold = 60 * LV.diff, xp = 140 * LV.diff, it = rollRare(rng((Math.random() * 1e9) | 0), LV.diff + 1);
-    hero.gold += gold; gainXp(xp);
-    groundItems.push({ item: it, fi: hero.fi + 0.6, fj: hero.fj + 0.6, t: 0 });
-    say(`${q.name}: +${gold} GOLD, +${xp} XP`, 51, 3);
+}
+// the mine's stairs: chained until the chief's key opens them (game.js asks before going down)
+function mineBarred() {
+  if (!LV.hub || mineOpen()) return false;
+  const f = storyF();
+  if (f.chiefDead) {   // the key turns: the chains fall and the way down opens
+    f.mineOpen = true; sfx('chest'); sfx('stairs'); say('THE KEY TURNS. THE CHAINS FALL AWAY', 51, 3); saveGame(); return false;
   }
-  if (paid) { sfx('gold'); saveGame(); return; }
-  // otherwise, a reminder of what is left
-  const next = QUESTS.find(q => !G.quests[q.id].done);
-  if (next) say(next.give[1], 26, 3); else say(LV.gateOpen ? 'THE ROAD SOUTH IS OPEN. GO WITH THE LIGHT.' : 'THE LIGHT KEEPS YOU.', 26, 3);
+  if (!(G.sealT > 0)) {
+    say('THE MINE IS CHAINED SHUT', 22, 2.5); say('THE BANDITS TOOK THE KEY', 26, 2.5); G.sealT = 3;
+    if (!f.sawChain && storyOn()) { f.sawChain = true; saveGame(); }
+  }
+  return true;
+}
+// where the next goal is, for the marker at the screen's edge: [fi, fj] or null
+function storyTarget() {
+  if (!storyOn()) return null;
+  const st = storyStage(), npc = r => { const n = npcs.find(n => n.role === r); return n ? [n.fi, n.fj] : null; };
+  if (LV.side) {
+    if (LV.side === 'den' && (st === 'den' || st === 'cage')) { const a = enemies.find(e => e.id === 'alpha' && alive(e)); if (a && LV.seen[tIdx(Math.floor(a.fi), Math.floor(a.fj))]) return [a.fi, a.fj]; const al = npc('aldo'); return al && st === 'cage' ? al : null; }
+    if (LV.side === 'cellar' && (st === 'farm' || st === 'cellar')) { const c = enemies.find(e => e.id === 'banditchief' && alive(e)); return c && LV.seen[tIdx(Math.floor(c.fi), Math.floor(c.fj))] ? [c.fi, c.fj] : null; }
+    return LV.seen[tIdx(LV.stairs.i, LV.stairs.j)] ? [LV.stairs.i + 0.5, LV.stairs.j + 0.5] : null;   // done here: the way out
+  }
+  if (!LV.hub) return null;
+  const mine = [LV.stairs.i + 0.5, LV.stairs.j + 0.5];
+  return { meet: npc('priest'), wren: npc('wren'), aldoBack: npc('wren'), den: SIDES.den.door(), cage: SIDES.den.door(), mine, hollis: npc('hollis'), farm: [HUB.farm[0] + 1, HUB.farm[1] + 2],
+    cellar: SIDES.cellar.door(), farmBack: npc('hollis'), letter: npc('priest'), unlock: mine, king: mine, kingBack: npc('priest') }[st] || null;
 }
 // a rare (or better) item: rerolls until one comes up
 function rollRare(R, level) {
   for (let t = 0; t < 80; t++) { const it = rollItem(R, level); if (it.rarity !== 'normal' && it.rarity !== 'magic') return it; }
   return rollItem(R, level);
 }
-// the tracker: one line per open quest, at the left under the messages
+// the tracker: the quest's name, and what to do next in words
 function drawQuestTracker() {
-  if (!G.quests || G.mode !== 'play') return;
-  let y = 68;   // below the message lines (34-58), clear of the boss bar
-  for (const q of QUESTS) {
-    const s = G.quests[q.id]; if (!s || s.paid) continue;
-    const line = s.done ? `${q.name}: SEE BROTHER OSRIC` : (() => { const st = q.steps[s.step]; return st.n > 1 ? `${st.text} ${s.n}/${st.n}` : st.text; })();
-    text(line, 4, y, s.done ? 51 : 26); y += 8;
-  }
+  if (G.mode !== 'play' || !storyOn()) return;
+  const st = storyStage(); if (st === 'done') return;
+  const q = STAGE_QUEST[st];
+  if (q) text(STORY_NAMES[q], 4, 68, 24);
+  text(stageText(st), 4, q ? 76 : 68, 51);
 }
-// "!" over the priest while he has quests to give, "?" when one is ready to hand in
+// "!" over someone with news or a task, "?" when a reward waits
 function priestMark(n, sx, by) {
-  if (n.role !== 'priest') return false;
-  const ch = !questsGiven() ? '!' : questReady() ? '?' : null; if (!ch) return false;
+  const ch = storyMark(n.role); if (!ch) return false;
   textC(ch, sx, by - 2, 51, 2);
   return true;
 }
+// old saves (round 26's three quests at once) become the matching place in the chain
+function convertQuests(q, gates) {
+  const f = {}, done = id => q && q[id] && q[id].done, paid = id => q && q[id] && q[id].paid;
+  if (q && Object.keys(q).length) f.met = f.woodTold = true;
+  if (done('wolves')) f.alphaDead = f.aldoFree = true;
+  if (paid('wolves')) f.woodPaid = f.sawChain = f.farmTold = true;
+  if (done('bandits')) { f.woodTold = f.alphaDead = f.aldoFree = f.woodPaid = f.sawChain = f.farmTold = f.chiefDead = f.met = true; }
+  if (paid('bandits')) f.farmPaid = f.letterRead = f.mineOpen = true;
+  if (done('mine') || (gates && gates[0])) Object.assign(f, { met: true, woodTold: true, alphaDead: true, aldoFree: true, woodPaid: true, sawChain: true, farmTold: true, chiefDead: true, farmPaid: true, letterRead: true, mineOpen: true, kingDead: true, kingPaid: !!paid('mine') });
+  return { f, n: 0 };
+}
+
+// ---------------------------------------------------------------- the story's props (round 42b)
+// Aldo's cage: a square of wooden bars on a frame, roped at the corners, a padlock on the door.
+// Drawn in two halves (game.js) so Aldo stands between the back bars and the front ones.
+PROPS.cage = (open, half) => propSprite('cage' + (open ? 'o' : '') + half, r => {
+  const S = 9, Z = 30, front = p => p[0] + p[1] > 0.5;
+  const keep = p => half === 'f' ? front(p) : !front(p);
+  const bar = (a, b) => { if (keep(V.mul(V.add(a, b), 0.5))) r.cone(a, b, 0.95, 0.95, M.WOOD); };
+  for (const [x0, y0, x1, y1] of [[S, -S, S, S], [-S, -S, -S, S], [-S, -S, S, -S], [-S, S, S, S]]) {   // the four sides
+    const isDoor = x0 === S && x1 === S;
+    for (let k = 0; k <= 4; k++) {
+      const t = k / 4; let x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t;
+      if (isDoor && open && k > 0 && k < 4) { const a = 1.25 * (k / 4), d = (y + S); x = S + Math.sin(a) * d; y = -S + Math.cos(a) * d; }   // the door swung out on its hinge
+      bar([x, y, 0.5], [x, y, Z]);
+    }
+    if (keep([(x0 + x1) / 2 + (x0 === x1 ? 0 : 0), (y0 + y1) / 2, 0])) for (const z of [1.2, Z - 0.6]) r.cone([x0, y0, z], [x1, y1, z], 1.2, 1.2, M.BARK);   // rails top and bottom
+  }
+  if (half === 'f') {
+    for (const [x, y] of [[S, S], [S, -S], [-S, S]]) r.sph([x, y, Z - 0.8], 1.5, M.LEATHER);   // rope lashings
+    if (!open) r.box([S + 1, 0, 9], [0.8, 1.6, 1.8], M.GOLD, null, { mf: p => p[2] < 8.4 && Math.abs(p[1]) < 0.4 ? M.DARK : 0 });
+  }
+}, [48, 66, 24, 52], 0);
+// sacks of bones from the graveyard: burlap sacks tied at the neck, bones poking out, a skull
+PROPS.sacks = v => propSprite('sacks' + v, r => {
+  const R = rng(v * 17 + 3);
+  for (const [k, [x, y, sc]] of [[-4, -5, 1], [5, -3, 0.9], [-1, 6, 0.95]].entries()) {
+    const c = [x, y, 8 * sc], lean = V.norm([(R() - 0.5) * 0.5, (R() - 0.5) * 0.5, 1]);
+    r.group(() => { r.ell(c, [6.4 * sc, 6.2 * sc, 8.2 * sc], M.CLOTH_TAN, null, { mf: p => Math.abs((p[2] * 1.1 + p[0] * 0.3) % 3.2) < 0.32 ? M.LEATHER : 0 }); r.cone(V.mad(c, lean, 7 * sc), V.mad(c, lean, 11.5 * sc), 2.6 * sc, 1.6 * sc, M.CLOTH_TAN); });
+    r.cyl(V.mad(c, lean, 9 * sc), V.mad(c, lean, 10.2 * sc), 2.4 * sc, M.LEATHER);
+    if (k !== v % 3) { const b0 = V.mad(c, lean, 11 * sc), dir = V.norm([R() - 0.5, R() - 0.5, 1]); r.cone(b0, V.mad(b0, dir, 5), 1.0, 1.0, M.BONE); r.sph(V.mad(b0, dir, 5.4), 1.4, M.BONE); }
+  }
+  skullAt(r, [9, 4, 3.2], V.norm([1, 0.2, 0.15]), [0, 1, 0], [0, 0, 1], M.BONE, M.DARK, 0, 0.8);
+  for (const [x, y, a] of [[10, -6, 0.3], [7, 9, 2.0]]) r.cone([x, y, 0.8], [x + Math.cos(a) * 5, y + Math.sin(a) * 5, 0.8], 0.9, 0.9, M.BONE);
+}, [60, 56, 30, 40], Math.PI / 4);
 
 // ---------------------------------------------------------------- side areas
 // Each is a short floor generated like a dungeon (few rooms), with its own monsters and a leader
@@ -85,6 +309,30 @@ const SIDES = {
   den: { name: 'THE WOLF DEN', theme: 'caves', rooms: 5, pool: ['wolf'], boss: 'alpha', door: () => [HUB.den[0] + 1.6, HUB.den[1] + 0.6], label: 'WOLF DEN' },
   cellar: { name: 'THE FARM CELLAR', theme: 'crypt', rooms: 5, pool: ['brigand'], boss: 'banditchief', door: () => HUB.cellar, label: 'FARMHOUSE CELLAR' },
 };
+// round 42b: what the story adds to a side area once it is built: Aldo's cage near the Alpha,
+// the cellar's sacks of bones. A cage tile is one with open floor all round it, so it blocks nothing
+function sideExtras(kind) {
+  const R = rng(LV.seed ^ 0xca9e), roomFloor = (r, pad) => { const out = []; for (let j = r.y + pad; j < r.y + r.h - pad; j++) for (let i = r.x + pad; i < r.x + r.w - pad; i++) { let ok = true; for (let b = -1; b <= 1 && ok; b++) for (let a = -1; a <= 1 && ok; a++) if (tileAt(i + a, j + b) !== FLOOR || LV.solid[tIdx(i + a, j + b)]) ok = false; if (ok) out.push([i, j]); } return out; };
+  const clearOf = (i, j) => Math.hypot(i - LV.stairs.i, j - LV.stairs.j) > 2.5 && !LV.decor.some(d => d.i === i && d.j === j) && !LV.spawns.some(s => Math.hypot(s.fi - i - 0.5, s.fj - j - 0.5) < 1.6);
+  if (kind === 'den') {
+    const f = storyF(), r = LV.rooms[LV.leaderRoom];
+    let c = roomFloor(r, 1).filter(([i, j]) => clearOf(i, j));
+    if (!c.length) c = roomFloor(r, 0).filter(([i, j]) => clearOf(i, j));   // a small far room: any open tile in it
+    if (!c.length) c = LV.rooms.flatMap((q, n) => n ? roomFloor(q, 0) : []).filter(([i, j]) => clearOf(i, j)).sort((p, q) => Math.hypot(p[0] - r.cx, p[1] - r.cy) - Math.hypot(q[0] - r.cx, q[1] - r.cy)).slice(0, 1);   // else the nearest open tile to it
+    if (!c.length) return;
+    c.sort((p, q) => Math.hypot(q[0] - r.cx, q[1] - r.cy) - Math.hypot(p[0] - r.cx, p[1] - r.cy));   // toward the room's edge, the Alpha in front
+    const [i, j] = c[Math.min(c.length - 1, R.int(0, 2))];
+    LV.decor.push({ kind: 'cage', i, j, open: !!f.aldoFree }); LV.solid[tIdx(i, j)] = 1;
+    if (!f.aldoFree && storyOn()) LV.npcs.push({ role: 'aldo', name: 'ALDO', fi: i + 0.5, fj: j + 0.5, caged: true });
+  }
+  if (kind === 'cellar') {
+    for (const [n, r] of LV.rooms.entries()) {
+      if (n === 0) continue;
+      const c = roomFloor(r, 0).filter(([i, j]) => clearOf(i, j) && (tileAt(i - 2, j) === WALL || tileAt(i, j - 2) === WALL));   // against the back walls
+      for (let k = 0; k < Math.min(c.length, 2 + R.int(0, 2)); k++) { const [i, j] = c.splice(R.int(0, c.length - 1), 1)[0]; LV.decor.push({ kind: 'sacks', i, j, seed: R.int(0, 5) }); LV.solid[tIdx(i, j)] = 1; }
+    }
+  }
+}
 // the hub's doors into the side areas: walk onto one to go in
 function updateSideDoors() {
   if (!LV.hub || G.fadeTo) return;

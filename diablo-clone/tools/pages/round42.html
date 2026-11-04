@@ -1,0 +1,99 @@
+<title>The Story Chain</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  /* layout: one narrow column, one section per part with its picture first */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul, ol { margin: 0; max-width: 64ch; }
+  ul, ol { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .frame img.smooth { image-rendering: auto; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .tw { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+</style>
+<main>
+  <header>
+    <h1>The Story Chain</h1>
+    <p class="lede">Dungeon of Bones, round 42. The tightened Act I story you approved, people to talk to, and a fuller loot table.</p>
+  </header>
+  <section>
+    <h2>Talking</h2>
+    <figure>
+      <div class="frame"><img src="talk-reward.png" alt="Two phone screens. Left: Brother Osric speaking in a dialogue box at the bottom. Right: Wren&rsquo;s reward, three item cards to choose from with a COLLECT button" width="1096" height="840"></div>
+      <figcaption>Left: a dialogue box. Right: choosing a reward.</figcaption>
+    </figure>
+    <ul>
+      <li><strong>The dialogue box</strong> pauses the game: a name, a few lines that type out, and a tap for the next page. It ends with ACCEPT for a quest, OK, or COLLECT.</li>
+      <li><strong>Rewards are a choice of three</strong> rare items from different slots. Tap one to see its stats, then COLLECT. You also get gold and experience, as before.</li>
+      <li><strong>Tap a person</strong> on screen and the hero walks over and talks. A speech bubble on the attack button means a tap there will talk.</li>
+      <li>A <strong>!</strong> over someone means a new task or news; a <strong>?</strong> means a reward is waiting.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>The chain</h2>
+    <ol>
+      <li><strong>Brother Osric</strong>: the dead are walking, and the graves behind his church were dug with spades. Aldo the woodcutter is missing; his daughter Wren is by the tents.</li>
+      <li><strong>Wren</strong> asks you to find him. In the wolf den, Aldo is locked in a cage behind the Alpha. Kill it, then free him; he runs home.</li>
+      <li><strong>Back with Wren</strong>, Aldo says the wolves were fleeing something, and that he saw a hooded man with a green lantern at the old mine. His wood now keeps the campfire high: stand by it to heal.</li>
+      <li><strong>The mine is chained shut.</strong> &ldquo;The bandits took the key.&rdquo;</li>
+      <li><strong>Hollis</strong>, sitting by the fire: the bandits took his farm and haul sacks out of his cellar every night. Their chief wears the key.</li>
+      <li><strong>Four bandits on the farm, then the chief in the cellar</strong>, among sacks of graveyard bones. He drops the key and a letter signed M.</li>
+      <li><strong>Back with Hollis</strong>: he goes home to his hay cart, and potions drop from 25 to 15 gold.</li>
+      <li><strong>Osric reads the letter</strong> and knows the hand: Maelis, a brother cast out of his order. &ldquo;I should have burned those books myself.&rdquo;</li>
+      <li><strong>The key opens the mine.</strong> Down to the King, then back to Osric, who says Maelis went south. The finale round will show Maelis in person.</li>
+    </ol>
+    <ul>
+      <li>The tracker at the top left gives the quest&rsquo;s name and the next step in words (&ldquo;FIND ALDO IN THE WOLF DEN (WEST)&rdquo;). A white arrow at the screen&rsquo;s edge points at the next goal while it&rsquo;s off screen.</li>
+      <li>Things done early still count. If you kill the Alpha and free Aldo before Wren asks, she simply thanks you.</li>
+      <li>Old saves land in the matching place in the chain. On Nightmare the mine is open from the start.</li>
+    </ul>
+    <figure>
+      <div class="frame"><img src="camp-before-after.png" alt="The camp before and now. Now: Hollis stands by the campfire and Osric has a ! over him; the tracker reads SPEAK TO BROTHER OSRIC" width="1104" height="718"></div>
+      <figcaption>The camp in round 41 (left) and now (right): Hollis by the fire, the first task in the tracker. Wren is by the tents; Aldo joins at his woodpile once he&rsquo;s home.</figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><img src="den-cellar.png" alt="Three views: Aldo inside a wooden cage in the wolf den; the cage door open after he leaves; the farm cellar with a sack of bones near the hero" width="1292" height="440"></div>
+      <figcaption>Aldo&rsquo;s cage, the cage once he&rsquo;s gone, and the cellar.</figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><img src="mine-before-after.png" alt="The mine mouth before (open and dark) and now (two planks nailed across it, a chain and a gold padlock), each beside the hero" width="780" height="168"></div>
+      <figcaption>The mine before and now: chained shut until you have the key.</figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><img src="sacks.png" alt="Two clusters of three burlap sacks with bones sticking out and a skull on the ground, each beside the hero" width="600" height="148"></div>
+      <figcaption>Sacks of bones (second art pass; in the first they were a third the size and read as bottles).</figcaption>
+    </figure>
+    <p>The new art went through the three-pass review. The cage took all three passes: first too short, with its lid covering Aldo; then a flat board facing the camera; finally corner-on, with no lid.</p>
+  </section>
+  <section>
+    <h2>The loot table</h2>
+    <figure>
+      <div class="frame"><img src="inventory.png" alt="The inventory screen with two new slots on the right holding a ring and an amulet, and a bag of new items" width="540" height="840"></div>
+      <figcaption>Rings and amulets in two new slots on the right.</figcaption>
+    </figure>
+    <ul>
+      <li>Legendaries and set items roll on their own chances before the normal roll, so adding more of them never thins the ordinary drops. The ordinary pool was thin: the mage had 8 kinds of item and the ranger 10.</li>
+      <li><strong>Rings and amulets</strong> for every class. They&rsquo;re always magic or better, and about 10% of drops whatever the class.</li>
+      <li><strong>24 more kinds of item</strong> at levels 2 to 5 (broadsword, morning star, battle axe, bascinet, gothic plate, heater shield, battle and runed staves, silk robe, recurve and war bows, drake hide and more). Each is a step up in numbers; they reuse existing looks, as Diablo did.</li>
+      <li><strong>8 everyday affixes</strong>: BURNING (fire damage on every hit and spell), CHILLING (a chance to slow), GILDED (more gold), LUCKY (better items), OF THE VULTURE (life per kill), OF SIPHONING (mana per kill), OF THE HEALER (stronger potions), OF THE WALL (damage taken off each hit).</li>
+      <li>How often each rarity drops hasn&rsquo;t changed.</li>
+    </ul>
+  </section>
+</main>

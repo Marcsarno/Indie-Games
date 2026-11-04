@@ -223,6 +223,8 @@ function drawHud() {
   if (hero.cls === 'mage') drawButton(UI.attack, [37, 38, 39, 40], !!press.attack, glyphMissile);   // magic missiles
   else if (hero.cls === 'ranger') drawButton(UI.attack, [33, 34, 35, 36], !!press.attack, (x, y) => glyphBowAtk(x, y));   // arrows
   else drawButton(UI.attack, [28, 29, 30, 31], !!press.attack, glyphSword);
+  if (LV.outdoor && nearTrader()) talkBubble(UI.attack[0] + 14, UI.attack[1] - 20);   // round 42b: a tap here talks
+  drawStoryMark();
   SKILLS.forEach((sk, i) => {
     const fx = btnFx(i), dtu = 1 / 60;
     if (fx.cd > 0 && CD[sk.id] <= 0) fx.ready = 0.3;   // just came off cooldown
@@ -309,6 +311,7 @@ function drawHud() {
   }
   if (G.mode === 'inv') drawInventory();
   if (G.mode === 'skills') drawSkills();
+  if (G.mode === 'talk') drawTalk();
   if (G.paused) { fade(0.6); textC('PAUSED', W / 2, H * 0.4, 26, 2); textC('TAP TO RESUME', W / 2, H * 0.4 + 16, 25); }
   if (G.fade > 0) fade(G.fade);
   if (params.get('fps') === '1') text(`${fpsShown} FPS ${spriteBuilds} SPR`, 4, 20, 31);
@@ -405,6 +408,50 @@ function drawTitle() {
   }
   textC('LEFT THUMB MOVES. RIGHT BUTTONS FIGHT.', W / 2, H - 32, 25);
   textC('ALL ART IS DRAWN IN CODE', W / 2, H - 24, 24);
+}
+// round 42b: a small speech bubble (over the attack button when a tap would talk)
+function talkBubble(x, y) {
+  for (let b = -5; b <= 5; b++) for (let a = -8; a <= 8; a++) {
+    const e = (a * a) / 64 + (b * b) / 25; if (e > 1.12) continue;
+    put(x + a, y + b, e > 0.8 ? BLK : 27);
+  }
+  for (let k = 0; k < 3; k++) for (let a = 0; a <= 2 - k; a++) put(x - 4 + a - k, y + 5 + k, k === 2 - 0 ? BLK : 27);
+  for (const a of [-4, 0, 4]) { put(x + a, y, 3); put(x + a + 1, y, 3); }
+}
+// the person under a tap (their body on screen), for walking over to talk
+function npcAtScreen(p) {
+  let best = null, bd = 1e9;
+  for (const n of npcs) {
+    if (!TRADER_ROLES[n.role] || n.leaving !== undefined) continue;
+    const [x, y] = iso(n.fi, n.fj), sx = x - camX, sy = y - camY;
+    if (p[0] < sx - 12 || p[0] > sx + 12 || p[1] < sy - 46 || p[1] > sy + 6) continue;
+    const d = Math.hypot(p[0] - sx, p[1] - (sy - 20)); if (d < bd) { bd = d; best = n; }
+  }
+  return best;
+}
+// an arrowhead at the screen's edge pointing at an off-screen point (the stairs, the next goal)
+function edgeArrow(sx, sy, c0 = 51, c1 = 50) {
+  const X0 = 14, X1 = W - 14, Y0 = 40, Y1 = Math.round(H * 0.6);
+  if (sx > X0 && sx < X1 && sy > Y0 && sy < Y1) return false;
+  const cx = W / 2, cy = (Y0 + Y1) / 2, dx = sx - cx, dy = sy - cy;
+  const k = Math.min((dx > 0 ? X1 - cx : cx - X0) / Math.abs(dx || 1e-6), (dy > 0 ? Y1 - cy : cy - Y0) / Math.abs(dy || 1e-6));
+  const bob = Math.sin(G.t * 5) * 1.5, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
+  const ax = cx + dx * k - ux * bob, ay = cy + dy * k - uy * bob;
+  for (let b = -10; b <= 10; b++) for (let a = -10; a <= 10; a++) {
+    const f = a * ux + b * uy, g = -a * uy + b * ux;
+    if (f < -8 || f > 6) continue;
+    const half = (6 - f) * 0.5;
+    if (Math.abs(g) > half + 1) continue;
+    put(Math.round(ax + a), Math.round(ay + b), Math.abs(g) > half || f < -7 ? BLK : (g < 0 ? c0 : c1));
+  }
+  return true;
+}
+// the story's next goal: an arrow at the edge while it is off screen (white, so it is not the stairs' gold)
+function drawStoryMark() {
+  if (G.mode !== 'play' || hero.dead) return;
+  const t = storyTarget(); if (!t) return;
+  if (LV.stairs && !LV.outdoor && Math.hypot(t[0] - LV.stairs.i - 0.5, t[1] - LV.stairs.j - 0.5) < 0.6) return;   // the stairs' own arrow already points there
+  const [x, y] = iso(t[0], t[1]); edgeArrow(x - camX, y - camY - 16, 27, 26);
 }
 const budgetOff = () => { const s = buildBudget.ms; buildBudget.ms = Infinity; return s; };
 const budgetOn = s => { buildBudget.ms = s; };
@@ -542,6 +589,7 @@ cvs.addEventListener('pointerdown', e => {
   if (G.paused) { G.paused = false; last = performance.now(); return; }
   if (G.mode === 'title') { for (const b of UI.titleBtns || []) if (inRect(p, b)) { sfx('tap'); b.on(); } return; }
   if (G.mode === 'inv') { sfx('tap'); invTap(p); return; }
+  if (G.mode === 'talk') { talkTap(p); return; }
   if (G.mode === 'skills') { sfx('tap'); skillsTap(p); return; }
   if (hero.dead > 2) { respawn(); return; }
   if (hitCircle(p, UI.bag)) { G.mode = 'inv'; clearInput(); return; }
@@ -551,6 +599,7 @@ cvs.addEventListener('pointerdown', e => {
   if (hitCircle(p, UI.potion)) { drinkPotion(); return; }
   for (let i = 0; i < UI.skills.length; i++) if (hitCircle(p, UI.skills[i], 5)) { press.skill = i; useSkill(i); return; }
   if (ULTS[hero.cls] && hitCircle(p, UI.ult, 4)) { useUlt(); return; }
+  { const n = LV.outdoor && npcAtScreen(p); if (n) { hero.goTalk = n; hero.goTalkT = 6; return; } }   // round 42b: tap a person to walk over and talk
   if (hitCircle(p, UI.attack, 10) || (p[0] > W * 0.55 && p[1] > H * 0.3)) { press.attack = e.pointerId; input.attack = true; heroAttack(); capture(e); return; }
   if (p[0] < W * 0.55 && stick.id === null) { stick.id = e.pointerId; stick.ox = p[0]; stick.oy = p[1]; stick.x = p[0]; stick.y = p[1]; capture(e); }
 }, { passive: false });
@@ -572,6 +621,7 @@ addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   audioInit();
   if (k === 'n') setMuted(!SFX.muted);
+  if (G.mode === 'talk') { if (k === 'enter' || k === ' ' || k === 'j') { const L = talkLayout(); talkTap(L.btn ? [L.btn.x + 2, L.btn.y + 2] : [W / 2, 10]); } else if (G.talk && G.talk.reward && (k === '1' || k === '2' || k === '3')) talkTap([talkLayout().cards[+k - 1].x + 2, talkLayout().cards[+k - 1].y + 2]); e.preventDefault(); return; }
   if (G.mode === 'title' && (k === 'enter' || k === ' ')) { const c = TITLE.sel || 'warrior'; beginGame(!!loadSave(c), c); return; }
   if (G.mode === 'title' && (k === 'arrowleft' || k === 'arrowright')) { const L = ['warrior', 'mage', 'ranger'], n = L.indexOf(TITLE.sel || 'warrior'); titlePick(L[(n + (k === 'arrowleft' ? 2 : 1)) % 3]); return; }
   input.keys.add(k);

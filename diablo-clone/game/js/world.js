@@ -76,7 +76,7 @@ function genLevel(level, seed, side = null) {
   // reject and retry: each attempt has its own derived seed, so a seed always lands on the same
   // level; after 20 strict failures the checks on shape (not on reachability) are relaxed
   for (let attempt = 0; attempt < 30; attempt++) {
-    if (tryGen(LV.diff, (seed + attempt * 7919) >>> 0, attempt >= 20)) { LV.level = level; LV.seed = seed; LV.genAttempts = attempt + 1; return; }
+    if (tryGen(LV.diff, (seed + attempt * 7919) >>> 0, attempt >= 20)) { LV.level = level; LV.seed = seed; LV.genAttempts = attempt + 1; if (side) sideExtras(side); return; }
   }
   throw new Error('level generation failed');
 }
@@ -971,6 +971,12 @@ function buildWorld() {
       fires.push({ wx: tip2[0], wy: tip2[1] - 40 - 8, h: 14, w: 3.6, seed: d.i * 13 + d.j, tile: tIdx(d.i, d.j), ember: 0.03 });
       const g = d.face === 'L' ? iso(d.i + 0.5, d.j + 1.6) : iso(d.i + 1.6, d.j + 0.5);
       lights.push({ x: g[0], y: g[1], z: 48, r: 170, i: 1.0, seed: d.i * 3 + d.j });
+    } else if (d.kind === 'sacks') {   // round 42b: the cellar's sacks of bones
+      const [x, y] = iso(d.i + 0.5, d.j + 0.5);
+      props.push({ depth: d.i + d.j + 1, sp: PROPS.sacks(d.seed % 3), wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
+    } else if (d.kind === 'cage') {   // round 42b: Aldo's cage in the wolf den (open once he is free)
+      const [x, y] = iso(d.i + 0.5, d.j + 0.5);
+      dynProps.push({ kind: 'cage', i: d.i, j: d.j, depth: d.i + d.j + 1, wx: x, wy: y + 2, hp: 1, open: !!d.open, seed: 0, tile: tIdx(d.i, d.j) });
     } else if (d.kind === 'barrel' || d.kind === 'chest' || d.kind === 'egg') {
       const [x, y] = iso(d.i + 0.5, d.j + 0.5);
       dynProps.push({ kind: d.kind, i: d.i, j: d.j, depth: d.i + d.j + 1, wx: x, wy: y + (d.kind === 'barrel' ? 3 : 2), hp: d.kind === 'egg' ? EGG_HP : 1, hatch: 3 + (d.seed % 5), open: false, seed: d.seed, tile: tIdx(d.i, d.j) });
