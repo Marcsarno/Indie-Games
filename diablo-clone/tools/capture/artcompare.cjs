@@ -20,9 +20,9 @@ const { chromium } = require('playwright'); const fs = require('fs'), path = req
       const get = (e, d, clip, f) => { try { return getSprite(e.fam, e.look, d, clip, f, e, SPX); } catch (er) { return null; } };
       const urls = [];
       for (const id of ids) {
-        const e = makeEnemy(id, 10, 10, 1);
+        const e = makeEnemy(id, 10, 10, 1), m = MONSTERS[id], atk = m.ranged === 'arrow' ? 'shoot' : m.ranged ? 'cast' : 'attack';   // each monster's real attack clip
         const cells = [[1, 'idle', 0, 'front'], [0, 'idle', 0, 'fr-right'], [7, 'idle', 0, 'right'], [6, 'idle', 0, 'bk-right'], [5, 'idle', 0, 'back'], [3, 'idle', 0, 'fr-left'],
-          [0, 'walk', 1, 'walk'], [0, 'walk', 3, 'walk'], [0, 'attack', 1, 'wind-up'], [0, 'attack', 2, 'strike'], [1, 'hit', 0, 'hit'], [0, 'death', 5, 'dead']]
+          [0, 'walk', 1, 'walk'], [0, 'walk', 3, 'walk'], [0, atk, 1, 'wind-up'], [0, atk, 2, 'strike'], [1, 'hit', 0, 'hit'], [0, 'death', 5, 'dead']]
           .map(([d, clip, f, cap]) => ({ sp: get(e, d, clip, f), cap })).filter(c => c.sp);
         for (const c of cells) c.bx = box(c.sp);
         const up = Math.max(...cells.map(c => -c.bx.t)), down = Math.max(...cells.map(c => c.bx.b));

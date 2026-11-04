@@ -339,6 +339,23 @@ function fallenRig(look, st) {
     const lc = V.add(V.mad(J.pelvis, fwd, 2.2), V.mul(up, -2.2));   // a ragged flap that ends in a point
     r.box(lc, [0.45, 2.1, 2.4], M.LEATHER, lf);
     r.cone(V.add(lc, V.mul(up, -1.6)), V.add(V.mad(lc, up, -4.2), V.mul(fwd, 0.3)), 1.4, 0.3, M.LEATHER);
+    const spearling = !look.knife && !look.sling && !look.staff && !look.unarmed;
+    if (spearling) {   // art A3, the spearling: a leather pauldron on the right shoulder and a strap across the chest to the left hip
+      const pc = V.add(V.mad(J.shR, up, 0.9), V.mul(sideR, 0.6));
+      r.ell(pc, [2.0, 2.1, 1.4], M.LEATHER, lf);
+      r.sph(V.add(V.mad(pc, up, 0.7), V.mul(fwd, 1.5)), 0.55, M.IRON, { noShadow: true, bias: 1 });
+      const s0 = V.add(V.mad(J.chest, up, 2.4), V.mul(sideR, 2.0)), s1 = V.add(V.mad(J.pelvis, up, 1.2), V.mul(sideR, -2.6));
+      r.cone(V.mad(s0, fwd, 2.3), V.mad(s1, fwd, 2.6), 0.55, 0.55, M.LEATHER);
+      r.cone(V.mad(s0, fwd, -2.2), V.mad(s1, fwd, -2.2), 0.55, 0.55, M.LEATHER);
+    }
+    if (look.sling) {   // art A3, the slinger: a ragged leather capelet with a bone clasp, and a pouch of stones at the left hip
+      const cp = V.mad(J.chest, up, 2.8);
+      r.ell(cp, [3.2, 4.2, 1.9], M.LEATHER, lf);
+      r.sph(V.add(V.mad(cp, fwd, 3.1), V.mul(up, -0.3)), 0.7, M.BONE, { bias: 1 });
+      const pp = V.add(V.add(J.pelvis, V.mul(sideR, -3.6)), V.add(V.mul(up, -1.6), V.mul(fwd, 1.0)));
+      r.cyl(V.mad(pp, up, -1.4), V.mad(pp, up, 1.0), 2.3, M.LEATHER);
+      for (const [u, v] of [[-0.6, -0.5], [0.7, 0.2], [0, 0.8]]) r.sph(V.add(V.mad(pp, up, 1.2), V.add(V.mul(fwd, u), V.mul(sideR, v))), 0.95, M.STONE);
+    }
   } else {
     r.group(() => { r.ell(J.pelvis, [3.2, 3.6, 2.8], skin); r.ell(V.lerp(J.pelvis, J.chest, 0.6), [3.6, 4.0, 4.2], skin, frameAlong(fwd, up)); });
     r.box(V.add(V.mad(J.pelvis, fwd, 2.6), [0, 0, -1.6]), [0.5, 2.4, 2.6], M.LEATHER, frameAlong(fwd, [0, 0, 1]));
@@ -357,6 +374,26 @@ function fallenRig(look, st) {
     handR = V.add(V.add(J.shR, V.mul(fwd, 2 + sw.a * 2)), V.mul(up, -1 + sw.a * 4)); bd = V.norm([0.2, 0, 1]);
   } else {
     handR = V.add(V.add(J.shR, V.mul(fwd, 2.5 + J.swingArm * 1.5)), V.mul(up, -5)); bd = V.norm(V.add(V.mul(fwd, 0.35), up));
+  }
+  const idleish = st.clip !== 'attack' && st.clip !== 'shoot' && st.clip !== 'death';
+  if (imp && !look.knife && !look.sling && !look.staff && !look.unarmed && idleish) {
+    // the spearling's guard: the spear held low across the body in both hands, the point forward-left
+    handR = V.add(V.add(J.shR, V.mul(fwd, 3 + J.swingArm)), V.add(V.mul(up, -5.5), V.mul(sideR, 0.5)));
+    bd = V.norm(V.add(V.add(V.mul(fwd, 0.8), V.mul(up, 0.25)), V.mul(sideR, -0.55)));
+    handL = V.mad(handR, bd, 5);
+  }
+  if (look.knife && idleish) {   // the knifer: blade held low and forward, the off hand clawing
+    handR = V.add(V.add(J.shR, V.mul(fwd, 4 + J.swingArm)), V.add(V.mul(up, -4.5), V.mul(sideR, 0.6)));
+    bd = V.norm(V.add(V.mul(fwd, 1), V.mul(up, 0.35)));
+    handL = V.add(V.add(J.shL, V.mul(fwd, 2.5 - J.swingArm)), V.add(V.mul(up, -4.5), V.mul(sideR, -1.2)));
+  }
+  let slingA = -1;   // the slinger: the sling hangs from the right hand; to shoot it whirls overhead and lets fly forward
+  if (look.sling) {
+    if (st.clip === 'shoot' && sw) {
+      slingA = sw.a;
+      handR = sw.a > 0.9 && !sw.hit ? V.add(V.add(J.shR, V.mul(fwd, 0.5)), V.add(V.mul(up, 4.5), V.mul(sideR, 0.6))) : V.add(V.add(J.shR, V.mul(fwd, 5)), V.add(V.mul(up, 0.5 + sw.a), V.mul(sideR, 0.3)));
+    } else if (idleish) handR = V.add(V.add(J.shR, V.mul(fwd, 5 + J.swingArm)), V.add(V.mul(up, -2.5), V.mul(sideR, 1.6)));   // held out from the body so the sling hangs clear
+    if (idleish) handL = V.add(V.add(J.shL, V.mul(fwd, 2.5 - J.swingArm)), V.add(V.mul(up, -5), V.mul(sideR, -1.3)));
   }
   if (look.ember) {   // the off hand held out palm-up with a flame on it; thrust forward to cast
     const ca = st.clip === 'cast' && sw ? sw.a : 0;
@@ -378,6 +415,20 @@ function fallenRig(look, st) {
     const lp = V.add(V.mad(J.pelvis, sideR, -3.4), V.mul(fwd, 0.6));
     r.box(lp, [1.1, 1.1, 1.4], M.LAMP, null, { noShadow: true }); r.box(V.mad(lp, up, 1.8), [0.8, 0.8, 0.4], M.IRON);
   } else if (look.unarmed) { /* both hands free to clutch the sack */ }
+  else if (look.knife) {   // a short broad knife with a leather-wrapped grip
+    r.cone(V.mad(g, bd, -1.4), V.mad(g, bd, 0.8), 0.6, 0.6, M.LEATHER);
+    const kf = [bd, V.norm(V.cross(bd, up)), V.norm(V.cross(bd, V.cross(bd, up)))];
+    r.group(() => { r.box(V.mad(g, bd, 3.0), [2.2, 0.35, 1.0], M.STEEL, kf); r.cone(V.mad(g, bd, 5.0), V.mad(g, bd, 7.4), 1.0, 0.15, M.STEEL); });
+  } else if (look.sling) {   // two cords from the fist to a leather cup holding a stone
+    let cup;
+    if (slingA < 0) cup = V.add(V.mad(g, up, -4.4), V.add(V.mul(fwd, 2.6), V.mul(sideR, 1.2)));   // dangling ahead of the body, clear of it
+    else if (slingA > 0.9) cup = V.add(V.mad(g, up, 2.4), V.add(V.mul(fwd, -2.6), V.mul(sideR, 4.2)));   // whirling high beside the head
+    else cup = V.add(V.mad(g, fwd, 4.4), V.mul(up, 0.6));   // let fly
+    const sideC = V.norm(V.cross(V.norm(V.sub(cup, g)), fwd));
+    for (const sd of [-1, 1]) r.cone(g, V.mad(cup, sideC, sd * 1.0), 0.5, 0.5, M.LEATHER, { noShadow: true });
+    r.ell(cup, [1.6, 1.6, 1.1], M.LEATHER);
+    if (!(st.clip === 'shoot' && sw && sw.hit)) r.sph(V.mad(cup, up, 0.8), 1.35, M.STONE);
+  }
   else if (look.staff && look.ember) {
     // a crooked staff: it kinks twice on the way up and ends in a hook that cradles a glowing orb
     const s0 = V.mad(g, bd, -8.5), s1 = V.mad(g, bd, 6), s2 = V.add(V.mad(g, bd, 11), V.mul(fwd, -1)), s3 = V.add(V.mad(g, bd, 15.5), V.mul(fwd, 0.6));
@@ -466,25 +517,36 @@ function houndRig(look, st) {
   if (clip === 'hit') { lunge = -2; headDrop = -1.5; jaw = 0.6; }
   const H = 11;
   const back = [-4.5 + lunge, 0, H + bob], front = [5 + lunge, 0, H + 2.5 + bob];   // compact, front-heavy
+  // art A3 looks (set only on their own entries): plates (bone hound: bone plates down the back, a furred
+  // tail), ember (ember hound: glowing slashes on the flanks, dark lower legs), pale (wolf: light muzzle),
+  // mastiff (brigand mastiff: jowls, droopy ears, studded collar, curled tail)
+  const mid = V.lerp(back, front, 0.5);
+  const emberMf = look.ember ? { mf: p => { const q = V.sub(p, mid); if (Math.abs(q[1]) < 3.6 || q[2] < -1.5 || q[2] > 3.2) return 0; const u = q[0] + q[2] * 0.55; for (const c of [-2.2, 0, 2.2]) if (Math.abs(u - c) < 0.5) return M.FIREM; return 0; } } : undefined;
   r.group(() => {
     r.ell(back, [5.2, 5.0, 4.4], skin);
-    r.ell(V.lerp(back, front, 0.5), [5.6, 5.2, 4.6], skin);
+    r.ell(mid, [5.6, 5.2, 4.6], skin, null, emberMf);
     r.ell(front, [5.8, 6.2, 5.8], skin);
   });
   // bone ribs over the barrel of the body and a spiked spine (a wolf has fur instead)
-  const fur = !!look.wolf;
-  for (let i = 0; i < (fur ? 0 : 4); i++) {
+  const fur = !!look.wolf, bare = fur || look.plates || look.ember;   // bare: no ribs, spine or spikes
+  for (let i = 0; i < (bare ? 0 : 4); i++) {
     const x = front[0] - 1.5 - i * 2.2, z = H + 1.8 + bob - i * 0.3;
     for (const s of [-1, 1]) r.group(() => {
       r.cone([x, 0, z + 4.4], [x - 0.6, s * 5.0, z + 0.8], 0.8, 0.75, bone);
       r.cone([x - 0.6, s * 5.0, z + 0.8], [x + 0.4, s * 4.4, z - 2.6], 0.75, 0.6, bone);
     });
   }
-  if (!fur) r.cone(V.add(back, [-3, 0, 4.2]), V.add(front, [0, 0, 5]), 1.1, 1.2, bone);   // spine
-  for (let i = 0; i < (fur ? 0 : 5); i++) { const b = V.lerp(back, front, 0.05 + i * 0.22); const base = V.add(b, [0, 0, 4.6]); r.cone(base, V.add(base, [-2.4, 0, 3.6 - Math.abs(i - 2) * 0.6]), 1.1, 0.25, bone); }
+  if (!bare) r.cone(V.add(back, [-3, 0, 4.2]), V.add(front, [0, 0, 5]), 1.1, 1.2, bone);   // spine
+  if (look.plates) for (let i = 0; i < 4; i++) {   // four flat bone plates standing along the back, leaning back
+    const c = V.add(V.lerp(back, front, 0.05 + i * 0.26), [0, 0, 5.2 - Math.abs(i - 1.5) * 0.3]);
+    r.ell(c, [1.1, 3.4, 2.3], bone, frameAlong(V.norm([1, 0, 0.8]), [0, 0, 1]));
+  }
+  for (let i = 0; i < (bare ? 0 : 5); i++) { const b = V.lerp(back, front, 0.05 + i * 0.22); const base = V.add(b, [0, 0, 4.6]); r.cone(base, V.add(base, [-2.4, 0, 3.6 - Math.abs(i - 2) * 0.6]), 1.1, 0.25, bone); }
   // tail: bony and spiked
   const t0 = V.add(back, [-5, 0, 1.5]), t1 = V.add(t0, [-4, 0, 2 + Math.sin(ph) * 1.5]), t2 = V.add(t1, [-3, Math.cos(ph) * 1.2, -1]);
-  if (fur && look.bear) r.sph(V.add(back, [-5.5, 0, 2.5]), 1.8, skin);   // a bear's stub of a tail
+  if (look.mastiff) { const m1 = V.add(back, [-6.5, 0, 4]), m2 = V.add(back, [-5.5, 0, 7.2]); r.group(() => { r.cone(t0, m1, 1.8, 1.5, skin); r.cone(m1, m2, 1.5, 1.0, skin); }); }   // a thick tail curled up over the back
+  else if (fur && look.bear) r.sph(V.add(back, [-5.5, 0, 2.5]), 1.8, skin);   // a bear's stub of a tail
+  else if (look.plates || look.ember) r.group(() => { r.cone(t0, t1, 1.6, 2.1, skin); r.cone(t1, t2, 2.1, 0.6, skin, { mf: p => V.dot(V.sub(p, t1), V.sub(t2, t1)) > 6 ? M.CLOTH_WHITE : 0 }); });   // a furred tail with a pale tip
   else if (fur) r.group(() => { r.cone(t0, t1, 1.8, 2.2, skin); r.cone(t1, t2, 2.2, 0.6, skin, { mf: p => V.dot(V.sub(p, t1), V.sub(t2, t1)) > 6 ? M.CLOTH_WHITE : 0 }); });
   else r.group(() => { r.cone(t0, t1, 1.4, 1.0, skin); r.cone(t1, t2, 1.0, 0.5, bone); });
   // legs (trot: diagonal pairs move together); bone caps at the joints and bone claws
@@ -495,9 +557,10 @@ function houndRig(look, st) {
     let foot = [hip[0] - stride * Math.cos(p) + (fr > 0 ? 0.5 : -0.5), y * 1.15, moving ? 2.2 * Math.max(0, Math.sin(p)) : 0];
     if (clip === 'attack' && fr > 0) foot = [hip[0] + 2, y * 1.15, 0];
     const L = ik(hip, V.add(foot, [0, 0, 1]), 5.8, 5.8, [-fr, 0, 0]);
-    r.cone(hip, L.joint, 2.7, 2.0, skin); r.cone(L.joint, L.end, 2.0, 1.7, skin);
-    if (!fur) r.sph(L.joint, 1.8, bone);
-    r.ell(V.add(L.end, [1.2, 0, -0.4]), [2.6, 2.0, 1.1], skin);
+    const lk = look.mastiff ? 1.2 : 1, low = look.ember ? M.HIDE : skin;   // the mastiff is stocky; the ember hound's legs darken below the knee
+    r.cone(hip, L.joint, 2.7 * lk, 2.0 * lk, skin); r.cone(L.joint, L.end, 2.0 * lk, 1.7 * lk, low);
+    if (!bare) r.sph(L.joint, 1.8, bone);
+    r.ell(V.add(L.end, [1.2, 0, -0.4]), [2.6 * lk, 2.0 * lk, 1.1], low);
     for (const c of [-1, 0, 1]) r.cone(V.add(L.end, [3, c * 1.1, -0.5]), V.add(L.end, [4.8, c * 1.4, -1]), 0.55, 0.15, bone, { noShadow: true });
   }
   // neck, collar and scarf
@@ -506,9 +569,11 @@ function houndRig(look, st) {
   const hr0 = r.p.length;   // head parts are scaled up about the head center below
   r.cone(neck, hd, 3.4, 2.8, skin);
   const cc = V.lerp(neck, hd, 0.35);
-  if (!fur) r.ell(cc, [1.6, 4.4, 4.0], M.LEATHER, frameAlong(V.sub(hd, neck)));
-  if (!fur) for (const a of [-0.9, 0, 0.9]) r.sph(V.add(cc, [0.9, Math.sin(a) * 4.3, -Math.cos(a) * 3.6]), 0.9, M.GOLD, { noShadow: true });
-  if (fur) r.ell(V.add(front, [3.5, 0, 3]), [3.4, 5.4, 3.6], skin, null, { mf: p => p[2] < front[2] + 1 ? M.CLOTH_WHITE : 0 });   // a ruff of fur
+  if ((!fur && !look.ember) || look.mastiff) r.ell(cc, [1.6, 4.4, 4.0], M.LEATHER, frameAlong(V.sub(hd, neck)));
+  if (!fur && !look.ember) for (const a of [-0.9, 0, 0.9]) r.sph(V.add(cc, [0.9, Math.sin(a) * 4.3, -Math.cos(a) * 3.6]), 0.9, M.GOLD, { noShadow: true });
+  if (look.mastiff) for (const a of [-1.3, -0.45, 0.45, 1.3]) r.sph(V.add(cc, [0.9, Math.sin(a) * 4.4, -Math.cos(a) * 3.7]), 0.75, M.STEEL, { noShadow: true });   // studs
+  if (look.mastiff || look.ember) { /* no ruff, no scarf */ }
+  else if (fur) r.ell(V.add(front, [3.5, 0, 3]), [3.4, 5.4, 3.6], skin, null, { mf: p => p[2] < front[2] + 1 ? M.CLOTH_WHITE : 0 });   // a ruff of fur
   else r.group(() => {
     r.ell(V.add(front, [3.2, 0, 3.6]), [2.8, 5.0, 2.6], M.CLOTH_RED);
     for (const s of [-1, 1]) r.box(V.add(front, [2.6, s * 5.0, -0.4]), [1.4, 0.5, 2.6], M.CLOTH_RED, frameAlong([1, 0, 0], [0, -s * 0.25, 1]), { mf: p => p[2] < front[2] - 4 && hash(Math.round(p[0] * 1.5), 3, 1) < 0.5 ? M.MARK : 0 });
@@ -516,8 +581,15 @@ function houndRig(look, st) {
   // skull head: bone cranium and snout, dark socket with a red eye, jaw with teeth
   const hb = fur ? skin : bone;
   r.ell(hd, [3.8, 3.3, 3.1], hb, null, { mf: p => { const q = V.sub(p, hd); return q[0] > 1.2 && (Math.abs(q[1]) - 1.8) ** 2 + (q[2] - 0.7) ** 2 < 1.4 ? M.DARK : 0; } });
-  const snoutEnd = V.add(hd, [5.8, 0, -0.9]);
-  r.cone(V.add(hd, [1.5, 0, -0.3]), snoutEnd, 2.3, 1.5, hb, { mf: p => p[0] > snoutEnd[0] - 1 && Math.abs(p[1]) < 0.7 && p[2] > snoutEnd[2] ? M.DARK : 0 });
+  const snoutEnd = V.add(hd, look.mastiff ? [4.2, 0, -1.3] : [5.8, 0, -0.9]);
+  r.cone(V.add(hd, [1.5, 0, -0.3]), snoutEnd, look.mastiff ? 2.9 : 2.3, look.mastiff ? 2.3 : 1.5, hb, { mf: p => {
+    if (!look.mastiff && p[0] > snoutEnd[0] - 1 && Math.abs(p[1]) < 0.7 && p[2] > snoutEnd[2]) return M.DARK;
+    return look.pale && p[2] < snoutEnd[2] + 0.3 ? M.CLOTH_WHITE : 0;   // the wolf's pale muzzle
+  } });
+  if (look.mastiff) {   // heavy jowls hanging either side of the muzzle, and a big dark nose
+    for (const s of [-1, 1]) r.ell(V.add(hd, [3.2, s * 1.7, -2.4]), [1.9, 1.3, 1.6], skin);
+    r.ell(V.add(snoutEnd, [1.6, 0, 0.5]), [0.9, 1.3, 0.9], M.DARK, null, { bias: 1 });
+  }
   const jd = V.norm([Math.cos(jaw), 0, -Math.sin(jaw)]), j0 = V.add(hd, [0.8, 0, -2.2]);
   r.cone(j0, V.mad(j0, jd, 6), 1.6, 1.0, hb, { bias: -1 });
   r.box(V.lerp(j0, V.mad(j0, jd, 6), 0.55), [2.2, 1.1, 0.5], M.DARK, frameAlong(jd), { noShadow: true });
@@ -527,6 +599,7 @@ function houndRig(look, st) {
     // horns sweep back, then up and forward like a bull's
     if (fur && look.bear) { r.sph(V.add(hd, [-0.8, s * 2.4, 2.6]), 1.4, skin); continue; }   // round ears
     if (fur && look.boar) { r.cone(V.add(hd, [4.6, s * 1.4, -1.4]), V.add(hd, [5.4, s * 2.6, 1.2]), 0.8, 0.2, M.BONE, { noShadow: true }); r.cone(V.add(hd, [-0.6, s * 2.2, 1.6]), V.add(hd, [-1.4, s * 3.4, 3.4]), 1.3, 0.3, skin); continue; }   // tusks, small ears
+    if (look.mastiff) { r.cone(V.add(hd, [-0.4, s * 2.6, 1.8]), V.add(hd, [0.8, s * 3.6, -1.8]), 1.7, 1.1, skin); continue; }   // droopy ears
     if (fur) { r.cone(V.add(hd, [-0.8, s * 1.8, 2.2]), V.add(hd, [-1.6, s * 2.6, 6.4]), 1.6, 0.3, skin); continue; }   // pointed ears
     const a = V.add(hd, [-0.6, s * 2.2, 2]), b = V.add(hd, [-1.8, s * 4.8, 4.2]), c = V.add(hd, [0.6, s * 6.2, 6.8]), e = V.add(hd, [3.8, s * 5.6, 7.6]);
     r.group(() => { r.cone(a, b, 1.5, 1.3, bone); r.cone(b, c, 1.3, 0.9, bone); r.cone(c, e, 0.9, 0.3, bone); });
@@ -554,16 +627,33 @@ function ogreRig(look, st) {
     r.cone(hip, knee, 3.4, 3.0, skin); r.cone(knee, ank, 3.0, 2.6, skin);
     r.ell(V.add(ank, [2.2, 0, -0.8]), [3.8, 2.8, 1.6], M.LEATHER);
   }
-  r.group(() => {   // belly and chest as one mass
-    r.ell(V.mad(J.pelvis, up, 2), [6.4, 7.4, 6], skin);
-    r.ell(V.mad(J.chest, up, 0.6), [5.6, 8.2, 5.4], skin, frameAlong(fwd, up));
+  r.group(() => {   // belly and chest as one mass (the grunts: a slimmer belly under a broad chest, top-heavy)
+    r.ell(V.mad(J.pelvis, up, 2), look.grunt ? [5.6, 6.4, 5.6] : [6.4, 7.4, 6], skin);
+    r.ell(V.mad(J.chest, up, 0.6), look.grunt ? [5.8, 9.0, 5.8] : [5.6, 8.2, 5.4], skin, frameAlong(fwd, up));
   });
-  const belt = V.mad(J.pelvis, up, 0.5);
-  r.ell(belt, [6.8, 7.8, 1.5], M.LEATHER, frameAlong(fwd, up));
-  skullAt(r, V.mad(belt, fwd, 6.6), fwd, sideR, up, M.BONE, M.DARK, 0, 0.75);
-  r.box(V.add(V.mad(J.pelvis, fwd, 5.5), V.mul(up, -3.5)), [0.5, 3.6, 3.2], M.LEATHER, frameAlong(fwd, up));
-  r.cone(V.add(V.mad(J.chest, up, 4), V.mul(sideR, -6)), V.add(V.mad(J.pelvis, up, 1), V.mul(sideR, 5)), 1.0, 1.0, M.LEATHER);   // strap
-  for (const [sh, sd] of [[J.shL, -1], [J.shR, 1]]) {   // shoulder pads with spikes
+  const belt = V.mad(J.pelvis, up, 0.5), grunt = !!look.grunt, lf = frameAlong(fwd, up);
+  r.ell(belt, [6.8, 7.8, 1.5], M.LEATHER, lf);
+  if (grunt) {
+    // art A3, the ogre grunts (clubber, rockthrower, shieldbearer, enforcer): a square iron buckle and a
+    // ragged leather skirt to mid-thigh in place of the warlord's skull and apron
+    r.box(V.mad(belt, fwd, 6.9), [0.5, 1.5, 1.1], M.IRON, lf, { bias: 1 });
+    const sk = V.mad(J.pelvis, up, 0.4), hem = V.add(J.pelvis, [0, 0, -3.2]), ax = V.norm(V.sub(hem, sk)), Ls = V.len(V.sub(hem, sk));
+    r.cone(sk, hem, 6.9, 7.3, M.LEATHER, { mf: p => { const q = V.sub(p, sk), t = V.dot(q, ax), ang = Math.atan2(V.dot(q, sideR), V.dot(q, fwd)); return t > Ls - 1.1 + Math.abs(Math.sin(ang * 5)) * 1.0 ? M.HAIR : 0; } });   // torn hem in a darker leather
+    if (look.vest) {   // a sleeveless leather vest, open at the neck
+      const vc = V.mad(J.chest, up, 0.6);
+      r.ell(vc, [6.0, 8.6, 5.8], M.LEATHER, lf, { mf: p => { const q = V.sub(p, vc); return V.dot(q, fwd) > 3 && Math.abs(V.dot(q, sideR)) < 2.6 - (3.2 - V.dot(q, up)) * 0.45 && V.dot(q, up) > -1 ? M.OGRE : 0; } });
+    }
+  } else {
+    skullAt(r, V.mad(belt, fwd, 6.6), fwd, sideR, up, M.BONE, M.DARK, 0, 0.75);
+    r.box(V.add(V.mad(J.pelvis, fwd, 5.5), V.mul(up, -3.5)), [0.5, 3.6, 3.2], M.LEATHER, lf);
+  }
+  if (!grunt || look.rock) r.cone(V.add(V.mad(J.chest, up, 4), V.mul(sideR, -6)), V.add(V.mad(J.pelvis, up, 1), V.mul(sideR, 5)), 1.0, 1.0, M.LEATHER);   // strap
+  if (look.rock) {   // a bag of rocks at the right hip
+    const bg = V.add(V.add(J.pelvis, V.mul(sideR, 7.2)), V.add(V.mul(up, -0.6), V.mul(fwd, 1.5)));
+    r.ell(bg, [3.0, 2.4, 2.6], M.LEATHER);
+    for (const [u, v] of [[-1, 0], [0.8, 0.5], [0, -0.9]]) r.sph(V.add(V.mad(bg, up, 2.1), V.add(V.mul(fwd, u), V.mul(sideR, v))), 1.3, M.ROCK);
+  }
+  if (!grunt || look.pads) for (const [sh, sd] of [[J.shL, -1], [J.shR, 1]]) {   // shoulder pads with spikes
     const c = V.mad(sh, up, 1.2);
     r.ell(c, [4.2, 4.2, 3], M.LEATHER, frameAlong(fwd, up));
     r.cone(V.mad(c, up, 2), V.add(V.mad(c, up, 5.5), V.mul(sideR, sd * 1.5)), 1.2, 0.2, M.BONE);
@@ -572,20 +662,43 @@ function ogreRig(look, st) {
   const sw = atkIndex(st.clip) >= 0 ? st.key : null, list = sw ? SWINGS.heavy : null;
   const pivot = V.add(V.add(J.chest, V.mul(sideR, 3.5)), V.add(V.mul(up, 4), V.mul(fwd, 1)));
   const U = V.norm(V.add(V.mul(up, Math.cos(0.22)), V.mul(sideR, Math.sin(0.22)))), inPlane = a => V.norm(V.add(V.mul(fwd, Math.cos(a)), V.mul(U, Math.sin(a))));
-  let handR, bd;
-  if (sw) { handR = V.mad(pivot, inPlane(sw.a), (sw.r || 6.5) * 1.3); bd = inPlane(sw.a + (sw.ck || 0)); }
+  let handR, bd, rockAt = null;
+  if (look.rock) {   // the rockthrower: a rock held up beside the head; to throw, cocked back, then hurled forward
+    const a = st.clip === 'shoot' && st.key ? st.key.a : 0, hit = st.clip === 'shoot' && st.key && st.key.hit;
+    handR = hit || (st.clip === 'shoot' && a < 0.6) ? V.add(V.add(J.shR, V.mul(fwd, 8)), V.add(V.mul(up, 0.5), V.mul(sideR, -0.5)))
+      : V.add(V.add(J.shR, V.mul(fwd, 1 - a * 3)), V.add(V.mul(up, 3.5 + a * 1.5), V.mul(sideR, 1.2)));
+    bd = up;
+    if (!(st.clip === 'shoot' && (hit || a < 0.6)) && st.clip !== 'death') rockAt = V.mad(handR, up, 2.6);
+  } else if (sw) { handR = V.mad(pivot, inPlane(sw.a), (sw.r || 6.5) * 1.3); bd = inPlane(sw.a + (sw.ck || 0)); }
   else { handR = V.add(V.add(J.shR, V.mul(fwd, 3 + J.swingArm * 1.5)), V.add(V.mul(up, -9), V.mul(sideR, 3))); bd = V.norm(V.add(V.add(V.mul(fwd, 0.5), V.mul(up, 0.75)), V.mul(sideR, 0.3))); }
   if (st.clip === 'death') { handR = V.add(J.shR, [3, 3, -11]); bd = V.norm([1, 0.4, -0.6]); }
-  const handL = st.clip === 'death' ? V.add(J.shL, [2, -3, -10]) : V.add(V.add(J.shL, V.mul(fwd, 4 - J.swingArm * 2)), V.add(V.mul(up, -9), V.mul(sideR, -2)));
+  if (look.cleaver && !sw && st.clip !== 'death') bd = V.norm(V.add(V.mul(fwd, 0.55), V.mul(up, -0.7)));   // the enforcer: the cleaver hangs low, edge forward
+  let handL = st.clip === 'death' ? V.add(J.shL, [2, -3, -10]) : V.add(V.add(J.shL, V.mul(fwd, 4 - J.swingArm * 2)), V.add(V.mul(up, -9), V.mul(sideR, -2)));
+  if (look.plank && st.clip !== 'death') handL = V.add(V.add(J.shL, V.mul(fwd, 6)), V.add(V.mul(up, -5), V.mul(sideR, -0.5)));   // the shield held up in front
   for (const [sh, hand, s] of [[J.shR, handR, 1], [J.shL, handL, -1]]) {
     const a = armTo(J, sh, hand, B, s);
-    r.cone(sh, a.el, 2.8, 2.4, skin); r.cone(a.el, a.hand, 2.4, 2.2, skin); r.sph(a.hand, 2.7, skin);
-    r.cyl(V.lerp(a.el, a.hand, 0.3), V.lerp(a.el, a.hand, 0.7), 2.6, M.LEATHER);   // bracers
+    const ak = look.grunt ? 1.2 : 1;
+    if (look.grunt && !look.pads) r.ell(V.add(V.mad(sh, up, 0.8), V.mul(sideR, s * 0.8)), [3.9, 3.9, 3.6], skin, frameAlong(fwd, up));   // a great shoulder muscle
+    r.cone(sh, a.el, 2.8 * ak, 2.4 * ak, skin); r.cone(a.el, a.hand, 2.4 * ak, 2.2 * ak, skin); r.sph(a.hand, 2.7 * ak, skin);
+    if (!grunt || look.pads) r.cyl(V.lerp(a.el, a.hand, 0.3), V.lerp(a.el, a.hand, 0.7), 2.6, M.LEATHER);   // bracers
   }
-  // club: a thick haft swelling into a studded head
   const g = handR;
-  r.cone(V.mad(g, bd, -3), V.mad(g, bd, 12), 1.4, 3.4, M.WOOD);
-  for (let k = 0; k < 7; k++) { const a = k * 2.4, t = 7 + (k % 3) * 2, ax = V.norm(V.add(V.mul(V.cross(bd, up), Math.cos(a)), V.mul(V.cross(bd, V.norm(V.cross(bd, up))), Math.sin(a)))); const b = V.mad(V.mad(g, bd, t), ax, 2.8); r.cone(b, V.mad(b, ax, 2.4), 0.9, 0.2, M.IRON, { noShadow: true }); }
+  if (look.rock) { if (rockAt) r.sph(rockAt, 3.2, M.ROCK); }
+  else if (look.cleaver) {   // a heavy square cleaver: short wooden grip, a broad steel blade
+    r.cone(V.mad(g, bd, -2.5), V.mad(g, bd, 2.5), 1.0, 1.0, M.WOOD);
+    const side = V.norm(V.sub(fwd, V.mul(bd, V.dot(fwd, bd)))), cf = [bd, side, V.norm(V.cross(bd, side))];
+    r.box(V.add(V.mad(g, bd, 7), V.mul(side, 1.6)), [4.4, 3.4, 0.5], M.STEEL, cf);
+  } else if (grunt) {   // a rough log club, its cut end showing pale wood rings
+    const tip = V.mad(g, bd, 12);
+    r.cone(V.mad(g, bd, -3), tip, 1.5, 3.0, M.WOOD, { mf: p => V.dot(V.sub(p, tip), bd) > -0.2 ? M.PLANK : 0 });
+  }
+  if (look.plank) {   // a plank shield: upright boards with two iron bands, held on the left arm
+    const aL2 = armTo(J, J.shL, handL, B, -1), n = V.norm(V.add(V.mul(fwd, 0.9), V.mul(sideR, -0.4))), across = V.norm(V.cross(up, n)), c = V.add(V.mad(aL2.hand, n, 1.8), V.mul(up, 1));
+    r.box(c, [0.8, 4.8, 7.6], M.WOOD, [n, across, up], { mf: p => { const q = V.sub(p, c), u = V.dot(q, across), v = Math.abs(V.dot(q, up)); if (v > 4.2 && v < 5.6) return M.IRON; return Math.abs(((u + 4.8) % 2.4) - 1.2) > 1.05 ? M.DARK : 0; } });
+  }
+  // club: a thick haft swelling into a studded head (the warlord)
+  if (!grunt) r.cone(V.mad(g, bd, -3), V.mad(g, bd, 12), 1.4, 3.4, M.WOOD);
+  if (!grunt) for (let k = 0; k < 7; k++) { const a = k * 2.4, t = 7 + (k % 3) * 2, ax = V.norm(V.add(V.mul(V.cross(bd, up), Math.cos(a)), V.mul(V.cross(bd, V.norm(V.cross(bd, up))), Math.sin(a)))); const b = V.mad(V.mad(g, bd, t), ax, 2.8); r.cone(b, V.mad(b, ax, 2.4), 0.9, 0.2, M.IRON, { noShadow: true }); }
   if (sw && sw.smear && st.prev) smearArc(r, pivot, fwd, U, st.prev.a + (st.prev.ck || 0), sw.a + (sw.ck || 0), 8, 22);
   // head: big, a heavy brow over small yellow eyes, an underbite with two tusks, a top-knot
   const hd = J.head, h0 = r.p.length;
@@ -597,7 +710,12 @@ function ogreRig(look, st) {
     r.cone(V.add(V.mad(hd, up, 0.6), V.mul(sideR, s * 4.2)), V.add(V.add(V.mad(hd, up, 1.6), V.mul(sideR, s * 6.6)), V.mul(fwd, -1)), 1.4, 0.3, skin);   // ears
   }
   r.cone(V.add(V.mad(hd, up, 3.6), V.mul(fwd, -1)), V.add(V.mad(hd, up, 8), V.mul(fwd, -3)), 1.6, 0.4, M.HAIR);   // top-knot
-  bigHead(r, h0, hd, 1.2);
+  if (look.helm) {   // the shieldbearer's iron kettle helm, the top-knot poking through
+    const hc = V.add(V.mad(hd, up, 2.6), V.mul(fwd, -0.3));
+    r.ell(hc, [4.9, 5.1, 2.9], M.IRON, frameAlong(fwd, up));
+    r.cyl(V.mad(hc, up, -0.9), V.mad(hc, up, -0.4), 6.0, M.IRON);
+  }
+  bigHead(r, h0, hd, look.grunt ? 1.4 : 1.2);   // the grunts' heads are bigger, as the concepts draw them
   if (st.clip === 'death') deathTip(r, B, st.f, -1);
   if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
   return r;
@@ -816,7 +934,7 @@ function spiderRig(look, st) {
 const FAMILIES = {
   hero: { size: [72, 72, 36, 60], rig: heroRig, swing: e => weaponSwing(e.look), combo: (e, k) => weaponSwing(e.look, k) },
   skeleton: { size: [72, 78, 36, 55], gait: gaitFrameTiles(SKEL_B, 1.1), rig: skeletonRig, swing: e => e.look.weapon === 'bow' || e.look.weapon === 'crossbow' ? SWINGS.bow : e.look.lich ? SWINGS.cast : FEEL_OLD ? SWINGS.light : MON_SWINGS.chop },
-  fallen: { size: [52, 48, 26, 40], gait: gaitFrameTiles(FALLEN_B), rig: fallenRig, swing: e => e.look.staff ? SWINGS.cast : FEEL_OLD ? SWINGS.claw : MON_SWINGS.pounce },
+  fallen: { size: [52, 48, 26, 40], gait: gaitFrameTiles(FALLEN_B), rig: fallenRig, swing: e => e.look.staff ? SWINGS.cast : e.look.sling ? SWINGS.bow : FEEL_OLD ? SWINGS.claw : MON_SWINGS.pounce },
   hound: { size: [80, 64, 38, 50], rig: houndRig, swing: () => FEEL_OLD ? SWINGS.bite : MON_SWINGS.lunge },
   spider: { size: [80, 60, 40, 46], rig: spiderRig, swing: () => FEEL_OLD ? SWINGS.bite : MON_SWINGS.rear },
   chicken: { size: [28, 28, 14, 22], rig: chickenRig, swing: () => SWINGS.bite },
@@ -826,7 +944,7 @@ const FAMILIES = {
   shroom: { size: [44, 48, 22, 36], gait: gaitFrameTiles(SHROOM_B), rig: shroomRig, swing: () => SWINGS.claw },
   wraith: { size: [56, 60, 28, 46], gait: 0.2, rig: wraithRig, swing: () => SWINGS.claw },
   treant: { size: [150, 160, 75, 132], gait: gaitFrameTiles(TREANT_B, 1.4), rig: treantRig, swing: () => SWINGS.heavy },
-  ogre: { size: [140, 140, 70, 112], gait: gaitFrameTiles(OGRE_B, 1.5), rig: ogreRig, swing: () => SWINGS.heavy },
+  ogre: { size: [140, 140, 70, 112], gait: gaitFrameTiles(OGRE_B, 1.5), rig: ogreRig, swing: e => e.look.rock ? SWINGS.bow : SWINGS.heavy },
 };
 // Variants: same family, different look and stats. `kind` is what the roster ledger counts.
 const MONSTERS = {
@@ -839,12 +957,22 @@ const MONSTERS = {
   tombguard: { family: 'skeleton', name: 'TOMB GUARD', minLevel: 99, look: { weapon: 'mace', chunky: true, helm: 'kettle', pauldron: 'both', breastplate: true, towerShield: true, rag: M.CLOTH_RED }, hp: 26, dmg: [4, 7], speed: 22, reach: 1.3, xp: 24, chest: 22, shadow: 8 },
   archer: { family: 'skeleton', name: 'SKELETON ARCHER', look: { weapon: 'bow', bone: M.OLDBONE }, hp: 10, dmg: [2, 4], speed: 24, reach: 6.5, ranged: 'arrow', xp: 14, chest: 22, shadow: 7 },
   burning: { family: 'skeleton', name: 'BURNING DEAD', look: { weapon: 'sword', shield: false, helm: true, burn: true, bone: M.OLDBONE, eye: M.FIREM }, hp: 24, dmg: [4, 8], speed: 30, reach: 1.25, xp: 30, chest: 22, shadow: 7, minLevel: 2 },
+  // art A3 (imps from the user's front/back concepts): minLevel 99 keeps them out of the spawn pools until
+  // the main chat sets levels and stats (placeholders here). The slinger shoots 'arrow' until a stone exists.
+  knifer: { family: 'fallen', name: 'FALLEN KNIFER', minLevel: 99, look: { knife: true }, hp: 6, dmg: [1, 4], speed: 44, reach: 1.1, xp: 6, chest: 12, shadow: 5, pack: true },
+  slinger: { family: 'fallen', name: 'FALLEN SLINGER', minLevel: 99, look: { sling: true }, hp: 6, dmg: [1, 3], speed: 36, reach: 6, ranged: 'arrow', xp: 8, chest: 12, shadow: 5, pack: true },
   fallen: { family: 'fallen', name: 'FALLEN ONE', look: {}, hp: 7, dmg: [1, 3], speed: 40, reach: 1.15, xp: 6, chest: 12, shadow: 5, pack: true },
   shaman: { family: 'fallen', name: 'FALLEN SHAMAN', look: { staff: true, hood: true, ember: true }, hp: 9, dmg: [3, 6], speed: 28, reach: 6, ranged: 'firebolt', leader: true, xp: 16, chest: 12, shadow: 5 },
-  hound: { family: 'hound', name: 'BONE HOUND', look: {}, hp: 16, dmg: [3, 6], speed: 52, reach: 1.35, xp: 18, chest: 12, shadow: 10 },
+  hound: { family: 'hound', name: 'BONE HOUND', look: { plates: true }, hp: 16, dmg: [3, 6], speed: 52, reach: 1.35, xp: 18, chest: 12, shadow: 10 },
   lich: { family: 'skeleton', name: 'THE LICH', title: 'WHO DIED AND WOULD NOT STAY DEAD', look: { lich: true, eye: M.EYE_GRN, bone: M.OLDBONE, scale: 1.6, size: [124, 140, 62, 112] }, hp: 260, dmg: [8, 14], speed: 22, reach: 7, ranged: 'frostbolt', xp: 400, chest: 46, shadow: 11, unique: true, boss: 'lich', minLevel: 99 },
   skelking: { family: 'skeleton', name: 'SKELETON KING', title: 'LORD OF THE RESTLESS DEAD', look: { weapon: 'sword', shield: false, armored: true, crown: true, eye: M.FIREM, scale: 1.6, size: [124, 132, 62, 104] }, hp: 170, dmg: [9, 16], speed: 24, reach: 1.9, xp: 200, chest: 42, shadow: 11, unique: true, boss: 'king', minLevel: 99 },
   treant: { family: 'treant', name: 'TREANT ELDER', title: 'THE WOOD THAT WALKS', minLevel: 99, look: { scale: 1.4 }, hp: 170, dmg: [8, 14], speed: 18, reach: 2.3, xp: 190, chest: 54, shadow: 14, unique: true, boss: 'slam', minions: ['shroom', 'sporecap'], calls: 'THE ELDER WAKES THE MUSHROOMS' },
+  // art A3: ogre grunts from the user's front/back concepts (minLevel 99: out of the spawn pools until the
+  // main chat sets levels and stats; these are placeholders). The rockthrower shoots 'arrow' until a rock exists.
+  oclubber: { family: 'ogre', name: 'OGRE CLUBBER', minLevel: 99, look: { grunt: true, scale: 1.05 }, hp: 40, dmg: [6, 11], speed: 24, reach: 1.7, xp: 45, chest: 32, shadow: 10, where: 'out' },
+  orockthrower: { family: 'ogre', name: 'OGRE ROCKTHROWER', minLevel: 99, look: { grunt: true, rock: true, vest: true, scale: 1.05 }, hp: 34, dmg: [5, 10], speed: 22, reach: 6, ranged: 'arrow', xp: 45, chest: 32, shadow: 10, where: 'out' },
+  oshield: { family: 'ogre', name: 'OGRE SHIELDBEARER', minLevel: 99, look: { grunt: true, vest: true, helm: true, plank: true, scale: 1.05 }, hp: 60, dmg: [5, 9], speed: 20, reach: 1.7, xp: 55, chest: 32, shadow: 10, where: 'out' },
+  oenforcer: { family: 'ogre', name: 'OGRE ENFORCER', minLevel: 99, look: { grunt: true, pads: true, cleaver: true, scale: 1.05 }, hp: 50, dmg: [8, 13], speed: 24, reach: 1.7, xp: 60, chest: 32, shadow: 10, where: 'out' },
   warlord: { family: 'ogre', name: 'OGRE WARLORD', title: 'TYRANT OF THE DEEP WOODS', minLevel: 99, look: { scale: 1.5 }, hp: 140, dmg: [8, 14], speed: 22, reach: 2.1, xp: 160, chest: 46, shadow: 13, unique: true, boss: 'slam' },
   shroom: { family: 'shroom', name: 'SHROOMLING', look: {}, hp: 10, dmg: [2, 4], speed: 26, reach: 1.1, xp: 9, chest: 14, shadow: 5, pack: true, where: 'out' },
   sporecap: { family: 'shroom', name: 'SPORECAP', look: { purple: true }, hp: 16, dmg: [3, 6], speed: 24, reach: 1.15, xp: 16, chest: 14, shadow: 5, where: 'out', minLevel: 2 },
@@ -857,14 +985,16 @@ const MONSTERS = {
   gchief: { family: 'fallen', name: 'GOBLIN CHIEFTAIN', look: { skin: M.GOBLIN, goblin: true, chief: true, scale: 1.45, size: [76, 70, 38, 58] }, hp: 60, dmg: [5, 10], speed: 32, reach: 1.5, leader: true, xp: 70, chest: 22, shadow: 7, where: 'out', elite: true },
   gshaman: { family: 'fallen', name: 'GOBLIN SHAMAN', look: { skin: M.GOBLIN, goblin: true, staff: true }, hp: 9, dmg: [3, 6], speed: 30, reach: 6, ranged: 'firebolt', leader: true, xp: 16, chest: 12, shadow: 5, where: 'out' },
   brigand: { family: 'hero', name: 'BRIGAND', look: { team: 'tan', helm: 'cap', chest: 'chain', weapon: 'axe', shield: 'none', hair: 'brown', cape: 'red' }, hp: 22, dmg: [3, 7], speed: 30, reach: 1.35, xp: 24, chest: 18, shadow: 7, where: 'out' },
-  wolf: { family: 'hound', name: 'WOLF', look: { skin: M.FUR, eye: M.EYE_YEL, wolf: true }, hp: 14, dmg: [2, 5], speed: 54, reach: 1.35, xp: 15, chest: 12, shadow: 10, pack: true, where: 'out' },
+  // art A3: the brigand mastiff (new; minLevel 99 keeps it out of the spawn pools; stats are placeholders)
+  mastiff: { family: 'hound', name: 'BRIGAND MASTIFF', minLevel: 99, look: { skin: M.BOAR, eye: M.EYE_YEL, wolf: true, mastiff: true, scale: 1.12 }, hp: 24, dmg: [3, 7], speed: 44, reach: 1.35, xp: 22, chest: 13, shadow: 11, where: 'out' },
+  wolf: { family: 'hound', name: 'WOLF', look: { skin: M.FUR, eye: M.EYE_YEL, wolf: true, pale: true }, hp: 14, dmg: [2, 5], speed: 54, reach: 1.35, xp: 15, chest: 12, shadow: 10, pack: true, where: 'out' },
   // round 26: the diggers of the old mine: hunched, snouted, in a dented iron cap, swinging a pick, a lamp at the belt
   digger: { family: 'fallen', name: 'DIGGER', look: { skin: M.LEATHER, digger: true }, hp: 10, dmg: [2, 4], speed: 36, reach: 1.25, xp: 9, chest: 12, shadow: 5, pack: true, where: 'out' },
   // round 26 side-area leaders
   alpha: { family: 'hound', name: 'THE ALPHA', look: { skin: M.HIDE, eye: M.EYE_RED, wolf: true, scale: 1.45, size: [100, 84, 50, 62] }, hp: 70, dmg: [5, 9], speed: 50, reach: 1.6, xp: 80, chest: 14, shadow: 12, elite: true, leader: true, where: 'out' },
   banditchief: { family: 'hero', name: 'BANDIT CHIEF', look: { team: 'red', helm: 'horned', chest: 'brigandine', weapon: 'axe', shield: 'round', hair: 'brown', cape: 'red' }, hp: 80, dmg: [5, 10], speed: 30, reach: 1.4, xp: 90, chest: 24, shadow: 8, elite: true, leader: true, where: 'out' },
   goblin: { family: 'fallen', name: 'GOBLIN', look: { skin: M.GOBLIN, goblin: true }, hp: 9, dmg: [2, 4], speed: 38, reach: 1.15, xp: 8, chest: 12, shadow: 5, pack: true, where: 'out' },
-  ghoulhound: { family: 'hound', name: 'HELL HOUND', look: { skin: M.FLESH, bone: M.OLDBONE, eye: M.FIREM, scale: 1.15 }, hp: 28, dmg: [5, 9], speed: 50, reach: 1.45, xp: 34, chest: 13, shadow: 11, minLevel: 2 },
+  ghoulhound: { family: 'hound', name: 'HELL HOUND', look: { skin: M.FLESH, bone: M.OLDBONE, eye: M.FIREM, scale: 1.15, ember: true }, hp: 28, dmg: [5, 9], speed: 50, reach: 1.45, xp: 34, chest: 13, shadow: 11, minLevel: 2 },
   spider: { family: 'spider', name: 'CAVE SPIDER', look: { scale: 0.8 }, hp: 10, dmg: [2, 4], speed: 46, reach: 1.3, xp: 10, chest: 8, shadow: 11, pack: true },
   broodmother: { family: 'spider', name: 'BROODMOTHER', title: 'MOTHER OF A THOUSAND LEGS', look: { brood: true, scale: 1.15, size: [128, 84, 64, 60] }, hp: 60, dmg: [6, 12], speed: 34, reach: 1.9, xp: 90, chest: 12, shadow: 17, minLevel: 3, unique: true },
 };

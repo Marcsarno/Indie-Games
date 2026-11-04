@@ -45,3 +45,23 @@ Review: 3 passes (pass 1 armor too pale and the axeman's helm a square bucket; p
 went near-black and lost the floor, so pass 1's color was kept; pass 3 SLATE won both orders).
 Spearman and axeman use the skeletons' overhead chop; a thrust and a two-handed swing are possible follow-ups.
 All 25 pre-existing monsters except the four changed in A1 still render pixel-identical; crossbow aim frames don't clip.
+
+## A3: imps, hounds and ogres from front/back concepts (2026-11-04)
+Review page: https://claude.ai/artifact/PkRXomggM975jbhcagyGTL (source and images in `art/review/a3-hounds-ogres-imps/`).
+**For the main chat:** seven new MONSTERS entries with `minLevel: 99` (no spawn pool yet; stats are
+placeholders), and look changes on four existing entries. Two new ranged monsters shoot `'arrow'` until a
+stone/rock projectile exists: `slinger` and `orockthrower`.
+
+| Id (name) | Kind | Where / look | Review |
+|---|---|---|---|
+| `fallen` (FALLEN ONE = Spearling) | refined | `fallenRig`: plain imps (no knife/sling/staff/unarmed) get a leather pauldron and chest strap, and hold the spear low across the body in both hands when not attacking | 2 passes |
+| `knifer` (FALLEN KNIFER) | new | `look: { knife }`: short broad knife held low, off hand clawing; pounce attack | 2 passes |
+| `slinger` (FALLEN SLINGER) | new | `look: { sling }`: capelet, stone pouch, sling; FAMILIES.fallen swing maps `sling` to SWINGS.bow (shoot clip whirls then lets fly) | 3 passes; weakest of the round (a sling is thin at this size) |
+| `wolf` (WOLF = Grey Pack Hunter) | refined | `look.pale`: pale muzzle (the Alpha does not get it) | 1 pass |
+| `hound` (BONE HOUND) | refined | `look.plates`: four flat bone plates down the back replace ribs, spine and spikes; furred pale-tipped tail | 1 pass |
+| `ghoulhound` (HELL HOUND = Ember Hound) | refined | `look.ember`: glowing slashes on the flanks, dark lower legs, furred tail, no ribs/scarf/collar | 1 pass |
+| `mastiff` (BRIGAND MASTIFF) | new | `look: { skin: BOAR, wolf, mastiff, scale 1.12 }`: stocky legs, droopy ears, short muzzle with jowls and nose, studded collar, curled tail | 2 passes |
+| `oclubber`, `orockthrower`, `oshield`, `oenforcer` (OGRE CLUBBER / ROCKTHROWER / SHIELDBEARER / ENFORCER) | new | `ogreRig`, `look.grunt` plus `rock`, `vest`, `helm`, `plank`, `pads`, `cleaver`: iron buckle, torn skirt, slimmer belly, bigger shoulders, arms and head (the Warlord unchanged). FAMILIES.ogre swing maps `rock` to SWINGS.bow | 3 passes |
+
+All monsters outside this list render pixel-identical to before A3 (Warlord, Alpha, Bear and Boar
+included); no new monster clips its sprite box in any frame. Progress page updated (18 done).
