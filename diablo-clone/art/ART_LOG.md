@@ -122,3 +122,8 @@ unchanged. The Brigand (cap) and Bandit Chief (horned) wear these helms and chan
 monster renders pixel-identical. No hero frame clips (296 frames per helm: idle, walk, atk1-3, hit, death x 8).
 3 passes, each won both orders (pass 3 restored a little horn length so the horns read at 1x).
 New tool options: `tools/capture/heroparts.cjs <outDir> [zoom] [gameDir] [helm,chest]`.
+- **A5 round 2** (the user asked for more): closed shells made upright and narrower ([4.5, 4.2, 5.4] / barbute
+  [4.45, 4.15, 5.3], centre up 0.1) like the mock-up; a bigger STEEL face plate [1.0, 3.4, 2.7] with three bold slots;
+  a bold barbute T; breathing holes on the bascinet snout; horned helm in M.SLATE; bolder crown circlet and points.
+  A BLADE (bright) face plate was tried and reverted (it renders cream like the sword). Still no clipping in 2072
+  hero frames; all monsters other than the Brigand and Bandit Chief unchanged.
