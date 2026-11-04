@@ -1821,19 +1821,27 @@ function lightPass(chars, kx, ky) {
   for (let y = 0; y < H; y++) {
     const wy = camY + y, o0 = y * W;
     if (wy < 0 || wy >= WH) { lbuf.fill(0, o0, o0 + W); continue; }
-    const row = wy * WW + camX;
-    for (let x = 0; x < W; x++) { const wx = camX + x; lbuf[o0 + x] = amb + ((wx >= 0 && wx < WW) ? A[row + x] * f0 + B[row + x] * f1 : 0); }
+    const row = wy * WW + camX, xa = Math.max(0, -camX), xb = Math.min(W, WW - camX);   // (round 57: the world's edges worked out once per row)
+    for (let x = 0; x < xa; x++) lbuf[o0 + x] = amb;
+    for (let x = xa; x < xb; x++) lbuf[o0 + x] = amb + A[row + x] * f0 + B[row + x] * f1;
+    for (let x = Math.max(xa, xb); x < W; x++) lbuf[o0 + x] = amb;
   }
   for (const L of dyn) {
     const lx = L.x - camX, ly = L.y - camY, r = L.r, r2 = r * r, li = L.i;
     const X0 = Math.max(0, Math.floor(lx - r) & ~1), X1 = Math.min(W, Math.ceil(lx + r)), Y0 = Math.max(0, Math.floor(ly - r / 2 - ZMAX) & ~1), Y1 = Math.min(H, Math.ceil(ly + r / 2));
     const lp = (x, y, z) => { const dx = x - lx, dy = (y + z - ly) * 2, dz = z - L.z, d2 = dx * dx + dy * dy + dz * dz; if (d2 >= r2) return 0; const f = 1 - d2 / r2; return f * f * li; };
-    for (let y = Y0; y < Y1 - 1; y += 2) for (let x = X0; x < X1 - 1; x += 2) {
-      const o = y * W + x, o2 = o + W, za = zbuf[o], zb = zbuf[o + 1], zc = zbuf[o2], zd = zbuf[o2 + 1];
-      if (Math.max(za, zb, zc, zd) - Math.min(za, zb, zc, zd) <= 6) {
-        const l = lp(x + 0.5, y + 0.5, (za + zb + zc + zd) >> 2);
-        if (l) { lbuf[o] += l; lbuf[o + 1] += l; lbuf[o2] += l; lbuf[o2 + 1] += l; }
-      } else { lbuf[o] += lp(x, y, za); lbuf[o + 1] += lp(x + 1, y, zb); lbuf[o2] += lp(x, y + 1, zc); lbuf[o2 + 1] += lp(x + 1, y + 1, zd); }
+    const lz = L.z, ir2 = 1 / r2;
+    for (let y = Y0; y < Y1 - 1; y += 2) {
+      const yc = y + 0.5 - ly;
+      for (let x = X0; x < X1 - 1; x += 2) {
+        const o = y * W + x, o2 = o + W, za = zbuf[o], zb = zbuf[o + 1], zc = zbuf[o2], zd = zbuf[o2 + 1];
+        const zmx = za > zb ? (za > zc ? (za > zd ? za : zd) : (zc > zd ? zc : zd)) : (zb > zc ? (zb > zd ? zb : zd) : (zc > zd ? zc : zd));
+        const zmn = za < zb ? (za < zc ? (za < zd ? za : zd) : (zc < zd ? zc : zd)) : (zb < zc ? (zb < zd ? zb : zd) : (zc < zd ? zc : zd));
+        if (zmx - zmn <= 6) {   // (round 57: the flat-block case inlined, no function call or Math.max/min)
+          const z = (za + zb + zc + zd) >> 2, dx = x + 0.5 - lx, dy = (yc + z) * 2, dz = z - lz, d2 = dx * dx + dy * dy + dz * dz;
+          if (d2 < r2) { const f = 1 - d2 * ir2, l = f * f * li; lbuf[o] += l; lbuf[o + 1] += l; lbuf[o2] += l; lbuf[o2 + 1] += l; }
+        } else { lbuf[o] += lp(x, y, za); lbuf[o + 1] += lp(x + 1, y, zb); lbuf[o2] += lp(x, y + 1, zc); lbuf[o2 + 1] += lp(x + 1, y + 1, zd); }
+      }
     }
   }
   const charLevel = chars.map(c => {
@@ -1845,6 +1853,26 @@ function lightPass(chars, kx, ky) {
   const vis = LV.vis, seen = LV.seen, black = PAL32[BLK], top = (LEVELS - 1) * NPAL;
   const cl = charLevel.map(L => L * NPAL);
 
+  if (!VIEW_FOG) {   // round 57: the usual case, kept lean (no fog reads; the tone curve and AO as one lookup; edges per row)
+    const outd = LV.outdoor, TL = LEVELS - 1;
+    for (let y = 0, o = 0; y < H; y++) {
+      const by = (y & 3) << 2, wy = camY + y, aoRow = nl && wy >= 0 && wy < WH ? wy * WW + camX : -1, xa = Math.max(0, -camX), xb = Math.min(W, WW - camX);
+      for (let x = 0; x < W; x++, o++) {
+        const v = scr[o];
+        if (v === BLK) { levB[o] = 255; out32[o] = black; continue; }
+        if (!outd && tbuf[o] < 0) { levB[o] = 255; out32[o] = black; continue; }
+        const ci = cid[o];
+        if (ci) { levB[o] = 255; out32[o] = (v & EMIS) ? PAL32[CYCLE[v & 127]] : LCOL[cl[ci - 1] + v]; continue; }
+        let lr = shd[o] ? lbuf[o] * 0.4 : lbuf[o];
+        if (aoRow >= 0 && x >= xa && x < xb) lr *= AO[aoRow + x] * (1 / 255);
+        const n = (lr * 320) | 0, l = (nl ? TONE[n < 1023 ? n : 1023] : lr * BANDS) + BAYER[by | (x & 3)];
+        const L = (l | 0) < TL ? (l | 0) : TL;
+        levB[o] = L;
+        out32[o] = (v & EMIS) ? PAL32[CYCLE[v & 127]] : LCOL[L * NPAL + v];
+      }
+    }
+    return charLevel;
+  }
   for (let y = 0, o = 0; y < H; y++) {
     const by = (y & 3) << 2, wy = camY + y, aoRow = nl && wy >= 0 && wy < WH ? wy * WW + camX : -1;
     for (let x = 0; x < W; x++, o++) {

@@ -131,7 +131,7 @@ function syncLightTables(outdoor) { const v = DL48 && !outdoor; if (v !== DLT) {
 // torch pools keep their shading and their edge.
 const TONE = new Float32Array(1024);
 for (let n = 0; n < 1024; n++) { const lv = n / 64; TONE[n] = lv < 1.5 ? 1.35 + lv * 0.1 : lv <= 3 ? lv : 3 + 2.3 * (1 - Math.exp(-(lv - 3) / 2.3)); }
-const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => v / 16);
+const BAYER = Float32Array.from([0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5], v => v / 16);   // (round 57: typed, for the light pass)
 
 // ---------------------------------------------------------------- random
 function hash(a, b, c = 0) {
