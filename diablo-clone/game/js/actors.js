@@ -445,6 +445,86 @@ function setHead(r, eq, hd, fwd, up, sideR, helmF) {
   if (eq.set === 'magus' && eq.helm === 'hat') r.sph(V.add(V.mad(hd, up, 12), V.mul(fwd, -4.6)), 1.4, M.GOLD, { noShadow: true });
 }
 const GEAR_EXTRA = { helm: {}, chest: {}, weapon: {} }, GEAR_SWING = {}, GEAR_LEN = {};
+// art A6: the warrior's seven armor sets (art/concepts/heroes/warrior-sets.png). Each chest look is
+// drawn as an existing one (base) and then retouched by warriorSet(): parts recolored, the belt
+// and skirt redrawn, and trims, straps, sashes and tabards added. Teal has no cloth: WATERM.
+const WARRIOR_SETS = {
+  militia: { base: 'tunic' }, ironguard: { base: 'plate' }, warbringer: { base: 'darkplate' }, vanguard: { base: 'plate' },
+  crownguard: { base: 'plate' }, borderwarden: { base: 'brigandine' }, steelknight: { base: 'plate' },
+};
+function warriorSet(r, id, J) {
+  const { fwd, up, sideR } = J, P = r.p, base = WARRIOR_SETS[id].base, plate = base !== 'tunic' && base !== 'brigandine';
+  const bulk = plate ? 1 : base === 'brigandine' ? 0.75 : 0, K = HERO_BK;
+  const near = (a, b) => V.len(V.sub(a, b)) < 1e-6;
+  const loc = p => { const q = V.sub(p, J.chest); return [V.dot(q, fwd), V.dot(q, sideR), V.dot(q, up)]; };
+  const paint = (q, fn) => { const o = q.mf; q.mf = (p, n) => fn(p) || (o ? o(p, n) : 0); };
+  const mat = (qs, m) => { for (const q of qs) if (q) q.m = m; };
+  // find the body's parts by the joints they were built on
+  const iPel = P.findIndex(q => q.k === 1 && q.c === J.pelvis), abdC = V.mad(J.chest, up, -3.6), chC = V.mad(J.chest, up, 0.8);
+  const iAbd = P.findIndex(q => q.k === 1 && near(q.c, abdC)), pel = P[iPel], abd = P[iAbd], chest = P.find(q => q.k === 1 && near(q.c, chC));
+  for (let i = iPel + 1; i < iAbd; i++) P[i].dead = true;   // belt, tabard or faulds: redrawn below
+  const legs = [J.hipL, J.hipR].map(h => { const i = P.findIndex(q => q.k === 2 && q.a === h); return { thigh: P[i], shin: P[i + 1], knee: plate ? P[i + 2] : null, boot: P[i + (plate ? 3 : 2)] }; });
+  const arms = [J.shR, J.shL].map(s => { const i = P.findIndex(q => q.k === 2 && q.a === s); const sl = P[i]; return { sleeve: sl, fore: P[i + 1], hand: P[i + 2], cop: P.find(q => q.k === 0 && q.c === sl.b) }; });
+  const pads = P.filter(q => q.k === 1 && q.rad && ((q.rad[0] === 5.0 && q.rad[1] === 5.0) || (q.rad[0] === 4.2 && q.rad[1] === 4.0)));
+  const rivets = plate ? pads.map(q => P[P.indexOf(q) + 1]) : [];
+  const L = k => legs.map(l => l[k]), A = k => arms.map(a => a[k]);
+  const goldEdge = q => { const c = q.c; const o = q.mf; q.mf = (p, n) => (V.dot(n, up) < 0.35 && V.dot(V.sub(p, c), up) < 0.8 ? M.GOLD : 0) || (o ? o(p, n) : 0); };   // a gold rim round the plate's edge, seen from above
+  const goldRim = (q, z) => { const c = q.c; paint(q, p => V.dot(V.sub(p, c), up) < z ? M.GOLD : 0); };   // c by value: the renderer rescales q.c
+  // belt and buckle
+  const beltC = V.mad(J.pelvis, up, 3.0), belt = (m) => { r.ell(beltC, [3.8 + bulk * 1.4, 4.6 + bulk * 1.6, 1.1], m, frameAlong(fwd, up)); r.box(V.mad(beltC, fwd, (3.8 + bulk * 1.4) * K + 0.4), [0.6, 1.3, 1.2], M.GOLD, frameAlong(fwd, up)); };
+  // skirt panels hanging from the belt (front, sides, back), flaring a little; lengths are pre-slim half lengths
+  const rf = (3.4 + bulk) * K, rs = (4.2 + bulk * 1.4) * K, top = V.mad(J.pelvis, up, 1.6);
+  const panel = (dir, off, w, h, m, mf) => {
+    const ax = frameAlong(V.norm(V.add(dir, V.mul(up, 0.22))), up);
+    r.box(V.add(V.mad(top, dir, off + h * K * 0.22), V.mul(ax[2], -h * K)), [0.6, w, h], m, ax, mf ? { mf } : {});
+  };
+  const skirt = (m, o) => r.group(() => {
+    if (o.front) panel(fwd, rf + 0.2, o.fw || 3.2, o.front, o.fm || m, o.fmf);
+    if (o.side) for (const sd of [-1, 1]) panel(V.mul(sideR, sd), rs - 0.2, 3.2, o.side, m, o.smf);
+    if (o.back) panel(V.mul(fwd, -1), rf, 3.6, o.back, m, o.smf);
+  });
+  const lw = (p, c) => Math.abs(V.dot(V.sub(p, top), sideR) - c);   // distance across the body from c
+  if (id === 'militia') {   // red plaid tunic, a leather baldric with a gold buckle, leather bracers
+    const plaid = p => { const [f, s, z] = loc(p), u = s * 0.42 + 10, v = z * 0.42 + 10; return (u - Math.floor(u) < 0.2 || v - Math.floor(v) < 0.2) ? M.BLOODY : 0; };
+    const strap = p => { const [f, s, z] = loc(p), d = -s * 0.75 + z - 0.6; if (Math.abs(d) < 1.4) return f > 3 && Math.abs(z - 0.4) < 1.1 ? M.GOLD : M.LEATHER; return 0; };
+    mat([chest, abd, pel], M.CLOTH_RED); mat(A('sleeve'), M.CLOTH_RED); mat(A('fore'), M.LEATHER);
+    chest.mf = p => strap(p) || ((() => { const [f, s, z] = loc(p); return f > 1.5 && z > 2.6 && Math.abs(s) < (z - 2.6) * 0.9 + 0.6 ? M.FACE : 0; })()) || plaid(p);
+    abd.mf = plaid; pel.mf = plaid;
+    belt(M.LEATHER); skirt(M.CLOTH_RED, { front: 2.6, side: 2.6, back: 2.6, fmf: plaid, smf: plaid });
+  } else if (id === 'borderwarden') {   // a green tunic under a leather lamellar vest, leather knee guards
+    const lam = p => { const [f, s, z] = loc(p), v = z * 0.55 + 10; if (f > 1.5 && z > 2.4 && Math.abs(s) < (z - 2.4) * 0.9 + 0.8) return M.CLOTH_GREEN; if (Math.abs(s) > 5.4) return M.CLOTH_GREEN; return v - Math.floor(v) < 0.24 ? M.CLOTH_DARK : 0; };
+    mat([chest, abd], M.LEATHER); chest.mf = lam; abd.mf = lam; mat([pel], M.CLOTH_GREEN);
+    mat(A('sleeve'), M.CLOTH_GREEN); for (const q of pads) q.dead = true;
+    for (const l of legs) r.sph(V.add(l.shin.a, V.mul(fwd, 1.3)), 2.1, M.LEATHER);
+    belt(M.LEATHER); skirt(M.CLOTH_GREEN, { front: 2.8, side: 2.8, back: 2.8 });
+  } else {   // the plate sets
+    if (id === 'ironguard') {   // steel breastplate, blue sleeves, a blue cloth front, steel greaves over brown boots
+      mat(A('sleeve'), M.CLOTH_BLUE); mat([...L('thigh'), pel], M.CLOTH_TAN); mat(L('boot'), M.LEATHER);
+      belt(M.LEATHER); skirt(M.CLOTH_BLUE, { front: 4.8, fw: 3.6 });
+    } else if (id === 'warbringer') {   // blackened steel, gold-rimmed pauldrons and knees, dark sleeves, a red skirt
+      mat(A('sleeve'), M.CLOTH_DARK); mat([...L('thigh'), pel], M.LEATHER); mat(L('boot'), M.LEATHER);
+      for (const q of pads) { q.mf = null; goldEdge(q); } mat(rivets, M.GOLD); for (const q of L('knee')) goldRim(q, -0.5);
+      const pleat = p => { const u = V.dot(V.sub(p, top), sideR) * 0.5 + 10; return u - Math.floor(u) < 0.16 ? M.BLOODY : 0; };
+      belt(M.LEATHER); skirt(M.CLOTH_RED, { front: 3.2, side: 3.0, back: 3.0, fmf: pleat });
+    } else if (id === 'vanguard') {   // bright steel with a teal tabard stripe, teal skirt
+      const tab = p => { const [f, s] = loc(p); return f > 1.2 && Math.abs(s) < 1.8 ? M.WATERM : 0; };
+      mat([chest, abd, pel, ...A('fore'), ...A('hand'), ...A('cop'), ...pads, ...L('thigh'), ...L('knee'), ...L('shin')], M.STEEL);
+      chest.mf = tab; paint(abd, tab); mat(A('sleeve'), M.CLOTH_DARK); mat(L('boot'), M.LEATHER);
+      belt(M.LEATHER); skirt(M.WATERM, { front: 3.0, side: 2.8 });
+    } else if (id === 'crownguard') {   // gold trim at neck, pauldrons, belt and greaves; a red-and-cream tabard skirt
+      mat(A('sleeve'), M.CLOTH_BLUE); mat([...L('thigh')], M.LEATHER);
+      paint(chest, p => { const [f, s, z] = loc(p); return z > 3.9 ? M.GOLD : 0; });
+      for (const q of pads) { q.mf = null; goldEdge(q); } mat(rivets, M.GOLD); for (const q of L('knee')) goldRim(q, -0.5);
+      for (const q of L('boot')) { const c = q.c; paint(q, p => V.dot(V.sub(p, c), up) > 0.5 ? M.GOLD : 0); }
+      belt(M.GOLD); skirt(M.CLOTH_RED, { front: 3.8, side: 3.0, fmf: p => lw(p, 0) < 0.9 ? M.CLOTH_WHITE : 0 });
+    } else if (id === 'steelknight') {   // full bright plate, a purple sash across the chest and a purple tabard
+      mat([chest, abd, pel, ...A('sleeve'), ...A('fore'), ...A('hand'), ...A('cop'), ...pads, ...L('thigh'), ...L('knee'), ...L('shin'), ...L('boot')], M.STEEL);
+      const sash = p => { const [f, s, z] = loc(p); return Math.abs(-s * 0.75 + z - 0.4) < 1.6 ? M.CLOTH_PURPLE : 0; }; paint(chest, sash); paint(abd, sash);
+      belt(M.LEATHER); skirt(M.CLOTH_PURPLE, { front: 4.4, fw: 2.2 });
+    }
+  }
+  r.p = r.p.filter(q => !q.dead);
+}
 function weaponSwing(eq, combo = 0) {
   if (isBow(eq.weapon)) return RANGER_BOW;
   const S = FEEL_OLD ? SWINGS : HERO_SWINGS;
@@ -456,6 +536,7 @@ const WEAPON_LEN = { sword: 21, axe: 16, mace: 16, flail: 17, greatsword: 27, bs
 
 function heroRig(eq, st) {
   const volley = st.clip === 'volley', skyShot = st.clip === 'skyshot'; if (volley || skyShot) st = Object.assign({}, st, { clip: 'shoot', sky: skyShot });   // round 43: the volley and Rain of Arrows' shot into the sky   // round 43: Multishot draws like a shot, the bow canted over and three arrows on the string
+  const wset = WARRIOR_SETS[eq.chest] ? eq.chest : null; if (wset) eq = Object.assign({}, eq, { chest: WARRIOR_SETS[wset].base });   // art A6: a warrior set, drawn over its base look
   const B = robed(eq) ? MAGE_B : HERO_B, J = bipedJoints(B, st), r = new Rig();
   const team = TEAM[eq.team] || M.CLOTH_RED;
   const gothic = eq.chest === 'gothic', plate = eq.chest === 'plate' || eq.chest === 'darkplate' || gothic, scale = eq.chest === 'scale', chain = eq.chest === 'chain' || scale, brig = eq.chest === 'brigandine';
@@ -662,6 +743,7 @@ function heroRig(eq, st) {
     if (plate) r.sph(V.add(V.add(c, V.mul(fwd, 4.4)), V.mul(up, -1)), 0.9, gothic ? M.GOLD : M.STEEL);
     if (gothic) r.cone(V.add(V.mad(c, up, 2.6), V.mul(sideR, sd * 1.5)), V.add(V.mad(c, up, 9), V.mul(sideR, sd * 4)), 2.0, 0.3, M.DSTEEL);   // a spike on each shoulder
   }
+  if (wset) warriorSet(r, wset, J);
   // slim every body part made so far (centers stay put), then build the head at normal size and
   // scale it up about its center
   for (const q of r.p) { if (q.a) { q.ra *= HERO_BK; q.rb *= HERO_BK; } if (q.r) q.r *= HERO_BK; if (q.rad) q.rad = V.mul(q.rad, HERO_BK); if (q.half) q.half = V.mul(q.half, HERO_BK); }
