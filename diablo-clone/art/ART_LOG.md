@@ -178,3 +178,23 @@ read as a bobblehead, 1.1 lost the eyes. Then the wizard/conjurer hat (and all c
 narrower brim (5.9 -> 5.2) and a shorter crown (tip 8.4 -> 7.3); the mage and ranger hoods hug the head
 ([4.6,5.0,5.0] -> [4.5,4.6,4.75], [4.7,5.1,5.1] -> [4.55,4.65,4.8]); the Magus set's gold ball moved down to the new tip.
 Affects every hero look, the townsfolk, the Brigand and the Bandit Chief; every other monster renders identically.
+
+## A8 ranger: four front/back sets (2026-11-04)
+From `art/concepts/heroes/ranger-front-back.png` (FRONT and BACK). Review images in `art/review/a8-front-back/ranger/`
+(`new-sets.png` concept beside front-right/front/back, `new-sets-1x.png`, `passes-*.png`, `anim-*.png`).
+New looks only, all in `game/js/actors.js` (new `JERKIN` entries, `jerkinChestA8()`, `BOWX` entries, an `XBOW` table
+for the crossbow looks, a wrist-cuff hook); no items.js, rig.js or material changes. Every existing hero look
+(339 looks x 8 dirs x 17 frames x 2 detail levels) and every monster renders identically to 5bc96ed.
+
+| Set | Chest look | Weapon look | Passes (kept) |
+|---|---|---|---|
+| Marsh Runner | jerkin_marsh | bow_swamp | 3 (p3: wide capelet, narrow shin bands, steel buckle) |
+| Frostpath Stalker | jerkin_frost | bow_silver | 3 (p3: steel buttons, small fur cuffs; p1/p2 tied) |
+| Dune Strider | jerkin_dune | bow_arbalest (crossbow poses) | 4 (p4: copper prod, gold caps; p3 tied p1) |
+| Blackthorn Warden | jerkin_warden | bow_thorn | 4 (p2: long tabard; pointed tabards lost twice) |
+
+Substitutes: teal-green tunic = PINE (WATERM read blue), pale blue coat = CHAIN (the lightest blue-grey cloth),
+near-black coat = CLOTH_SHADOW, violet = CLOTH_PURPLE, rust = AUTUMNM sleeves + MARK scarf, tan vest = STRAWM,
+bronze = PUMPKIN prod with GOLD fittings, dark bow woods = HAIR (swamp) and CHITIN (blackthorn), cream recurve = WAX.
+Still off: the teal reads green; the pale coat is slate rather than sky blue; the Warden's tabard is square, not
+pointed; shin bands read a little like socks from front-right; the head hides the chest details from front-right.

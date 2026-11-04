@@ -466,9 +466,23 @@ const JERKIN = {
   jerkin_ashwood: { m: M.AUTUMNM, sleeve: M.CLOTH_SHADOW, skirt: 2.2 }, // Ashwood Hunter: russet studded vest, cream fur collar, dark grey sleeves
   jerkin_night: { m: M.CLOTH_SHADOW, sleeve: M.CLOTH_SHADOW, fore: M.IRON, skirt: 4.4 },   // Night Tracker: navy coat, slate cowl, steel cuffs
   jerkin_thorn: { m: M.CLOTH_GREEN, sleeve: M.CLOTH_GREEN, skirt: 2.0, skirtM: M.CLOTH_WHITE },   // Thorn Sentinel: cream leaf plate on green, leaf tassets, greaves
+  // a8 (ranger-front-back concept): four more sets, front and back. mf paints the torso (s signed, z up, f forward
+  // from the chest), skirtMf the skirt (s = |side|, along = down from the belt, f = forward), legs/boots recolor them
+  jerkin_marsh: { m: M.PINE, sleeve: M.CLOTH_GREEN, skirt: 2.4, mf: (s, z) => Math.abs(s - z * 0.85 + 0.6) < 0.9 ? M.LEATHER : 0 },   // Marsh Runner: teal-green tunic and strap under a brown hooded capelet
+  jerkin_frost: { m: M.CHAIN, sleeve: M.CHAIN, fore: M.CHAIN, skirt: 4.6, coat: true, cuff: M.CLOTH_WHITE, legs: M.CLOTH_SHADOW,   // Frostpath Stalker: pale blue double-breasted coat, fur collar and cuffs
+    mf: (s, z, f) => f > 1.5 && Math.abs(s + 1.15) < 0.32 && z < 3.2 ? M.SLATE : 0 },   // the overlap's edge (silver buttons drawn on top)
+  jerkin_dune: { m: M.STRAWM, sleeve: M.AUTUMNM, skirt: 2.2,   // Dune Strider: tan padded vest over rust sleeves, a rust scarf
+    mf: (s, z, f) => Math.abs((z + 20.6) / 2.1 % 1 - 0.5) > 0.4 ? M.PLANK : 0, skirtMf: (s, along) => Math.abs(along - 1.6) < 0.45 ? M.PLANK : undefined },   // quilted rows
+  jerkin_warden: { m: M.CLOTH_SHADOW, sleeve: M.CLOTH_SHADOW, skirt: 4.2, cuff: M.IRON, cuffAt: [-2.4, -0.9, 0.45, 0.6], legs: M.CLOTH_DARK, boots: M.CLOTH_DARK,   // Blackthorn Warden: near-black coat, violet tabard front and back
+    mf: (s, z, f) => f > 1.2 && Math.abs(s) < 1.55 && z < 2.8 ? M.CLOTH_PURPLE : 0, skirtMf: (s, along, f) => s < 1.7 + along * 0.08 ? M.CLOTH_PURPLE : undefined },   // the tabard, down to the knees
 };
 // the upgrade bows: limb material, half-length, grip, tip caps, how far the tips curl forward (a recurve)
 const BOWX = { bow_ash: { m: M.PLANK, L: 8.6 }, bow_iron: { m: M.BARK, L: 14, cap: M.BONE }, bow_recurve: { m: M.BONE, L: 11, grip: M.CLOTH_GREEN, curl: 2.4 } };
+// a8: Swampwood Bow, Silverlimb Recurve, Blackthorn Longbow (bands: steel rings round the limbs)
+Object.assign(BOWX, { bow_swamp: { m: M.HAIR, L: 10, grip: M.CLOTH_GREEN, cap: M.GOLD, curl: 1.2 }, bow_silver: { m: M.WAX, L: 11.5, grip: M.CLOTH_BLUE, cap: M.STEEL, curl: 2.6 },
+  bow_thorn: { m: M.CHITIN, L: 14.5, grip: M.CLOTH_PURPLE, cap: M.STEEL, bands: M.STEEL } });
+// the crossbows (a6 steel, a8 Bronze Arbalest): stock, prod, fittings
+const XBOW = { bow_cross: { stock: M.WOOD, prod: M.STEEL }, bow_arbalest: { stock: M.WOOD, prod: M.PUMPKIN, fit: M.GOLD } };
 // the parts a jerkin adds over the torso (built before the body is slimmed, like the torso)
 function jerkinChest(r, eq, J, fwd, up, sideR) {
   const K = JERKIN[eq.chest] || JERKIN.jerkin, k = eq.chest, B = HERO_B;
@@ -477,9 +491,10 @@ function jerkinChest(r, eq, J, fwd, up, sideR) {
   // the skirt (or the coat's tails): a flared cone from under the belt toward the knees, so it follows the stride
   const top = V.mad(J.pelvis, up, 1.6), kneeMid = V.mul(V.add(J.kneeL, J.kneeR), 0.5);
   const dn = V.norm(V.sub(kneeMid, top)), bot = V.mad(top, dn, K.skirt + 1.6);
-  const coat = k === 'jerkin_hide' || k === 'jerkin_night';
+  const coat = k === 'jerkin_hide' || k === 'jerkin_night' || !!K.coat;
   r.cone(top, bot, 4.2, coat ? 5.0 : 4.8, K.skirtM || K.m, { mf: p => {
     const q = V.sub(p, top), s = Math.abs(V.dot(q, sideR)), along = V.dot(q, dn);
+    if (K.skirtMf) { const v = K.skirtMf(s, along, V.dot(q, fwd)); if (v !== undefined) return v; }   // a8
     if (s < 0.45 && along > (coat ? 1.2 : 2.0)) return M.DARK;   // the split, front and back
     if (k === 'jerkin_scale' && Math.abs(along - 2.4) < 0.5) return M.GOLD;
     return 0;
@@ -517,6 +532,52 @@ function jerkinChest(r, eq, J, fwd, up, sideR) {
     r.ell(belt, [4.3, 5.1, 1.4], M.CLOTH_GREEN, frameAlong(fwd, up));
     const a = V.add(V.mad(belt, fwd, 3.9), V.mul(sideR, -2.0));
     r.box(V.add(V.mad(a, up, -3.0), V.mul(fwd, 0.6)), [0.7, 1.4, 3.0], M.CLOTH_GREEN, frameAlong(fwd, up));
+  }
+  jerkinChestA8(r, K, k, J, fwd, up, sideR, onT);
+}
+// a8 (ranger-front-back concept): the four front/back sets' capelets, scarf, buttons, belts, pouches and leg wraps
+function jerkinChestA8(r, K, k, J, fwd, up, sideR, onT) {
+  const B = HERO_B, tf = frameAlong(fwd, up), legs = [[J.hipL, J.kneeL, J.ankL], [J.hipR, J.kneeR, J.ankR]];
+  if (K.legs || K.boots) for (const [hip, knee, ank] of legs) {   // trousers and boots of another color, just over the plain ones
+    if (K.legs) r.cone(hip, knee, 2.75, 2.45, K.legs);
+    if (K.boots) { r.cone(knee, ank, 2.35, 2.0, K.boots); r.ell(V.add(ank, [2.0, 0, -0.9]), [4.15, 2.35, 1.75], K.boots); }
+  }
+  const capelet = m => {   // a hooded capelet over the shoulders, the hood bunched behind the neck
+    r.group(() => {
+      r.ell(V.add(V.mad(J.chest, up, B.shZ - 0.3), V.mul(fwd, 0.2)), [5.3, 9.4, 3.3], m, tf);   // over the shoulders, the tunic showing below
+      r.box(V.add(V.mad(J.chest, up, 0.9), V.mul(fwd, -3.7)), [0.7, 5.6, 3.0], m, tf);
+    });
+    r.ell(V.add(V.mad(J.chest, up, 5.2), V.mul(fwd, -3.0)), [2.4, 4.2, 2.2], m, tf);
+  };
+  if (k === 'jerkin_marsh') {   // a brown capelet with a round gold clasp; cream wraps on the shins
+    capelet(M.BARK);
+    const cc = V.add(V.mad(J.chest, up, B.shZ + 0.3), V.mul(fwd, 3.8));
+    r.cyl(cc, V.mad(cc, fwd, 0.7), 1.6, M.GOLD);
+    for (const [, knee, ank] of legs) for (const [t0, t1] of [[0.2, 0.33], [0.62, 0.75]]) {   // two narrow bands, just over the shin (2.2 -> 1.84)
+      const a = V.add(knee, V.mul(V.sub(ank, knee), t0)), b = V.add(knee, V.mul(V.sub(ank, knee), t1));
+      r.cone(a, b, 2.4 - t0 * 0.36, 2.4 - t1 * 0.36, M.CLOTH_WHITE);
+    }
+    r.box(V.mad(V.mad(J.pelvis, up, 3.0), fwd, 4.4), [0.6, 1.5, 1.2], M.STEEL, tf);   // a steel buckle over the plain gold one
+  }
+  if (k === 'jerkin_frost') {   // silver buttons in two columns, a steel pad on the right shoulder
+    for (const z of [0.4, -1.5, -3.4]) for (const s of [-1.25, 1.25]) r.sph(V.mad(onT(s, z), fwd, -0.2), 1.4, M.STEEL, { noShadow: true });
+    r.sph(V.add(V.mad(J.shR, up, 0.8), V.mul(sideR, 0.3)), 3.1, M.SLATE);
+  }
+  if (k === 'jerkin_dune') {   // a rust scarf wound round the neck, its tail down the back; leather pouches at the belt
+    r.ell(V.add(V.mad(J.chest, up, 4.0), V.mul(fwd, 0.5)), [4.9, 6.1, 2.7], M.MARK, tf);
+    r.box(V.add(V.add(V.mad(J.chest, up, 1.4), V.mul(fwd, -4.0)), V.mul(sideR, 2.0)), [0.7, 1.5, 2.8], M.MARK, tf);
+    for (const [f, s] of [[3.0, -3.4], [-3.2, 3.0]]) {
+      const pc = V.add(V.add(V.mad(J.pelvis, up, 0.6), V.mul(fwd, f)), V.mul(sideR, s));
+      r.box(pc, [1.4, 1.7, 1.8], M.LEATHER, tf);
+      r.sph(V.add(V.mad(pc, up, 0.9), V.mul(fwd, Math.sign(f) * 1.4)), 0.95, M.GOLD, { noShadow: true });
+    }
+  }
+  if (k === 'jerkin_warden') {   // a green capelet with a steel brooch, a grey belt with a steel buckle
+    capelet(M.CLOTH_GREEN);
+    r.sph(V.add(V.mad(J.chest, up, B.shZ + 0.3), V.mul(fwd, 3.9)), 1.3, M.STEEL, { noShadow: true });
+    const belt = V.mad(J.pelvis, up, 3.0);
+    r.ell(belt, [4.35, 5.2, 1.2], M.IRON, tf);
+    r.box(V.mad(belt, fwd, 4.5), [0.6, 1.5, 1.3], M.STEEL, tf);
   }
 }
 function setHead(r, eq, hd, fwd, up, sideR, helmF) {
@@ -807,6 +868,7 @@ function heroRig(eq, st) {
     if (eq.chest === 'jerkin') { if (f > 1.5 && z > 2.2 && sd < (z - 2.2) * 0.9 + 0.7) return M.CLOTH_GREEN; if (f > 2.4 && sd < 0.5 && z > -3 && z < 2.4) return M.DARK; }
     if (eq.chest === 'jerkin_scale') { const v = (z + 0.4) / 2.3; if (Math.abs(v - Math.round(v)) < 0.22) return M.GOLD; }   // horizontal bands of gold scales
     if ((eq.chest === 'jerkin_hide' || eq.chest === 'jerkin_bramble') && Math.abs(s - z * 0.85 + 0.6) < 0.9) return M.LEATHER;   // the strap from the right shoulder to the left hip
+    { const xm = (JERKIN[eq.chest] || {}).mf; if (xm) { const v = xm(s, z, f); if (v) return v; } }   // a8: the front/back sets' own painting
     return 0;
   };
   const robeMf = p => {   // robe: a V of skin at the neck and a gold stripe down the front
@@ -903,7 +965,7 @@ function heroRig(eq, st) {
     if (eq.weapon === 'fhammer') { handR = V.add(V.add(J.shR, V.mul(fwd, 4.5 + s * 0.3)), V.add(V.mul(up, -8.5), V.mul(sideR, -3.2))); bd = V.norm(V.add(V.add(V.mul(sideR, -1), V.mul(up, 0.22)), V.mul(fwd, 0.15))); acrossG = true; }   // art A6b: the forge hammer held across the body
   }
   // a6: the steel crossbow is held level in both hands: low at the belly, raised to the shoulder to shoot
-  const xbow = eq.weapon === 'bow_cross', xbHold = xbow && st.clip !== 'death' && st.clip !== 'toss' && st.clip !== 'vault' && st.clip !== 'drink';
+  const xbow = !!XBOW[eq.weapon], xbHold = xbow && st.clip !== 'death' && st.clip !== 'toss' && st.clip !== 'vault' && st.clip !== 'drink';
   let xbL = null;
   if (xbHold) {
     const raised = st.clip === 'shoot';
@@ -970,6 +1032,7 @@ function heroRig(eq, st) {
   if (st.clip === 'channel' && st.f >= 9) { if (st.f === 9) { const fb = V.add(V.mad(aL.hand, up, 2.6), V.mul(fwd, 0.8)); r.sph(fb, 3.3, M.FIREM, { noShadow: true }); r.sph(V.mad(fb, up, 2.6), 1.6, M.FIREM, { noShadow: true }); } }   // the hurl: a fireball held in the cocked hand, gone once thrown
   else if (st.clip === 'channel' && st.f >= 6) { if (st.f === 7) { const ft = V.add(V.mad(aR.hand, up, -12), V.mul(fwd, 1.5)); for (const [s, h] of [[-1, 2.2], [0, 3.4], [1, 2.2]]) r.cone(V.add(ft, V.mul(sideR, s * 3.6)), V.add(V.mad(ft, up, h + 2.5), V.mul(sideR, s * 5)), 1.6, 0.4, M.ICE, { noShadow: true }); } }   // ice shards spring up round the staff's foot   // the slam: frost bursting at the staff's foot
   else if (st.clip === 'channel' && st.f % 3 !== 0) r.sph(V.mad(aL.hand, fwd, 2.2), st.f % 3 === 1 ? 1.9 : 1.4, staff ? M.ARCANE : M.HOLY, { noShadow: true });
+  if (jerk && (JERKIN[eq.chest] || {}).cuff) for (const a of [aR, aL]) { const d = V.norm(V.sub(a.hand, a.el)), [c0, c1, w0, w1] = JERKIN[eq.chest].cuffAt || [-3.2, -1.9, 0.3, 0.4]; r.cone(V.mad(a.hand, d, c0), V.mad(a.hand, d, c1), ar[2] + w0, ar[2] + w1, JERKIN[eq.chest].cuff); }   // a8: a cuff at the wrist (fur, or steel bands)
   if (plate) for (const a of [aR, aL]) r.sph(a.el, 2.2, PL);   // elbow cops
   // pauldrons: big rounded plates with a bright lower rim and a rivet (plate); pads otherwise
   if (eq.chest !== 'tunic' && !robe && !jerk) for (const [sh, sd] of [[J.shL, -1], [J.shR, 1]]) {
@@ -1007,7 +1070,7 @@ function heroRig(eq, st) {
     const SC = SET_CAPE[eq.set], LL = SC ? SC.len : L;   // round 43: a set's cloak, longer and in its colors
     r.box(V.mad(top, dn, LL / 2), [0.5, B.shW * (SC ? 0.86 : 0.78), LL / 2], SC ? SC.m : TEAM[eq.cape] || CAPE_M, [a0, a1, dn], { mf: p => V.dot(V.sub(p, top), dn) > LL - 1.2 ? (SC ? SC.hem : M.LEATHER) : 0 });
   }
-  if (bow && eq.weapon !== 'bow_cross') {   // a quiver on the back, from behind the right shoulder down to the left hip, fletchings showing
+  if (bow && !XBOW[eq.weapon]) {   // a quiver on the back, from behind the right shoulder down to the left hip, fletchings showing
     const qa = V.add(V.add(V.mad(J.chest, up, 6.4), V.mul(fwd, -4.6)), V.mul(sideR, 3.0)), qb = V.add(V.add(V.mad(J.chest, up, -4.4), V.mul(fwd, -4.0)), V.mul(sideR, -2.2));
     const qd = V.norm(V.sub(qa, qb));
     const deep = eq.shield === 'quiver_deep';   // round 43: the deep quiver: wider, a gold band, five arrows showing
@@ -1176,12 +1239,15 @@ function heroRig(eq, st) {
   const wf = [bd, wide, V.cross(bd, wide)];
   const aim = skyShot ? V.norm(V.add(V.mul(up, 0.78), V.mul(fwd, 0.63))) : fwd;   // where the arrow points
   const bowUp = volley ? V.norm(V.add(V.mul(up, 0.5), V.mul(sideR, -0.87))) : skyShot ? V.norm(V.sub(up, V.mul(aim, V.dot(up, aim) * 1.0)).map((v, i) => v + (i === 2 ? 0 : 0))) : up;   // round 43: canted over for the volley
-  if (eq.weapon === 'bow_cross') {   // a6: the steel crossbow: a wooden stock along the aim, a steel prod across its front, the string back to the nut, a bolt in the groove
+  if (xbow) {   // a6: the steel crossbow: a wooden stock along the aim, a steel prod across its front, the string back to the nut, a bolt in the groove
+    const XB = XBOW[eq.weapon];   // a8: the Bronze Arbalest: a bronze prod, bronze fittings on the stock
     const xg = xbHold ? aR.hand : aL.hand, xd = xbHold ? bd : V.norm(V.add(fwd, V.mul(up, -0.55))), across = V.norm(V.cross(up, xd)), xu = V.cross(xd, across), nose = V.mad(xg, xd, 9.5);
-    r.group(() => { r.box(V.mad(xg, xd, 3.6), [6.4, 0.95, 1.05], M.WOOD, [xd, across, xu]); r.box(V.add(V.mad(xg, xd, -2.2), V.mul(xu, -0.7)), [1.7, 0.95, 1.6], M.WOOD, [xd, across, xu]); });
+    r.group(() => { r.box(V.mad(xg, xd, 3.6), [6.4, 0.95, 1.05], XB.stock, [xd, across, xu]); r.box(V.add(V.mad(xg, xd, -2.2), V.mul(xu, -0.7)), [1.7, 0.95, 1.6], XB.stock, [xd, across, xu]); });
+    if (XB.fit) { r.box(V.mad(xg, xd, 8.4), [1.1, 1.15, 1.25], XB.fit, [xd, across, xu]); r.box(V.add(V.mad(xg, xd, -3.2), V.mul(xu, -0.7)), [0.6, 1.1, 1.75], XB.fit, [xd, across, xu]); }
     const bendL = V.add(V.mad(nose, across, -3.4), V.mul(xd, -0.5)), bendR = V.add(V.mad(nose, across, 3.4), V.mul(xd, -0.5));
     const tipL = V.add(V.mad(nose, across, -5.8), V.mul(xd, -2.5)), tipR = V.add(V.mad(nose, across, 5.8), V.mul(xd, -2.5));
-    r.group(() => { r.cone(nose, bendL, 1.1, 0.95, M.STEEL); r.cone(bendL, tipL, 0.95, 0.7, M.STEEL); r.cone(nose, bendR, 1.1, 0.95, M.STEEL); r.cone(bendR, tipR, 0.95, 0.7, M.STEEL); });
+    r.group(() => { r.cone(nose, bendL, 1.1, 0.95, XB.prod); r.cone(bendL, tipL, 0.95, 0.7, XB.prod); r.cone(nose, bendR, 1.1, 0.95, XB.prod); r.cone(bendR, tipR, 0.95, 0.7, XB.prod); });
+    if (XB.fit) { for (const [b, t] of [[bendL, tipL], [bendR, tipR]]) r.cone(V.add(b, V.mul(V.sub(t, b), 0.55)), t, 1.05, 0.95, XB.fit); r.cyl(V.mad(nose, across, -1.1), V.mad(nose, across, 1.1), 1.35, XB.fit); }   // a8: bronze-capped prod tips, a bronze collar at the nose
     const loosed = st.clip === 'shoot' && st.f >= 2, nut = V.mad(xg, xd, loosed ? 6.5 : 1.6);
     r.cone(tipL, nut, 0.3, 0.3, M.CLOTH_WHITE, { noShadow: true }); r.cone(nut, tipR, 0.3, 0.3, M.CLOTH_WHITE, { noShadow: true });
     if (!loosed) { r.cone(V.mad(nut, xu, 0.9), V.add(V.mad(nose, xd, 1.4), V.mul(xu, 0.9)), 0.4, 0.4, M.WOOD, { noShadow: true }); r.cone(V.add(V.mad(nose, xd, 1.2), V.mul(xu, 0.9)), V.add(V.mad(nose, xd, 2.8), V.mul(xu, 0.9)), 0.6, 0.15, M.STEEL, { noShadow: true }); }
@@ -1201,6 +1267,7 @@ function heroRig(eq, st) {
     r.cone(V.mad(c, bowUp, -1.2), V.mad(c, bowUp, 1.2), 1.15, 1.15, BX && BX.grip || M.LEATHER);   // grip
     if (BX && BX.cap) for (const sd2 of [1, -1]) r.cone(tip(sd2), V.mad(tip(sd2), bowUp, sd2 * 1.6), 1.0, 0.3, BX.cap);   // a6: the ironwood longbow's pale horn tips
     if (BX && BX.curl) for (const sd2 of [1, -1]) r.cone(tip(sd2), V.add(V.mad(tip(sd2), bowUp, sd2 * 1.2), V.mul(back, -BX.curl)), 0.7, 0.4, BX.m);   // a6: the recurve's tips flick forward
+    if (BX && BX.bands) for (const sd2 of [1, -1]) for (const [a, b, t] of [[c, mid(sd2), 0.6], [mid(sd2), tip(sd2), 0.5]]) { const q = V.add(a, V.mul(V.sub(b, a), t)), d = V.norm(V.sub(b, a)); r.cyl(V.mad(q, d, -0.4), V.mad(q, d, 0.4), 1.45, BX.bands); }   // a8: steel bands round the longbow's limbs
     if (hasFx(eq, 'wind')) for (const sd2 of [1, -1]) { const t = tip(sd2); r.cone(t, V.add(V.mad(t, bowUp, -sd2 * 0.5), V.add(V.mul(back, 2.5), V.mul(up, -3.5))), 0.7, 0.3, M.CLOTH_GREEN, { noShadow: true }); }   // round 43: Windrunner: silver limbs, green ribbons at the tips
     if (eq.weapon === 'bow_war') for (const sd2 of [1, -1]) r.cone(tip(sd2), V.mad(tip(sd2), bowUp, sd2 * 1.8), 1.0, 0.2, M.STEEL);   // round 43: the war bow: dark wood, iron-capped tips
     if (eq.ench) for (const sd2 of [1, -1]) r.sph(tip(sd2), 1.3, eq.ench === 'fire' ? M.FIREM : M.ICE, { noShadow: true });   // round 43: Burning or Chilling: the limb tips glow
