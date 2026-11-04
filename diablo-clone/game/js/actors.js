@@ -322,6 +322,21 @@ function deathTip(rig, B, f, dir = -1, side = 1) {
   tipRig(rig, [dir * 2, 0, 0], dir * 1.5 * k, side * 0.55 * k, [0, 0, 0.5, 1.5, 2.2, 2.6][f] * B.hipH / 18);
 }
 
+// round 43: secondary motion for a hat tip or a hood point: [back, up, side] offsets that lag
+// the body (streaming back while walking and bobbing with the stride, flicking forward on a stop,
+// whipping round in a spin, tossed up on a landing)
+function headSway(st) {
+  const c = st.clip, ph = (st.f || 0) / 8 * Math.PI * 2;
+  if (FEEL_OLD) return [0, 0, 0];
+  if (c === 'walk') return [1.6 + Math.sin(ph * 2) * 0.5, Math.cos(ph * 2) * 0.7, Math.sin(ph) * 0.6];
+  if (c === 'go') return [1.2, 0, 0];
+  if (c === 'stop' || c === 'skid') return [-1.4, -0.4, 0];
+  if (c === 'spin') return [0.6, 0, [1.8, -1.8, 1.8, -1.8][(st.f || 0) % 4]];
+  if (c === 'vault') return [[0, 2, -1.2][st.f || 0], [0, -1.2, 1.4][st.f || 0], 0];
+  if (c === 'arrive') return [-1.2, st.f === 0 ? 1.4 : 0.4, 0];
+  if (c === 'storm') return [0.3, -0.6 + Math.sin(ph * 2) * 0.4, Math.sin(ph) * 0.8];
+  return [0, 0, 0];
+}
 // chibi heads (round 13): scale every part added since index `from` about the head center
 function bigHead(r, from, hd, HK) {
   const sc = q => V.add(hd, V.mul(V.sub(q, hd), HK));
@@ -682,7 +697,7 @@ function heroRig(eq, st) {
       const hm = M.CLOTH_PURPLE, base = V.add(V.mad(hd, up, 3.3), V.mul(fwd, -0.8));   // set high and tipped back so the eyes show
       r.group(() => {
         r.cyl(base, V.mad(base, up, 0.7), 5.9, hm);
-        const mid = V.add(V.mad(base, up, 4.6), V.mul(fwd, -1.0)), tip = V.add(V.mad(base, up, 8.4), V.mul(fwd, -3.6));
+        const sway = headSway(st), mid = V.add(V.mad(base, up, 4.6), V.mul(fwd, -1.0 - sway[0] * 0.3)), tip = V.add(V.mad(base, up, 8.4 + sway[1]), V.add(V.mul(fwd, -3.6 - sway[0]), V.mul(sideR, sway[2])));   // round 43: the tip lags behind the head
         r.cone(V.mad(base, up, 0.5), mid, 3.9, 2.2, hm, { mf: p => V.dot(V.sub(p, base), up) < 1.6 ? M.GOLD : 0 });
         r.cone(mid, tip, 2.2, 0.5, hm);
       });
@@ -702,7 +717,7 @@ function heroRig(eq, st) {
       const hm = eq.helm === 'rhood_dark' ? M.CLOTH_SHADOW : eq.helm === 'rhood_night' ? M.CLOTH_NAVY : M.CLOTH_GREEN, fur = eq.helm === 'rhood_hunter', hc = V.add(V.mad(hd, up, 0.8), V.mul(fwd, -1.0));
       r.group(() => {
         r.ell(hc, [4.7, 5.1, 5.1], hm, helmF);   // set back, so the face stands out of its opening
-        r.cone(V.add(V.mad(hd, up, 3.0), V.mul(fwd, -3.4)), V.add(V.mad(hd, up, 1.0), V.mul(fwd, -6.6)), 2.2, 0.5, hm);
+        { const sw = headSway(st); r.cone(V.add(V.mad(hd, up, 3.0), V.mul(fwd, -3.4)), V.add(V.add(V.mad(hd, up, 1.0 + sw[1] * 0.8), V.mul(fwd, -6.6 - sw[0] * 1.2)), V.mul(sideR, sw[2])), 2.2, 0.5, hm); }   // round 43: the hood's point streams back
         r.ell(V.add(V.mad(hd, up, -4.2), V.mul(fwd, -1.2)), [3.3, 4.5, 1.3], fur ? M.FUR : hm, helmF);   // the cowl, kept small so the jerkin shows (the hunter's: a fur mantle)
       });
     }
