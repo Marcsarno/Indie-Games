@@ -841,6 +841,47 @@ GEAR_EXTRA.helm.kettle = (r, { hd, fwd, up, sideR, helmF }) => {
   });
   r.box(V.add(V.mad(hd, up, 0.2), V.mul(fwd, 4.4)), [0.5, 0.6, 1.8], M.STEEL, helmF);   // the nasal
 };
+// art A10: the ranger's headpieces (art/concepts/heroes/ranger-headpieces.png), drawn over the bare face. HAIR_HELMS
+// keeps the spiky hair: true all of it, 'band' no fringe (the band covers the brow), 'low' no fringe and no spikes on
+// the crown (under the cap), 'fringe' only the fringe and the painted hairline (in the hood)
+const HAIR_HELMS = { bandana: 'band', greenwood: 'low', circlet: 'band', shadowhood: 'fringe' };
+const RANGER_HEAD = {
+  bandana: (r, { hd, fwd, up, sideR }) => {   // a rust-red band around the brow, knotted at the back with two tails
+    const at = (f, s, z) => V.add(V.add(V.mad(hd, fwd, f), V.mul(sideR, s)), V.mul(up, z));
+    r.cyl(at(-0.75, 0, 1.2), at(-0.75, 0, 3.2), 5.2, M.MARK);
+    const k = at(-5.8, 0, 2.2);
+    r.group(() => {
+      r.sph(k, 1.4, M.MARK);
+      for (const sd of [-1, 1]) r.cone(k, at(-6.7, sd * 1.7, -1.8), 1.1, 0.8, M.MARK);
+    });
+  },
+  greenwood: (r, { hd, fwd, up, sideR, helmF }) => {   // a green felt hunter's cap, an upturned ochre brim, a red-and-white feather
+    const at = (f, s, z) => V.add(V.add(V.mad(hd, fwd, f), V.mul(sideR, s)), V.mul(up, z));
+    r.group(() => {
+      r.ell(at(-1.3, 0, 3.0), [5.0, 4.6, 2.7], M.CLOTH_GREEN, helmF);
+      r.cone(at(-2.4, 0, 4.4), at(-5.6, 0, 5.4), 2.3, 0.6, M.CLOTH_GREEN);   // the point, trailing back
+    });
+    r.cyl(at(-0.8, 0, 1.0), at(-0.8, 0, 3.1), 5.35, M.GOLD);   // the upturned brim: a band all round
+    const a = at(-1.4, -4.9, 3.2), b = at(-4.6, -5.6, 7.8), d = V.norm(V.sub(b, a));
+    r.cone(a, b, 1.1, 0.4, M.CLOTH_WHITE, { noShadow: true, mf: p => { const t = V.dot(V.sub(p, a), d); return t > 2.2 && t < 3.6 || t > 4.8 ? M.CLOTH_RED : 0; } });
+  },
+  shadowhood: (r, { hd, fwd, up, sideR, helmF, st }) => {   // a slate-blue hood, a brown lining framing the face, a seam down the back
+    const hc = V.add(V.mad(hd, up, 0.8), V.mul(fwd, -1.0));
+    r.group(() => {
+      r.ell(hc, [4.55, 4.65, 4.8], M.HIDE, helmF, { mf: p => { const q = V.sub(p, hc), f2 = V.dot(q, fwd); return f2 > 1.8 ? M.LEATHER : f2 < -2.0 && Math.abs(V.dot(q, sideR)) < 0.35 ? M.CLOTH_DARK : 0; } });
+      const sw = headSway(st); r.cone(V.add(V.mad(hd, up, 3.6), V.mul(fwd, -2.6)), V.add(V.add(V.mad(hd, up, 4.4 + sw[1] * 0.5), V.mul(fwd, -5.2 - sw[0] * 0.8)), V.mul(sideR, sw[2] * 0.6)), 2.2, 0.5, M.HIDE);   // a short point
+      r.ell(V.add(V.mad(hd, up, -4.2), V.mul(fwd, -1.2)), [3.3, 4.5, 1.3], M.HIDE, helmF);   // the cowl
+    });
+  },
+  circlet: (r, { hd, fwd, up, sideR, helmF }) => {   // a leather headband, a gold diamond at the front, ear flaps, a buckle at the back
+    const at = (f, s, z) => V.add(V.add(V.mad(hd, fwd, f), V.mul(sideR, s)), V.mul(up, z));
+    r.cyl(at(-0.8, 0, 1.6), at(-0.8, 0, 3.0), 5.1, M.LEATHER);
+    for (const sd of [-1, 1]) r.ell(at(-0.6, sd * 4.3, -0.4), [2.0, 1.1, 2.6], M.LEATHER, helmF);   // the side guards
+    const g = at(4.4, 0, 2.3), dg = frameAlong(fwd, up);
+    r.box(g, [0.5, 1.1, 1.1], M.GOLD, [dg[0], V.norm(V.add(dg[1], dg[2])), V.norm(V.sub(dg[2], dg[1]))], { bias: 1 });   // a diamond: a square turned 45 degrees
+    r.box(at(-6.0, 0, 2.3), [0.5, 1.2, 0.9], M.GOLD, helmF, { mf: p => Math.abs(V.dot(V.sub(p, at(-6.0, 0, 2.3)), sideR)) < 0.45 ? M.DARK : 0 });   // the buckle
+  },
+};
 // weapons (art A6b): the crescent axe, the flanged mace and the forge hammer (two-handed, carried across the body)
 GEAR_EXTRA.weapon.caxe = (r, { g, bd, wide, wf }) => {
   r.cone(V.mad(g, bd, 1.2), V.mad(g, bd, 14), 0.9, 0.9, M.WOOD);
@@ -1261,14 +1302,15 @@ function heroRig(eq, st) {
   const helmF = frameAlong(fwd, up), hairM = HAIRM[eq.hair] || M.HAIR_O, bald = eq.hair === 'bald';
   const xHelm = GEAR_EXTRA.helm[eq.helm];
   if (xHelm) xHelm(r, { hd, fwd, up, sideR, helmF, eq, st, J });
-  else if (eq.helm === 'none' || eq.helm === 'cap' || eq.helm === 'spangen' || eq.helm === 'hat' || eq.helm === 'hat_conj' || eq.helm.startsWith('hood') || eq.helm.startsWith('rhood')) {
+  else if (eq.helm === 'none' || eq.helm === 'cap' || eq.helm === 'spangen' || eq.helm === 'hat' || eq.helm === 'hat_conj' || eq.helm.startsWith('hood') || eq.helm.startsWith('rhood') || RANGER_HEAD[eq.helm]) {
+    const hairOn = eq.helm === 'none' || HAIR_HELMS[eq.helm] || false;   // art A10: the ranger's bandana, cap and circlet keep the hair
     // chibi face (round 13 pass 2): light, nearly flat skin; small dark eyes under short brows, a
     // tiny mouth; the hairline is painted on the head and the hair mass sits on top
     r.ell(hd, [4.3, 4.3, 4.5], M.FACE, helmF, { mf: p => {
       const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up), as = Math.abs(s2);
       if (f2 > 2.3 && Math.abs(as - 1.6) < 0.5 && z2 > -1.0 && z2 < 0.7) return M.EYE;
       if (f2 > 3.2 && as < 0.45 && Math.abs(z2 + 1.9) < 0.22) return M.MOUTH;
-      if (eq.helm === 'none' && !bald && (z2 > 1.55 + Math.max(0, f2 - 2.5) * 0.2 || f2 < -1.2 || (as > 3.4 && z2 > -0.6))) return hairM;
+      if (hairOn && !bald && (z2 > 1.55 + Math.max(0, f2 - 2.5) * 0.2 || f2 < -1.2 || (as > 3.4 && z2 > -0.6))) return hairM;
       return 0;
     } });
     if (eq.helm === 'cap') r.ell(V.mad(hd, up, 2.0), [4.7, 4.6, 3.3], M.STEEL, helmF, { mf: p => V.dot(V.sub(p, hd), up) < 0.6 ? M.LEATHER : 0 });
@@ -1301,7 +1343,7 @@ function heroRig(eq, st) {
       });
     }
     if (eq.beard) r.ell(V.add(V.mad(hd, up, -3.2), V.mul(fwd, 2.4)), [2.6, 3.3, 2.3], bald ? M.HAIR : hairM, helmF, { noShadow: true });   // a big round beard
-    if (eq.helm === 'none' && !bald) {
+    if (hairOn && !bald) {
       // one mass of hair: a cap over the top and back, a fringe falling over the brow, and a few
       // chunky spikes on the crown and the back only (nothing sticks out at the sides)
       const at = (f2, s2, z2) => V.add(V.add(V.mad(hd, fwd, f2), V.mul(sideR, s2)), V.mul(up, z2));
@@ -1309,18 +1351,19 @@ function heroRig(eq, st) {
       const hairT = st.clip === 'walk' || st.clip === 'go' ? -0.45 : st.clip === 'stop' || st.clip === 'skid' || st.clip === 'pivot' ? 0.35 : st.clip === 'spin' ? -0.3 : 0, hairS = st.clip === 'spin' ? 0.5 : 0;
       const dirOf = (f2, s2, z2) => V.norm(V.add(V.add(V.mul(fwd, f2 + (f2 < 0 ? hairT : hairT * 0.3)), V.mul(sideR, s2 + hairS)), V.mul(up, z2)));
       r.group(() => {
-        r.ell(at(-0.9, 0, 1.9), [4.6, 4.75, 3.3], hairM, helmF, { noShadow: true });
+        if (hairOn !== 'fringe') r.ell(at(-0.9, 0, 1.9), [4.6, 4.75, 3.3], hairM, helmF, { noShadow: true });
         // [base f, s, z, direction f, s, z, length, radius]
         for (const [bf, bs, bz, df, ds, dz, len, rr] of [
           [1.6, 0.9, 3.6, 0.5, 0.2, 1, 2.0, 1.5], [-0.6, -0.4, 4.3, -0.4, -0.1, 1, 2.3, 1.7], [-1.8, 1.7, 3.6, -0.8, 0.4, 0.8, 2.8, 1.5],
           [-1.8, -1.9, 3.5, -0.8, -0.4, 0.8, 2.6, 1.5], [-3.6, 0.2, 2.4, -1, 0, 0.35, 2.8, 1.6], [-3.4, 1.9, 0.9, -1, 0.35, -0.2, 2.2, 1.3], [-3.4, -1.9, 0.9, -1, -0.35, -0.2, 2.2, 1.3]])
-          if (eq.hair !== 'grey') r.cone(at(bf, bs, bz), V.mad(at(bf, bs, bz), dirOf(df, ds, dz), len), rr, 0.3, hairM, { noShadow: true });   // the old keep smooth hair
-        for (const sd of [-1.5, 0, 1.5]) {   // fringe: locks falling forward over the forehead
-          const base = at(2.4, sd, 3.5);
-          r.cone(base, V.add(at(4.1, sd * 1.25, 1.7), V.mul(sideR, sd * 0.2)), 1.25, 0.35, hairM, { noShadow: true });
+          if (eq.hair !== 'grey' && hairOn !== 'fringe' && !(hairOn === 'low' && bz > 2)) r.cone(at(bf, bs, bz), V.mad(at(bf, bs, bz), dirOf(df, ds, dz), len), rr, 0.3, hairM, { noShadow: true });   // the old keep smooth hair
+        if (hairOn === true || hairOn === 'fringe') for (const sd of [-1.5, 0, 1.5]) {   // fringe: locks falling forward over the forehead
+          const lo = hairOn === 'fringe' ? 1.4 : 0, base = at(2.4 + lo * 0.4, sd, 3.5 - lo);   // art A10: under a hood, lower
+          r.cone(base, V.add(at(4.1, sd * 1.25, 1.7 - lo * 0.3), V.mul(sideR, sd * 0.2)), 1.25, 0.35, hairM, { noShadow: true });
         }
       });
     }
+    if (RANGER_HEAD[eq.helm]) RANGER_HEAD[eq.helm](r, { hd, fwd, up, sideR, helmF, eq, st, hairM, bald });
   } else {
     if (eq.helm === 'barbute') {
       // barbute: close round helm with a T-shaped face opening

@@ -232,3 +232,27 @@ with it. Test copy of the art branch for play-testing: https://claude.ai/artifac
 `art/test-build/`: the game page plus `art-test.js`, a TEST-ONLY script, not part of the game, that gives every new
 set look temporary item entries and an OUTFIT button cycling the hero through them). The main game artifact was not
 touched. Republish the test copy from `art/test-build/index.html` with the files map in the A9 commit message notes.
+
+## A10: ranger headpieces (2026-11-04)
+From `art/concepts/heroes/ranger-headpieces.png` (FRONT and BACK). Review images in `art/review/a10-ranger-heads/`
+(`headpieces.png` concept beside front-right/front/back, `headpieces-1x.png`, `passes-*.png`).
+New helm looks only, in `game/js/actors.js`: a `RANGER_HEAD` table drawn in the bare-face branch of `heroRig`, and
+`HAIR_HELMS`, which keeps the `helm === 'none'` spiky hair under a headpiece (true all of it; 'band' no fringe; 'low'
+no fringe and no crown spikes; 'fringe' only a lowered fringe and the painted hairline). No items.js, rig.js or
+material changes. Every existing hero look (429 looks x 8 dirs x 13-15 frames, 3 classes) and every monster (40 ids)
+renders identically to c5d6b3e; no clipping (1152 frames per headpiece: idle, walk, shoot, volley, skyshot, toss,
+vault, hit, death x 8 dirs x 2x/1x, bow and crossbow).
+
+| Headpiece | Helm look | Passes (kept) |
+|---|---|---|
+| Trail Bandana | bandana | 3 (p2: a band that reads over the hair, knot and two tails; p3 slimmer band lost both orders) |
+| Greenwood Cap | greenwood | 4 (p4: a lower crown drawn out to the back with a trailing point; p3 straw brim lost to gold) |
+| Shadow Hood | shadowhood | 4 (p4: leather lining edge round the face, fringe lowered so it stays inside the hood) |
+| Hawk Scout Circlet | circlet | 4 (p2; p3 bigger ear guards and p4 darker band both tied) |
+
+Substitutes: rust-red cloth = MARK, ochre brim = GOLD (STRAWM read khaki), slate-blue hood = HIDE (the grey-blue matte
+ramp), hood lining and circlet = LEATHER, hood seam = CLOTH_DARK, feather = CLOTH_WHITE with CLOTH_RED bands.
+Test copy: `art/test-build/art-test.js` has helm-only OUTFIT entries (TRAIL BANDANA etc.) that change just the helm.
+Still off: the circlet's leather band and ear guards are close in tone to the orange hair's shadow and the jerkin, so
+they read weakly at 1x; one pixel of fringe can show at the top of the shadow hood from the back; the greenwood cap
+reads rounder than the concept's peaked felt cap.
