@@ -21,6 +21,7 @@ function skeletonRig(look, st) {
   const B = SKEL_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J;
   const bone = look.bone || M.BONE, eye = look.eye || M.EYE_RED;
   const tk = look.chunky ? 1.3 : look.burn ? 1.2 : 1;   // field variants (art A2) and the burning dead (a4): thicker bones, as the concepts draw them
+  const sk = look.armored && !look.crown;   // art B2: the plain skeleton warrior (not the king), refined toward its concept
   // the burning dead (art pass 1): scorched bands across the long bones, measured along each bone
   // so they ride with it and never swim between frames
   const charBand = (a, b, t0, t1) => look.burn ? { mf: p => { const d = V.sub(b, a), t = V.dot(V.sub(p, a), d) / V.dot(d, d); return t > t0 && t < t1 ? M.IRON : 0; } } : undefined;
@@ -55,7 +56,7 @@ function skeletonRig(look, st) {
     const draw = st.clip === 'shoot' ? sw.a : 0;
     handL = V.add(V.add(J.shL, V.mul(fwd, 9.5)), V.mul(up, -1));
     handR = V.add(V.add(J.shR, V.mul(fwd, 9.5 - draw * 7)), V.add(V.mul(up, -1), V.mul(sideR, -2.5)));
-    if (st.clip !== 'shoot') { handL = V.add(V.add(J.shL, V.mul(fwd, 4)), V.mul(up, -8)); handR = V.add(V.add(J.shR, V.mul(fwd, 2)), V.mul(up, -9)); }
+    if (st.clip !== 'shoot') { handL = V.add(V.add(J.shL, V.mul(fwd, 5)), V.add(V.mul(up, -7), V.mul(sideR, -2.5))); handR = V.add(V.add(J.shR, V.mul(fwd, 2)), V.mul(up, -9)); }   // (b2 pass 2) the bow held out from the body
   } else if (look.lich) {
     // the lich: staff upright in the right hand, raised high to cast (the cast swing's a: 0 -> 1.2);
     // the off hand claws forward, open, as the spell is loosed
@@ -97,8 +98,8 @@ function skeletonRig(look, st) {
   const twoHand = look.weapon === 'spear' || look.weapon === 'axe';
   if (twoHand && st.clip !== 'attack' && st.clip !== 'death') {
     // guard: the haft held low across the body in both hands, the head forward and to the left
-    handR = V.add(V.add(J.shR, V.mul(fwd, 4.5 + J.swingArm)), V.add(V.mul(up, look.weapon === 'spear' ? -7.5 : -8.5), V.mul(sideR, 0.5)));
-    bd = look.weapon === 'spear' ? V.norm(V.add(V.add(V.mul(fwd, 0.8), V.mul(up, 0.55)), V.mul(sideR, -0.45))) : V.norm(V.add(V.add(V.mul(fwd, 0.75), V.mul(up, 0.05)), V.mul(sideR, -0.65)));
+    handR = V.add(V.add(J.shR, V.mul(fwd, 4.5 + J.swingArm)), V.add(V.mul(up, look.weapon === 'spear' ? -7.5 : -8.5), V.mul(sideR, look.weapon === 'spear' ? 1.5 : 0.5)));
+    bd = look.weapon === 'spear' ? V.norm(V.add(V.add(V.mul(fwd, 0.55), V.mul(up, 0.5)), V.mul(sideR, -0.8))) : V.norm(V.add(V.add(V.mul(fwd, 0.65), V.mul(up, 0.5)), V.mul(sideR, -0.65)));   // (b2 pass 4) head raised to the shoulder
   }
   if (twoHand) handL = V.mad(handR, bd, look.weapon === 'spear' ? 6.5 : 5);   // the off hand further up the haft
   if (look.weapon === 'mace' && st.clip !== 'attack') {   // the tomb guard: mace low at its side, shield up
@@ -113,12 +114,20 @@ function skeletonRig(look, st) {
   }
   if (look.weapon === 'bow') {
     const c = aL.hand, ax = frameAlong(fwd, up);
-    const top = V.add(V.mad(c, up, 8), V.mul(fwd, -2)), bot = V.add(V.mad(c, up, -8), V.mul(fwd, -2));
-    r.group(() => { r.cone(c, top, 0.8, 0.5, M.WOOD); r.cone(c, bot, 0.8, 0.5, M.WOOD); });
+    const top = V.add(V.mad(c, up, 9.5), V.mul(fwd, -2.6)), bot = V.add(V.mad(c, up, -9.5), V.mul(fwd, -2.6));
+    const tT = V.add(V.mad(top, up, 1.2), V.mul(fwd, 1.1)), tB = V.add(V.mad(bot, up, -1.2), V.mul(fwd, 1.1));   // (b2) longer, with recurved tips
+    r.group(() => { r.cone(c, top, 1.0, 0.65, M.WOOD); r.cone(c, bot, 1.0, 0.65, M.WOOD); r.cone(top, tT, 0.65, 0.4, M.WOOD); r.cone(bot, tB, 0.65, 0.4, M.WOOD); });
+    r.cone(V.mad(c, up, -1.2), V.mad(c, up, 1.2), 1.2, 1.2, M.LEATHER);   // the grip
     const pull = st.clip === 'shoot' ? aR.hand : V.add(c, V.mul(fwd, -2.2));
     r.cone(top, pull, 0.3, 0.3, M.BONE, { noShadow: true }); r.cone(pull, bot, 0.3, 0.3, M.BONE, { noShadow: true });
     if (st.clip === 'shoot' && sw.a > 0.5) r.cone(aR.hand, V.mad(aR.hand, fwd, 11), 0.35, 0.35, M.WOOD);
     void ax;
+    // (b2) a leather quiver slung across the back, fletched arrows over the right shoulder, and a bracer on the bow arm
+    const qa = V.norm(V.add(V.add(up, V.mul(sideR, 0.45)), V.mul(fwd, -0.2))), qc = V.add(V.mad(J.chest, fwd, -3.4), V.mul(up, -0.5));
+    r.cone(V.mad(qc, qa, -4.2), V.mad(qc, qa, 3.2), 1.7, 2.0, M.LEATHER);
+    for (const [u, v] of [[-0.7, -0.5], [0.4, 0.6], [-0.1, -1.3]]) { const b0 = V.add(V.mad(qc, qa, 3.0), V.add(V.mul(fwd, u), V.mul(sideR, v))); r.cone(b0, V.mad(b0, qa, 2.6), 0.4, 0.4, M.WOOD, { noShadow: true }); r.cone(V.mad(b0, qa, 2.4), V.mad(b0, qa, 4.4), 0.8, 0.35, M.CLOTH_RED, { noShadow: true }); }   // (pass 2) red fletching
+    r.cyl(V.lerp(aL.el, aL.hand, 0.25), V.lerp(aL.el, aL.hand, 0.8), 1.35, M.LEATHER);
+    r.cone(J.shR, qc, 0.5, 0.5, M.LEATHER, { noShadow: true });   // the strap
   } else if (look.weapon === 'crossbow') {
     // a wooden stock along the aim, a steel prod across its front with a string back to the nut,
     // and a bolt laid in the groove
@@ -136,14 +145,14 @@ function skeletonRig(look, st) {
     const g = aR.hand, wide = V.norm(V.cross(bd, V.len(V.cross(bd, up)) > 0.3 ? up : fwd)), wf = [bd, wide, V.cross(bd, wide)];
     if (look.weapon === 'spear') {   // a long ash shaft and a leaf-shaped steel head on an iron collar
       r.cone(V.mad(g, bd, -8), V.mad(g, bd, 15), 0.9, 0.9, M.WOOD);   // (a4) thicker shaft, bigger head and collar
-      r.cyl(V.mad(g, bd, 14.4), V.mad(g, bd, 15.8), 1.3, M.SLATE);
-      r.group(() => { r.cone(V.mad(g, bd, 15.6), V.mad(g, bd, 18), 0.7, 2.0, M.SLATE); r.cone(V.mad(g, bd, 18), V.mad(g, bd, 22.2), 2.0, 0.15, M.SLATE); });
+      r.cyl(V.mad(g, bd, 14.4), V.mad(g, bd, 15.8), 1.4, M.SLATE);
+      r.group(() => { r.cone(V.mad(g, bd, 15.6), V.mad(g, bd, 18.4), 0.7, 2.4, M.SLATE); r.cone(V.mad(g, bd, 18.4), V.mad(g, bd, 23.4), 2.4, 0.15, M.SLATE); });   // (b2) a bigger leaf
     } else if (look.weapon === 'axe') {   // a long haft and a broad bearded head, its edge flaring wide
       r.cone(V.mad(g, bd, -4), V.mad(g, bd, 12.5), 0.9, 0.9, M.WOOD);
       const hc = V.mad(g, bd, 10.4), side = V.norm(V.sub(V.mul(fwd, 1), V.mul(bd, V.dot(fwd, bd)))), af = [bd, side, V.norm(V.cross(bd, side))];
       r.group(() => {   // (a4) a broad head, about the skull's size, as the concept draws it
-        r.box(V.mad(hc, side, 1.9), [1.9, 2.0, 0.55], M.SLATE, af);
-        r.ell(V.mad(hc, side, 4.6), [4.8, 1.6, 0.6], M.SLATE, af);   // the flared edge
+        r.box(V.mad(hc, side, 2.0), [2.2, 2.3, 0.6], M.SLATE, af);
+        r.ell(V.mad(hc, side, 5.0), [5.6, 1.9, 0.65], M.SLATE, af);   // the flared edge (b2: broader still)
       });
       r.box(V.mad(hc, side, -1.1), [1.0, 1.1, 0.7], M.SLATE, af);   // the poll behind the haft
     } else {   // a short iron-bound haft and a spiked iron ball
@@ -155,7 +164,7 @@ function skeletonRig(look, st) {
     }
     if (look.towerShield) {   // a tall rectangular shield: red field, steel rim
       const n = V.norm(V.add(V.mul(fwd, 0.85), V.mul(sideR, -0.5))), c = V.add(V.mad(aL.hand, n, 1.4), V.mul(up, 0.5)), ax = [n, V.norm(V.cross(up, n)), up];
-      r.box(V.mad(c, up, 0.6), [0.7, 4.7, 8.0], M.CLOTH_RED, ax, { mf: p => { const q = V.sub(p, V.mad(c, up, 0.6)); return Math.abs(V.dot(q, ax[1])) > 3.6 || Math.abs(V.dot(q, ax[2])) > 6.9 ? M.SLATE : 0; } });   // (a4) taller and wider, as the concept's
+      r.box(V.mad(c, up, 0.6), [0.7, 4.7, 8.0], M.CLOTH_RED, ax, { mf: p => { const q = V.sub(p, V.mad(c, up, 0.6)); const u = Math.abs(V.dot(q, ax[1])), v = Math.abs(V.dot(q, ax[2])); return u > 3.6 || v > 6.9 ? M.SLATE : (u > 2.7 && u < 3.1 && v < 6.0) || (v > 5.4 && v < 5.8 && u < 3.1) ? M.MARK : 0; } });   // (b2 pass 3) an inner bevel line   // (a4) taller and wider, as the concept's
     }
   } else if (look.lich) {   // a long staff of black wood with a bone cage around a frost orb
     const g = aR.hand;
@@ -167,14 +176,31 @@ function skeletonRig(look, st) {
     const g = aR.hand, wide = V.norm(V.cross(bd, V.len(V.cross(bd, up)) > 0.3 ? up : fwd)), wf = [bd, wide, V.cross(bd, wide)];
     r.cone(V.mad(g, bd, -1.6), V.mad(g, bd, 1), 0.7, 0.7, M.LEATHER);
     r.box(V.mad(g, bd, 1.3), [0.6, 2.4, 0.6], M.IRON, wf);
-    if (look.armored) {   // a longer, rust-pitted blade
+    if (sk) {   // (b2) a broad blued-steel blade, as the concept's
+      r.box(V.mad(g, bd, 9.6), [8.2, 1.3, 0.4], M.SLATE, wf);
+      r.cone(V.mad(g, bd, 17.6), V.mad(g, bd, 19.6), 1.15, 0.2, M.SLATE);
+    } else if (look.crown) {   // (b2 pass 2) the king: a broad greatsword with a gold cross-guard and pommel
+      r.box(V.mad(g, bd, 1.3), [0.75, 3.4, 0.75], M.GOLD, wf); r.sph(V.mad(g, bd, -2.2), 1.0, M.GOLD);
+      r.box(V.mad(g, bd, 10.8), [9.4, 1.4, 0.45], M.SLATE, wf);
+      r.cone(V.mad(g, bd, 20), V.mad(g, bd, 22), 1.25, 0.2, M.SLATE);
+    } else if (look.armored) {   // a longer, rust-pitted blade
       const bc = V.mad(g, bd, 10);
       r.box(bc, [8.4, 1.1, 0.35], M.IRON, wf, { mf: p => hash(Math.round(V.dot(V.sub(p, bc), bd) * 1.3), 7, 3) < 0.35 ? M.RUST : 0 });
     } else if (look.burn) {   // a broad steel blade with a point (the burning dead)
       r.box(V.mad(g, bd, 7.8), [6.2, 1.45, 0.45], M.SLATE, wf);   // (a4) dark blued iron, as the concept's
       r.cone(V.mad(g, bd, 13.6), V.mad(g, bd, 16.6), 1.35, 0.2, M.SLATE);
     } else r.box(V.mad(g, bd, 8.6), [7, 1.0, 0.35], M.IRON, wf);
-    if (look.shield && look.armored) {   // heater shield: red field, rusted rim, a bone skull emblem
+    if (look.shield && sk) {   // (b2) a round red shield, dark iron rim, a big bone skull in the middle (the concept's)
+      const n = V.norm(V.add(V.mul(fwd, 0.8), V.mul(sideR, -0.6))), c = V.mad(aL.hand, n, 1.4), ax = [n, V.norm(V.cross(up, n)), up];
+      r.ell(c, [1.1, 5.6, 5.6], M.CLOTH_RED, ax, { mf: p => {
+        const q = V.sub(p, c), u = V.dot(q, ax[1]), v = V.dot(q, ax[2]);
+        if (u * u + v * v > 4.6 * 4.6) return M.IRON;
+        const su = Math.abs(u), sv = v - 0.6;
+        if (su < 1.3 && v < -1.0 && v > -2.6) return su % 0.9 < 0.32 ? M.DARK : M.BONE;              // jaw with teeth
+        if (su * su / 1.1 + sv * sv < 4.4) return ((su - 0.95) ** 2 + (sv + 0.1) ** 2 < 0.42) ? M.DARK : M.BONE;   // skull + eye holes
+        return 0;
+      } });
+    } else if (look.shield && look.armored) {   // heater shield: red field, rusted rim, a bone skull emblem
       const n = V.norm(V.add(V.mul(fwd, 0.8), V.mul(sideR, -0.6))), c = V.mad(aL.hand, n, 1.4), ax = [n, V.norm(V.cross(up, n)), up];
       r.ell(c, [1.0, 4.8, 6.4], M.CLOTH_RED, ax, { mf: p => {
         const q = V.sub(p, c), u = V.dot(q, ax[1]), v = V.dot(q, ax[2]);
@@ -191,16 +217,28 @@ function skeletonRig(look, st) {
   }
   if (look.armored) {
     // rusted bracers and greaves, one pauldron, belt and buckle, red loincloth and scarf (mock-up)
-    for (const a of [aR, aL]) r.cyl(V.lerp(a.el, a.hand, 0.2), V.lerp(a.el, a.hand, 0.8), 1.45, M.RUST);
-    for (const [knee, ank] of [[J.kneeL, J.ankL], [J.kneeR, J.ankR]]) r.cyl(V.lerp(knee, ank, 0.15), V.lerp(knee, ank, 0.7), 1.55, M.RUST);
+    const am = sk ? M.SLATE : M.RUST;   // (b2) the plain skeleton's bracers, greaves and pauldron are blued steel, as the concept's
+    for (const a of [aR, aL]) r.cyl(V.lerp(a.el, a.hand, 0.2), V.lerp(a.el, a.hand, 0.8), 1.45, am);
+    for (const [knee, ank] of [[J.kneeL, J.ankL], [J.kneeR, J.ankR]]) r.cyl(V.lerp(knee, ank, 0.15), V.lerp(knee, ank, 0.7), 1.55, am);
     const pc = V.add(V.mad(J.shR, up, 1.3), V.mul(sideR, 0.9));
-    r.ell(pc, [3.8, 3.6, 3.0], M.RUST, frameAlong(fwd, up), { mf: p => V.dot(V.sub(p, pc), up) < -1.6 ? M.IRON : 0 });
+    if (sk) {   // a big round pauldron with an orange-gold boss on its face
+      const pk = V.add(pc, V.mul(sideR, 0.8));   // (b2 pass 3) bigger, further out over the arm
+      r.ell(pk, [4.9, 4.7, 3.8], M.SLATE, frameAlong(fwd, up), { mf: p => V.dot(V.sub(p, pk), up) < -2.2 ? M.IRON : 0 });
+      r.sph(V.add(V.add(V.mad(pk, up, 2.0), V.mul(fwd, 1.9)), V.mul(sideR, 2.3)), 1.3, M.HAIR_O, { bias: 1 });   // (pass 2) orange, as the concept's
+    } else r.ell(pc, [3.8, 3.6, 3.0], M.RUST, frameAlong(fwd, up), { mf: p => V.dot(V.sub(p, pc), up) < -1.6 ? M.IRON : 0 });
     const bc = V.mad(J.pelvis, up, 1.8);
-    r.ell(bc, [3.0, 4.4, 1.1], M.LEATHER, frameAlong(fwd, up));
-    r.cyl(V.mad(bc, fwd, 2.7), V.mad(bc, fwd, 3.4), 1.4, M.GOLD, { mf: p => V.len(V.sub(V.sub(p, V.mad(bc, fwd, 3.4)), V.mul(fwd, V.dot(V.sub(p, V.mad(bc, fwd, 3.4)), fwd)))) < 0.7 ? M.IRON : 0 });
-    r.box(V.add(V.mad(J.pelvis, fwd, 2.6), V.mul(up, -2.6)), [0.4, 1.9, 3.4], M.CLOTH_RED, frameAlong(fwd, up), { mf: p => V.dot(V.sub(p, J.pelvis), up) < -5 && hash(Math.round(V.dot(p, sideR) * 2), 5, 9) < 0.4 ? M.MARK : 0 });
+    if (sk) r.ell(V.mad(bc, up, -0.6), [2.9, 4.1, 0.7], M.CLOTH_RED, frameAlong(fwd, up));   // (b2 pass 2) a thin red sash, no belt or buckle
+    else r.ell(bc, [3.0, 4.4, 1.1], M.LEATHER, frameAlong(fwd, up));
+    if (!sk) r.cyl(V.mad(bc, fwd, 2.7), V.mad(bc, fwd, 3.4), 1.4, M.GOLD, { mf: p => V.len(V.sub(V.sub(p, V.mad(bc, fwd, 3.4)), V.mul(fwd, V.dot(V.sub(p, V.mad(bc, fwd, 3.4)), fwd)))) < 0.7 ? M.IRON : 0 });
+    if (sk) {   // (b2) a long red loincloth torn into three points, no scarf: the ribs show, as the concept's
+      const lc = V.add(V.mad(J.pelvis, fwd, 2.7), V.mul(up, -2.6)), lf = frameAlong(fwd, up);
+      r.group(() => {
+        r.box(lc, [0.45, 2.3, 3.2], M.CLOTH_RED, lf);
+        for (const sd of [-1.3, 0, 1.3]) r.cone(V.add(V.mad(lc, up, -2.6), V.mul(sideR, sd)), V.add(V.add(V.mad(lc, up, -5.6 + Math.abs(sd) * 0.8), V.mul(sideR, sd * 1.05)), V.mul(fwd, 0.3)), 0.95, 0.25, M.CLOTH_RED);
+      });
+    } else r.box(V.add(V.mad(J.pelvis, fwd, 2.6), V.mul(up, -2.6)), [0.4, 1.9, 3.4], M.CLOTH_RED, frameAlong(fwd, up), { mf: p => V.dot(V.sub(p, J.pelvis), up) < -5 && hash(Math.round(V.dot(p, sideR) * 2), 5, 9) < 0.4 ? M.MARK : 0 });
     const nk = V.mad(J.chest, up, 4.6);
-    r.group(() => {   // a wide cowl of a scarf with one tail falling over the shield shoulder
+    if (!sk) r.group(() => {   // a wide cowl of a scarf with one tail falling over the shield shoulder
       r.ell(nk, [3.6, 5.2, 2.0], M.CLOTH_RED, frameAlong(fwd, up));
       r.cone(V.add(V.mad(nk, fwd, 1.8), V.mul(sideR, -3.8)), V.add(V.add(V.mad(nk, fwd, 2.4), V.mul(sideR, -4.6)), V.mul(up, -5)), 1.5, 0.7, M.CLOTH_RED);
     });
@@ -209,23 +247,48 @@ function skeletonRig(look, st) {
     const mat = look.pauldron === 'leather' ? M.LEATHER : M.SLATE;
     for (const [sh, sd] of look.pauldron === 'both' ? [[J.shR, 1], [J.shL, -1]] : [[J.shR, 1]]) {
       const pc = V.add(V.mad(sh, up, 1.0), V.mul(sideR, sd * 0.8));
+      if (look.pauldron === 'leather') {   // (b2 pass 3) the crossbowman's: bigger, with a darker turned-down edge and a big rivet
+        const pk = V.add(pc, V.mul(sideR, 0.6));
+        r.ell(pk, [4.3, 4.1, 3.3], mat, frameAlong(fwd, up), { mf: p => V.dot(V.sub(p, pk), up) < -1.8 ? M.HAIR : 0 });
+        r.sph(V.add(V.add(V.mad(pk, up, 1.6), V.mul(fwd, 2.6)), V.mul(sideR, 1.2)), 0.9, M.GOLD, { noShadow: true, bias: 1 });
+        continue;
+      }
       r.ell(pc, [3.4, 3.2, 2.6], mat, frameAlong(fwd, up));
       r.sph(V.add(V.add(V.mad(pc, up, 1.2), V.mul(fwd, 2.4)), V.mul(sideR, sd * 0.8)), 0.65, M.GOLD, { noShadow: true, bias: 1 });
     }
   }
   if (look.breastplate) {   // a plate cuirass over the ribs, with a skirt band at the waist
     const bc = V.mad(J.chest, up, -0.2);
-    r.group(() => { r.ell(V.mad(bc, fwd, 0.6), [3.6, 4.9, 4.6], M.SLATE, frameAlong(fwd, up)); r.ell(V.mad(J.pelvis, up, 1.6), [3.2, 4.4, 1.4], M.SLATE, frameAlong(fwd, up)); });
+    r.group(() => {
+      r.ell(V.mad(bc, fwd, 0.6), [3.6, 4.9, 4.6], M.SLATE, frameAlong(fwd, up), { mf: p => { const z = V.dot(V.sub(p, bc), up); return z < -2.2 && Math.abs(z + 3.2) < 0.35 ? M.IRON : 0; } });   // (b2) a lame line low on the plate
+      r.ell(V.mad(J.pelvis, up, 1.4), [3.6, 4.8, 1.8], M.SLATE, frameAlong(fwd, up), { mf: p => Math.abs(V.dot(V.sub(p, V.mad(J.pelvis, up, 1.4)), up) - 0.2) < 0.3 ? M.IRON : 0 });
+    });
   }
   if (look.quiver) {   // a strap from the leather pauldron down across the chest, a bolt quiver at the left hip
     const s0 = V.add(V.mad(J.chest, up, 3.4), V.mul(sideR, 2.6)), s1 = V.add(V.add(V.mad(J.pelvis, up, 1.5), V.mul(sideR, -3.4)), V.mul(fwd, 0.4));
     r.cone(V.mad(s0, fwd, 2.0), V.mad(s1, fwd, 2.4), 0.7, 0.7, M.LEATHER);
     r.cone(V.mad(s0, fwd, -2.2), V.mad(s1, fwd, -2.0), 0.7, 0.7, M.LEATHER);
-    const qc = V.add(V.add(J.pelvis, V.mul(sideR, -4.3)), V.add(V.mul(up, -1.5), V.mul(fwd, 0.6))), qa = V.norm(V.add(up, V.mul(fwd, -0.25)));
-    r.cone(V.mad(qc, qa, -2.8), V.mad(qc, qa, 2.6), 1.7, 1.9, M.LEATHER);
-    for (const [u, v] of [[-0.6, 0], [0.6, 0.4], [0, -0.6]]) r.cone(V.add(V.mad(qc, qa, 2.4), V.add(V.mul(fwd, u), V.mul(sideR, v))), V.add(V.mad(qc, qa, 5), V.add(V.mul(fwd, u), V.mul(sideR, v))), 0.35, 0.35, M.STEEL, { noShadow: true });
+    const qc = V.add(V.add(J.pelvis, V.mul(sideR, -5.0)), V.add(V.mul(up, -3.6), V.mul(fwd, 0.2))), qa = V.norm(V.add(V.add(up, V.mul(fwd, -0.2)), V.mul(sideR, -0.35)));   // (b2 pass 4) lower, outside the thigh
+    r.cone(V.mad(qc, qa, -2.8), V.mad(qc, qa, 2.8), 2.0, 2.2, M.LEATHER, { mf: p => Math.abs(V.dot(V.sub(p, qc), qa) - 2.2) < 0.4 ? M.HAIR : 0 });
+    for (const [u, v] of [[-0.8, 0], [0.8, 0.5], [0, -0.8]]) { const b0 = V.add(V.mad(qc, qa, 2.6), V.add(V.mul(fwd, u), V.mul(sideR, v))); r.cone(b0, V.mad(b0, qa, 2.0), 0.4, 0.4, M.WOOD, { noShadow: true }); r.cone(V.mad(b0, qa, 1.8), V.mad(b0, qa, 4.0), 0.85, 0.15, M.STEEL, { noShadow: true }); }
   }
-  if (look.rag) {   // a ragged cloth hanging from the hips at the front, torn into points
+  if (look.rag && (look.weapon === 'axe' || look.weapon === 'mace')) {   // (b2) a long red cloth to the knees, front and back, torn into points
+    for (const fs of [1, -1]) {
+      const rc = V.add(V.mad(J.pelvis, fwd, fs * 2.6), V.mul(up, -2.6)), rf = frameAlong(fwd, up);
+      r.group(() => {
+        r.box(rc, [0.45, 2.3, 3.0], look.rag, rf);
+        for (const sd of [-1.3, 0, 1.3]) r.cone(V.add(V.mad(rc, up, -2.4), V.mul(sideR, sd)), V.add(V.add(V.mad(rc, up, -5.4 + Math.abs(sd) * 0.9), V.mul(sideR, sd * 1.05)), V.mul(fwd, fs * 0.3)), 0.95, 0.25, look.rag);
+      });
+    }
+  } else if (look.rag && look.weapon === 'spear') {   // (b2 pass 2) the spearman: a longer muted-navy rag front and back, torn into points
+    for (const fs of [1, -1]) {
+      const rc = V.add(V.mad(J.pelvis, fwd, fs * 2.5), V.mul(up, -2.4)), rf = frameAlong(fwd, up);
+      r.group(() => {
+        r.box(rc, [0.45, 2.2, 2.8], M.CLOTH_NAVY, rf);
+        for (const sd of [-1.2, 0.1, 1.3]) r.cone(V.add(V.mad(rc, up, -2.2), V.mul(sideR, sd)), V.add(V.add(V.mad(rc, up, -5.0 + Math.abs(sd - 0.1) * 0.7), V.mul(sideR, sd * 1.05)), V.mul(fwd, fs * 0.3)), 0.9, 0.25, M.CLOTH_NAVY);
+      });
+    }
+  } else if (look.rag) {   // a ragged cloth hanging from the hips at the front, torn into points
     const rc = V.add(V.mad(J.pelvis, fwd, 2.4), V.mul(up, -2.2)), rf = frameAlong(fwd, up);
     r.box(rc, [0.4, 2.0, 2.6], look.rag, rf);
     for (const sd of [-1.1, 0.2, 1.3]) r.cone(V.add(V.mad(rc, up, -2.2), V.mul(sideR, sd)), V.add(V.add(V.mad(rc, up, -4.6 - Math.abs(sd) * 0.4), V.mul(sideR, sd * 1.1)), V.mul(fwd, 0.2)), 0.75, 0.2, look.rag);
@@ -239,12 +302,18 @@ function skeletonRig(look, st) {
     // a tattered robe from the waist to the floor (it floats: no feet), hem ragged and glowing
     // faintly; a high mantle over the shoulders; the ribcage shows through the open front
     const RM = M.CLOTH_DARK, TRIM = M.CLOTH_PURPLE, top = V.mad(J.pelvis, up, 2), hem = [J.pelvis[0] - (st.clip === 'walk' ? 1.6 : 0.3), J.pelvis[1], 1.2], ax = V.norm(V.sub(hem, top)), Lh = V.len(V.sub(hem, top));
-    r.cone(top, hem, 4.0, 8.2, RM, { mf: p => {
-      const q = V.sub(p, top), t = V.dot(q, ax);
-      if (t > Lh - 1.4 && hash(Math.round(V.dot(q, sideR) * 1.3 + V.dot(q, fwd) * 1.1), 3, 7) < 0.45) return M.DARK;   // ragged, tattered hem
-      if (Math.abs(t - (Lh - 2.6)) < 0.5) return TRIM;   // a purple band above the hem
-      return V.dot(q, fwd) > 2.6 && Math.abs(V.dot(q, sideR)) < 1.0 ? TRIM : 0;   // and down the front
-    } });
+    // (b2) a bell: a narrow cone to the knees, then a wide flat flare, then torn tails round the hem
+    const knee = V.lerp(top, hem, 0.62), flare = V.add(hem, [0, 0, 1.4]);
+    const robeMf = p => { const q = V.sub(p, top), t = V.dot(q, ax); if (Math.abs(t - (Lh - 2.4)) < 0.55) return TRIM; return V.dot(q, fwd) > 2.4 && Math.abs(V.dot(q, sideR)) < 1.0 ? TRIM : 0; };
+    r.group(() => {
+      r.cone(top, knee, 4.0, 5.2, RM, { mf: robeMf });
+      r.cone(knee, flare, 5.2, 7.6, RM, { mf: robeMf });
+      r.ell(flare, [7.8, 7.8, 1.6], RM, frameAlong(fwd, up), { mf: robeMf });
+    });
+    for (let k = 0; k < 9; k++) {   // ragged tails
+      const a = (k + 0.5) / 9 * Math.PI * 2, o = V.add(V.mul(fwd, Math.cos(a)), V.mul(sideR, Math.sin(a))), b0 = V.add(V.mad(flare, o, 6.6), [0, 0, 0.2]);
+      r.cone(b0, V.add(V.mad(b0, o, 2.2 + (k % 3) * 0.6), [0, 0, -1.6]), 1.3, 0.3, RM);
+    }
     const mc = V.mad(J.chest, up, 3.6);
     r.group(() => {   // mantle: wide over the shoulders with a stiff collar behind the neck
       r.ell(mc, [3.8, 7.6, 2.6], RM, frameAlong(fwd, up), { mf: p => V.dot(V.sub(p, mc), up) < -1.4 ? TRIM : 0 });
@@ -262,15 +331,16 @@ function skeletonRig(look, st) {
   if (look.helm && look.burn) {
     // an open kettle helm riding high on the skull so the burning eyes show under its brim,
     // with three tongues of flame licking up from the crown (they flicker with the frame)
-    const hc = V.add(V.mad(J.head, up, 2.4), V.mul(fwd, -0.5));
-    r.ell(hc, [4.4, 4.5, 3.0], M.IRON, frameAlong(fwd, up));
-    r.cyl(V.mad(hc, up, -0.9), V.mad(hc, up, -0.4), 4.9, M.IRON);
+    const hc = V.add(V.mad(J.head, up, 2.6), V.mul(fwd, -0.5));
+    r.ell(V.mad(hc, up, 0.5), [4.2, 4.3, 3.9], M.IRON, frameAlong(fwd, up));   // (b2) a taller dome, as the concept's
+    r.cyl(V.mad(hc, up, -0.9), V.mad(hc, up, -0.4), 4.7, M.IRON);
+    { const a0 = V.norm(V.sub(V.mul(fwd, -1), V.mul(up, 0.6))); r.ell(V.add(V.mad(hc, up, -0.8), V.mul(fwd, -2.6)), [2.6, 4.4, 0.9], M.IRON, frameAlong(a0, up)); }   // (b2 pass 3) a sallet flare behind
     const fl = st.f || 0, burnOut = st.clip === 'death' ? [1, 0.8, 0.5, 0.2, 0, 0][fl] : 1;   // the flames gutter out as it dies
     // one tall flame from the crown, and two from the helm's sides that curl outward and up
-    if (burnOut > 0) for (const [k, s, z, f2] of [[0, 0, 2.7, -0.4], [1, -1, 0.4, 0.4], [2, 1, 0.4, 0.4]]) {
-      const base = V.add(V.add(V.mad(hc, up, z), V.mul(sideR, s * 4.0)), V.mul(fwd, f2)), h = ((k ? 3.2 : 4.6) + [0, 0.9, 0.3, -0.5][(fl + k) % 4]) * burnOut;
+    if (burnOut > 0) for (const [k, s, z, f2] of [[0, 0, 3.8, -0.4], [1, -1, 1.2, 0.4], [2, 1, 1.2, 0.4]]) {
+      const base = V.add(V.add(V.mad(hc, up, z), V.mul(sideR, s * 3.7)), V.mul(fwd, f2)), h = ((k ? 3.8 : 5.4) + [0, 0.9, 0.3, -0.5][(fl + k) % 4]) * burnOut;
       const mid = V.add(V.mad(base, up, h * 0.5), V.mul(sideR, s * 1.3)), tip = V.add(V.add(V.mad(base, up, h), V.mul(sideR, s * (k ? 1.4 : 0) + [0.4, -0.3, 0.2, -0.4][(fl + k) % 4])), V.mul(fwd, -0.5));
-      const core = { noShadow: true, mf: p => { const q = V.sub(p, base), t = V.dot(q, up) / h, sd = Math.abs(V.dot(q, sideR) - s * 1.3 * Math.min(1, t * 2)); return t < 0.55 && sd < 0.75 ? M.LAMP : 0; } };   // a yellow heart low in each flame
+      const core = { noShadow: true, mf: p => { const q = V.sub(p, base), t = V.dot(q, up) / h, sd = Math.abs(V.dot(q, sideR) - s * 1.3 * Math.min(1, t * 2)); return t < 0.55 && sd < 0.75 ? M.LAMP : t > 0.72 ? M.EYE_RED : 0; } };   // a yellow heart low in each flame, red tips (b2)
       r.group(() => { r.cone(base, mid, k ? 1.35 : 1.7, k ? 0.95 : 1.2, M.FIREM, core); r.cone(mid, tip, k ? 0.95 : 1.2, 0.2, M.FIREM, core); });
     }
   } else if (look.helm === 'open') {
@@ -288,10 +358,15 @@ function skeletonRig(look, st) {
     });
     r.cyl(V.mad(hc, up, -0.8), V.mad(hc, up, -0.2), 4.8, M.SLATE);   // the brow band
   } else if (look.helm === 'kettle') {   // the tomb guard: a round dome with a narrow brim all round
-    const hc = V.add(V.mad(J.head, up, 2.3), V.mul(fwd, -0.4));
+    const hc = V.add(V.mad(J.head, up, 2.9), V.mul(fwd, -0.5));   // (b2 pass 2) higher, so the eyes show
     r.ell(hc, [4.4, 4.5, 3.2], M.SLATE, frameAlong(fwd, up));
-    r.cyl(V.mad(hc, up, -1.0), V.mad(hc, up, -0.4), 5.0, M.SLATE);
+    r.cyl(V.mad(hc, up, -1.0), V.mad(hc, up, -0.4), 4.6, M.SLATE);
+    r.group(() => { for (let k = 0; k < 40; k++) { const a = k / 40 * Math.PI * 2; r.sph(V.add(V.mad(hc, up, -0.7), V.add(V.mul(fwd, Math.cos(a) * 4.5), V.mul(sideR, Math.sin(a) * 4.5))), 0.9, M.SLATE); } });   // (b2) a thick rolled brim, as the concept's
   } else if (look.helm) r.ell(V.mad(J.head, up, 1.8), [4.5, 4.5, 3.2], M.IRON);
+  if (look.lich) {   // (b2 pass 3) a dark hood over the back of the skull
+    const hh = V.add(V.mad(J.head, up, 0.4), V.mul(fwd, -1.3));
+    r.ell(hh, [4.4, 4.8, 4.9], M.CLOTH_DARK, frameAlong(fwd, up), { mf: p => V.dot(V.sub(p, hh), fwd) > 3.0 ? M.CLOTH_PURPLE : 0 });
+  }
   if (look.lich) {   // a dark iron circlet with tall points and a frost stone
     const cc = V.mad(J.head, up, 2.6);
     r.cyl(V.mad(cc, up, 0.2), V.mad(cc, up, 0.75), 3.75, M.IRON);
@@ -305,9 +380,14 @@ function skeletonRig(look, st) {
     r.sph(V.add(V.mad(cc, up, 0.8), V.mul(fwd, 4.3)), 0.8, M.EYE_RED, { noShadow: true });
   }
   bigHead(r, sk0, J.head, 1.4);   // chibi skull
-  if (look.crown) {   // and a royal cloak
-    const top = V.add(V.mad(J.chest, up, 3.4), V.mul(fwd, -2.4)), dn = V.norm(V.add(V.mul(up, -1), V.mul(fwd, -0.25))), a1 = V.norm(V.sub(sideR, V.mul(dn, V.dot(sideR, dn))));
-    r.box(V.mad(top, dn, 6.5), [0.5, 5.5, 6.5], M.CLOTH_RED, [V.cross(a1, dn), a1, dn], { mf: p => V.dot(V.sub(p, top), dn) > 11.5 ? M.GOLD : 0 });
+  if (look.crown) {   // and a royal cloak (b2: it drapes, widening from the shoulders to a gold-trimmed hem, under a white fur collar)
+    const top = V.add(V.mad(J.chest, up, 3.4), V.mul(fwd, -2.6)), dn = V.norm(V.add(V.mul(up, -1), V.mul(fwd, st.clip === 'death' ? [-0.3, -0.2, -0.05, 0.05, 0.1, 0.12][st.f] : -0.3)));   // (b2 pass 4) lies on the back as it falls
+    const hemC = V.mad(top, dn, 13.5);
+    r.group(() => {
+      for (let i = -2; i <= 2; i++) r.cone(V.add(V.mad(top, dn, 0.8), V.mul(sideR, i * 1.15)), V.add(V.add(hemC, V.mul(sideR, i * 2.5)), V.mul(fwd, -Math.abs(i) * 0.3 + (i & 1) * 0.6)), 1.4, 1.9, M.CLOTH_RED, { mf: p => V.dot(V.sub(p, top), dn) > 12.2 ? M.GOLD : 0 });   // five folds
+    });
+    const cc = V.add(V.mad(J.chest, up, 5.0), V.mul(fwd, -1.0));
+    r.ell(cc, [4.2, 6.8, 2.2], M.CLOTH_WHITE, frameAlong(fwd, up), { mf: p => hash(Math.round(V.dot(p, sideR) * 0.9), Math.round(V.dot(p, fwd) * 0.9), 4) < 0.12 ? M.DARK : 0 });
   }
   if (look.lich && st.clip !== 'death') {   // floats a hand's breadth off the floor, bobbing slowly
     const lift = 2.2 + (st.clip === 'idle' ? [0, 0.6, 1, 0.6][st.f % 4] : 0.5);
