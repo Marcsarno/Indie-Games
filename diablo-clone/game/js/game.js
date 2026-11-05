@@ -1805,6 +1805,14 @@ function drawProjectile(p) {
 // lighting: static torch maps (scaled by flicker) + dynamic lights (hero, bolts), then fog of war,
 // then a light-table lookup per pixel. Environment pixels dither between levels; characters get
 // one level each so they never shimmer.
+// round 60: the brightest light level a character gets. It was L_ID + 2: the hero's own light kept
+// them there in dungeons, and its warm lift turned the purple hat pink, skin yellow, green lime and
+// blue grey (by the camp fire the old tables slid them a shade up their ramps instead). The user:
+// they look better darker, the shading helps the models; capped at the colors as drawn. Torches
+// still give them the warm rim. OPTIONS: HERO LIGHT cycles 3 / 4 / 5 to compare (?charlight=, dcg-charlight)
+let CHAR_CAP = L_ID;
+try { const q = new URLSearchParams(location.search).get('charlight') || localStorage.getItem('dcg-charlight'); if (q && +q >= 1 && +q < LEVELS) CHAR_CAP = +q; } catch (e) { /* storage blocked */ }
+function setCharCap(v) { CHAR_CAP = v; try { localStorage.setItem('dcg-charlight', String(v)); } catch (e) { /* ignore */ } }
 function lightPass(chars, kx, ky) {
   const t = G.t;
   cyclePalette(t);
@@ -1849,7 +1857,7 @@ function lightPass(chars, kx, ky) {
     const [x, y] = screenOf(c), sx = Math.round(x - camX), sy = Math.round(y - camY - 16);
     const l = (sx >= 0 && sy >= 0 && sx < W && sy < H) ? lbuf[sy * W + sx] : 0.3;
     const lv = tone ? tone[Math.min(1023, (l * BANDS * 64) | 0)] : l * BANDS;
-    return Math.min(L_ID + 2, Math.max(1, Math.round(lv)));   // capped: torch-side sprites must not blow out
+    return Math.min(CHAR_CAP, Math.max(1, Math.round(lv)));   // capped: torch-side sprites must not blow out (round 60: at the colors as drawn)
   });
   const vis = LV.vis, seen = LV.seen, black = PAL32[BLK], top = (LEVELS - 1) * NPAL;
   const cl = charLevel.map(L => L * NPAL);

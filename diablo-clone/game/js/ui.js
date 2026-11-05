@@ -403,7 +403,7 @@ function drawSplash() {
   const saved = budgetOff();
   ['ranger', 'warrior', 'mage'].forEach((cls, k) => {
     const look = TITLE.looks[cls], ent = { look, cls, combo: 0 };
-    bigHero(look, 1, 'idle', Math.floor(G.t / 0.2 + k) % 4, ent, W / 2 + (k - 1) * 74, cy + 140 + (k === 1 ? 8 : 0), 4);
+    bigHero(look, 1, 'idle', Math.floor(G.t / 0.2 + k) % 4, ent, W / 2 + (k - 1) * 74, cy + 140 + (k === 1 ? 8 : 0), L_ID);
   });
   budgetOn(saved);
   if (Math.floor(G.t * 1.6) % 2 === 0) textC('TAP TO BEGIN', W / 2, Math.round(H * 0.74), 51, 2);
@@ -441,7 +441,7 @@ function drawTitle() {
     } else sp = [look, sel ? 1 : Math.floor(G.t / 0.7 + k * 3) % 8, 'idle', Math.floor(G.t / 0.2) % 4, ent];
     // a pool of light under the picked one
     if (sel) for (let yy = -5; yy <= 5; yy++) for (let xx = -26; xx <= 26; xx++) if ((xx / 26) ** 2 + (yy / 5) ** 2 <= 1 && ((xx + yy) & 1)) put(x + cw / 2 + xx, y0 + 112 + yy, 6);
-    bigHero(...sp, x + cw / 2, y0 + 112, sel ? 6 : 4);   // (round 50: the sharp sprite)
+    bigHero(...sp, x + cw / 2, y0 + 112, L_ID);   // (round 50: the sharp sprite; round 60: as drawn, picked or not: brighter washed it out)
     info.lines.forEach((l, n) => textC(l, x + cw / 2, y0 + 124 + n * 8, sel ? 26 : 24));
     // its four skills
     SKILLSETS[cls].forEach((sk, n) => { const sl = SPELL_LOOK[sk.id] || [[48, 49, 50, 51], glyphBolt]; drawButton([x + 12 + n * 20, y0 + 154, 8], sel ? sl[0] : [3, 4, 5, 6], false, sl[1]); });
@@ -460,6 +460,7 @@ function drawTitle() {
     btn(FEEL_OLD ? 'COMBAT: OLD' : 'COMBAT: NEW', 6, oy - 22, 84, 16, () => setFeelOld(!FEEL_OLD), 25, 3, 6);
     btn(WORLD2X ? 'DETAIL: SHARP' : 'DETAIL: CLASSIC', 93, oy - 22, 84, 16, () => setWorld2x(!WORLD2X), 25, 3, 6);
     btn(HUE_LIGHT ? 'LIGHT: NEW' : 'LIGHT: OLD', 180, oy - 22, 84, 16, () => setLightNew(!HUE_LIGHT), 25, 3, 6);
+    btn('HERO LIGHT: ' + (CHAR_CAP === L_ID ? 'DRAWN' : '+' + (CHAR_CAP - L_ID)), 6, oy - 44, 84, 16, () => setCharCap(CHAR_CAP >= L_ID + 2 ? L_ID : CHAR_CAP + 1), 25, 3, 6);   // round 60
     btn(DL48 ? 'DUNGEONS: NEW' : 'DUNGEONS: OLD', 6, oy, 84, 16, () => setDL48(!DL48), 25, 3, 6);   // round 48: the dungeon light
     btn(SFX.synth ? 'SOUND: SYNTH' : 'SOUND: REAL', 180, oy, 84, 16, () => { setSynthSfx(!SFX.synth); sfx('hit'); }, 25, 3, 6);   // round 44: compare the recorded sounds with the old synth
   }
@@ -636,7 +637,7 @@ function drawInventory() {
   const L = invLayout(), pulse = Math.floor(G.t * 4) % 2;
   drawTabs(L, 'inv');
   // paper doll: the real hero sprite at 2x, so gear changes show here too
-  bigHero(hero.look, 1, 'idle', Math.floor(G.t / 0.2) % 4, hero, 150, 148, 4);   // (round 50: the sharp sprite)
+  bigHero(hero.look, 1, 'idle', Math.floor(G.t / 0.2) % 4, hero, 150, 148, L_ID);   // (round 50: the sharp sprite)
   const nm = { helm: 'HEAD', chest: 'BODY', weapon: 'HAND', shield: 'OFF', ring: 'RING', amulet: 'NECK' };
   const target = INV.sel && INV.sel.from === 'bag' ? ITEM_BASES[INV.sel.item.base].slot : null;   // where the chosen bag item would go
   for (const s of SLOTS) {
