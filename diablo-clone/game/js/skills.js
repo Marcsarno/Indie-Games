@@ -70,11 +70,12 @@ function useSkill(i) {
 const SLAM_R = 4.2, SLAM_HALF = 0.55;
 function groundSlam() {
   const t = nearestEnemy(SLAM_R + 1, true); if (t) hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
-  hero.combo = 3; hero.atk = 0; hero.hitDone = false; hero.approach = null; hero.mag = 0;
+  hero.combo = 3; hero.atk = 0; hero.hitDone = false; hero.approach = null; hero.mag = 0; hero.afterSlam = false; hero.jumpDust = false;
   sfx('heavySwing');
 }
 function groundSlamHit() {
   const [fx, fy] = dirVec(hero.dir), a0 = Math.atan2(fy, fx), mod = skillMod('slam');
+  if (hero.afterSlam) { hero.afterSlam = false; slamAt(a0, SLAM_R * 0.9, SLAM_HALF + 0.15, 0.9); return; }   // round 65c: Aftershock's second hop lands
   if (mod === 'ring') return slamAt(a0, 2.9, Math.PI, 1.4, true);   // the full circle: all around, shorter reach
   if (mod === 'fissure') {   // one long narrow crack racing out, hitting as it reaches each enemy
     G.fissures.push({ fi: hero.fi, fj: hero.fj, a0, reach: 0.5, R: 7.5, half: 0.2, hit: new Set() });
@@ -82,11 +83,12 @@ function groundSlamHit() {
     G.quakes.push(q); stampCracks(q);
     impactFlash(hero.fi + fx * 0.9, hero.fj + fy * 0.9, 3, 6);
     if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.4);
+    landOomph(hero.fi + fx * 0.6, hero.fj + fy * 0.6, a0, false);   // round 65c
     sfx('boom'); sfx('crack');
     return;
   }
   slamAt(a0, SLAM_R, SLAM_HALF, 1.5);
-  if (mod === 'after') G.aftershocks.push({ t: 0.45, a0 });   // a second, weaker slam on the same ground
+  if (mod === 'after') G.aftershocks.push({ t: 0.22, a0, hop: true });   // a second, weaker slam on the same ground (round 65c: he hops again for it)
 }
 // one slam of the ground from where the hero stands: a cone (or ring) of reach R and half-angle half
 function slamAt(a0, R, half, k, ring = false) {
@@ -155,7 +157,9 @@ function updateSlamMods(dt) {
     if (Math.random() < 0.8) { const d = Math.min(f.reach, f.R), [x, y] = iso(f.fi + Math.cos(f.a0) * d, f.fj + Math.sin(f.a0) * d); pspawn(5, x, y, 1, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 14, 40 + Math.random() * 40, 1, LV.outdoor ? DIRT[3] : S[5]); }
   }
   G.fissures = G.fissures.filter(f => f.reach < f.R + 0.5);
-  for (const a of G.aftershocks) { a.t -= dt; if (a.t <= 0) { a.done = true; slamAt(a.a0, SLAM_R * 0.9, SLAM_HALF + 0.15, 0.9); } }
+  for (const a of G.aftershocks) { a.t -= dt; if (a.t <= 0) { a.done = true;
+    if (a.hop && hero.combo === 3 && hero.atk >= 0 && !hero.dead) { const sw = weaponSwing(hero.look, 3), i0 = sw.findIndex(k => k.arc); let t0 = 0; for (let i = 0; i < i0; i++) t0 += sw[i].ms; hero.atk = t0; hero.hitDone = false; hero.afterSlam = true; hero.jumpDust = false; }   // back up into the jump
+    else slamAt(a.a0, SLAM_R * 0.9, SLAM_HALF + 0.15, 0.9); } }
   G.aftershocks = G.aftershocks.filter(a => !a.done);
 }
 
@@ -286,6 +290,7 @@ function updateLeap(dt) {
     const mod = L.mod, R = mod === 'quake' ? 3.3 : 1.9;   // round 30: Earthquake lands far wider; Pounce saves it all for the target
     hero.leap = null; hero.leapZ = 0; hero.atk = -1; hero.clip = 'idle'; hero.stopT = 0.11; hero.swingEnd = G.t; unstickHero();
     if (!FEEL_OLD) { hero.landT = 0.26; hero.stopT = 0; }   // round 40a: a squash on landing, then a kneel before standing
+    if (!FEEL_OLD) slamEruption(hero.fi, hero.fj, 0, R + 0.4, Math.PI, mod === 'quake' ? 1.4 : 1.1);   // round 65c: the landing breaks the ground like the slam
     G.pierce = true;
     for (const en of enemies) {
       if (!alive(en)) continue;
@@ -740,7 +745,8 @@ function updateSkills(dt) {
     if (hero.whirlTick <= 0) {   // four hits on everything in reach while spinning
       const storm = skillMod('whirl') === 'storm';   // round 30: Blade Storm reaches wider and hits faster
       hero.whirlTick = storm ? 0.13 : 0.2;
-      for (const e of enemies) if (alive(e) && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < heroReach() + 0.35 + (storm ? 0.8 : 0)) { const crit = Math.random() < CRIT_CHANCE; G.elem = 'stagger'; damageEnemy(e, heroDmg((crit ? 2 : 1) * (storm ? 0.45 : 0.6)), hero.fi, hero.fj, crit); G.elem = null; }
+      for (const e of enemies) if (alive(e) && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < heroReach() + 0.35 + (storm ? 0.8 : 0)) { const crit = Math.random() < CRIT_CHANCE; G.elem = 'stagger'; damageEnemy(e, heroDmg((crit ? 2 : 1) * (storm ? 0.45 : 0.6)), hero.fi, hero.fj, crit); G.elem = null;
+        { const [x, y] = screenOf(e), ta = Math.atan2(e.fj - hero.fj, e.fi - hero.fi) + 1.57; for (let q = 0; q < 6; q++) { const a = ta + (Math.random() - 0.5) * 0.9, s = 60 + Math.random() * 60; pspawn(2, x, y, e.def.chest * 0.6, (Math.cos(a) - Math.sin(a)) * s * 0.7, (Math.cos(a) + Math.sin(a)) * s * 0.35, Math.random() * 30, 0.15, q % 2 ? 51 : 27); } impactFlash(e.fi, e.fj, e.def.chest * 0.6, 3); } }   // round 65c: sparks fly off each blade hit
       for (const p of dynProps) if (!p.broken && (p.kind === 'barrel' || p.kind === 'egg') && Math.hypot(p.i + 0.5 - hero.fi, p.j + 0.5 - hero.fj) < 1.7) hitProp(p);
       sfx('swing'); sfx('whoomp');   // each turn of the spin has a low whoosh under the swish
     }
@@ -1133,6 +1139,7 @@ function updateImpactFx(dt) {
   for (const f of G.impacts) f.t -= dt; G.impacts = G.impacts.filter(f => f.t > 0);
   for (const f of G.frost) f.t -= dt; G.frost = G.frost.filter(f => f.t > 0);
   for (const k of G.streaks) k.t -= dt; G.streaks = G.streaks.filter(k => k.t > 0);
+  if (hero.whirl > 0 && Math.random() < 0.5 && G.dust) { const a = G.t * 14 + Math.random(), r = 1.0; G.dust.push({ fi: hero.fi + Math.cos(a) * r, fj: hero.fj + Math.sin(a) * r, vi: -Math.sin(a) * 3.5, vj: Math.cos(a) * 3.5, r: 4, vr: 10, t: 0.4, t0: 0.5, z: 1 }); }   // round 65c: a swirl of dust round his feet
   if (hero.whirl > 0 && Math.random() < 0.5) { const [x, y] = screenOf(hero), a = Math.random() * 6.283; pspawn(5, x + Math.cos(a) * 12, y + Math.sin(a) * 6, 1, -Math.sin(a) * 40, Math.cos(a) * 20, 10 + Math.random() * 10, 1, LV.outdoor ? DIRT[3] : S[5]); }
 }
 // ground-level pieces, drawn into the world layer under the bodies
@@ -1364,10 +1371,16 @@ function slamEruption(fi, fj, a0, R, half, k) {
     const a = ring ? c / 14 * 6.283 : a0 + (c / 9 - 0.5) * 2 * half, d = R * (0.45 + Math.random() * 0.5);
     G.dust.push({ fi: fi + Math.cos(a) * d * 0.4, fj: fj + Math.sin(a) * d * 0.4, vi: Math.cos(a) * 1.6, vj: Math.sin(a) * 1.6, r: 6 + Math.random() * 6, vr: 18, t: 0.9 + Math.random() * 0.4, t0: 1.2, z: 2 });
   }
+  landOomph(fi, fj, a0, ring);
+}
+// the landing itself (every slam, the Fissure too): a crater, a hold, the view punching down, a flash, dust round his feet
+function landOomph(fi, fj, a0, ring) {
   stampCrater(fi, fj, ring ? 1.25 : 0.95);
-  hero.stop = Math.max(hero.stop || 0, 0.09);   // the blow lands: everything holds a beat
-  if (HEAVY) camKick(Math.cos(a0), Math.sin(a0), ring ? 3 : 4.5);
-  if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.25);
+  hero.stop = Math.max(hero.stop || 0, 0.13);   // the blow lands: everything holds a beat
+  if (HEAVY) camKick(Math.cos(a0) + 0.7, Math.sin(a0) + 0.7, ring ? 4 : 5);   // (the view punches down and along the blow)
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.32);
+  G.flashes.push({ fi: hero.fi, fj: hero.fj, t: 0.14, t0: 0.14, r: 170 });   // a flash of light off the strike
+  { const dust = LV.outdoor ? [DIRT[4], DIRT[3]] : [TH().ramp[Math.min(TH().ramp.length - 1, 6)], TH().ramp[4]]; shockwave(hero.fi, hero.fj, 1.7, 0.28, dust, null, false); }   // a ring of dust round his feet
 }
 // the crater: a dark dip with a lit far rim, pressed into the floor for good (like the cracks)
 function stampCrater(fi, fj, r) {
@@ -1738,19 +1751,12 @@ function updateUlt(dt) {
   if (hero.ultOn && hero.ultOn.kind === 'storm') updateStorm(dt);
 }
 // detail layer: lightning from the top of the screen down to the struck spot, jagged, white core
-function drawStrikes() {
+function drawStrikes() {   // round 65c: the storm's bolts are Chain Lightning's: thick from the sky, a burst where they land
   for (const s of G.strikes) {
-    const [x, y] = iso(s.fi, s.fj), X1 = x * SPX - cam2x, Y1 = (y - s.z) * SPX - cam2y, p = 1 - s.t / s.t0;
-    const R = rng(s.seed + Math.floor(G.t * 40)), n = 12; let px = X1 + (R() - 0.5) * 40, py = -10;
-    for (let k = 1; k <= n; k++) {
-      const u = k / n, nx = k === n ? X1 : X1 + (R() - 0.5) * 30 * (1 - u) + (px - X1) * 0.3, ny = -10 + (Y1 + 10) * u;
-      const m = Math.ceil(Math.hypot(nx - px, ny - py));
-      for (let j = 0; j <= m; j++) {
-        const X = Math.round(px + (nx - px) * j / m), Y = Math.round(py + (ny - py) * j / m);
-        ovSet(X, Y, 27); ovSet(X + 1, Y, 27); ovSet(X - 1, Y, 40); ovSet(X + 2, Y, 40); if (p < 0.6) { if ((X + Y) & 1) { ovSet(X - 2, Y, 39); ovSet(X + 3, Y, 39); } }
-      }
-      px = nx; py = ny;
-    }
+    const [x, y] = iso(s.fi, s.fj), X1 = Math.round(x * SPX - cam2x), Y1 = Math.round((y - s.z) * SPX - cam2y), life = s.t / s.t0, R = rng(s.seed);
+    if (life < 0.35 && Math.floor(G.t * 30) % 2) continue;
+    boltLine([X1 + Math.round((R() - 0.5) * 60), -10], [X1, Y1], s.seed, life > 0.5 ? 3 : 2, life);
+    if (life > 0.5) for (let b = -6; b <= 6; b++) for (let a = -10; a <= 10; a++) { const d = Math.hypot(a / 10, b / 6); if (d <= 1) ovSet(X1 + a, Y1 + b, d < 0.4 ? 27 : d < 0.7 ? 32 : 40); }
   }
 }
 // the button's glyphs: a mountain peak with a crack of light, a swirl of arcane bolts
@@ -1873,7 +1879,8 @@ function updateRoll(dt) {
   const R = hero.roll; R.t += dt;
   const u = Math.min(1, R.t / R.dur), e = u * (2 - u);
   hero.fi = R.from[0] + (R.to[0] - R.from[0]) * e; hero.fj = R.from[1] + (R.to[1] - R.from[1]) * e;
-  hero.leapZ = Math.sin(u * Math.PI) * 9;
+  hero.leapZ = Math.sin(u * Math.PI) * 14;
+  if (!R.ghostT || G.t > R.ghostT) { R.ghostT = G.t + 0.045; const [gx, gy] = screenOf(hero); G.ghosts.push({ sp: getSprite('hero', hero.look, hero.dir, hero.clip, frameOf(hero), hero), x: gx, y: gy - hero.leapZ, t: 0.22, t0: 0.22, fl: 0 }); }   // round 65c: afterimages along the leap
   hero.clip = FEEL_OLD ? 'stop' : 'vault';   // round 43: crouch, tucked jump, landing (frameOf reads the leap's progress)
   if (Math.random() < 0.7) { const [x, y] = screenOf(hero); pspawn(5, x, y, 1, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 8, 6, 1, LV.outdoor ? DIRT[3] : S[5]); }
   if (u >= 1) {
@@ -1960,13 +1967,20 @@ function drawRangerGround() {
   for (const tp of G.traps) {
     let fi = tp.fi, fj = tp.fj, z = 0;
     if (tp.fly > 0) { const u = 1 - tp.fly / 0.25; fi = tp.from[0] + (tp.fi - tp.from[0]) * u; fj = tp.from[1] + (tp.fj - tp.from[1]) * u; z = Math.sin(u * Math.PI) * 16; }
-    const [x0, y0] = iso(fi, fj), cx = Math.round(x0 - camX), cy = Math.round(y0 - camY - z), R = tp.small ? 4 : 6, shut = tp.snapT > 0;
-    for (let k = 0; k < 24; k++) {   // the ring of the jaws, and teeth pointing in (or meeting in the middle when shut)
-      const a = k / 24 * 6.283, rx = Math.cos(a) * R, ry = Math.sin(a) * R * 0.5;
-      put(cx + Math.round(rx), cy + Math.round(ry), STEEL[1]); put(cx + Math.round(rx), cy + Math.round(ry) - 1, STEEL[3]);
-      if (k % 3 === 0) { const t = shut ? 0.15 : 0.6; put(cx + Math.round(rx * t), cy + Math.round(ry * t) - 1, STEEL[4]); }
+    const [x0, y0] = iso(fi, fj), cx = Math.round(x0 - camX), cy = Math.round(y0 - camY - z), R = tp.small ? 7 : 11, shut = tp.snapT > 0;   // (round 65c: twice the size, with real teeth)
+    if (tp.arm <= 0 && !shut && tp.fly <= 0) {   // armed: its reach, a dashed ring that breathes
+      const rr = tp.r * 22.6 * (0.96 + Math.sin(G.t * 4) * 0.04);
+      for (let k = 0; k < 96; k++) { if ((k + Math.floor(G.t * 8)) % 6 > 2) continue; const a = k / 96 * 6.283; put(cx + Math.round(Math.cos(a) * rr), cy + Math.round(Math.sin(a) * rr * 0.5), 54); }
     }
-    put(cx, cy, tp.arm > 0 ? STEEL[2] : 22);   // the plate in the middle: red once it is armed
+    for (let k = 0; k < 40; k++) {   // the iron ring, lit on top, dark below
+      const a = k / 40 * 6.283, rx = Math.cos(a) * R, ry = Math.sin(a) * R * 0.5;
+      put(cx + Math.round(rx), cy + Math.round(ry) + 1, BLK); put(cx + Math.round(rx), cy + Math.round(ry), STEEL[1]); put(cx + Math.round(rx), cy + Math.round(ry) - 1, Math.sin(a) < 0 ? STEEL[4] : STEEL[3]);
+    }
+    for (let k = 0; k < 10; k++) {   // teeth pointing in (meeting in the middle once it has snapped)
+      const a = k / 10 * 6.283, t0 = 1, t1 = shut ? 0.08 : 0.55;
+      for (let s = 0; s <= 4; s++) { const t = t0 + (t1 - t0) * s / 4; put(cx + Math.round(Math.cos(a) * R * t), cy + Math.round(Math.sin(a) * R * 0.5 * t) - 1 - (s > 2 ? 1 : 0), s === 4 ? 27 : STEEL[4]); }
+    }
+    for (const [a, b] of [[0, 0], [1, 0], [-1, 0], [0, -1]]) put(cx + a, cy + b, tp.arm > 0 ? STEEL[2] : (Math.floor(G.t * 4) % 2 ? 22 : 23));   // the plate in the middle: red, blinking, once it is armed
     if (tp.mod === 'net' && !shut) for (let k = 0; k < 12; k++) { const a = k / 12 * 6.283; put(cx + Math.round(Math.cos(a) * R * 1.6), cy + Math.round(Math.sin(a) * R * 0.8), WOOD[1]); }
   }
   for (const s of G.stuck) {   // a shaft leaning out of the ground with its fletching
@@ -1992,6 +2006,14 @@ function drawRangerFx() {
   }
   for (const e of enemies) {
     if (!(e.markT > 0) || !alive(e)) continue;
+    { // round 65c: a bold red reticle turning on the ground under it, and a red arrow bobbing over its head
+      const [gx, gy] = iso(e.fi, e.fj), X = Math.round(gx * SPX - cam2x), Y = Math.round(gy * SPX - cam2y), R0 = 14 + (e.def.chest || 20) * 0.5, spin = G.t * 1.6;
+      const pulse = 0.5 + 0.5 * Math.sin(G.t * 6);
+      for (let k = 0; k < 160; k++) { const a = k / 160 * 6.283; for (const dr of [-1, 0, 1, 2, 3]) { const r = R0 + dr; ovSet(Math.round(X + Math.cos(a) * r * 2), Math.round(Y + Math.sin(a) * r), dr === 3 || dr === -1 ? BLK : dr === 0 && pulse > 0.5 ? 51 : 23); } }
+      for (let q = 0; q < 4; q++) { const a = spin + q * 1.571; for (let s = -6; s <= 8; s++) { const r = R0 + s; ovSet(Math.round(X + Math.cos(a) * r * 2), Math.round(Y + Math.sin(a) * r), s < 0 ? 51 : 22); ovSet(Math.round(X + Math.cos(a) * r * 2) + 1, Math.round(Y + Math.sin(a) * r), s < 0 ? 51 : 23); } }
+      const hy = Math.round((gy - (e.def.chest || 20) * 2 - 14 - Math.abs(Math.sin(G.t * 5)) * 4) * SPX - cam2y);
+      for (let b = 0; b < 8; b++) for (let a = -(8 - b); a <= 8 - b; a++) ovSet(X + a, hy + b, Math.abs(a) >= 8 - b - 1 ? BLK : b < 2 ? 23 : 22);
+    }
     // a target lock around the body: a broken red ring that breathes, four ticks pointing in
     const [x, y] = iso(e.fi, e.fj), X = Math.round(x * SPX - cam2x), Y = Math.round((y - e.def.chest * 0.8) * SPX - cam2y), R = Math.round(e.def.chest * 1.1 + 12 + Math.sin(G.t * 8) * 2), seen = LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] >= 0.3;
     for (let a = 0; a < 72; a++) { const t = a / 72 * 6.283; if ((a % 18) > 12) continue; for (const dr of [-2, -1, 0, 1, 2]) ovSet(Math.round(X + Math.cos(t) * (R + dr)), Math.round(Y + Math.sin(t) * (R + dr) * 0.8), dr === 2 || dr === -2 ? BLK : dr < 0 ? 51 : 27); }

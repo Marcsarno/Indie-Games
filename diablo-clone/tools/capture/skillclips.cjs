@@ -4,7 +4,7 @@
 const { chromium } = require('playwright'); const fs = require('fs'), path = require('path');
 (async () => {
   const [gameDir, outDir, ...specs] = process.argv.slice(2); fs.mkdirSync(outDir, { recursive: true });
-  const b = await chromium.launch(); const p = await b.newPage(); await p.addInitScript(() => { window.requestAnimationFrame = () => 0; Math.random = (() => { let s = 9; return () => (s = (s * 16807) % 2147483647) / 2147483647; })(); });
+  const b = await chromium.launch(); const p = await b.newPage(); await p.addInitScript((nf) => { window.__nf = nf; window.requestAnimationFrame = () => 0; Math.random = (() => { let s = 9; return () => (s = (s * 16807) % 2147483647) / 2147483647; })(); }, process.env.NF || 54);
   const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + path.resolve(gameDir, 'index.html'));
   for (const spec of specs) {
@@ -22,7 +22,7 @@ const { chromium } = require('playwright'); const fs = require('fs'), path = req
       for (let s = 0; s < 60; s++) warmStep(40);
       G.t = 5; updateFov(hero.fi, hero.fj); computeFlow();
       const out = []; const dt = 1 / 30;
-      const cast = () => { if (id === 'attack') heroAttack(); else if (id === 'ult') { hero.ult = 1; useUlt(); } else { const k = SKILLS.findIndex(s => s.id === id); CD[id] = 0; hero.mana = 999; useSkill(k); } };
+      const cast = () => { if (id === 'attack') heroAttack(); else if (id === 'ult') { hero.ult = 100; useUlt(); } else { const k = SKILLS.findIndex(s => s.id === id); CD[id] = 0; hero.mana = 999; useSkill(k); } };
       const NF = +(window.__nf || 54); for (let f = 0; f < NF; f++) {
         if (f === 2) cast();
         for (const e of enemies) { e.cool = 99; e.atk = -1; }

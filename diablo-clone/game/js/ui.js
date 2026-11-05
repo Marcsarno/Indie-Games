@@ -394,7 +394,7 @@ function titlePick(cls) { if (TITLE.sel !== cls) { TITLE.sel = cls; TITLE.pickT 
 // round 60: the splash is the user's own picture (game/art/splash.webp, the one image file in the
 // game); the code-drawn splash stays as the fallback while it loads or if it can't load
 const SPLASH_IMG = new Image(); SPLASH_IMG.src = 'art/splash.webp';
-const splashReady = () => SPLASH_IMG.complete && SPLASH_IMG.naturalWidth > 0;
+const splashReady = () => SPLASH_IMG.complete && SPLASH_IMG.naturalWidth > 0 && location.protocol !== 'file:';   // (from local files the picture would block the test tools' screenshots: the drawn splash there)
 function drawSplashImage() {   // over the finished frame, at the canvas's full resolution, filling it (cropped to fit)
   const iw = SPLASH_IMG.naturalWidth, ih = SPLASH_IMG.naturalHeight, k = Math.max(OW / iw, OH / ih), w = iw * k, h = ih * k;
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';

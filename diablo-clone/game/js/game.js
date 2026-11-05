@@ -801,8 +801,9 @@ function updateHero(dt) {
       // moment at the top, then down faster and faster into the blow
       const a0 = sw.findIndex(k => k.arc), hiK = sw.findIndex(k => k.hit);
       let t0 = 0; for (let i = 0; i < a0; i++) t0 += sw[i].ms; let t1 = t0; for (let i = a0; i < hiK; i++) t1 += sw[i].ms;
-      if (a0 >= 0 && hero.atk >= t0 && hero.atk < t1) { const u = (hero.atk - t0) / (t1 - t0), H = 18; hero.leapZ = u < 0.62 ? H * (1 - (1 - u / 0.62) ** 2) : H * (1 - ((u - 0.62) / 0.38) ** 2); }
-      else { const want = ki >= 0 ? sw[ki].hop || 0 : 0; hero.leapZ = (hero.leapZ || 0) + (want - (hero.leapZ || 0)) * Math.min(1, dt * 28); if (ki >= 0 && sw[ki].hit) hero.leapZ = 0; }
+      if (a0 >= 0 && hero.atk >= t0 && hero.atk < t1 && !hero.jumpDust) { hero.jumpDust = true; const [x, y] = screenOf(hero), dc = LV.outdoor ? DIRT[3] : S[5]; for (let q = 0; q < 12; q++) { const a = q / 12 * 6.283; pspawn(5, x + Math.cos(a) * 6, y + Math.sin(a) * 3, 1, Math.cos(a) * 40, Math.sin(a) * 20, 10 + Math.random() * 15, 1, dc); } }   // round 65c: dust kicked up on takeoff
+      if (a0 >= 0 && hero.atk >= t0 && hero.atk < t1) { const u = (hero.atk - t0) / (t1 - t0), H = hero.afterSlam ? 15 : 25; hero.leapZ = u < 0.62 ? H * (1 - (1 - u / 0.62) ** 2) : H * (1 - ((u - 0.62) / 0.38) ** 2); }
+      else { const want = ki >= 0 ? sw[ki].hop || 0 : 0; hero.leapZ = (hero.leapZ || 0) + (want - (hero.leapZ || 0)) * Math.min(1, dt * 28); if (ki >= 0 && sw[ki].hit) hero.leapZ = 0; if (hero.atk < t0) hero.jumpDust = false; }
     }   // round 40a: the slam's hop
     if (!hero.hitDone && hero.mag > 0) { const st = Math.min(hero.mag, dt * 4.5); lungeHero(st); hero.mag -= st; }
     if (ki >= 0 && sw[ki].hit && !hero.hitDone) {
@@ -1602,7 +1603,7 @@ function render() {
   ov.sort((a, b) => a.depth - b.depth);
   for (const d of ov) d.draw();
   drawEliteFx();
-  for (const g of G.ghosts) ovBlit(g.sp, g.x, g.y, L_ID, 6, 1 - g.t / g.t0, -1);   // blink afterimage, dissolving
+  for (const g of G.ghosts) ovBlit(g.sp, g.x, g.y, L_ID, g.fl ?? 6, 1 - g.t / g.t0, -1);   // blink afterimage, dissolving
   for (let k = 0; k < PN; k++) {
     const kind = pkind[k]; if (!kind) continue;
     const X = Math.round(px_[k] * SPX) - cam2x, Y = Math.round((py_[k] - pz_[k]) * SPX) - cam2y;
