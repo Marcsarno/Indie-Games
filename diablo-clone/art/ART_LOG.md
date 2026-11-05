@@ -430,3 +430,11 @@ body, (2) lay short staggered fur clumps (+1/-1 tone) running back and down, on 
 ruff, the neck and 14 low swept-back spine tufts plus flank tufts join the body part (the ruff, head-scaled, had been
 the stray round "dome"). Coat now `M.HELLSTONE` (red-brown, matches the user's v3 concept). The same treatment could
 carry to the Dire Bear, Greyfang and the wolves if the user likes it.
+
+## B5: Old Mossback deleted (2026-11-05)
+After the plain-bear, three-view, fur and front-view passes the user decided the bear "just isn't working out" and
+asked to delete it. The `mossback` MONSTERS entry is removed. Its houndRig code (`look.moss` / `MB`, `look.mossy`)
+and the opt-in `ff` fur hook in rig.js stay in place but nothing uses them (every monster and the heroes render
+identically with or without them); delete them if you want the code smaller. **Main chat:** drop any mossback
+wiring. Remaining secret bosses: Drowned Warden, Flintback Matriarch, Brother Cinder (user's simpler v2 concepts in
+`art/concepts/monsters/*_v2.png`).
