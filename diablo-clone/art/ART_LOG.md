@@ -410,3 +410,12 @@ you decide where to hide them and which boss AI they get (none has a `boss:` key
 **Weak spots:** Flintback's slabs look boxy; Warden's helm greyer than the concept; Mossback's mushroom caps dull tan.
 **Existing bug spotted (not changed):** the Dire Bear's and Gorr's sprite canvases are a little short, so a few death
 frames (bear dirs 2-4, Gorr 4-5) are cut off at the bottom; the fix is a taller `size` on those entries.
+
+## B5 redo (in progress, paused by the user, 2026-11-05)
+The user found all four B5 secret bosses bad. Old Mossback was being redone by the art chat directly (paused):
+the moss lumps and hanging hanks were removed (they read as warts), body and legs now share one part (no seams),
+cranium/snout/jaw are one shape, the head is held further forward at a normal 1.2x scale (1.6x made a bobblehead),
+the neck is slimmer, the moss is painted onto the fur (also on the B2 bear hump, which had covered it), smaller eyes
+with no dark sockets, a black nose, tan caps. All behind `look.moss`; the Dire Bear and other hounds are unaffected.
+**Next:** the user will send simpler concepts (a plain bear, a plain skeleton) without moss and mushrooms: small
+organic surface detail doesn't suit code-drawn sprites. Flintback and Brother Cinder redos not started.
