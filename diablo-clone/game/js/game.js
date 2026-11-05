@@ -73,7 +73,7 @@ function say(text, col = 26, t = 2.5) { G.msg.push({ text, col, t }); if (G.msg.
 // everything a fight leaves in the air: missiles, effects, particles, floaters (the skill preview
 // clears it between loops too)
 function resetFx() {
-  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.bolts = []; G.spikes = []; G.dust = []; G.mist = []; G.needles = []; G.clusters = []; G.bomblets = []; G.sentries = []; hero.hawks = []; hero.pips = 0; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; G.debris = []; G.eliteFire = []; G.frostOrbs = []; G.summons = []; G.eliteBursts = []; G.blinkFx = []; G.leech = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
+  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.bolts = []; G.spikes = []; G.dust = []; G.mist = []; G.needles = []; G.clusters = []; G.bomblets = []; G.sentries = []; hero.hawks = []; hero.pips = 0; hero.quick = 0; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; G.debris = []; G.eliteFire = []; G.frostOrbs = []; G.summons = []; G.eliteBursts = []; G.blinkFx = []; G.leech = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
 }
 function startLevel(level, seed, side = null) {
   genLevel(level, seed, side);
@@ -1284,7 +1284,7 @@ function updateProjectiles(dt) {
             if (arrow) arrowBite(p, e); else { impactFlash(e.fi, e.fj, p.z, 3); sfx('zap'); } continue;
           }
           if (p.boom) { p.life = 0; break; }   // a fireball bursts on whatever it touches (below)
-          if (p.spell) { const c = spellCrit(); G.elem = p.elem || null; damageEnemy(e, spellDmg(c ? p.dmgK * 2 : p.dmgK), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, c, 0, true); G.elem = null; if (p.kind === 'arrow') arrowBite(p, e); if (p.onHit) p.onHit(e, p); if (p.basic) { hero.pips = Math.min(3, (hero.pips || 0) + 1); hero.pipT = G.t; } if (p.kind === 'missile') hero.mana = Math.min(STAT.maxMana, hero.mana + (p.small ? 1 : 3)); }
+          if (p.spell) { const c = p.crit || spellCrit(); G.elem = p.elem || null; damageEnemy(e, spellDmg(c ? p.dmgK * 2 : p.dmgK), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, c, 0, true); G.elem = null; if (p.kind === 'arrow') arrowBite(p, e); if (p.onHit) p.onHit(e, p); if (p.basic) { hero.pips = Math.min(3, (hero.pips || 0) + 1); hero.pipT = G.t; } if (p.kind === 'missile') hero.mana = Math.min(STAT.maxMana, hero.mana + (p.small ? 1 : 3)); }
           else damageEnemy(e, roll(p.dmg), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, false, 0, true);
           p.life = 0; break;
         }
@@ -1793,7 +1793,7 @@ function drawProjectile(p) {
     for (let s = -12; s <= 9; s++) { const x = Math.round(X0 + dx * s), y = Math.round(Y0 + dy * s); ovSet(x, y, s > 6 ? 27 : BONE[2]); ovSet(x, y + 1, s > 6 ? STEEL[3] : WOOD[3]); }
     for (let s = -12; s <= -8; s++) for (const sd of [-1, 1]) { const x = Math.round(X0 + dx * s - dy * sd * (s + 14) * 0.5), y = Math.round(Y0 + dy * s + dx * sd * (s + 14) * 0.5); ovSet(x, y, p.fire ? 16 : p.mark ? 23 : 27); }
     if (p.fire) for (let k = 0; k < 3; k++) ovSet(Math.round(X0 + dx * 10 + (Math.random() - 0.5) * 3), Math.round(Y0 + dy * 10 - Math.random() * 3), 17);
-    for (let s = -15; s >= -42; s--) { const x = Math.round(X0 + dx * s), y = Math.round(Y0 + dy * s), u = (-s - 15) / 27; if (BAYER[((y & 3) << 2) | (x & 3)] < u) continue; ovSet(x, y, u < 0.35 ? 27 : p.fire ? 16 : p.mark ? 22 : 31); }   // round 65: a tracer streak behind it
+    for (let s = -15; s >= -42; s--) { const x = Math.round(X0 + dx * s), y = Math.round(Y0 + dy * s), u = (-s - 15) / 27; if (BAYER[((y & 3) << 2) | (x & 3)] < u) continue; ovSet(x, y, u < 0.35 ? 27 : p.fire ? 16 : p.quick ? 51 : p.mark ? 22 : 31); }   // round 65: a tracer streak behind it (round 66b: gold for Quickdraw)
     return;
   }
   if (p.kind === 'arrow') {

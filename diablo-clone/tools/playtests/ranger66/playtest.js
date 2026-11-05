@@ -36,8 +36,10 @@ arena(5, 0.7); const c5 = run(12, () => { if ((hero.pips || 0) >= 3 && CD.cluste
 L.push({ packOfFive: { basicOnly: b5, withPierce: p5, withCluster: c5 } });
 // pets: sentry and hawk on top of the basic shot
 arena(1); const s1 = run(12, () => { if (CD.sentry <= 0) sk('sentry')(); else basic(); });
-arena(1); const h1 = run(12, () => { if (CD.hawk <= 0 && !(hero.hawks && hero.hawks.length)) sk('hawk')(); else basic(); });
-L.push({ pets: { basicOnly: b1, withSentry: s1, withHawk: h1 } });
+arena(1); const v1 = run(12, () => { if (CD.vault <= 0) sk('vault')(); else basic(); });
+L.push({ pets: { basicOnly: b1, withSentry: s1, withVaultQuickdraw: v1 } });
+// the vault's trap: an enemy that follows steps in it
+{ arena(1); const e = enemies[0]; e.fi = hero.fi + 1.2; e.fj = hero.fj; sk('vault')(); for (let f = 0; f < 20; f++) { G.t += 1 / 30; update(1 / 30); } const trapAt = G.traps[G.traps.length - 1]; e.home = null; e.fi = trapAt.fi + 0.2; e.fj = trapAt.fj; for (let f = 0; f < 6; f++) { G.t += 1 / 30; update(1 / 30); } L.push({ vaultTrap: !!trapAt, snapped: trapAt.snapT > 0 || trapAt.life <= 0.5, rooted: e.rootT > 0, quickAfterLanding: hero.quick }); }
 // the combo points: basic hits fill them, the spenders empty them
 arena(1); for (let k = 0; k < 5; k++) { basic(); for (let f = 0; f < 20; f++) { G.t += 1 / 30; update(1 / 30); } } const filled = hero.pips; sk('pierce')(); L.push({ pipsAfterFiveShots: filled, afterPierce: hero.pips });
 L.push({ kit: SKILLS.map(s => s.id).join(',') });

@@ -22,12 +22,12 @@ const SKILLSETS = {
     { id: 'pierce', name: 'PIERCING SHOT', lvl: 1, mana: 7, cd: 0.9 },
     { id: 'cluster', name: 'CLUSTER ARROW', lvl: 2, mana: 12, cd: 2.5 },
     { id: 'sentry', name: 'SENTRY', lvl: 3, mana: 14, cd: 8 },
-    { id: 'hawk', name: 'HAWK', lvl: 4, mana: 12, cd: 20 },
+    { id: 'vault', name: 'VAULT', lvl: 4, mana: 8, cd: 4 },   // round 66b: replaces the Hawk (the user didn't like it)
   ],
 };
 let SKILLS = SKILLSETS.warrior;
 function setSkillsFor(cls) { SKILLS = SKILLSETS[cls] || SKILLSETS.warrior; }
-const CD = { bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, leap: 0, fireball: 0, cone: 0, meteor: 0, blink: 0, chain: 0, multi: 0, trap: 0, roll: 0, mark: 0, pierce: 0, cluster: 0, sentry: 0, hawk: 0 };
+const CD = { bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, leap: 0, fireball: 0, cone: 0, meteor: 0, blink: 0, chain: 0, multi: 0, trap: 0, roll: 0, mark: 0, pierce: 0, cluster: 0, sentry: 0, hawk: 0, vault: 0 };
 function resetSkills() { for (const k in CD) CD[k] = 0; hero.whirl = 0; hero.dash = 0; hero.buff = 0; }
 const heroBusy = () => hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0 || !!hero.leap || !!hero.ultOn || !!hero.roll;
 // one hit's damage, with the war cry bonus
@@ -62,6 +62,7 @@ function useSkill(i) {
   if (s.id === 'cluster') { if (!clusterArrow()) { hero.mana += skillCost(s); CD.cluster = 0; } }
   if (s.id === 'sentry') placeSentry();
   if (s.id === 'hawk') callHawk();
+  if (s.id === 'vault') { if (!vault()) { hero.mana += skillCost(s); CD.vault = 0; } }
   if (s.id === 'multi') multishot();
   if (s.id === 'trap') { if (!throwTrap()) { hero.mana += skillCost(s); CD.trap = 0; } }
   if (s.id === 'roll') { if (!startRoll()) { hero.mana += skillCost(s); CD.roll = 0; } }
@@ -226,6 +227,11 @@ const SKILL_MODS = {
     { id: 'ballista', name: 'BALLISTA', desc: 'SLOWER, HEAVY BOLTS THAT GO THROUGH' },
     { id: 'fire', name: 'FIRE SENTRY', desc: 'BURNING BOLTS' },
     { id: 'twin', name: 'TWO SENTRIES', desc: 'PLANTS A PAIR, EACH A LITTLE SLOWER' },
+  ],
+  vault: [   // round 66b
+    { id: 'spike', name: 'SPIKE TRAP', desc: 'THE TRAP SPRINGS A HEAVY SPIKE INSTEAD OF A SNARE' },
+    { id: 'smoke', name: 'SMOKE BOMB', desc: 'SMOKE WHERE YOU STOOD DAZES THOSE IN IT' },
+    { id: 'long', name: 'LONG VAULT', desc: 'TWICE AS FAR, AND FIVE QUICKDRAW SHOTS' },
   ],
   hawk: [
     { id: 'pair', name: 'MATED PAIR', desc: 'TWO HAWKS' },
@@ -1827,6 +1833,12 @@ function aimAngle(t) {
 function looseArrow() {
   const t = hero.shotAt && alive(hero.shotAt) ? hero.shotAt : rangerTarget();
   if (t) hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
+  if (hero.quick > 0) {   // round 66b: Quickdraw (after a Vault): two arrows, both sure to crit
+    hero.quick--; const a = aimAngle(t);
+    for (const da of [-0.06, 0.06]) shootArrow(a + da, { dmgK: 1.05, basic: true, crit: true, quick: true });
+    sfx('twang'); sfx('swing');
+    return;
+  }
   shootArrow(aimAngle(t), { dmgK: 1.05, basic: true });   // (round 66: a basic shot that hits fills a combo point)
   sfx('twang');
 }
@@ -1964,6 +1976,27 @@ function updateHawks(dt) {
   }
   hero.hawks = hero.hawks.filter(h => h.t > 0);
 }
+// Vault (round 66b, replaces the Hawk; the user: a vault that drops a trap at your feet): a flip back,
+// away from the nearest foe (or along the stick); a snare snaps open where you stood, armed at once, so
+// whatever follows runs into it; on landing, QUICKDRAW: the next 3 shots (5 with Long Vault) loose two
+// arrows each and always crit. Spike Trap: the trap springs a heavy spike. Smoke Bomb: dazing smoke.
+function vault() {
+  const mod = skillMod('vault'), dist0 = mod === 'long' ? 5.5 : 3.2;
+  let dx, dy;
+  if (Math.hypot(input.mx, input.my) > 0.2) [dx, dy] = stickToGround(input.mx, input.my);
+  else { const t = nearestEnemy(6); if (t) { const l = Math.hypot(hero.fi - t.fi, hero.fj - t.fj) || 1; dx = (hero.fi - t.fi) / l; dy = (hero.fj - t.fj) / l; } else { const [fx, fy] = dirVec(hero.dir); dx = -fx; dy = -fy; } }
+  let dist = 0;
+  for (let s = 0.25; s <= dist0; s += 0.25) { if (blocked(hero.fi + dx * s, hero.fj + dy * s)) break; if (standable(hero.fi + dx * s, hero.fj + dy * s)) dist = s; }
+  if (dist < 0.75) return false;
+  G.traps.push({ fi: hero.fi, fj: hero.fj, from: [hero.fi, hero.fj], fly: 0, arm: 0.15, life: 12, mod: mod === 'spike' ? 'spike' : null, r: 1.6, small: false });
+  while (G.traps.length > 6) G.traps.shift();
+  if (mod === 'smoke') { G.smoke.push({ fi: hero.fi, fj: hero.fj, t: 3, t0: 3, r: 2 }); for (const e of enemies) if (alive(e) && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 2.2 && !e.def.unique) e.stun = Math.max(e.stun || 0, 1.2); }
+  { const [x, y] = screenOf(hero); for (let q = 0; q < 12; q++) { const a = q / 12 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 45, Math.sin(a) * 22, 14, 1, LV.outdoor ? DIRT[3] : S[5]); } }
+  hero.roll = { from: [hero.fi, hero.fj], to: [hero.fi + dx * dist, hero.fj + dy * dist], t: 0, dur: 0.26 + dist * 0.03, mod, vault: true };
+  hero.atk = -1; hero.cast = -1; hero.approach = null;
+  sfx('swing'); sfx('clank');
+  return true;
+}
 function updateRangerKit(dt) {
   updateClusters(dt); updateSentries(dt); updateHawks(dt);
   for (const p of projectiles) if (p.bolt >= 4 && p.life > 0 && Math.random() < 0.8 && G.dust) {   // the ballista bolt tears up the floor as it goes
@@ -2083,6 +2116,7 @@ function updateRoll(dt) {
   if (u >= 1) {
     hero.roll = null; hero.leapZ = 0; hero.clip = 'idle'; unstickHero();
     const [x, y] = screenOf(hero); for (let k = 0; k < 10; k++) { const a = k / 10 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 40, Math.sin(a) * 20, 12, 1, LV.outdoor ? DIRT[3] : S[5]); }
+    if (R.vault) { hero.quick = R.mod === 'long' ? 5 : 3; hero.quickT = G.t; sfx('levelUp', 0.4); const [x2, y2] = screenOf(hero); for (let q = 0; q < 10; q++) { const a = q / 10 * 6.283; pspawn(2, x2, y2, 24, Math.cos(a) * 40, Math.sin(a) * 20, 20, 0.25, q % 2 ? 51 : 27); } return; }   // round 66b: Quickdraw
     const t = rangerTarget(8);
     if (t) {   // landing: loose at the nearest
       hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);

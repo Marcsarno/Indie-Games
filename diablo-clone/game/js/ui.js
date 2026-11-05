@@ -217,7 +217,7 @@ const glyphLeap = (cx, cy) => {   // an arc up and down, landing in a burst
   for (let a = 0; a <= 16; a++) { const u = a / 16; put(cx - 7 + u * 12, cy + 4 - Math.sin(u * Math.PI) * 10, a > 12 ? 51 : 27); }
   for (const [a, b] of [[-3, 0], [3, 0], [0, -3], [2, -2], [-2, -2]]) line(cx + 5, cy + 5, cx + 5 + a, cy + 5 + b, 50);
 };
-const SPELL_LOOK = { multi: [[33, 34, 35, 36], (x, y) => glyphMulti(x, y)], trap: [[28, 29, 30, 31], (x, y) => glyphTrap(x, y)], roll: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)], mark: [[19, 20, 21, 22], (x, y) => glyphMark(x, y)], slam: [[13, 14, 15, 16], glyphSlam], hook: [[28, 29, 30, 31], glyphHook], whirl: [[19, 20, 21, 22], glyphWhirl], leap: [[48, 49, 50, 51], glyphLeap], fireball: [[13, 14, 15, 16], glyphFire], cone: [[114, 115, 116, 117], glyphCone], meteor: [[19, 20, 21, 22], glyphMeteor], blink: [[56, 57, 58, 59], glyphBlink], chain: [[37, 38, 39, 40], glyphChain], pierce: [[48, 49, 50, 51], glyphPierce], cluster: [[13, 14, 15, 16], glyphCluster], sentry: [[33, 34, 35, 36], glyphSentry], hawk: [[28, 29, 30, 31], glyphHawk] };
+const SPELL_LOOK = { multi: [[33, 34, 35, 36], (x, y) => glyphMulti(x, y)], trap: [[28, 29, 30, 31], (x, y) => glyphTrap(x, y)], roll: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)], mark: [[19, 20, 21, 22], (x, y) => glyphMark(x, y)], slam: [[13, 14, 15, 16], glyphSlam], hook: [[28, 29, 30, 31], glyphHook], whirl: [[19, 20, 21, 22], glyphWhirl], leap: [[48, 49, 50, 51], glyphLeap], fireball: [[13, 14, 15, 16], glyphFire], cone: [[114, 115, 116, 117], glyphCone], meteor: [[19, 20, 21, 22], glyphMeteor], blink: [[56, 57, 58, 59], glyphBlink], chain: [[37, 38, 39, 40], glyphChain], pierce: [[48, 49, 50, 51], glyphPierce], cluster: [[13, 14, 15, 16], glyphCluster], sentry: [[33, 34, 35, 36], glyphSentry], hawk: [[28, 29, 30, 31], glyphHawk], vault: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)] };
 const glyphBolt = (cx, cy) => { for (let a = 0; a < 8; a++) { const t = a * Math.PI / 4; line(cx, cy, cx + Math.cos(t) * 7, cy + Math.sin(t) * 7, a % 2 ? 50 : 51); } put(cx, cy, 27); };
 const glyphBag = (cx, cy) => { fillRect(cx - 5, cy - 3, 11, 9, 35); frame(cx - 5, cy - 3, 11, 9, 36, 33); line(cx - 3, cy - 3, cx - 1, cy - 6, 36); line(cx + 3, cy - 3, cx + 1, cy - 6, 36); fillRect(cx - 1, cy, 3, 2, 50); };
 const glyphSound = (cx, cy) => {
@@ -255,6 +255,7 @@ function drawHud() {
     drawButton(UI.attack, [33, 34, 35, 36], !!press.attack, (x, y) => glyphBowAtk(x, y));   // arrows
     // round 66: the combo points, three diamonds over the attack button (the newest one flashes)
     const [ax, ay, ar] = UI.attack, n = hero.pips || 0, fresh = G.t - (hero.pipT || 0) < 0.25;
+    if (hero.quick > 0) { textC(`QUICKDRAW ${hero.quick}`, ax, ay - ar - 22, Math.floor(G.t * 4) % 2 ? 51 : 50); }   // round 66b
     for (let k = 0; k < 3; k++) { const cx = ax - 12 + k * 12, cy = ay - ar - 9, on = k < n; for (let b = -4; b <= 4; b++) for (let a = -4; a <= 4; a++) { const d = Math.abs(a) + Math.abs(b); if (d > 4) continue; put(cx + a, cy + b, d === 4 ? BLK : !on ? 3 : fresh && k === n - 1 ? 27 : d < 2 ? 51 : n >= 3 ? 50 : 49); } }
   }
   else drawButton(UI.attack, [28, 29, 30, 31], !!press.attack, glyphSword);
@@ -950,6 +951,10 @@ const SKILL_TEXT = {
   'sentry/ballista': 'SLOWER, HEAVY BOLTS THAT GO THROUGH EVERYTHING IN A LINE.',
   'sentry/fire': 'BURNING BOLTS.',
   'sentry/twin': 'PLANTS TWO AT ONCE, EACH A LITTLE SLOWER.',
+  vault: 'FLIP BACK OUT OF TROUBLE. A SNARE SNAPS OPEN WHERE YOU STOOD, SO WHATEVER CHASES YOU STEPS IN IT. YOUR NEXT 3 SHOTS FIRE TWO ARROWS EACH AND ALWAYS CRIT.',
+  'vault/spike': 'THE TRAP SPRINGS A HEAVY SPIKE INSTEAD OF A SNARE.',
+  'vault/smoke': 'SMOKE WHERE YOU STOOD DAZES EVERYTHING IN IT.',
+  'vault/long': 'TWICE AS FAR, AND FIVE QUICKDRAW SHOTS.',
   hawk: 'A HAWK CIRCLES YOU FOR 30 SECONDS AND DIVES AT WHAT YOU SHOOT. EACH DIVE MARKS IT: 25% MORE DAMAGE FROM EVERYTHING.',
   'hawk/pair': 'TWO HAWKS.',
   'hawk/talons': 'EACH DIVE HITS TWICE AS HARD.',

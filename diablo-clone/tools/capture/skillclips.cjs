@@ -21,10 +21,13 @@ const { chromium } = require('playwright'); const fs = require('fs'), path = req
       hero.dir = dirFrom(1, -1); hero.mana = 999; for (const k in CD) CD[k] = 0; hero.pips = 3;   // (the ranger's spenders at full combo points)
       for (let s = 0; s < 60; s++) warmStep(40);
       G.t = 5; updateFov(hero.fi, hero.fj); computeFlow();
+      if (id === 'vault') { const e = enemies[0]; if (e) { e.fi = hero.fi + 1.3; e.fj = hero.fj - 0.6; e.cool = 99; } }
       const out = []; const dt = 1 / 30;
       const cast = () => { if (id === 'attack') heroAttack(); else if (id === 'ult') { hero.ult = 100; useUlt(); } else { const k = SKILLS.findIndex(s => s.id === id); CD[id] = 0; hero.mana = 999; useSkill(k); } };
       const NF = +(window.__nf || 54); for (let f = 0; f < NF; f++) {
         if (f === 2) cast();
+        if (id === 'vault' && f > 4 && enemies[0] && !(enemies[0].rootT > 0) && f < 30) { const e = enemies[0], tp = G.traps[G.traps.length - 1]; if (tp) { const dx = tp.fi - e.fi, dy = tp.fj - e.fj, d = Math.hypot(dx, dy); if (d > 0.05) { e.fi += dx / d * 0.09; e.fj += dy / d * 0.09; e.clip = 'walk'; } } }
+        if (id === 'vault' && f > 22 && f % 9 === 0 && hero.cls === 'ranger') rangerShoot();
         for (const e of enemies) { e.cool = 99; e.atk = -1; }
         G.t += dt; update(dt); render();
         out.push(cvs.toDataURL());
