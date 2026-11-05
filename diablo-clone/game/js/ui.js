@@ -245,6 +245,7 @@ function drawHud() {
   else drawButton(UI.attack, [28, 29, 30, 31], !!press.attack, glyphSword);
   drawActionButton();   // round 43b: talk, trade, free, unlock
   drawStoryMark();
+  if (typeof drawPortalPrompt === 'function') { drawPortalPrompt(); drawQuestBanner(); }   // round 64
   SKILLS.forEach((sk, i) => {
     const fx = btnFx(i), dtu = 1 / 60;
     if (fx.cd > 0 && CD[sk.id] <= 0) fx.ready = 0.3;   // just came off cooldown
@@ -514,14 +515,36 @@ function arrowHead(ax, ay, ux, uy, c0, c1) {
 // step. Off screen: an arrow at the edge pointing the way to walk (along the ground, round walls and
 // trees). On screen: a small arrow bobbing over it (people with a ! or ? show their own mark), plus
 // the edge arrow when the way there is much longer than the straight line (behind a wall).
+// round 64: a steady arrow (the user: it jolts and jitters and moves all over the place). It was
+// re-aimed every frame at the farthest point of the path in plain sight, and drawn where that ray
+// met the screen's edge, so it jumped along the edges and flicked on and off. Now: the aim is kept
+// while it is still in sight (re-aimed when it is reached, lost behind something, or every 1.5 s),
+// the arrow turns smoothly toward it, and it rides a ring round the hero instead of the screen's edge.
+// The bobbing arrow over the goal comes in and out with some slack, so it doesn't flicker either.
+const QA = { aim: null, tgt: null, ang: null, at: 0, ring: false, on: false, t0: 0 };
 function drawStoryMark() {
-  if (G.mode !== 'play' || hero.dead || G.fadeTo) return;
-  const t = storyTarget(); if (!t) return;
-  const d = Math.hypot(t[0] - hero.fi, t[1] - hero.fj); if (d < 1.6) return;
-  const w = wayTo(t), [x, y] = iso(t[0], t[1]), sx = x - camX, sy = y - camY - 16;
-  const on = sx > 14 && sx < W - 14 && sy > 40 && sy < Math.round(H * 0.6);
-  if (on && !(t.npc && typeof storyMarkFor === 'function' && storyMarkFor(t))) arrowHead(sx, sy - 14 + Math.sin(G.t * 5) * 2, 0, 1, 27, 26);
-  if (!on || w.around) { const [ax, ay] = iso(hero.fi + w.dir[0] * 80, hero.fj + w.dir[1] * 80); edgeArrow(ax - camX, ay - camY, 27, 26); }
+  if (G.mode !== 'play' || hero.dead || G.fadeTo) { QA.ang = null; return; }
+  const t = storyTarget(); if (!t) { QA.aim = null; QA.ang = null; return; }
+  const dt = Math.min(0.1, Math.max(0, G.t - QA.t0)); QA.t0 = G.t;
+  const d = Math.hypot(t[0] - hero.fi, t[1] - hero.fj); if (d < 1.6) { QA.ang = null; return; }
+  if (!QA.tgt || Math.hypot(QA.tgt[0] - t[0], QA.tgt[1] - t[1]) > 2) QA.aim = null;   // a new goal
+  QA.tgt = [t[0], t[1]];
+  if (!QA.aim || G.t > QA.at || Math.hypot(QA.aim[0] - hero.fi, QA.aim[1] - hero.fj) < 1.5 || !clearLine(hero.fi, hero.fj, QA.aim[0], QA.aim[1])) {
+    const w = wayTo(t); QA.aim = [hero.fi + w.dir[0], hero.fj + w.dir[1]]; QA.around = w.around; QA.at = G.t + 1.5;
+  }
+  const [hx0, hy0] = iso(hero.fi, hero.fj), [ax0, ay0] = iso(QA.aim[0], QA.aim[1]), want = Math.atan2(ay0 - hy0, ax0 - hx0);
+  if (QA.ang === null) QA.ang = want;
+  else { let da = want - QA.ang; da = Math.atan2(Math.sin(da), Math.cos(da)); QA.ang += Math.sign(da) * Math.min(Math.abs(da), Math.max(Math.abs(da) * 7, 1.5) * dt); }
+  // the goal on screen (with slack: in when well inside, out when well outside)
+  const [x, y] = iso(t[0], t[1]), sx = x - camX, sy = y - camY - 16, m = QA.on ? 4 : 18;
+  QA.on = sx > m && sx < W - m && sy > 40 + m && sy < Math.round(H * 0.6) - m;
+  if (QA.on && !(t.npc && typeof storyMarkFor === 'function' && storyMarkFor(t))) arrowHead(sx, sy - 14 + Math.sin(G.t * 4) * 1.5, 0, 1, 27, 26);
+  // the ring arrow round the hero: shown while the goal is off screen or the way is a long way round
+  QA.ring = !QA.on || (QA.around && d > 6);
+  if (QA.ring) {
+    const ux = Math.cos(QA.ang), uy = Math.sin(QA.ang), cx = hx0 - camX, cy = hy0 - camY - 14, R = 30;
+    arrowHead(Math.round(cx + ux * R), Math.round(cy + uy * R * 0.8), ux, uy, 27, 26);
+  }
 }
 // the ! or ? a person on the story's next step already shows
 function storyMarkFor(t) { const n = npcs.find(n => Math.abs(n.fi - t[0]) < 0.01 && Math.abs(n.fj - t[1]) < 0.01); return n ? storyMark(n.role) : null; }
@@ -1047,7 +1070,8 @@ cvs.addEventListener('pointerdown', e => {
   if (hitCircle(p, UI.potion)) { drinkPotion(); return; }
   for (let i = 0; i < UI.skills.length; i++) if (hitCircle(p, UI.skills[i], 5)) { press.skill = i; useSkill(i); return; }
   if (ULTS[hero.cls] && hitCircle(p, UI.ult, 4)) { useUlt(); return; }
-  { const a = actionTarget(); if (a && UI.act && inRect(p, UI.act)) { doAction(a); return; } }   // round 43b: the action button
+  { const a = actionTarget(); if (a && UI.act && inRect(p, UI.act)) { doAction(a); return; } }
+  if (UI.tpPrompt && inRect(p, UI.tpPrompt)) { usePortal(); return; }   // round 64: the town portal prompt   // round 43b: the action button
   // round 42b: tap a person to walk over and talk. Round 51: on the move side a touch on a person still
   // starts the stick; it counts as a tap on them only if it lifts quickly without moving (endPointer),
   // so a thumb landing on someone no longer sends the hero walking off to them

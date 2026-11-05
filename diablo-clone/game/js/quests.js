@@ -177,8 +177,8 @@ function talkTo(n) {
     return openTalk([[Al, st === 'mine' ? 'THE OLD MINE, NORTH IN THE RIVERLANDS. THAT IS WHERE I SAW HIM. GREEN FIRE. I CLEARED THE TREE OFF THE ROAD FOR YOU.' : 'THE FIRE IS HIGH. SIT A WHILE.']]);
   }
   if (n.role === 'hollis') {
-    if (on && (st === 'hollis' || (st === 'mine' && f.sawChain))) return openTalk([
-      [Ho, 'CHAINS ON THE MINE? THAT IS THE BANDITS. THEY TOOK MY FARM A WEEK AGO AND PUT ME OUT IN MY NIGHTSHIRT.'],
+    if (on && (st === 'hollis' || st === 'mine')) return openTalk([   // (round 64: straight after Wren's reward, no trip to the chains first)
+      [Ho, f.sawChain ? 'CHAINS ON THE MINE? THAT IS THE BANDITS. THEY TOOK MY FARM A WEEK AGO AND PUT ME OUT IN MY NIGHTSHIRT.' : 'A MAN AT THE OLD MINE? THE BANDITS HAVE CHAINED IT SHUT. THEY TOOK MY FARM A WEEK AGO AND PUT ME OUT IN MY NIGHTSHIRT.'],
       [Ho, 'EVERY NIGHT THEY HAUL SACKS IN AND OUT OF MY CELLAR. HEAVY SACKS. I DO NOT WANT TO KNOW WHAT IS IN THEM.'],
       [Ho, 'THEIR CHIEF WEARS THE MINE KEY ON HIS BELT. THE FARM IS NORTH, IN THE RIVERLANDS, PAST THE FALLEN TREE. GET IT BACK FOR ME?']], 'ACCEPT', () => { f.farmTold = true; G.story.n = 0; });
     if (on && st === 'farmBack') return openTalk([
@@ -194,10 +194,60 @@ function freeAldo(n) {
   for (const p of dynProps) if (p.kind === 'cage') p.open = true;
   n.leaving = 1.2; sfx('chest'); say('ALDO IS FREE. RETURN TO WREN', 51, 3);
 }
+// ---------------------------------------------------------------- round 64: the quest flow
+// The user: you can miss a quest, you walk all the way back following the arrow, and where you're
+// going and what you're doing should be more obvious. Now: (1) in camp, whoever has your next step
+// speaks to you as soon as you arrive (no walking up to them): Osric at the start, the turn-ins with
+// their rewards, and the next quest right after (Wren's reward, then Hollis; Hollis's, then Osric's
+// letter). (2) Finishing a quest in the field rings a bell with a QUEST COMPLETE banner and a big
+// TOWN PORTAL prompt (tap it, or the portal button); the arrow then points at the portal you opened,
+// not at the long walk home. (3) Each new step shows its objective in a banner.
+const CAMP_ROLE = { meet: 'priest', wren: 'wren', aldoBack: 'wren', mine: 'hollis', hollis: 'hollis', farmBack: 'hollis', letter: 'priest', kingBack: 'priest' };
+const TURN_IN = { aldoBack: 'woodcutter', farmBack: 'farm', kingBack: 'king' };
+const campStep = st => !!CAMP_ROLE[st];
+// a step that waits in camp while the hero is away from it: the portal home is the way
+const portalHome = () => storyOn() && campStep(storyStage()) && LV.area !== 'town' && !hero.dead;
+function questBanner(title, line, col = 51) { G.qBanner = { title, line, col, t: 3.4 }; }
+function storyFlow(dt) {
+  const st = storyStage(), key = LV.level + ':' + LV.seed + ':' + (LV.side || '');
+  if (G.qBanner) { G.qBanner.t -= dt; if (G.qBanner.t <= 0) G.qBanner = null; }
+  if (G.lastSt === undefined || G.lastStory !== G.story) { G.lastSt = st; G.lastStory = G.story; }   // (a load or a new game: no banner for where it starts)
+  if (st !== G.lastSt) {
+    const prev = G.lastSt; G.lastSt = st;
+    if (TURN_IN[st]) { questBanner('QUEST COMPLETE', STORY_NAMES[TURN_IN[st]]); sfx('levelUp'); if (LV.area !== 'town') say('OPEN A TOWN PORTAL TO CLAIM YOUR REWARD', 51, 4); }
+    else if (st !== 'done' && !(LV.hub && campStep(st))) { { const nq = STAGE_QUEST[st] && STAGE_QUEST[st] !== STAGE_QUEST[prev]; questBanner(nq ? 'NEW QUEST' : 'NEW OBJECTIVE', (nq ? STORY_NAMES[STAGE_QUEST[st]] + ': ' : '') + stageText(st)); } sfx('chest'); }
+    else if (st === 'done') questBanner('ACT I COMPLETE', 'THE ROAD ON IS OPEN');
+  }
+  // in camp: the one with your next step speaks to you, a moment after you arrive (and after each talk)
+  if (G.autoKey !== key) { G.autoKey = key; G.autoTalkT = G.t + 1.0; }
+  if (LV.hub && campStep(st) && G.mode === 'play' && !G.talk && !G.fadeTo && !(G.actCard > 0) && !hero.dead && G.t > (G.autoTalkT || 0)) {
+    const n = npcs.find(n => n.role === CAMP_ROLE[st]);
+    if (n) { G.autoTalkT = G.t + 0.8; talkTo(n); }
+  }
+}
+// the prompt: a big button under the tracker while a reward waits in camp (tap = the portal button)
+function drawPortalPrompt() {
+  UI.tpPrompt = null;
+  if (G.mode !== 'play' || !portalHome()) return;
+  const open = G.tp && !G.tp.back, label = open ? 'WALK INTO THE PORTAL' : TURN_IN[storyStage()] ? 'TOWN PORTAL: CLAIM YOUR REWARD' : 'TOWN PORTAL: BACK TO CAMP';
+  const w = textWidth(label) + 28, h = 20, x = Math.round(W / 2 - w / 2), y = 92, pulse = Math.floor(G.t * 3) % 2;
+  fillRect(x, y, w, h, 5); frame(x, y, w, h, pulse ? 40 : 39, 3); frame(x + 1, y + 1, w - 2, h - 2, 4, 2);
+  glyphPortal(x + 11, y + 10); text(label, x + 21, y + 8, 27);
+  if (!open) UI.tpPrompt = { x: x - 4, y: y - 4, w: w + 8, h: h + 8 };
+  if (!open && pulse) { const [bx, by, br] = UI.portal; for (let a = 0; a < 40; a++) { const q = a / 40 * 6.283; put(Math.round(bx + Math.cos(q) * (br + 3)), Math.round(by + Math.sin(q) * (br + 3)), 51); } }   // a ring round the portal button too
+}
+// the banner: a dark band with the title and the line, high on the screen
+function drawQuestBanner() {
+  const B = G.qBanner; if (!B || G.mode !== 'play') return;
+  const t = 3.4 - B.t, open = Math.min(1, t / 0.25, B.t / 0.35), cy = Math.round(H * 0.33), hh = Math.round(17 * open);   // (below the portal prompt)
+  for (let y = cy - hh; y < cy + hh; y++) for (let x = 0; x < W; x++) if (BAYER[((y & 3) << 2) | (x & 3)] < 0.8) put(x, y, BLK);
+  if (open > 0.8) { textC(B.title, W / 2, cy - 10, B.col, 2); wrapText(B.line, 60).slice(0, 2).forEach((l, n) => textC(l, W / 2, cy + 5 + n * 8, 26)); }
+}
 // ---------------------------------------------------------------- the camp and the mine
 function updateStory(dt) {
   if (!storyOn()) return;
   const f = storyF();
+  storyFlow(dt);
   // Aldo leaves the den: he walks off and fades
   for (let k = npcs.length - 1; k >= 0; k--) { const n = npcs[k]; if (n.leaving === undefined) continue; n.leaving -= dt; n.clip = 'walk'; n.walk += dt * 8; tryMove(n, dt * 1.5, -dt * 1.5, 0.2); if (n.leaving <= 0) npcs.splice(k, 1); }
   if (LV.side === 'cellar' && !f.cellarSeen) { f.cellarSeen = true; say('SACKS OF BONES, STACKED TO THE ROOF.', 26, 4); say('THE GRAVES WERE DUG FOR THIS.', 26, 4); }
@@ -247,6 +297,7 @@ function unlockMine() {
 // the mine, and once it is all done, the open road south. drawStoryMark leads there along the ground.
 function storyTarget() {
   if (!storyOn()) return null;
+  if (portalHome()) { if (G.tp && !G.tp.back) { const p = [G.tp.fi, G.tp.fj]; return p; } return null; }   // round 64: the portal home, not the long walk
   const st = storyStage(), live = id => enemies.filter(e => e.id === id && alive(e));
   const nearest = list => { let b = null, bd = 1e9; for (const e of list) { const d = Math.hypot(e.fi - hero.fi, e.fj - hero.fj); if (d < bd) { bd = d; b = [e.fi, e.fj]; } } return b; };
   const npc = r => { const n = npcs.find(n => n.role === r); if (!n) return null; const p = [n.fi, n.fj]; p.npc = true; return p; };
@@ -283,7 +334,7 @@ function drawQuestTracker() {
   const st = storyStage(); if (st === 'done' && !(G.gates && G.gates[0] && (LV.hub || LV.riv))) return;
   const q = STAGE_QUEST[st];
   if (q) text(STORY_NAMES[q], 4, 68, 24);
-  text(stageText(st), 4, q ? 76 : 68, 51);
+  text(portalHome() && TURN_IN[st] ? 'QUEST COMPLETE: CLAIM YOUR REWARD IN CAMP' : stageText(st), 4, q ? 76 : 68, 51);
 }
 // "!" over someone with news or a task, "?" when a reward waits
 function priestMark(n, sx, by) {
