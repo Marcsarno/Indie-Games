@@ -190,6 +190,11 @@ const glyphMissile = (cx, cy) => { for (const [ox, oy] of [[-5, 4], [0, -1], [5,
 const SKILL_GLYPH = [null, glyphBash, glyphWhirl, glyphCry];
 // per skill: button ramp and glyph (the warrior's by slot, the mage's by spell)
 const glyphCone = (cx, cy) => { for (let k = 0; k < 9; k++) { const a = -0.55 + k * 0.1375; line(cx - 7, cy + 6, cx - 7 + Math.cos(a - 0.785) * 15, cy + 6 + Math.sin(a - 0.785) * 15, k % 2 ? 117 : 118); } put(cx - 7, cy + 6, 27); };
+const glyphChain = (cx, cy) => {   // round 65: a forked bolt
+  const P = [[3, -8], [-2, -2], [2, -1], [-3, 7]];
+  for (let k = 0; k < 3; k++) for (const o of [-1, 0, 1]) line(cx + P[k][0] + o, cy + P[k][1], cx + P[k + 1][0] + o, cy + P[k + 1][1], o ? 40 : 27);
+  line(cx + 2, cy - 1, cx + 6, cy + 3, 40); line(cx - 2, cy - 2, cx - 6, cy - 4, 40);
+};
 const glyphBlink = (cx, cy) => { for (let b = -3; b <= 3; b++) for (let a = -3; a <= 3; a++) if (a * a + b * b <= 9) put(cx + 3 + a, cy - 3 + b, a * a + b * b <= 2 ? 27 : 40); for (let k = 0; k < 4; k++) put(cx - 3 - k * 1.6, cy + 3 + k * 1.6, k % 2 ? 39 : 40); for (const [a, b] of [[-6, -1], [0, 5], [-2, -5]]) put(cx + a, cy + b, 39); };
 const glyphSlam = (cx, cy) => {   // a weapon driven into cracked ground
   line(cx - 1, cy - 8, cx + 1, cy + 1, 31); line(cx, cy - 8, cx + 2, cy + 1, 27); fillRect(cx - 3, cy - 6, 7, 2, 50);
@@ -207,7 +212,7 @@ const glyphLeap = (cx, cy) => {   // an arc up and down, landing in a burst
   for (let a = 0; a <= 16; a++) { const u = a / 16; put(cx - 7 + u * 12, cy + 4 - Math.sin(u * Math.PI) * 10, a > 12 ? 51 : 27); }
   for (const [a, b] of [[-3, 0], [3, 0], [0, -3], [2, -2], [-2, -2]]) line(cx + 5, cy + 5, cx + 5 + a, cy + 5 + b, 50);
 };
-const SPELL_LOOK = { multi: [[33, 34, 35, 36], (x, y) => glyphMulti(x, y)], trap: [[28, 29, 30, 31], (x, y) => glyphTrap(x, y)], roll: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)], mark: [[19, 20, 21, 22], (x, y) => glyphMark(x, y)], slam: [[13, 14, 15, 16], glyphSlam], hook: [[28, 29, 30, 31], glyphHook], whirl: [[19, 20, 21, 22], glyphWhirl], leap: [[48, 49, 50, 51], glyphLeap], fireball: [[13, 14, 15, 16], glyphFire], cone: [[114, 115, 116, 117], glyphCone], meteor: [[19, 20, 21, 22], glyphMeteor], blink: [[56, 57, 58, 59], glyphBlink] };
+const SPELL_LOOK = { multi: [[33, 34, 35, 36], (x, y) => glyphMulti(x, y)], trap: [[28, 29, 30, 31], (x, y) => glyphTrap(x, y)], roll: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)], mark: [[19, 20, 21, 22], (x, y) => glyphMark(x, y)], slam: [[13, 14, 15, 16], glyphSlam], hook: [[28, 29, 30, 31], glyphHook], whirl: [[19, 20, 21, 22], glyphWhirl], leap: [[48, 49, 50, 51], glyphLeap], fireball: [[13, 14, 15, 16], glyphFire], cone: [[114, 115, 116, 117], glyphCone], meteor: [[19, 20, 21, 22], glyphMeteor], blink: [[56, 57, 58, 59], glyphBlink], chain: [[37, 38, 39, 40], glyphChain] };
 const glyphBolt = (cx, cy) => { for (let a = 0; a < 8; a++) { const t = a * Math.PI / 4; line(cx, cy, cx + Math.cos(t) * 7, cy + Math.sin(t) * 7, a % 2 ? 50 : 51); } put(cx, cy, 27); };
 const glyphBag = (cx, cy) => { fillRect(cx - 5, cy - 3, 11, 9, 35); frame(cx - 5, cy - 3, 11, 9, 36, 33); line(cx - 3, cy - 3, cx - 1, cy - 6, 36); line(cx + 3, cy - 3, cx + 1, cy - 6, 36); fillRect(cx - 1, cy, 3, 2, 50); };
 const glyphSound = (cx, cy) => {
@@ -899,6 +904,10 @@ const SKILL_TEXT = {
   'meteor/shower': 'THREE SMALLER METEORS AROUND THE TARGET. A WIDER SPREAD FOR BIG PACKS.',
   'meteor/molten': 'THE CRATER BURNS FOR 4 SECONDS. HOLD A CHOKE POINT WITH IT.',
   'meteor/comet': 'A BALL OF ICE INSTEAD: IT FREEZES WHAT IT HITS RATHER THAN BURNING IT.',
+  chain: 'A BOLT THAT JUMPS FROM FOE TO FOE, UP TO FIVE. EACH IS SHOCKED: 25% MORE DAMAGE FROM EVERYTHING FOR 3 SECONDS.',
+  'chain/fork': 'SPLITS IN TWO AT EVERY JUMP: UP TO EIGHT FOES. FOR BIG PACKS.',
+  'chain/overload': 'ONE HUGE BOLT THAT STUNS, AND ONE JUMP. FOR THE BIG ONES.',
+  'chain/conductor': 'JUMPS TWICE AS FAR THROUGH CHILLED AND FROZEN FOES. CONE OF COLD FIRST.',
   blink: 'TELEPORT A SHORT WAY. GET OUT OF A CROWD OR AWAY FROM A BIG HIT.',
   'blink/burst': 'A BLAST WHERE YOU LAND THAT THROWS FOES BACK. BLINK IN AND KNOCK THEM AWAY.',
   'blink/double': 'A SECOND BLINK FOR FREE WITHIN 1.5 SECONDS. IN, THEN BACK OUT.',

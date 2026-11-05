@@ -73,7 +73,7 @@ function say(text, col = 26, t = 2.5) { G.msg.push({ text, col, t }); if (G.msg.
 // everything a fight leaves in the air: missiles, effects, particles, floaters (the skill preview
 // clears it between loops too)
 function resetFx() {
-  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; G.debris = []; G.eliteFire = []; G.frostOrbs = []; G.summons = []; G.eliteBursts = []; G.blinkFx = []; G.leech = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
+  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.bolts = []; G.spikes = []; G.dust = []; G.mist = []; G.needles = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; G.debris = []; G.eliteFire = []; G.frostOrbs = []; G.summons = []; G.eliteBursts = []; G.blinkFx = []; G.leech = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
 }
 function startLevel(level, seed, side = null) {
   genLevel(level, seed, side);
@@ -333,7 +333,12 @@ function camKick(dx, dy, px) {
 }
 function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = false) {
   if (e.pw && !G.pierce) { dmg = eliteDamage(e, dmg, pow, fromFi, fromFj, ranged); if (dmg < 0) { if (e.state === 'sleep') wake(e); return; } }   // round 39: shields, blink openings
-  if (e.frozen > 0) dmg = Math.round(dmg * 1.4);   // frozen solid: hits land harder
+  if (e.shockT > 0) dmg = Math.round(dmg * 1.25);   // round 65: shocked (Chain Lightning): everything hits harder
+  if (e.frozen > 0 && (G.elem === 'fire' || G.elem === 'heavy') && !e.def.unique) {   // round 65: fire or a heavy blow SHATTERS the ice: a big hit, and the ice is gone
+    dmg = Math.round(dmg * 1.8); floater('SHATTER', e.fi, e.fj, e.def.chest + 26, 118);
+    { const [x, y] = screenOf(e); burst(5, x, y, e.def.chest * 0.6, 22, 110, 118); burst(2, x, y, e.def.chest * 0.6, 14, 90, 27); }
+    e.frozen = 0; sfx('clink'); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.12);
+  } else if (e.frozen > 0) dmg = Math.round(dmg * 1.4);   // frozen solid: hits land harder
   if (e.open && e.atk >= 0) { dmg = Math.round(dmg * 1.3); if (!e.def.unique) { e.atk = -1; e.open = false; e.leapZ = 0; e.hurt = Math.max(e.hurt || 0, 0.3); } floater('OPEN', e.fi, e.fj, e.def.chest + 26, 51); }   // round 34: punished in its recovery
   if (e.markT > 0) { dmg = Math.round(dmg * (e.markK || 1.35)); if (e.markLeech) hero.hp = Math.min(STAT.maxHp, hero.hp + dmg * e.markLeech); }   // round 33: Hunter's Mark
   const heroStop = hero.stop;
@@ -664,7 +669,7 @@ function update(dt) {
   for (const g of groundItems) if (g.item && g.item.rarity === 'legend' && !g.announced) { g.announced = true; say('A LEGENDARY ITEM HAS FALLEN', 112, 3); sfx('levelUp'); }   // never miss one
   if (hero.frenzy > 0) hero.frenzy -= dt; if (hero.stoneskin > 0) hero.stoneskin -= dt;
   separate();
-  updateProjectiles(dt); updateMeteors(dt); updateLichFx(dt); updateWarriorFx(dt); updateImpactFx(dt); updateSlamMods(dt); updateFireGround(dt); updateMods30(dt); updateUlt(dt); updateDebris(dt); updateEliteFx(dt);
+  updateProjectiles(dt); updateMeteors(dt); updateLichFx(dt); updateWarriorFx(dt); updateImpactFx(dt); updateLightning(dt); updateSlamFx(dt); updateFrostFx(dt); updateSlamMods(dt); updateFireGround(dt); updateMods30(dt); updateUlt(dt); updateDebris(dt); updateEliteFx(dt);
   updateParticles(dt);
   ambience(dt);
   for (const f of floaters) { f.t -= dt; f.y -= dt * 18; }
@@ -1271,7 +1276,7 @@ function updateProjectiles(dt) {
             if (arrow) arrowBite(p, e); else { impactFlash(e.fi, e.fj, p.z, 3); sfx('zap'); } continue;
           }
           if (p.boom) { p.life = 0; break; }   // a fireball bursts on whatever it touches (below)
-          if (p.spell) { const c = spellCrit(); G.elem = p.elem || null; damageEnemy(e, spellDmg(c ? p.dmgK * 2 : p.dmgK), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, c, 0, true); G.elem = null; if (p.kind === 'arrow') arrowBite(p, e); }
+          if (p.spell) { const c = spellCrit(); G.elem = p.elem || null; damageEnemy(e, spellDmg(c ? p.dmgK * 2 : p.dmgK), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, c, 0, true); G.elem = null; if (p.kind === 'arrow') arrowBite(p, e); if (p.kind === 'missile') hero.mana = Math.min(STAT.maxMana, hero.mana + (p.small ? 1 : 3)); }
           else damageEnemy(e, roll(p.dmg), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, false, 0, true);
           p.life = 0; break;
         }
@@ -1325,7 +1330,7 @@ function frameOf(e) {
   if (e.clip === 'walk') return Math.floor(e.walk) % 8;
   if (e === hero && e.clip === 'vault' && hero.roll) { const u = hero.roll.t / hero.roll.dur; return u < 0.16 ? 0 : u < 0.78 ? 1 : 2; }   // round 43
   if (e === hero && e.clip === 'toss') return hero.tossT > 0.2 ? 0 : 1;
-  if (e === hero && e.clip === 'channel') { const a = hero.castAge || 0, rl = castRel(hero.castKind), ph = a < rl ? 0 : a < rl + 0.13 ? 1 : 2; return (hero.castKind === 'meteor' ? 3 : hero.castKind === 'cone' && !FEEL_OLD ? 6 : hero.castKind === 'fireball' && !FEEL_OLD ? 9 : 0) + ph; }   // round 43: the slam and the hurl
+  if (e === hero && e.clip === 'channel') { const a = hero.castAge || 0, rl = castRel(hero.castKind), ph = a < rl ? 0 : a < rl + 0.13 ? 1 : 2; return (hero.castKind === 'meteor' ? 3 : hero.castKind === 'cone' && !FEEL_OLD ? 6 : (hero.castKind === 'fireball' || hero.castKind === 'chain') && !FEEL_OLD ? 9 : 0) + ph; }   // round 43: the slam and the hurl
   if (e.clip === 'attack2' || e.clip === 'attack3' || e.clip === 'attack4') return Math.max(0, swingKey(FAMILIES[e.fam].combo(e, atkIndex(e.clip)), e.atk));
   if (e === hero && e.clip === 'arrive') return hero.arriveT > 0.15 ? 0 : 1;
   if (e === hero && e.clip === 'storm') return Math.floor(G.t * 6) % 4;   // round 43
@@ -1771,6 +1776,7 @@ function drawProjectile(p) {
     for (let s = -12; s <= 9; s++) { const x = Math.round(X0 + dx * s), y = Math.round(Y0 + dy * s); ovSet(x, y, s > 6 ? 27 : BONE[2]); ovSet(x, y + 1, s > 6 ? STEEL[3] : WOOD[3]); }
     for (let s = -12; s <= -8; s++) for (const sd of [-1, 1]) { const x = Math.round(X0 + dx * s - dy * sd * (s + 14) * 0.5), y = Math.round(Y0 + dy * s + dx * sd * (s + 14) * 0.5); ovSet(x, y, p.fire ? 16 : p.mark ? 23 : 27); }
     if (p.fire) for (let k = 0; k < 3; k++) ovSet(Math.round(X0 + dx * 10 + (Math.random() - 0.5) * 3), Math.round(Y0 + dy * 10 - Math.random() * 3), 17);
+    for (let s = -15; s >= -42; s--) { const x = Math.round(X0 + dx * s), y = Math.round(Y0 + dy * s), u = (-s - 15) / 27; if (BAYER[((y & 3) << 2) | (x & 3)] < u) continue; ovSet(x, y, u < 0.35 ? 27 : p.fire ? 16 : p.mark ? 22 : 31); }   // round 65: a tracer streak behind it
     return;
   }
   if (p.kind === 'arrow') {

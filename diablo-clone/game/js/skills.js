@@ -15,7 +15,7 @@ const SKILLSETS = {
     { id: 'fireball', name: 'FIREBALL', lvl: 1, mana: 9, cd: 0.7 },
     { id: 'cone', name: 'CONE OF COLD', lvl: 2, mana: 12, cd: 5 },
     { id: 'meteor', name: 'METEOR', lvl: 3, mana: 22, cd: 9 },
-    { id: 'blink', name: 'BLINK', lvl: 4, mana: 8, cd: 3 },
+    { id: 'chain', name: 'CHAIN LIGHTNING', lvl: 4, mana: 14, cd: 2.5 },   // round 65: replaces Blink
   ],
   // round 33: the ranger's attack button looses single arrows (no focus); these are its four
   ranger: [
@@ -27,7 +27,7 @@ const SKILLSETS = {
 };
 let SKILLS = SKILLSETS.warrior;
 function setSkillsFor(cls) { SKILLS = SKILLSETS[cls] || SKILLSETS.warrior; }
-const CD = { bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, leap: 0, fireball: 0, cone: 0, meteor: 0, blink: 0, multi: 0, trap: 0, roll: 0, mark: 0 };
+const CD = { bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, leap: 0, fireball: 0, cone: 0, meteor: 0, blink: 0, chain: 0, multi: 0, trap: 0, roll: 0, mark: 0 };
 function resetSkills() { for (const k in CD) CD[k] = 0; hero.whirl = 0; hero.dash = 0; hero.buff = 0; }
 const heroBusy = () => hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0 || !!hero.leap || !!hero.ultOn || !!hero.roll;
 // one hit's damage, with the war cry bonus
@@ -56,6 +56,7 @@ function useSkill(i) {
   if (s.id === 'fireball') castFireball();
   if (s.id === 'cone') coneOfCold();
   if (s.id === 'blink') blink();
+  if (s.id === 'chain') { if (!chainLightning()) { hero.mana += skillCost(s); CD.chain = 0; } }
   if (s.id === 'meteor') castMeteor();
   if (s.id === 'multi') multishot();
   if (s.id === 'trap') { if (!throwTrap()) { hero.mana += skillCost(s); CD.trap = 0; } }
@@ -105,6 +106,7 @@ function slamAt(a0, R, half, k, ring = false) {
   for (const p of dynProps) if (!p.broken && (p.kind === 'barrel' || p.kind === 'egg') && Math.hypot(p.i + 0.5 - hero.fi, p.j + 0.5 - hero.fj) < R) hitProp(p);
   const q = ring ? { fi: hero.fi, fj: hero.fj, a0: 0, ring: true, R, t: 0.9, t0: 0.9, seed: (Math.random() * 1e6) | 0 } : { fi: hero.fi + fx * 0.6, fj: hero.fj + fy * 0.6, a0, t: 0.9, t0: 0.9, seed: (Math.random() * 1e6) | 0 };
   G.quakes.push(q); stampCracks(q);
+  slamEruption(q.fi, q.fj, a0, R, ring ? Math.PI : half, k);   // round 65: rock spikes, a crater, billowing dust
   // round 25: a wave of dust rolling out over the cone, a flash where the blade bit, stone chunks
   const lite = LV.outdoor ? [DIRT[4], DIRT[3]] : [TH().ramp[TH().ramp.length - 1], TH().ramp[5]];
   shockwave(q.fi, q.fj, R, 0.38, lite, ring ? null : [a0, half + 0.1], false);
@@ -132,7 +134,13 @@ function tetherBlow(a) {
 // the fissure runs out at 16 tiles a second; aftershocks go off on their timers
 function updateSlamMods(dt) {
   for (const f of G.fissures) {
-    f.reach += 16 * dt;
+    const r0 = f.reach; f.reach += 16 * dt;
+    if (!G.spikes) G.spikes = [];
+    for (let d = Math.ceil(r0 / 0.7) * 0.7; d < Math.min(f.reach, f.R); d += 0.7) {   // round 65: slabs burst up along the crack as it races out
+      if (d < 1.2) continue;
+      const side = (Math.round(d / 0.7) % 2 ? 1 : -1) * 0.25, pi = f.fi + Math.cos(f.a0) * d - Math.sin(f.a0) * side, pj = f.fj + Math.sin(f.a0) * d + Math.cos(f.a0) * side;
+      if (!blocked(pi, pj)) G.spikes.push({ fi: pi, fj: pj, h: 30 - d * 1.6, w: 7 + Math.random() * 3, delay: 0, t: 0.45, t0: 0.45, seed: (Math.random() * 1e6) | 0, lean: Math.sign(Math.cos(f.a0) - Math.sin(f.a0)) * 0.3 });
+    }
     G.pierce = true;
     for (const e of enemies) {
       if (!alive(e) || f.hit.has(e)) continue;
@@ -215,6 +223,11 @@ const SKILL_MODS = {
     { id: 'spread', name: 'SPREADING MARK', desc: 'WHEN THE MARKED DIES, THE MARK JUMPS ON' },
     { id: 'death', name: 'DEATH MARK', desc: 'TAKES 70% MORE DAMAGE, BUT ONLY 5 SECONDS' },
     { id: 'blood', name: "PREY'S BLOOD", desc: 'HITS ON THE MARKED HEAL YOU' },
+  ],
+  chain: [   // round 65
+    { id: 'fork', name: 'FORK', desc: 'SPLITS IN TWO AT EVERY JUMP: UP TO EIGHT FOES' },
+    { id: 'overload', name: 'OVERLOAD', desc: 'ONE HUGE BOLT THAT STUNS, AND ONE JUMP' },
+    { id: 'conductor', name: 'CONDUCTOR', desc: 'JUMPS TWICE AS FAR THROUGH CHILLED AND FROZEN FOES' },
   ],
   blink: [
     { id: 'burst', name: 'ARCANE BURST', desc: 'A BLAST WHERE YOU LAND THAT THROWS FOES BACK' },
@@ -415,7 +428,7 @@ function drawHookChains() {
 const CAST_RELEASE = 0.06;
 // round 29: how long each spell is gathered before it leaves the staff (the wind-up you can see);
 // the missile stays snappy, the big ones are held a beat longer
-const CAST_REL = { missile: 0.07, fireball: 0.13, cone: 0.12, meteor: 0.24 };
+const CAST_REL = { missile: 0.07, fireball: 0.13, cone: 0.12, meteor: 0.24, chain: 0.16 };
 const castRel = k => CAST_REL[k] ?? CAST_RELEASE;
 const spellDmg = k => Math.max(1, Math.round((roll(STAT.dmg) + (STAT.fireDmg || 0)) * k * (hero.buff > 0 ? 1.4 : 1)));
 const spellCrit = () => Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100;
@@ -528,7 +541,7 @@ function coneOfCold() {
       wake(e); G.pierce = true; G.elem = 'cold'; damageEnemy(e, spellDmg(dmgK), hero.fi, hero.fj, spellCrit(), 0, true); G.pierce = false; G.elem = null;
       if (!alive(e)) continue;
       if (e.def.unique || e.def.elite || e.champ) { e.slowT = (e.def.unique ? 3 : 4) * hold / 3; }
-      else { e.frozen = hold; e.atk = -1; e.hurt = 0; e.kb = [0, 0]; e.deepIce = mod === 'deep'; }
+      else { e.frozen = e.frozenT0 = hold; e.atk = -1; e.hurt = 0; e.kb = [0, 0]; e.deepIce = mod === 'deep'; }
     }
     // shards of frost flying out across the wedge, and a sheet of frost on the ground (drawn)
     for (let k = 0; k < (mod === 'nova' ? 64 : 46); k++) {
@@ -536,6 +549,7 @@ function coneOfCold() {
       pspawn(4, x, y, 10 + Math.random() * 12, (gx - gy) * 16 * T, (gx + gy) * 8 * T, 0, 0.26 + Math.random() * 0.12, k % 3 ? 118 : 117);
     }
     G.cones.push({ fi: hero.fi, fj: hero.fj, a0, t: 0.5, t0: 0.5, R, half });
+    frostBreath(a0, R, half);   // round 65: the billowing cloud and the needles
     G.frost.push({ fi: hero.fi, fj: hero.fj, a0, t: 3.2 * hold / 3, seed: (Math.random() * 1e6) | 0, R, half });   // round 25: frost stays on the ground a while
     shockwave(hero.fi, hero.fj, R, 0.3, [27, 118], mod === 'nova' ? null : [a0, half]);
     orbFlare(117, 118, 12);
@@ -621,6 +635,7 @@ function updateMeteors(dt) {
     }
     if (m.t <= 0 && !m.done) {
       m.done = true; explodeAt(m.fi, m.fj, m.r || 2.4, m.k || 3.2, 2, !m.small, m.cold);
+      { stampCrater(m.fi, m.fj, m.small ? 0.8 : 1.3); if (!G.dust) G.dust = []; const n = m.small ? 7 : 12; for (let c = 0; c < n; c++) { const a = c / n * 6.283 + Math.random() * 0.3; G.dust.push({ fi: m.fi + Math.cos(a) * 0.5, fj: m.fj + Math.sin(a) * 0.5, vi: Math.cos(a) * 2.4, vj: Math.sin(a) * 2.4, r: 7 + Math.random() * 6, vr: 20, t: 1 + Math.random() * 0.4, t0: 1.4, z: 3 }); } if (SHAKE) G.trauma = Math.min(1, G.trauma + (m.small ? 0.15 : 0.3)); }   // round 65: a crater and a cloud of dust
       if (m.molten) G.fireGround.push({ fi: m.fi, fj: m.fj, r: 2.2, t: 4, tick: 0.3 });
       const [x, y] = iso(m.fi, m.fj), dust = LV.outdoor ? DIRT[3] : S[5];
       for (let k = 0; k < (m.small ? 16 : 28); k++) { const a = k / 28 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 75, Math.sin(a) * 37, 40 + Math.random() * 30, 1, k % 3 ? dust : m.cold ? 117 : 15); }
@@ -1167,6 +1182,7 @@ function drawStreaks() {   // the blink's streak: a white core in an arcane band
   }
 }
 function drawImpactFlashes() {
+  drawSlamFx(); drawFrostFx(); drawLightning();   // round 65
   drawStreaks(); drawHookChains(); drawMods30(); drawStrikes(); drawRangerFx(); drawDebris();
   for (const f of G.impacts) {
     const [x, y] = iso(f.fi, f.fj), X0 = Math.round(x * SPX - cam2x), Y0 = Math.round((y - f.z) * SPX - cam2y), p = 1 - f.t / f.t0, R = f.size * (0.6 + p * 0.6);
@@ -1201,7 +1217,7 @@ function whirlSmear(front) {
 const smallFoe = e => !e.def.unique && !e.def.elite && !e.champ;
 function freezeFoe(e, t, deep = false) {
   if (!alive(e)) return;
-  if (smallFoe(e)) { e.frozen = Math.max(e.frozen || 0, t); e.atk = -1; e.hurt = 0; e.kb = [0, 0]; e.windT = 0; e.deepIce = deep; }
+  if (smallFoe(e)) { e.frozen = Math.max(e.frozen || 0, t); e.frozenT0 = e.frozen; e.atk = -1; e.hurt = 0; e.kb = [0, 0]; e.windT = 0; e.deepIce = deep; }
   else e.slowT = Math.max(e.slowT || 0, e.def.unique ? t * 0.7 : t);
 }
 // the Arcane Orb: every 0.3 s an arc of arcane light jumps to up to four foes near it
@@ -1321,6 +1337,253 @@ function drawMods30() {
         ovSet(sx, sy, front ? dust[2] : dust[0]); if (front) ovSet(sx, sy + 1, dust[1]);
       }
     }
+  }
+}
+
+// ---------------------------------------------------------------- Ground Slam, bigger (round 65)
+// The user: the ground slam is weak. On top of the cracks, the dust wave and the chunks: rock spikes
+// burst up out of the floor in a wave rolling out over the cone (each rises in 60 ms, holds, sinks),
+// a crater is pressed into the floor where the blade bit, slow dust clouds billow out along the
+// front, and the blow freezes the hero a moment and jolts the view.
+// G.spikes: { fi, fj, h (detail px), w, delay, t, t0, seed }; G.dust: { fi, fj, r, vr, vi, vj, t, t0, col }
+function slamEruption(fi, fj, a0, R, half, k) {
+  if (!G.spikes) G.spikes = []; if (!G.dust) G.dust = [];
+  const ring = half >= 3, rows = Math.round(R / 0.9);
+  for (let r = 1; r <= rows; r++) {
+    const d = 0.5 + r * 0.9 * (R - 0.4) / R, n = ring ? Math.round(4 + d * 2.2) : Math.max(1, Math.round(d * half * 2 / 1.15));
+    for (let c = 0; c < n; c++) {
+      const a = ring ? (c + Math.random() * 0.6) / n * 6.283 : a0 + (n === 1 ? 0 : (c / (n - 1) - 0.5) * 2 * half * 0.9) + (Math.random() - 0.5) * 0.12, dd = d + (Math.random() - 0.5) * 0.3;
+      const pi = fi + Math.cos(a) * dd, pj = fj + Math.sin(a) * dd; if (blocked(pi, pj)) continue;
+      { const gi = pi - hero.fi, gj = pj - hero.fj; if (Math.hypot(gi, gj) < 2.1 && gi + gj > -0.4) continue; }   // none in front of the hero's own legs
+      const h = (30 + Math.random() * 16) * (1 - d / (R + 2.5)) * (0.8 + 0.2 * k), sx = Math.cos(a) - Math.sin(a);   // (sx: which way it leans on screen: away from the hero)
+      G.spikes.push({ fi: pi, fj: pj, h, w: 8 + Math.random() * 4, delay: d * 0.045, t: 0.5, t0: 0.5, seed: (Math.random() * 1e6) | 0, lean: Math.sign(sx) * (0.25 + Math.random() * 0.25) });
+    }
+  }
+  // dust clouds along the front, rolling outward and up
+  for (let c = 0; c < (ring ? 14 : 10); c++) {
+    const a = ring ? c / 14 * 6.283 : a0 + (c / 9 - 0.5) * 2 * half, d = R * (0.45 + Math.random() * 0.5);
+    G.dust.push({ fi: fi + Math.cos(a) * d * 0.4, fj: fj + Math.sin(a) * d * 0.4, vi: Math.cos(a) * 1.6, vj: Math.sin(a) * 1.6, r: 6 + Math.random() * 6, vr: 18, t: 0.9 + Math.random() * 0.4, t0: 1.2, z: 2 });
+  }
+  stampCrater(fi, fj, ring ? 1.25 : 0.95);
+  hero.stop = Math.max(hero.stop || 0, 0.09);   // the blow lands: everything holds a beat
+  if (HEAVY) camKick(Math.cos(a0), Math.sin(a0), ring ? 3 : 4.5);
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.25);
+}
+// the crater: a dark dip with a lit far rim, pressed into the floor for good (like the cracks)
+function stampCrater(fi, fj, r) {
+  const [hx, hy] = iso(fi, fj), rx = r * 22, ry = r * 11, ramp = LV.outdoor ? DIRT : TH().ramp;
+  for (let y = Math.floor(hy - ry - 2); y <= hy + ry + 2; y++) for (let x = Math.floor(hx - rx - 2); x <= hx + rx + 2; x++) {
+    if (x < 0 || y < 0 || x >= WW || y >= WH) continue;
+    const k = y * WW + x; if (!wFloor[k] || floorBuf[k] === BLK) continue;
+    const u = (x - hx) / rx, v = (y - hy) / ry, d = Math.hypot(u, v), th = BAYER[((y & 3) << 2) | (x & 3)];
+    if (d > 1.12) continue;
+    if (d > 0.92) { if (v < 0 ? th < 0.6 : th < 0.25) setFloor(k, v < 0 ? ramp[Math.min(ramp.length - 1, 4)] : ramp[1]); continue; }   // the rim: lit on the far side, dark on the near
+    if (d < 0.35 ? true : th < 1 - d * 0.7) setFloor(k, d < 0.5 ? BLK : ramp[0]);
+  }
+}
+function updateSlamFx(dt) {
+  if (G.spikes) { for (const s of G.spikes) { if (s.delay > 0) { s.delay -= dt; if (s.delay <= 0) { const [x, y] = iso(s.fi, s.fj); for (let q = 0; q < 3; q++) pspawn(7, x, y, 2, (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 20, 40 + Math.random() * 50, 1, TH().ramp[4]); } continue; } s.t -= dt; } G.spikes = G.spikes.filter(s => s.delay > 0 || s.t > 0); }
+  if (G.dust) { for (const d of G.dust) { d.t -= dt; d.fi += d.vi * dt; d.fj += d.vj * dt; d.vi *= Math.exp(-dt * 2.5); d.vj *= Math.exp(-dt * 2.5); d.r += d.vr * dt; d.vr *= Math.exp(-dt * 2); d.z += dt * 10; } G.dust = G.dust.filter(d => d.t > 0); }
+}
+// the spikes (detail layer, lit where they stand): a jagged shard with a lit left face, a dark right
+// face and a black edge; they burst up, hold, then sink back
+function drawSlamFx() {
+  const lit = (X, Y, v) => { if (X < 0 || Y < 0 || X >= OW || Y >= OH) return; const c = envCol((X + hx) >> 1, (Y + hy) >> 1, v, -2); if (c) ov32[Y * OW + X] = c; };
+  const ramp = LV.outdoor ? DIRT : TH().ramp, top = ramp.length - 1;
+  if (G.dust) for (const d of G.dust) {   // dust: dithered puffs, thinning as they spread
+    const [x, y] = iso(d.fi, d.fj), X0 = Math.round(x * SPX - cam2x), Y0 = Math.round((y - d.z) * SPX - cam2y), life = d.t / d.t0, R = d.r;
+    for (let b = -Math.ceil(R * 0.7); b <= R * 0.7; b++) for (let a = -Math.ceil(R); a <= R; a++) {
+      const q = Math.hypot(a / R, b / (R * 0.7)); if (q > 1) continue;
+      const X = X0 + a, Y = Y0 + b; if (BAYER[((Y & 3) << 2) | (X & 3)] > life * (1.1 - q) * 0.9) continue;
+      lit(X, Y, q < 0.5 && b < 0 ? ramp[Math.min(top, 6)] : ramp[Math.min(top, 4)]);
+    }
+  }
+  if (G.spikes) for (const s of G.spikes) {
+    if (s.delay > 0) continue;
+    const age = s.t0 - s.t, up = Math.min(1, age / 0.06), down = Math.min(1, s.t / 0.2), h = s.h * up * down; if (h < 2) continue;
+    const [x, y] = iso(s.fi, s.fj), X0 = Math.round(x * SPX - cam2x), Y0 = Math.round(y * SPX - cam2y), R = rng(s.seed), w = s.w;
+    // a slab: wide at the foot, narrowing to a broken, slanted top; three faces lit from the upper left
+    const cut = 0.25 + R() * 0.3;   // how far down the broken top slants
+    for (let yy = 0; yy < h; yy++) {
+      const u = yy / h, half = u < 0.7 ? w * (1 - u * 0.55) : w * (1 - 0.385) * (1 - (u - 0.7) / 0.3 * 0.75), cx = X0 + s.lean * yy;
+      for (let a = Math.floor(-half) - 1; a <= Math.ceil(half) + 1; a++) {
+        const X = Math.round(cx + a), Y = Y0 - yy, uu = (a + half) / (2 * half || 1), topY = h * (1 - cut * uu);   // the slanted break
+        if (yy > topY + 1) continue;
+        const inside = Math.abs(a) <= half && yy <= topY;
+        if (!inside) { lit(X, Y, BLK); continue; }
+        lit(X, Y, yy > topY - 1.5 ? ramp[Math.min(top, 7)] : a < -half * 0.35 ? ramp[Math.min(top, 6)] : a < half * 0.3 ? ramp[Math.min(top, 4)] : ramp[2]);
+      }
+    }
+    for (let a = -w - 1; a <= w + 1; a++) lit(X0 + a, Y0 + 1, BLK);   // a dark foot where it broke through
+  }
+}
+
+// ---------------------------------------------------------------- Cone of Cold, bigger (round 65)
+// The user: Cone of Cold looks pretty terrible. On top of the flash of frost on the floor: a cloud of
+// frost rolls out of the staff over the whole cone, swelling and thinning as it goes (dithered, so the
+// foes show through it), ice needles streak out ahead of it, and every foe it freezes is locked in
+// ice: pale crystals jut up round its feet, with a glint, until it thaws.
+// G.mist: { fi, fj, z, vi, vj, r, t, t0 }; G.needles: { fi, fj, z, vi, vj, t, t0 }
+function frostBreath(a0, R, half) {
+  if (!G.mist) G.mist = []; if (!G.needles) G.needles = [];
+  const [ox, oy] = staffTip(), ring = half >= 3;
+  for (let c = 0; c < (ring ? 26 : 18); c++) {
+    const a = ring ? c / 26 * 6.283 + Math.random() * 0.2 : a0 + (Math.random() * 2 - 1) * half * 0.95, sp = R * (2.2 + Math.random() * 1.4);
+    G.mist.push({ fi: ring ? hero.fi + Math.cos(a) * 1.0 : ox, fj: ring ? hero.fj + Math.sin(a) * 1.0 : oy, z: ring ? 8 : ORB_Z - 8, vi: Math.cos(a) * sp, vj: Math.sin(a) * sp, r: 4, t: 0.55 + Math.random() * 0.25, t0: 0.8 });
+  }
+  for (let c = 0; c < (ring ? 20 : 14); c++) {
+    const a = ring ? c / 20 * 6.283 : a0 + (Math.random() * 2 - 1) * half, sp = 14 + Math.random() * 6;
+    G.needles.push({ fi: ox, fj: oy, z: ORB_Z - 6 + Math.random() * 6, vi: Math.cos(a) * sp, vj: Math.sin(a) * sp, t: R / sp, t0: R / sp, vz: -10 - Math.random() * 20 });
+  }
+}
+function updateFrostFx(dt) {
+  if (G.mist) { for (const m of G.mist) { m.t -= dt; m.fi += m.vi * dt; m.fj += m.vj * dt; const k = Math.exp(-dt * 4.5); m.vi *= k; m.vj *= k; m.r += (14 - m.r) * dt * 4; m.z = Math.max(4, m.z - dt * 30); } G.mist = G.mist.filter(m => m.t > 0 && !blocked(m.fi, m.fj)); }
+  if (G.needles) { for (const n of G.needles) { n.t -= dt; n.fi += n.vi * dt; n.fj += n.vj * dt; n.z = Math.max(2, n.z + n.vz * dt); } G.needles = G.needles.filter(n => n.t > 0); }
+}
+function drawFrostFx() {
+  const P = (fi, fj, z) => { const [x, y] = iso(fi, fj); return [Math.round(x * SPX - cam2x), Math.round((y - z) * SPX - cam2y)]; };
+  if (G.mist) for (const m of G.mist) {   // the cloud: a soft pale ball, dithered thinner at its edge and as it fades
+    const [X0, Y0] = P(m.fi, m.fj, m.z), life = Math.min(1, m.t / 0.35), R = m.r * SPX;
+    for (let b = -Math.ceil(R * 0.75); b <= R * 0.75; b++) for (let a = -Math.ceil(R); a <= R; a++) {
+      const q = Math.hypot(a / R, b / (R * 0.75)); if (q > 1) continue;
+      const X = X0 + a, Y = Y0 + b, th = BAYER[((Y & 3) << 2) | (X & 3)];
+      if (th > life * (1.05 - q * q) * 0.5) continue;
+      ovSet(X, Y, q < 0.3 && b < 0 && life > 0.6 ? 27 : (X + Y) & 2 ? 118 : 117);
+    }
+  }
+  if (G.needles) for (const n of G.needles) {   // needles: a short bright streak along the way it flies
+    const [X0, Y0] = P(n.fi, n.fj, n.z), [X1, Y1] = P(n.fi - n.vi * 0.035, n.fj - n.vj * 0.035, n.z), L = Math.ceil(Math.hypot(X1 - X0, Y1 - Y0));
+    for (let s = 0; s <= L; s++) { const u = s / (L || 1); ovSet(Math.round(X0 + (X1 - X0) * u), Math.round(Y0 + (Y1 - Y0) * u), u < 0.3 ? 27 : u < 0.7 ? 118 : 117); }
+  }
+  // the ice that holds a frozen foe: crystals jutting up round its feet, a glint now and then
+  for (const e of enemies) {
+    if (!(e.frozen > 0) || !alive(e) || e.def.unique) continue;
+    const [X0, Y0] = P(e.fi, e.fj, 0), R = rng(e.seed * 7 + 3), sc = Math.min(1.4, (e.def.chest || 20) / 22), grow = Math.min(1, (e.frozenT0 ? (e.frozenT0 - e.frozen) : 1) / 0.12), melt = Math.min(1, e.frozen / 0.4);
+    for (let c = 0; c < 5; c++) {
+      const ox = (c - 2) * 6 * sc + (R() - 0.5) * 4, h = (10 + R() * 14) * sc * grow * melt, w = (3 + R() * 2) * sc, lean = (c - 2) * 0.18 + (R() - 0.5) * 0.2, oy = (c === 0 || c === 4 ? -3 : 2) * sc;
+      if (h < 2) continue;
+      for (let yy = 0; yy < h; yy++) {
+        const u = yy / h, half = w * (1 - u), cx = X0 + ox + lean * yy;
+        for (let a = Math.floor(-half) - 1; a <= Math.ceil(half) + 1; a++) {
+          const X = Math.round(cx + a), Y = Math.round(Y0 + oy - yy);
+          if (Math.abs(a) > half) { if (Math.abs(a) <= half + 1) ovSet(X, Y, 115); continue; }
+          ovSet(X, Y, a < -half * 0.3 ? 27 : a < half * 0.3 ? 118 : 116);
+        }
+      }
+    }
+    if (hash(Math.floor(G.t * 3), e.seed, 9) < 0.4) { const gx = X0 + (R() - 0.5) * 16 * sc, gy = Y0 - (8 + R() * 30) * sc; for (let k = -3; k <= 3; k++) { ovSet(gx + k, gy, Math.abs(k) < 2 ? 27 : 118); ovSet(gx, gy + k, Math.abs(k) < 2 ? 27 : 118); } }   // a glint
+  }
+}
+
+// ---------------------------------------------------------------- Chain Lightning (round 65)
+// Replaces Blink (the user: lightning is the missing element: arcane, fire, earth, water). A short
+// charge crackling at the staff, then a jagged bolt to the nearest foe that jumps on to the next
+// nearest it hasn't hit (3.6 tiles), up to five, one jump every 70 ms. Every foe it hits is SHOCKED
+// for 3 s: everything hits it 25% harder (damageEnemy), and it crackles. Fork: splits in two at each
+// jump, up to eight. Overload: one jump, a huge bolt (x2.2) that stuns. Conductor: jumps twice as far
+// to and through chilled or frozen foes.
+// G.bolts: { a: [fi, fj, z] start, e: foe, b: [fi, fj, z] end (kept if it dies), delay, t, t0, k, big, seed, done }
+const CHAIN_JUMP = 3.6;
+const chillish = e => e.frozen > 0 || e.slowT > 0 || e.chillT > 0;
+function chainLightning() {
+  const mod = skillMod('chain'), first = nearestEnemy(7.5, true);
+  if (!first) { say('NOTHING TO STRIKE', 25, 1); return false; }
+  startCast('chain', 0.3, [first.fi, first.fj], () => {
+    const [ox, oy] = staffTip(), n = mod === 'overload' ? 2 : mod === 'fork' ? 8 : 5, k = mod === 'overload' ? 2.2 : 1.0, big = mod === 'overload';
+    const hit = new Set([first]), seq = [{ a: [ox, oy, ORB_Z], e: first, step: 0 }];
+    let front = [first], step = 0;
+    while (hit.size < n && front.length) {
+      step++; const next = [];
+      for (const src of front) for (let b = 0; b < (mod === 'fork' ? 2 : 1) && hit.size < n; b++) {
+        let best = null, bd = 1e9;
+        for (const e of enemies) {
+          if (!alive(e) || hit.has(e) || LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] < 0.3) continue;
+          const d = Math.hypot(e.fi - src.fi, e.fj - src.fj), range = mod === 'conductor' && (chillish(e) || chillish(src)) ? CHAIN_JUMP * 2 : CHAIN_JUMP;
+          if (d < range && d < bd) { bd = d; best = e; }
+        }
+        if (best) { hit.add(best); seq.push({ a: null, src, e: best, step }); next.push(best); }
+      }
+      front = next;
+    }
+    for (const s of seq) G.bolts.push({ a: s.a, src: s.src || null, e: s.e, delay: s.step * 0.07, t: big ? 0.26 : 0.18, t0: big ? 0.26 : 0.18, k: k * (1 - s.step * 0.06), big, seed: (Math.random() * 1e6) | 0, done: false });
+    orbFlare(40, 32, 14); sfx('zap'); if (SHAKE) G.trauma = Math.min(1, G.trauma + (big ? 0.35 : 0.15));
+  });
+  return true;
+}
+const chestOf = e => [e.fi, e.fj, (e.def.chest || 20) * 0.65];
+function updateLightning(dt) {
+  if (!G.bolts) G.bolts = [];
+  // the charge: sparks crackling at the staff's orb before the bolt leaves
+  if (hero.cast > 0 && hero.castKind === 'chain' && (hero.castAge || 0) < castRel('chain') && Math.random() < 0.9) {
+    const [fi, fj] = staffTip(), [x, y] = iso(fi, fj);
+    for (let q = 0; q < 2; q++) { const a = Math.random() * 6.283; pspawn(2, x + Math.cos(a) * 5, y, ORB_Z + Math.sin(a) * 5, -Math.cos(a) * 30, 0, -Math.sin(a) * 30, 0.12, q ? 40 : 32); }
+    G.staffArc = G.t;
+  }
+  for (const B of G.bolts) {
+    if (B.delay > 0) { B.delay -= dt; if (B.delay > 0) continue; }
+    if (!B.a) B.a = chestOf(B.src);   // a jump starts where the last foe stood
+    if (!B.done) {
+      B.done = true; B.b = chestOf(B.e);
+      const e = B.e;
+      if (alive(e)) {
+        wake(e); const c = spellCrit(); G.elem = 'shock'; G.pierce = true;
+        damageEnemy(e, spellDmg(c ? B.k * 2 : B.k), B.a[0], B.a[1], c, B.big ? 1 : 0, true); G.elem = null; G.pierce = false;
+        if (alive(e)) { e.shockT = 3; if (B.big && !e.def.unique) e.stun = Math.max(e.stun || 0, 1.0); }
+      }
+      impactFlash(B.b[0], B.b[1], B.b[2], B.big ? 7 : 4);
+      const [x, y] = iso(B.b[0], B.b[1]);
+      for (let q = 0; q < (B.big ? 18 : 10); q++) { const a = Math.random() * 6.283, s = 40 + Math.random() * 60; pspawn(2, x, y, B.b[2], Math.cos(a) * s, Math.sin(a) * s * 0.5, Math.random() * 40, 0.18 + Math.random() * 0.12, q % 3 ? 40 : 32); }
+      G.flashes.push({ fi: B.b[0], fj: B.b[1], t: 0.1, t0: 0.1, r: B.big ? 110 : 70 });
+      sfx('zap', B.big ? 1 : 0.6);
+    } else if (alive(B.e)) B.b = chestOf(B.e);
+    B.t -= dt;
+  }
+  G.bolts = G.bolts.filter(B => B.delay > 0 || B.t > 0);
+  for (const e of enemies) if (e.shockT > 0) e.shockT -= dt;
+}
+// a jagged bolt, re-rolled every other frame: a white core, a pale blue glow either side, a few short
+// forks off it, thinning out as it fades (detail layer)
+function boltLine(A, B, seed, w, life, forks = true) {
+  const R = rng(seed + Math.floor(G.t * 30)), n = Math.max(4, Math.round(Math.hypot(B[0] - A[0], B[1] - A[1]) / 9));
+  const nx = -(B[1] - A[1]), ny = B[0] - A[0], nl = Math.hypot(nx, ny) || 1;
+  let px = A[0], py = A[1];
+  for (let s = 1; s <= n; s++) {
+    const u = s / n, j = s < n ? (R() - 0.5) * 16 : 0, qx = A[0] + (B[0] - A[0]) * u + nx / nl * j, qy = A[1] + (B[1] - A[1]) * u + ny / nl * j;
+    const m = Math.ceil(Math.hypot(qx - px, qy - py));
+    for (let k = 0; k <= m; k++) {
+      const x = Math.round(px + (qx - px) * k / m), y = Math.round(py + (qy - py) * k / m);
+      if (w >= 2) {   // a 2 px hot core in a pale blue glow, a dithered deep blue haze outside it
+        for (const [a, b] of [[-2, 0], [2, 0], [0, -2], [0, 3], [-2, 1], [2, 1]]) if ((x + y + a) & 1) ovSet(x + a, y + b, 39);
+        for (const [a, b] of [[-1, 0], [1, 0], [0, -1], [0, 2], [-1, 1], [1, 1]]) ovSet(x + a, y + b, 40);
+        if (w > 2) for (const [a, b] of [[-3, 0], [3, 0], [0, -3], [0, 4]]) if ((x + y) & 1) ovSet(x + a, y + b, 39);
+      } else if (life > 0.5 && ((x + y) & 1)) ovSet(x, y + 1, 40);
+      ovSet(x, y, 27); if (w >= 2) ovSet(x, y + 1, 32);
+    }
+    if (forks && s < n && R() < 0.45) {   // a short fork
+      let fx = qx, fy = qy, a = Math.atan2(B[1] - A[1], B[0] - A[0]) + (R() < 0.5 ? 1 : -1) * (0.6 + R() * 0.6);
+      for (let f = 0; f < 6 + R() * 8; f++) { a += (R() - 0.5) * 0.8; fx += Math.cos(a) * 1.4; fy += Math.sin(a) * 1.4; ovSet(Math.round(fx), Math.round(fy), f < 4 ? 32 : 40); }
+    }
+    px = qx; py = qy;
+  }
+}
+function drawLightning() {
+  if (!G.bolts) return;
+  const P = p => { const [x, y] = iso(p[0], p[1]); return [Math.round(x * SPX - cam2x), Math.round((y - p[2]) * SPX - cam2y)]; };
+  if (G.staffArc === G.t) { const [fi, fj] = staffTip(), c = P([fi, fj, ORB_Z]), R = rng(Math.floor(G.t * 40)); for (let q = 0; q < 2; q++) { const a = R() * 6.283; boltLine([c[0], c[1]], [c[0] + Math.cos(a) * 12, c[1] + Math.sin(a) * 12], q * 13, 1, 1, false); } }   // the charge crackles round the orb
+  for (const B of G.bolts) {
+    if (B.delay > 0 || !B.a || !B.b) continue;
+    const life = B.t / B.t0; if (life < 0.35 && Math.floor(G.t * 30) % 2) continue;   // flickers out
+    const pa = P(B.a), pb = P(B.b);
+    boltLine(pa, pb, B.seed, B.big ? 3 : life > 0.4 ? 2 : 1, life);
+    if (life > 0.55) for (const [cx, cy, r] of [[pb[0], pb[1], B.big ? 7 : 5], [pa[0], pa[1], 3]]) for (let b = -r; b <= r; b++) for (let a = -r; a <= r; a++) { const d = Math.hypot(a, b); if (d <= r) ovSet(cx + a, cy + b, d < r * 0.45 ? 27 : d < r * 0.75 ? 32 : 40); }   // a hot spark where it bites (and leaves)
+    if (B.big && life > 0.5) boltLine(P(B.a), P(B.b), B.seed + 7, 1, life, false);   // Overload: a second strand
+  }
+  // the shocked crackle: little arcs over the body, now and then
+  for (const e of enemies) {
+    if (!(e.shockT > 0) || !alive(e)) continue;
+    const r = hash(Math.floor(G.t * 15), e.seed, 5); if (r > 0.7) continue;
+    const c = P(chestOf(e)), R = rng(e.seed + Math.floor(G.t * 15));
+    for (let q = 0; q < 2; q++) { const a = R() * 6.283, l = 14 + R() * 14, ox = (R() - 0.5) * 10, oy = (R() - 0.5) * 24; boltLine([c[0] + ox + Math.cos(a) * l * 0.5, c[1] + oy + Math.sin(a) * l * 0.6], [c[0] + ox - Math.cos(a) * l * 0.5, c[1] + oy - Math.sin(a) * l * 0.6], e.seed + q, 1, 1, true); }
   }
 }
 
