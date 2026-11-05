@@ -1,0 +1,37 @@
+<title>Secret Bosses B5</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+/* one dark dungeon look to match the game; each monster: concept + note, then a before/after strip that scrolls sideways on phones */
+:root { --bg:#17120f; --panel:#211a16; --ink:#ece2cf; --dim:#a8987f; --rule:#3a2f27; --ember:#e8902f;
+  --display:'Pixelify Sans','Courier New',monospace; --body:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace; color-scheme: dark; }
+body { background:var(--bg); color:var(--ink); font-family:var(--body); line-height:1.55; margin:0; }
+.wrap { max-width:1180px; margin:0 auto; padding-block:28px 64px; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px)); display:grid; gap:34px; }
+h1 { font-family:var(--display); font-weight:700; font-size:clamp(28px,5vw,44px); line-height:1.1; margin:0; text-wrap:balance; }
+h1 em { font-style:normal; color:var(--ember); }
+.lede { max-width:68ch; color:var(--dim); margin:10px 0 0; } .lede b { color:var(--ink); font-weight:600; }
+.grp { font-family:var(--display); font-size:24px; color:var(--ember); margin:18px 0 0; letter-spacing:.03em; }
+h3 { font-family:var(--display); font-weight:700; font-size:22px; margin:0; }
+section { display:grid; gap:12px; border-top:1px solid var(--rule); padding-top:22px; }
+.head { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 14px; }
+.tag { font-family:var(--mono); font-size:12px; color:var(--dim); }
+.row { display:grid; grid-template-columns:minmax(0,340px) minmax(0,1fr); gap:18px; align-items:start; }
+@media (max-width:640px) { .row { grid-template-columns:minmax(0,1fr); } .concept { max-width:340px; } }
+.concept { margin:0; background:var(--panel); border:1px solid var(--rule); }
+.concept img { display:block; width:100%; image-rendering:pixelated; }
+.concept.none { padding:14px 0; }
+figcaption { font-family:var(--mono); font-size:11px; color:var(--dim); padding:6px 8px; }
+.note { margin:0; max-width:66ch; }
+.strip { overflow-x:auto; border:1px solid var(--rule); background:#000; }
+.strip img { display:block; max-width:none; width:auto; height:auto; max-height:520px; image-rendering:pixelated; }
+</style>
+<div class="wrap">
+<header>
+<h1>Secret bosses: The Forgotten <em>B5</em></h1>
+<p class="lede">The four hidden bosses from your <b>Secret Bosses</b> sheet, each with 4-7 passes judged side by side in both orders, normal head proportions. All are new: each is shown beside its nearest relative for size (Dire Bear, Skeleton King, Stoneback, Fallen Shaman and Ashhex). None spawn yet; the main chat decides where to hide them. Every other monster and the heroes render exactly as before.</p>
+</header>
+<section><div class="head"><h3>Old Mossback</h3></div><div class="row"><figure class="concept"><img src="concepts/old_mossback.png" alt="Concept: Old Mossback"><figcaption>your concept</figcaption></figure><p class="note">Hidden Grove. A huge brown bear (shown under the Dire Bear): shoulder hump, moss draped over the back and shoulders with ragged drips, a cascade of mushrooms, a pale brow scar, yellow eyes, big cream claws. Weak spot: mushroom caps are a dull tan (no closer orange-tan in the palette).</p></div><div class="strip"><img loading="lazy" src="mossback/final-mossback.png" alt="Old Mossback"></div></section>
+<section><div class="head"><h3>The Drowned Warden</h3></div><div class="row"><figure class="concept"><img src="concepts/drowned_warden.png" alt="Concept: The Drowned Warden"><figcaption>your concept</figcaption></figure><p class="note">Flooded Crypt. A huge hunched skeleton with long heavy arms (shown above the Skeleton King): crusted iron helm with nose guard, bronze-brown pauldrons with moss, moss on the bones, torn teal loincloth, barnacled round shield, an iron anchor dragged low. Weak spot: the helm reads greyer than the concept.</p></div><div class="strip"><img loading="lazy" src="warden/final-warden.png" alt="The Drowned Warden"></div></section>
+<section><div class="head"><h3>Flintback Matriarch</h3></div><div class="row"><figure class="concept"><img src="concepts/flintback_matriarch.png" alt="Concept: Flintback Matriarch"><figcaption>your concept</figcaption></figure><p class="note">Sealed Mine Pocket. A big furry brown spider (shown under the Stoneback): ivory tusk fangs, thick banded legs, flint slabs on her back with glowing amber crystals. Weak spot: the slabs still look boxy, like a roof.</p></div><div class="strip"><img loading="lazy" src="flintback/final-flintback.png" alt="Flintback Matriarch"></div></section>
+<section><div class="head"><h3>Brother Cinder</h3></div><div class="row"><figure class="concept"><img src="concepts/brother_cinder.png" alt="Concept: Brother Cinder"><figcaption>your concept</figcaption></figure><p class="note">Buried Shrine. A red imp monk (shown above the Fallen Shaman and Ashhex): dark hood with gold trim, white horn, purple ears, fang necklace, ragged crimson robe, a book, and a tall crooked staff with a swinging, glowing bronze bell.</p></div><div class="strip"><img loading="lazy" src="cinder/final-cinder.png" alt="Brother Cinder"></div></section>
+</div>

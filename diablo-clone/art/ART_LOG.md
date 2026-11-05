@@ -392,3 +392,21 @@ Review page: https://claude.ai/artifact/U8ZU9PUjZiF46HLshWdwxS (source `art/revi
 **Weak spots:** Greyfang's mane hides his ears from the front; Gravespine's horns resemble the Bone Hound's; Ashhex's
 hood is blobby from behind; Rook's key is small at 1x.
 Queued next (B5): secret bosses Old Mossback, Drowned Warden, Flintback Matriarch, Brother Cinder.
+
+## B5: secret bosses "The Forgotten" (2026-11-05)
+Concepts: `art/concepts/monsters/secret-bosses-sheet.png` + crops. Four reviewers (worktrees from 3cfcf82), 4-7 passes
+each, both orders; merged, each re-verified pixel-identical to its branch; all other monsters unchanged.
+Review page: https://claude.ai/artifact/CyW6uZHyzvQcJXftLNf4SY (source `art/review/b5-secret/`).
+**For the main chat:** all four are new MONSTERS entries with `minLevel: 99`, `unique: true` and placeholder stats;
+you decide where to hide them and which boss AI they get (none has a `boss:` key except the Warden's suggested 'slam').
+
+| Id | Name (title) | Family / look | Notes |
+|---|---|---|---|
+| `mossback` | OLD MOSSBACK (OF THE HIDDEN GROVE) | hound, bear b2 shape + `look.moss`, scale 2.4, size [170,150,85,104] | `charge: true`, `where: 'out'` |
+| `warden` | THE DROWNED WARDEN (KEEPER OF THE FLOODED CRYPT) | skeleton, `look.warden`, scale 1.65 | suggested `boss: 'slam'`, `minions: ['skeleton','spearman']`, `calls` text |
+| `flintback` | FLINTBACK MATRIARCH (SEALED MINE POCKET) | spider, `SPIDER_V.flint` / `look.flint`, scale 1.45 | melee |
+| `cinder` | BROTHER CINDER (BURIED SHRINE) | fallen, acolyte look + `look.cinder`, scale 1.6 | ranged `'firebolt'`; bell swings |
+
+**Weak spots:** Flintback's slabs look boxy; Warden's helm greyer than the concept; Mossback's mushroom caps dull tan.
+**Existing bug spotted (not changed):** the Dire Bear's and Gorr's sprite canvases are a little short, so a few death
+frames (bear dirs 2-4, Gorr 4-5) are cut off at the bottom; the fix is a taller `size` on those entries.
