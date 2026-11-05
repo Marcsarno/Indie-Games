@@ -235,8 +235,25 @@ const OUTFITS = {
   runebinder: { name: 'RUNEBINDER', pieces: ['runebinder_robe', 'runebinder_hat', 'runebinder_staff'], bonus: [{ mana: 30 }, { crit: 8, dmgPct: 15 }], lines: ['2: +30 MANA', '3: +8% CRIT, +15% DAMAGE'] },
   sunwarden: { name: 'SUNWARDEN', pieces: ['sunwarden_robe', 'sunwarden_hat', 'sunwarden_staff'], bonus: [{ hp: 25 }, { dmgPct: 25, regen: 2 }], lines: ['2: +25 LIFE', '3: +25% DAMAGE, +2 LIFE/S'] },
 };
-const outfitsOf = base => Object.keys(OUTFITS).filter(k => OUTFITS[k].pieces.includes(base));
-function outfitCount(k, equip) { const e = equip || (typeof hero !== 'undefined' ? hero.equip : {}); return Object.values(e).filter(it => it && OUTFITS[k].pieces.includes(it.base)).length; }
+// round 63: higher tiers of the art chat's set pieces. All gear stopped at item level 6, so deeper
+// floors only had better affixes. Each piece now also drops as TEMPERED (6 levels on) and ANCIENT
+// (12 on): the same look, damage along the gear curve (((L + 2) / (l + 2)) ^ 0.8), armor more gently
+// (its square root: armor cuts damage steeply), block +5 a tier (max 40). A tier counts as its plain
+// piece for the outfit's bonus (`root`).
+const TIERS = [['TEMPERED', 6], ['ANCIENT', 12]];
+for (const id of [...new Set(Object.values(OUTFITS).flatMap(o => o.pieces))]) {
+  const b = ITEM_BASES[id]; if (!b || !b.icon) continue;   // (the old generic pieces in an outfit, a cap or a long sword, stay as they are)
+  TIERS.forEach(([word, up], n) => {
+    const L = b.lvl + up, k = (L + 2) / (b.lvl + 2), ka = Math.sqrt(k), v = Object.assign({}, b, { name: word + ' ' + b.name, lvl: L, root: id, tier: n + 1 });
+    if (b.dmg) { const kd = Math.pow(k, 0.8); v.dmg = [Math.round(b.dmg[0] * kd), Math.round(b.dmg[1] * kd)]; }
+    if (b.armor) v.armor = Math.round(b.armor * ka);
+    if (b.block) v.block = Math.min(40, b.block + 5 * (n + 1));
+    ITEM_BASES[id + '_t' + (n + 1)] = v;
+  });
+}
+const rootOf = base => (ITEM_BASES[base] && ITEM_BASES[base].root) || base;
+const outfitsOf = base => Object.keys(OUTFITS).filter(k => OUTFITS[k].pieces.includes(rootOf(base)));
+function outfitCount(k, equip) { const e = equip || (typeof hero !== 'undefined' ? hero.equip : {}); return Object.values(e).filter(it => it && OUTFITS[k].pieces.includes(rootOf(it.base))).length; }
 // the hero's class decides which gear drops (game.js sets hero.cls; warrior when unset)
 const heroCls = () => (typeof hero !== 'undefined' && hero.cls) || 'warrior';
 const forCls = o => o.cls === 'any' || (o.cls || 'warrior') === heroCls();
@@ -257,7 +274,7 @@ function rollItem(R, level, forceBase) {
   const bases = Object.keys(ITEM_BASES).filter(k => ITEM_BASES[k].lvl <= level + 1 && ITEM_BASES[k].slot !== 'potion' && forCls(ITEM_BASES[k]));
   let baseId = forceBase;
   if (!baseId) {   // weighted pick: rings and amulets keep a fixed share (about 6% and 4%) however many other bases a class has
-    const nGear = bases.filter(k => !JEWELRY[ITEM_BASES[k].slot]).length, wt = k => JEWELRY[ITEM_BASES[k].slot] ? ITEM_BASES[k].w * nGear : 1;
+    const gw = k => ITEM_BASES[k].lvl < level - 6 ? 0.35 : 1, nGear = bases.filter(k => !JEWELRY[ITEM_BASES[k].slot]).reduce((a, k) => a + gw(k), 0), wt = k => JEWELRY[ITEM_BASES[k].slot] ? ITEM_BASES[k].w * nGear : gw(k);   // (round 63: gear far below the floor's level comes up less)
     const tot = bases.reduce((a, k) => a + wt(k), 0);
     let x = R() * tot; baseId = bases[bases.length - 1];
     for (const k of bases) { x -= wt(k); if (x < 0) { baseId = k; break; } }
