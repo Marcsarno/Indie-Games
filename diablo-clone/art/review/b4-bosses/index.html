@@ -1,0 +1,43 @@
+<title>Bosses and Elites B4</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+/* one dark dungeon look to match the game; each monster: concept + note, then a before/after strip that scrolls sideways on phones */
+:root { --bg:#17120f; --panel:#211a16; --ink:#ece2cf; --dim:#a8987f; --rule:#3a2f27; --ember:#e8902f;
+  --display:'Pixelify Sans','Courier New',monospace; --body:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace; color-scheme: dark; }
+body { background:var(--bg); color:var(--ink); font-family:var(--body); line-height:1.55; margin:0; }
+.wrap { max-width:1180px; margin:0 auto; padding-block:28px 64px; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px)); display:grid; gap:34px; }
+h1 { font-family:var(--display); font-weight:700; font-size:clamp(28px,5vw,44px); line-height:1.1; margin:0; text-wrap:balance; }
+h1 em { font-style:normal; color:var(--ember); }
+.lede { max-width:68ch; color:var(--dim); margin:10px 0 0; } .lede b { color:var(--ink); font-weight:600; }
+.grp { font-family:var(--display); font-size:24px; color:var(--ember); margin:18px 0 0; letter-spacing:.03em; }
+h3 { font-family:var(--display); font-weight:700; font-size:22px; margin:0; }
+section { display:grid; gap:12px; border-top:1px solid var(--rule); padding-top:22px; }
+.head { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 14px; }
+.tag { font-family:var(--mono); font-size:12px; color:var(--dim); }
+.row { display:grid; grid-template-columns:minmax(0,340px) minmax(0,1fr); gap:18px; align-items:start; }
+@media (max-width:640px) { .row { grid-template-columns:minmax(0,1fr); } .concept { max-width:340px; } }
+.concept { margin:0; background:var(--panel); border:1px solid var(--rule); }
+.concept img { display:block; width:100%; image-rendering:pixelated; }
+.concept.none { padding:14px 0; }
+figcaption { font-family:var(--mono); font-size:11px; color:var(--dim); padding:6px 8px; }
+.note { margin:0; max-width:66ch; }
+.strip { overflow-x:auto; border:1px solid var(--rule); background:#000; }
+.strip img { display:block; max-width:none; width:auto; height:auto; max-height:520px; image-rendering:pixelated; }
+</style>
+<div class="wrap">
+<header>
+<h1>Bosses and elites from your sheets <em>B4</em></h1>
+<p class="lede">All eight characters from your <b>Bosses</b> and <b>Elites</b> sheets, each with 3+ passes judged side by side in both orders. Heads now follow the concept proportions, <b>no bobbleheads</b>. Three bosses are rebuilt in place (top strip: before, then after); Gorr and the four elites are new and are shown beside their nearest relative. The new ones do not spawn yet. Nothing else changed: other monsters and the player heroes render exactly as before.</p>
+</header>
+<h2 class="grp">Bosses</h2>
+<section><div class="head"><h3>Greyfang, the Alpha</h3></div><div class="row"><figure class="concept"><img src="concepts/greyfang.png" alt="Concept: Greyfang, the Alpha"><figcaption>your concept</figcaption></figure><p class="note">Rebuilt: blue-grey coat (reads on dark floors), big spiky cream mane over neck, shoulders and chest, yellow eyes, red scar, leaner longer legs, cream toes and tail tip. Weak spot: the mane hides the ears from the front.</p></div><div class="strip"><img loading="lazy" src="hounds/final-alpha.png" alt="Greyfang, the Alpha"></div></section>
+<section><div class="head"><h3>Rook, Bandit Chief</h3></div><div class="row"><figure class="concept"><img src="concepts/rook.png" alt="Concept: Rook, Bandit Chief"><figcaption>your concept</figcaption></figure><p class="note">Rebuilt: steel cap with a red bandana knotted at the side, scowling bearded face, stocky build, quilted red coat to the knees, leather pauldron, belt with a brass key, broad cleaver, planked round shield. Horned helm, spikes and axe gone.</p></div><div class="strip"><img loading="lazy" src="rook/final-banditchief.png" alt="Rook, Bandit Chief"></div></section>
+<section><div class="head"><h3>The Skeleton King</h3></div><div class="row"><figure class="concept"><img src="concepts/skeleton_king.png" alt="Concept: The Skeleton King"><figcaption>your concept</figcaption></figure><p class="note">Rebuilt: normal-size skull (was 1.4x), modest gold crown, plate breastplate with gold buckle, layered gold-trimmed pauldrons, tattered dark crimson cape gathered at the neck, broad chipped sword held low, clawed hand raised.</p></div><div class="strip"><img loading="lazy" src="skeletons/final-skelking.png" alt="The Skeleton King"></div></section>
+<section><div class="head"><h3>Gorr, the Minebreaker</h3></div><div class="row"><figure class="concept"><img src="concepts/gorr.png" alt="Concept: Gorr, the Minebreaker"><figcaption>your concept</figcaption></figure><p class="note">New boss (shown under the Warlord for scale): steel pauldrons, leather overalls with braces crossing at the back, rope belt, ragged apron, hip pouch, faceted stone sledgehammer with an overhead two-handed slam.</p></div><div class="strip"><img loading="lazy" src="ogres/final-gorr.png" alt="Gorr, the Minebreaker"></div></section>
+<h2 class="grp">Elites</h2>
+<section><div class="head"><h3>Ironjaw Enforcer</h3></div><div class="row"><figure class="concept"><img src="concepts/ironjaw_enforcer.png" alt="Concept: Ironjaw Enforcer"><figcaption>your concept</figcaption></figure><p class="note">New (shown under the regular Enforcer): iron jaw grille with tusks poking past it, riveted steel pauldron, cross strap, big buckle, short torn red skirt, iron-banded wooden mallet.</p></div><div class="strip"><img loading="lazy" src="ogres/final-ironjaw.png" alt="Ironjaw Enforcer"></div></section>
+<section><div class="head"><h3>Ashhex Shaman</h3></div><div class="row"><figure class="concept"><img src="concepts/ashhex_shaman.png" alt="Concept: Ashhex Shaman"><figcaption>your concept</figcaption></figure><p class="note">New (shown under the Fallen Shaman): orange hood and mantle, tall white horns, bone-fang necklace, taller orb staff, flame in hand; smaller head than the Shaman&#x27;s.</p></div><div class="strip"><img loading="lazy" src="ashhex/final-ashhex.png" alt="Ashhex Shaman"></div></section>
+<section><div class="head"><h3>Gravespine Hound</h3></div><div class="row"><figure class="concept"><img src="concepts/gravespine_hound.png" alt="Concept: Gravespine Hound"><figcaption>your concept</figcaption></figure><p class="note">New (shown above the Bone Hound): horned skull mask with red eyes, tall curled bone plates down the spine, ragged dark red cloth, studded iron collar.</p></div><div class="strip"><img loading="lazy" src="hounds/final-gravespine.png" alt="Gravespine Hound"></div></section>
+<section><div class="head"><h3>Crypt Bulwark</h3></div><div class="row"><figure class="concept"><img src="concepts/crypt_bulwark.png" alt="Concept: Crypt Bulwark"><figcaption>your concept</figcaption></figure><p class="note">New (shown above the Tomb Guard): blued-steel kettle helm with an iron brim, steel pauldrons, cross strap, bare-wood tower shield with iron bands, spiked mace, blue loincloth, 15% bigger.</p></div><div class="strip"><img loading="lazy" src="skeletons/final-bulwark.png" alt="Crypt Bulwark"></div></section>
+</div>

@@ -363,3 +363,32 @@ The user disliked the brown on the Restless Dead's head (B2 pass 6-7 had added a
 wisps). Removed both: the head is now a bald pale skull like the concept. Added big dark round eye sockets with a
 small red glint deep in each (front views now read as a skull face). Kept: won both orders vs B2's final. Other
 monsters pixel-identical; 304 frames, 0 sprite-edge hits; no page errors. Review/progress/test pages updated.
+
+## B4: bosses and elites from the user's sheets (2026-11-05)
+Concepts: `art/concepts/monsters/` (bosses-sheet, elites-sheet and one crop per character). The user approved large
+identity changes and asked to "get away from the bobblehead style": heads follow the concept proportions.
+Five reviewers (worktrees from db71e61), 3-5 passes each, judged in both orders; merged into `art`, each slice
+re-verified pixel-identical to its branch, player heroes hash-identical. Post-merge fix by the art chat: the Bulwark's
+helm moved from CLOTH_NAVY (royal blue) to SLATE with an IRON brim.
+Review page: https://claude.ai/artifact/U8ZU9PUjZiF46HLshWdwxS (source `art/review/b4-bosses/`, `build_page.py`).
+
+**Rebuilt in place (look only; ids, names and stats unchanged):**
+- `alpha` as Greyfang: `look.gf` in houndRig (HIDE coat, BONE mane tufts, scar, yellow eyes, lean).
+- `banditchief` as Rook: actors.js, all gated by `bandit: 'rook'` (`ROOK_B`, `rookcap`, `rcleaver`, `rookShield`,
+  `rookBody`). Now unused leftovers: `GEAR_EXTRA.helm.bchief` and the `bandit === 'chief'` block. **Main chat:**
+  rename to ROOK, BANDIT CHIEF if wanted; `LEADER_POWERS.banditchief` in elites.js is untouched.
+- `skelking`: `king = !!look.crown` in skeletonRig (no bigHead for him, plate armor, crimson cape, eyes EYE_RED).
+
+**New MONSTERS entries (all `minLevel: 99`, placeholder stats; main chat sets levels/spawns/loot):**
+
+| Id | Name | Family / look | Notes |
+|---|---|---|---|
+| `gorr` | GORR (title THE MINEBREAKER) | ogre, `look.gorr`, scale 1.5 | boss keys like the warlord (`unique`, `boss: 'slam'`); new `SWINGS.slam` overhead hammer swing via FAMILIES.ogre swing |
+| `ironjaw` | IRONJAW ENFORCER | ogre, `grunt` + `ironjaw`, scale 1.2 | `elite: true` |
+| `ashhex` | ASHHEX SHAMAN | fallen, acolyte look + `ashhex`, scale 1.15 | `elite`, `leader`; ranged `'firebolt'` |
+| `gravespine` | GRAVESPINE HOUND | hound, `b2: 'gs'`, scale 1.15 | `elite: true` |
+| `bulwark` | CRYPT BULWARK | skeleton, `helm: 'bulwark'`, `bulwark`, scale 1.27 | `elite: true` |
+
+**Weak spots:** Greyfang's mane hides his ears from the front; Gravespine's horns resemble the Bone Hound's; Ashhex's
+hood is blobby from behind; Rook's key is small at 1x.
+Queued next (B5): secret bosses Old Mossback, Drowned Warden, Flintback Matriarch, Brother Cinder.
