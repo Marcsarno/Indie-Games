@@ -434,11 +434,11 @@ function skeletonRig(look, st) {
   } else if (look.helm === 'bulwark') {   // (b4) a deep navy kettle helm: dome, a low ridge, a thick riveted iron rim
     const hc = V.add(V.mad(J.head, up, 3.3), V.mul(fwd, -0.9)), hf = frameAlong(fwd, up);   // (pass 4) higher and further back so the eyes show under the brim
     r.group(() => {
-      r.ell(hc, [4.5, 4.6, 3.6], M.CLOTH_NAVY, hf);
-      r.ell(V.mad(hc, up, 0.6), [4.4, 0.8, 3.3], M.CLOTH_NAVY, hf);
+      r.ell(hc, [4.5, 4.6, 3.6], M.SLATE, hf);   // (b4 fix) blued steel, the concept's dark blue-grey (CLOTH_NAVY read royal blue)
+      r.ell(V.mad(hc, up, 0.6), [4.4, 0.8, 3.3], M.SLATE, hf);
     });
     // (pass 3) a broad iron brim standing out round the dome, riveted
-    r.cyl(V.mad(hc, up, -1.5), V.mad(hc, up, -0.4), 5.6, M.SLATE, { mf: p => { const q = V.sub(p, hc), a = Math.atan2(V.dot(q, sideR), V.dot(q, fwd)), t = a * 2.6; return V.dot(q, up) > -0.75 && Math.abs(t - Math.round(t)) < 0.18 && Math.hypot(V.dot(q, fwd), V.dot(q, sideR)) > 4.6 ? M.IRON : 0; } });
+    r.cyl(V.mad(hc, up, -1.5), V.mad(hc, up, -0.4), 5.6, M.IRON, { mf: p => { const q = V.sub(p, hc), a = Math.atan2(V.dot(q, sideR), V.dot(q, fwd)), t = a * 2.6; return V.dot(q, up) > -0.75 && Math.abs(t - Math.round(t)) < 0.18 && Math.hypot(V.dot(q, fwd), V.dot(q, sideR)) > 4.6 ? M.IRON : 0; } });
   } else if (look.helm) r.ell(V.mad(J.head, up, 1.8), [4.5, 4.5, 3.2], M.IRON);
   if (look.lich) {   // (b2 pass 3) a dark hood over the back of the skull
     const hh = V.add(V.mad(J.head, up, 0.4), V.mul(fwd, -1.3));
