@@ -597,12 +597,32 @@ function fallenRig(look, st) {
   // art B4, the Ashhex Shaman (elite, concept "ASHHEX SHAMAN"): the acolyte's body under an ochre hood and
   // mantle with a dark rim, a shadowed face, purple ears and white horns through the hood, a fang necklace
   const ash = !!look.ashhex, ashM = M.HAIR_O;
+  // art B5, Brother Cinder (secret boss, concept "BROTHER CINDER"): the acolyte's body at boss size under a deep
+  // charcoal hood and mantle edged in gold, one white horn through the hood, a bone-fang necklace, a ragged layered
+  // crimson robe with a zigzag hem, a closed book in the left hand and a crooked staff hung with a glowing bronze bell
+  const cin = !!look.cinder, cinM = M.CLOTH_SHADOW;
   const lg = chunk ? [1.75, 1.4, 1.05] : imp ? [1.45, 1.15, 0.95] : gobLean ? [1.4, 1.1, 0.9] : [1.8, 1.4, 1.0];
   for (const [hip, knee, ank] of [[J.hipL, J.kneeL, J.ankL], [J.hipR, J.kneeR, J.ankR]]) {
     r.cone(hip, knee, lg[0], lg[1], skin); r.cone(knee, ank, lg[1], lg[2], skin);
     r.ell(V.add(ank, [1.4, 0, -0.5]), imp ? [2.0, 1.2, 0.85] : [2.2, 1.2, 0.8], M.HORN);   // art B2: the imps' hooves pale grey as in the concepts
   }
-  if (imp && look.ember) {
+  if (imp && cin) {
+    const lf = frameAlong(fwd, up), top = V.lerp(J.pelvis, J.chest, 0.85), hem = V.add(J.pelvis, [0, 0, -4.0]);
+    const ax = V.norm(V.sub(hem, top)), Lr = V.len(V.sub(hem, top));
+    const tri = a => Math.abs(((a * 7 / Math.PI) % 2 + 2) % 2 - 1);   // a triangle wave round the robe: the zigzag teeth
+    const ragged = (c0, L) => ({ mf: p => { const q = V.sub(p, c0), t = V.dot(q, ax), ang = Math.atan2(V.dot(q, sideR), V.dot(q, fwd)); return t > L - 0.4 - tri(ang) * 1.7 ? M.DARK : 0; } });
+    r.cone(top, hem, 3.0, 4.5, M.BLOODY, ragged(top, Lr));   // the long under-robe
+    for (let k = 0; k < 9; k++) {   // its hem torn into points
+      const a = (k + 0.5) / 9 * Math.PI * 2, d = V.add(V.mul(fwd, Math.cos(a)), V.mul(sideR, Math.sin(a))), b = V.mad(hem, d, 3.7);   // art B5 pass 3: a shorter robe (shins and hooves show) with longer, flared points
+      r.cone(V.mad(b, up, 1.0), V.add(V.mad(b, up, -2.4 - (k % 2) * 0.6), V.mul(d, 0.9)), 1.35, 0.2, M.BLOODY);
+    }
+    const mid = V.add(J.pelvis, [0, 0, -1.2]), Lm = V.len(V.sub(mid, top));
+    r.cone(V.mad(top, up, 0.6), mid, 3.3, 4.4, M.BLOODY, ragged(V.mad(top, up, 0.6), Lm + 0.6));   // the shorter over-layer, its own zigzag edge
+    const cp = V.mad(J.chest, up, 2.9);   // a charcoal mantle over the shoulders, its edge trimmed in gold
+    r.ell(cp, [4.7, 5.6, 2.7], cinM, lf, { mf: p => V.dot(V.sub(p, cp), up) < -1.7 ? M.GOLD : 0 });
+    const nc = V.mad(J.chest, up, 0.4);   // a string of big bone fangs across the chest
+    for (let k = -2; k <= 2; k++) { const a = k * 0.4, p = V.add(V.mad(nc, fwd, Math.cos(a) * 3.7), V.mul(sideR, Math.sin(a) * 3.9)); r.cone(p, V.add(V.mad(p, up, k ? -2.0 : -2.6), V.mul(fwd, 0.5)), 0.85, 0.2, M.CLOTH_WHITE, { noShadow: true }); }
+  } else if (imp && look.ember) {
     // the ember acolyte (concept "EMBER ACOLYTE"): a ragged brown robe from chest to knee, tied
     // with a rope belt whose ends hang in front, under a purple capelet with a bone clasp
     const lf = frameAlong(fwd, up), top = V.lerp(J.pelvis, J.chest, 0.7), hem = V.add(J.pelvis, [0, 0, -4.2]);   // hangs straight down whatever the hunch
@@ -702,7 +722,11 @@ function fallenRig(look, st) {
     } else if (idleish) handR = V.add(V.add(J.shR, V.mul(fwd, 5 + J.swingArm)), V.add(V.mul(up, -2.5), V.mul(sideR, 1.6)));   // held out from the body so the sling hangs clear
     if (idleish) handL = V.add(V.add(J.shL, V.mul(fwd, 2.5 - J.swingArm)), V.add(V.mul(up, -5), V.mul(sideR, -1.3)));
   }
-  if (look.ember) {   // the off hand held out palm-up with a flame on it; thrust forward to cast
+  if (cin) {   // the book clutched at the left hip, raised on the cast; the staff planted beside the right foot
+    const ca = st.clip === 'cast' && sw ? sw.a : 0;
+    handL = V.add(V.add(J.shL, V.mul(fwd, 2.4 + ca * 2.2)), V.add(V.mul(up, -4.4 + ca * 2.4), V.mul(sideR, -1.2)));
+    if (idleish) { handR = V.add(V.add(J.shR, V.mul(fwd, 2.6 + J.swingArm * 0.8)), V.add(V.mul(up, -3.6), V.mul(sideR, 3.0))); bd = V.norm(V.add(V.add(up, V.mul(fwd, 0.1)), V.mul(sideR, 0.14))); }
+  } else if (look.ember) {   // the off hand held out palm-up with a flame on it; thrust forward to cast
     const ca = st.clip === 'cast' && sw ? sw.a : 0;
     handL = V.add(V.add(J.shL, V.mul(fwd, 4.2 + ca * 2.5)), V.add(V.mul(up, -2.6 + ca * 1.5), V.mul(sideR, -1.6)));
   }
@@ -746,6 +770,28 @@ function fallenRig(look, st) {
     r.ell(cup, [1.8, 1.8, 1.2], M.LEATHER);
     if (!(st.clip === 'shoot' && sw && sw.hit)) r.sph(V.mad(cup, up, 0.8), 1.5, M.ROCK);
   }
+  else if (cin) {
+    // a tall crooked staff that kinks on the way up and hooks forward, a bronze bell swinging from the hook
+    const out = V.norm(V.add(V.mul(fwd, -0.3), sideR));   // art B5 pass 4: hooked out and a little back, clear of the face in the three-quarter views   // the hook leans out to the right, so the bell hangs clear of the face
+    const s0 = V.mad(g, bd, -11.5), s1 = V.add(V.mad(g, bd, 5), V.mul(fwd, 0.7)), s2 = V.add(V.mad(g, bd, 11.5), V.mul(fwd, -0.6)), s3 = V.add(V.mad(g, bd, 18.5), V.mul(fwd, 0.4));
+    const h1 = V.add(V.mad(g, bd, 21), V.mul(out, 1.6)), h2 = V.add(V.mad(g, bd, 20.4), V.mul(out, 4.0));
+    r.group(() => { r.cone(s0, s1, 0.95, 1.0, M.WOOD); r.cone(s1, s2, 1.0, 0.95, M.WOOD); r.cone(s2, s3, 0.95, 0.95, M.WOOD); r.cone(s3, h1, 0.95, 0.9, M.WOOD); r.cone(h1, h2, 0.9, 0.8, M.WOOD); });
+    const fl = st.f || 0, ca = st.clip === 'cast' && sw ? sw.a : 0;
+    const th = st.clip === 'walk' ? Math.sin(fl / 8 * Math.PI * 2) * 0.3 : st.clip === 'cast' ? 0.45 - ca * 0.5 : [0, 0.1, 0.16, 0.08][fl % 4];
+    const dn = V.norm(V.add(V.mul(up, -Math.cos(th)), V.mul(fwd, Math.sin(th)))), b0 = V.mad(h2, dn, 1.4), bm = V.mad(h2, dn, 2.6), b1 = V.mad(h2, dn, 4.4);
+    // a bronze bell: a brown dome flaring to a flat-mouthed skirt with a gold lip, lit orange from inside through
+    // slots in its side, the glowing clapper hanging out of the mouth
+    const bx = V.norm(V.cross(dn, sideR)), bs = V.norm(V.cross(dn, bx));
+    r.group(() => {
+      r.cone(b0, bm, 1.3, 1.75, M.LEATHER);
+      r.cyl(bm, b1, 2.3, M.LEATHER, { mf: p => { const q = V.sub(p, h2), t = V.dot(q, dn); if (t > 3.8) return M.GOLD; const a = Math.atan2(V.dot(q, bs), V.dot(q, bx)); return t > 2.7 && t < 3.6 && Math.abs(((a * 3 / Math.PI) % 2 + 2) % 2 - 1) < 0.28 ? M.FIREM : 0; } });
+    });
+    r.cyl(V.mad(h2, dn, 0.2), b0, 0.9, M.IRON);   // the ring it hangs from
+    r.sph(V.mad(b1, dn, 0.6), 1.15, M.LAMP, { noShadow: true });
+    // the closed book: a leather cover, pale page edges along the front
+    const bk = V.add(V.mad(aL.hand, fwd, 0.6), V.mul(up, 0.4)), bf = frameAlong(fwd, up);
+    r.box(bk, [2.1, 1.0, 2.6], M.HAIR, bf, { mf: p => { const q = V.sub(p, bk); return V.dot(q, fwd) > 1.6 && Math.abs(V.dot(q, sideR)) < 0.6 && Math.abs(V.dot(q, up)) < 2.2 ? M.CLOTH_WHITE : 0; } });
+  }
   else if (look.staff && look.ember) {
     // a crooked staff: it kinks twice on the way up and ends in a hook that cradles a glowing orb
     const xl = ash ? 3 : 0;   // art B4: the ashhex's staff stands taller, its hook well above the hood as in the concept
@@ -781,7 +827,7 @@ function fallenRig(look, st) {
   const hd = J.head, hf0 = r.p.length;
   if (imp) {
     // a squarer skull, wide across the brow and narrowing to a pointed chin, with angry slanted eyes
-    const hf = frameAlong(fwd, up), fs = ash ? M.BLOODY : skin;   // the ashhex's face sits in the hood's shadow
+    const hf = frameAlong(fwd, up), fs = ash || cin ? M.BLOODY : skin;   // the ashhex's face sits in the hood's shadow
     r.group(() => {
       r.ell(V.mad(hd, up, 0.7), [3.6, 4.0, 3.0], fs, hf);   // wide across the brow
       r.ell(V.add(V.mad(hd, up, 1.4), V.mul(fwd, 1.2)), [2.6, 3.4, 1.6], fs, hf);   // a jutting brow ridge over the eyes
@@ -789,14 +835,15 @@ function fallenRig(look, st) {
     });
     for (const s of [-1, 1]) {
       const e = V.add(V.add(V.mad(hd, fwd, 3.55), V.mul(sideR, s * 1.55)), V.mul(up, 0.7));
-      r.ell(e, ash ? [0.5, 1.15, 0.7] : look.ember ? [0.4, 0.95, 0.55] : [0.45, 1.15, 0.7], M.EYE_YEL,   // art B2: bigger glaring eyes (tied on the acolyte, kept as was)
+      r.ell(e, ash || cin ? [0.5, 1.15, 0.7] : look.ember ? [0.4, 0.95, 0.55] : [0.45, 1.15, 0.7], M.EYE_YEL,   // art B2: bigger glaring eyes (tied on the acolyte, kept as was)
         [fwd, V.norm(V.add(sideR, V.mul(up, s * 0.35))), V.norm(V.sub(up, V.mul(sideR, s * 0.35)))], { noShadow: true, bias: 1 });
       // big grey ears swept out and back, and a pale horn rising from the top of the head
       // art B2: bigger bat-like ears, raised higher and dusky purple as in the concepts
       const ea = V.add(V.mad(hd, up, 1.2), V.mul(sideR, s * 3.0)), eb = V.add(V.add(V.mad(hd, up, 3.6), V.mul(sideR, s * 6.4)), V.mul(fwd, -3.4));
       r.cone(V.mad(ea, fwd, -0.4), eb, 1.7, 0.25, M.CLOTH_PURPLE);   // art A4: dusty mauve, not blue-grey; the acolyte's ears are sleeved in its hood
       const ha = V.add(V.mad(hd, up, 3.0), V.mul(sideR, s * 1.6)), hb = V.add(V.add(V.mad(hd, up, 6.6), V.mul(sideR, s * 2.4)), V.mul(fwd, -1.0));
-      if (ash) r.cone(ha, V.add(V.add(V.mad(hd, up, 8.4), V.mul(sideR, s * 2.8)), V.mul(fwd, -1.2)), 1.35, 0.2, M.CLOTH_WHITE);   // art B4: taller white horns clear of the hood
+      if (cin) { if (s > 0) r.cone(V.add(V.mad(hd, up, 3.4), V.mul(sideR, 1.0)), V.add(V.add(V.mad(hd, up, 8.6), V.mul(sideR, 1.8)), V.mul(fwd, -1.6)), 1.5, 0.2, M.CLOTH_WHITE); }   // art B5: one white horn through the hood
+      else if (ash) r.cone(ha, V.add(V.add(V.mad(hd, up, 8.4), V.mul(sideR, s * 2.8)), V.mul(fwd, -1.2)), 1.35, 0.2, M.CLOTH_WHITE);   // art B4: taller white horns clear of the hood
       else r.cone(ha, hb, 1.25, 0.2, M.BONE);   // art A4: cream horns, thick at the root
     }
   } else r.ell(hd, [3.8, 3.6, 3.4], skin, frameAlong(fwd, up), { mf: p => { const q = V.sub(p, hd); return V.dot(q, fwd) > 2.4 && Math.abs(V.dot(q, up) + 1.5) < 0.5 && Math.abs(V.dot(q, sideR)) < 1.6 ? M.DARK : 0; } });
@@ -814,7 +861,15 @@ function fallenRig(look, st) {
     r.ell(V.mad(hd, up, 2.3), [3.6, 3.5, 2.2], M.SLATE, frameAlong(fwd, up));   // art B2: a smaller blued cap riding higher, eyes clear
     r.cyl(V.mad(hd, up, 1.4), V.mad(hd, up, 1.8), 4.2, M.SLATE);
   }
-  if (look.hood && ash) {   // art B4: a big ochre cowl pulled forward over the brow, its opening rimmed dark
+  if (look.hood && cin) {   // art B5: a deep charcoal cowl pulled low over the brow, its opening rimmed in gold
+    const hf = frameAlong(fwd, up), hc = V.add(V.mad(hd, up, 1.3), V.mul(fwd, -0.8));
+    r.group(() => {
+      // art B5 pass 3: a thin gold ring round the opening, the inside of the cowl in deep shadow
+      r.ell(hc, [4.3, 4.4, 4.1], cinM, hf, { mf: p => { const q = V.sub(p, hc), f = V.dot(q, fwd); return V.dot(q, up) < -1.8 ? 0 : f > 3.55 ? M.DARK : f > 2.95 ? M.GOLD : 0; } });
+      r.ell(V.add(V.mad(hd, up, 3.1), V.mul(fwd, 1.4)), [2.5, 3.3, 1.4], cinM, hf);   // the peak over the brow
+      r.cone(V.add(V.mad(hd, up, 2.6), V.mul(fwd, -3.6)), V.add(V.mad(hd, up, 0.0), V.mul(fwd, -6.0)), 1.8, 0.4, cinM);   // the hood's tail behind
+    });
+  } else if (look.hood && ash) {   // art B4: a big ochre cowl pulled forward over the brow, its opening rimmed dark
     const hf = frameAlong(fwd, up), hc = V.add(V.mad(hd, up, 1.2), V.mul(fwd, -1.0));
     r.group(() => {
       r.ell(hc, [4.1, 4.3, 3.9], ashM, hf, { mf: p => { const q = V.sub(p, hc); return V.dot(q, fwd) > 3.4 && V.dot(q, up) > -1.5 ? M.CLOTH_DARK : 0; } });
@@ -842,7 +897,7 @@ function fallenRig(look, st) {
     const nc = V.mad(J.chest, up, 3.0);
     for (let k = -3; k <= 3; k++) { const a = k * 0.42, p = V.add(V.mad(nc, fwd, Math.cos(a) * 3.3), V.mul(sideR, Math.sin(a) * 3.6)); r.cone(p, V.add(V.mad(p, up, -1.6), V.mul(fwd, 0.4)), 0.6, 0.2, M.BONE, { noShadow: true }); }
   }
-  bigHead(r, hf0, hd, ash ? 1.05 : imp && !look.ember ? 1.4 : 1.3);   // art B2: the imps' heads a little bigger, as in the concepts; art B4: the ashhex's kept near true size (no bobblehead)
+  bigHead(r, hf0, hd, cin ? 1.0 : ash ? 1.05 : imp && !look.ember ? 1.4 : 1.3);   // art B2: the imps' heads a little bigger, as in the concepts; art B4: the ashhex's kept near true size (no bobblehead)
   if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
   if (st.clip === 'death') deathTip(r, B, st.f, -1, -1);
   return r;
@@ -1816,6 +1871,8 @@ const MONSTERS = {
   fallen: { family: 'fallen', name: 'FALLEN ONE', look: {}, hp: 7, dmg: [1, 3], speed: 40, reach: 1.15, xp: 6, chest: 12, shadow: 5, pack: true },
   shaman: { family: 'fallen', name: 'FALLEN SHAMAN', look: { staff: true, hood: true, ember: true }, hp: 9, dmg: [3, 6], speed: 28, reach: 6, ranged: 'firebolt', leader: true, xp: 16, chest: 12, shadow: 5 },
   // art B4: elite shaman from the user's "ASHHEX SHAMAN" concept (minLevel 99: placeholder stats a bit above the shaman)
+  // art B5: secret boss from the user's concept (art/concepts/monsters/brother_cinder.png); minLevel 99, placeholder stats a bit above the Skeleton King
+  cinder: { family: 'fallen', name: 'BROTHER CINDER', title: 'BURIED SHRINE', minLevel: 99, look: { staff: true, hood: true, ember: true, cinder: true, scale: 1.6, size: [100, 104, 50, 84] }, hp: 180, dmg: [9, 16], speed: 26, reach: 6.5, ranged: 'firebolt', xp: 220, chest: 30, shadow: 9, unique: true },
   ashhex: { family: 'fallen', name: 'ASHHEX SHAMAN', minLevel: 99, look: { staff: true, hood: true, ember: true, ashhex: true, scale: 1.15, size: [62, 58, 31, 48] }, hp: 16, dmg: [4, 8], speed: 28, reach: 6, ranged: 'firebolt', leader: true, xp: 30, chest: 16, shadow: 6, elite: true },
   hound: { family: 'hound', name: 'BONE HOUND', look: { plates: true, lean: true, slabs: true, brush: true, paws: true, b2: 'hound' }, hp: 16, dmg: [3, 6], speed: 52, reach: 1.35, xp: 18, chest: 12, shadow: 10 },
   lich: { family: 'skeleton', name: 'THE LICH', title: 'WHO DIED AND WOULD NOT STAY DEAD', look: { lich: true, eye: M.EYE_GRN, bone: M.OLDBONE, scale: 1.6, size: [124, 140, 62, 112] }, hp: 260, dmg: [8, 14], speed: 22, reach: 7, ranged: 'frostbolt', xp: 400, chest: 46, shadow: 11, unique: true, boss: 'lich', minLevel: 99 },
