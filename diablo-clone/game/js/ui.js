@@ -398,7 +398,7 @@ function drawSplash() {
   if (splashReady()) { UI.titleBtns = [{ x: 0, y: 0, w: W, h: H, on: () => { TITLE.splash = false; TITLE.pickT = G.t - 9; } }]; return; }
   fade(0.55);
   const cy = Math.round(H * 0.3);
-  textC('DUNGEON', W / 2, cy - 30, 22, 4);
+  textC('DUNGEONS', W / 2, cy - 30, 22, 4);
   textC('OF BONES', W / 2, cy - 4, 26, 3);
   const saved = budgetOff();
   ['ranger', 'warrior', 'mage'].forEach((cls, k) => {
@@ -419,7 +419,7 @@ function drawTitle() {
   }
   if (TITLE.splash) return drawSplash();
   fade(0.7);
-  textC('DUNGEON', W / 2, 34, 22, 4);
+  textC('DUNGEONS', W / 2, 34, 22, 4);
   textC('OF BONES', W / 2, 60, 26, 2);
   textC('CHOOSE YOUR HERO', W / 2, 86, 25);
   UI.titleBtns = [];
