@@ -460,6 +460,7 @@ function drawTitle() {
     btn(FEEL_OLD ? 'COMBAT: OLD' : 'COMBAT: NEW', 6, oy - 22, 84, 16, () => setFeelOld(!FEEL_OLD), 25, 3, 6);
     btn(WORLD2X ? 'DETAIL: SHARP' : 'DETAIL: CLASSIC', 93, oy - 22, 84, 16, () => setWorld2x(!WORLD2X), 25, 3, 6);
     btn(HUE_LIGHT ? 'LIGHT: NEW' : 'LIGHT: OLD', 180, oy - 22, 84, 16, () => setLightNew(!HUE_LIGHT), 25, 3, 6);
+    btn(HEAVY ? 'WEIGHT: HEAVY' : 'WEIGHT: LIGHT', 93, oy - 44, 84, 16, () => setHeavy(!HEAVY), 25, 3, 6);   // round 62
     btn('HERO LIGHT: ' + (CHAR_CAP === L_ID ? 'DRAWN' : '+' + (CHAR_CAP - L_ID)), 6, oy - 44, 84, 16, () => setCharCap(CHAR_CAP >= L_ID + 2 ? L_ID : CHAR_CAP + 1), 25, 3, 6);   // round 60
     btn(DL48 ? 'DUNGEONS: NEW' : 'DUNGEONS: OLD', 6, oy, 84, 16, () => setDL48(!DL48), 25, 3, 6);   // round 48: the dungeon light
     btn(SFX.synth ? 'SOUND: SYNTH' : 'SOUND: REAL', 180, oy, 84, 16, () => { setSynthSfx(!SFX.synth); sfx('hit'); }, 25, 3, 6);   // round 44: compare the recorded sounds with the old synth

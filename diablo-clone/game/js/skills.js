@@ -31,7 +31,7 @@ const CD = { bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, leap: 0, fire
 function resetSkills() { for (const k in CD) CD[k] = 0; hero.whirl = 0; hero.dash = 0; hero.buff = 0; }
 const heroBusy = () => hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0 || !!hero.leap || !!hero.ultOn || !!hero.roll;
 // one hit's damage, with the war cry bonus
-const heroDmg = (k = 1) => Math.max(1, Math.round((roll(STAT.dmg) + (STAT.fireDmg || 0)) * k * (hero.buff > 0 ? 1.4 : 1)));   // fire damage from gear rides on every hit (round 42a)
+const heroDmg = (k = 1) => Math.max(1, Math.round((roll(STAT.dmg) + (STAT.fireDmg || 0)) * k * (hero.buff > 0 ? 1.4 : 1) * (HEAVY ? 1.25 : 1)));   // round 62: heavier blows   // fire damage from gear rides on every hit (round 42a)
 
 // button feedback (round 25): a pulse when a skill fires, a flash when it is ready again, a shake
 // with no mana
@@ -223,7 +223,7 @@ const SKILL_MODS = {
   ],
 };
 // the missile's and the orb's attack timings; the orb is a slower cast
-const missileCast = () => (skillMod('missile') === 'orb' ? 0.55 : 0.38);
+const missileCast = () => (skillMod('missile') === 'orb' ? 0.55 : 0.38) * (HEAVY ? 1.3 : 1);   // round 62: fewer, heavier missiles
 const modUnlock = (skillId, k) => { const sk = Object.values(SKILLSETS).flat().find(s => s.id === skillId) || { lvl: 1 }; return sk.lvl + 2 + k * 2; };   // the missile (the mage's attack) counts as level 1
 function skillMod(id) { const m = hero.mods && hero.mods[id]; if (!m) return null; const k = (SKILL_MODS[id] || []).findIndex(x => x.id === m); return k >= 0 && hero.lvl >= modUnlock(id, k) ? m : null; }
 const skillCost = s => s.mana + (s.id === 'fireball' && skillMod('fireball') === 'great' ? 6 : 0) + (s.id === 'whirl' && skillMod('whirl') === 'long' ? 6 : 0);
@@ -446,7 +446,7 @@ function castMissiles() {
   const [t, at] = aimAt(8);
   const mod = skillMod('missile');
   startCast('missile', missileCast() / (1 + ((STAT.atkSpeed || 0) + (hero.frenzy > 0 ? 50 : 0)) / 100), at, () => {   // attack speed and frenzy cast faster
-    const [ox, oy] = staffTip(), a = Math.atan2(at[1] - oy, at[0] - ox), K = hero.lvl >= 5 ? 1.5 : 1.15;
+    const [ox, oy] = staffTip(), a = Math.atan2(at[1] - oy, at[0] - ox), K = (hero.lvl >= 5 ? 1.5 : 1.15) * (HEAVY ? 1.3 : 1);
     const bolt = (a, sp, o) => projectiles.push(Object.assign({ kind: 'missile', fi: ox, fj: oy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, z: ORB_Z, life: 1.8, owner: 'hero', home: t, spell: true, dmgK: K, age: 0, spin: Math.random() * 6.28, elem: 'arcane' }, o));
     if (mod === 'seek') {   // round 30: three small bolts fanned out, each after a different foe if there are enough
       const foes = enemies.filter(e => alive(e) && LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] >= 0.3 && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 8).sort((p, q) => Math.hypot(p.fi - hero.fi, p.fj - hero.fj) - Math.hypot(q.fi - hero.fi, q.fj - hero.fj));

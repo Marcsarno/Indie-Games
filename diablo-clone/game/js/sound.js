@@ -162,6 +162,7 @@ function noise(dur, gain, type, f0, f1, q = 1, delay = 0) {
 }
 const vary = (f, k = 0.06) => f * (1 + (Math.random() * 2 - 1) * k);   // small pitch variation per play
 const RECIPES = {
+  thud: (v = 1) => { tone('sine', vary(120), 40, 0.16, 0.42 * v); noise(0.07, 0.16 * v, 'lowpass', 500, 120); },   // round 62: the weight under a blow (HEAVY)
   swing: () => noise(0.13, 0.42, 'bandpass', 700, 2400, 0.9),
   heavySwing: () => noise(0.2, 0.48, 'bandpass', 400, 1600, 0.9),
   hit: () => { tone('sine', vary(190), 60, 0.1, 0.6); noise(0.05, 0.3, 'lowpass', 2500, 600); },

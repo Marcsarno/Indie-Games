@@ -525,7 +525,7 @@ function placeSpawns(R, level) {
     const base = (2 + Math.floor(level * 0.8)) * clamp(Math.pow((r.area || r.w * r.h) / 64, 0.6), 0.75, 1.8);   // round 38: more in bigger rooms (capped so a great hall isn't a crowd)
     let budget = Math.round(base * (0.6 + 0.8 * r.depth) * (cfg ? 0.6 : 1)) + (r.dead ? 1 : 0);   // side areas are lighter
     while (budget > 0) {
-      const id = R.pick(pool), m = MONSTERS[id], count = m.pack ? R.int(2, 4) : 1;
+      const id = R.pick(pool), m = MONSTERS[id], count = m.pack ? R.int(2, HEAVY ? 5 : 4) : 1;   // (round 62: HEAVY packs run a little bigger)
       budget -= m.pack ? 2 : 1;
       const c = spot(r); if (!c) continue;
       const g = { room: n, at: c, members: [] };

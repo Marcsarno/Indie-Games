@@ -100,10 +100,13 @@ function startLevel(level, seed, side = null) {
 }
 function makeEnemy(id, fi, fj, n, lvl) {
   const m = MONSTERS[id], lv = lvl || LV.diff;   // round 48c: a spawn may carry its own level (the Hollow's clearings climb in bands)
-  const scale = 1 + (lv - 1) * 0.22;
+  // round 62 (HEAVY): more health, more for the big ones (fodder x1.6, the rank and file x2, bruisers
+  // x2.3, uniques x1.5), and it climbs faster with the level (0.27 a level, compounding 1.5%) so
+  // deeper floors outpace old gear and upgrades are felt. Damage keeps the old curve.
+  const scale = 1 + (lv - 1) * 0.22, hpScale = !HEAVY ? scale : (1 + (lv - 1) * 0.27) * Math.pow(1.015, lv - 1) * (m.unique ? 1.5 : m.hp < 12 ? 1.6 : m.hp < 30 ? 2 : 2.3);
   return {
     id, def: m, fam: m.family, look: m.look, fi, fj, home: [fi, fj], dir: (n * 3) % 8, clip: 'idle', clock: n * 0.13, walk: 0,
-    hp: Math.round(m.hp * scale), maxHp: Math.round(m.hp * scale), dmg: [Math.round(m.dmg[0] * scale), Math.round(m.dmg[1] * scale)],
+    hp: Math.round(m.hp * hpScale), maxHp: Math.round(m.hp * hpScale), dmg: [Math.round(m.dmg[0] * scale), Math.round(m.dmg[1] * scale)],
     lvl: lv, state: 'sleep', atk: -1, hitDone: false, stop: 0, flash: 0, kb: [0, 0], hurt: 0, dying: -1, cool: 0.5 + hash(n, 3) * 1.5, seed: n,
   };
 }
@@ -319,7 +322,15 @@ function drinkPotion() {
   const [x, y] = screenOf(hero); burst(4, x, y, 20, 10, 30, 22);
 }
 // pow: 0 = light blow (sword swings, spells), 1 = heavy (two-handers), 2 = combo finisher
-const HITSTOP = [0.045, 0.08, 0.11], KNOCK = [5, 7.7, 11];   // knock speed: tiles/s, ~1/14 of it is the slide
+const HITSTOP = [0.045, 0.08, 0.11], KNOCK = [5, 7.7, 11];
+const HITSTOP_H = [0.07, 0.12, 0.16], KNOCK_H = [6.2, 9.6, 13.5];   // round 62: HEAVY   // knock speed: tiles/s, ~1/14 of it is the slide
+// round 62: a short jolt of the view in the direction of a blow (frame pixels), easing back
+// the low thud layered under a melee blow (synthesized, so it never repeats a sample)
+function RECIPES_THUD(v) { if (SFX.muted || !SFX.ctx || SFX.ctx.state !== 'running') return; const now = SFX.ctx.currentTime; if (SFX.last.thud && now - SFX.last.thud < 0.06) return; SFX.last.thud = now; try { RECIPES.thud(v); } catch (e) { /* audio is optional */ } }
+function camKick(dx, dy, px) {
+  const sx = (dx - dy), sy = (dx + dy) * 0.5, l = Math.hypot(sx, sy) || 1, k = Math.min(px, 4.5);
+  G.kick = [(G.kick ? G.kick[0] : 0) * 0.4 + sx / l * k, (G.kick ? G.kick[1] : 0) * 0.4 + sy / l * k];
+}
 function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = false) {
   if (e.pw && !G.pierce) { dmg = eliteDamage(e, dmg, pow, fromFi, fromFj, ranged); if (dmg < 0) { if (e.state === 'sleep') wake(e); return; } }   // round 39: shields, blink openings
   if (e.frozen > 0) dmg = Math.round(dmg * 1.4);   // frozen solid: hits land harder
@@ -348,7 +359,7 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
   if (STAT.chill && !e.def.unique && Math.random() * 100 < STAT.chill) e.slowT = Math.max(e.slowT || 0, 1.5);   // round 42a: CHILLING gear
   if (e.windT > 0 && (pow >= 1 || dmg >= e.maxHp * 0.18)) e.windT = 0;   // a big hit stops a charge before it starts
   if (pow === 2 && e.look.shield === true) e.guardT = G.t + 2.2;   // a finisher knocks the shield aside
-  ultGain(e, Math.min(dmg, Math.max(0, e.hp)), dmg >= e.hp); e.hp -= dmg; e.flash = FEEL_OLD ? (crit ? 0.09 : 0.05) : (crit ? 0.1 : 0.065); if (!FEEL_OLD) e.tint = 0.08;
+  ultGain(e, Math.min(dmg, Math.max(0, e.hp)), dmg >= e.hp); e.hp -= dmg; e.flash = FEEL_OLD ? (crit ? 0.09 : 0.05) : HEAVY ? (crit ? 0.13 : 0.09) : (crit ? 0.1 : 0.065); if (!FEEL_OLD) e.tint = 0.08;
   if (crit) floater(dmg + '!', e.fi, e.fj, e.def.chest + 18, 51, 2); else floater(String(dmg), e.fi, e.fj, e.def.chest + 14, 27);
   if (STAT.leech) hero.hp = Math.min(STAT.maxHp, hero.hp + Math.max(1, Math.round(dmg * STAT.leech / 100)));
   const [ex, ey] = screenOf(e), d = Math.hypot(e.fi - fromFi, e.fj - fromFj) || 1;
@@ -380,7 +391,7 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
     if (e.frozen > 0) { const [x, y] = screenOf(e); burst(5, x, y, e.def.chest, 18, 90, 118); burst(2, x, y, e.def.chest, 10, 80, 117); e.frozen = 0; if (e.deepIce) G.iceBursts.push({ fi: e.fi, fj: e.fj }); }   // shatters (Deep Freeze: and bursts)
     if (ranged) hero.stop = heroStop;   // spells and arrows never freeze the caster
     if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.5);
-    sfx('kill');
+    sfx('kill'); if (HEAVY) RECIPES_THUD(ranged ? 0.7 : 1.2);
     if (e.deathKind === 'gib') gibBurst(e, fromFi, fromFj);
     else if (bony) shatter(e, fromFi, fromFj);   // skeletons burst apart into a heap of bones
     else stampBlood(Math.round(ex), Math.round(ey), e.def.unique ? 6 : 3, (Math.random() * 1e6) | 0, e.fam === 'spider' ? GREEN : RED);
@@ -412,16 +423,17 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
     if (e === boss) { say(`THE ${e.def.name} IS SLAIN`, 51, 4); say('THE WAY DOWN IS OPEN', 26, 4); sfx('levelUp'); G.slowmo = 0.9; G.bossIntro = 0; }
     G.kills++;
   } else {
-    sfx('hit');
+    sfx('hit'); if (HEAVY) RECIPES_THUD((ranged ? 0.45 : 0.7) + pow * 0.25 + (crit ? 0.3 : 0));
     if (FEEL_OLD) {
       e.stop = crit ? 0.11 : 0.07; hero.stop = Math.max(hero.stop, e.stop);
       e.kb = [(e.fi - fromFi) / d * 3, (e.fj - fromFj) / d * 3];
       if (dmg >= e.maxHp * 0.18 && !e.def.unique) { e.atk = -1; e.hurt = 0.18; }
     } else {
       // the freeze scales with the blow; the hero's is shorter than the target's, so control stays snappy
-      e.stop = HITSTOP[pow] + (crit ? 0.03 : 0); hero.stop = Math.max(hero.stop, e.stop * 0.6);
+      e.stop = (HEAVY ? HITSTOP_H : HITSTOP)[pow] + (crit ? 0.03 : 0); hero.stop = Math.max(hero.stop, e.stop * 0.6);
+      if (HEAVY) camKick(e.fi - fromFi, e.fj - fromFj, (ranged ? 0.8 : 1.6) + pow * 0.9 + (crit ? 0.8 : 0));   // round 62: the view jolts with the blow
       // every hit shoves: heavier blows further, bosses barely, elites and champions half
-      const mass = e.def.unique ? 0.15 : e.def.elite || e.champ ? 0.5 : 1, v = KNOCK[pow] * mass * (crit ? 1.25 : 1);
+      const mass = e.def.unique ? 0.15 : e.def.elite || e.champ ? 0.5 : 1, v = (HEAVY ? KNOCK_H : KNOCK)[pow] * mass * (crit ? 1.25 : 1);
       e.kb = [(e.fi - fromFi) / d * v, (e.fj - fromFj) / d * v];
       // every hit flinches an enemy that isn't mid-attack; a big hit, a heavy blow or a finisher also
       // interrupts its attack (Diablo's hit recovery). Bosses never flinch; elites only to finishers.
@@ -642,6 +654,7 @@ function update(dt) {
   if (guideFrozen()) { const k = 1 - G.guide.t / 0.4; if (k <= 0) return; dt *= k; }   // round 45: slow to a stop for the guide
   G.saveT += dt; if (G.saveT > 20) { G.saveT = 0; saveGame(); }
   G.trauma = Math.max(0, G.trauma - dt * 1.4);
+  if (G.kick) { const f = Math.exp(-dt * 22); G.kick[0] *= f; G.kick[1] *= f; if (Math.abs(G.kick[0]) + Math.abs(G.kick[1]) < 0.3) G.kick = null; }   // round 62
   updateHero(dt);
   flowT -= dt; if (flowT <= 0) { flowT = 0.4; computeFlow(); }
   assignEngage();
@@ -1453,7 +1466,8 @@ function render() {
   const sh = G.trauma * G.trauma * 5;
   const shx = Math.round(sh * (Math.sin(t * 61) * 0.6 + Math.sin(t * 97 + 1) * 0.4)), shy = Math.round(sh * (Math.sin(t * 73 + 2) * 0.6 + Math.sin(t * 89 + 3) * 0.4));
   // the camera in detail pixels; the world layer uses the whole-pixel part and is shifted by the rest
-  cam2x = Math.round((vx0 - W / 2) * SPX) + shx * SPX; cam2y = Math.round((vy0 - H * 0.47) * SPX) + shy * SPX;
+  const kx2 = G.kick && SHAKE ? Math.round(G.kick[0]) : 0, ky2 = G.kick && SHAKE ? Math.round(G.kick[1]) : 0;   // round 62: the blow's jolt
+  cam2x = Math.round((vx0 - W / 2) * SPX) + shx * SPX + kx2; cam2y = Math.round((vy0 - H * 0.47) * SPX) + shy * SPX + ky2;
   camX = Math.floor(cam2x / SPX); camY = Math.floor(cam2y / SPX); hx = cam2x - camX * SPX; hy = cam2y - camY * SPX;
   shd.fill(0); cid.fill(0);
   for (let y = 0; y < H; y++) {

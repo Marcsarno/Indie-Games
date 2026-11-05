@@ -430,16 +430,29 @@ const atkIndex = clip => ATTACK_CLIPS.indexOf(clip);
 let FEEL_OLD = typeof location !== 'undefined' && new URLSearchParams(location.search).get('feel') === 'old';
 try { if (localStorage.getItem('dcg-feel') === 'old') FEEL_OLD = true; } catch (e) { /* storage blocked */ }
 function setFeelOld(v) { FEEL_OLD = v; try { localStorage.setItem('dcg-feel', v ? 'old' : 'new'); } catch (e) { /* ignore */ } }
+// round 62: WEIGHT. The user: attacks a little slower, with more impact and weight. HEAVY (the
+// default) winds up ~50% longer and holds the follow-through ~20% longer, each blow hitting 25%
+// harder (heroDmg) with a longer freeze, a harder flash, a camera kick and more shove; enemies have
+// more health, climbing faster with their level (makeEnemy), and packs run a little bigger.
+// LIGHT is the game as it was (OPTIONS: WEIGHT; ?weight=light; storage dcg-weight).
+let HEAVY = true;
+try { const q = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('weight') : null; HEAVY = q ? q !== 'light' : localStorage.getItem('dcg-weight') !== 'light'; } catch (e) { /* storage blocked */ }
+function setHeavy(v) { HEAVY = v; try { localStorage.setItem('dcg-weight', v ? 'heavy' : 'light'); } catch (e) { /* ignore */ } }
 const HERO_PRE = { light: [45, 35, 35], light2: [45, 35, 35], thrust: [70, 40], heavy: [110, 45, 45], heavy2: [100, 45, 45], slam: [140, 45, 45], gslam: [110, 45, 45] };
-const HERO_SWINGS = {};
+const HERO_SWINGS = {}, HERO_SWINGS_H = {};
 for (const name in HERO_PRE) {
   const sw = SWINGS[name], hi = sw.findIndex(k => k.hit), pre = HERO_PRE[name];
   const keys = sw.map((k, i) => Object.assign({}, k, i < hi ? { ms: pre[i] } : {}));
   let t = 0; for (let i = 0; i <= hi; i++) t += keys[i].ms;
   HERO_SWINGS[name] = withTilt(keys, sw.tilt, { twoHand: sw.twoHand, free: t, chain: t + keys[hi + 1].ms });
+  // round 62: the heavy set: the wind-up x1.5, the blow and the follow-through x1.2
+  const hk = sw.map((k, i) => Object.assign({}, k, { ms: Math.round((i < hi ? pre[i] * 1.5 : k.ms * 1.2)) }));
+  let th = 0; for (let i = 0; i <= hi; i++) th += hk[i].ms;
+  HERO_SWINGS_H[name] = withTilt(hk, sw.tilt, { twoHand: sw.twoHand, free: th, chain: th + hk[hi + 1].ms });
 }
 // round 33: the ranger's shot, a short draw: nock, draw, loose (the arrow leaves on 'hit'), recover
 const RANGER_BOW = [{ a: 0.2, ms: 50 }, { a: 1, ms: 110 }, { a: 1, ms: 40, hit: true }, { a: 0.3, ms: 110 }];
+const RANGER_BOW_H = [{ a: 0.2, ms: 60 }, { a: 1, ms: 150 }, { a: 1, ms: 45, hit: true }, { a: 0.3, ms: 130 }];   // round 62: a fuller draw
 const isBow = w => typeof w === 'string' && w.startsWith('bow');
 // round 41b: gear looks from outside the hero's body code (the art kit). A helm, chest or weapon
 // look id found here is drawn by its function instead of a built-in one; GEAR_SWING picks a
@@ -955,8 +968,8 @@ function warriorSetA8(r, id, J, S) {
   }
 }
 function weaponSwing(eq, combo = 0) {
-  if (isBow(eq.weapon)) return RANGER_BOW;
-  const S = FEEL_OLD ? SWINGS : HERO_SWINGS;
+  if (isBow(eq.weapon)) return HEAVY && !FEEL_OLD ? RANGER_BOW_H : RANGER_BOW;
+  const S = FEEL_OLD ? SWINGS : HEAVY ? HERO_SWINGS_H : HERO_SWINGS;
   if (combo === 3) return FEEL_OLD ? S.heavy : S.gslam;   // the ground slam (round 40a: a hop and a crash; ?feel=old keeps the old chop)
   return (eq.weapon === 'sword' || eq.weapon === 'bsword' || GEAR_SWING[eq.weapon] === 'light' ? [S.light, S.light2, S.thrust] : [S.heavy, S.heavy2, S.slam])[combo] || S.light;
 }
