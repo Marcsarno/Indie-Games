@@ -949,10 +949,11 @@ function houndRig(look, st) {
       r.ell(V.add(mid, [0, 0, 0.5]), [5.8, 3.8, 3.6], skin, null, emberMf || (look.bib ? { mf: p => p[2] < mid[2] - 2.4 ? M.CLOTH_WHITE : 0 } : undefined));
       r.ell(front, [5.4, 4.8, 5.4], skin, null, bib);
     } else {
-    r.ell(back, [5.2, 5.0, 4.4], skin, null, fo(mossMf(V.add(back, [0, 0, 1.2]))));
-    r.ell(mid, [5.6, 5.2, 4.6], skin, null, fo(emberMf || mossMf(mid)));
-    r.ell(front, [5.8, 6.2, 5.8], skin, null, fo(mossMf(V.add(front, [-1, 0, 0]), MB ? 2.6 : 1.6)));
-    if (B2 === 'bear') r.ell(V.add(front, [-1.2, 0, 4.2]), [4.6, 4.8, 3.4], skin, null, fo(mossMf(V.add(front, [0, 0, 1.4]), 3.6)));   // b2: the bear's shoulder hump ((b5 redo) mossed on Mossback; mossMf is a no-op otherwise)
+    const wy = MB ? 1.35 : 1;   // (b5 front) Mossback is a wide dome seen from the front
+    r.ell(back, [5.2, 5.0 * wy, 4.4], skin, null, fo(mossMf(V.add(back, [0, 0, 1.2]))));
+    r.ell(mid, [5.6, 5.2 * wy, 4.6], skin, null, fo(emberMf || mossMf(mid)));
+    r.ell(front, [5.8, 6.2 * wy, 5.8], skin, null, fo(mossMf(V.add(front, [-1, 0, 0]), MB ? 2.6 : 1.6)));
+    if (B2 === 'bear') r.ell(V.add(front, [-1.2, 0, 4.2]), [4.6, 4.8 * wy, 3.4], skin, null, fo(mossMf(V.add(front, [0, 0, 1.4]), 3.6)));   // b2: the bear's shoulder hump ((b5 redo) mossed on Mossback; mossMf is a no-op otherwise)
     if (look.mossy) r.ell(V.add(front, [-0.8, 0, 5.4]), [5.8, 6.2, 3.8], skin, null, mossMf(V.add(front, [0, 0, 1.4]), 3.6));   // b5: Mossback's great shoulder hump ((b5 redo) moss runs down over the shoulders)
     if (hog) r.ell(V.add(mid, [0, 0, 0.4]), [6.4, 5.8, 5.0], skin);   // b2: the boar's barrel
     }
@@ -1037,7 +1038,8 @@ function houndRig(look, st) {
   else if (fur) r.group(() => { r.cone(t0, t1, 1.8, 2.2, skin); r.cone(t1, t2, 2.2, 0.6, skin, { mf: p => V.dot(V.sub(p, t1), V.sub(t2, t1)) > 6 ? M.CLOTH_WHITE : 0 }); });
   else r.group(() => { r.cone(t0, t1, 1.4, 1.0, skin); r.cone(t1, t2, 1.0, 0.5, bone); });
   // legs (trot: diagonal pairs move together); bone caps at the joints and bone claws
-  const lw = lean ? 0.8 : 1, LL = lean ? 6.6 : hog ? 5.1 : 5.8;   // lean: legs set closer, longer and thinner
+  let lw = lean ? 0.8 : 1, LL = lean ? 6.6 : hog ? 5.1 : 5.8;   // lean: legs set closer, longer and thinner
+  if (MB) lw *= 1.4;   // (b5 front) a wide stance
   const legs = [[front, -3.6 * lw, 0, 1], [front, 3.6 * lw, Math.PI, 1], [back, -3.4 * lw, Math.PI, -1], [back, 3.4 * lw, 0, -1]];
   for (const [root, y, off, fr] of legs) {
     const hip = V.add(root, [fr > 0 ? 1 : 0, y, -1.5]);
@@ -1057,7 +1059,7 @@ function houndRig(look, st) {
   }
   // neck, collar and scarf
   const neck = V.add(front, [3.5, 0, 2.5]);
-  const hd = V.add(front, MB ? [8.2, 0, 1.0 + headDrop] : [7.5, 0, 1.2 + headDrop]);   // (b5 redo) Mossback's head held further out and up
+  const hd = V.add(front, MB ? [8.4, 0, 2.0 + headDrop] : [7.5, 0, 1.2 + headDrop]);   // (b5 redo) Mossback's head held further out and up
   if (MB) { const pS = r.part; r.part = bodyPart; r.lock = true; r.cone(neck, V.lerp(neck, hd, 0.7), 4.6, 3.4, skin, { ff: furFF }); r.lock = false; r.part = pS; }   // (b5 fur) a thick neck that is part of the body, not a separate dome
   const hr0 = r.p.length;   // head parts are scaled up about the head center below
   if (!MB) r.cone(neck, hd, 3.4, 2.8, skin);
@@ -1079,7 +1081,7 @@ function houndRig(look, st) {
   }
   else if (GF) { /* the mane is the ruff */ }
   else if (look.ember) { /* no ruff, no scarf */ }
-  else if (MB) { const pS = r.part; r.part = bodyPart; r.lock = true; r.ell(V.add(front, [3.0, 0, 2.6]), [3.4, 5.4, 3.4], skin, null, { ff: furFF }); r.lock = false; r.part = pS; }   // (b5 fur) the ruff joins the body: no separate dome, no white underside
+  else if (MB) { const pS = r.part; r.part = bodyPart; r.lock = true; r.ell(V.add(front, [3.0, 0, 2.6]), [3.4, 6.6, 3.6], skin, null, { ff: furFF }); r.lock = false; r.part = pS; }   // (b5 fur) the ruff joins the body: no separate dome, no white underside
   else if (fur) r.ell(V.add(front, [3.5, 0, 3]), [3.4, 5.4, 3.6], skin, null, { mf: look.bib ? p => p[2] < front[2] + 3.2 && p[0] > front[0] + 4.2 ? M.CLOTH_WHITE : 0 : p => p[2] < front[2] + 1 ? M.CLOTH_WHITE : 0 });   // a ruff of fur
   else r.group(() => {
     r.ell(V.add(front, [3.2, 0, 3.6]), [2.8, 5.0, 2.6], M.CLOTH_RED);
@@ -1089,25 +1091,26 @@ function houndRig(look, st) {
   const hb = GS ? bone : fur ? skin : bone;   // art B4: the Gravespine wears a bone skull mask over a furred body
   const cheek = B2 === 'wolf';   // b2: the wolf's pale cheek under the eye, as the concept paints it
   if (MB) { r.part++; r.lock = true; }   // (b5 redo) cranium, snout and jaw read as one head
-  r.ell(hd, MB ? [3.0, 3.1, 2.6] : [3.8, 3.3, 3.1], hb, null, { ...(MB ? { ff: P => ({ b: furStroke(P) }) } : {}), mf: p => { const q = V.sub(p, hd); if (!MB && q[0] > 1.2 && (Math.abs(q[1]) - 1.8) ** 2 + (q[2] - 0.7) ** 2 < 1.4) return M.DARK; if (MB && q[0] > 1.4 && q[1] > 0.5 && q[1] < 1.9 && Math.abs(q[2] - 2.6 + q[1] * 0.8) < 0.22) return M.CLOTH_TAN;   // art B5: Mossback's pale scar slashed across the brow
+  r.ell(hd, MB ? [3.0, 3.7, 2.8] : [3.8, 3.3, 3.1], hb, null, { ...(MB ? { ff: P => ({ b: furStroke(P) }) } : {}), mf: p => { const q = V.sub(p, hd); if (!MB && q[0] > 1.2 && (Math.abs(q[1]) - 1.8) ** 2 + (q[2] - 0.7) ** 2 < 1.4) return M.DARK; if (MB && q[0] > 1.2 && Math.abs(q[1] - 0.25 + (q[2] - 1.6) * 0.25) < 0.32 && q[2] > 1.1 && q[2] < 2.7) return M.CLOTH_WHITE;   // (b5 front) the pale forehead scar
+    if (MB && q[0] > 1.6 && Math.abs(q[1]) > 0.5 && Math.abs(q[1]) < 2.6 && Math.abs(q[2] - (1.55 - Math.abs(q[1]) * 0.28)) < 0.28) return M.DARK;   // (b5 front) an angry brow, low over the eyes   // art B5: Mossback's pale scar slashed across the brow
     if (GF && Math.abs(q[2] - 0.7 + (q[0] - 2.4) * 0.9) < 0.6 && q[1] > 0.4 && q[0] > 0.2) return M.CLOTH_RED;   // art B4: Greyfang's scar across his right eye
     return cheek && q[2] < -0.6 && q[0] > -0.5 ? M.CLOTH_WHITE : 0; } });
-  const snL = B2 === 'bear' ? 3.9 : hog ? 4.6 : 5.8, snoutEnd = V.add(hd, [snL, 0, hog ? -0.5 : -0.9]);
-  r.cone(V.add(hd, [1.5, 0, -0.3]), snoutEnd, hog ? 2.5 : 2.3, hog ? 2.0 : B2 === 'bear' ? 1.8 : 1.5, hb, { mf: p => {
-    if (B2 === 'bear' && p[0] > hd[0] + 2.6) return M.CLOTH_TAN;   // b2: the bear's tan muzzle
+  const snL = MB ? 2.7 : B2 === 'bear' ? 3.9 : hog ? 4.6 : 5.8, snoutEnd = V.add(hd, [snL, 0, hog ? -0.5 : MB ? -1.5 : -0.9]);
+  r.cone(V.add(hd, MB ? [1.6, 0, -0.9] : [1.5, 0, -0.3]), snoutEnd, hog ? 2.5 : MB ? 1.55 : 2.3, hog ? 2.0 : MB ? 1.35 : B2 === 'bear' ? 1.8 : 1.5, hb, { mf: p => {
+    if (B2 === 'bear' && p[0] > hd[0] + (MB ? 1.8 : 2.6)) return M.CLOTH_TAN;   // b2: the bear's tan muzzle
     if (GF && p[1] > 0.4 && p[0] < hd[0] + 4.2 && Math.abs(p[2] - hd[2] + (p[0] - hd[0] - 2.4) * 0.9 - 0.7) < 0.6) return M.CLOTH_RED;   // the scar runs on down the snout
     if (GF && p[0] > hd[0] + 3.6) return M.CLOTH_SHADOW;   // art B4: Greyfang's dark muzzle
     if (!B2 && p[0] > snoutEnd[0] - 1 && Math.abs(p[1]) < 0.7 && p[2] > snoutEnd[2]) return M.DARK;
     return look.pale && p[2] < snoutEnd[2] + 0.3 ? M.CLOTH_WHITE : 0;   // the wolf's pale muzzle
   } });
   if (hog) r.cyl(V.add(snoutEnd, [-0.2, 0, 0]), V.add(snoutEnd, [0.6, 0, 0]), 1.9, M.SKIN, { mf: p => p[0] > snoutEnd[0] + 0.3 && Math.abs(Math.abs(p[1]) - 0.8) < 0.45 && Math.abs(p[2] - snoutEnd[2]) < 0.6 ? M.DARK : 0 });   // b2: the boar's flat pink snout disc with two nostrils
-  else if (B2) r.sph(V.add(snoutEnd, MB ? [0.9, 0, 0.8] : [0.2, 0, 0.5]), MB ? 1.1 : 1.05, M.CLOTH_DARK, { noShadow: true });   // b2: a black nose on the tip
-  const jl = B2 === 'bear' ? 4.4 : hog ? 4.4 : 6;
+  else if (B2) r.sph(V.add(snoutEnd, MB ? [0.6, 0, 0.75] : [0.2, 0, 0.5]), MB ? 0.75 : 1.05, M.CLOTH_DARK, { noShadow: true });   // b2: a black nose on the tip
+  const jl = MB ? 2.6 : B2 === 'bear' ? 4.4 : hog ? 4.4 : 6;
   const jd = V.norm([Math.cos(jaw), 0, -Math.sin(jaw)]), j0 = V.add(hd, [0.8, 0, -2.2]);
   r.cone(j0, V.mad(j0, jd, jl), 1.6, 1.0, hb, { bias: -1 });
   if (MB) r.lock = false;
   r.box(V.lerp(j0, V.mad(j0, jd, jl), 0.55), [2.2 * jl / 6, 1.1, 0.5], M.DARK, frameAlong(jd), { noShadow: true });
-  for (let t = 0; t < (jl < 6 ? 2 : 3); t++) for (const s of [-1, 1]) r.cone(V.add(hd, [2.4 + t * 1.3, s * 1.2, -2]), V.add(hd, [2.4 + t * 1.3, s * 1.1, -3]), 0.4, 0.15, M.BONE, { noShadow: true });
+  if (!MB) for (let t = 0; t < (jl < 6 ? 2 : 3); t++) for (const s of [-1, 1]) r.cone(V.add(hd, [2.4 + t * 1.3, s * 1.2, -2]), V.add(hd, [2.4 + t * 1.3, s * 1.1, -3]), 0.4, 0.15, M.BONE, { noShadow: true });
   for (const s of [-1, 1]) {
     r.sph(V.add(hd, MB ? [3.2, s * 1.7, 0.9] : [2.7, s * 1.9, 0.8]), MB ? 0.5 : 0.65, look.eye || M.EYE_RED, { noShadow: true });   // (b5 redo) Mossback: small bear eyes, no dark socket
     if (GS) {   // art B4 Gravespine: tall horns rising from the mask's crown, curving back at the tips
@@ -1123,14 +1126,15 @@ function houndRig(look, st) {
     if (B2 === 'wolf' || B2 === 'alpha') { r.cone(V.add(hd, [-0.6, s * 1.9, 2.0]), V.add(hd, [-1.6, s * 2.8, 7.4]), 2.0, 0.3, skin); continue; }   // b2: taller, broader pointed ears
     if (hog) { r.cone(V.add(hd, [3.4, s * 1.7, -1.9]), V.add(hd, [4.4, s * 3.6, 1.6]), 1.15, 0.25, M.BONE, { noShadow: true }); r.cone(V.add(hd, [-0.6, s * 2.2, 1.6]), V.add(hd, [0.4, s * 3.8, 3.0]), 1.4, 0.3, skin); continue; }   // b2: big up-curved tusks, ears pricked forward
     // horns sweep back, then up and forward like a bull's
-    if (fur && look.bear) { r.sph(V.add(hd, MB ? [-1.0, s * 2.7, 2.6] : [-0.8, s * 2.4, 2.6]), MB ? 1.0 : B2 ? 1.8 : 1.4, skin); continue; }   // round ears
+    if (MB) { const ec = V.add(hd, [0.5, s * 2.7, 2.0]); r.sph(ec, 1.25, skin, { mf: p => p[0] > ec[0] + 0.5 && Math.hypot(p[1] - ec[1], p[2] - ec[2] + 0.1) < 0.7 ? M.CLOTH_DARK : 0 }); continue; }   // (b5 front) round ears with dark centers, at the corners of the head
+    if (fur && look.bear) { r.sph(V.add(hd, MB ? [-0.2, s * 2.6, 1.9] : [-0.8, s * 2.4, 2.6]), MB ? 1.0 : B2 ? 1.8 : 1.4, skin); continue; }   // round ears
     if (fur && look.boar) { r.cone(V.add(hd, [4.6, s * 1.4, -1.4]), V.add(hd, [5.4, s * 2.6, 1.2]), 0.8, 0.2, M.BONE, { noShadow: true }); r.cone(V.add(hd, [-0.6, s * 2.2, 1.6]), V.add(hd, [-1.4, s * 3.4, 3.4]), 1.3, 0.3, skin); continue; }   // tusks, small ears
     if (fur) { r.cone(V.add(hd, [-0.8, s * 1.8, 2.2]), V.add(hd, [-1.6, s * 2.6, 6.4]), 1.6, 0.3, skin); continue; }   // pointed ears
     const a = V.add(hd, [-0.6, s * 2.2, 2]), b = V.add(hd, [-1.8, s * 4.8, 4.2]), c = V.add(hd, [0.6, s * 6.2, 6.8]), e = V.add(hd, [3.8, s * 5.6, 7.6]);
     r.group(() => { r.cone(a, b, 1.5, 1.3, bone); r.cone(b, c, 1.3, 0.9, bone); r.cone(c, e, 0.9, 0.3, bone); });
   }
   // a big skull reads at this size: scale every head part (cranium, snout, jaw, horns) 1.3x about the head
-  const HK = MB ? 1.3 : GF ? 1.25 : GS ? 1.15 : B2 === 'wolf' || B2 === 'hound' || B2 === 'ember' ? 1.45 : 1.3, sc = q => V.add(hd, V.mul(V.sub(q, hd), HK));
+  const HK = MB ? 1.45 : GF ? 1.25 : GS ? 1.15 : B2 === 'wolf' || B2 === 'hound' || B2 === 'ember' ? 1.45 : 1.3, sc = q => V.add(hd, V.mul(V.sub(q, hd), HK));
   for (const q of r.p.slice(hr0)) {
     if (q.c) q.c = sc(q.c); if (q.a) { q.a = sc(q.a); q.b = sc(q.b); q.ra *= HK; q.rb *= HK; }
     if (q.r) q.r *= HK; if (q.rad) q.rad = V.mul(q.rad, HK); if (q.half) q.half = V.mul(q.half, HK);
