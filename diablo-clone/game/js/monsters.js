@@ -1493,7 +1493,7 @@ const MONSTERS = {
   digger: { family: 'fallen', name: 'DIGGER', look: { skin: M.LEATHER, digger: true }, hp: 10, dmg: [2, 4], speed: 36, reach: 1.25, xp: 9, chest: 12, shadow: 5, pack: true, where: 'out' },
   // round 26 side-area leaders
   alpha: { family: 'hound', name: 'THE ALPHA', look: { skin: M.CLOTH_SHADOW, eye: M.EYE_RED, wolf: true, brush: true, b2: 'alpha', scale: 1.45, size: [100, 84, 50, 62] }, hp: 70, dmg: [5, 9], speed: 50, reach: 1.6, xp: 80, chest: 14, shadow: 12, elite: true, leader: true, where: 'out' },
-  banditchief: { family: 'hero', name: 'BANDIT CHIEF', look: { team: 'red', helm: 'horned', chest: 'brigandine', weapon: 'baxe', shield: 'round', hair: 'brown', cape: 'red', bandit: 'chief' }, hp: 80, dmg: [5, 10], speed: 30, reach: 1.4, xp: 90, chest: 24, shadow: 8, elite: true, leader: true, where: 'out' },
+  banditchief: { family: 'hero', name: 'BANDIT CHIEF', look: { team: 'red', helm: 'rookcap', chest: 'tunic', weapon: 'rcleaver', shield: 'round', hair: 'brown', bandit: 'rook' }, hp: 80, dmg: [5, 10], speed: 30, reach: 1.4, xp: 90, chest: 24, shadow: 8, elite: true, leader: true, where: 'out' },
   goblin: { family: 'fallen', name: 'GOBLIN', look: { skin: M.GOBLIN, goblin: true }, hp: 9, dmg: [2, 4], speed: 38, reach: 1.15, xp: 8, chest: 12, shadow: 5, pack: true, where: 'out' },
   ghoulhound: { family: 'hound', name: 'HELL HOUND', look: { skin: M.FLESH, eye: M.FIREM, scale: 1.15, ember: true, lean: true, paws: true, brush: true, b2: 'ember' }, hp: 28, dmg: [5, 9], speed: 50, reach: 1.45, xp: 34, chest: 13, shadow: 11, minLevel: 2 },
   spider: { family: 'spider', name: 'CAVE SPIDER', look: { scale: 0.8 }, hp: 10, dmg: [2, 4], speed: 46, reach: 1.3, xp: 10, chest: 8, shadow: 11, pack: true },

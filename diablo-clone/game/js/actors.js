@@ -1105,6 +1105,75 @@ GEAR_EXTRA.helm.bxcap = (r, { hd, fwd, up, sideR, helmF }) => {
   const hc = V.add(V.mad(hd, up, 2.5), V.mul(fwd, -0.7));   // set high and back, so the eyes show under the brim
   r.group(() => { r.ell(hc, [4.8, 4.7, 3.7], M.SLATE, helmF); r.cyl(V.mad(hc, up, -1.2), V.mad(hc, up, -0.6), 5.0, M.SLATE); });
 };
+// ---------------------------------------------------------------- art B4: Rook, the bandit chief (`bandit: 'rook'`)
+// Only the banditchief sets `bandit: 'rook'` or the helm/weapon keys below, so none of this reaches the player heroes.
+const ROOK_B = Object.assign({}, HERO_B, { shW: 6.0, hipW: 2.8, stride: 5.8, stance: 1.4 });   // stocky: broad shoulders, a wide stance
+const ROOK_COAT = M.MARK, ROOK_SEAM = M.BLOODY;   // the padded coat: maroon, darker quilting seams
+// a steel skullcap over a red bandana knotted at the back, a scowling bearded face under it
+GEAR_EXTRA.helm.rookcap = (r, { hd, fwd, up, sideR, helmF, st }) => {
+  r.ell(hd, [4.3, 4.3, 4.5], M.FACE, helmF, { mf: p => {
+    const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), as = Math.abs(s2), z2 = V.dot(q, up);
+    if (f2 > 2.0 && as > 0.5 && as < 2.9 && Math.abs(z2 - 0.9 + as * 0.35) < 0.4) return M.HAIR;   // heavy brows, drawn down to the nose: the scowl
+    if (f2 > 2.3 && Math.abs(as - 1.6) < 0.5 && z2 > -0.6 && z2 < 0.5) return M.EYE;
+    return (as > 3.3 && z2 < 0.6) || f2 < -1.2 ? M.HAIR : 0;   // sideburns into the beard; dark hair at the back under the cap
+  } });
+  r.ell(V.add(V.mad(hd, up, -2.6), V.mul(fwd, 2.0)), [2.9, 3.9, 2.6], M.HAIR, helmF, { mf: p => { const q = V.sub(p, hd); return V.dot(q, fwd) > 3.6 && Math.abs(V.dot(q, sideR)) < 1.0 && Math.abs(V.dot(q, up) + 1.5) < 0.35 ? M.MOUTH : 0; } });   // a full beard round the jaw, the mouth a hard line in it
+  const hc = V.add(V.mad(hd, up, 1.9), V.mul(fwd, -0.3));
+  r.ell(hc, [4.6, 4.6, 3.9], M.SLATE, helmF, { mf: p => { const q = V.sub(p, hc); return Math.abs(V.dot(q, sideR)) < 0.45 && V.dot(q, up) > 0.6 ? M.STEEL : 0; } });   // the skullcap (mid grey steel), a bright riveted ridge
+  r.cyl(V.mad(hd, up, 0.9), V.mad(hd, up, 2.2), 4.75, M.CLOTH_RED);   // the bandana round the brow, under the cap's rim
+  const sw = headSway(st), kn = V.add(V.add(V.mad(hd, up, 1.5), V.mul(fwd, -4.3)), V.mul(sideR, 1.6));   // the knot at the back, off to the right
+  r.sph(kn, 1.5, M.CLOTH_RED);
+  for (const [s, dz] of [[1, -1.0], [0.2, -3.0]]) r.cone(kn, V.add(V.add(V.mad(kn, up, dz + sw[1] * 0.6), V.mul(fwd, -1.6 - sw[0] * 1.0)), V.mul(sideR, s * 3.0 + sw[2] * 0.8)), 1.3, 0.55, M.CLOTH_RED);   // two tails flaring out
+};
+// the broad cleaver: a wide square blade, a dark spine, a chipped edge
+GEAR_EXTRA.weapon.rcleaver = (r, { g, bd, wide, wf }) => {
+  const c = V.add(V.mad(g, bd, 6.6), V.mul(wide, 1.9));
+  r.box(c, [4.2, 3.2, 0.45], M.BLADE, wf, { mf: p => { const q = V.sub(p, c), w = V.dot(q, wide), t = V.dot(q, bd); return w < -2.4 ? M.IRON : w > 2.6 && Math.abs(Math.sin(t * 1.3)) > 0.93 ? M.IRON : 0; } });
+  r.box(V.mad(g, bd, 2.0), [0.6, 1.2, 0.7], M.IRON, wf);   // the bolster
+};
+GEAR_LEN.rcleaver = 12;
+// the round wooden shield: planks, an iron rim, a big iron boss
+function rookShield(r, c, ax) {
+  r.ell(c, [1.1, 6.2, 6.2], M.WOOD, ax, { mf: p => { const q = V.sub(p, c), a = V.dot(q, ax[1]), b = V.dot(q, ax[2]), d2 = (a * a + b * b) / 38.4; if (d2 > 0.78) return M.IRON; return Math.abs(((a + 6.2) / 3.1) % 1 - 0.5) > 0.42 && d2 < 0.7 ? M.BARK : 0; } });
+  r.sph(V.mad(c, ax[0], 1.0), 1.9, M.STEEL);
+}
+// Rook's body: the padded coat to the knees, leather shoulder pads, a belt and buckle, keys at the belt
+function rookBody(r, J, st, aL, aR) {
+  const { fwd, up, sideR } = J, K = 1 / HERO_BK, tf = frameAlong(fwd, up);
+  const quilt = o => p => { const q = V.sub(p, o), s = V.dot(q, sideR); return Math.abs(Math.abs(s) - 2.0) < 0.3 ? ROOK_SEAM : 0; };
+  r.group(() => {
+    const ch = V.mad(J.chest, up, 0.6), bl = V.mad(J.chest, up, -3.4);
+    r.ell(ch, [4.6 * K, 6.0 * K, 5.0 * K], ROOK_COAT, tf, { mf: quilt(ch) });
+    r.ell(bl, [4.5 * K, 5.6 * K, 3.8 * K], ROOK_COAT, tf, { mf: quilt(bl) });
+    // the skirt: waist to the knees, following the legs
+    const top = V.mad(J.pelvis, up, 1.0), kneeMid = V.mul(V.add(J.kneeL, J.kneeR), 0.5), hem = V.add([kneeMid[0], kneeMid[1], Math.min(J.kneeL[2], J.kneeR[2]) + 2.0], V.mul(fwd, -0.4));
+    r.cone(top, hem, 4.4 * K, 4.9 * K, ROOK_COAT, { mf: p => { const q = V.sub(p, top), s = V.dot(q, sideR), f = V.dot(q, fwd); return f > 2 && Math.abs(s) < 0.35 ? ROOK_SEAM : quilt(top)(p); } });   // a slit up the front
+  });
+  // sleeves over the arms (maroon to the forearm, leather cuffs), hands bare
+  for (const [sh, a] of [[J.shL, aL], [J.shR, aR]]) {
+    const d = V.norm(V.sub(a.hand, a.el)), w = V.mad(a.hand, d, -1.4);
+    r.group(() => { r.cone(sh, a.el, 2.2 * K, 2.0 * K, ROOK_COAT); r.cone(a.el, w, 2.0 * K, 1.85 * K, ROOK_COAT); });
+    r.cone(V.mad(w, d, -1.6), V.mad(w, d, 0.4), 2.05 * K, 2.05 * K, M.LEATHER);
+  }
+  // one leather pauldron, on the right (weapon) shoulder, a dark lower edge and an iron rivet
+  { const c = V.add(V.mad(J.shR, up, 1.3), V.mul(sideR, 0.6)), k = 0.95;
+    r.ell(c, [3.9 * K * k, 3.5 * K * k, 2.6 * K * k], M.LEATHER, tf, { mf: p => V.dot(V.sub(p, c), up) < -1.4 * K * k ? M.HAIR : 0 });
+    r.sph(V.add(V.add(c, V.mul(fwd, 2.4 * K * k)), V.mul(up, 0.6)), 0.75 * K, M.IRON, { noShadow: true }); }
+  // a leather strap across the back, from the left shoulder to the right hip
+  { const back = (s, z) => 4.6 * Math.sqrt(Math.max(0.05, 1 - (s / 6.0) ** 2 - ((z - 0.6) / 5.6) ** 2)) + 0.2;
+    const pts = [[-3.6, 3.6], [-1.6, 1.0], [0.6, -1.8], [2.8, -4.6]].map(([s, z]) => V.add(V.add(V.mad(J.chest, fwd, -back(s, z)), V.mul(sideR, s)), V.mul(up, z)));
+    r.group(() => { for (let k = 0; k < pts.length - 1; k++) r.cone(pts[k], pts[k + 1], 0.8 * K, 0.8 * K, M.LEATHER); }); }
+  // the belt and its buckle; two keys on a ring at the left hip
+  const belt = V.mad(J.pelvis, up, 2.6);
+  r.ell(belt, [4.9 * K, 5.9 * K, 1.2 * K], M.LEATHER, tf);
+  r.box(V.mad(belt, fwd, 4.9), [0.5 * K, 1.4 * K, 1.0 * K], M.GOLD, tf, { mf: p => Math.abs(V.dot(V.sub(p, belt), sideR)) < 0.6 * K && Math.abs(V.dot(V.sub(p, belt), up)) < 0.4 * K ? M.LEATHER : 0 });
+  const kr = V.add(V.add(V.mad(belt, fwd, 5.0), V.mul(sideR, -2.3)), V.mul(up, -1.4));   // a big brass key hanging left of the buckle
+  r.group(() => {
+    r.sph(kr, 1.3 * K, M.GOLD, { noShadow: true });
+    r.cone(kr, V.mad(kr, up, -4.0), 0.85 * K, 0.85 * K, M.GOLD, { noShadow: true });
+    r.box(V.add(V.mad(kr, up, -3.3), V.mul(sideR, -0.9)), [0.4 * K, 0.9 * K, 0.8 * K], M.GOLD, tf);
+  });
+}
 // body pieces drawn before the body is slimmed (aL, aR: the arms)
 function banditBody(r, eq, J, st, aL, aR) {
   const { fwd, up, sideR } = J, K = 1 / HERO_BK;   // radii are given at their final (slimmed) size
@@ -1131,6 +1200,7 @@ function banditBody(r, eq, J, st, aL, aR) {
     const lace = p => { const q = V.sub(p, J.chest), s2 = V.dot(q, sideR), z2 = V.dot(q, up); if (V.dot(q, fwd) > 1.5 && Math.abs(s2) < 0.45 && z2 < 3 && z2 > -6) return M.DARK; return Math.abs(-s2 - z2 * 0.85 + 0.6) < 0.8 ? M.HIDE : 0; };
     r.group(() => { r.ell(c, [3.95 * K * HERO_BK, 5.15 * K * HERO_BK, 4.4 * K * HERO_BK], M.LEATHER, tf, { mf: lace }); r.ell(abd, [3.35 * K * HERO_BK, 4.15 * K * HERO_BK, 3.5 * K * HERO_BK], M.LEATHER, tf, { mf: lace }); });
   }
+  if (eq.bandit === 'rook') rookBody(r, J, st, aL, aR);   // art B4
   if (eq.bandit === 'chief') {
     // a thick fur mantle over the shoulders and round the neck
     r.ell(V.add(V.mad(J.chest, up, 3.3), V.mul(fwd, -0.6)), [4.6 * K, 6.6 * K, 2.5 * K], M.FUR, frameAlong(fwd, up));
@@ -1157,7 +1227,7 @@ function heroRig(eq, st) {
   const wset = WARRIOR_SETS[eq.chest] ? eq.chest : null; if (wset) eq = Object.assign({}, eq, { chest: WARRIOR_SETS[wset].base });   // art A6: a warrior set, drawn over its base look
   const hvar = HELM_VARS[eq.helm] ? eq.helm : null; if (hvar) eq = Object.assign({}, eq, { helm: HELM_VARS[hvar] });   // art A6b: a helm variant
   const svar = SHIELD_VARS[eq.shield] ? eq.shield : null; if (svar) eq = Object.assign({}, eq, { shield: SHIELD_VARS[svar] });   // and a shield variant
-  const B = robed(eq) ? MAGE_B : HERO_B, J = bipedJoints(B, st), r = new Rig();
+  const B = eq.bandit === 'rook' ? ROOK_B : robed(eq) ? MAGE_B : HERO_B, J = bipedJoints(B, st), r = new Rig();   // art B4: Rook is stockier
   const team = TEAM[eq.team] || M.CLOTH_RED;
   const gothic = eq.chest === 'gothic', plate = eq.chest === 'plate' || eq.chest === 'darkplate' || gothic, scale = eq.chest === 'scale', chain = eq.chest === 'chain' || scale, brig = eq.chest === 'brigandine';
   const PL = eq.chest === 'darkplate' || gothic ? M.DSTEEL : M.PLATE;   // round 43: gothic plate is blackened steel with gold edges and spiked pauldrons
@@ -1426,7 +1496,7 @@ function heroRig(eq, st) {
   for (const q of r.p) { if (q.a) { q.ra *= HERO_BK; q.rb *= HERO_BK; } if (q.r) q.r *= HERO_BK; if (q.rad) q.rad = V.mul(q.rad, HERO_BK); if (q.half) q.half = V.mul(q.half, HERO_BK); }
   // a short cloak hanging from the shoulders: it streams back and flutters when he runs, swings
   // forward when he stops, and follows the shoulders through a swing (secondary motion)
-  if (!robe && !(jerk && !SET_CAPE[eq.set]) && !(wset && !SET_CAPE[eq.set]) && eq.bandit !== 'xbow') {   // art B2: the bandit crossbowman wears none   // a6: a plain jerkin wears no cloak (the quiver shows); art A8: nor does a warrior set (its back shows)
+  if (!robe && !(jerk && !SET_CAPE[eq.set]) && !(wset && !SET_CAPE[eq.set]) && eq.bandit !== 'xbow' && eq.bandit !== 'rook') {   // art B2 (B4: nor Rook): the bandit crossbowman wears none   // a6: a plain jerkin wears no cloak (the quiver shows); art A8: nor does a warrior set (its back shows)
     const c = st.clip, ph = st.f / 8 * Math.PI * 2;
     let th = 0.14, side = 0;
     if (c === 'walk') { th = 0.62 + 0.12 * Math.sin(ph * 2); side = J.swingArm * 0.18; }
@@ -1592,6 +1662,7 @@ function heroRig(eq, st) {
       r.ell(hc, rad, team, ax, { mf: p => { const q = V.sub(p, hc), u = V.dot(q, ax[1]) / rad[1], v = V.dot(q, ax[2]) / rad[2]; if (v > 0.62) return M.IRON; if (u * u + v * v > 0.66) return M.GOLD; if (Math.abs(v + Math.abs(u) * 1.1 - 0.15) < 0.13) return M.GOLD; return 0; } });
       r.box(V.mad(hc, ax[2], 5.6), [1.1, 4.9, 0.9], M.IRON, ax);   // the flat top edge
     } else if (eq.shield === 'round') {   // wooden round shield, iron rim and boss
+      if (eq.bandit === 'rook') rookShield(r, c, ax); else
       r.ell(c, [1.1, 5.3, 5.3], M.WOOD, ax, { mf: p => { const q = V.sub(p, c), d2 = (V.dot(q, ax[1]) ** 2 + V.dot(q, ax[2]) ** 2) / 28; return d2 > 0.74 || d2 < 0.06 ? M.IRON : 0; } });
     } else {
       const rad = big ? [1.0, 5.0, 7.0] : [1.1, 4.2, 4.2];
