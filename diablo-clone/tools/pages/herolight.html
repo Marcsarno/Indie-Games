@@ -7,15 +7,15 @@
     --display: 'Cinzel', Georgia, serif; --body: 'Source Sans 3', system-ui, sans-serif; color-scheme: dark; }
   html, body { background: var(--crypt); color: var(--bone); }
   body { font: 16px/1.5 var(--body); margin: 0; padding: 28px max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px)); }
-  main { max-width: 900px; margin: 0 auto; display: grid; gap: 34px; }
+  main { max-width: 640px; margin: 0 auto; display: grid; gap: 22px; }
   section { display: grid; gap: 12px; min-width: 0; }
   h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: .04em; }
   h2 { font: 600 1.1rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: .05em; }
   p { margin: 0; max-width: 64ch; } .lede { color: var(--dim); }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; max-width: 600px; }   /* the three side by side, even on a phone */
   label { display: grid; gap: 6px; cursor: pointer; }
   label input { position: absolute; opacity: 0; pointer-events: none; }
-  label img { width: 100%; height: auto; display: block; image-rendering: pixelated; border: 3px solid var(--rule); border-radius: 4px; }
+  label img { width: 100%; height: auto; display: block; image-rendering: pixelated; border: 2px solid var(--rule); border-radius: 3px; }
   label span { text-align: center; font-weight: 600; color: var(--dim); }
   label input:checked + img { border-color: var(--pick); }
   label input:checked ~ span { color: var(--pick); }
