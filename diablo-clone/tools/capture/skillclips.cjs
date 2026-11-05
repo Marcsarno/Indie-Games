@@ -23,7 +23,7 @@ const { chromium } = require('playwright'); const fs = require('fs'), path = req
       G.t = 5; updateFov(hero.fi, hero.fj); computeFlow();
       const out = []; const dt = 1 / 30;
       const cast = () => { if (id === 'attack') heroAttack(); else if (id === 'ult') { hero.ult = 1; useUlt(); } else { const k = SKILLS.findIndex(s => s.id === id); CD[id] = 0; hero.mana = 999; useSkill(k); } };
-      for (let f = 0; f < 54; f++) {
+      const NF = +(window.__nf || 54); for (let f = 0; f < NF; f++) {
         if (f === 2) cast();
         for (const e of enemies) { e.cool = 99; e.atk = -1; }
         G.t += dt; update(dt); render();

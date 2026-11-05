@@ -53,9 +53,9 @@ const SWINGS = {
   // leaves the ground, jump = knees tucked), crash down into a deep squat and hold it, then rise.
   // The blow lands at the same moment as the old overhead chop it replaces
   gslam: withTilt([
-    K(2.1, 220, { ck: 0.2, r: 4.5, tw: 0.1, ln: 0.18, bob: -2.4, fl: 3, fr: -3 }),
-    K(2.3, 60, { ck: 0.3, r: 4.8, tw: 0, ln: -0.12, bob: 0.4, fl: 3.5, fr: -3, jump: 3.5, hop: 7 }),
-    K(1.0, 60, { smear: true, ck: 0.3, r: 7, tw: 0, ln: 0.2, bob: -0.6, fl: 5, fr: -3.5, jump: 1.2, hop: 3, mv: 0.06 }),
+    K(1.55, 220, { ck: 0.2, r: 4.5, tw: 0.1, ln: 0.18, bob: -2.4, fl: 3, fr: -3 }),
+    K(1.2, 60, { ck: 0.3, r: 4.4, tw: 0, ln: -0.18, bob: 0.6, fl: 3.5, fr: -3, jump: 4, hop: 7, arc: 1 }),   // (round 65: up, the weapon high over the head)
+    K(0.35, 60, { smear: true, ck: 0.3, r: 7, tw: 0, ln: 0.24, bob: -0.6, fl: 5, fr: -3.5, jump: 1.2, hop: 3, mv: 0.06, arc: 1 }),   // and down, chopping
     K(-0.45, 60, { smear: true, hit: true, ck: 0, r: 7.4, tw: -0.1, ln: 0.4, bob: -3.4, fl: 6.5, fr: -4.5, mv: 0.03 }),
     K(-0.6, 180, { ck: -0.1, r: 7, tw: -0.1, ln: 0.36, bob: -3.2, fl: 6.5, fr: -4.5 }),
     K(0.6, 120, { ck: 0.3, r: 5.5, tw: 0, ln: 0.1, bob: -1, fl: 4, fr: -3 }),
@@ -438,7 +438,7 @@ function setFeelOld(v) { FEEL_OLD = v; try { localStorage.setItem('dcg-feel', v 
 let HEAVY = true;
 try { const q = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('weight') : null; HEAVY = q ? q !== 'light' : localStorage.getItem('dcg-weight') !== 'light'; } catch (e) { /* storage blocked */ }
 function setHeavy(v) { HEAVY = v; try { localStorage.setItem('dcg-weight', v ? 'heavy' : 'light'); } catch (e) { /* ignore */ } }
-const HERO_PRE = { light: [45, 35, 35], light2: [45, 35, 35], thrust: [70, 40], heavy: [110, 45, 45], heavy2: [100, 45, 45], slam: [140, 45, 45], gslam: [110, 45, 45] };
+const HERO_PRE = { light: [45, 35, 35], light2: [45, 35, 35], thrust: [70, 40], heavy: [110, 45, 45], heavy2: [100, 45, 45], slam: [140, 45, 45], gslam: [100, 150, 55] };   // (round 65: the slam's jump: a crouch, 150 ms rising, 55 ms crashing down)
 const HERO_SWINGS = {}, HERO_SWINGS_H = {};
 for (const name in HERO_PRE) {
   const sw = SWINGS[name], hi = sw.findIndex(k => k.hit), pre = HERO_PRE[name];
@@ -446,7 +446,7 @@ for (const name in HERO_PRE) {
   let t = 0; for (let i = 0; i <= hi; i++) t += keys[i].ms;
   HERO_SWINGS[name] = withTilt(keys, sw.tilt, { twoHand: sw.twoHand, free: t, chain: t + keys[hi + 1].ms });
   // round 62: the heavy set: the wind-up x1.5, the blow and the follow-through x1.2
-  const hk = sw.map((k, i) => Object.assign({}, k, { ms: Math.round((i < hi ? pre[i] * 1.5 : k.ms * 1.2)) }));
+  const hk = sw.map((k, i) => Object.assign({}, k, { ms: Math.round((i < hi ? pre[i] * (name === 'gslam' ? 1 : 1.5) : k.ms * 1.2)) }));   // (the slam's jump keeps its own quick timing)
   let th = 0; for (let i = 0; i <= hi; i++) th += hk[i].ms;
   HERO_SWINGS_H[name] = withTilt(hk, sw.tilt, { twoHand: sw.twoHand, free: th, chain: th + hk[hi + 1].ms });
 }

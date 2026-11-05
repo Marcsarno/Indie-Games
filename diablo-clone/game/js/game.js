@@ -796,7 +796,14 @@ function updateHero(dt) {
     hero.atk += dt * 1000 * (1 + ((STAT.atkSpeed || 0) + (hero.frenzy > 0 ? 50 : 0)) / 100);
     const sw = weaponSwing(hero.look, hero.combo), ki = swingKey(sw, hero.atk);
     if (ki >= 0 && sw[ki].mv) lungeHero(sw[ki].mv * dt * 1000 / sw[ki].ms);
-    if (hero.combo === 3 && !hero.leap && !hero.ultOn) { const want = ki >= 0 ? sw[ki].hop || 0 : 0; hero.leapZ = (hero.leapZ || 0) + (want - (hero.leapZ || 0)) * Math.min(1, dt * 28); }   // round 40a: the slam's hop
+    if (hero.combo === 3 && !hero.leap && !hero.ultOn) {
+      // round 65: the slam is a real jump: over the arc keys the body follows a curve, quick up, a
+      // moment at the top, then down faster and faster into the blow
+      const a0 = sw.findIndex(k => k.arc), hiK = sw.findIndex(k => k.hit);
+      let t0 = 0; for (let i = 0; i < a0; i++) t0 += sw[i].ms; let t1 = t0; for (let i = a0; i < hiK; i++) t1 += sw[i].ms;
+      if (a0 >= 0 && hero.atk >= t0 && hero.atk < t1) { const u = (hero.atk - t0) / (t1 - t0), H = 18; hero.leapZ = u < 0.62 ? H * (1 - (1 - u / 0.62) ** 2) : H * (1 - ((u - 0.62) / 0.38) ** 2); }
+      else { const want = ki >= 0 ? sw[ki].hop || 0 : 0; hero.leapZ = (hero.leapZ || 0) + (want - (hero.leapZ || 0)) * Math.min(1, dt * 28); if (ki >= 0 && sw[ki].hit) hero.leapZ = 0; }
+    }   // round 40a: the slam's hop
     if (!hero.hitDone && hero.mag > 0) { const st = Math.min(hero.mag, dt * 4.5); lungeHero(st); hero.mag -= st; }
     if (ki >= 0 && sw[ki].hit && !hero.hitDone) {
       hero.hitDone = true; if (hero.cls === 'ranger') looseArrow(); else if (hero.combo === 3) groundSlamHit(); else heroHitResolve(!!sw[ki].slam, hero.combo === 2 ? 2 : STAT.slow ? 1 : 0);
