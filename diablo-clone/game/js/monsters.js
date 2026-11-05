@@ -1430,11 +1430,18 @@ const SPIDER_V = {
   stone: { H: 5.2, curl: 3.6, abdO: [-7, 3.2], abdR: [8.2, 7.4, 6], hk: 1.12, reach: 18.5, ik: [11, 11.5], up: 0.3, th: [2, 1.7], sh: [1.7, 0.85], kn: 1.7 },
   // Brood Guard: a tall sentry on long stilt legs, a lean striped abdomen, long fangs
   guard: { H: 13.5, curl: 10, abdO: [-7.2, 3.4], abdR: [8, 5.8, 5], hk: 1, reach: 20, ik: [16, 16.5], up: 0.1, th: [1.3, 1.05], sh: [1.1, 0.55], kn: 1.25 },
+  // art B5: the Flintback Matriarch (secret boss): a huge furry brown spider, a big round abdomen under
+  // overlapping flint slabs with amber crystals, thick banded legs, ivory tusk fangs
+  flint: { H: 7.5, curl: 4.5, abdO: [-10, 4.2], abdR: [11, 10, 8.6], hk: 1.45, cx: 2.2, reach: 23, ik: [14.5, 15], up: 0.32, th: [2.6, 2.2], sh: [2.2, 1.0], kn: 2.1 },
 };
+// art B5: the flintback's shell: flint slabs [angle up the abdomen's back from the rear (rad), half length,
+// half width, half thickness, roll] and amber crystal clusters [slab, offset along, offset across, [[tilt fwd, tilt side, length]...]]
+const FLINT_SLABS = [[0.75, 3.6, 8.4, 1.0, 0.12], [1.2, 4.2, 10, 1.1, -0.1], [1.65, 4.4, 10.6, 1.2, 0.08], [2.05, 3.8, 9, 1.0, -0.12]];
+const FLINT_XTAL = [[2, 0.6, -1.8, [[0.2, -0.3, 6.4], [-0.5, 0.3, 4.6], [0.5, 0.6, 3.6], [-0.2, -0.8, 3.2]]], [1, -0.4, 2.6, [[0.1, 0.4, 5], [-0.5, -0.2, 3.6], [0.5, 0.1, 2.8]]], [0, 0.4, -1.4, [[-0.3, -0.3, 4.4], [0.3, 0.4, 3]]]];
 function spiderRig(look, st) {
-  const kind = look.brood ? 'brood' : look.spit ? 'spit' : look.stone ? 'stone' : look.guard ? 'guard' : 'skit', P = SPIDER_V[kind];
-  const brood = kind === 'brood', skit = kind === 'skit', spit = kind === 'spit', stone = kind === 'stone', guard = kind === 'guard';
-  const r = new Rig(), ch = look.chitin || (spit ? M.LEATHER : stone ? M.HAIR : M.CHITIN);
+  const kind = look.flint ? 'flint' : look.brood ? 'brood' : look.spit ? 'spit' : look.stone ? 'stone' : look.guard ? 'guard' : 'skit', P = SPIDER_V[kind];
+  const flint = kind === 'flint', brood = kind === 'brood', skit = kind === 'skit', spit = kind === 'spit', stone = kind === 'stone', guard = kind === 'guard';
+  const r = new Rig(), ch = look.chitin || (spit ? M.LEATHER : stone ? M.HAIR : flint ? M.LEATHER : M.CHITIN);
   const { clip, f } = st;
   let bob = 0, rear = 0, ph = 0, moving = false, curl = 0, aim = 0, spat = false;
   if (clip === 'idle') bob = [0, -0.3, -0.4, -0.2][f % 4];
@@ -1446,8 +1453,12 @@ function spiderRig(look, st) {
   if (clip === 'death') curl = [0, 0.25, 0.55, 0.85, 1, 1][f];
   // the broodmother: low heavy body, long sprawling legs, red chevrons down the abdomen
   const H = P.H + rear * 2.5 + aim * 3.4 - curl * P.curl;
-  const ceph = [3.5, 0, H + bob + rear * 1.5 + aim * 4.5], abd = [P.abdO[0] - aim * 1.6, 0, H + P.abdO[1] + bob - rear - aim * 4];
-  const mfAbd = brood ? (p => {
+  const ceph = [3.5 + (P.cx || 0), 0, H + bob + rear * 1.5 + aim * 4.5], abd = [P.abdO[0] - aim * 1.6, 0, H + P.abdO[1] + bob - rear - aim * 4];
+  // the flintback's fur: dark flecks on a 1.7-unit lattice, hashed so they don't line up
+  const fur = c => (p => { const q = V.sub(p, c), i = Math.floor(q[0] / 1.7), j = Math.floor(q[1] / 1.7), k = Math.floor(q[2] / 1.7);
+    const h = Math.abs(Math.sin(i * 12.99 + j * 78.23 + k * 37.72) * 43758.5) % 1; if (h > 0.45) return 0;
+    const dx = q[0] - (i + 0.5) * 1.7, dy = q[1] - (j + 0.5) * 1.7, dz = q[2] - (k + 0.5) * 1.7; return dx * dx + dy * dy + dz * dz < 0.5 ? M.HAIR : 0; });
+  const mfAbd = flint ? fur(abd) : brood ? (p => {
     const q = V.sub(p, abd);
     if (q[2] < 1.5) return 0;
     const u = q[0], v = Math.abs(q[1]);
@@ -1480,26 +1491,57 @@ function spiderRig(look, st) {
       const q = V.sub(p, abd), y = q[1] + x * 0.7, k = Math.abs(((y % 5.2) + 5.2) % 5.2 - 2.6 + Math.abs(((q[0] - x) * 1.1) % 2 - 1) * 1.2);
       return k < 0.42 && q[2] > z ? M.ROCKRISE : 0;
     } });
+  if (flint) {   // art B5: overlapping flint slabs over the back, each its own part so the seams show; amber crystals grow out of them
+    const R = P.abdR, sl = [];
+    FLINT_SLABS.forEach(([t, hl, hw, ht, roll], i) => {
+      const c = V.add(abd, [-Math.cos(t) * R[0] * 0.98, 0, Math.sin(t) * R[2] * 0.98]);
+      const n = V.norm([-Math.cos(t) * R[2] / R[0], 0, Math.sin(t)]);   // the abdomen's surface normal there
+      const tg0 = V.norm(V.cross([0, 1, 0], n)), sd0 = [0, 1, 0];
+      const sr = V.norm(V.add(V.mul(sd0, Math.cos(roll)), V.mul(n, Math.sin(roll)))), nn = V.norm(V.cross(tg0, sr));
+      const yw = [0.18, -0.12, 0.1, -0.2][i], tg = V.add(V.mul(tg0, Math.cos(yw)), V.mul(sr, Math.sin(yw))), sd = V.sub(V.mul(sr, Math.cos(yw)), V.mul(tg0, Math.sin(yw)));   // each slab turned a little, so no two edges line up
+      const cc = V.mad(c, nn, ht * 0.4 + i * 0.25);
+      r.box(cc, [hl, hw, ht], M.ROCK, [tg, sd, nn]);
+      if (i < 3) {   // a smaller flake of flint stacked on the slab (a second layer), the crystals grow from it
+        const ys = -yw * 1.6, ft = V.add(V.mul(tg, Math.cos(ys)), V.mul(sd, Math.sin(ys))), fs = V.sub(V.mul(sd, Math.cos(ys)), V.mul(tg, Math.sin(ys)));
+        const fc = V.add(V.mad(cc, nn, ht + 0.6), V.mul(tg, -hl * 0.2));
+        r.box(fc, [hl * 0.6, hw * 0.55, 0.8], M.ROCK, [ft, fs, nn]);
+        sl.push({ c: V.mad(fc, nn, 0.8), tg: ft, sd: fs, nn });
+      } else sl.push({ c: V.mad(cc, nn, ht), tg, sd, nn });
+    });
+    r.group(() => {
+      for (const [k, u, v, xs] of FLINT_XTAL) {
+        const s = sl[k], base = V.add(V.mad(s.c, s.tg, u), V.mul(s.sd, v));
+        r.sph(base, 1.6, M.FIREM, { noShadow: true });
+        for (const [a, b, L] of xs) r.cone(V.mad(base, s.nn, -0.4), V.add(V.add(V.mad(base, s.nn, L), V.mul(s.tg, a * L * 0.5)), V.mul(s.sd, b * L * 0.5)), 1.5, 0.35, M.PUMPKIN);
+      }
+    });
+  }
   if (brood) r.group(() => {   // art B2: a clutch of pale egg sacs webbed to the back of her abdomen
     for (const [x, y, z, rr] of [[-8.6, -2, 1.6, 1.7], [-8.6, 2, 1.6, 1.7], [-9.3, 0, 0, 1.8], [-8.2, 0, 3.4, 1.8], [-9.2, -1, 3, 1.4], [-9.2, 1, 3, 1.4]]) r.sph(V.add(abd, [x, y, z]), rr, M.OLDBONE);
   });
   const hk = P.hk;   // the broodmother's head is bigger, with a heavier eye cluster and fangs
-  r.ell(ceph, [4.4 * hk, 4.2 * hk, 3.2 * hk], ch, null, skit ? { mf: p => { const q = V.sub(p, ceph); return q[2] > 2.2 && (q[0] + 0.6) * (q[0] + 0.6) + q[1] * q[1] < 1.6 ? M.WAX : 0; } } : {});
+  r.ell(ceph, [4.4 * hk, 4.2 * hk, 3.2 * hk], ch, null, flint ? { mf: fur(ceph) } : skit ? { mf: p => { const q = V.sub(p, ceph); return q[2] > 2.2 && (q[0] + 0.6) * (q[0] + 0.6) + q[1] * q[1] < 1.6 ? M.WAX : 0; } } : {});
   // eyes: a cluster of beads on the front (the skitter and spitter: two big front eyes over the fangs)
   const eyes = brood ? [[-1, 0.8, 0.6], [1, 0.8, 0.6], [-2, 1.4, 0.45], [2, 1.4, 0.45], [-0.6, 1.8, 0.4], [0.6, 1.8, 0.4]] : [[-1.1, 0.7, 0.85], [1.1, 0.7, 0.85], [-2, 1.5, 0.45], [2, 1.5, 0.45], [-0.6, 1.9, 0.4], [0.6, 1.9, 0.4]];
   if (spit || stone) { eyes[0][2] = eyes[1][2] = 1.05; eyes[2][2] = eyes[3][2] = 0.6; }   // the spitter's big green eyes, the stoneback's orange ones
-  for (const [y, z, s] of eyes) r.sph(V.add(ceph, [3.7 * hk, y * hk, z * hk]), s * hk, spit ? M.EYE_GRN : stone ? M.FIREM : M.EYE_RED, { noShadow: true });
+  if (flint) { eyes.length = 4; eyes[0][2] = eyes[1][2] = 1.0; eyes[2][2] = eyes[3][2] = 0.5; }   // two big yellow eyes and two small
+  for (const [y, z, s] of eyes) r.sph(V.add(ceph, [3.7 * hk, y * hk, z * hk]), s * hk, spit ? M.EYE_GRN : stone ? M.FIREM : flint ? M.EYE_YEL : M.EYE_RED, { noShadow: true });
   // fangs (the skitter's are white, the spitter's venom green); the spitter's gape on the spit
   const gape = spit ? aim * 0.8 : 0;
-  for (const s of [-1, 1]) r.cone(V.add(ceph, [3.6 * hk, s * 1.1 * hk, -1.2 * hk]), V.add(ceph, [4.6 * hk + rear + aim * 0.6, s * (0.7 + gape) * hk, (guard ? -5.6 : -4) * hk + rear]), (brood ? 0.8 : 0.9) * hk, brood ? 0.25 : 0.35, brood ? M.HORN : spit ? M.SLIME : M.BONE);
+  if (flint) for (const s of [-1, 1]) {   // art B5: big curved ivory tusks, down and in
+    const at = (x, y, z) => V.add(ceph, [x * hk + rear, s * y * hk, z * hk + rear]);
+    const a = at(3.3, 1.5, -1.5), b = at(5, 2, -3.4), c = at(5.6, 1.7, -5.3), d = at(5, 0.7, -6.7);   // out, down, then the tip hooks back in
+    r.group(() => { r.cone(a, b, 1.3 * hk, 1.05 * hk, M.BONE); r.cone(b, c, 1.05 * hk, 0.75 * hk, M.BONE); r.cone(c, d, 0.75 * hk, 0.25, M.BONE); });
+  }
+  else for (const s of [-1, 1]) r.cone(V.add(ceph, [3.6 * hk, s * 1.1 * hk, -1.2 * hk]), V.add(ceph, [4.6 * hk + rear + aim * 0.6, s * (0.7 + gape) * hk, (guard ? -5.6 : -4) * hk + rear]), (brood ? 0.8 : 0.9) * hk, brood ? 0.25 : 0.35, brood ? M.HORN : spit ? M.SLIME : M.BONE);
   if (spit && !curl) {   // a bead of venom hangs between the fangs; on the spit a glob leaves the mouth
     if (spat) { r.sph(V.add(ceph, [8.6 * hk, 0, -1.4 * hk]), 2.1, M.SLIME, { noShadow: true }); r.sph(V.add(ceph, [5.6 * hk, 0, -2.4 * hk]), 1, M.SLIME, { noShadow: true }); }
     else r.sph(V.add(ceph, [4.4 * hk, 0, -3.6 * hk]), 0.8 + aim * 0.4, M.SLIME, { noShadow: true });
   }
   // legs: 4 per side, knees high; alternating tetrapod gait
-  const ang = [0.55, 1.15, 1.85, 2.45];
+  const ang = flint ? [0.85, 1.35, 1.85, 2.4] : [0.55, 1.15, 1.85, 2.45];   // the flintback's front legs splay out to the sides, clear of her face
   for (let i = 0; i < 4; i++) for (const s of [-1, 1]) {
-    const a = ang[i], hip = V.add(ceph, [Math.cos(a) * 2.2 - 0.5, s * Math.sin(a) * 2.6, -0.4]);
+    const a = ang[i], hip = flint ? V.add(ceph, [Math.cos(a) * 2.6 - 1.6, s * Math.sin(a) * 4.4, -1.8]) : V.add(ceph, [Math.cos(a) * 2.2 - 0.5, s * Math.sin(a) * 2.6, -0.4]);
     const grp = (i + (s > 0 ? 1 : 0)) % 2, p = ph + grp * Math.PI;
     const reach = P.reach - Math.abs(i - 1.5) * 1.2;
     let foot = [ceph[0] + Math.cos(a) * reach - 1.5 - (moving ? 2.4 * Math.cos(p) : 0), s * Math.sin(a) * reach, moving ? 1.8 * Math.max(0, Math.sin(p)) : 0];
@@ -1511,9 +1553,14 @@ function spiderRig(look, st) {
     if (curl) foot = V.lerp(foot, [ceph[0] - 1, s * 3, H + 5], curl * 0.85);
     const L = ik(hip, foot, P.ik[0], P.ik[1], [0, s * P.up, 1]);
     r.cone(hip, L.joint, P.th[0], P.th[1], ch);
-    if (skit || guard) { const m = V.lerp(L.joint, L.end, skit ? 0.62 : 0.7); r.cone(L.joint, m, skit ? 1.15 : P.sh[0], skit ? 0.9 : 0.8, ch); r.cone(m, L.end, skit ? 0.9 : 0.8, skit ? 0.6 : 0.5, M.MARK); }   // red-tipped feet
+    if (flint) {   // art B5: thick banded legs, three segments with dark joint bands, a dark pointed tip
+      const m = V.lerp(L.joint, L.end, 0.5), t = V.lerp(L.joint, L.end, 0.86);
+      r.cone(L.joint, m, P.sh[0], 1.7, ch); r.cone(m, t, 1.6, 1.15, ch); r.cone(t, L.end, 1.05, 0.5, M.HAIR);
+      r.sph(m, 1.75, M.HAIR);
+    }
+    else if (skit || guard) { const m = V.lerp(L.joint, L.end, skit ? 0.62 : 0.7); r.cone(L.joint, m, skit ? 1.15 : P.sh[0], skit ? 0.9 : 0.8, ch); r.cone(m, L.end, skit ? 0.9 : 0.8, skit ? 0.6 : 0.5, M.MARK); }   // red-tipped feet
     else r.cone(L.joint, L.end, P.sh[0], P.sh[1], ch);
-    r.sph(L.joint, P.kn, spit || stone ? ch : guard ? M.MARKB : M.MARK);
+    r.sph(L.joint, P.kn, flint ? M.HAIR : spit || stone ? ch : guard ? M.MARKB : M.MARK);
     if (brood && !curl) r.cone(L.joint, V.add(L.joint, [0.6, s * 0.9, 3.2]), 1.1, 0.3, M.MARKB);   // art B2: a red spur on every knee
   }
   if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
@@ -1819,6 +1866,8 @@ const MONSTERS = {
   // art B2: new spiders from the user's concepts; minLevel 99 keeps them out of the spawn pools, stats are placeholders
   spitter: { family: 'spider', name: 'VENOM SPITTER', minLevel: 99, look: { spit: true, scale: 0.85 }, hp: 9, dmg: [2, 5], speed: 40, reach: 6, ranged: 'arrow', xp: 13, chest: 8, shadow: 11 },
   stoneback: { family: 'spider', name: 'STONEBACK SPIDER', minLevel: 99, look: { stone: true, size: [96, 70, 48, 52] }, hp: 26, dmg: [4, 8], speed: 30, reach: 1.5, xp: 24, chest: 8, shadow: 13 },
+  // art B5: secret boss from the user's concept (art/concepts/monsters/flintback_matriarch.png); minLevel 99, placeholder stats a bit above the broodmother
+  flintback: { family: 'spider', name: 'FLINTBACK MATRIARCH', title: 'SEALED MINE POCKET', minLevel: 99, look: { flint: true, scale: 1.45, size: [104, 80, 52, 56] }, hp: 75, dmg: [7, 13], speed: 30, reach: 2, xp: 110, chest: 14, shadow: 19, unique: true },
   broodguard: { family: 'spider', name: 'BROOD GUARD', minLevel: 99, look: { guard: true, size: [100, 92, 50, 72] }, hp: 20, dmg: [4, 7], speed: 44, reach: 1.7, xp: 20, chest: 8, shadow: 13 },
 };
 const lookKey = l => JSON.stringify(l);
