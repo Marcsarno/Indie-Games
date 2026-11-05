@@ -4,6 +4,8 @@
 
 // ---------------------------------------------------------------- skeleton
 const SKEL_B = { hipH: 12.5, thigh: 6.4, shin: 5.8, ankle: 1.2, spine: 7, shW: 5.6, shZ: 3, neck: 10, upper: 6, fore: 5.5, hipW: 2.6, stride: 5.5, lift: 2.5, duty: 0.55, bob: 0.6, sway: 0.5, runLean: 0.1, counter: 0.14 };
+// art B5: the Drowned Warden (secret boss): a huge hunched skeleton, long heavy arms reaching low
+const WARDEN_B = { ...SKEL_B, hunch: 0.34, spine: 7.4, shW: 6.6, shZ: 3.4, neck: 8.6, upper: 7.6, fore: 7.2, hipW: 3.0 };
 function skullAt(r, hd, fwd, sideR, up, bone, eye, jawOpen = 0, k = 1) {
   r.sph(hd, 4.1 * k, bone, { mf: p => {
     const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up);
@@ -17,18 +19,102 @@ function skullAt(r, hd, fwd, sideR, up, bone, eye, jawOpen = 0, k = 1) {
   const jc = V.add(V.mad(hd, fwd, 1.6 * k), V.mul(up, (-3.3 - jawOpen) * k));
   r.ell(jc, [2.7 * k, 2.6 * k, 1.1 * k], bone, frameAlong(fwd, up), { mf: p => V.dot(V.sub(p, jc), fwd) > 1.8 && Math.abs(V.dot(V.sub(p, jc), up) - 0.6) < 0.35 ? M.DARK : 0 });
 }
+// art B5: the Drowned Warden's parts (only look.warden reaches these)
+// moss grows on the upper faces of the long bones in patches measured along each bone (no swimming)
+function wardenMoss(a, b, seed) {
+  return { mf: (p, n) => {
+    const d = V.sub(b, a), t = V.dot(V.sub(p, a), d) / V.dot(d, d);
+    return n[2] > 0.25 && hash(Math.floor(t * 4), Math.round(seed * 100), 41) < 0.55 ? M.LEAFM : 0;
+  } };
+}
+function wardenHelm(r, hd, fwd, sideR, up) {
+  // an open helm of corroded iron, verdigris crusted over it: a dome riding above the sockets, a
+  // ridge front to back, a riveted rim and a nose guard
+  const hc = V.add(V.mad(hd, up, 2.5), V.mul(fwd, -0.6)), hf = frameAlong(fwd, up);
+  const vg = p => { const q = V.sub(p, hc); return hash(Math.round(V.dot(q, fwd) * 0.7), Math.round(V.dot(q, sideR) * 0.7), Math.round(V.dot(q, up) * 0.7)) < 0.5 ? M.OGRE : 0; };   // verdigris patches
+  r.group(() => {
+    r.ell(hc, [4.3, 4.4, 3.3], M.HIDE, hf, { mf: vg });
+    r.ell(V.mad(hc, up, 0.4), [4.4, 0.8, 3.2], M.OGRE, hf);
+  });
+  r.cyl(V.mad(hc, up, -1.2), V.mad(hc, up, -0.3), 4.7, M.OGRE, { mf: p => { const q = V.sub(p, hc), a = Math.atan2(V.dot(q, sideR), V.dot(q, fwd)), t = a * 2.2; return Math.abs(t - Math.round(t)) < 0.2 && V.dot(q, up) > -1.0 && V.dot(q, up) < -0.5 ? M.IRON : 0; } });
+  r.box(V.add(V.mad(hc, fwd, 4.5), V.mul(up, -2.2)), [0.5, 0.65, 2.0], M.OGRE, hf);   // the nose guard
+}
+function wardenAnchor(r, g, bd, fwd, sideR, up) {
+  // a big iron ship's anchor: ring and stock above the hand, a long shank, two curved arms ending in
+  // spade flukes
+  const w0 = V.add(sideR, V.mul(fwd, 0.4)), wide = V.norm(V.sub(w0, V.mul(bd, V.dot(w0, bd)))), A = M.SLATE;
+  const top = V.mad(g, bd, -2.4);
+  r.cyl(V.mad(top, wide, -0.3), V.mad(top, wide, 0.3), 1.5, A, { mf: p => { const q = V.sub(p, top); return V.len(V.sub(q, V.mul(wide, V.dot(q, wide)))) < 0.7 ? M.DARK : 0; } });   // the ring
+  r.cone(V.add(V.mad(g, bd, -1.0), V.mul(wide, -2.8)), V.add(V.mad(g, bd, -1.0), V.mul(wide, 2.8)), 0.7, 0.7, A);   // the stock
+  const cr = V.mad(g, bd, 11.5);
+  r.group(() => {
+    r.cone(V.mad(g, bd, -1.6), cr, 0.95, 1.15, A);
+    for (const s of [-1, 1]) {
+      const m0 = V.add(V.mad(cr, wide, s * 2.6), V.mul(bd, 0.2)), e0 = V.add(V.mad(cr, wide, s * 4.4), V.mul(bd, -2.4));
+      r.cone(cr, m0, 1.1, 1.0, A); r.cone(m0, e0, 1.0, 0.85, A);
+      const tip = V.add(V.mad(e0, wide, s * 1.0), V.mul(bd, -2.6));
+      r.cone(V.mad(e0, bd, 0.6), tip, 1.7, 0.2, A);   // the fluke
+    }
+    r.sph(cr, 1.3, A);
+  });
+}
+function wardenShield(r, h, fwd, sideR, up) {
+  // a round wooden shield: planks, a thick iron rim, pale barnacles crusted on the face
+  const n = V.norm(V.add(V.mul(fwd, 0.8), V.mul(sideR, -0.6))), ax = [n, V.norm(V.cross(up, n)), up], c = V.mad(h, n, 1.5);
+  r.ell(c, [1.1, 6.6, 6.6], M.WOOD, ax, { mf: p => {
+    const q = V.sub(p, c), u = V.dot(q, ax[1]), v = V.dot(q, ax[2]), d = Math.hypot(u, v);
+    if (d > 5.6) return M.IRON;
+    if (Math.abs(((u + 6) % 2.6) - 1.3) > 1.1) return M.HAIR;   // the gaps between planks
+    return 0;
+  } });
+  for (const [u, v, k] of [[1.7, 2.1, 1.15], [3.0, 0.6, 0.95], [0.3, 3.4, 0.9], [-1.8, -1.6, 1.1], [-0.3, -3.0, 0.95], [2.5, -2.3, 0.9]]) {
+    const b = V.add(V.mad(c, n, 1.0), V.add(V.mul(ax[1], u), V.mul(ax[2], v)));
+    r.sph(b, k, M.RUIN, { bias: 1, mf: p => V.dot(V.sub(p, b), n) > k * 0.75 ? M.DARK : 0 });
+  }
+}
+function wardenGear(r, J, st, aR, aL, bone) {
+  const { fwd, sideR, up } = J, lf = frameAlong(fwd, up);
+  // big corroded bronze pauldrons on both shoulders, moss on top, slime dripping off the rims
+  for (const [sh, sd] of [[J.shR, 1], [J.shL, -1]]) {
+    const pk = V.add(V.mad(sh, up, 1.2), V.mul(sideR, sd * 1.3)), so = V.norm(V.add(up, V.mul(sideR, sd * 0.55))), pf = frameAlong(fwd, so);
+    const lame = V.add(V.mad(pk, up, -1.8), V.mul(sideR, sd * 1.7));
+    const moss = p => { const q = V.sub(p, pk); return V.dot(q, so) > 2.0 && hash(Math.round(V.dot(q, fwd) * 0.6), Math.round(V.dot(q, sideR) * 0.6), 7) < 0.3 ? M.LEAFM : 0; };
+    // (pass 5) corroded bronze: brown leather-toned plate with a dark rim and copper flecks (RUST read slate grey, AUTUMN alone read as pumpkins)
+    const fleck = (p, c0) => { const q = V.sub(p, c0); return hash(Math.round(V.dot(q, fwd) * 1.1), Math.round(V.dot(q, sideR) * 1.1), Math.round(V.dot(q, up) * 1.1) + 3) < 0.22 ? M.AUTUMNM : 0; };
+    r.ell(lame, [3.6, 3.3, 1.6], M.LEATHER, pf, { mf: p => V.dot(V.sub(p, lame), so) < -0.6 ? M.HAIR : fleck(p, lame) });
+    r.ell(pk, [4.5, 4.3, 2.5], M.LEATHER, pf, { mf: p => moss(p) || (V.dot(V.sub(p, pk), so) < -1.0 ? M.HAIR : fleck(p, pk)) });
+    for (const [f2, l] of [[1.6, 2.6], [-0.8, 3.6], [-2.6, 2.0]]) {   // slime drips
+      const b0 = V.add(V.add(V.mad(lame, fwd, f2), V.mul(sideR, sd * 2.6)), V.mul(up, -0.6));
+      r.cone(b0, V.mad(b0, up, -l), 0.9, 0.35, M.LEAFM, { noShadow: true });
+    }
+  }
+  // a rope belt and a torn sea-green loincloth, front and back, ragged to the knees
+  const be = V.mad(J.pelvis, up, 1.6);
+  r.ell(be, [3.2, 4.6, 1.0], M.LEATHER, lf);
+  for (const fs of [1, -1]) {
+    const tc = V.add(V.mad(J.pelvis, fwd, fs * 2.8), V.mul(up, -2.2));
+    r.group(() => {
+      r.box(tc, [0.45, 3.2, 2.8], M.WATERM, lf);
+      for (const sd of [-2.2, -0.8, 0.7, 2.1]) r.cone(V.add(V.mad(tc, up, -2.0), V.mul(sideR, sd)), V.add(V.add(V.mad(tc, up, -5.6 + Math.abs(sd) * 0.6 + (sd > 0 ? 0.8 : 0)), V.mul(sideR, sd * 1.1)), V.mul(fwd, fs * 0.3)), 1.0, 0.25, M.WATERM);
+    });
+  }
+  // moss strands hanging from the ribs and the forearms
+  for (const [p0, l] of [[V.add(V.mad(J.chest, up, -1.5), V.add(V.mul(fwd, 2.8), V.mul(sideR, -2.4))), 3.0], [V.add(V.mad(J.chest, up, -0.6), V.add(V.mul(fwd, 2.4), V.mul(sideR, 2.8))), 2.4], [V.lerp(aR.el, aR.hand, 0.45), 2.6], [V.lerp(aL.el, aL.hand, 0.4), 2.2]])
+    r.cone(p0, V.mad(p0, up, -l), 0.95, 0.3, M.LEAFM, { noShadow: true });
+}
 function skeletonRig(look, st) {
-  const B = SKEL_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J;
+  const wd = !!look.warden;   // art B5: the Drowned Warden
+  const B = wd ? WARDEN_B : SKEL_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J;
   const bone = look.bone || M.BONE, eye = look.eye || M.EYE_RED;
-  const tk = look.chunky ? 1.3 : look.burn ? 1.2 : 1;   // field variants (art A2) and the burning dead (a4): thicker bones, as the concepts draw them
+  const tk = wd ? 1.5 : look.chunky ? 1.3 : look.burn ? 1.2 : 1;   // field variants (art A2) and the burning dead (a4): thicker bones, as the concepts draw them
   const sk = look.armored && !look.crown;   // art B2: the plain skeleton warrior (not the king), refined toward its concept
   const bw = !!look.bulwark;   // art B4: the Crypt Bulwark elite (kettle helm, steel pauldrons, bare-wood tower shield)
   const king = !!look.crown;   // art B4: the Skeleton King rebuilt to his concept (normal skull, plate, crimson cape)
   // the burning dead (art pass 1): scorched bands across the long bones, measured along each bone
   // so they ride with it and never swim between frames
-  const charBand = (a, b, t0, t1) => look.burn ? { mf: p => { const d = V.sub(b, a), t = V.dot(V.sub(p, a), d) / V.dot(d, d); return t > t0 && t < t1 ? M.IRON : 0; } } : undefined;
+  const charBand = (a, b, t0, t1) => wd ? wardenMoss(a, b, t0) : look.burn ? { mf: p => { const d = V.sub(b, a), t = V.dot(V.sub(p, a), d) / V.dot(d, d); return t > t0 && t < t1 ? M.IRON : 0; } } : undefined;
   if (!look.lich) for (const [hip, knee, ank, sd] of [[J.hipL, J.kneeL, J.ankL, 0], [J.hipR, J.kneeR, J.ankR, 1]]) {
-    r.cone(hip, knee, 1.3 * tk, 1.0 * tk, bone, sd ? charBand(hip, knee, 0.45, 0.75) : undefined); r.cone(knee, ank, 1.1 * tk, 0.9 * tk, bone, sd ? undefined : charBand(knee, ank, 0.2, 0.5));
+    r.cone(hip, knee, 1.3 * tk, 1.0 * tk, bone, sd || wd ? charBand(hip, knee, sd ? 0.45 : 0.46, 0.75) : undefined); r.cone(knee, ank, 1.1 * tk, 0.9 * tk, bone, sd && !wd ? undefined : charBand(knee, ank, sd ? 0.21 : 0.2, 0.5));
     r.sph(knee, 1.4 * tk, bone); r.ell(V.add(ank, [1.4, 0, -0.6]), [2.4 * tk, 1.2 * tk, 0.8 * tk], bone);
   }
   r.ell(J.pelvis, [2.6, 4.0, 2.0], bone);
@@ -80,6 +166,11 @@ function skeletonRig(look, st) {
     handR = V.mad(piv, V.norm(V.add(V.mul(F, Math.cos(sw.a)), V.mul(U, Math.sin(sw.a)))), (sw.r || 7) * 0.85);
     if (sw.smear && st.prev) smearArc(r, piv, F, U, st.prev.a + (st.prev.ck || 0), ba, 9, 18);
     handL = V.add(V.add(J.shL, V.mul(fwd, 5)), V.mul(up, -6));
+  } else if (wd) {
+    // (b5) the warden: the anchor hangs from the right hand by the shank, low at his side, its
+    // crown dragging by the foot; the shield held low and forward in the left
+    handR = V.add(V.add(J.shR, V.mul(fwd, 2.4 + J.swingArm * 1.2)), V.add(V.mul(up, -11.5), V.mul(sideR, 2.0)));
+    bd = V.norm(V.add(V.add(V.mul(fwd, 0.25), V.mul(up, -1)), V.mul(sideR, 0.12)));
   } else if (look.crown) {
     // (b4) the king, as the concept: the broad sword held low at his right side, point toward the
     // floor; the left hand raised beside the head, fingers clawed
@@ -116,10 +207,11 @@ function skeletonRig(look, st) {
   }
   if (look.towerShield) handL = V.add(V.add(J.shL, V.mul(fwd, 5.5)), V.add(V.mul(up, -4.5), V.mul(sideR, -1)));
   if (bw) handL = V.add(V.add(J.shL, V.mul(fwd, 4.8)), V.add(V.mul(up, -5.0), V.mul(sideR, -2.0)));   // (b4) the bulwark's shield held out at its left side
+  if (wd) handL = V.add(V.add(J.shL, V.mul(fwd, 6.0 - (st.clip === 'walk' ? J.swingArm : 0))), V.add(V.mul(up, -8.5), V.mul(sideR, -1.6)));   // (b5) the warden's shield low and forward
   const aR = armTo(J, J.shR, handR, B, 1), aL = armTo(J, J.shL, handL, B, -1);
   for (const a of [aR, aL]) {
     const sh = a === aR ? J.shR : J.shL;
-    r.cone(sh, a.el, 1.1 * tk, 0.9 * tk, bone, a === aL ? charBand(sh, a.el, 0.3, 0.65) : undefined); r.cone(a.el, a.hand, 0.9 * tk, 0.8 * tk, bone, a === aR ? charBand(a.el, a.hand, 0.15, 0.5) : undefined); r.sph(a.hand, 1.2 * tk, bone);
+    r.cone(sh, a.el, 1.1 * tk, 0.9 * tk, bone, a === aL || wd ? charBand(sh, a.el, a === aR ? 0.31 : 0.3, 0.65) : undefined); r.cone(a.el, a.hand, 0.9 * tk, 0.8 * tk, bone, a === aR || wd ? charBand(a.el, a.hand, a === aR ? 0.15 : 0.16, 0.5) : undefined); r.sph(a.hand, 1.2 * tk, bone);
   }
   if (look.weapon === 'bow') {
     const c = aL.hand, ax = frameAlong(fwd, up);
@@ -185,6 +277,9 @@ function skeletonRig(look, st) {
       const n = V.norm(V.add(V.mul(fwd, 0.85), V.mul(sideR, -0.5))), c = V.add(V.mad(aL.hand, n, 1.4), V.mul(up, 0.5)), ax = [n, V.norm(V.cross(up, n)), up];
       r.box(V.mad(c, up, 0.6), [0.7, 4.7, 8.0], M.CLOTH_RED, ax, { mf: p => { const q = V.sub(p, V.mad(c, up, 0.6)); const u = Math.abs(V.dot(q, ax[1])), v = Math.abs(V.dot(q, ax[2])); return u > 3.6 || v > 6.9 ? M.SLATE : (u > 2.7 && u < 3.1 && v < 6.0) || (v > 5.4 && v < 5.8 && u < 3.1) ? M.MARK : 0; } });   // (b2 pass 3) an inner bevel line   // (a4) taller and wider, as the concept's
     }
+  } else if (wd) {
+    wardenAnchor(r, aR.hand, bd, fwd, sideR, up);
+    wardenShield(r, aL.hand, fwd, sideR, up);
   } else if (look.lich) {   // a long staff of black wood with a bone cage around a frost orb
     const g = aR.hand;
     r.cone(V.mad(g, bd, -9), V.mad(g, bd, 14), 0.8, 0.9, bone, { mf: p => (Math.round(V.dot(V.sub(p, g), bd) * 0.5) % 3 === 0) ? M.OLDBONE : 0 });   // a staff of bone, jointed
@@ -326,6 +421,7 @@ function skeletonRig(look, st) {
     r.ell(be, [3.1, 4.4, 1.1], M.LEATHER, frameAlong(fwd, up));
     r.box(V.mad(be, fwd, 3.1), [0.5, 1.3, 1.0], M.SLATE, frameAlong(fwd, up), { mf: p => { const q = V.sub(p, V.mad(be, fwd, 3.1)); return Math.abs(V.dot(q, sideR)) < 0.55 && Math.abs(V.dot(q, up)) < 0.35 ? M.LEATHER : 0; } });
   }
+  if (wd) wardenGear(r, J, st, aR, aL, bone);
   if (look.breastplate) {   // a plate cuirass over the ribs, with a skirt band at the waist
     const bc = V.mad(J.chest, up, -0.2);
     r.group(() => {
@@ -396,7 +492,9 @@ function skeletonRig(look, st) {
     for (const a of [aR, aL]) r.cone(V.lerp(a.el, a.hand, 0.15), V.lerp(a.el, a.hand, 0.75), 1.5, 2.3, RM);   // ragged sleeves
   }
   const sk0 = r.p.length;
-  skullAt(r, look.armored ? V.mad(J.head, up, king ? -0.6 : 0.6) : J.head, fwd, sideR, up, bone, eye, st.clip === 'attack' && sw.hit ? 0.8 : 0, king ? 1.0 : look.armored ? 1.15 : 1);
+  const hd = wd ? V.add(V.mad(J.head, up, 0.5), V.mul(fwd, 1.8)) : J.head;
+  skullAt(r, look.armored ? V.mad(J.head, up, king ? -0.6 : 0.6) : hd, fwd, sideR, up, bone, eye, st.clip === 'attack' && sw.hit ? 0.8 : 0, king || wd ? 1.0 : look.armored ? 1.15 : 1);
+  if (wd) wardenHelm(r, hd, fwd, sideR, up);
   if (look.helm && look.burn) {
     // an open kettle helm riding high on the skull so the burning eyes show under its brim,
     // with three tongues of flame licking up from the crown (they flicker with the frame)
@@ -456,7 +554,7 @@ function skeletonRig(look, st) {
     for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2, b = V.add(V.mad(cc, up, 1.0), V.add(V.mul(fwd, Math.cos(a) * 3.2), V.mul(sideR, Math.sin(a) * 3.2))); r.cone(b, V.mad(b, up, 1.6), 0.8, 0.2, M.GOLD); }
     r.sph(V.add(V.mad(cc, up, 0.55), V.mul(fwd, 3.5)), 0.6, M.EYE_RED, { noShadow: true });
   }
-  if (!king) bigHead(r, sk0, J.head, bw ? 1.12 : 1.4);   // chibi skull (the king's is drawn at body scale, as his concept)
+  if (!king && !wd) bigHead(r, sk0, J.head, bw ? 1.12 : 1.4);   // chibi skull (the king's is drawn at body scale, as his concept)
   if (look.crown) {   // (b4) a dark crimson cloak from the shoulders, widening to a ragged, torn hem; no trim, no collar
     const top = V.add(V.mad(J.chest, up, 3.4), V.mul(fwd, -2.6)), dn = V.norm(V.add(V.mul(up, -1), V.mul(fwd, st.clip === 'death' ? [-0.3, -0.2, -0.05, 0.05, 0.1, 0.12][st.f] : -0.3)));
     r.group(() => {
@@ -1674,6 +1772,8 @@ const MONSTERS = {
   ashhex: { family: 'fallen', name: 'ASHHEX SHAMAN', minLevel: 99, look: { staff: true, hood: true, ember: true, ashhex: true, scale: 1.15, size: [62, 58, 31, 48] }, hp: 16, dmg: [4, 8], speed: 28, reach: 6, ranged: 'firebolt', leader: true, xp: 30, chest: 16, shadow: 6, elite: true },
   hound: { family: 'hound', name: 'BONE HOUND', look: { plates: true, lean: true, slabs: true, brush: true, paws: true, b2: 'hound' }, hp: 16, dmg: [3, 6], speed: 52, reach: 1.35, xp: 18, chest: 12, shadow: 10 },
   lich: { family: 'skeleton', name: 'THE LICH', title: 'WHO DIED AND WOULD NOT STAY DEAD', look: { lich: true, eye: M.EYE_GRN, bone: M.OLDBONE, scale: 1.6, size: [124, 140, 62, 112] }, hp: 260, dmg: [8, 14], speed: 22, reach: 7, ranged: 'frostbolt', xp: 400, chest: 46, shadow: 11, unique: true, boss: 'lich', minLevel: 99 },
+  // art B5: secret boss from the user's concept (art/concepts/monsters/drowned_warden.png); minLevel 99, placeholder stats a bit above the king
+  warden: { family: 'skeleton', name: 'THE DROWNED WARDEN', title: 'KEEPER OF THE FLOODED CRYPT', look: { warden: true, eye: M.EYE_YEL, scale: 1.65, size: [150, 140, 75, 110] }, hp: 190, dmg: [10, 18], speed: 22, reach: 2.2, xp: 230, chest: 46, shadow: 13, unique: true, boss: 'slam', minions: ['skeleton', 'spearman'], calls: 'THE WARDEN CALLS UP THE DROWNED', minLevel: 99 },
   skelking: { family: 'skeleton', name: 'SKELETON KING', title: 'LORD OF THE RESTLESS DEAD', look: { weapon: 'sword', shield: false, armored: true, crown: true, eye: M.EYE_RED, scale: 1.6, size: [124, 132, 62, 104] }, hp: 170, dmg: [9, 16], speed: 24, reach: 1.9, xp: 200, chest: 42, shadow: 11, unique: true, boss: 'king', minLevel: 99 },
   treant: { family: 'treant', name: 'TREANT ELDER', title: 'THE WOOD THAT WALKS', minLevel: 99, look: { scale: 1.4 }, hp: 170, dmg: [8, 14], speed: 18, reach: 2.3, xp: 190, chest: 54, shadow: 14, unique: true, boss: 'slam', minions: ['shroom', 'sporecap'], calls: 'THE ELDER WAKES THE MUSHROOMS' },
   // art A3: ogre grunts from the user's front/back concepts (minLevel 99: out of the spawn pools until the
