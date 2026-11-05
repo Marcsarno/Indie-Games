@@ -190,6 +190,11 @@ const glyphMissile = (cx, cy) => { for (const [ox, oy] of [[-5, 4], [0, -1], [5,
 const SKILL_GLYPH = [null, glyphBash, glyphWhirl, glyphCry];
 // per skill: button ramp and glyph (the warrior's by slot, the mage's by spell)
 const glyphCone = (cx, cy) => { for (let k = 0; k < 9; k++) { const a = -0.55 + k * 0.1375; line(cx - 7, cy + 6, cx - 7 + Math.cos(a - 0.785) * 15, cy + 6 + Math.sin(a - 0.785) * 15, k % 2 ? 117 : 118); } put(cx - 7, cy + 6, 27); };
+// round 66: the ranger's new kit
+const glyphPierce = (cx, cy) => { for (let k = -8; k <= 6; k++) { put(cx + k, cy - k * 0.5, 27); put(cx + k, cy - k * 0.5 + 1, k < 4 ? 35 : 31); } for (const [a, b] of [[6, -6], [4, -4], [7, -2]]) line(cx + 4, cy - 2, cx + a, cy + b, 27); for (const o of [-3, 0, 3]) line(cx - 8, cy + 4 + o, cx - 4, cy + 2 + o, 51); };
+const glyphCluster = (cx, cy) => { for (const [a, b] of [[0, 0], [-5, 3], [5, 3], [-3, -4], [4, -4]]) for (let q = -2; q <= 2; q++) for (let r = -2; r <= 2; r++) if (q * q + r * r <= 4) put(cx + a + q, cy + b + r, q * q + r * r <= 1 ? 18 : 16); put(cx, cy, 27); };
+const glyphSentry = (cx, cy) => { line(cx, cy - 1, cx - 6, cy + 7, 35); line(cx, cy - 1, cx + 6, cy + 7, 35); line(cx, cy - 1, cx, cy + 7, 35); line(cx - 7, cy - 3, cx + 7, cy - 3, 31); line(cx - 6, cy - 6, cx - 6, cy, 27); line(cx + 6, cy - 6, cx + 6, cy, 27); put(cx + 8, cy - 3, 27); };
+const glyphHawk = (cx, cy) => { for (let k = -8; k <= 8; k++) { const u = Math.abs(k) / 8; put(cx + k, cy - 4 + u * u * 6 - u * 4, 27); put(cx + k, cy - 3 + u * u * 6 - u * 4, 26); } for (let b = -1; b <= 2; b++) for (let a = -2; a <= 2; a++) put(cx + a, cy + b, 26); put(cx + 2, cy - 1, 51); };
 const glyphChain = (cx, cy) => {   // round 65: a forked bolt
   const P = [[3, -8], [-2, -2], [2, -1], [-3, 7]];
   for (let k = 0; k < 3; k++) for (const o of [-1, 0, 1]) line(cx + P[k][0] + o, cy + P[k][1], cx + P[k + 1][0] + o, cy + P[k + 1][1], o ? 40 : 27);
@@ -212,7 +217,7 @@ const glyphLeap = (cx, cy) => {   // an arc up and down, landing in a burst
   for (let a = 0; a <= 16; a++) { const u = a / 16; put(cx - 7 + u * 12, cy + 4 - Math.sin(u * Math.PI) * 10, a > 12 ? 51 : 27); }
   for (const [a, b] of [[-3, 0], [3, 0], [0, -3], [2, -2], [-2, -2]]) line(cx + 5, cy + 5, cx + 5 + a, cy + 5 + b, 50);
 };
-const SPELL_LOOK = { multi: [[33, 34, 35, 36], (x, y) => glyphMulti(x, y)], trap: [[28, 29, 30, 31], (x, y) => glyphTrap(x, y)], roll: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)], mark: [[19, 20, 21, 22], (x, y) => glyphMark(x, y)], slam: [[13, 14, 15, 16], glyphSlam], hook: [[28, 29, 30, 31], glyphHook], whirl: [[19, 20, 21, 22], glyphWhirl], leap: [[48, 49, 50, 51], glyphLeap], fireball: [[13, 14, 15, 16], glyphFire], cone: [[114, 115, 116, 117], glyphCone], meteor: [[19, 20, 21, 22], glyphMeteor], blink: [[56, 57, 58, 59], glyphBlink], chain: [[37, 38, 39, 40], glyphChain] };
+const SPELL_LOOK = { multi: [[33, 34, 35, 36], (x, y) => glyphMulti(x, y)], trap: [[28, 29, 30, 31], (x, y) => glyphTrap(x, y)], roll: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)], mark: [[19, 20, 21, 22], (x, y) => glyphMark(x, y)], slam: [[13, 14, 15, 16], glyphSlam], hook: [[28, 29, 30, 31], glyphHook], whirl: [[19, 20, 21, 22], glyphWhirl], leap: [[48, 49, 50, 51], glyphLeap], fireball: [[13, 14, 15, 16], glyphFire], cone: [[114, 115, 116, 117], glyphCone], meteor: [[19, 20, 21, 22], glyphMeteor], blink: [[56, 57, 58, 59], glyphBlink], chain: [[37, 38, 39, 40], glyphChain], pierce: [[48, 49, 50, 51], glyphPierce], cluster: [[13, 14, 15, 16], glyphCluster], sentry: [[33, 34, 35, 36], glyphSentry], hawk: [[28, 29, 30, 31], glyphHawk] };
 const glyphBolt = (cx, cy) => { for (let a = 0; a < 8; a++) { const t = a * Math.PI / 4; line(cx, cy, cx + Math.cos(t) * 7, cy + Math.sin(t) * 7, a % 2 ? 50 : 51); } put(cx, cy, 27); };
 const glyphBag = (cx, cy) => { fillRect(cx - 5, cy - 3, 11, 9, 35); frame(cx - 5, cy - 3, 11, 9, 36, 33); line(cx - 3, cy - 3, cx - 1, cy - 6, 36); line(cx + 3, cy - 3, cx + 1, cy - 6, 36); fillRect(cx - 1, cy, 3, 2, 50); };
 const glyphSound = (cx, cy) => {
@@ -246,7 +251,12 @@ function drawHud() {
   drawButton(UI.potion, [19, 20, 21, 22], false, (cx, cy) => { sprite(itemIcon({ base: 'heal' }), cx, cy + 4, 1, 4); });
   text(`${hero.potions}`, UI.potion[0] + 9, UI.potion[1] + 4, 27);
   if (hero.cls === 'mage') drawButton(UI.attack, [37, 38, 39, 40], !!press.attack, glyphMissile);   // magic missiles
-  else if (hero.cls === 'ranger') drawButton(UI.attack, [33, 34, 35, 36], !!press.attack, (x, y) => glyphBowAtk(x, y));   // arrows
+  else if (hero.cls === 'ranger') {
+    drawButton(UI.attack, [33, 34, 35, 36], !!press.attack, (x, y) => glyphBowAtk(x, y));   // arrows
+    // round 66: the combo points, three diamonds over the attack button (the newest one flashes)
+    const [ax, ay, ar] = UI.attack, n = hero.pips || 0, fresh = G.t - (hero.pipT || 0) < 0.25;
+    for (let k = 0; k < 3; k++) { const cx = ax - 12 + k * 12, cy = ay - ar - 9, on = k < n; for (let b = -4; b <= 4; b++) for (let a = -4; a <= 4; a++) { const d = Math.abs(a) + Math.abs(b); if (d > 4) continue; put(cx + a, cy + b, d === 4 ? BLK : !on ? 3 : fresh && k === n - 1 ? 27 : d < 2 ? 51 : n >= 3 ? 50 : 49); } }
+  }
   else drawButton(UI.attack, [28, 29, 30, 31], !!press.attack, glyphSword);
   drawActionButton();   // round 43b: talk, trade, free, unlock
   drawStoryMark();
@@ -928,6 +938,22 @@ const SKILL_TEXT = {
   'leap/burn': 'THE LANDING LEAVES FIRE ON THE FLOOR.',
   'leap/quake': 'A MUCH WIDER LANDING THAT KNOCKS EVERY FOE NEAR IT DOWN.',
   'leap/pounce': 'A LONGER JUMP THAT ENDS IN ONE HUGE BLOW ON THE TARGET.',
+  pierce: 'SPENDS YOUR COMBO POINTS ON ONE HEAVY BOLT THROUGH EVERY FOE IN A LINE. EACH POINT MAKES IT FAR STRONGER: AT THREE, A BALLISTA BOLT.',
+  'pierce/fire': 'SETS EVERYTHING IT GOES THROUGH ALIGHT.',
+  'pierce/frost': 'CHILLS WHAT IT HITS. WITH THREE COMBO POINTS IT FREEZES THEM, READY TO SHATTER.',
+  'pierce/twin': 'TWO BOLTS SIDE BY SIDE, EACH A LITTLE WEAKER. A WIDER LINE.',
+  cluster: 'A LOBBED ARROW THAT BURSTS AND THROWS OUT BOMBLETS. SPENDS COMBO POINTS: TWO MORE BOMBLETS EACH.',
+  'cluster/fire': 'EVERY BLAST LEAVES THE GROUND BURNING.',
+  'cluster/frost': 'THE BOMBLETS FREEZE WHAT THEY HIT.',
+  'cluster/big': 'NO BOMBLETS: ONE HUGE BLAST INSTEAD.',
+  sentry: 'PLANTS A CROSSBOW THAT SHOOTS THE NEAREST FOE ON ITS OWN FOR 12 SECONDS. UP TO TWO AT ONCE.',
+  'sentry/ballista': 'SLOWER, HEAVY BOLTS THAT GO THROUGH EVERYTHING IN A LINE.',
+  'sentry/fire': 'BURNING BOLTS.',
+  'sentry/twin': 'PLANTS TWO AT ONCE, EACH A LITTLE SLOWER.',
+  hawk: 'A HAWK CIRCLES YOU FOR 30 SECONDS AND DIVES AT WHAT YOU SHOOT. EACH DIVE MARKS IT: 25% MORE DAMAGE FROM EVERYTHING.',
+  'hawk/pair': 'TWO HAWKS.',
+  'hawk/talons': 'EACH DIVE HITS TWICE AS HARD.',
+  'hawk/screech': 'EACH DIVE STUNS FOR A MOMENT.',
   multi: 'A FAN OF ARROWS IN FRONT OF YOU. GOOD AGAINST A PACK.',
   'multi/wide': 'NINE ARROWS IN A WIDE FAN, EACH A LITTLE WEAKER.',
   'multi/pierce': 'THE ARROWS GO THROUGH EVERY FOE IN THEIR LINE.',

@@ -15,6 +15,7 @@ const PV_PLAN = {
   fireball: { len: 2.4 }, cone: { len: 2.6 }, meteor: { len: 3.0 },
   // Blink: away from dummies at its elbow (Frost Step freezes them as it goes); Arcane Burst blinks into them
   chain: { len: 2.4 },   // round 65
+  pierce: { len: 2.2 }, cluster: { len: 2.8 }, sentry: { len: 3.4 }, hawk: { len: 3.6, attack: 0.4 },   // round 66
   blink: { len: 2.4, near: 0.6, away: true, again: 'double', mods: { burst: { near: 0, far: 2, away: false } } },
   slam: { len: 2.4 }, hook: { len: 2.6, far: 1.5 }, whirl: { len: 3.0, near: 0.55 }, leap: { len: 2.6, far: 1.5 },
   multi: { len: 2.4 }, trap: { len: 3.0, walk: true }, roll: { len: 2.6, near: 0.7 }, mark: { len: 3.0, attack: 1.4 },

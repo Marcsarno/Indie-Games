@@ -18,16 +18,16 @@ const SKILLSETS = {
     { id: 'chain', name: 'CHAIN LIGHTNING', lvl: 4, mana: 14, cd: 2.5 },   // round 65: replaces Blink
   ],
   // round 33: the ranger's attack button looses single arrows (no focus); these are its four
-  ranger: [
-    { id: 'multi', name: 'MULTISHOT', lvl: 1, mana: 8, cd: 1.2 },
-    { id: 'trap', name: 'SNARE TRAP', lvl: 2, mana: 10, cd: 4 },
-    { id: 'roll', name: 'EVASIVE LEAP', lvl: 3, mana: 6, cd: 3 },
-    { id: 'mark', name: "HUNTER'S MARK", lvl: 4, mana: 12, cd: 8 },
+  ranger: [   // round 66: the kit rethought (the user: boring; every skill lost damage against just shooting)
+    { id: 'pierce', name: 'PIERCING SHOT', lvl: 1, mana: 7, cd: 0.9 },
+    { id: 'cluster', name: 'CLUSTER ARROW', lvl: 2, mana: 12, cd: 2.5 },
+    { id: 'sentry', name: 'SENTRY', lvl: 3, mana: 14, cd: 8 },
+    { id: 'hawk', name: 'HAWK', lvl: 4, mana: 12, cd: 20 },
   ],
 };
 let SKILLS = SKILLSETS.warrior;
 function setSkillsFor(cls) { SKILLS = SKILLSETS[cls] || SKILLSETS.warrior; }
-const CD = { bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, leap: 0, fireball: 0, cone: 0, meteor: 0, blink: 0, chain: 0, multi: 0, trap: 0, roll: 0, mark: 0 };
+const CD = { bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, leap: 0, fireball: 0, cone: 0, meteor: 0, blink: 0, chain: 0, multi: 0, trap: 0, roll: 0, mark: 0, pierce: 0, cluster: 0, sentry: 0, hawk: 0 };
 function resetSkills() { for (const k in CD) CD[k] = 0; hero.whirl = 0; hero.dash = 0; hero.buff = 0; }
 const heroBusy = () => hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0 || !!hero.leap || !!hero.ultOn || !!hero.roll;
 // one hit's damage, with the war cry bonus
@@ -58,6 +58,10 @@ function useSkill(i) {
   if (s.id === 'blink') blink();
   if (s.id === 'chain') { if (!chainLightning()) { hero.mana += skillCost(s); CD.chain = 0; } }
   if (s.id === 'meteor') castMeteor();
+  if (s.id === 'pierce') { if (!piercingShot()) { hero.mana += skillCost(s); CD.pierce = 0; } }
+  if (s.id === 'cluster') { if (!clusterArrow()) { hero.mana += skillCost(s); CD.cluster = 0; } }
+  if (s.id === 'sentry') placeSentry();
+  if (s.id === 'hawk') callHawk();
   if (s.id === 'multi') multishot();
   if (s.id === 'trap') { if (!throwTrap()) { hero.mana += skillCost(s); CD.trap = 0; } }
   if (s.id === 'roll') { if (!startRoll()) { hero.mana += skillCost(s); CD.roll = 0; } }
@@ -207,6 +211,26 @@ const SKILL_MODS = {
     { id: 'shower', name: 'SHOWER', desc: 'THREE SMALLER METEORS AROUND THE TARGET' },
     { id: 'molten', name: 'MOLTEN CRATER', desc: 'THE CRATER BURNS FOR 4 SECONDS' },
     { id: 'comet', name: 'COMET', desc: 'A BALL OF ICE: FREEZES INSTEAD OF BURNING' },
+  ],
+  pierce: [   // round 66
+    { id: 'fire', name: 'FLAMING BOLT', desc: 'SETS EVERYTHING IT GOES THROUGH ALIGHT' },
+    { id: 'frost', name: 'FROST BOLT', desc: 'CHILLS; WITH THREE COMBO POINTS IT FREEZES' },
+    { id: 'twin', name: 'TWIN BOLTS', desc: 'TWO BOLTS SIDE BY SIDE, EACH A LITTLE WEAKER' },
+  ],
+  cluster: [
+    { id: 'fire', name: 'NAPALM', desc: 'THE BLASTS LEAVE THE GROUND BURNING' },
+    { id: 'frost', name: 'FROST CLUSTER', desc: 'THE BOMBLETS FREEZE WHAT THEY HIT' },
+    { id: 'big', name: 'BIG BANG', desc: 'NO BOMBLETS: ONE HUGE BLAST' },
+  ],
+  sentry: [
+    { id: 'ballista', name: 'BALLISTA', desc: 'SLOWER, HEAVY BOLTS THAT GO THROUGH' },
+    { id: 'fire', name: 'FIRE SENTRY', desc: 'BURNING BOLTS' },
+    { id: 'twin', name: 'TWO SENTRIES', desc: 'PLANTS A PAIR, EACH A LITTLE SLOWER' },
+  ],
+  hawk: [
+    { id: 'pair', name: 'MATED PAIR', desc: 'TWO HAWKS' },
+    { id: 'talons', name: 'IRON TALONS', desc: 'DIVES HIT TWICE AS HARD' },
+    { id: 'screech', name: 'SCREECH', desc: 'EACH DIVE STUNS FOR A MOMENT' },
   ],
   multi: [
     { id: 'wide', name: 'VOLLEY', desc: 'NINE ARROWS IN A WIDE FAN, EACH A LITTLE WEAKER' },
@@ -1189,7 +1213,7 @@ function drawStreaks() {   // the blink's streak: a white core in an arcane band
   }
 }
 function drawImpactFlashes() {
-  drawSlamFx(); drawFrostFx(); drawLightning();   // round 65
+  drawSlamFx(); drawFrostFx(); drawLightning(); drawRangerKit();   // round 65, 66
   drawStreaks(); drawHookChains(); drawMods30(); drawStrikes(); drawRangerFx(); drawDebris();
   for (const f of G.impacts) {
     const [x, y] = iso(f.fi, f.fj), X0 = Math.round(x * SPX - cam2x), Y0 = Math.round((y - f.z) * SPX - cam2y), p = 1 - f.t / f.t0, R = f.size * (0.6 + p * 0.6);
@@ -1803,8 +1827,181 @@ function aimAngle(t) {
 function looseArrow() {
   const t = hero.shotAt && alive(hero.shotAt) ? hero.shotAt : rangerTarget();
   if (t) hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
-  shootArrow(aimAngle(t), { dmgK: 1.05 });
+  shootArrow(aimAngle(t), { dmgK: 1.05, basic: true });   // (round 66: a basic shot that hits fills a combo point)
   sfx('twang');
+}
+// ---------------------------------------------------------------- the ranger's kit (round 66)
+// Diablo 4's rogue: the basic shot builds COMBO POINTS (hero.pips, up to 3, one per basic arrow that
+// hits); Piercing Shot and Cluster Arrow spend them all and grow with each. Sentry and Hawk are pets
+// whose damage is all extra. Every skill out-damages the basic shot over the time it takes (checked
+// in tools/playtests/ranger66).
+const spendPips = () => { const n = hero.pips || 0; hero.pips = 0; return n; };
+const rangerRelease = () => { hero.combo = 0; hero.atk = 70; hero.hitDone = true; hero.approach = null; };
+// Piercing Shot: one heavy bolt through every foe in a line, knocking them back. 1.6 x the staff
+// damage at no combo points, +1.9 a point (at three: a ballista bolt, 7.3 x, that tears the floor along its way)
+function piercingShot() {
+  const mod = skillMod('pierce'), t = rangerTarget(), a0 = aimAngle(t), n = spendPips(), k = (1.6 + n * 1.9) * (mod === 'twin' ? 0.7 : 1);
+  if (t) hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
+  const frozen = mod === 'frost' && n >= 3;
+  const onHit = (e, p) => {
+    if (!alive(e)) return;
+    if (mod === 'frost') { if (frozen) freezeFoe(e, 2.2); else e.slowT = Math.max(e.slowT || 0, 2.5); }
+    const [x, y] = screenOf(e); for (let q = 0; q < 8 + n * 3; q++) { const a = Math.atan2(p.vy, p.vx) + (Math.random() - 0.5) * 1.2; pspawn(2, x, y, e.def.chest * 0.6, (Math.cos(a) - Math.sin(a)) * 70, (Math.cos(a) + Math.sin(a)) * 35, Math.random() * 30, 0.18, q % 2 ? 51 : 27); }
+  };
+  const off = mod === 'twin' ? [-0.28, 0.28] : [0];
+  for (const o of off) {
+    const [ox, oy] = bowTip(), px = -Math.sin(a0) * o, py = Math.cos(a0) * o, sp = 19;
+    projectiles.push({ kind: 'arrow', fi: ox + px, fj: oy + py, vx: Math.cos(a0) * sp, vy: Math.sin(a0) * sp, z: 20, life: 11 / sp, owner: 'hero', spell: true, dmgK: k, age: 0, elem: mod === 'fire' ? 'fire' : mod === 'frost' ? 'cold' : n >= 3 ? 'heavy' : null, pierce: true, hits: new Set(), pow: n >= 2 ? 2 : 1, bolt: 1 + n, fire: mod === 'fire', frost: mod === 'frost', onHit });
+  }
+  rangerRelease(); hero.volleyT = 0.3; impactFlash(...bowTip(), 20, 4 + n);
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.08 + n * 0.08); if (HEAVY) camKick(-Math.cos(a0), -Math.sin(a0), 1 + n);   // (the bow kicks back)
+  sfx('twang'); sfx('heavySwing'); if (n >= 3) sfx('boom');
+  return true;
+}
+// Cluster Arrow: lobbed to the target (or the ground ahead); bursts (1.6 tiles, 2.4 x) and throws out
+// three bomblets, two more per combo point, that bounce once and pop (1 tile, 1.1 x each)
+function clusterArrow() {
+  const mod = skillMod('cluster'), t = rangerTarget(8), n = spendPips();
+  const [fx, fy] = dirVec(hero.dir), at = t ? [t.fi, t.fj] : [hero.fi + fx * 4, hero.fj + fy * 4];
+  if (t) hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
+  const [ox, oy] = bowTip(), d = Math.hypot(at[0] - ox, at[1] - oy);
+  if (!G.clusters) G.clusters = [];
+  G.clusters.push({ a: [ox, oy], b: at, t: 0, dur: 0.3 + d * 0.035, h: 30 + d * 4, n: mod === 'big' ? 0 : 3 + n * 2, mod, pips: n });
+  rangerRelease(); hero.tossT = 0.34; sfx('twang');
+  return true;
+}
+function clusterBurst(C) {
+  const [fi, fj] = C.b, cold = C.mod === 'frost', big = C.mod === 'big';
+  explodeAt(fi, fj, big ? 2.6 : 1.6, big ? 4.2 + C.pips * 0.8 : 2.4, 1, big, false);
+  if (C.mod === 'fire') G.fireGround.push({ fi, fj, r: 1.6, t: 3, tick: 0.3 });
+  stampCrater(fi, fj, big ? 1.1 : 0.7);
+  if (!G.bomblets) G.bomblets = [];
+  for (let k = 0; k < C.n; k++) { const a = k / C.n * 6.283 + Math.random() * 0.5, s = 2.6 + Math.random() * 1.6; G.bomblets.push({ fi, fj, vi: Math.cos(a) * s, vj: Math.sin(a) * s, z: 6, vz: 70 + Math.random() * 40, bounce: 1, fuse: 0.45 + Math.random() * 0.3, cold, fire: C.mod === 'fire' }); }
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + (big ? 0.4 : 0.22));
+}
+function updateClusters(dt) {
+  if (G.clusters) { for (const C of G.clusters) { C.t += dt; if (C.t >= C.dur && !C.done) { C.done = true; clusterBurst(C); } else if (!C.done && Math.random() < 0.8) { const u = C.t / C.dur, [x, y] = iso(C.a[0] + (C.b[0] - C.a[0]) * u, C.a[1] + (C.b[1] - C.a[1]) * u); pspawn(3, x, y, 20 + Math.sin(u * Math.PI) * C.h, 0, 0, 4, 0.3, Math.random() < 0.5 ? 17 : 4); } } G.clusters = G.clusters.filter(C => !C.done); }
+  if (G.bomblets) {
+    for (const b of G.bomblets) {
+      b.fuse -= dt; b.vz -= 420 * dt; b.z += b.vz * dt;
+      const ni = b.fi + b.vi * dt, nj = b.fj + b.vj * dt; if (!blocked(ni, nj)) { b.fi = ni; b.fj = nj; } else { b.vi *= -0.5; b.vj *= -0.5; }
+      if (b.z <= 0) { b.z = 0; if (b.bounce-- > 0) { b.vz = 45; b.vi *= 0.6; b.vj *= 0.6; } else { b.vz = 0; b.vi = b.vj = 0; } }
+      if (b.fuse <= 0 && !b.done) { b.done = true; explodeAt(b.fi, b.fj, 1.0, 1.1, 0, false, b.cold); if (b.fire) G.fireGround.push({ fi: b.fi, fj: b.fj, r: 0.9, t: 2.5, tick: 0.3 }); sfx('boom', 0.5); }
+    }
+    G.bomblets = G.bomblets.filter(b => !b.done);
+  }
+}
+// Sentry: a crossbow on a tripod, planted in front of you for 12 s; it shoots the nearest foe it can
+// see (8 tiles) every 0.5 s (0.65 x). Ballista: every 1.1 s, heavy bolts through (1.6 x). Two
+// Sentries: a pair, each every 0.65 s. Up to two out at once (the oldest goes).
+function placeSentry() {
+  const mod = skillMod('sentry'), [fx, fy] = dirVec(hero.dir);
+  if (!G.sentries) G.sentries = [];
+  const spots = mod === 'twin' ? [[-fy * 1.2 + fx * 0.8, fx * 1.2 + fy * 0.8], [fy * 1.2 + fx * 0.8, -fx * 1.2 + fy * 0.8]] : [[fx * 1.1, fy * 1.1]];
+  for (const [dx, dy] of spots) {
+    let p = [hero.fi + dx, hero.fj + dy]; if (blocked(p[0], p[1])) p = [hero.fi, hero.fj];
+    G.sentries.push({ fi: p[0], fj: p[1], t: 12, t0: 12, next: 0.4, mod, ang: Math.atan2(fy, fx), rise: 0, kick: 0 });
+    const [x, y] = iso(p[0], p[1]); for (let q = 0; q < 10; q++) { const a = q / 10 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 35, Math.sin(a) * 18, 10, 1, LV.outdoor ? DIRT[3] : S[5]); }
+  }
+  while (G.sentries.length > (mod === 'twin' ? 2 : 2)) G.sentries.shift();
+  rangerRelease(); hero.tossT = 0.34; sfx('clank'); sfx('chest');
+}
+function updateSentries(dt) {
+  if (!G.sentries) return;
+  for (const s of G.sentries) {
+    s.t -= dt; s.rise = Math.min(1, s.rise + dt * 5); s.kick = Math.max(0, s.kick - dt * 6); s.next -= dt;
+    let best = null, bd = 8;
+    for (const e of enemies) { if (!alive(e) || LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] < 0.3) continue; const d = Math.hypot(e.fi - s.fi, e.fj - s.fj); if (d < bd && los(s.fi, s.fj, e.fi, e.fj)) { bd = d; best = e; } }
+    if (!best) continue;
+    const want = Math.atan2(best.fj - s.fj, best.fi - s.fi); let da = Math.atan2(Math.sin(want - s.ang), Math.cos(want - s.ang)); s.ang += Math.sign(da) * Math.min(Math.abs(da), dt * 9);
+    if (s.next <= 0 && Math.abs(da) < 0.3) {
+      const heavy = s.mod === 'ballista', sp = heavy ? 17 : 14;
+      s.next = heavy ? 1.1 : s.mod === 'twin' ? 0.65 : 0.5; s.kick = 1;
+      projectiles.push({ kind: 'arrow', fi: s.fi + Math.cos(s.ang) * 0.35, fj: s.fj + Math.sin(s.ang) * 0.35, vx: Math.cos(s.ang) * sp, vy: Math.sin(s.ang) * sp, z: 16, life: 9 / sp, owner: 'hero', spell: true, dmgK: heavy ? 1.6 : 0.65, age: 0, elem: s.mod === 'fire' ? 'fire' : null, fire: s.mod === 'fire', pierce: heavy, hits: heavy ? new Set() : null, bolt: heavy ? 2 : 0 });
+      sfx('twang', 0.5);
+    }
+  }
+  G.sentries = G.sentries.filter(s => s.t > 0);
+}
+// Hawk: circles you for 30 s and dives at whatever you last shot (or the nearest foe in 7 tiles) every
+// 1.4 s: 1.0 x, and the foe is MARKED for 4 s (25% more damage from everything; the red reticle).
+// Mated Pair: two. Iron Talons: x2. Screech: each dive stuns 0.6 s.
+function callHawk() {
+  const mod = skillMod('hawk');
+  hero.hawks = [];
+  for (let k = 0; k < (mod === 'pair' ? 2 : 1); k++) hero.hawks.push({ t: 30, ang: k * Math.PI, next: 0.6 + k * 0.7, dive: null, fi: hero.fi, fj: hero.fj, z: 46, mod, flap: Math.random() * 6 });
+  sfx('cry'); sfx('swing');
+  rangerRelease(); hero.tossT = 0.3;
+}
+function updateHawks(dt) {
+  if (!hero.hawks || !hero.hawks.length) return;
+  for (const h of hero.hawks) {
+    h.t -= dt; h.flap += dt * (h.dive ? 30 : 14); h.next -= dt;
+    if (h.dive) {
+      const D = h.dive, e = D.e; D.u += dt / (D.back ? 0.35 : 0.22);
+      if (!D.back) {
+        const tz = e.def.chest * 0.7; h.fi = D.from[0] + (e.fi - D.from[0]) * D.u; h.fj = D.from[1] + (e.fj - D.from[1]) * D.u; h.z = D.from[2] + (tz - D.from[2]) * D.u * D.u;
+        if (D.u >= 1) {
+          if (alive(e)) {
+            const c = spellCrit(); G.pierce = true; damageEnemy(e, spellDmg((c ? 2 : 1) * (h.mod === 'talons' ? 2 : 1)), h.fi - 0.3, h.fj - 0.3, c, 0, true); G.pierce = false;
+            if (alive(e)) { e.markT = Math.max(e.markT || 0, 4); e.markK = 1.25; if (h.mod === 'screech' && !e.def.unique) e.stun = Math.max(e.stun || 0, 0.6); }
+            const [x, y] = screenOf(e); for (let q = 0; q < 8; q++) { const a = Math.random() * 6.283; pspawn(4, x, y, tz, Math.cos(a) * 50, Math.sin(a) * 25, 20, 0.2, q % 2 ? 26 : 23); }
+            impactFlash(e.fi, e.fj, tz, 4); sfx('thunk'); if (h.mod === 'screech') sfx('cry', 0.4);
+          }
+          D.back = true; D.u = 0; D.from = [h.fi, h.fj, h.z];
+        }
+      } else {
+        const ox = hero.fi + Math.cos(h.ang) * 1.5, oy = hero.fj + Math.sin(h.ang) * 1.5; h.fi = D.from[0] + (ox - D.from[0]) * D.u; h.fj = D.from[1] + (oy - D.from[1]) * D.u; h.z = D.from[2] + (46 - D.from[2]) * Math.sqrt(Math.min(1, D.u));
+        if (D.u >= 1) h.dive = null;
+      }
+      continue;
+    }
+    h.ang += dt * 1.8; const tx = hero.fi + Math.cos(h.ang) * 1.5, ty = hero.fj + Math.sin(h.ang) * 1.5; h.fi += (tx - h.fi) * Math.min(1, dt * 6); h.fj += (ty - h.fj) * Math.min(1, dt * 6); h.z += (46 + Math.sin(G.t * 2 + h.ang) * 4 - h.z) * Math.min(1, dt * 4);
+    if (h.next <= 0) {
+      const t = hero.shotAt && alive(hero.shotAt) && Math.hypot(hero.shotAt.fi - hero.fi, hero.shotAt.fj - hero.fj) < 9 ? hero.shotAt : nearestEnemy(7, true);
+      if (t) { h.dive = { e: t, u: 0, from: [h.fi, h.fj, h.z] }; h.next = 1.4; sfx('swing', 0.5); } else h.next = 0.3;
+    }
+  }
+  hero.hawks = hero.hawks.filter(h => h.t > 0);
+}
+function updateRangerKit(dt) {
+  updateClusters(dt); updateSentries(dt); updateHawks(dt);
+  for (const p of projectiles) if (p.bolt >= 4 && p.life > 0 && Math.random() < 0.8 && G.dust) {   // the ballista bolt tears up the floor as it goes
+    G.dust.push({ fi: p.fi, fj: p.fj, vi: -p.vx * 0.05 + (Math.random() - 0.5), vj: -p.vy * 0.05 + (Math.random() - 0.5), r: 3, vr: 14, t: 0.6, t0: 0.6, z: 1 });
+    if (Math.random() < 0.3) { const [x, y] = iso(p.fi, p.fj); rubble(x, y, 2, 40); }
+  }
+}
+// detail layer: the lobbed cluster arrow, the bomblets, the sentries, the hawks
+function drawRangerKit() {
+  const P = (fi, fj, z) => { const [x, y] = iso(fi, fj); return [Math.round(x * SPX - cam2x), Math.round((y - z) * SPX - cam2y)]; };
+  const lit = (X, Y, v) => { if (X < 0 || Y < 0 || X >= OW || Y >= OH) return; const c = envCol((X + hx) >> 1, (Y + hy) >> 1, v, -2); ov32[Y * OW + X] = c || PAL32[v]; };
+  if (G.clusters) for (const C of G.clusters) {   // a fat arrow with a glowing bundle on its head, arcing
+    const u = Math.min(1, C.t / C.dur), fi = C.a[0] + (C.b[0] - C.a[0]) * u, fj = C.a[1] + (C.b[1] - C.a[1]) * u, z = 20 + Math.sin(u * Math.PI) * C.h;
+    const [X, Y] = P(fi, fj, z); for (let b = -3; b <= 3; b++) for (let a = -3; a <= 3; a++) if (a * a + b * b <= 9) ovSet(X + a, Y + b, a * a + b * b <= 2 ? 27 : (Math.floor(G.t * 20) % 2 ? 17 : 16));
+    const [X2, Y2] = P(fi - (C.b[0] - C.a[0]) * 0.05, fj - (C.b[1] - C.a[1]) * 0.05, z - Math.cos(u * Math.PI) * C.h * 0.1); for (let s = 0; s <= 10; s++) ovSet(Math.round(X + (X2 - X) * s / 10 * 2), Math.round(Y + (Y2 - Y) * s / 10 * 2), s > 7 ? 27 : WOOD[3]);
+  }
+  if (G.bomblets) for (const b of G.bomblets) { const [X, Y] = P(b.fi, b.fj, b.z + 3), blink = Math.floor(G.t * (b.fuse < 0.2 ? 30 : 12)) % 2; for (let q = -2; q <= 2; q++) for (let r = -2; r <= 2; r++) if (q * q + r * r <= 5) ovSet(X + q, Y + r, Math.abs(q) + Math.abs(r) > 2 ? BLK : blink ? (b.cold ? 118 : 17) : (b.cold ? 116 : 15)); }
+  if (G.sentries) for (const s of G.sentries) {   // a tripod, a crossbow on top that turns and kicks when it shoots
+    const [X, Y] = P(s.fi, s.fj, 0), h = Math.round(40 * s.rise), fade = s.t < 0.6 && Math.floor(G.t * 20) % 2;   // (sizes in detail pixels: twice a game pixel)
+    if (fade) continue;
+    for (const [lx, ly] of [[-16, 6], [16, 6], [0, 12]]) for (let k = 0; k <= h; k++) { const u = k / (h || 1), x = Math.round(X + lx * (1 - u)), y = Math.round(Y + ly * (1 - u) - k); lit(x - 1, y, BLK); lit(x, y, WOOD[k % 6 === 0 ? 1 : 3]); lit(x + 1, y, WOOD[2]); lit(x + 2, y, BLK); }
+    for (let a = -6; a <= 6; a++) for (let b = -3; b <= 3; b++) if (a * a / 36 + b * b / 9 <= 1) lit(X + a, Y - h + b, b < 0 ? STEEL[3] : STEEL[1]);   // the swivel
+    const cx = X, cy = Y - h - 2, ux = Math.cos(s.ang) - Math.sin(s.ang), uy = (Math.cos(s.ang) + Math.sin(s.ang)) * 0.5, ul = Math.hypot(ux, uy) || 1, dx = ux / ul, dy = uy / ul, kb = s.kick * 5;
+    for (let k = -18; k <= 22; k++) { const x = Math.round(cx + dx * (k - kb)), y = Math.round(cy + dy * (k - kb)); lit(x, y - 2, BLK); lit(x, y - 1, k > 17 ? STEEL[4] : WOOD[4]); lit(x, y, k > 17 ? STEEL[3] : WOOD[3]); lit(x, y + 1, WOOD[1]); lit(x, y + 2, BLK); }   // the stock
+    for (let k = -16; k <= 16; k++) { const x = Math.round(cx + dx * (14 - kb) - dy * k), y = Math.round(cy + dy * (14 - kb) + dx * k * 0.5 + Math.abs(k) * 0.35); lit(x, y - 1, BLK); lit(x, y, STEEL[4]); lit(x, y + 1, STEEL[2]); lit(x, y + 2, BLK); }   // the prod (the bow arms)
+    for (const sd of [-16, 16]) { const x0 = Math.round(cx + dx * (14 - kb) - dy * sd), y0 = Math.round(cy + dy * (14 - kb) + dx * sd * 0.5 + Math.abs(sd) * 0.35); const x1 = Math.round(cx + dx * (-4 - kb + s.kick * 8)), y1 = Math.round(cy + dy * (-4 - kb + s.kick * 8)); for (let q = 0; q <= 16; q++) lit(Math.round(x0 + (x1 - x0) * q / 16), Math.round(y0 + (y1 - y0) * q / 16), BONE[2]); }   // the string
+    if (s.mod === 'fire') for (let q = 0; q < 3; q++) ovSet(Math.round(cx + dx * 24 + (Math.random() - 0.5) * 4), Math.round(cy + dy * 24 - Math.random() * 6), Math.floor(G.t * 15 + q) % 2 ? 17 : 16);
+    { const life = s.t / s.t0; for (let k = 0; k < 20; k++) { if (k / 20 > life) break; ovSet(X - 10 + k, Y + 16, 54); } }   // how long it has left
+  }
+  if (hero.hawks) for (const h of hero.hawks) {   // a hawk: brown body, pale belly, wings beating (tucked in a dive)
+    const [X, Y] = P(h.fi, h.fj, h.z), w = h.dive && !h.dive.back ? 0.2 : Math.sin(h.flap), span = 22, dir = h.dive ? Math.sign(h.dive.e.fi - h.dive.e.fj - (h.fi - h.fj)) || 1 : (Math.cos(h.ang + 1.57) - Math.sin(h.ang + 1.57) > 0 ? 1 : -1);
+    for (let k = -span; k <= span; k++) { const u = Math.abs(k) / span, y = Math.round(Y - w * u * 13 + u * u * 4); for (let t = -1; t <= 2; t++) ovSet(X + k, y + t, t === -1 || t === 2 ? BLK : u > 0.72 ? (t ? WOOD[0] : WOOD[1]) : (t ? WOOD[1] : WOOD[3])); if (u > 0.7 && (k & 3) === 0) ovSet(X + k, y + 3, WOOD[0]); }   // the wings, feather tips at the ends
+    for (let b = -5; b <= 5; b++) for (let a = -9; a <= 9; a++) { const q = (a / 9) ** 2 + (b / 4.5) ** 2; if (q <= 1) ovSet(X + a, Y + b, q > 0.75 ? BLK : b > 1 ? BONE[2] : b > -1 ? BONE[1] : WOOD[3]); }   // the body, pale belly
+    for (let b = -3; b <= 3; b++) for (let a = -3; a <= 3; a++) if (a * a + b * b <= 9) ovSet(X + dir * 10 + a, Y - 3 + b, a * a + b * b > 6 ? BLK : WOOD[3]);   // the head
+    for (const [a, b, c] of [[13, -3, 51], [14, -2, 51], [13, -2, 50], [11, -4, BLK], [9, -4, 27]]) ovSet(X + dir * a, Y + b, c);   // beak and eye
+    for (let t = -4; t <= 4; t++) for (let l = 0; l < 6; l++) ovSet(X - dir * (9 + l), Y + t * 0.6 + 1, Math.abs(t) === 4 ? BLK : WOOD[l % 2 ? 1 : 2]);   // the tail fan
+    if (!h.dive) { const [sx, sy] = P(h.fi, h.fj, 0); for (let a = -6; a <= 6; a++) if (((a + sx) & 1) === 0) ovSet(sx + a * 2, sy, BLK); }   // its shadow far below
+  }
 }
 // an arrow biting: a spark of splinters, a thunk, a small push
 function arrowBite(p, e) {

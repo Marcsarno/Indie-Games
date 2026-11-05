@@ -18,7 +18,7 @@ const { chromium } = require('playwright'); const fs = require('fs'), path = req
       const sk = enemies.filter(e => e.id === 'skeleton' || e.fam === 'skeleton').slice(0, 5); enemies = sk;
       // the line: in front of the hero (facing +i +j = down-right on screen), 2.2 to 4 tiles off
       [[2.2, -1.4], [2.8, -2.6], [3.6, -1.2], [1.4, -2.6], [4.0, -2.8]].forEach(([a, c], k) => { const e = sk[k]; if (!e) return; e.fi = hero.fi + a; e.fj = hero.fj + c; e.state = 'idle'; e.cool = 99; e.hp = e.maxHp = 99999; e.atk = -1; });
-      hero.dir = dirFrom(1, -1); hero.mana = 999; for (const k in CD) CD[k] = 0;
+      hero.dir = dirFrom(1, -1); hero.mana = 999; for (const k in CD) CD[k] = 0; hero.pips = 3;   // (the ranger's spenders at full combo points)
       for (let s = 0; s < 60; s++) warmStep(40);
       G.t = 5; updateFov(hero.fi, hero.fj); computeFlow();
       const out = []; const dt = 1 / 30;

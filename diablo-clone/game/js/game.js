@@ -73,7 +73,7 @@ function say(text, col = 26, t = 2.5) { G.msg.push({ text, col, t }); if (G.msg.
 // everything a fight leaves in the air: missiles, effects, particles, floaters (the skill preview
 // clears it between loops too)
 function resetFx() {
-  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.bolts = []; G.spikes = []; G.dust = []; G.mist = []; G.needles = []; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; G.debris = []; G.eliteFire = []; G.frostOrbs = []; G.summons = []; G.eliteBursts = []; G.blinkFx = []; G.leech = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
+  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.bolts = []; G.spikes = []; G.dust = []; G.mist = []; G.needles = []; G.clusters = []; G.bomblets = []; G.sentries = []; hero.hawks = []; hero.pips = 0; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; G.debris = []; G.eliteFire = []; G.frostOrbs = []; G.summons = []; G.eliteBursts = []; G.blinkFx = []; G.leech = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
 }
 function startLevel(level, seed, side = null) {
   genLevel(level, seed, side);
@@ -669,7 +669,7 @@ function update(dt) {
   for (const g of groundItems) if (g.item && g.item.rarity === 'legend' && !g.announced) { g.announced = true; say('A LEGENDARY ITEM HAS FALLEN', 112, 3); sfx('levelUp'); }   // never miss one
   if (hero.frenzy > 0) hero.frenzy -= dt; if (hero.stoneskin > 0) hero.stoneskin -= dt;
   separate();
-  updateProjectiles(dt); updateMeteors(dt); updateLichFx(dt); updateWarriorFx(dt); updateImpactFx(dt); updateLightning(dt); updateSlamFx(dt); updateFrostFx(dt); updateSlamMods(dt); updateFireGround(dt); updateMods30(dt); updateUlt(dt); updateDebris(dt); updateEliteFx(dt);
+  updateProjectiles(dt); updateMeteors(dt); updateLichFx(dt); updateWarriorFx(dt); updateImpactFx(dt); updateLightning(dt); updateSlamFx(dt); updateFrostFx(dt); updateRangerKit(dt); updateSlamMods(dt); updateFireGround(dt); updateMods30(dt); updateUlt(dt); updateDebris(dt); updateEliteFx(dt);
   updateParticles(dt);
   ambience(dt);
   for (const f of floaters) { f.t -= dt; f.y -= dt * 18; }
@@ -1280,11 +1280,11 @@ function updateProjectiles(dt) {
           if (p.pierce) {   // the piercing bolt goes on through, hitting each foe once
             if (p.hits.has(e)) continue;
             const arrow = p.kind === 'arrow';   // (the ranger's Piercing Shots use it too)
-            p.hits.add(e); const c = spellCrit(); G.elem = arrow ? p.elem || null : 'arcane'; G.pierce = true; damageEnemy(e, spellDmg(c ? p.dmgK * 2 : p.dmgK), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, c, 0, true); G.elem = null; G.pierce = false;
+            p.hits.add(e); const c = spellCrit(); G.elem = arrow ? p.elem || null : 'arcane'; G.pierce = true; damageEnemy(e, spellDmg(c ? p.dmgK * 2 : p.dmgK), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, c, p.pow || 0, true); G.elem = null; G.pierce = false; if (p.onHit) p.onHit(e, p);
             if (arrow) arrowBite(p, e); else { impactFlash(e.fi, e.fj, p.z, 3); sfx('zap'); } continue;
           }
           if (p.boom) { p.life = 0; break; }   // a fireball bursts on whatever it touches (below)
-          if (p.spell) { const c = spellCrit(); G.elem = p.elem || null; damageEnemy(e, spellDmg(c ? p.dmgK * 2 : p.dmgK), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, c, 0, true); G.elem = null; if (p.kind === 'arrow') arrowBite(p, e); if (p.kind === 'missile') hero.mana = Math.min(STAT.maxMana, hero.mana + (p.small ? 1 : 3)); }
+          if (p.spell) { const c = spellCrit(); G.elem = p.elem || null; damageEnemy(e, spellDmg(c ? p.dmgK * 2 : p.dmgK), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, c, 0, true); G.elem = null; if (p.kind === 'arrow') arrowBite(p, e); if (p.onHit) p.onHit(e, p); if (p.basic) { hero.pips = Math.min(3, (hero.pips || 0) + 1); hero.pipT = G.t; } if (p.kind === 'missile') hero.mana = Math.min(STAT.maxMana, hero.mana + (p.small ? 1 : 3)); }
           else damageEnemy(e, roll(p.dmg), p.fi - p.vx * 0.05, p.fj - p.vy * 0.05, false, 0, true);
           p.life = 0; break;
         }
@@ -1778,6 +1778,15 @@ function drawProjectile(p) {
   // on the detail layer, over the characters: blocks the size of a world pixel, placed at the finer position
   const X0 = Math.round(x * SPX) - cam2x, Y0 = Math.round((y - p.z) * SPX) - cam2y;
   const put = (a, b, c) => ovPutAt(X0 + a * SPX, Y0 + b * SPX, c);
+  if (p.kind === 'arrow' && p.owner === 'hero' && p.bolt) {   // round 66: Piercing Shot's bolt: thicker and longer the more combo points went into it, glowing, a long streak
+    const l = Math.hypot(p.vx, p.vy) || 1, ux = (p.vx - p.vy) / l * 0.707, uy = (p.vx + p.vy) / l * 0.354, ul = Math.hypot(ux, uy), dx = ux / ul, dy = uy / ul, b = p.bolt, L = 12 + b * 3, w = b >= 3 ? 2 : 1;
+    const glow = p.fire ? [17, 16] : p.frost ? [27, 118] : b >= 4 ? [27, 51] : [27, 31];
+    for (let s = -L - 4 - b * 14; s < -L; s++) { const x = Math.round(X0 + dx * s), y = Math.round(Y0 + dy * s), u = (-L - s) / (4 + b * 14); if (BAYER[((y & 3) << 2) | (x & 3)] < u * 0.9) continue; for (let o = -w; o <= w; o++) ovSet(x, y + o, Math.abs(o) < w || u < 0.3 ? glow[0] : glow[1]); }   // the streak
+    for (let s = -L; s <= L * 0.6; s++) { const x = Math.round(X0 + dx * s), y = Math.round(Y0 + dy * s); for (let o = -w - 1; o <= w + 2; o++) ovSet(x, y + o, o === -w - 1 || o === w + 2 ? BLK : o <= 0 ? WOOD[3] : WOOD[1]); }   // the shaft
+    for (let s = 0; s <= 5 + b; s++) { const x = Math.round(X0 + dx * (L * 0.6 + s)), y = Math.round(Y0 + dy * (L * 0.6 + s)), hw = Math.max(0, Math.round((5 + b - s) * 0.5)); for (let o = -hw - 1; o <= hw + 1; o++) ovSet(x, y + o, Math.abs(o) > hw ? BLK : o < 0 ? 27 : STEEL[3]); }   // the head
+    for (let b2 = -3; b2 <= 3; b2++) for (let a = -3; a <= 3; a++) if (a * a + b2 * b2 <= 9) ovSet(Math.round(X0 + dx * (L * 0.6 + 3)) + a, Math.round(Y0 + dy * (L * 0.6 + 3)) + b2, a * a + b2 * b2 <= 2 ? 27 : glow[1]);   // a glow round the head
+    return;
+  }
   if (p.kind === 'arrow' && p.owner === 'hero') {   // round 33: the ranger's arrow, at full detail: shaft, steel head, fletching
     const l = Math.hypot(p.vx, p.vy) || 1, ux = (p.vx - p.vy) / l * 0.707, uy = (p.vx + p.vy) / l * 0.354, ul = Math.hypot(ux, uy), dx = ux / ul, dy = uy / ul;
     for (let s = -13; s <= 10; s++) { const x = Math.round(X0 + dx * s), y = Math.round(Y0 + dy * s); ovSet(x, y - 1, BLK); ovSet(x, y + 2, BLK); }   // a dark outline so it reads on any floor
