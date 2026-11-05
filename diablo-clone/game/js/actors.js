@@ -140,6 +140,7 @@ function tipRig(rig, pivot, pitch, roll = 0, drop = 0) {
     if (p.a) { p.a = P(p.a); p.b = P(p.b); }
     if (p.ax) p.ax = p.ax.map(Vv);
     if (p.mf) { const f = p.mf; const inv = q => { let r = [q[0] - pivot[0], q[1] - pivot[1], q[2] - pivot[2] + drop]; r = V.rotX(r, -roll); r = V.rotY(r, -pitch); return V.add(r, pivot); }; p.mf = (q, n) => f(inv(q), n); }
+    if (p.ff) { const f = p.ff; const inv = q => { let r = [q[0] - pivot[0], q[1] - pivot[1], q[2] - pivot[2] + drop]; r = V.rotX(r, -roll); r = V.rotY(r, -pitch); return V.add(r, pivot); }; p.ff = (q, n) => { const fr = f(inv(q), V.rotY(V.rotX(n, -roll), -pitch)); if (fr && fr.n) fr.n = Vv(fr.n); return fr; }; }   // art B5 fur hook
   }
   rig.tris = rig.tris.map(([a, b, c, col, d]) => [P(a), P(b), P(c), col, d]);
 }

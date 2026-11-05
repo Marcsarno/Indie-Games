@@ -276,10 +276,13 @@ function renderRig(rig, yaw, w, h, ax, ay, step = 1) {
     const i = bi[k]; if (i < 0) continue;
     const p = prims[i], bt = dep[k], px = k % w, py = (k / w) | 0, sx = px - ax + 0.5, sy = py - ay + 0.5;
     const P = [R[0] * sx + D[0] * sy + VD[0] * (bt - 400), R[1] * sx + D[1] * sy + VD[1] * (bt - 400), R[2] * sx + D[2] * sy + VD[2] * (bt - 400)];
-    const n0 = nx[k], n1 = ny[k], n2 = nz[k];
+    let n0 = nx[k], n1 = ny[k], n2 = nz[k], fb = 0;
     let mat = p.m;
     if (p.mf) { const mm = p.mf(P, [n0, n1, n2]); if (mm) mat = mm; }
-    m[k] = mat; pid[k] = p.part; zz[k] = clamp(Math.round(P[2]), 0, 255); bias[k] = p.bias || 0;
+    // art B5 fur hook (opt-in): ff(P, n) may return { n: a replacement normal, b: a tone offset } so a mass of
+    // primitives can shade as one body and carry painted fur clumps; no ff, no change
+    if (p.ff) { const fr = p.ff(P, [n0, n1, n2]); if (fr) { if (fr.n) { n0 = fr.n[0]; n1 = fr.n[1]; n2 = fr.n[2]; } fb = fr.b || 0; } }
+    m[k] = mat; pid[k] = p.part; zz[k] = clamp(Math.round(P[2]), 0, 255); bias[k] = (p.bias || 0) + fb;
     nx[k] = n0 * R[0] + n1 * R[1] + n2 * R[2]; ny[k] = n0 * D[0] + n1 * D[1] + n2 * D[2]; nz[k] = n0 * T[0] + n1 * T[1] + n2 * T[2];
     // cast shadow: does anything else sit between this point and the light?
     if (step > 1 && (px % step || py % step)) {
@@ -417,6 +420,7 @@ function scaleRig(rig, k) {
     if (p.rad) p.rad = V.mul(p.rad, k);
     if (p.half) p.half = V.mul(p.half, k);
     if (p.mf) { const f = p.mf; p.mf = (q, n) => f(V.mul(q, 1 / k), n); }
+    if (p.ff) { const f = p.ff; p.ff = (q, n) => f(V.mul(q, 1 / k), n); }
   }
   rig.tris = rig.tris.map(([a, b, c, col, d]) => [V.mul(a, k), V.mul(b, k), V.mul(c, k), col, d]);
 }

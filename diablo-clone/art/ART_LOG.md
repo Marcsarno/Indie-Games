@@ -419,3 +419,14 @@ the neck is slimmer, the moss is painted onto the fur (also on the B2 bear hump,
 with no dark sockets, a black nose, tan caps. All behind `look.moss`; the Dire Bear and other hounds are unaffected.
 **Next:** the user will send simpler concepts (a plain bear, a plain skeleton) without moss and mushrooms: small
 organic surface detail doesn't suit code-drawn sprites. Flintback and Brother Cinder redos not started.
+
+## B5 fur experiment: Old Mossback (2026-11-05)
+The user asked why the bear looked like "round balls" instead of fur. Cause: every primitive is lit on its own, so
+each ellipsoid shows its own highlight. Added an opt-in renderer hook, `ff(P, n)` on a primitive (rig.js rasterizer;
+carried through `scaleRig`, `tipRig` and the hound head scale-up): it may return `{ n, b }`, a replacement normal and a
+tone offset. No primitive outside Mossback sets it, so every other sprite is unchanged (all monsters cmp-identical,
+hero hashes identical). Mossback uses it to (1) blend normals toward one big body ellipsoid so the mass shades as one
+body, (2) lay short staggered fur clumps (+1/-1 tone) running back and down, on body, legs and head; (3) the wolf
+ruff, the neck and 14 low swept-back spine tufts plus flank tufts join the body part (the ruff, head-scaled, had been
+the stray round "dome"). Coat now `M.HELLSTONE` (red-brown, matches the user's v3 concept). The same treatment could
+carry to the Dire Bear, Greyfang and the wolves if the user likes it.
