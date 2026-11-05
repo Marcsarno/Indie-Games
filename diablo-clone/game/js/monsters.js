@@ -924,8 +924,8 @@ function houndRig(look, st) {
   }
   if (clip === 'hit') { lunge = -2; headDrop = -1.5; jaw = 0.6; }
   // art A4: lean (wolf, bone hound, ember hound): a longer, slimmer body set higher on long thin legs, as the concepts draw them
-  const lean = !!look.lean, H = lean ? 13.5 : hog ? 10 : 11;
-  const back = [(lean ? -6.5 : -4.5) + lunge, 0, H + bob], front = [(lean ? 5.5 : 5) + lunge, 0, H + (lean ? 1.6 : 2.5) + bob];   // compact and front-heavy unless lean
+  const lean = !!look.lean, H = lean ? 13.5 : hog ? 10 : MB ? 9.2 : 11;   // (b5 v3) Mossback: long and low on short legs
+  const back = [(lean ? -6.5 : MB ? -6.8 : -4.5) + lunge, 0, H + bob], front = [(lean ? 5.5 : MB ? 5.6 : 5) + lunge, 0, H + (lean ? 1.6 : 2.5) + bob];   // compact and front-heavy unless lean
   // art A3 looks (set only on their own entries): plates (bone hound: bone plates down the back, a furred
   // tail), ember (ember hound: glowing slashes on the flanks, dark lower legs), pale (wolf: light muzzle)
   const mid = V.lerp(back, front, 0.5);
@@ -1024,7 +1024,7 @@ function houndRig(look, st) {
     let foot = [hip[0] - stride * Math.cos(p) + (fr > 0 ? 0.5 : -0.5), y * 1.15, moving ? 2.2 * Math.max(0, Math.sin(p)) : 0];
     if (clip === 'attack' && fr > 0) foot = [hip[0] + 2, y * 1.15, 0];
     const L = ik(hip, V.add(foot, [0, 0, 1]), LL, LL, [-fr, 0, 0]);
-    const lk = MB ? 1.45 : B2 === 'bear' ? 1.2 : GF ? 1.0 : lean ? 0.8 : 1, low = look.ember ? M.HIDE : hog || B2 === 'bear' ? M.HAIR : skin;   // the ember hound's legs darken below the knee
+    const lk = MB ? 1.45 : B2 === 'bear' ? 1.2 : GF ? 1.0 : lean ? 0.8 : 1, low = look.ember ? M.HIDE : MB ? skin : hog || B2 === 'bear' ? M.HAIR : skin;   // the ember hound's legs darken below the knee
     const pSave = r.part; if (MB) { r.part = bodyPart; r.lock = true; }   // (b5 redo) one smooth body: no seams between body, thigh, shin and paw
     r.cone(hip, L.joint, 2.7 * lk, 2.0 * lk, skin); r.cone(L.joint, L.end, 2.0 * lk, 1.7 * lk, low);
     if (!bare) r.sph(L.joint, 1.8, bone);
@@ -1035,7 +1035,7 @@ function houndRig(look, st) {
   }
   // neck, collar and scarf
   const neck = V.add(front, [3.5, 0, 2.5]);
-  const hd = V.add(front, MB ? [8.4, 0, 1.6 + headDrop] : [7.5, 0, 1.2 + headDrop]);   // (b5 redo) Mossback's head held further out and up
+  const hd = V.add(front, MB ? [8.2, 0, 1.0 + headDrop] : [7.5, 0, 1.2 + headDrop]);   // (b5 redo) Mossback's head held further out and up
   const hr0 = r.p.length;   // head parts are scaled up about the head center below
   if (MB) r.cone(neck, hd, 2.3, 2.0, skin, mossMf(V.add(neck, [0, 0, 0.6]), 0));   // (b5 redo) Mossback: a slimmer neck (the head scale-up made the full one a huge lump), moss along its top
   else r.cone(neck, hd, 3.4, 2.8, skin);
@@ -1107,7 +1107,7 @@ function houndRig(look, st) {
     r.group(() => { r.cone(a, b, 1.5, 1.3, bone); r.cone(b, c, 1.3, 0.9, bone); r.cone(c, e, 0.9, 0.3, bone); });
   }
   // a big skull reads at this size: scale every head part (cranium, snout, jaw, horns) 1.3x about the head
-  const HK = MB ? 1.45 : GF ? 1.25 : GS ? 1.15 : B2 === 'wolf' || B2 === 'hound' || B2 === 'ember' ? 1.45 : 1.3, sc = q => V.add(hd, V.mul(V.sub(q, hd), HK));
+  const HK = MB ? 1.3 : GF ? 1.25 : GS ? 1.15 : B2 === 'wolf' || B2 === 'hound' || B2 === 'ember' ? 1.45 : 1.3, sc = q => V.add(hd, V.mul(V.sub(q, hd), HK));
   for (const q of r.p.slice(hr0)) {
     if (q.c) q.c = sc(q.c); if (q.a) { q.a = sc(q.a); q.b = sc(q.b); q.ra *= HK; q.rb *= HK; }
     if (q.r) q.r *= HK; if (q.rad) q.rad = V.mul(q.rad, HK); if (q.half) q.half = V.mul(q.half, HK);
@@ -1934,7 +1934,7 @@ const MONSTERS = {
   banditchief: { family: 'hero', name: 'BANDIT CHIEF', look: { team: 'red', helm: 'rookcap', chest: 'tunic', weapon: 'rcleaver', shield: 'round', hair: 'brown', bandit: 'rook' }, hp: 80, dmg: [5, 10], speed: 30, reach: 1.4, xp: 90, chest: 24, shadow: 8, elite: true, leader: true, where: 'out' },
   goblin: { family: 'fallen', name: 'GOBLIN', look: { skin: M.GOBLIN, goblin: true }, hp: 9, dmg: [2, 4], speed: 38, reach: 1.15, xp: 8, chest: 12, shadow: 5, pack: true, where: 'out' },
   // art B5: secret boss from the user's concept (art/concepts/monsters/old_mossback.png); minLevel 99, placeholder stats a bit above the forest bosses
-  mossback: { family: 'hound', name: 'OLD MOSSBACK', title: 'OF THE HIDDEN GROVE', minLevel: 99, look: { skin: M.HAIR, eye: M.EYE_YEL, wolf: true, bear: true, b2: 'bear', moss: true, scale: 2.4, size: [170, 150, 85, 104] }, hp: 190, dmg: [9, 16], speed: 34, reach: 2.2, charge: true, xp: 210, chest: 50, shadow: 20, where: 'out', unique: true },
+  mossback: { family: 'hound', name: 'OLD MOSSBACK', title: 'OF THE HIDDEN GROVE', minLevel: 99, look: { skin: M.HELLSTONE, eye: M.EYE_YEL, wolf: true, bear: true, b2: 'bear', moss: true, scale: 2.4, size: [170, 150, 85, 104] }, hp: 190, dmg: [9, 16], speed: 34, reach: 2.2, charge: true, xp: 210, chest: 50, shadow: 20, where: 'out', unique: true },
   gravespine: { family: 'hound', name: 'GRAVESPINE HOUND', minLevel: 99, elite: true, look: { skin: M.HIDE, eye: M.EYE_RED, wolf: true, lean: true, paws: true, brush: true, b2: 'gs', scale: 1.15 }, hp: 24, dmg: [4, 8], speed: 52, reach: 1.4, xp: 28, chest: 13, shadow: 11 },
   ghoulhound: { family: 'hound', name: 'HELL HOUND', look: { skin: M.FLESH, eye: M.FIREM, scale: 1.15, ember: true, lean: true, paws: true, brush: true, b2: 'ember' }, hp: 28, dmg: [5, 9], speed: 50, reach: 1.45, xp: 34, chest: 13, shadow: 11, minLevel: 2 },
   spider: { family: 'spider', name: 'CAVE SPIDER', look: { scale: 0.8 }, hp: 10, dmg: [2, 4], speed: 46, reach: 1.3, xp: 10, chest: 8, shadow: 11, pack: true },
