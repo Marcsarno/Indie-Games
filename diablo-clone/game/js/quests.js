@@ -394,7 +394,10 @@ PROPS.sacks = v => propSprite('sacks' + v, r => {
 const SIDES = {
   den: { name: 'THE WOLF DEN', theme: 'caves', rooms: 5, pool: ['wolf'], boss: 'alpha', at: 'hub', door: () => [HUB.den[0] + 1.6, HUB.den[1] + 0.6], label: 'WOLF DEN', seed: 0xd3d },
   // round 48c: the Hollow's other doors (the barrow: dangerous, level 6; the watchtower: goblins and their shaman)
-  barrow: { name: 'THE BARROW', theme: 'crypt', rooms: 6, pool: ['spearman', 'axeman', 'gravebow', 'tombguard', 'skeleton'], boss: 'wraith', at: 'hub', diff: 6, door: () => [HUB.barrow[0] + 1.6, HUB.barrow[1] + 0.6], label: 'THE BARROW: DANGER', labelCol: 22, seed: 0xba770 },
+  barrow: { name: 'THE BARROW', down: 'barrow2', theme: 'crypt', rooms: 6, pool: ['spearman', 'axeman', 'gravebow', 'tombguard', 'skeleton'], boss: 'wraith', at: 'hub', diff: 6, door: () => [HUB.barrow[0] + 1.6, HUB.barrow[1] + 0.6], label: 'THE BARROW: DANGER', labelCol: 22, seed: 0xba770 },
+  // round 67: the barrow's second floor, down the stairs in the wraith's room: bigger and harder, its
+  // dead led by the Barrow Wight (it raises the dead and calls frost orbs); its hoard is in two chests
+  barrow2: { name: 'THE BARROW: THE DEEP TOMB', theme: 'crypt', rooms: 7, pool: ['spearman', 'axeman', 'gravebow', 'tombguard', 'tombguard', 'wraith'], boss: 'barrowwight', bigLeader: true, at: 'below', diff: 7, label: '', seed: 0xba772 },
   tower: { name: 'THE OLD WATCHTOWER', theme: 'crypt', rooms: 4, pool: ['goblin', 'goblin', 'gshaman'], boss: 'gchief', at: 'hub', diff: 3, door: () => [HUB.tower[0] + 1.6, HUB.tower[1] - 0.4], label: 'OLD WATCHTOWER', seed: 0x70e7 },
   cellar: { name: 'THE FARM CELLAR', theme: 'crypt', rooms: 5, pool: ['brigand'], boss: 'banditchief', at: 'riv', door: () => RIV.cellar, label: 'FARMHOUSE CELLAR', seed: 0xce11a },
 };
@@ -414,6 +417,11 @@ function sideExtras(kind) {
     const [i, j] = c[Math.min(c.length - 1, R.int(0, 2))];
     LV.decor.push({ kind: 'cage', i, j, open: !!f.aldoFree }); LV.solid[tIdx(i, j)] = 1;
     if (!f.aldoFree && storyOn()) LV.npcs.push({ role: 'aldo', name: 'ALDO', fi: i + 0.5, fj: j + 0.5, caged: true });
+  }
+  const trySolidBlocks = (i, j) => { LV.solid[tIdx(i, j)] = 1; const d = bfs(LV.start.cx, LV.start.cy); LV.solid[tIdx(i, j)] = 0; for (let q = 0; q < MW * MH; q++) if (LV.map[q] === FLOOR && !LV.solid[q] && q !== tIdx(i, j) && d[q] < 0) return true; return false; };
+  if (kind === 'barrow2') {   // the hoard: two chests at the back of the Wight's room
+    const r = LV.rooms[LV.leaderRoom], c = (roomFloor(r, 1).filter(([i, j]) => clearOf(i, j)).length >= 3 ? roomFloor(r, 1) : roomFloor(r, 0)).filter(([i, j]) => clearOf(i, j) && !(LV.down && Math.abs(i - LV.down.i) <= 2 && Math.abs(j - LV.down.j) <= 2)).sort((p, q) => Math.hypot(q[0] - r.cx, q[1] - r.cy) - Math.hypot(p[0] - r.cx, p[1] - r.cy));
+    for (let k = 0, n = 0; k < c.length && n < 2; k++) { const [i, j] = c[k]; if (LV.decor.some(d => Math.abs(d.i - i) <= 1 && Math.abs(d.j - j) <= 1) || trySolidBlocks(i, j)) continue; n++; LV.decor.push({ kind: 'chest', i, j, seed: R.int(0, 999) }); LV.solid[tIdx(i, j)] = 1; }
   }
   if (kind === 'cellar') {
     for (const [n, r] of LV.rooms.entries()) {
@@ -437,6 +445,24 @@ function enterSide(kind) {
   const back = { level: LV.level, seed: LV.seed, door: SIDES[kind].door(), snap: { enemies, boss, groundItems, seen: LV.seen.slice(), props: dynProps.map(p => ({ open: p.open, broken: p.broken, hp: p.hp, hatch: p.hatch })) } };
   G.fadeTo = () => { G.sideBack = back; startLevel(back.level, (back.seed ^ SIDES[kind].seed) >>> 0, kind); say(SIDES[kind].name, 51, 3); saveGame(); };
 }
+// round 67: down the barrow's stairs to its second floor, and back up to where you left the first
+function descendSide() {
+  const to = LV.sideCfg && LV.sideCfg.down; if (!to) return;
+  sfx('stairs');
+  const back = { level: LV.level, seed: LV.seed, side: LV.side, snap: { enemies, boss, groundItems, seen: LV.seen.slice(), props: dynProps.map(p => ({ open: p.open, broken: p.broken, hp: p.hp, hatch: p.hatch })) } };
+  G.fadeTo = () => { G.sideDown = back; startLevel(back.level, (back.seed ^ SIDES[to].seed) >>> 0, to); say(SIDES[to].name, 22, 3); G.upArmed = false; saveGame(); };
+}
+function climbSide() {
+  const B = G.sideDown; if (!B) return leaveSide();
+  sfx('stairs');
+  G.fadeTo = () => {
+    const keep = G.sideBack; startLevel(B.level, B.seed, B.side); G.sideBack = keep;
+    const S = B.snap; enemies = S.enemies; boss = S.boss; groundItems = S.groundItems; LV.seen.set(S.seen);
+    S.props.forEach((q, n) => { if (dynProps[n]) Object.assign(dynProps[n], q); });
+    hero.fi = LV.down.i + 1.5; hero.fj = LV.down.j + 1.5; G.sideDown = null; G.downArmed = false;
+    updateFov(hero.fi, hero.fj); saveGame();
+  };
+}
 function leaveSide() {
   const R0 = G.sideBack; if (!R0) return;
   sfx('stairs');
@@ -446,12 +472,13 @@ function leaveSide() {
     enemies = S.enemies; boss = S.boss; groundItems = S.groundItems; LV.seen.set(S.seen);
     S.props.forEach((q, n) => { if (dynProps[n]) Object.assign(dynProps[n], q); });
     // back at the door, a step out so it doesn't take you straight in again
-    hero.fi = R0.door[0] + 1; hero.fj = R0.door[1] + 0.6; G.sideBack = null;
+    hero.fi = R0.door[0] + 1; hero.fj = R0.door[1] + 0.6; G.sideBack = null; G.sideDown = null;
     for (const k in SIDES) G['armed_' + k] = false;
     updateFov(hero.fi, hero.fj); saveGame();
   };
 }
 function drawSideDoorLabels() {
+  if (LV.down && Math.hypot(LV.down.i + 0.5 - hero.fi, LV.down.j + 0.5 - hero.fj) < 6) { const [x, y] = iso(LV.down.i + 0.5, LV.down.j + 0.5); textC('DOWN: THE DEEP TOMB', Math.round(x - camX), Math.round(y - camY) - 30, 22); }
   if (LV.side) return;
   for (const k of sidesHere()) {
     const [fi, fj] = SIDES[k].door(); if (Math.hypot(fi - hero.fi, fj - hero.fj) > 6) continue;

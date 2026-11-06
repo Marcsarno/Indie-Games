@@ -826,12 +826,13 @@ function updateHero(dt) {
   for (const p of dynProps) if (p.kind === 'chest' && !p.open && Math.hypot(p.i + 0.5 - hero.fi, p.j + 0.5 - hero.fj) < 1.15) openChest(p);
   // stairs
   const s = LV.stairs;
-  if (!G.fadeTo && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55 && bossAlive()) {
+  if (!G.fadeTo && !LV.side && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55 && bossAlive()) {   // (round 67: a side area's way out is never sealed)
     if (!(G.sealT > 0)) { say(`THE ${boss.def.name} GUARDS THE WAY DOWN`, 22, 2); G.sealT = 3; }
   } else if (LV.side) {   // a side area's stairs lead back up to the hub (once the hero has stepped off them)
     const d = Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj);
     if (d > 1.2) G.upArmed = true;
-    if (!G.fadeTo && G.upArmed && d < 0.55) { G.upArmed = false; leaveSide(); }
+    if (!G.fadeTo && G.upArmed && d < 0.55) { G.upArmed = false; if (LV.side === 'barrow2') climbSide(); else leaveSide(); }
+    if (LV.down) { const dd = Math.hypot(LV.down.i + 0.5 - hero.fi, LV.down.j + 0.5 - hero.fj); if (dd > 1.2) G.downArmed = true; if (!G.fadeTo && G.downArmed && dd < 0.55) { G.downArmed = false; descendSide(); } }
   } else if (!G.fadeTo && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55 && !(s.mine && mineBarred())) {   // round 42b: the mine is chained until the key
     sfx('stairs');
     // the hub's mine leads straight to the first floor; Act I's boss hall leads home to the hub,
@@ -2055,7 +2056,7 @@ function beginGame(fromSave, cls = 'warrior') {
   const d = fromSave ? loadSave(cls) : null;
   if (d) {
     newHero(cls); Object.assign(hero, d.hero); hero.cls = cls; itemSerial = d.serial || 100; recalcHero();
-    G.mode = 'play'; G.town = d.town || null; G.portal = d.portal || null; G.gates = d.gates || null; G.story = d.story || convertQuests(d.quests, d.gates); G.sideBack = null; startLevel(d.level, d.seed);
+    G.mode = 'play'; G.town = d.town || null; G.portal = d.portal || null; G.gates = d.gates || null; G.story = d.story || convertQuests(d.quests, d.gates); G.sideBack = null; G.sideDown = null; startLevel(d.level, d.seed);
   } else {
     G.town = null; G.portal = null; G.story = null; G.gates = null; G.sideBack = null;
     newHero(cls); G.mode = 'play'; startLevel(1, (Math.random() * 1e9) >>> 0);

@@ -20,7 +20,7 @@ const POWER_EASY = ['burning', 'shielded', 'vampiric', 'summoner'];   // the fir
 const POWER_BANNED = [['shielded', 'vampiric'], ['blinking', 'frozen']];
 const NO_SUMMON = { hero: 1, treant: 1, ogre: 1 };
 // quest leaders carry a fixed power, a preview of the bosses to come
-const LEADER_POWERS = { alpha: ['blinking'], banditchief: ['burning'] };
+const LEADER_POWERS = { alpha: ['blinking'], banditchief: ['burning'], barrowwight: ['summoner', 'frozen'] };   // (round 67: the Wight raises the dead and calls frost orbs)
 const powerCount = () => LV.loop >= 1 ? 3 : LV.diff >= 4 ? 2 : 1;
 
 function rollPowers(e, R) {

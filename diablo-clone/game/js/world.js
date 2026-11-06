@@ -173,9 +173,12 @@ function tryGen(level, seed, relaxed = false) {
   let far = 1, fd = -1;
   rooms.forEach((r, n) => { const d = dist[tIdx(r.cx, r.cy)]; if (n && d > fd) { fd = d; far = n; } });
   if (!relaxed && fd < (cfg ? 16 : 24)) return false;   // the way down must be a real walk from the start
+  if (!relaxed && cfg && cfg.bigLeader && rooms[far].kind === 'small') return false;   // round 67: a boss gets a real room to fight in
   LV.stairs = { i: rooms[far].cx, j: rooms[far].cy, room: far };
   if (cfg) { LV.leaderRoom = far; const r0 = rooms[0]; LV.stairs = { i: r0.x + 1, j: r0.y + 1, room: 0, up: true }; }   // side areas: the way out is by the entrance
+  LV.down = cfg && cfg.down ? { i: rooms[far].cx, j: rooms[far].cy, room: far } : null;   // round 67: the barrow's way down to its second floor, in the far room
   analyzeLayout(dist);
+  if (LV.down) for (let b = -1; b <= 4; b++) for (let a = -1; a <= 4; a++) if (Math.abs(a - b) <= 1 || (a <= 1 && b <= 1)) { const i = LV.down.i + a, j = LV.down.j + b; if (i > 0 && j > 0 && i < MW && j < MH) LV.reserve[tIdx(i, j)] = 1; }   // kept clear, and its approach
   placeDecor(subRng(seed, 'decor'), level, dist);
   placeSpawns(subRng(seed, 'spawns'), level);
   const bad = validateLevel(relaxed);
@@ -445,6 +448,7 @@ function trySolid(i, j) {
   if (LV.map[k] !== FLOOR || LV.solid[k] || LV.reserve[k]) return false;
   if (Math.abs(i - LV.start.cx) <= 1 && Math.abs(j - LV.start.cy) <= 1) return false;
   if (LV.stairs && Math.abs(i - LV.stairs.i) <= 1 && Math.abs(j - LV.stairs.j) <= 1) return false;
+  if (LV.down && Math.abs(i - LV.down.i) <= 1 && Math.abs(j - LV.down.j) <= 1) return false;
   LV.solid[k] = 1;
   const d = bfs(LV.start.cx, LV.start.cy);
   for (let q = 0; q < MW * MH; q++) if (LV.map[q] === FLOOR && !LV.solid[q] && d[q] < 0) { LV.solid[k] = 0; return false; }
@@ -996,8 +1000,9 @@ function buildWorld() {
   }
   // stairs down (round 25): a stairwell sunk into the floor, steps falling away into a dark arch,
   // with a lit lip around the opening and a fire bowl at each side so it reads from across a room
-  if (!LV.outdoor) {
-    const s = LV.stairs, [x, y] = iso(s.i + 0.5, s.j + 0.5);
+  if (!LV.outdoor) for (const s of [LV.stairs, LV.down]) {
+    if (!s) continue;
+    const [x, y] = iso(s.i + 0.5, s.j + 0.5);
     s.sp = stairwellSprite(LV.theme || 'crypt'); s.wx = x; s.wy = y;
     for (const [ox, oy] of [[-STW.x - 4.5, STW.y + 4.5], [STW.x + 4.5, -STW.y - 4.5]]) {
       const fi = s.i + 0.5 + ox / TILE_U, fj = s.j + 0.5 + oy / TILE_U, [bx, by] = iso(fi, fj);
@@ -1013,6 +1018,7 @@ function buildWorld() {
     if (d.kind === 'bones') blitWorld(d.sp, d.wx, d.wy, 0, -1, true);
   }
   if (LV.stairs.sp) blitWorld(LV.stairs.sp, LV.stairs.wx, LV.stairs.wy, 0, -1, true);   // over any lava or blood stamped there
+  if (LV.down && LV.down.sp) blitWorld(LV.down.sp, LV.down.wx, LV.down.wy, 0, -1, true);
   back.sort((a, b) => a.depth - b.depth);
   for (const d of back) blitWorld(d.sp, d.wx, d.wy, d.z || 0, d.tile);
   props.sort((a, b) => a.depth - b.depth);

@@ -790,23 +790,35 @@ function shroomRig(look, st) {
 // a wraith: a hooded, legless robe that floats and sways, glowing eyes in the dark of the hood,
 // long clawed hands reaching out on the strike
 function wraithRig(look, st) {
-  const r = new Rig(), { clip, f } = st, robe = M.CLOTH_PURPLE;
+  const r = new Rig(), { clip, f } = st, robe = look.robe || M.CLOTH_PURPLE, eyeM = look.eye || M.FUNGUS2;   // (round 67: the Barrow Wight's own robe, eyes, crown and bone arms)
   const bob = clip === 'walk' ? Math.sin(f / 8 * Math.PI * 2) * 1.2 : clip === 'idle' ? Math.sin(f * Math.PI / 2) * 0.8 : 0;
   const sw = st.key || null, reach = clip === 'attack' && sw ? (sw.hit ? 1 : sw.a > 0.8 ? -0.6 : 0.4) : 0;
   const lean = clip === 'walk' ? 0.25 : reach * 0.2, top = [lean * 4, 0, 22 + bob], base = [-2 - lean * 3, 0, 5 + bob];
-  r.group(() => { r.cone(base, top, 6.2, 3.4, robe, { mf: p => (p[2] - base[2]) < 2 && hash(Math.floor(Math.atan2(p[1], p[0]) * 5), 1, 3) < 0.5 ? M.CLOTH_DARK : 0 }); });
+  r.group(() => { r.cone(base, top, 6.2, 3.4, robe, { mf: p => (p[2] - base[2]) < 2 && hash(Math.floor(Math.atan2(p[1], p[0]) * 5), 1, 3) < 0.5 ? (look.mould ? M.ROCK : M.CLOTH_DARK) : look.mould && (p[2] - base[2]) < 6 && hash(Math.floor(Math.atan2(p[1], p[0]) * 7), Math.floor(p[2] * 0.7), 5) < (6 - (p[2] - base[2])) * 0.07 ? M.ROCK : 0 }); });
   for (const s of [-1, 1]) {   // tattered hem points
     const a = [base[0] - 1, s * 4, base[2] + 1]; r.cone(a, [a[0] - 2, s * 5, a[2] - 4.5], 1.4, 0.2, robe);
   }
   const hd = V.add(top, [1.2, 0, 3.6]);
-  r.ell(hd, [4.4, 4.2, 4.6], robe, null, { mf: p => { const q = V.sub(p, hd); if (q[0] > 2.4 && Math.abs(q[2] + 0.3) < 2.4 && Math.abs(q[1]) < 2.6) return (Math.abs(Math.abs(q[1]) - 1.2) < 0.5 && Math.abs(q[2] - 0.2) < 0.5) ? M.FUNGUS2 : M.DARK; return 0; } });
-  r.cone(V.add(hd, [-2, 0, 3]), V.add(hd, [-6, 0, 5.5]), 2, 0.3, robe);   // hood tip
+  r.ell(hd, [4.4, 4.2, 4.6], robe, null, { mf: p => { const q = V.sub(p, hd); if (q[0] > 2.4 && Math.abs(q[2] + 0.3) < 2.4 && Math.abs(q[1]) < 2.6) return (Math.abs(Math.abs(q[1]) - 1.2) < 0.5 && Math.abs(q[2] - 0.2) < 0.5) ? eyeM : M.DARK; return 0; } });
+  if (!look.crown) r.cone(V.add(hd, [-2, 0, 3]), V.add(hd, [-6, 0, 5.5]), 2, 0.3, robe);   // hood tip
+  else {   // an iron crown on the hood: a band round the brow and five points
+    const c0 = V.add(hd, [-0.6, 0, 3.4]);
+    r.cyl(c0, V.add(c0, [0, 0, 1.2]), 3.6, M.BRONZE);
+    for (let k = 0; k < 5; k++) { const a = -1.2 + k * 0.6, b = V.add(c0, [Math.cos(a) * 3.2, Math.sin(a) * 3.2, 1]); r.cone(b, V.add(b, [0.4, 0, 3.6 - Math.abs(k - 2) * 0.6]), 1.0, 0.15, M.BRONZE); }
+  }
   for (const s of [-1, 1]) {
     const sh = V.add(top, [0, s * 4, -2]), hand = V.add(sh, [3 + reach * 6, s * 2, -5 + reach * 3]);
-    r.cone(sh, hand, 1.4, 1.0, robe);
-    for (let k = -1; k <= 1; k++) r.cone(hand, V.add(hand, [2.4, s * 0.5 + k * 0.7, -1 + k * 0.4]), 0.45, 0.1, M.OLDBONE, { noShadow: true });
+    if (look.bony) {   // a short ragged sleeve, then a bare bone forearm
+      const el = V.lerp ? V.lerp(sh, hand, 0.45) : V.add(sh, V.mul(V.sub(hand, sh), 0.45));
+      r.cone(sh, el, 1.7, 1.5, robe); r.cone(el, hand, 0.95, 0.9, M.OLDBONE); r.sph(hand, 1.1, M.OLDBONE);
+      for (let k = -1; k <= 1; k++) r.cone(hand, V.add(hand, [3.2, s * 0.5 + k * 0.9, -1.4 + k * 0.5]), 0.5, 0.1, M.OLDBONE, { noShadow: true });
+    } else {
+      r.cone(sh, hand, 1.4, 1.0, robe);
+      for (let k = -1; k <= 1; k++) r.cone(hand, V.add(hand, [2.4, s * 0.5 + k * 0.7, -1 + k * 0.4]), 0.45, 0.1, M.OLDBONE, { noShadow: true });
+    }
   }
   if (clip === 'death') tipRig(r, [0, 0, 0], 0, 0, [0, 3, 7, 11, 14, 16][f]);   // sinks into the floor
+  if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
   return r;
 }
 // ---------------------------------------------------------------- the treant elder (autumn boss)
@@ -1027,6 +1039,7 @@ const MONSTERS = {
   warlord: { family: 'ogre', name: 'OGRE WARLORD', title: 'TYRANT OF THE DEEP WOODS', minLevel: 99, look: { scale: 1.5 }, hp: 140, dmg: [8, 14], speed: 22, reach: 2.1, xp: 160, chest: 46, shadow: 13, unique: true, boss: 'slam' },
   shroom: { family: 'shroom', name: 'SHROOMLING', look: {}, hp: 10, dmg: [2, 4], speed: 26, reach: 1.1, xp: 9, chest: 14, shadow: 5, pack: true, where: 'out' },
   sporecap: { family: 'shroom', name: 'SPORECAP', look: { purple: true }, hp: 16, dmg: [3, 6], speed: 24, reach: 1.15, xp: 16, chest: 14, shadow: 5, where: 'out', minLevel: 2 },
+  barrowwight: { family: 'wraith', name: 'THE BARROW WIGHT', title: 'CROWNED IN THE DARK BELOW THE MOUND', minLevel: 99, look: { robe: M.CLOTH_DARK, mould: true, eye: M.EYE_GRN, crown: true, bony: true, scale: 1.75, size: [100, 112, 50, 86] }, hp: 120, dmg: [7, 12], speed: 30, reach: 1.7, xp: 150, chest: 38, shadow: 10, unique: true },   // round 67: the barrow's second floor
   wraith: { family: 'wraith', name: 'WRAITH', look: {}, hp: 18, dmg: [4, 8], speed: 34, reach: 1.3, xp: 26, chest: 26, shadow: 6, minLevel: 2 },
   slime: { family: 'slime', name: 'SLIME', look: {}, hp: 8, dmg: [1, 3], speed: 30, reach: 1.15, xp: 6, chest: 9, shadow: 7, pack: true, where: 'out' },
   blueslime: { family: 'slime', name: 'BIG BLUE SLIME', look: { blue: true, big: true }, hp: 30, dmg: [3, 7], speed: 24, reach: 1.4, xp: 30, chest: 14, shadow: 10, where: 'out', minLevel: 2 },
