@@ -836,7 +836,8 @@ function updateHero(dt) {
   } else if (LV.side) {   // a side area's stairs lead back up to the hub (once the hero has stepped off them)
     const d = Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj);
     if (d > 1.2) G.upArmed = true;
-    if (!G.fadeTo && G.upArmed && d < 0.55) { G.upArmed = false; if (LV.side === 'barrow2') climbSide(); else leaveSide(); }
+    const steering = Math.hypot(input.mx, input.my) >= 0.18 || input.keys.size > 0 || !!hero.goTalk;   // round 68a: only when walked onto, never when knocked back onto it mid-fight
+    if (!G.fadeTo && G.upArmed && d < 0.55 && steering) { G.upArmed = false; if (LV.side === 'barrow2') climbSide(); else leaveSide(); }
     if (LV.down) { const dd = Math.hypot(LV.down.i + 0.5 - hero.fi, LV.down.j + 0.5 - hero.fj); if (dd > 1.2) G.downArmed = true; if (!G.fadeTo && G.downArmed && dd < 0.55) { G.downArmed = false; descendSide(); } }
   } else if (!G.fadeTo && !G.finale && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55 && !(s.mine && mineBarred())) {   // (round 67: not while Maelis is coming)   // round 42b: the mine is chained until the key
     sfx('stairs');

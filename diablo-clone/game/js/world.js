@@ -178,7 +178,16 @@ function tryGen(level, seed, relaxed = false) {
   if (!relaxed && fd < (cfg ? 16 : 24)) return false;   // the way down must be a real walk from the start
   if (!relaxed && cfg && cfg.bigLeader && rooms[far].kind === 'small') return false;   // round 67: a boss gets a real room to fight in
   LV.stairs = { i: rooms[far].cx, j: rooms[far].cy, room: far };
-  if (cfg) { LV.leaderRoom = far; const r0 = rooms[0]; LV.stairs = { i: r0.x + 1, j: r0.y + 1, room: 0, up: true }; }   // side areas: the way out is by the entrance
+  if (cfg) {   // side areas: the way out is by the entrance, in the start room's corner farthest from its openings (round 68a: at the
+    LV.leaderRoom = far; const r0 = rooms[0];   // fixed back corner, the walk out of the room often ran over it and threw you out)
+    const opens = []; for (let j = r0.y - 1; j <= r0.y + r0.h; j++) for (let i = r0.x - 1; i <= r0.x + r0.w; i++) if ((i < r0.x || j < r0.y || i >= r0.x + r0.w || j >= r0.y + r0.h) && map[tIdx(i, j)] === FLOOR) opens.push([i, j]);
+    let best = null, bd = -1;
+    for (const [i, j] of [[r0.x + 1, r0.y + 1], [r0.x + r0.w - 2, r0.y + 1], [r0.x + 1, r0.y + r0.h - 2], [r0.x + r0.w - 2, r0.y + r0.h - 2]]) {
+      if (map[tIdx(i, j)] !== FLOOR || LV.roomOf[tIdx(i, j)] !== 0) continue;
+      const dmin = opens.reduce((m, [a, b]) => Math.min(m, Math.hypot(a - i, b - j)), 99); if (dmin > bd) { bd = dmin; best = [i, j]; }
+    }
+    best = best || [r0.x + 1, r0.y + 1]; LV.stairs = { i: best[0], j: best[1], room: 0, up: true };
+  }
   LV.down = cfg && cfg.down ? { i: rooms[far].cx, j: rooms[far].cy, room: far } : null;   // round 67: the barrow's way down to its second floor, in the far room
   analyzeLayout(dist);
   if (LV.down) for (let b = -1; b <= 4; b++) for (let a = -1; a <= 4; a++) if (Math.abs(a - b) <= 1 || (a <= 1 && b <= 1)) { const i = LV.down.i + a, j = LV.down.j + b; if (i > 0 && j > 0 && i < MW && j < MH) LV.reserve[tIdx(i, j)] = 1; }   // kept clear, and its approach

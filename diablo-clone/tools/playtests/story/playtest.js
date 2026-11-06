@@ -10,7 +10,7 @@ const goTo = (fi, fj) => { hero.fi = fi; hero.fj = fj; hero.goTalk = null; run(2
 const finish = (pick = 0) => { let pages = 0, btn = null, reward = 0; while (G.mode === 'talk') { const T = G.talk; T.t = 99; T.typed = true; if (T.k < T.pages.length - 1) { T.k++; pages++; continue; } pages++; btn = T.btn; if (T.reward) { reward = T.reward.length; T.pick = pick; } closeTalk(); } return { pages, btn, reward }; };
 const talk = r => { const n = who(r); goTo(n.fi + 1.1, n.fj); talkTo(n); return finish(); };
 const enter = k => { const [fi, fj] = SIDES[k].door(); goTo(fi + 2, fj); goTo(fi, fj); run(60); };
-const leave = () => { goTo(LV.stairs.i + 2.5, LV.stairs.j + 2.5); goTo(LV.stairs.i + 0.5, LV.stairs.j + 0.5); run(60); };
+const leave = () => { goTo(LV.stairs.i + 2.5, LV.stairs.j + 2.5); input.keys.add('shift'); goTo(LV.stairs.i + 0.5, LV.stairs.j + 0.5); input.keys.clear(); run(60); };   // (round 68a: a player steers onto the way out)
 const kill = e => { damageEnemy(e, 99999, e.fi - 1, e.fj); run(2); };
 newHero('warrior'); hero.lvl = 8; recalcHero(); hero.hp = STAT.maxHp = 99999; G.mode = 'play'; G.story = null; startLevel(1, 4242); G.actCard = 0;
 const st = () => storyStage();

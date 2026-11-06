@@ -27,11 +27,11 @@ for (const seed of [4242, 7, 99, 31337, 5, 11, 1234, 777, 2024, 31]) {
   if (seed === 4242) { const tmp = enemies; enemies = [w]; w.fi = hero.fi + 2; w.fj = hero.fj - 1.2; w.state = 'idle'; w.cool = 99; for (let i = 0; i < 200; i++) warmStep(30); G.msg = []; render(); shots.wight = cvs.toDataURL(); enemies = tmp; }
   // back up
   hero.fi = LV.stairs.i + 2.5; hero.fj = LV.stairs.j + 2.5; for (const e of enemies) e.cool = 99; step(2);
-  hero.fi = LV.stairs.i + 0.5; hero.fj = LV.stairs.j + 0.5; step(1); run();
+  hero.fi = LV.stairs.i + 0.5; hero.fj = LV.stairs.j + 0.5; input.keys.add('shift'); step(1); input.keys.clear(); run();   // (a player steers onto the way out)
   o.back = LV.side + (Math.hypot(hero.fi - LV.down.i, hero.fj - LV.down.j) < 3 ? ' by the way down' : ' ELSEWHERE') + ', alive ' + enemies.filter(e => e.hp > 0).length + '/' + n1;
   if (seed === 4242) { enemies = []; hero.fi = LV.down.i + 2.5; hero.fj = LV.down.j + 2.5; for (let i = 0; i < 200; i++) warmStep(30); G.msg = []; render(); shots.down = cvs.toDataURL(); }
   // and out to the Hollow
-  hero.fi = LV.stairs.i + 2.5; hero.fj = LV.stairs.j + 2.5; step(2); hero.fi = LV.stairs.i + 0.5; hero.fj = LV.stairs.j + 0.5; step(1); run();
+  hero.fi = LV.stairs.i + 2.5; hero.fj = LV.stairs.j + 2.5; step(2); hero.fi = LV.stairs.i + 0.5; hero.fj = LV.stairs.j + 0.5; input.keys.add('shift'); step(1); input.keys.clear(); run();   // (a player steers onto the way out)
   o.out = LV.hub ? 'hollow' : 'NOT OUT ' + LV.side;
   if (!o.downReach || o.f2 !== 'barrow2' || !w || !o.wightReach || !o.back.includes('barrow by') || o.out !== 'hollow') bad++;
   L.push(o);

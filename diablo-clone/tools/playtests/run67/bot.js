@@ -8,7 +8,8 @@
   const cls = window.__cls || 'warrior', CAP = (window.__cap || 50) * 60, dt = 1 / 30;
   Math.random = (() => { let s = window.__seed || 31; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
   newHero(cls); G.mode = 'play'; G.story = { f: {}, n: 0 }; startLevel(1, 4242); G.actCard = 0;
-  const marks = [], seen = {}; let t = 0, last = '', stuckT = 0, lastPos = [hero.fi, hero.fj], cache = { key: '', d: null }, drinks = 0, jig = 0, back = 0, backFrom = null;
+  const marks = [], seen = {};
+  if (window.__dbg && !window.__ls) { window.__ls = leaveSide; leaveSide = function () { marks.push(['LEAVE at ' + hero.fi.toFixed(2) + ',' + hero.fj.toFixed(2) + ' stairs ' + LV.stairs.i + ',' + LV.stairs.j + ' input ' + input.mx.toFixed(2) + ',' + input.my.toFixed(2) + ' jig ' + jig.toFixed(2) + ' back ' + back.toFixed(2) + ' foe? ' + enemies.filter(e => alive(e) && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 6).length, 0, 0]); return window.__ls(); }; } let t = 0, last = '', stuckT = 0, lastPos = [hero.fi, hero.fj], cache = { key: '', d: null }, drinks = 0, jig = 0, back = 0, backFrom = null;
   let minHp = 1; const mark = (k) => { if (seen[k]) return; seen[k] = 1; marks.push([k, +(t / 60).toFixed(1), hero.lvl]); };
   const pathDir = (tg) => {
     const ti = Math.floor(tg[0]), tj = Math.floor(tg[1]), key = LV.level + ':' + LV.seed + ':' + (LV.side || '') + ':' + ti + ',' + tj;
@@ -19,6 +20,7 @@
     for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
       const ii = i + a, jj = j + b; if (ii < 0 || jj < 0 || ii >= MW || jj >= MH) continue;
       const v = d[tIdx(ii, jj)]; if (v < 0) continue;
+      const st = LV.stairs, dn = LV.down; if ((st && ii === st.i && jj === st.j && !(ti === st.i && tj === st.j)) || (dn && ii === dn.i && jj === dn.j && !(ti === dn.i && tj === dn.j))) continue;   // keep off stairs it isn't going to
       if (a && b && (d[tIdx(i + a, j)] < 0 || d[tIdx(i, j + b)] < 0)) continue;   // no corner cutting
       if (v < bv) { bv = v; best = [ii + 0.5 - hero.fi, jj + 0.5 - hero.fj]; }
     }
@@ -36,6 +38,7 @@
     if (hero.dead) { if (hero.dead > 2.2) respawn(); G.t += dt; update(dt); continue; }
     const st = storyStage(); if (st !== last) { mark(st + (LV.side ? '@' + LV.side : '')); last = st; }
     mark(areaName());
+    if (window.__dbg && Math.floor(t / 10) !== Math.floor((t - dt) / 10)) { const a = enemies.find(e => e.id === 'alpha'); const tg0 = storyTarget(); marks.push(['DBG ' + Math.round(t) + ' at ' + hero.fi.toFixed(1) + ',' + hero.fj.toFixed(1) + ' tg ' + (tg0 ? tg0.map(v => v.toFixed(1)) : '-') + ' alpha ' + (a ? a.fi.toFixed(1) + ',' + a.fj.toFixed(1) + ' hp' + Math.round(a.hp) + ' ' + a.state : 'none') + ' alive ' + enemies.filter(alive).length, 0, 0]); }
     input.attack = false; input.mx = input.my = 0; minHp = Math.min(minHp, hero.hp / STAT.maxHp);
     if (hero.hp < STAT.maxHp * 0.4 && hero.potions > 0 && !(hero.potT > G.t)) { drinkPotion(); drinks++; hero.potT = G.t + 1.5; }
     if (Math.floor(t) % 20 === 0 && Math.floor(t - dt) % 20 !== 0) { try { wearBest(); } catch (e) {} G.mode = 'play'; }
