@@ -20,4 +20,6 @@ enemies = near; hero.hp = STAT.maxHp = 9999; updateFov(hero.fi, hero.fj);
 input.attack = true; for (let i = 0; i < 40; i++) { G.t += 1 / 30; update(1 / 30); } input.attack = false;
 hero.hp = STAT.maxHp = 94; settle(); shots.fight = cvs.toDataURL();
 L.push({ cor, great: !!great.great, room: [r.w, r.h] });
+// round 68a: a corridor with its colonnade, on whichever of a few floors has one
+for (const sd of [4242, 99, 777, 5, 11]) { startLevel(3, sd); G.actCard = 0; LV.act = 1; const c = LV.decor.find(d => d.col); if (!c) continue; enemies = []; hero.hp = STAT.maxHp = 94; hero.fi = c.i + 1.6; hero.fj = c.j + 2.2; updateFov(hero.fi, hero.fj); settle(); shots.colonnade = cvs.toDataURL(); L.push({ colonnadeSeed: sd }); break; }
 window.__out = { log: L, shots };

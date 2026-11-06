@@ -75,7 +75,7 @@ function genLevel(level, seed, side = null) {
   // A side area (quests.js SIDES) is a short dungeon floor hanging off the hub at the hub's level
   const A0 = areaOf(level), sd = side && SIDES[side].diff ? SIDES[side].diff + A0.cyc * 3 : A0.diff, A = side ? { kind: 'dungeon', cyc: A0.cyc, act: A0.act, loop: A0.loop, floor: 1, depth: A0.cyc * 3 + 1, diff: sd } : A0;   // (round 48c: a side area may be harder than its hub: the barrow)
   LV.side = side; LV.sideCfg = side ? SIDES[side] : null;
-  { const big = A.kind === 'forest' || A.hub, floorBig = A.kind === 'dungeon' && !side && !A.arena; const hs = A.hub && !side ? 100 : big ? 64 : floorBig ? 56 : 40; resizeWorld(hs, hs); }   // round 41: the hub 84x84   // round 38: dungeon floors 56x56 (were 40)
+  { const big = A.kind === 'forest' || A.hub, floorBig = A.kind === 'dungeon' && !side && !A.arena; const hs = A.hub && !side ? 100 : big ? 64 : floorBig ? 62 : 46; resizeWorld(hs, hs); }   // (round 68a: wider halls and rooms further apart: 62 / 46, were 56 / 40)   // round 41: the hub 84x84   // round 38: dungeon floors 56x56 (were 40)
   LV.area = A.kind; LV.cyc = A.cyc; LV.act = A.act; LV.loop = A.loop; LV.floor = A.floor || 0; LV.arena = A.arena || null;
   LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.hub = !!A.hub; LV.riv = !!A.riv && !side; LV.gateSign = null; LV.gateOpen = false; LV.autumn = A.act === 1; LV.night = A.kind !== 'dungeon' && A.act === 2; LV.plaza = null; LV.npcs = []; LV.critters = []; LV.champsPlanned = false; LV.genFail = null;
   if (typeof syncLightTables === 'function') syncLightTables(LV.outdoor);   // round 48
@@ -114,7 +114,7 @@ function tryGen(level, seed, relaxed = false) {
     const T = TPL[kind](), w = T.w, h = T.h;
     if (w > MW - 6 || h > MH - 6) continue;
     const x = R.int(2, MW - w - 2), y = R.int(2, MH - h - 2);
-    if (rooms.some(r => x < r.x + r.w + 3 && x + w + 3 > r.x && y < r.y + r.h + 3 && y + h + 3 > r.y)) continue;
+    if (rooms.some(r => x < r.x + r.w + 5 && x + w + 5 > r.x && y < r.y + r.h + 5 && y + h + 5 > r.y)) continue;   // (round 68a: 5 apart, so the wider halls don't run into rooms)
     rooms.push(Object.assign(T, { kind, x, y, cx: x + (w >> 1), cy: y + (h >> 1) }));
   }
   if (rooms.length < (cfg ? 4 : 7) || (!cfg && !rooms.some(r => r.great))) return false;
@@ -136,18 +136,25 @@ function tryGen(level, seed, relaxed = false) {
     }
   });
   // corridors: minimum spanning tree over room centers plus a couple of loops, 2 tiles wide (3 into a big room)
+  // round 68a (the user: halls too slim; concept art: corridors 3-4 tiles wide, a pillar row down the
+  // wide ones): every corridor is 3 tiles wide, 4 into a big room (a colonnade: pillars every 3 tiles
+  // along the straight runs, placed later by trySolid so nothing is ever cut off)
   let wide = false;
-  const carve = (i, j) => { for (const [a, b] of wide ? [[-1, -1], [0, -1], [1, -1], [-1, 0], [0, 0], [1, 0], [-1, 1], [0, 1], [1, 1]] : [[0, 0], [1, 0], [0, 1], [1, 1]]) if (i + a > 0 && j + b > 0 && i + a < MW - 1 && j + b < MH - 1) map[tIdx(i + a, j + b)] = FLOOR; };
+  const OFF3 = [], OFF4 = []; for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) OFF3.push([a, b]); for (let b = -1; b <= 2; b++) for (let a = -1; a <= 2; a++) OFF4.push([a, b]);
+  const colonnade = LV.colonnade = [];
+  const carve = (i, j) => { for (const [a, b] of wide ? OFF4 : OFF3) if (i + a > 0 && j + b > 0 && i + a < MW - 1 && j + b < MH - 1) map[tIdx(i + a, j + b)] = FLOOR; };
   const edges = [];
   const corridor = (A, B) => {
-    wide = !cfg && (A.area > 120 || B.area > 120) && R() < 0.7;
+    wide = (A.area > 120 || B.area > 120) && R() < 0.75;
     edges.push([rooms.indexOf(A), rooms.indexOf(B)]);
     const horizFirst = R() < 0.5;
     let i = A.cx, j = A.cy;
-    const stepI = () => { while (i !== B.cx) { carve(i, j); i += Math.sign(B.cx - i); } };
-    const stepJ = () => { while (j !== B.cy) { carve(i, j); j += Math.sign(B.cy - j); } };
+    const run = [];   // the straight stretches, for the colonnade
+    const stepI = () => { while (i !== B.cx) { carve(i, j); if (wide) run.push([i, j, 'i']); i += Math.sign(B.cx - i); } };
+    const stepJ = () => { while (j !== B.cy) { carve(i, j); if (wide) run.push([i, j, 'j']); j += Math.sign(B.cy - j); } };
     if (horizFirst) { stepI(); stepJ(); } else { stepJ(); stepI(); }
     carve(i, j);
+    if (wide) colonnade.push(run);
   };
   const inTree = [0], d2 = (a, b) => (a.cx - b.cx) ** 2 + (a.cy - b.cy) ** 2;
   while (inTree.length < rooms.length) {
@@ -456,6 +463,17 @@ function trySolid(i, j) {
 }
 function placeDecor(R, level) {
   const D = LV.decor = [];
+  // round 68a: the colonnade down a 4-wide corridor (concept A): a pillar every 3 tiles along its
+  // straight runs, one tile in from the middle so a 2-tile lane runs beside it; never by a room
+  for (const run of LV.colonnade || []) {
+    if (run.length < 8) continue;
+    for (let k = 3; k < run.length - 3; k += 3) {
+      const [i0, j0, ax] = run[k], i = ax === 'i' ? i0 : i0 + 1, j = ax === 'i' ? j0 + 1 : j0;
+      let nearRoom = false; for (let b = -2; b <= 2 && !nearRoom; b++) for (let a = -2; a <= 2; a++) if (LV.roomOf[tIdx(i + a, j + b)] >= 0) { nearRoom = true; break; }
+      if (nearRoom || LV.roomOf[tIdx(i, j)] >= 0 || hidesStairs(i, j)) continue;
+      if (trySolid(i, j)) D.push({ kind: 'pillar', i, j, col: true });
+    }
+  }
   const wallSide = (i, j) => tileAt(i - 1, j) === WALL || tileAt(i, j - 1) === WALL || tileAt(i + 1, j) === WALL || tileAt(i, j + 1) === WALL;
   LV.rooms.forEach((r, n) => {
     const mine = (i, j) => LV.roomOf[tIdx(i, j)] === n;   // (shaped rooms: only tiles of this room's own floor)

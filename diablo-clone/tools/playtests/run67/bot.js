@@ -8,7 +8,7 @@
   const cls = window.__cls || 'warrior', CAP = (window.__cap || 50) * 60, dt = 1 / 30;
   Math.random = (() => { let s = window.__seed || 31; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
   newHero(cls); G.mode = 'play'; G.story = { f: {}, n: 0 }; startLevel(1, 4242); G.actCard = 0;
-  const marks = [], seen = {}; let t = 0, last = '', stuckT = 0, lastPos = [hero.fi, hero.fj], cache = { key: '', d: null }, drinks = 0, jig = 0;
+  const marks = [], seen = {}; let t = 0, last = '', stuckT = 0, lastPos = [hero.fi, hero.fj], cache = { key: '', d: null }, drinks = 0, jig = 0, back = 0, backFrom = null;
   let minHp = 1; const mark = (k) => { if (seen[k]) return; seen[k] = 1; marks.push([k, +(t / 60).toFixed(1), hero.lvl]); };
   const pathDir = (tg) => {
     const ti = Math.floor(tg[0]), tj = Math.floor(tg[1]), key = LV.level + ':' + LV.seed + ':' + (LV.side || '') + ':' + ti + ',' + tj;
@@ -55,10 +55,11 @@
       if (n && d < 1.4) { if (!(hero.tradeT > G.t)) { hero.tradeT = G.t + 0.8; trade(n); } }
       else go(pathDir(tg));
     } else { const n = npcs.find(q => q.role === 'priest'); if (n) go(pathDir([n.fi, n.fj])); }
-    if (jig > 0) { jig -= dt; go([Math.cos(jig * 3 + t), Math.sin(jig * 3 + t)]); }
+    if (back > 0) { back -= dt; jig = 0; let bd = [1, 1]; for (let q = 0; q < 8; q++) { const a = q * 0.785, v = [Math.cos(a), Math.sin(a)]; if (!blocked(hero.fi + v[0] * 2, hero.fj + v[1] * 2)) { bd = v; break; } } go(bd); }   // standing on a door that has not re-armed: step off it first
+    else if (jig > 0) { jig -= dt; go([Math.cos(jig * 3 + t), Math.sin(jig * 3 + t)]); }
     G.t += dt; update(dt);
     // stuck: no progress for 6 s while walking somewhere
-    if (Math.hypot(hero.fi - lastPos[0], hero.fj - lastPos[1]) > 0.8) { lastPos = [hero.fi, hero.fj]; stuckT = 0; } else if ((stuckT += dt) > 6) { stuckT = 0; jig = 1.2; mark('stuck@' + areaName() + '#' + Math.round(t) + ' at ' + hero.fi.toFixed(1) + ',' + hero.fj.toFixed(1) + ' tg ' + (tg ? tg.map(v => v.toFixed(1)).join(',') : '-') + ' foe ' + (foe ? foe.id + ' ' + fd.toFixed(1) + ' hp' + Math.round(foe.hp) : '-') + ' mode ' + G.mode + ' fade ' + G.fade.toFixed(2) + ' up ' + G.upArmed); cache.key = ''; }
+    if (Math.hypot(hero.fi - lastPos[0], hero.fj - lastPos[1]) > 0.8) { lastPos = [hero.fi, hero.fj]; stuckT = 0; } else if ((stuckT += dt) > 6) { stuckT = 0; jig = 1.2; if (tg && Math.hypot(tg[0] - hero.fi, tg[1] - hero.fj) < 0.9) { back = 1.0; backFrom = tg; } mark('stuck@' + areaName() + '#' + Math.round(t) + ' at ' + hero.fi.toFixed(1) + ',' + hero.fj.toFixed(1) + ' tg ' + (tg ? tg.map(v => v.toFixed(1)).join(',') : '-') + ' foe ' + (foe ? foe.id + ' ' + fd.toFixed(1) + ' hp' + Math.round(foe.hp) : '-') + ' mode ' + G.mode + ' fade ' + G.fade.toFixed(2) + ' up ' + G.upArmed + ' armedDen ' + G.armed_den + ' fadeTo ' + !!G.fadeTo + ' side ' + LV.side + ' sideBack ' + !!G.sideBack + ' hp ' + Math.round(hero.hp) + ' dead ' + hero.dead); cache.key = ''; }
   }
   return { cls, minutes: +(t / 60).toFixed(1), lvl: hero.lvl, deaths: (hero.stats || {}).deaths, kills: (hero.stats || {}).kills, potionsDrunk: drinks, gold: hero.gold, minHp: +minHp.toFixed(2), end: G.mode === 'end' || !!seen.END, stage: storyStage(), area: areaName(), marks };
 })

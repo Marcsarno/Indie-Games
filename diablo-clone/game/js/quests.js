@@ -474,7 +474,7 @@ function leaveSide() {
     enemies = S.enemies; boss = S.boss; groundItems = S.groundItems; LV.seen.set(S.seen);
     S.props.forEach((q, n) => { if (dynProps[n]) Object.assign(dynProps[n], q); });
     // back at the door, a step out so it doesn't take you straight in again
-    hero.fi = R0.door[0] + 1; hero.fj = R0.door[1] + 0.6; G.sideBack = null; G.sideDown = null;
+    hero.fi = R0.door[0] + 1.3; hero.fj = R0.door[1] + 0.8; G.sideBack = null; G.sideDown = null;   // (round 68a: 1.5 out, past the 1.2 that re-arms the door: at 1.17 you couldn't turn straight back in)
     for (const k in SIDES) G['armed_' + k] = false;
     updateFov(hero.fi, hero.fj); saveGame();
   };
