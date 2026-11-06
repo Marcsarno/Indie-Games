@@ -438,3 +438,13 @@ and the opt-in `ff` fur hook in rig.js stay in place but nothing uses them (ever
 identically with or without them); delete them if you want the code smaller. **Main chat:** drop any mossback
 wiring. Remaining secret bosses: Drowned Warden, Flintback Matriarch, Brother Cinder (user's simpler v2 concepts in
 `art/concepts/monsters/*_v2.png`).
+
+## B6: Hellbound infernal bosses, 1 of 4: Malgrath (2026-11-06)
+Concepts: `art/concepts/monsters/infernal-bosses-sheet.png` + crops (malgrath, vexara, azhruk, baelgor). Built one at a
+time by the art chat, judged against the concept in both orders.
+**Malgrath, the Iron Butcher** (`malgrath`, family ogre, `look.malg`, scale 1.5, own taller canvas size [140,154,70,112]
+so death frames don't clip): reuses Gorr's body (`GR` is true for him) in FLESH red, with a dark IRON riveted apron and
+pauldrons, leather braces crossed on the back, a belt with an iron buckle, studded iron wrist bands, cloven hooves,
+cream ram horns curling round the ears (no top-knot), and a big notched cleaver with a hole (CHAIN grey) on the
+heavy chop swing. 4 passes kept (iron instead of blued steel; grey cleaver; plain horns; tighter curl).
+Placeholder stats near Gorr, `unique: true`, `minLevel: 99`. Other monsters cmp-identical; 304 frames, 0 edge hits.
