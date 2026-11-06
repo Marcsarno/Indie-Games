@@ -1010,20 +1010,24 @@ const FAMILIES = {
   ogre: { size: [140, 140, 70, 112], gait: gaitFrameTiles(OGRE_B, 1.5), rig: ogreRig, swing: e => e.look.rock ? SWINGS.bow : SWINGS.heavy },
 };
 // Variants: same family, different look and stats. `kind` is what the roster ledger counts.
+// round 67: the art chat's monsters get roles of their own (they had placeholder stats near their kin):
+// the spearman out-reaches you, the axeman hits hard and dies fast, the crossbowman shoots slow heavy
+// bolts from far off, the tomb guard and the ogre shieldbearer turn arrows and spells off their shields
+// from the front (guard: flank them or close in), knifers swarm, the mastiff and the ogre enforcer charge
 const MONSTERS = {
   skeleton: { family: 'skeleton', name: 'SKELETON', look: { weapon: 'sword', shield: true, armored: true }, hp: 14, dmg: [2, 5], speed: 26, reach: 1.25, xp: 12, chest: 22, shadow: 7 },
   // art A2 (field variants from the user's front/back concepts): minLevel 99 keeps them out of the spawn
   // pools until the main chat sets their levels, stats and loot; stats here are placeholders
-  spearman: { family: 'skeleton', name: 'CRYPT SPEARMAN', minLevel: 1, look: { weapon: 'spear', chunky: true, pauldron: 'one', rag: M.CLOTH_BLUE }, hp: 14, dmg: [3, 5], speed: 26, reach: 1.6, xp: 13, chest: 22, shadow: 7 },
-  axeman: { family: 'skeleton', name: 'BONE AXEMAN', minLevel: 2, look: { weapon: 'axe', chunky: true, helm: 'open', rag: M.CLOTH_RED }, hp: 18, dmg: [4, 8], speed: 24, reach: 1.4, xp: 17, chest: 22, shadow: 7 },
-  gravebow: { family: 'skeleton', name: 'GRAVE CROSSBOWMAN', minLevel: 1, look: { weapon: 'crossbow', chunky: true, pauldron: 'leather', quiver: true }, hp: 11, dmg: [3, 5], speed: 24, reach: 6.5, ranged: 'arrow', xp: 15, chest: 22, shadow: 7 },
-  tombguard: { family: 'skeleton', name: 'TOMB GUARD', minLevel: 2, look: { weapon: 'mace', chunky: true, helm: 'kettle', pauldron: 'both', breastplate: true, towerShield: true, rag: M.CLOTH_RED }, hp: 26, dmg: [4, 7], speed: 22, reach: 1.3, xp: 24, chest: 22, shadow: 8 },
+  spearman: { family: 'skeleton', name: 'CRYPT SPEARMAN', minLevel: 1, look: { weapon: 'spear', chunky: true, pauldron: 'one', rag: M.CLOTH_BLUE }, hp: 13, dmg: [3, 6], speed: 26, reach: 1.9, xp: 14, chest: 22, shadow: 7 },
+  axeman: { family: 'skeleton', name: 'BONE AXEMAN', minLevel: 2, look: { weapon: 'axe', chunky: true, helm: 'open', rag: M.CLOTH_RED }, hp: 16, dmg: [5, 9], speed: 28, reach: 1.4, xp: 18, chest: 22, shadow: 7 },
+  gravebow: { family: 'skeleton', name: 'GRAVE CROSSBOWMAN', minLevel: 1, look: { weapon: 'crossbow', chunky: true, pauldron: 'leather', quiver: true }, hp: 10, dmg: [4, 7], speed: 22, reach: 7, ranged: 'arrow', xp: 16, chest: 22, shadow: 7 },
+  tombguard: { family: 'skeleton', name: 'TOMB GUARD', minLevel: 2, look: { weapon: 'mace', chunky: true, helm: 'kettle', pauldron: 'both', breastplate: true, towerShield: true, rag: M.CLOTH_RED }, hp: 30, dmg: [3, 6], speed: 20, reach: 1.3, guard: true, xp: 26, chest: 22, shadow: 8 },
   archer: { family: 'skeleton', name: 'SKELETON ARCHER', look: { weapon: 'bow', bone: M.OLDBONE }, hp: 10, dmg: [2, 4], speed: 24, reach: 6.5, ranged: 'arrow', xp: 14, chest: 22, shadow: 7 },
   burning: { family: 'skeleton', name: 'BURNING DEAD', look: { weapon: 'sword', shield: false, helm: true, burn: true, bone: M.OLDBONE, eye: M.FIREM }, hp: 24, dmg: [4, 8], speed: 30, reach: 1.25, xp: 30, chest: 22, shadow: 7, minLevel: 2 },
   // art A3 (imps from the user's front/back concepts): minLevel 99 keeps them out of the spawn pools until
   // the main chat sets levels and stats (placeholders here). The slinger shoots 'arrow' until a stone exists.
-  knifer: { family: 'fallen', name: 'FALLEN KNIFER', minLevel: 2, look: { knife: true }, hp: 6, dmg: [1, 4], speed: 44, reach: 1.1, xp: 6, chest: 12, shadow: 5, pack: true },
-  slinger: { family: 'fallen', name: 'FALLEN SLINGER', minLevel: 2, look: { sling: true }, hp: 6, dmg: [1, 3], speed: 36, reach: 6, ranged: 'arrow', xp: 8, chest: 12, shadow: 5, pack: true },
+  knifer: { family: 'fallen', name: 'FALLEN KNIFER', minLevel: 2, look: { knife: true }, hp: 5, dmg: [2, 4], speed: 50, reach: 1.1, xp: 6, chest: 12, shadow: 5, pack: true },
+  slinger: { family: 'fallen', name: 'FALLEN SLINGER', minLevel: 2, look: { sling: true }, hp: 5, dmg: [1, 3], speed: 34, reach: 6, ranged: 'arrow', xp: 8, chest: 12, shadow: 5, pack: true },
   fallen: { family: 'fallen', name: 'FALLEN ONE', look: {}, hp: 7, dmg: [1, 3], speed: 40, reach: 1.15, xp: 6, chest: 12, shadow: 5, pack: true },
   shaman: { family: 'fallen', name: 'FALLEN SHAMAN', look: { staff: true, hood: true, ember: true }, hp: 9, dmg: [3, 6], speed: 28, reach: 6, ranged: 'firebolt', leader: true, xp: 16, chest: 12, shadow: 5 },
   hound: { family: 'hound', name: 'BONE HOUND', look: { plates: true, lean: true, slabs: true, brush: true }, hp: 16, dmg: [3, 6], speed: 52, reach: 1.35, xp: 18, chest: 12, shadow: 10 },
@@ -1032,10 +1036,10 @@ const MONSTERS = {
   treant: { family: 'treant', name: 'TREANT ELDER', title: 'THE WOOD THAT WALKS', minLevel: 99, look: { scale: 1.4 }, hp: 170, dmg: [8, 14], speed: 18, reach: 2.3, xp: 190, chest: 54, shadow: 14, unique: true, boss: 'slam', minions: ['shroom', 'sporecap'], calls: 'THE ELDER WAKES THE MUSHROOMS' },
   // art A3: ogre grunts from the user's front/back concepts (minLevel 99: out of the spawn pools until the
   // main chat sets levels and stats; these are placeholders). The rockthrower shoots 'arrow' until a rock exists.
-  oclubber: { family: 'ogre', name: 'OGRE CLUBBER', minLevel: 4, look: { grunt: true, scale: 1.05 }, hp: 40, dmg: [6, 11], speed: 24, reach: 1.7, xp: 45, chest: 32, shadow: 10, where: 'out' },
-  orockthrower: { family: 'ogre', name: 'OGRE ROCKTHROWER', minLevel: 4, look: { grunt: true, rock: true, vest: true, scale: 1.05 }, hp: 34, dmg: [5, 10], speed: 22, reach: 6, ranged: 'arrow', xp: 45, chest: 32, shadow: 10, where: 'out' },
-  oshield: { family: 'ogre', name: 'OGRE SHIELDBEARER', minLevel: 5, look: { grunt: true, vest: true, helm: true, plank: true, scale: 1.05 }, hp: 60, dmg: [5, 9], speed: 20, reach: 1.7, xp: 55, chest: 32, shadow: 10, where: 'out' },
-  oenforcer: { family: 'ogre', name: 'OGRE ENFORCER', minLevel: 5, look: { grunt: true, pads: true, cleaver: true, scale: 1.05 }, hp: 50, dmg: [8, 13], speed: 24, reach: 1.7, xp: 60, chest: 32, shadow: 10, where: 'out' },
+  oclubber: { family: 'ogre', name: 'OGRE CLUBBER', minLevel: 4, look: { grunt: true, scale: 1.05 }, hp: 44, dmg: [6, 11], speed: 22, reach: 1.7, xp: 46, chest: 32, shadow: 10, where: 'out' },
+  orockthrower: { family: 'ogre', name: 'OGRE ROCKTHROWER', minLevel: 4, look: { grunt: true, rock: true, vest: true, scale: 1.05 }, hp: 30, dmg: [6, 11], speed: 20, reach: 7, ranged: 'arrow', xp: 46, chest: 32, shadow: 10, where: 'out' },
+  oshield: { family: 'ogre', name: 'OGRE SHIELDBEARER', minLevel: 5, look: { grunt: true, vest: true, helm: true, plank: true, scale: 1.05 }, hp: 56, dmg: [4, 8], speed: 20, reach: 1.7, guard: true, xp: 56, chest: 32, shadow: 10, where: 'out' },
+  oenforcer: { family: 'ogre', name: 'OGRE ENFORCER', minLevel: 5, look: { grunt: true, pads: true, cleaver: true, scale: 1.05 }, hp: 46, dmg: [8, 14], speed: 26, reach: 1.7, charge: true, xp: 62, chest: 32, shadow: 10, where: 'out' },
   warlord: { family: 'ogre', name: 'OGRE WARLORD', title: 'TYRANT OF THE DEEP WOODS', minLevel: 99, look: { scale: 1.5 }, hp: 140, dmg: [8, 14], speed: 22, reach: 2.1, xp: 160, chest: 46, shadow: 13, unique: true, boss: 'slam' },
   shroom: { family: 'shroom', name: 'SHROOMLING', look: {}, hp: 10, dmg: [2, 4], speed: 26, reach: 1.1, xp: 9, chest: 14, shadow: 5, pack: true, where: 'out' },
   sporecap: { family: 'shroom', name: 'SPORECAP', look: { purple: true }, hp: 16, dmg: [3, 6], speed: 24, reach: 1.15, xp: 16, chest: 14, shadow: 5, where: 'out', minLevel: 2 },
@@ -1050,7 +1054,7 @@ const MONSTERS = {
   gshaman: { family: 'fallen', name: 'GOBLIN SHAMAN', look: { skin: M.GOBLIN, goblin: true, staff: true }, hp: 9, dmg: [3, 6], speed: 30, reach: 6, ranged: 'firebolt', leader: true, xp: 16, chest: 12, shadow: 5, where: 'out' },
   brigand: { family: 'hero', name: 'BRIGAND', look: { team: 'tan', helm: 'cap', chest: 'chain', weapon: 'axe', shield: 'none', hair: 'brown', cape: 'red' }, hp: 22, dmg: [3, 7], speed: 30, reach: 1.35, xp: 24, chest: 18, shadow: 7, where: 'out' },
   // art A3: the brigand mastiff (new; minLevel 99 keeps it out of the spawn pools; stats are placeholders)
-  mastiff: { family: 'hound', name: 'BRIGAND MASTIFF', minLevel: 2, look: { skin: M.BOAR, eye: M.EYE_YEL, wolf: true, mastiff: true, scale: 1.12, paws: true, collar: true }, hp: 24, dmg: [3, 7], speed: 44, reach: 1.35, xp: 22, chest: 13, shadow: 11, where: 'out' },
+  mastiff: { family: 'hound', name: 'BRIGAND MASTIFF', minLevel: 2, look: { skin: M.BOAR, eye: M.EYE_YEL, wolf: true, mastiff: true, scale: 1.12, paws: true, collar: true }, hp: 20, dmg: [3, 6], speed: 46, reach: 1.35, charge: true, xp: 22, chest: 13, shadow: 11, where: 'out' },
   wolf: { family: 'hound', name: 'WOLF', look: { skin: M.HIDE, eye: M.EYE_YEL, wolf: true, pale: true, lean: true, bib: true, paws: true, brush: true }, hp: 14, dmg: [2, 5], speed: 54, reach: 1.35, xp: 15, chest: 12, shadow: 10, pack: true, where: 'out' },
   // round 26: the diggers of the old mine: hunched, snouted, in a dented iron cap, swinging a pick, a lamp at the belt
   digger: { family: 'fallen', name: 'DIGGER', look: { skin: M.LEATHER, digger: true }, hp: 10, dmg: [2, 4], speed: 36, reach: 1.25, xp: 9, chest: 12, shadow: 5, pack: true, where: 'out' },

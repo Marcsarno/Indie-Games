@@ -1303,10 +1303,10 @@ function heroRig(eq, st) {
       r.cone(V.mad(hc, up, 2.2), V.mad(hc, up, 5.4), 2.3, 0.3, M.STEEL);
       r.box(V.add(V.mad(hd, up, 0.2), V.mul(fwd, 4.3)), [0.5, 0.6, 1.8], M.STEEL, helmF);
     }
-    if (eq.helm === 'hood' || eq.helm === 'hood_sage') {   // a deep hood: a shell over the back and top of the head, face left open (the sage's: sage green with a gold hem)
-      const hc = V.add(V.mad(hd, up, 0.7), V.mul(fwd, -1.3)), sage = eq.helm === 'hood_sage';
-      r.ell(hc, [4.5, 4.6, 4.75], sage ? M.CLOTH_GREEN : M.CLOTH_BLUE, helmF, sage ? { mf: p => V.dot(V.sub(p, hc), fwd) > 3.2 ? M.GOLD : 0 } : undefined);
-      r.cone(V.add(V.mad(hd, up, 2.6), V.mul(fwd, -4.0)), V.add(V.mad(hd, up, 0.2), V.mul(fwd, -7.2)), 2.0, 0.5, sage ? M.CLOTH_GREEN : M.CLOTH_BLUE);   // the point falls behind
+    if (eq.helm === 'hood' || eq.helm === 'hood_sage' || eq.helm === 'hood_dark') {   // (round 67: Maelis's dark hood)   // a deep hood: a shell over the back and top of the head, face left open (the sage's: sage green with a gold hem)
+      const hc = V.add(V.mad(hd, up, 0.7), V.mul(fwd, -1.3)), sage = eq.helm === 'hood_sage', hoodM = sage ? M.CLOTH_GREEN : eq.helm === 'hood_dark' ? M.CLOTH_DARK : M.CLOTH_BLUE;
+      r.ell(hc, [4.5, 4.6, 4.75], hoodM, helmF, sage ? { mf: p => V.dot(V.sub(p, hc), fwd) > 3.2 ? M.GOLD : 0 } : undefined);
+      r.cone(V.add(V.mad(hd, up, 2.6), V.mul(fwd, -4.0)), V.add(V.mad(hd, up, 0.2), V.mul(fwd, -7.2)), 2.0, 0.5, hoodM);   // the point falls behind
     }
     if (eq.helm.startsWith('rhood')) {   // the ranger's hood: a shell over the head with the face open, a pointed back and a cowl on the shoulders
       const hm = eq.helm === 'rhood_dark' ? M.CLOTH_SHADOW : eq.helm === 'rhood_night' ? M.CLOTH_NAVY : M.CLOTH_GREEN, fur = eq.helm === 'rhood_hunter', hc = V.add(V.mad(hd, up, 0.8), V.mul(fwd, -1.0));

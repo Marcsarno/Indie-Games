@@ -333,6 +333,10 @@ function camKick(dx, dy, px) {
 }
 function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = false) {
   if (e.pw && !G.pierce) { dmg = eliteDamage(e, dmg, pow, fromFi, fromFj, ranged); if (dmg < 0) { if (e.state === 'sleep') wake(e); return; } }   // round 39: shields, blink openings
+  if (e.def.guard && ranged && !G.pierce && e.dying < 0 && e.state !== 'sleep' && !(e.frozen > 0) && !(e.stun > 0)) {   // round 67: a shield wall: shots from in front glance off (60% less); from the side or behind, or in melee, it's open
+    const [fx, fy] = dirVec(e.dir), dx = fromFi - e.fi, dy = fromFj - e.fj, l = Math.hypot(dx, dy) || 1;
+    if ((dx * fx + dy * fy) / l > 0.35) { dmg = Math.max(1, Math.round(dmg * 0.4)); if (!(e.glanceT > G.t)) { e.glanceT = G.t + 0.5; floater('GLANCE', e.fi, e.fj, e.def.chest + 24, 31); sfx('block'); } }
+  }
   if (e.shockT > 0) dmg = Math.round(dmg * 1.25);   // round 65: shocked (Chain Lightning): everything hits harder
   if (e.frozen > 0 && (G.elem === 'fire' || G.elem === 'heavy') && !e.def.unique) {   // round 65: fire or a heavy blow SHATTERS the ice: a big hit, and the ice is gone
     dmg = Math.round(dmg * 1.8); floater('SHATTER', e.fi, e.fj, e.def.chest + 26, 118);
