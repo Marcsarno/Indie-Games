@@ -10,6 +10,7 @@ startLevel(2, 4242);
 { const d = bfs(LV.start.cx, LV.start.cy); L.push({ riv: LV.riv, beyondReachableWhileShut: d[tIdx(Math.floor(LV.gatePos[0]) - 1, Math.floor(LV.gatePos[1]) + 1)] >= 0 }); }
 L.push({ gateSolid: blocked(Math.floor(RIV.gate[0]) + 0.5, Math.floor(RIV.gate[1]) + 0.5), gateOpen: LV.gateOpen });
 startLevel(5, 99); const k = boss; damageEnemy(k, 1e7, k.fi - 1, k.fj); run(120);
+for (let i = 0; i < 900 && G.finale; i++) { if (G.mode === 'talk') closeTalk(); run(1); }   // round 67: Maelis has his say first
 L.push({ hall: areaName(), kingDead: !alive(k), storyAfterKing: (G.gates = G.gates || {}, storyStage()) });
 hero.fi = LV.stairs.i + 0.5; hero.fj = LV.stairs.j + 0.5; run(80);
 L.push({ home: LV.hub, level: LV.level, area: areaName(), saved: !!(JSON.parse(localStorage.getItem(saveKey('warrior')) || '{}').gates || {})[0], treeCleared: !LV.treeBlock });

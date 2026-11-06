@@ -404,6 +404,7 @@ Object.assign(ROBE_STYLE, {
   robe_rose: { m: M.CLOTH_WINE, panel: M.CLOTH_WHITE, pw: 1.3, wk: 1.3, hem: M.CLOTH_WHITE, hw: 1.0, mantle: M.BLOODY, collar: M.BLOODY, buckle: M.GOLD },   // the Rose Oracle
 });
 Object.assign(HAT_STYLE, { hat_tide: { m: M.CLOTH_NAVY, band: M.WATERM }, hat_cinder: { m: M.AUTUMNM, band: M.AUTUMNM }, hat_rune: { m: M.OLDBONE, band: M.CLOTH_NAVY }, hat_rose: { m: M.BLOODY, band: M.CLOTH_WHITE } });
+HAT_STYLE.hat_maelis = { m: M.CLOTH_DARK, band: M.HAIR_O };   // round 67: Maelis's tall hat (the user preferred it to the hood), charcoal with the cinder robe's orange band
 const TEAM = { red: M.CLOTH_RED, blue: M.CLOTH_BLUE, green: M.CLOTH_GREEN, tan: M.CLOTH_TAN, purple: M.CLOTH_PURPLE, white: M.CLOTH_WHITE };
 // townsfolk share the hero's rig: hair color, a beard, or no weapon at all
 const HAIRM = { orange: M.HAIR_O, brown: M.HAIR, blond: M.STRAWM, grey: M.CLOTH_WHITE };

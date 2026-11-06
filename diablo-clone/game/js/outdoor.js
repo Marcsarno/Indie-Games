@@ -1223,7 +1223,7 @@ const NPC_LOOKS = {
   wren: { team: 'purple', helm: 'none', chest: 'tunic', weapon: 'none', shield: 'none', hair: 'brown' },
   hollis: { team: 'tan', helm: 'none', chest: 'tunic', weapon: 'none', shield: 'none', hair: 'grey', beard: true },
   aldo: { team: 'green', helm: 'none', chest: 'tunic', weapon: 'axe', shield: 'none', hair: 'brown', beard: true },
-  maelis: { team: 'purple', helm: 'hood_dark', chest: 'robe_cinder', weapon: 'none', shield: 'none', hair: 'grey' },   // round 67: the cast-out monk, in a dark robe and hood
+  maelis: { team: 'purple', helm: 'hat_maelis', chest: 'robe_cinder', weapon: 'none', shield: 'none', hair: 'grey' },   // round 67: the cast-out monk, in a dark robe and hood
 };
 let npcs = [];
 function makeNpcs() {
