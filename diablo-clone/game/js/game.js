@@ -73,7 +73,7 @@ function say(text, col = 26, t = 2.5) { G.msg.push({ text, col, t }); if (G.msg.
 // everything a fight leaves in the air: missiles, effects, particles, floaters (the skill preview
 // clears it between loops too)
 function resetFx() {
-  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.bolts = []; G.spikes = []; G.dust = []; G.mist = []; G.needles = []; G.clusters = []; G.bomblets = []; G.sentries = []; hero.hawks = []; hero.pips = 0; hero.quick = 0; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; G.debris = []; G.eliteFire = []; G.frostOrbs = []; G.summons = []; G.eliteBursts = []; G.blinkFx = []; G.leech = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
+  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.bolts = []; G.spikes = []; G.dust = []; G.mist = []; G.needles = []; G.clusters = []; G.bomblets = []; G.sentries = []; hero.hawks = []; hero.pips = 0; hero.quick = 0; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.arcHits = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; G.debris = []; G.eliteFire = []; G.frostOrbs = []; G.summons = []; G.eliteBursts = []; G.blinkFx = []; G.leech = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
 }
 function startLevel(level, seed, side = null) {
   genLevel(level, seed, side);
@@ -326,7 +326,7 @@ const HITSTOP = [0.045, 0.08, 0.11], KNOCK = [5, 7.7, 11];
 const HITSTOP_H = [0.07, 0.12, 0.16], KNOCK_H = [6.2, 9.6, 13.5];   // round 62: HEAVY   // knock speed: tiles/s, ~1/14 of it is the slide
 // round 62: a short jolt of the view in the direction of a blow (frame pixels), easing back
 // the low thud layered under a melee blow (synthesized, so it never repeats a sample)
-function RECIPES_THUD(v) { if (SFX.muted || !SFX.ctx || SFX.ctx.state !== 'running') return; const now = SFX.ctx.currentTime; if (SFX.last.thud && now - SFX.last.thud < 0.06) return; SFX.last.thud = now; try { RECIPES.thud(v); } catch (e) { /* audio is optional */ } }
+function RECIPES_THUD(v) { if (SFX.muted || !SFX.ctx || SFX.ctx.state !== 'running') return; const now = SFX.ctx.currentTime; if (SFX.last.thud && now - SFX.last.thud < 0.06) return; SFX.last.thud = now; try { SFX.vk = (typeof SYNTH_GAIN !== 'undefined' && SYNTH_GAIN.thud) || 1; RECIPES.thud(v); } catch (e) { /* audio is optional */ } SFX.vk = 1; }
 function camKick(dx, dy, px) {
   const sx = (dx - dy), sy = (dx + dy) * 0.5, l = Math.hypot(sx, sy) || 1, k = Math.min(px, 4.5);
   G.kick = [(G.kick ? G.kick[0] : 0) * 0.4 + sx / l * k, (G.kick ? G.kick[1] : 0) * 0.4 + sy / l * k];
@@ -1257,7 +1257,7 @@ function separate() {
 function updateProjectiles(dt) {
   for (const p of projectiles) {
     p.life -= dt;
-    if (p.kind === 'missile') { (p.trail = p.trail || []).push([p.fi, p.fj, p.z]); if (p.trail.length > 9) p.trail.shift(); }   // round 27: the path it took, for the trail
+    if (p.kind === 'missile') { (p.trail = p.trail || []).push([p.fi, p.fj, p.z]); if (p.trail.length > (p.small ? 8 : 14)) p.trail.shift(); }   // round 27 (round 67: longer): the path it took, for the trail
     if (p.kind === 'missile') {   // homing: turn toward the target (or the nearest enemy once it dies)
       if (p.orb) updateOrb(p, dt);   // round 30: the Arcane Orb modifier zaps what is near it as it drifts
       if (p.noHome) { /* piercing bolts and orbs fly straight */ } else if (!p.home || !alive(p.home)) { let bd = 4; p.home = null; for (const e of enemies) { if (!alive(e)) continue; const d = Math.hypot(e.fi - p.fi, e.fj - p.fj); if (d < bd) { bd = d; p.home = e; } } }
@@ -1294,8 +1294,9 @@ function updateProjectiles(dt) {
     if (p.kind !== 'arrow' && Math.random() < 0.7) pspawn(3, x, y, p.z, (Math.random() - 0.5) * 8, 0, 4 + Math.random() * 8, 0.35, p.kind === 'holy' ? 50 : p.kind === 'missile' ? 39 : p.kind === 'frostbolt' ? 118 : 16);
     if (p.kind === 'hfire' && Math.random() < 0.6) pspawn(3, x + (Math.random() - 0.5) * 6, y, p.z + 2, (Math.random() - 0.5) * 6, 0, 10 + Math.random() * 8, 0.5, Math.random() < 0.5 ? 4 : 5);   // smoke
     if (p.kind === 'missile' && p.life <= 0 && p.orb) orbBurst(p);
-    if (p.kind === 'missile' && p.life <= 0) { impactFlash(p.fi, p.fj, p.z, 3); sfx('zap'); }
-    if (p.kind === 'missile' && p.life <= 0) for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283; pspawn(4, x, y, p.z, Math.cos(a) * 45, Math.sin(a) * 22, 0, 0.16, k % 2 ? 40 : 27); }   // a ring of sparks on impact
+    if (p.kind === 'missile' && p.life <= 0) { impactFlash(p.fi, p.fj, p.z, p.small ? 3 : 5); sfx('zap'); arcaneHit(p); }   // round 67: a rune ring and rays where it bursts
+    if (p.kind === 'missile' && p.life <= 0) for (let k = 0; k < (p.small ? 8 : 14); k++) { const a = k / (p.small ? 8 : 14) * 6.283 + Math.random() * 0.3, v = 40 + Math.random() * 35; pspawn(4, x, y, p.z, Math.cos(a) * v, Math.sin(a) * v * 0.5, 20 + Math.random() * 40, 0.22 + Math.random() * 0.12, k % 3 ? 40 : k % 2 ? 58 : 27); }   // a spray of sparks on impact
+    if (p.kind === 'missile' && p.life > 0 && !p.small && Math.random() < 0.5) pspawn(3, x + (Math.random() - 0.5) * 4, y + (Math.random() - 0.5) * 2, p.z + (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 3, -4, 0.4 + Math.random() * 0.3, Math.random() < 0.5 ? 58 : 40);   // round 67: motes left hanging in its wake
     if (p.life <= 0 && p.kind === 'holy') sfx('boltHit');
     if (p.life <= 0 && p.boom && !p.boomed) { p.boomed = true; explodeAt(p.fi - p.vx * 0.03, p.fj - p.vy * 0.03, p.boom.r, p.boom.k, p.boom.pow, !!p.boom.big); if (p.boom.ground) G.fireGround.push({ fi: p.fi, fj: p.fj, r: 1.6, t: 3, tick: 0.3 }); }
     if (p.life <= 0 && p.kind !== 'arrow' && !p.boom) burst(2, x, y, p.z, p.kind === 'missile' ? 7 : 12, 60, p.kind === 'holy' ? 51 : p.kind === 'missile' ? 40 : 17);
@@ -1807,19 +1808,29 @@ function drawProjectile(p) {
     const tr = p.trail || [], sp = (p.spin || 0) + G.t * (p.orb ? 6 : 14), B = p.small ? 0.55 : p.orb ? 1.55 : 1;
     for (let k = 0; k < tr.length; k++) {
       const [fi, fj, z] = tr[k], [x, y] = iso(fi, fj), u = k / tr.length, j = (hash(k, Math.floor(G.t * 24), 7) - 0.5) * 4 * (1 - u);
-      const X = Math.round(x * SPX) - cam2x, Y = Math.round((y - z) * SPX + j) - cam2y, w = Math.round(u * 3.5 * (p.lance ? 0.7 : B));
-      for (let b = -w; b <= w; b++) for (let a = -w; a <= w; a++) { if (Math.abs(a) + Math.abs(b) > w) continue; if (u < 0.5 && ((X + a + Y + b) & 1)) continue; ovSet(X + a, Y + b, u > 0.75 ? 40 : u > 0.4 ? 39 : 38); }
+      const X = Math.round(x * SPX) - cam2x, Y = Math.round((y - z) * SPX + j) - cam2y, w = Math.round(u * (p.lance ? 2.5 : 5.5 * B));
+      for (let b = -w; b <= w; b++) for (let a = -w; a <= w; a++) { if (Math.abs(a) + Math.abs(b) > w) continue; if (u < 0.5 && ((X + a + Y + b) & 1)) continue; ovSet(X + a, Y + b, u > 0.8 ? 40 : u > 0.5 ? 39 : u > 0.25 ? 38 : 58); }
     }
     if (p.lance) {   // a bright spear of light pointing the way it flies
       const l = Math.hypot(p.vx, p.vy) || 1, ux = (p.vx - p.vy) / l * 0.707, uy = (p.vx + p.vy) / l * 0.354, ul = Math.hypot(ux, uy), dx = ux / ul, dy = uy / ul;
       for (let s = -16; s <= 6; s++) { const w = s > 0 ? 3 - s * 0.5 : 3 * (1 + s / 16); for (let k = -Math.ceil(w); k <= w; k++) { const x = Math.round(X0 + dx * s - dy * k), y = Math.round(Y0 + dy * s + dx * k), e = Math.abs(k) / Math.max(1, w); ovSet(x, y, e < 0.35 ? 27 : e < 0.7 ? 40 : 39); } }
       return;
     }
-    const rx = Math.round(9 * B), ry = Math.round(7 * B);
-    for (let b = -ry; b <= ry; b++) for (let a = -rx; a <= rx; a++) {
-      const d = a * a / (rx * rx) + b * b / (ry * ry); if (d > 1) continue;
-      if (d > 0.72 && ((X0 + a + Y0 + b + Math.floor(G.t * 20)) & 1)) continue;   // a fizzing rim
-      ovSet(X0 + a, Y0 + b, d < 0.12 ? 27 : d < 0.4 ? 40 : d < 0.72 ? 39 : 38);
+    // round 67: a comet: a teardrop head pointing the way it flies, violet at the rim, white-hot in front,
+    // with a pulsing glow round it (the orb keeps its round shape)
+    const vl = Math.hypot(p.vx, p.vy) || 1, ux = (p.vx - p.vy) / vl * 0.707, uy = (p.vx + p.vy) / vl * 0.354, ul = Math.hypot(ux, uy) || 1, fx = ux / ul, fy = uy / ul;
+    const pul = 1 + Math.sin(G.t * 30 + (p.spin || 0)) * 0.08, rx = 9 * B * pul, ry = 7 * B * pul, stretch = p.orb ? 0 : 0.9;
+    const RR = Math.ceil(rx * (1 + stretch) + 3);
+    for (let b = -RR; b <= RR; b++) for (let a = -RR; a <= RR; a++) {
+      const al = a * fx + b * fy, pe = -a * fy + b * fx;   // along / across the flight
+      const k = al < 0 ? 1 / (1 + stretch * Math.min(1, -al / rx)) : 1;   // the back drawn out into a tail
+      const d = (al * k) * (al * k) / (rx * rx) + pe * pe / (ry * ry) * (al < 0 ? 1 + stretch * Math.min(1.4, -al / rx) : 1);
+      if (d > 1.45) continue;
+      const x = X0 + a, y = Y0 + b;
+      if (d > 1) { if (((x + y + Math.floor(G.t * 20)) & 1) === 0 && d < 1.3) ovSet(x, y, 57); continue; }   // the violet haze round it
+      if (d > 0.72 && ((x + y + Math.floor(G.t * 20)) & 1)) { ovSet(x, y, 58); continue; }   // a fizzing violet rim
+      const hot = d - Math.max(0, al) / rx * 0.35;   // hotter toward the front
+      ovSet(x, y, hot < 0.1 ? 27 : hot < 0.38 ? 40 : hot < 0.72 ? 39 : 38);
     }
     for (let k = 0; k < (p.orb ? 5 : 3); k++) { const a = sp + k * 6.283 / (p.orb ? 5 : 3), x = Math.round(X0 + Math.cos(a) * 13 * B), y = Math.round(Y0 + Math.sin(a) * 6.5 * B); ovSet(x, y, 27); ovSet(x + 1, y, 40); ovSet(x, y + 1, 39); }
     return;

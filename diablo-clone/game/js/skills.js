@@ -1142,6 +1142,24 @@ function shockwave(fi, fj, r, dur, cols, arc = null, emis = true) {
   }
 }
 function impactFlash(fi, fj, z, size) { G.impacts.push({ fi, fj, z, size, t: 0.09, t0: 0.09 }); }
+// round 67: where a magic missile bursts: a rune ring that spreads and thins, six rays, a white flash
+function arcaneHit(p) { (G.arcHits = G.arcHits || []).push({ fi: p.fi, fj: p.fj, z: p.z, t: 0.32, t0: 0.32, big: p.small ? 0.6 : p.orb ? 1.5 : 1, rot: Math.random() * 6.283 }); }
+function drawArcHits() {
+  if (!G.arcHits) return;
+  for (const h of G.arcHits) {
+    const [x, y] = iso(h.fi, h.fj), X = Math.round(x * SPX - cam2x), Y = Math.round((y - h.z) * SPX - cam2y), u = 1 - h.t / h.t0, B = h.big;
+    const R = (8 + u * 24) * B, th = Math.max(2, Math.round((1 - u) * 6 * B));
+    for (let k = 0; k < 120; k++) {   // the ring, broken into six rune arcs that turn as it spreads
+      const a = k / 120 * 6.283; if ((k % 20) > 15) continue;
+      for (let r = 0; r < th; r++) ovSet(Math.round(X + Math.cos(a + h.rot + u) * (R - r)), Math.round(Y + Math.sin(a + h.rot + u) * (R - r) * 0.55), r === 0 ? 27 : r === th - 1 ? 58 : u < 0.5 ? 40 : 39);
+    }
+    if (u < 0.6) for (let q = 0; q < 6; q++) {   // rays flung out past the ring
+      const a = h.rot + q * 1.047, r0 = R * 0.3, r1 = R * (1.1 + 0.3 * (q & 1));
+      for (let r = r0; r < r1; r += 1) ovSet(Math.round(X + Math.cos(a) * r), Math.round(Y + Math.sin(a) * r * 0.55), r > r1 - 3 ? 40 : 27);
+    }
+    if (u < 0.25) { const r = Math.round((1 - u * 4) * 7 * B); for (let b = -r; b <= r; b++) for (let a = -r; a <= r; a++) if (a * a + b * b * 2 <= r * r) ovSet(X + a, Y + b, a * a + b * b * 2 < r * r * 0.4 ? 27 : 40); }   // the white flash at the heart
+  }
+}
 // cracks: the same branching paths the glowing quake draws, pressed into the floor for good
 function crackPaths(q, fn) {
   const n = q.n || (q.ring ? 9 : 6), R = q.R || (q.ring ? 1.9 : SLAM_R), hf = q.half ?? SLAM_HALF;
@@ -1167,6 +1185,7 @@ function rubble(x, y, n, speed, a0 = null, half = Math.PI) {
 function updateImpactFx(dt) {
   for (const w of G.waves) w.t -= dt; G.waves = G.waves.filter(w => w.t > 0);
   for (const f of G.impacts) f.t -= dt; G.impacts = G.impacts.filter(f => f.t > 0);
+  if (G.arcHits) { for (const h of G.arcHits) h.t -= dt; G.arcHits = G.arcHits.filter(h => h.t > 0); }
   for (const f of G.frost) f.t -= dt; G.frost = G.frost.filter(f => f.t > 0);
   for (const k of G.streaks) k.t -= dt; G.streaks = G.streaks.filter(k => k.t > 0);
   if (hero.whirl > 0 && Math.random() < 0.5 && G.dust) { const a = G.t * 14 + Math.random(), r = 1.0; G.dust.push({ fi: hero.fi + Math.cos(a) * r, fj: hero.fj + Math.sin(a) * r, vi: -Math.sin(a) * 3.5, vj: Math.cos(a) * 3.5, r: 4, vr: 10, t: 0.4, t0: 0.5, z: 1 }); }   // round 65c: a swirl of dust round his feet
@@ -1219,7 +1238,7 @@ function drawStreaks() {   // the blink's streak: a white core in an arcane band
   }
 }
 function drawImpactFlashes() {
-  drawSlamFx(); drawFrostFx(); drawLightning(); drawRangerKit();   // round 65, 66
+  drawSlamFx(); drawFrostFx(); drawLightning(); drawRangerKit(); drawArcHits();   // round 65, 66, 67
   drawStreaks(); drawHookChains(); drawMods30(); drawStrikes(); drawRangerFx(); drawDebris();
   for (const f of G.impacts) {
     const [x, y] = iso(f.fi, f.fj), X0 = Math.round(x * SPX - cam2x), Y0 = Math.round((y - f.z) * SPX - cam2y), p = 1 - f.t / f.t0, R = f.size * (0.6 + p * 0.6);
@@ -2153,7 +2172,7 @@ function startRain() {
     const g = enemies.filter(o => alive(o) && Math.hypot(o.fi - best.fi, o.fj - best.fj) < 3);
     at = [g.reduce((a, o) => a + o.fi, 0) / g.length, g.reduce((a, o) => a + o.fj, 0) / g.length];
   }
-  G.rain.push({ fi: at[0], fj: at[1], t: 3, next: 0, r: 3.0 });
+  G.rain.push({ fi: at[0], fj: at[1], t: 3, next: 0, r: 3.0, lean: Math.sign(iso(at[0], at[1])[0] - iso(hero.fi, hero.fj)[0]) || 1 });
   hero.dir = dirFrom(at[0] - hero.fi, at[1] - hero.fj); hero.combo = 0; hero.atk = 0; hero.hitDone = true; hero.skyT = 0.45;   // loosed into the sky (round 43: the bow raised to it)
   say('RAIN OF ARROWS!', 55, 1.6); sfx('twang'); sfx('whoomp');
   for (let k = 0; k < 12; k++) { const [x, y] = screenOf(hero); pspawn(4, x, y, 30, (Math.random() - 0.5) * 20, 0, 180 + Math.random() * 60, 0.3, 27); }   // a sheaf sent straight up
@@ -2172,12 +2191,15 @@ function updateRanger(dt) {
   for (const e of enemies) if (e.markT > 0) { if (!alive(e)) { const sp = e.markSpread; e.markT = 0; if (sp) huntersMark(e); } else e.markT -= dt; }
   for (const s of G.smoke) s.t -= dt; G.smoke = G.smoke.filter(s => s.t > 0);
   // the rain: an arrow every 0.025 s somewhere in the circle, falling from on high
+  // (round 67: in volleys, eight every 0.2 s, falling at a slant from the ranger's side, so the storm has a beat)
   for (const R of G.rain) {
-    R.t -= dt; R.next -= dt;
+    R.t -= dt; R.next -= dt; R.age = (R.age || 0) + dt;
     while (R.next <= 0 && R.t > 0) {
-      R.next += 0.025;
-      const a = Math.random() * 6.283, d = Math.sqrt(Math.random()) * R.r, fi = R.fi + Math.cos(a) * d, fj = R.fj + Math.sin(a) * d;
-      if (!blocked(fi, fj)) G.falling.push({ fi, fj, z: 150 + Math.random() * 40, vz: 420 });
+      R.next += 0.2;
+      for (let q = 0; q < 8; q++) {
+        const a = Math.random() * 6.283, d = Math.sqrt(Math.random()) * R.r, fi = R.fi + Math.cos(a) * d, fj = R.fj + Math.sin(a) * d, z = 110 + Math.random() * 40;
+        if (!blocked(fi, fj)) G.falling.push({ fi, fj, z, z0: z, vz: 330 + Math.random() * 50, lean: R.lean || 0 });
+      }
     }
   }
   G.rain = G.rain.filter(R => R.t > 0);
@@ -2185,16 +2207,34 @@ function updateRanger(dt) {
     f.z -= f.vz * dt; if (f.z > 0) continue;
     f.done = true;
     const e = enemies.find(o => alive(o) && Math.hypot(o.fi - f.fi, o.fj - f.fj) < 0.7 + (o.def.unique ? 0.4 : 0));
-    if (e) { wake(e); const c = spellCrit(); G.pierce = true; damageEnemy(e, spellDmg(c ? 2.4 : 1.2), f.fi - 0.05, f.fj - 0.05, c, 0, true); G.pierce = false; if (alive(e)) e.rootT = Math.max(e.rootT || 0, e.def.unique ? 0.25 : 0.6); sfx('thunk'); }
-    else { G.stuck.push({ fi: f.fi, fj: f.fj, t: 3 + Math.random(), seed: (Math.random() * 1e6) | 0 }); const [x, y] = iso(f.fi, f.fj); pspawn(5, x, y, 1, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 10, 8, 1, LV.outdoor ? DIRT[3] : S[5]); }
+    if (e) { wake(e); const c = spellCrit(); G.pierce = true; damageEnemy(e, spellDmg(c ? 2.4 : 1.2), f.fi - 0.05, f.fj - 0.05, c, 0, true); G.pierce = false; if (alive(e)) e.rootT = Math.max(e.rootT || 0, e.def.unique ? 0.25 : 0.6); sfx('thunk'); const [x, y] = screenOf(e); for (let k = 0; k < 5; k++) pspawn(4, x, y, 14, (Math.random() - 0.5) * 50, (Math.random() - 0.5) * 20, 30 + Math.random() * 30, 0.2, k % 2 ? 27 : 51); }   // (round 67: a spray of sparks where it bites)
+    else {
+      G.stuck.push({ fi: f.fi, fj: f.fj, t: 3 + Math.random(), seed: (Math.random() * 1e6) | 0, lean: f.lean }); const [x, y] = iso(f.fi, f.fj);
+      for (let k = 0; k < 3; k++) pspawn(5, x, y, 1, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 14, 14 + Math.random() * 12, 0.5, LV.outdoor ? DIRT[3] : S[5]);   // chips kicked up
+      if (G.dust && Math.random() < 0.35) G.dust.push({ fi: f.fi, fj: f.fj, vi: (Math.random() - 0.5) * 0.8, vj: (Math.random() - 0.5) * 0.8, r: 3 + Math.random() * 2, vr: 10, t: 0.5, t0: 0.5, z: 1 });   // and a puff of dust
+    }
   }
   G.falling = G.falling.filter(f => !f.done);
   for (const s of G.stuck) s.t -= dt; G.stuck = G.stuck.filter(s => s.t > 0);
-  if (G.stuck.length > 120) G.stuck.splice(0, G.stuck.length - 120);
+  if (G.stuck.length > 70) G.stuck.splice(0, G.stuck.length - 70);
 }
 // world layer: traps (iron jaws in a ring, open then snapped), arrows stuck in the ground, smoke
 function drawRangerGround() {
   const put = (x, y, v) => { if (x >= 0 && y >= 0 && x < W && y < H && !cid[y * W + x]) scr[y * W + x] = v; };
+  for (const R of G.rain) {   // round 67: the storm's shadow on the ground, a gold ring closing in to its edge, then breathing
+    const [x0, y0] = iso(R.fi, R.fj), cx = x0 - camX, cy = y0 - camY, in0 = Math.min(1, (R.age || 0) / 0.3), fade = Math.min(1, R.t / 0.4);
+    const rr = R.r * 22.6 * (1.35 - 0.35 * in0) * (1 + Math.sin(G.t * 5) * 0.015);
+    for (let y = Math.floor(cy - rr / 2); y <= cy + rr / 2; y++) for (let x = Math.floor(cx - rr); x <= cx + rr; x++) {
+      if (x < 0 || y < 0 || x >= W || y >= H || cid[y * W + x]) continue;
+      const d = Math.hypot((x - cx) / rr, (y - cy) * 2 / rr); if (d > 1) continue;
+      if (BAYER[((y & 3) << 2) | (x & 3)] < 0.28 * fade * in0 * (1 - d * d * 0.5)) scr[y * W + x] = BLK;
+    }
+    for (let k = 0; k < 120; k++) { if ((k + Math.floor(G.t * 10)) % 5 > 2 || fade < 0.5 && k & 1) continue; const a = k / 120 * 6.283; put(Math.round(cx + Math.cos(a) * rr), Math.round(cy + Math.sin(a) * rr * 0.5), 51); put(Math.round(cx + Math.cos(a) * rr), Math.round(cy + Math.sin(a) * rr * 0.5) - 1, 50); put(Math.round(cx + Math.cos(a) * rr), Math.round(cy + Math.sin(a) * rr * 0.5) + 1, BLK); }
+  }
+  for (const f of G.falling) {   // each arrow's shadow, a dark dot growing as it nears the ground
+    const [x0, y0] = iso(f.fi, f.fj), x = Math.round(x0 - camX), y = Math.round(y0 - camY), u = 1 - f.z / (f.z0 || 180);
+    if (u < 0.35) continue; put(x, y, BLK); if (u > 0.7) { put(x + 1, y, BLK); put(x - 1, y, BLK); }
+  }
   for (const tp of G.traps) {
     let fi = tp.fi, fj = tp.fj, z = 0;
     if (tp.fly > 0) { const u = 1 - tp.fly / 0.25; fi = tp.from[0] + (tp.fi - tp.from[0]) * u; fj = tp.from[1] + (tp.fj - tp.from[1]) * u; z = Math.sin(u * Math.PI) * 16; }
@@ -2217,7 +2257,8 @@ function drawRangerGround() {
   for (const s of G.stuck) {   // a shaft leaning out of the ground with its fletching
     const [x0, y0] = iso(s.fi, s.fj), x = Math.round(x0 - camX), y = Math.round(y0 - camY), lean = (s.seed & 3) - 1.5;
     if (s.t < 0.6 && BAYER[((y & 3) << 2) | (x & 3)] > s.t / 0.6) continue;
-    for (let k = 0; k < 5; k++) put(x + Math.round(lean * k * 0.3), y - k, k < 4 ? WOOD[1] : 27);
+    const ln = s.lean ? s.lean * 0.4 : lean * 0.3;   // (round 67: longer, leaning the way it fell, red fletching)
+    for (let k = 0; k < 8; k++) { const xx = x + Math.round(ln * k), yy = y - k; put(xx, yy, k < 6 ? (k & 1 ? WOOD[1] : WOOD[2]) : BONE[2]); if (k >= 6) put(xx + 1, yy, BONE[1]); if (k < 6) put(xx + 1, yy, BLK); }
   }
   for (const s of G.smoke) {   // a grey cloud, thinning out
     const [x0, y0] = iso(s.fi, s.fj), cx = x0 - camX, cy = y0 - camY - 8, life = s.t / s.t0, R = s.r * 22;
@@ -2231,9 +2272,18 @@ function drawRangerGround() {
 // detail layer: falling arrows (streaks with a head), the hunter's mark (a red reticle over the
 // marked foe, drawn over walls too, so it shows where it hides)
 function drawRangerFx() {
+  // round 67: a real arrow (steel head, dark shaft, red fletching) leaning in from the ranger's side,
+  // a pale streak above it, so a volley reads as arrows and not rain
   for (const f of G.falling) {
-    const [x, y] = iso(f.fi, f.fj), X = Math.round(x * SPX - cam2x), Y = Math.round((y - f.z) * SPX - cam2y);
-    for (let s = 0; s < 20; s++) { const x = X - Math.round(s * 0.25); ovSet(x + 2, Y - s, BLK); ovSet(x - 1, Y - s, BLK); const c = s < 3 ? 27 : s > 15 ? 22 : BONE[2]; ovSet(x, Y - s, c); ovSet(x + 1, Y - s, s < 3 ? 27 : s > 15 ? 23 : BONE[1]); }
+    const [x, y] = iso(f.fi, f.fj), L = f.lean || 0, X = Math.round((x + f.z * 0.18 * -L) * SPX - cam2x), Y = Math.round((y - f.z) * SPX - cam2y), sl = 0.36 * L;
+    for (let s = 0; s < 46; s++) {
+      const xx = X + Math.round(s * sl), yy = Y - s;
+      if (s >= 28) { const u = (s - 28) / 18; if (BAYER[((yy & 3) << 2) | (xx & 3)] < u * 1.1) continue; ovSet(xx, yy, u < 0.4 ? BONE[2] : BONE[1]); continue; }   // the streak
+      if (s < 5) { const w = s < 2 ? 0 : 1; for (let a = -w - 1; a <= w + 1; a++) ovSet(xx + a, yy, Math.abs(a) > w ? BLK : s === 0 ? 27 : STEEL[4]); continue; }   // the head
+      ovSet(xx - 1, yy, BLK); ovSet(xx + 2, yy, BLK);
+      if (s > 20) { ovSet(xx - 2, yy, s & 1 ? 22 : 23); ovSet(xx + 3, yy, s & 1 ? 23 : 22); ovSet(xx, yy, 22); ovSet(xx + 1, yy, 23); }   // the fletching
+      else { ovSet(xx, yy, WOOD[1]); ovSet(xx + 1, yy, WOOD[2]); }
+    }
   }
   for (const e of enemies) {
     if (!(e.markT > 0) || !alive(e)) continue;

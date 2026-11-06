@@ -4,12 +4,15 @@
 // they were, and when OPTIONS > SOUND is SYNTH. Audio starts on the first tap, as phones require.
 // Music: the user's own songs in music/ (round 39b, 40b).
 
-const SFX = { ctx: null, out: null, noise: null, muted: false, last: {}, synth: false };
+const SFX = { ctx: null, out: null, noise: null, muted: false, last: {}, synth: false, vk: 1 };
 try { SFX.muted = localStorage.getItem('dcg-mute') === '1'; SFX.synth = localStorage.getItem('dcg-sfx') === 'synth'; } catch (e) { /* storage unavailable */ }
 // round 44: the recorded sounds: each name -> how many takes (sfx/<name>.mp3, sfx/<name>_2.mp3, ...),
 // one picked at random per play with a little pitch change so repeats don't grate
 const SAMPLES = {"swing": 2, "heavySwing": 1, "hit": 2, "crit": 1, "kill": 2, "block": 1, "clank": 1, "crack": 1, "chain": 1, "twang": 1, "thunk": 2, "missile": 1, "fireball": 1, "boom": 1, "meteor": 1, "frost": 1, "blink": 1, "squeal": 1, "yelp": 1, "hiss": 1, "clatter": 2, "growl": 1, "cry": 1, "splat": 1, "hurt": 1, "death": 1, "step": 4, "potion": 1, "levelUp": 1, "gold": 3, "clink": 1, "chest": 1, "portal": 1, "zap": 1, "barrel": 1};   // (round 58: the missile hit and the barrel are recordings now)
-const SAMPLE_GAIN = { step: 0.28, swing: 0.45, heavySwing: 0.5, hit: 0.6, crit: 0.75, kill: 0.7, block: 0.55, clank: 0.5, crack: 0.6, chain: 0.5, twang: 0.5, thunk: 0.5, missile: 0.42, fireball: 0.6, boom: 0.8, meteor: 0.6, frost: 0.55, blink: 0.5, squeal: 0.5, yelp: 0.5, hiss: 0.45, clatter: 0.55, growl: 0.5, cry: 0.75, splat: 0.45, hurt: 0.6, death: 0.75, potion: 0.5, levelUp: 0.55, gold: 0.4, clink: 0.4, chest: 0.55, portal: 0.5, zap: 0.45, barrel: 0.55 };
+// round 67: set from measured loudness (tools/sfx/loudness.cjs + balance.py): each sound as loud as its
+// role through a phone speaker, so the bass-heavy blows (boom, crack, the weight thud) are heard on a phone
+const SAMPLE_GAIN = {boom: 1.12, meteor: 1.37, crit: 1.16, kill: 0.77, crack: 1.5, death: 0.65, levelUp: 0.96, hurt: 0.39, cry: 1.16, hit: 0.71, block: 0.42, clank: 0.37, chain: 0.62, barrel: 0.63, thunk: 0.51, zap: 0.47, fireball: 1.12, frost: 0.61, blink: 0.47, missile: 0.85, swing: 0.71, heavySwing: 1.08, twang: 0.75, growl: 0.51, squeal: 0.71, yelp: 0.7, hiss: 0.59, clatter: 1.16, splat: 1.08, portal: 0.99, chest: 1.5, clink: 0.92, gold: 0.57, potion: 0.73, step: 0.37};
+const SYNTH_GAIN = {whoomp: 2.5, thud: 1.6, bolt: 0.99, boltHit: 1.78, sizzle: 0.33, arrow: 0.89, stairs: 1.68, streak: 1.46, pickup: 1.27, tap: 1.11, crackle: 0.98};   // (the sounds with no recording)   // (boom, portal and thud held back so headphones don't boom: full-range no louder than -6 dB)
 const SBUF = {};
 function loadSamples() {
   if (SFX.loading || !SFX.ctx) return; SFX.loading = true;
@@ -146,7 +149,7 @@ function setMuted(m) { SFX.muted = m; try { localStorage.setItem('dcg-mute', m ?
 // a pitched blip: oscillator gliding f0 -> f1 with a fast attack and exponential decay
 function tone(type, f0, f1, dur, gain, delay = 0) {
   const c = SFX.ctx, t = c.currentTime + delay, o = c.createOscillator(), g = c.createGain();
-  gain = Math.min(1, gain * 2.2);
+  gain = Math.min(1, gain * 2.2) * SFX.vk;
   o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
   g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   o.connect(g); g.connect(SFX.out); o.start(t); o.stop(t + dur + 0.02);
@@ -154,7 +157,7 @@ function tone(type, f0, f1, dur, gain, delay = 0) {
 // a burst of filtered noise, the filter sweeping f0 -> f1
 function noise(dur, gain, type, f0, f1, q = 1, delay = 0) {
   const c = SFX.ctx, t = c.currentTime + delay, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
-  gain = Math.min(3, gain * (type === 'lowpass' ? 2.5 : 6));   // band/high-passed noise loses most of its energy
+  gain = Math.min(3, gain * (type === 'lowpass' ? 2.5 : 6)) * SFX.vk;   // band/high-passed noise loses most of its energy
   s.buffer = SFX.noise; s.playbackRate.value = 0.7 + Math.random() * 0.6;
   f.type = type; f.Q.value = q; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
   g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
@@ -162,7 +165,7 @@ function noise(dur, gain, type, f0, f1, q = 1, delay = 0) {
 }
 const vary = (f, k = 0.06) => f * (1 + (Math.random() * 2 - 1) * k);   // small pitch variation per play
 const RECIPES = {
-  thud: (v = 1) => { tone('sine', vary(120), 40, 0.16, 0.42 * v); noise(0.07, 0.16 * v, 'lowpass', 500, 120); },   // round 62: the weight under a blow (HEAVY)
+  thud: (v = 1) => { tone('sine', vary(120), 40, 0.16, 0.42 * v); noise(0.07, 0.16 * v, 'lowpass', 500, 120); noise(0.06, 0.26 * v, 'bandpass', vary(650), 260, 1.2); },   // round 62: the weight under a blow (HEAVY) (round 67: a knock a phone can play)
   swing: () => noise(0.13, 0.42, 'bandpass', 700, 2400, 0.9),
   heavySwing: () => noise(0.2, 0.48, 'bandpass', 400, 1600, 0.9),
   hit: () => { tone('sine', vary(190), 60, 0.1, 0.6); noise(0.05, 0.3, 'lowpass', 2500, 600); },
@@ -199,7 +202,7 @@ const RECIPES = {
   chain: () => { for (let k = 0; k < 5; k++) noise(0.025, 0.28, 'bandpass', vary(3800, 0.15), 2600, 3, k * 0.035); },
   clink: () => { tone('sine', vary(2400), 2200, 0.1, 0.1); tone('sine', vary(3100), 3000, 0.08, 0.08, 0.03); },
   zap: () => { tone('square', vary(1300), 400, 0.05, 0.08); noise(0.04, 0.16, 'highpass', 5000, 3000, 1); },
-  whoomp: () => { tone('sine', 220, 70, 0.16, 0.35); noise(0.12, 0.2, 'lowpass', 1600, 300); },
+  whoomp: () => { tone('sine', 220, 70, 0.16, 0.35); noise(0.12, 0.2, 'lowpass', 1600, 300); noise(0.1, 0.08, 'bandpass', 900, 400, 1); },
   squeal: () => { tone('square', vary(900), 300, 0.12, 0.07); tone('sawtooth', vary(600), 200, 0.1, 0.05, 0.03); },   // round 37: death cries
   yelp: () => { tone('triangle', vary(1300), 500, 0.14, 0.12); tone('triangle', vary(900), 300, 0.08, 0.08, 0.1); },
   hiss: () => noise(0.22, 0.12, 'highpass', 4000, 2500, 1),
@@ -216,7 +219,7 @@ function sfx(name, v = 1) {
   const now = SFX.ctx.currentTime;
   if (SFX.last[name] && now - SFX.last[name] < 0.045) return;   // many hits on one frame play once
   SFX.last[name] = now;
-  try { if (!playSample(name, v)) RECIPES[name](v); } catch (e) { /* audio is optional */ }
+  try { if (!playSample(name, v)) { SFX.vk = SYNTH_GAIN[name] ?? 1; RECIPES[name](v); } } catch (e) { /* audio is optional */ } SFX.vk = 1;
 }
 // a faint fire crackle that swells near visible torches and braziers
 let crackleT = 0;

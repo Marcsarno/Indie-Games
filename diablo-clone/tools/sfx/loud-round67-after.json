@@ -1,0 +1,499 @@
+{
+ "thud": {
+  "synth": {
+   "full": -11,
+   "phone": -27.9,
+   "gain": 1.6
+  }
+ },
+ "swing": {
+  "synth": {
+   "full": -22.6,
+   "phone": -22.9,
+   "gain": 1
+  },
+  "rec": {
+   "full": -21.4,
+   "phone": -23,
+   "gain": 0.71
+  }
+ },
+ "heavySwing": {
+  "synth": {
+   "full": -21.2,
+   "phone": -22.2,
+   "gain": 1
+  },
+  "rec": {
+   "full": -14.5,
+   "phone": -21,
+   "gain": 1.08
+  }
+ },
+ "hit": {
+  "synth": {
+   "full": -16.9,
+   "phone": -29.8,
+   "gain": 1
+  },
+  "rec": {
+   "full": -18.2,
+   "phone": -19,
+   "gain": 0.71
+  }
+ },
+ "kill": {
+  "synth": {
+   "full": -12.6,
+   "phone": -29.3,
+   "gain": 1
+  },
+  "rec": {
+   "full": -12.9,
+   "phone": -17.9,
+   "gain": 0.77
+  }
+ },
+ "hurt": {
+  "synth": {
+   "full": -14.8,
+   "phone": -31.3,
+   "gain": 1
+  },
+  "rec": {
+   "full": -16.1,
+   "phone": -16.9,
+   "gain": 0.39
+  }
+ },
+ "block": {
+  "synth": {
+   "full": -24,
+   "phone": -24.1,
+   "gain": 1
+  },
+  "rec": {
+   "full": -18.9,
+   "phone": -19,
+   "gain": 0.42
+  }
+ },
+ "gold": {
+  "synth": {
+   "full": -21.7,
+   "phone": -21.7,
+   "gain": 1
+  },
+  "rec": {
+   "full": -23,
+   "phone": -23,
+   "gain": 0.57
+  }
+ },
+ "pickup": {
+  "synth": {
+   "full": -22.3,
+   "phone": -23.1,
+   "gain": 1.27
+  }
+ },
+ "potion": {
+  "synth": {
+   "full": -20.5,
+   "phone": -24.7,
+   "gain": 1
+  },
+  "rec": {
+   "full": -19.2,
+   "phone": -22,
+   "gain": 0.73
+  }
+ },
+ "chest": {
+  "synth": {
+   "full": -23.4,
+   "phone": -24.8,
+   "gain": 1
+  },
+  "rec": {
+   "full": -15.1,
+   "phone": -21.2,
+   "gain": 1.5
+  }
+ },
+ "barrel": {
+  "synth": {
+   "full": -16.8,
+   "phone": -26.4,
+   "gain": 1
+  },
+  "rec": {
+   "full": -18,
+   "phone": -20,
+   "gain": 0.63
+  }
+ },
+ "bolt": {
+  "synth": {
+   "full": -20.5,
+   "phone": -20.9,
+   "gain": 0.99
+  }
+ },
+ "boltHit": {
+  "synth": {
+   "full": -12.9,
+   "phone": -21,
+   "gain": 1.78
+  }
+ },
+ "arrow": {
+  "synth": {
+   "full": -23.2,
+   "phone": -23.2,
+   "gain": 0.89
+  }
+ },
+ "fireball": {
+  "synth": {
+   "full": -22.5,
+   "phone": -36.9,
+   "gain": 1
+  },
+  "rec": {
+   "full": -10.7,
+   "phone": -19,
+   "gain": 1.12
+  }
+ },
+ "levelUp": {
+  "synth": {
+   "full": -21.3,
+   "phone": -22,
+   "gain": 1
+  },
+  "rec": {
+   "full": -13.6,
+   "phone": -17,
+   "gain": 0.96
+  }
+ },
+ "portal": {
+  "synth": {
+   "full": -22.2,
+   "phone": -22.2,
+   "gain": 1
+  },
+  "rec": {
+   "full": -8,
+   "phone": -23.5,
+   "gain": 0.99
+  }
+ },
+ "stairs": {
+  "synth": {
+   "full": -18.6,
+   "phone": -21.3,
+   "gain": 1.68
+  }
+ },
+ "death": {
+  "synth": {
+   "full": -9.5,
+   "phone": -25.8,
+   "gain": 1
+  },
+  "rec": {
+   "full": -14.6,
+   "phone": -15,
+   "gain": 0.65
+  }
+ },
+ "cry": {
+  "synth": {
+   "full": -21.6,
+   "phone": -26.8,
+   "gain": 1
+  },
+  "rec": {
+   "full": -11.8,
+   "phone": -18,
+   "gain": 1.16
+  }
+ },
+ "crit": {
+  "synth": {
+   "full": -13.5,
+   "phone": -25.8,
+   "gain": 1
+  },
+  "rec": {
+   "full": -14.9,
+   "phone": -17,
+   "gain": 1.16
+  }
+ },
+ "streak": {
+  "synth": {
+   "full": -20,
+   "phone": -22.1,
+   "gain": 1.46
+  }
+ },
+ "tap": {
+  "synth": {
+   "full": -24.9,
+   "phone": -25.1,
+   "gain": 1.11
+  }
+ },
+ "missile": {
+  "synth": {
+   "full": -25.2,
+   "phone": -25.4,
+   "gain": 1
+  },
+  "rec": {
+   "full": -14.8,
+   "phone": -23,
+   "gain": 0.85
+  }
+ },
+ "boom": {
+  "synth": {
+   "full": -10.1,
+   "phone": -21.6,
+   "gain": 1
+  },
+  "rec": {
+   "full": -6.1,
+   "phone": -20.1,
+   "gain": 1.12
+  }
+ },
+ "frost": {
+  "synth": {
+   "full": -10.6,
+   "phone": -10.6,
+   "gain": 1
+  },
+  "rec": {
+   "full": -17.2,
+   "phone": -19,
+   "gain": 0.61
+  }
+ },
+ "blink": {
+  "synth": {
+   "full": -24.4,
+   "phone": -25.7,
+   "gain": 1
+  },
+  "rec": {
+   "full": -20.7,
+   "phone": -20.9,
+   "gain": 0.47
+  }
+ },
+ "meteor": {
+  "synth": {
+   "full": -17.9,
+   "phone": -18,
+   "gain": 1
+  },
+  "rec": {
+   "full": -11.9,
+   "phone": -16,
+   "gain": 1.37
+  }
+ },
+ "crack": {
+  "synth": {
+   "full": -11.1,
+   "phone": -11.6,
+   "gain": 1
+  },
+  "rec": {
+   "full": -20.1,
+   "phone": -20.1,
+   "gain": 1.5
+  }
+ },
+ "sizzle": {
+  "synth": {
+   "full": -21.4,
+   "phone": -21.4,
+   "gain": 0.33
+  }
+ },
+ "clank": {
+  "synth": {
+   "full": -21.1,
+   "phone": -21.7,
+   "gain": 1
+  },
+  "rec": {
+   "full": -19,
+   "phone": -19,
+   "gain": 0.37
+  }
+ },
+ "chain": {
+  "synth": {
+   "full": -26,
+   "phone": -26,
+   "gain": 1
+  },
+  "rec": {
+   "full": -20,
+   "phone": -20,
+   "gain": 0.62
+  }
+ },
+ "clink": {
+  "synth": {
+   "full": -27.1,
+   "phone": -27.1,
+   "gain": 1
+  },
+  "rec": {
+   "full": -21.9,
+   "phone": -21.9,
+   "gain": 0.92
+  }
+ },
+ "zap": {
+  "synth": {
+   "full": -24.1,
+   "phone": -24.1,
+   "gain": 1
+  },
+  "rec": {
+   "full": -16.4,
+   "phone": -20.9,
+   "gain": 0.47
+  }
+ },
+ "whoomp": {
+  "synth": {
+   "full": -8.9,
+   "phone": -20.9,
+   "gain": 2.5
+  }
+ },
+ "squeal": {
+  "synth": {
+   "full": -29,
+   "phone": -29.2,
+   "gain": 1
+  },
+  "rec": {
+   "full": -20.5,
+   "phone": -21,
+   "gain": 0.71
+  }
+ },
+ "yelp": {
+  "synth": {
+   "full": -27.8,
+   "phone": -27.8,
+   "gain": 1
+  },
+  "rec": {
+   "full": -16.7,
+   "phone": -21,
+   "gain": 0.7
+  }
+ },
+ "hiss": {
+  "synth": {
+   "full": -19.6,
+   "phone": -19.6,
+   "gain": 1
+  },
+  "rec": {
+   "full": -22,
+   "phone": -22.1,
+   "gain": 0.59
+  }
+ },
+ "clatter": {
+  "synth": {
+   "full": -29.9,
+   "phone": -30.1,
+   "gain": 1
+  },
+  "rec": {
+   "full": -14.5,
+   "phone": -21,
+   "gain": 1.16
+  }
+ },
+ "splat": {
+  "synth": {
+   "full": -21.1,
+   "phone": -29.1,
+   "gain": 1
+  },
+  "rec": {
+   "full": -20.7,
+   "phone": -21,
+   "gain": 1.08
+  }
+ },
+ "growl": {
+  "synth": {
+   "full": -36.8,
+   "phone": -44.3,
+   "gain": 1
+  },
+  "rec": {
+   "full": -21.4,
+   "phone": -22.9,
+   "gain": 0.51
+  }
+ },
+ "twang": {
+  "synth": {
+   "full": -27.5,
+   "phone": -30.2,
+   "gain": 1
+  },
+  "rec": {
+   "full": -21.6,
+   "phone": -22,
+   "gain": 0.75
+  }
+ },
+ "thunk": {
+  "synth": {
+   "full": -29.9,
+   "phone": -34.6,
+   "gain": 1
+  },
+  "rec": {
+   "full": -20.8,
+   "phone": -21,
+   "gain": 0.51
+  }
+ },
+ "step": {
+  "synth": {
+   "full": -51.5,
+   "phone": -54.5,
+   "gain": 1
+  },
+  "rec": {
+   "full": -27.8,
+   "phone": -32.1,
+   "gain": 0.37
+  }
+ },
+ "crackle": {
+  "synth": {
+   "full": -38,
+   "phone": -38,
+   "gain": 0.98
+  }
+ }
+}
