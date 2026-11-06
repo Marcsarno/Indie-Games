@@ -151,7 +151,8 @@ function talkTo(n) {
       [O, 'HE IS RAISING THE OLD KING UNDER THE MINE. TAKE THE KEY. PUT THE KING BACK IN HIS GRAVE, AND FIND MAELIS IF YOU CAN.']], 'ACCEPT', () => { f.letterRead = true; });
     if (st === 'kingBack') return openTalk([
       [O, 'THE KING IS DUST AGAIN. I FELT IT, LIKE A WINDOW OPENED IN A SICKROOM.'],
-      [O, 'BUT MAELIS IS NOT FINISHED. THE ROAD ON IS OPEN NOW, PAST THE RIVERLANDS, AND THAT IS THE WAY HE WENT. TAKE THIS, AND MY THANKS.']], 'COLLECT', () => { f.kingPaid = true; payQuest('king'); }, rewardChoice());
+      f.maelisSeen ? [O, 'AND MAELIS STOOD OVER THE BONES AND LAUGHED? THEN HE HAS WHAT HE WANTED FROM THE KING. HE WENT SOUTH, PAST THE RIVERLANDS. THE ROAD IS OPEN NOW. TAKE THIS, AND MY THANKS.']
+        : [O, 'BUT MAELIS IS NOT FINISHED. THE ROAD ON IS OPEN NOW, PAST THE RIVERLANDS, AND THAT IS THE WAY HE WENT. TAKE THIS, AND MY THANKS.']], 'COLLECT', () => { f.kingPaid = true; payQuest('king'); f.endDue = true; }, rewardChoice());   // (round 67: then the end of the act)
     const hint = { wren: 'WREN IS BY THE TENTS. SHE NEEDS YOU MORE THAN I DO.', den: 'THE DEN IS PAST THE WOLF GLADE, NORTHEAST. GO CAREFULLY.', cage: 'THE DEN IS PAST THE WOLF GLADE, NORTHEAST. GO CAREFULLY.', aldoBack: 'WREN WILL WANT TO KNOW.', mine: 'ALDO SAW SOMEONE AT THE MINE? THEN LOOK THERE.', hollis: 'HOLLIS SITS BY THE FIRE. HE LOST HIS FARM TO THE BANDITS.', farm: 'THE FARM IS EAST, PAST THE GATE.', cellar: 'THE FARM IS EAST, PAST THE GATE.', farmBack: 'HOLLIS WILL WANT TO KNOW.', unlock: 'THE MINE IS NORTH. THE LIGHT GOES WITH YOU.', king: 'THE MINE IS NORTH. THE LIGHT GOES WITH YOU.' }[st];
     return openTalk([[O, hint || 'THE LIGHT KEEPS YOU.']]);
   }
@@ -247,6 +248,7 @@ function drawQuestBanner() {
 function updateStory(dt) {
   if (!storyOn()) return;
   const f = storyF();
+  updateFinale(dt);
   storyFlow(dt);
   // Aldo leaves the den: he walks off and fades
   for (let k = npcs.length - 1; k >= 0; k--) { const n = npcs[k]; if (n.leaving === undefined) continue; n.leaving -= dt; n.clip = 'walk'; n.walk += dt * 8; tryMove(n, dt * 1.5, -dt * 1.5, 0.2); if (n.leaving <= 0) npcs.splice(k, 1); }
@@ -485,3 +487,64 @@ function drawSideDoorLabels() {
     const [x, y] = iso(fi, fj); textC(SIDES[k].label, Math.round(x - camX), Math.round(y - camY) - 30, SIDES[k].labelCol || 51);
   }
 }
+
+// ---------------------------------------------------------------- the Act I finale (round 67)
+// The King falls; a moment later Maelis steps out of a cold green flash a few paces off, his lantern
+// swinging, and says his piece (the game pauses for it); then he walks off and is gone in another
+// flash. Back in camp, Osric's thanks ends the act: the end screen (time, level, kills, deaths, what
+// comes next), then the game goes on with the road south open.
+const finaleDue = () => storyOn() && !storyF().maelisSeen;
+function startFinale() { G.finale = { t: 0, ph: 'wait' }; }
+function maelisFlash(fi, fj) {
+  impactFlash(fi, fj, 18, 9); sfx('blink'); sfx('whoomp');
+  const [x, y] = iso(fi, fj);
+  for (let k = 0; k < 26; k++) { const a = k / 26 * 6.283, v = 30 + Math.random() * 50; pspawn(4, x, y, 18, Math.cos(a) * v, Math.sin(a) * v * 0.5, 20 + Math.random() * 50, 0.5 + Math.random() * 0.3, k % 3 ? 55 : k % 2 ? 54 : 27); }
+  G.smoke.push({ fi, fj, r: 1.1, t: 1.6, t0: 1.6 });
+}
+const MAELIS = 'MAELIS';
+function updateFinale(dt) {
+  const F = G.finale, ff = storyF(); if (!F || G.mode !== 'play') { if ((ff.endDue || (ff.kingPaid && ff.maelisSeen && !ff.endShown)) && G.mode === 'play' && !G.talk && !G.fadeTo) showEnd(); return; }   // (however the king quest was handed in)
+  F.t += dt;
+  const m = npcs.find(n => n.maelis);
+  if (F.ph === 'wait' && F.t > 2.4 && !hero.dead) {
+    let spot = null;   // a clear floor spot four to five paces off, in sight
+    for (let r = 4.6; r >= 2.6 && !spot; r -= 0.5) for (let k = 0; k < 24; k++) { const a = k / 24 * 6.283 + 0.4, fi = hero.fi + Math.cos(a) * r, fj = hero.fj + Math.sin(a) * r; if (!blocked(fi, fj) && !clearance(fi, fj, 0.4) && LV.vis[tIdx(Math.floor(fi), Math.floor(fj))] > 0.5 && los(hero.fi, hero.fj, fi, fj)) { spot = [fi, fj]; break; } }
+    spot = spot || [hero.fi + 1.5, hero.fj - 1.5];
+    npcs.push({ role: 'maelis', name: MAELIS, maelis: true, fam: 'hero', look: NPC_LOOKS.maelis, fi: spot[0], fj: spot[1], home: spot, dir: dirFrom(hero.fi - spot[0], hero.fj - spot[1]), clip: 'idle', clock: 0, walk: 0, wait: 99, target: null, npc: true });
+    maelisFlash(spot[0], spot[1]); F.ph = 'appear'; F.t = 0;
+  } else if (F.ph === 'appear' && F.t > 1.1 && m) {
+    F.ph = 'talk'; hero.atk = -1; clearInput();
+    openTalk([
+      [MAELIS, 'SO THE OLD KING SLEEPS AGAIN. NO MATTER. HE HAD ALREADY GIVEN ME WHAT I CAME FOR.'],
+      [MAELIS, "YOU ARE OSRIC'S, AREN'T YOU? HE BURNED MY BOOKS AND CALLED IT MERCY. TELL HIM THEY WERE RIGHT: WHAT IS BURIED IN THIS LAND DOES NOT STAY BURIED."],
+      [MAELIS, 'FOLLOW ME SOUTH, IF YOU LIKE. I WOULD SO LIKE YOU TO SEE WHAT I WAKE NEXT.']], 'OK', () => { F.ph = 'flee'; F.t = 0; });
+  } else if (F.ph === 'flee' && m) {
+    const dx = m.fi - hero.fi, dy = m.fj - hero.fj, d = Math.hypot(dx, dy) || 1;
+    m.dir = dirFrom(dx, dy); m.clip = 'walk'; m.walk += dt * 7; tryMove(m, dx / d * dt * 1.6, dy / d * dt * 1.6, 0.2);
+    if (F.t > 1.1) {
+      maelisFlash(m.fi, m.fj); npcs.splice(npcs.indexOf(m), 1); G.finale = null; storyF().maelisSeen = true;
+      say('MAELIS IS GONE, SOUTH', 55, 4); say('THE WAY UP IS OPEN', 26, 4); saveGame();
+    }
+  }
+  if (m && Math.random() < 0.5) { const [x, y] = iso(m.fi, m.fj); pspawn(3, x + 7 + (Math.random() - 0.5) * 3, y, 13 + Math.random() * 3, (Math.random() - 0.5) * 4, 0, 6 + Math.random() * 8, 0.6, Math.random() < 0.6 ? 55 : 54); }   // the green lantern's glow
+}
+// the end of Act I: shown once, after Osric's thanks
+function showEnd() { const f = storyF(); f.endDue = false; f.endShown = true; G.mode = 'end'; G.endT = 0; G.endStats = Object.assign({ t: 0, deaths: 0, kills: 0 }, hero.stats || {}, { lvl: hero.lvl }); sfx('levelUp'); saveGame(); }
+function endLayout() { return { btn: { x: W / 2 - 52, y: H - 46, w: 104, h: 20 } }; }
+function drawEnd() {
+  G.endT = (G.endT || 0) + 1 / 60;
+  const a = Math.min(1, G.endT / 0.8); fade(0.55 + 0.4 * a); if (a < 0.6) return;
+  const S = G.endStats || {}, mm = Math.floor((S.t || 0) / 60), ss = Math.floor((S.t || 0) % 60), y0 = Math.round(H * 0.16);
+  textC('ACT I', W / 2, y0, 50, 2); textC('COMPLETE', W / 2, y0 + 18, 51, 3);
+  textC('THE KING SLEEPS. MAELIS HAS FLED SOUTH.', W / 2, y0 + 50, 26);
+  const rows = [['TIME', `${mm}:${String(ss).padStart(2, '0')}`], ['LEVEL', String(S.lvl || hero.lvl)], ['KILLS', String(S.kills || 0)], ['DEATHS', String(S.deaths || 0)]];
+  rows.forEach(([k, v], n) => { const y = y0 + 72 + n * 12; text(k, W / 2 - 60, y, 25); text(v, W / 2 + 60 - textWidth(v, 1), y, 51); });
+  const ty = y0 + 136;
+  for (let x = W / 2 - 70; x < W / 2 + 70; x++) put(x, ty - 6, 8);
+  textC('NEXT: ACT II, ASHFORD', W / 2, ty + 2, 50);
+  wrapText('A MINING TOWN UNDER A SMOKING MOUNTAIN. THE MINERS HAVE STOPPED COMING UP, AND SOMETHING BELOW HAS STARTED DIGGING TOWARD THEM.', 44).forEach((l, n) => textC(l, W / 2, ty + 16 + n * 8, 26));
+  textC('THANK YOU FOR PLAYING THE DEMO', W / 2, ty + 56, 25);
+  const L = endLayout(), b = L.btn;
+  if (G.endT > 1.6) { fillRect(b.x, b.y, b.w, b.h, 3); frame(b.x, b.y, b.w, b.h, 8, 3); textC('KEEP PLAYING', W / 2, b.y + 7, 51); }
+}
+function endTap(p) { const b = endLayout().btn; if (G.endT > 1.6 && inRect(p, b)) { sfx('tap'); G.mode = 'play'; clearInput(); say('THE ROAD SOUTH IS OPEN, PAST THE RIVERLANDS', 51, 4); } }

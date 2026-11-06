@@ -63,7 +63,7 @@ const PLAYLISTS = { title: ['title'], forest: ['forest', 'set1', 'forest', 'set2
   dungeon: ['enter', 'dungeon'], lair: ['lair'] };
 const MUS = { decks: [], cur: null, inWoods: false, pos: {}, duck: 1, idx: {}, place: null };
 // round 45: the song keeps playing under the dialogue, the bag and the skills screen, 40% quieter
-const MUSIC_MODES = { play: 1, talk: 0.6, inv: 0.6, skills: 0.6, title: 1 };
+const MUSIC_MODES = { play: 1, talk: 0.6, inv: 0.6, skills: 0.6, title: 1, end: 0.8 };
 // round 46b: the two players exist from page load, the first already downloading the title song,
 // so the first tap on the character screen can start it at once (inside the tap, which phones allow)
 function musicPrep() {

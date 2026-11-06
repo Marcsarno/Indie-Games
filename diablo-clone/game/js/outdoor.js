@@ -1223,6 +1223,7 @@ const NPC_LOOKS = {
   wren: { team: 'purple', helm: 'none', chest: 'tunic', weapon: 'none', shield: 'none', hair: 'brown' },
   hollis: { team: 'tan', helm: 'none', chest: 'tunic', weapon: 'none', shield: 'none', hair: 'grey', beard: true },
   aldo: { team: 'green', helm: 'none', chest: 'tunic', weapon: 'axe', shield: 'none', hair: 'brown', beard: true },
+  maelis: { team: 'purple', helm: 'hood', chest: 'robe_cinder', weapon: 'none', shield: 'none', hair: 'grey' },   // round 67: the cast-out monk, in a dark robe and hood
 };
 let npcs = [];
 function makeNpcs() {
@@ -1236,7 +1237,7 @@ function updateNpcs(dt) {
   for (const n of npcs) {
     n.clock += dt;
     const dh = Math.hypot(hero.fi - n.fi, hero.fj - n.fj);
-    if (n.leaving !== undefined) continue;   // Aldo running home from the den (quests.js)
+    if (n.leaving !== undefined || n.maelis) continue;   // Aldo running home from the den, Maelis (quests.js)
     if (n.role === 'merchant' || n.role === 'smith' || n.role === 'priest' || TALKERS[n.role]) {   // face the hero when close
       if (dh < 3) n.dir = dirFrom(hero.fi - n.fi, hero.fj - n.fj);
       continue;

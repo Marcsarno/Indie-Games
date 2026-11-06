@@ -352,6 +352,7 @@ function drawHud() {
   if (G.mode === 'inv') drawInventory();
   if (G.mode === 'skills') drawSkills();
   if (G.mode === 'talk') drawTalk();
+  if (G.mode === 'end') drawEnd();   // round 67
   drawGuide();   // round 45
   if (G.paused) { fade(0.6); textC('PAUSED', W / 2, H * 0.4, 26, 2); textC('TAP TO RESUME', W / 2, H * 0.4 + 16, 25); }
   if (G.fade > 0) fade(G.fade);
@@ -1099,6 +1100,7 @@ cvs.addEventListener('pointerdown', e => {
   if (G.mode === 'title') { for (const b of UI.titleBtns || []) if (inRect(p, b)) { sfx('tap'); b.on(); } return; }
   if (G.mode === 'inv') { sfx('tap'); invTap(p); return; }
   if (G.mode === 'talk') { talkTap(p); return; }
+  if (G.mode === 'end') { endTap(p); return; }
   if (G.mode === 'skills') { sfx('tap'); skillsTap(p); return; }
   if (hero.dead > 2) { respawn(); return; }
   if (hitCircle(p, UI.bag)) { openInv('inv'); return; }

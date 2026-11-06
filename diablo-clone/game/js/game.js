@@ -425,8 +425,8 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
       for (const o of enemies) if (o !== e && alive(o) && o.def.pack && o.fam === e.fam && Math.hypot(o.fi - e.fi, o.fj - e.fj) < 7) { o.panicT = 2.5 + Math.random() * 1.5; o.atk = -1; floater('!', o.fi, o.fj, o.def.chest + 16, 51); n++; }
       if (n >= 2) say('THEY SCATTER IN PANIC', 51, 1.6);
     }
-    if (e === boss) { say(`THE ${e.def.name} IS SLAIN`, 51, 4); say('THE WAY DOWN IS OPEN', 26, 4); sfx('levelUp'); G.slowmo = 0.9; G.bossIntro = 0; }
-    G.kills++;
+    if (e === boss) { say(`THE ${e.def.name} IS SLAIN`, 51, 4); if (!(e.id === 'skelking' && finaleDue())) say('THE WAY DOWN IS OPEN', 26, 4); sfx('levelUp'); G.slowmo = 0.9; G.bossIntro = 0; if (e.id === 'skelking' && finaleDue()) startFinale(); }   // (round 67: then Maelis)
+    G.kills++; if (hero.stats) hero.stats.kills++;
   } else {
     sfx('hit'); if (HEAVY) RECIPES_THUD((ranged ? 0.45 : 0.7) + pow * 0.25 + (crit ? 0.3 : 0));
     if (FEEL_OLD) {
@@ -656,6 +656,7 @@ function update(dt) {
   updateGuide(dt);
   if (G.mode === 'skills' && !PREVIEW) pvTick(dt);   // round 45: the skill preview runs while its screen is open
   if (G.mode !== 'play' || G.paused) return;
+  if (hero.stats && !hero.dead) hero.stats.t += dt;   // round 67: for the end-of-act screen
   if (guideFrozen()) { const k = 1 - G.guide.t / 0.4; if (k <= 0) return; dt *= k; }   // round 45: slow to a stop for the guide
   G.saveT += dt; if (G.saveT > 20) { G.saveT = 0; saveGame(); }
   G.trauma = Math.max(0, G.trauma - dt * 1.4);
@@ -833,7 +834,7 @@ function updateHero(dt) {
     if (d > 1.2) G.upArmed = true;
     if (!G.fadeTo && G.upArmed && d < 0.55) { G.upArmed = false; if (LV.side === 'barrow2') climbSide(); else leaveSide(); }
     if (LV.down) { const dd = Math.hypot(LV.down.i + 0.5 - hero.fi, LV.down.j + 0.5 - hero.fj); if (dd > 1.2) G.downArmed = true; if (!G.fadeTo && G.downArmed && dd < 0.55) { G.downArmed = false; descendSide(); } }
-  } else if (!G.fadeTo && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55 && !(s.mine && mineBarred())) {   // round 42b: the mine is chained until the key
+  } else if (!G.fadeTo && !G.finale && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55 && !(s.mine && mineBarred())) {   // (round 67: not while Maelis is coming)   // round 42b: the mine is chained until the key
     sfx('stairs');
     // the hub's mine leads straight to the first floor; Act I's boss hall leads home to the hub,
     // where the south gate now stands open (round 26)
@@ -1068,6 +1069,7 @@ function hurtHero(dmg, src) {
   if (hero.dead || hero.leap || hero.roll || (hero.ultOn && hero.ultOn.kind === 'wrath')) return;   // nothing touches him in the air
   if (Math.random() * 100 < STAT.block) { floater('BLOCK', hero.fi, hero.fj, 44, 31); sfx('block'); return; }
   dmg = Math.max(1, Math.round(dmg * 40 / (40 + STAT.armor * (hero.buff > 0 ? 1.5 : 1) * 2.5) * (hero.stoneskin > 0 ? 0.5 : 1)));
+  if (hero.cls === 'warrior') dmg = Math.max(1, Math.round(dmg * 0.75));   // round 67: he fights where the blows land (Diablo III's melee classes take 30% less); bots died 2-4 times a run as him, never as the others
   if (STAT.dr) dmg = Math.max(1, dmg - STAT.dr);   // round 42a: OF THE WALL
   hero.hp -= dmg; hero.flash = 0.06; hero.hurtT = 0.15; sfx('hurt');
   hero.hitF = 0;   // round 40a: which way the blow knocks him (0 front, 1 from his left, 2 from his right, 3 from behind)
@@ -2032,7 +2034,7 @@ function drawPortal() {
 }
 function saveGame() {
   if (G.mode !== 'play' || hero.dead || PREVIEW) return;   // (the skill preview's copy of the game never saves)
-  const data = { v: SAVE_V, level: LV.level, seed: LV.seed, hero: { cls: hero.cls, hp: Math.ceil(hero.hp), mana: Math.ceil(hero.mana), gold: hero.gold, xp: hero.xp, lvl: hero.lvl, potions: hero.potions, team: hero.team, equip: hero.equip, bag: hero.bag, mods: hero.mods || {}, ult: Math.floor(hero.ult || 0), modSeen: hero.modSeen || 0, tut: hero.tut || {} }, serial: itemSerial,
+  const data = { v: SAVE_V, level: LV.level, seed: LV.seed, hero: { cls: hero.cls, hp: Math.ceil(hero.hp), mana: Math.ceil(hero.mana), gold: hero.gold, xp: hero.xp, lvl: hero.lvl, potions: hero.potions, team: hero.team, equip: hero.equip, bag: hero.bag, mods: hero.mods || {}, ult: Math.floor(hero.ult || 0), modSeen: hero.modSeen || 0, tut: hero.tut || {}, stats: hero.stats || null }, serial: itemSerial,
     story: G.story || null, gates: G.gates || null, town: G.town || null, portal: G.portal ? { level: G.portal.level, seed: G.portal.seed, fi: G.portal.fi, fj: G.portal.fj } : null };
   try { localStorage.setItem(saveKey(hero.cls), JSON.stringify(data)); } catch (e) { /* storage can be unavailable; the game still runs */ }
 }
@@ -2045,7 +2047,7 @@ function loadSave(cls = 'warrior') {
   } catch (e) { return null; }
 }
 function newHero(cls = 'warrior') {
-  Object.assign(hero, { cls, hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, bag: [], mods: {}, ult: 0, modSeen: 0, tut: {}, equip: { weapon: null, helm: null, chest: null, shield: null, ring: null, amulet: null } });
+  Object.assign(hero, { cls, hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, bag: [], mods: {}, ult: 0, modSeen: 0, tut: {}, stats: { t: 0, deaths: 0, kills: 0 }, equip: { weapon: null, helm: null, chest: null, shield: null, ring: null, amulet: null } });
   const R = rng(5);
   const kit = cls === 'mage' ? ['oak_staff', 'apprentice_robe', 'wizard_hat'] : cls === 'ranger' ? ['hunting_bow', 'leather_jerkin', 'ranger_hood', 'quiver'] : ['short_sword', 'tunic'];
   for (const b of kit) { const it = rollItem(R, 1, b); it.rarity = 'normal'; it.mods = {}; hero.equip[ITEM_BASES[b].slot] = it; }
@@ -2063,6 +2065,7 @@ function beginGame(fromSave, cls = 'warrior') {
   }
 }
 function respawn() {
+  if (hero.stats) hero.stats.deaths++;
   hero.dead = 0; hero.clip = 'idle'; recalcHero(); hero.hp = STAT.maxHp; hero.mana = STAT.maxMana;
   hero.gold = Math.floor(hero.gold * 0.9);
   G.msg = []; say('YOU RISE AGAIN', 26, 2);
