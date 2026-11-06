@@ -136,12 +136,10 @@ function tryGen(level, seed, relaxed = false) {
     }
   });
   // corridors: minimum spanning tree over room centers plus a couple of loops, 2 tiles wide (3 into a big room)
-  // round 68a (the user: halls too slim; concept art: corridors 3-4 tiles wide, a pillar row down the
-  // wide ones): every corridor is 3 tiles wide, 4 into a big room (a colonnade: pillars every 3 tiles
-  // along the straight runs, placed later by trySolid so nothing is ever cut off)
+  // round 68a (the user: halls too slim; concept art: corridors 3-4 tiles wide): every corridor is 3
+  // tiles wide, 4 into a big room, and kept clear (the user: pillars belong in big rooms, not halls)
   let wide = false;
   const OFF3 = [], OFF4 = []; for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) OFF3.push([a, b]); for (let b = -1; b <= 2; b++) for (let a = -1; a <= 2; a++) OFF4.push([a, b]);
-  const colonnade = LV.colonnade = [];
   const carve = (i, j) => { for (const [a, b] of wide ? OFF4 : OFF3) if (i + a > 0 && j + b > 0 && i + a < MW - 1 && j + b < MH - 1) map[tIdx(i + a, j + b)] = FLOOR; };
   const edges = [];
   const corridor = (A, B) => {
@@ -149,12 +147,10 @@ function tryGen(level, seed, relaxed = false) {
     edges.push([rooms.indexOf(A), rooms.indexOf(B)]);
     const horizFirst = R() < 0.5;
     let i = A.cx, j = A.cy;
-    const run = [];   // the straight stretches, for the colonnade
-    const stepI = () => { while (i !== B.cx) { carve(i, j); if (wide) run.push([i, j, 'i']); i += Math.sign(B.cx - i); } };
-    const stepJ = () => { while (j !== B.cy) { carve(i, j); if (wide) run.push([i, j, 'j']); j += Math.sign(B.cy - j); } };
+    const stepI = () => { while (i !== B.cx) { carve(i, j); i += Math.sign(B.cx - i); } };
+    const stepJ = () => { while (j !== B.cy) { carve(i, j); j += Math.sign(B.cy - j); } };
     if (horizFirst) { stepI(); stepJ(); } else { stepJ(); stepI(); }
     carve(i, j);
-    if (wide) colonnade.push(run);
   };
   const inTree = [0], d2 = (a, b) => (a.cx - b.cx) ** 2 + (a.cy - b.cy) ** 2;
   while (inTree.length < rooms.length) {
@@ -463,17 +459,6 @@ function trySolid(i, j) {
 }
 function placeDecor(R, level) {
   const D = LV.decor = [];
-  // round 68a: the colonnade down a 4-wide corridor (concept A): a pillar every 3 tiles along its
-  // straight runs, one tile in from the middle so a 2-tile lane runs beside it; never by a room
-  for (const run of LV.colonnade || []) {
-    if (run.length < 8) continue;
-    for (let k = 3; k < run.length - 3; k += 3) {
-      const [i0, j0, ax] = run[k], i = ax === 'i' ? i0 : i0 + 1, j = ax === 'i' ? j0 + 1 : j0;
-      let nearRoom = false; for (let b = -2; b <= 2 && !nearRoom; b++) for (let a = -2; a <= 2; a++) if (LV.roomOf[tIdx(i + a, j + b)] >= 0) { nearRoom = true; break; }
-      if (nearRoom || LV.roomOf[tIdx(i, j)] >= 0 || hidesStairs(i, j)) continue;
-      if (trySolid(i, j)) D.push({ kind: 'pillar', i, j, col: true });
-    }
-  }
   const wallSide = (i, j) => tileAt(i - 1, j) === WALL || tileAt(i, j - 1) === WALL || tileAt(i + 1, j) === WALL || tileAt(i, j + 1) === WALL;
   LV.rooms.forEach((r, n) => {
     const mine = (i, j) => LV.roomOf[tIdx(i, j)] === n;   // (shaped rooms: only tiles of this room's own floor)
@@ -491,17 +476,20 @@ function placeDecor(R, level) {
       if (R() < 0.5) { const q = nearWall(); if (q && trySolid(...q)) D.push({ kind: 'bonepile', i: q[0], j: q[1], seed: R.int(1, 1e6) % 5 }); }
       if (n && R() < 0.7) { const q = interior(); D.push({ kind: 'lava', fi: q[0] + 0.5, fj: q[1] + 0.5, size: R.int(3, 6), seed: R.int(1, 1e6) }); }
     }
-    if (r.great && th !== 'caves') {   // a great hall: a colonnade down its back side (one by the camera hid the fight), a brazier in the middle
-      const along = r.w >= r.h, len = along ? r.w : r.h;
-      for (let s = 2; s <= len - 3; s += 3) for (const off of [2]) {
-        const i = along ? r.x + s : r.x + off, j = along ? r.y + off : r.y + s;
-        if (!hidesStairs(i, j) && trySolid(i, j)) D.push({ kind: 'pillar', i, j });
-      }
+    // round 68a (the user: use pillars to break up big rooms, four in a large one, not along the walls):
+    // pillars stand out on the floor, a third of the way in, so a fight goes round them
+    const pillarAt = (fx, fy) => { const i = r.x + Math.round((r.w - 1) * fx), j = r.y + Math.round((r.h - 1) * fy); if (mine(i, j) && !hidesStairs(i, j) && Math.hypot(i - LV.stairs.i, j - LV.stairs.j) > 2.5 && trySolid(i, j)) D.push({ kind: 'pillar', i, j }); };
+    if (r.great && th !== 'caves') {   // a great hall: two rows of three, a brazier in the middle
+      const along = r.w >= r.h;
+      for (const u of [0.2, 0.5, 0.8]) for (const v of [0.28, 0.72]) { if (u === 0.5) continue; along ? pillarAt(u, v) : pillarAt(v, u); }
+      for (const v of [0.28, 0.72]) along ? pillarAt(0.5, v) : pillarAt(v, 0.5);
       if (n && trySolid(r.cx, r.cy)) D.push({ kind: 'brazier', i: r.cx, j: r.cy });
     } else if (r.great) {   // a great cavern: a ring of stalagmites
       for (let k = 0; k < 6; k++) { const a = k / 6 * 6.283, i = Math.round(r.cx + Math.cos(a) * r.w * 0.3), j = Math.round(r.cy + Math.sin(a) * r.h * 0.3); if (trySolid(i, j)) D.push({ kind: 'stalagmite', i, j, seed: R.int(1, 1e6) % 7 }); }
+    } else if (th !== 'caves' && n && r.w >= 10 && r.h >= 10 && (r.area || r.w * r.h) >= 90) {   // a large room: four pillars in a square
+      for (const [u, v] of [[0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]]) pillarAt(u, v);
+      if (r.type === 'hall' && trySolid(r.cx, r.cy)) D.push({ kind: 'brazier', i: r.cx, j: r.cy });
     } else if (r.type === 'hall' && r.w >= 7 && r.h >= 7 && th !== 'caves') {
-      for (const [i, j] of [[r.x + 1, r.y + 1], [r.x + r.w - 2, r.y + 1], [r.x + 1, r.y + r.h - 2], [r.x + r.w - 2, r.y + r.h - 2]]) if (!hidesStairs(i, j) && trySolid(i, j)) D.push({ kind: 'pillar', i, j });
       if (n && trySolid(r.cx, r.cy)) D.push({ kind: 'brazier', i: r.cx, j: r.cy });
     } else if (n && r.w * r.h >= 36 && R() < 0.5 && trySolid(r.cx, r.cy)) D.push({ kind: 'brazier', i: r.cx, j: r.cy });
     if (r.type === 'store' || R() < (LV.theme === 'caves' ? 0.15 : 0.4)) {

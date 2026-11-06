@@ -20,6 +20,8 @@ enemies = near; hero.hp = STAT.maxHp = 9999; updateFov(hero.fi, hero.fj);
 input.attack = true; for (let i = 0; i < 40; i++) { G.t += 1 / 30; update(1 / 30); } input.attack = false;
 hero.hp = STAT.maxHp = 94; settle(); shots.fight = cvs.toDataURL();
 L.push({ cor, great: !!great.great, room: [r.w, r.h] });
-// round 68a: a corridor with its colonnade, on whichever of a few floors has one
-for (const sd of [4242, 99, 777, 5, 11]) { startLevel(3, sd); G.actCard = 0; LV.act = 1; const c = LV.decor.find(d => d.col); if (!c) continue; enemies = []; hero.hp = STAT.maxHp = 94; hero.fi = c.i + 1.6; hero.fj = c.j + 2.2; updateFov(hero.fi, hero.fj); settle(); shots.colonnade = cvs.toDataURL(); L.push({ colonnadeSeed: sd }); break; }
+// round 68a: a large room with its four pillars (and a great hall's two rows)
+startLevel(3, 4242); G.actCard = 0; LV.act = 1; enemies = []; hero.hp = STAT.maxHp = 94;
+{ const r = LV.rooms.find(q => !q.great && q.w >= 10 && q.h >= 10 && LV.decor.filter(d => d.kind === 'pillar' && d.i >= q.x && d.i < q.x + q.w && d.j >= q.y && d.j < q.y + q.h).length >= 3); if (r) { hero.fi = r.cx + 0.5; hero.fj = r.cy + 1.5; updateFov(hero.fi, hero.fj); settle(); shots.room4 = cvs.toDataURL(); } }
+{ const r = LV.rooms.find(q => q.great); hero.fi = r.cx + 0.5; hero.fj = r.cy + 1.5; updateFov(hero.fi, hero.fj); settle(); shots.great = cvs.toDataURL(); }
 window.__out = { log: L, shots };
