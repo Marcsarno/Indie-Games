@@ -448,3 +448,7 @@ pauldrons, leather braces crossed on the back, a belt with an iron buckle, studd
 cream ram horns curling round the ears (no top-knot), and a big notched cleaver with a hole (CHAIN grey) on the
 heavy chop swing. 4 passes kept (iron instead of blued steel; grey cleaver; plain horns; tighter curl).
 Placeholder stats near Gorr, `unique: true`, `minLevel: 99`. Other monsters cmp-identical; 304 frames, 0 edge hits.
+**Malgrath v2 (user: "colors are wrong, looks like an old lady demon, not scary or dark"):** skin BLOODY (deep blood
+red) instead of FLESH, horns BOAR tan with HAIR tips instead of cream, eyes glow FIREM, apron/pauldrons/wrist bands
+CLOTH_DARK (brown-black iron) with IRON rivets instead of slate with white rivets, HAIR skirt, an IRON cleaver, and
+two straight straps down the back instead of a crossed X. Others still cmp-identical; 0 edge hits.
