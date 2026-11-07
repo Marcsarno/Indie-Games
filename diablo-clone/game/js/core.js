@@ -40,6 +40,15 @@ const PAL_HEX = [
   'f2cc9e',                                                             // 125 light skin (top of the skin ramp)
   '22305c', '3a5088',                                                   // 126-127 navy (round 54: the last two free slots; its ends borrow blue 37 and steel 30)
 ];
+// round 68b (the crypt face-lift, from the user's concept art): stone is mauve-grey in the shade and
+// warms to tan only where the torches reach, at low saturation (the old ramp climbed to orange, so every
+// dungeon read as orange brick). ?stonepal=old (or dcg-stonepal) brings the old ramp back to compare
+const STONE_OLD = ['1e171a', '2b2020', '41302a', '584130', '705437', '8a663d', 'a37a45', 'b98d50', 'cfa262'];
+const STONE_NEW = ['1c161a', '2a2127', '3a2e32', '4a3c3e', '5c4b4a', '725d57', '8b7265', 'a68b78', 'c2a68c'];
+const STONE_DARK = ['18131a', '241c23', '32282d', '403437', '504141', '645250', '7b665d', '957d70', 'b29a84'];   // (a darker cut of the new stone, for the A/B)
+let STONE_PAL = 'new';
+try { const q = (typeof location !== 'undefined' && new URLSearchParams(location.search).get('stonepal')) || localStorage.getItem('dcg-stonepal'); if (q === 'old' || q === 'dark') STONE_PAL = q; } catch (e) { /* storage blocked */ }
+(STONE_PAL === 'old' ? STONE_OLD : STONE_PAL === 'dark' ? STONE_DARK : STONE_NEW).forEach((h, k) => { PAL_HEX[4 + k] = h; });
 const NPAL = PAL_HEX.length;
 const PR = new Uint8Array(NPAL), PG = new Uint8Array(NPAL), PB = new Uint8Array(NPAL);
 const PAL32 = new Uint32Array(NPAL);
