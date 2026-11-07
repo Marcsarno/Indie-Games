@@ -454,3 +454,9 @@ CLOTH_DARK (brown-black iron) with IRON rivets instead of slate with white rivet
 two straight straps down the back instead of a crossed X. Others still cmp-identical; 0 edge hits.
 **Malgrath v3 cleaver (user: 'looks like a plain sheet of metal'):** own MG branch: iron pommel, wrapped grip, iron collar; IRON blade with a bright BLADE honed edge and a DSTEEL bevel line, three uneven chips, two MARKB blood smears, two RUST patches, a hanging hole, a thick DSTEEL spine. The Enforcer's cleaver is unchanged.
 **Malgrath v4 grip (user: the hand grips the blade, not a handle):** the fist (radius ~3.6) had covered the whole grip. The grip now runs from a pommel below the fist to an iron collar well above it (blade starts 7 units up the haft), so a wrapped handle shows between hand and blade. 0 edge hits.
+**Malgrath v5 (the art chat's own ideas, user OK'd):** molten cracks (a few bold wavy veins: FIREM core, MARKB rim,
+on the bare hide of body, back and arms; they pulse wider/narrower over the 4 idle frames); a forge-hot FIREM strip
+on the cleaver edge; glowing mouth and bigger FIREM eyes; three meat hooks on short chains at the left of the belt; a
+broken shackle chain hanging from the left wrist; a hunched body (`MALG_B_OF`: hunch 0.18, longer arms, shorter
+legs) with the head thrust forward of the shoulders; tusks moved low and splayed so they no longer cover the eyes.
+Other monsters cmp-identical; 304 frames, 0 edge hits.

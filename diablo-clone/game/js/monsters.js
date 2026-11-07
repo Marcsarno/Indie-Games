@@ -1150,11 +1150,16 @@ function houndRig(look, st) {
 // ---------------------------------------------------------------- the ogre warlord (forest boss)
 // A big chibi ogre: grey-green hide, round belly, tusked underbite, a top-knot, leather straps
 // with a skull buckle, and a huge spiked club. Swings like the hero (posed heavy keys).
+const MALG_B_OF = b => ({ ...b, hunch: 0.18, upper: 8.2, fore: 7.8, thigh: 5.6, shin: 5.2, hipH: 10.6 });   // (b6 v5) Malgrath: hunched forward on shorter legs, long arms
 const OGRE_B = { hipH: 12, thigh: 6.4, shin: 6, ankle: 1.4, spine: 9, shW: 8.4, shZ: 3, neck: 10.5, upper: 7, fore: 6.5, hipW: 4, stride: 5, lift: 2.4, duty: 0.55, bob: 0.8, sway: 0.6, runLean: 0.1, counter: 0.1, stance: 1.5 };
 function ogreRig(look, st) {
   const MG = !!look.malg;   // art B6: Malgrath the Iron Butcher (infernal boss): Gorr's build in red hide, an iron apron, ram horns, hooves and a cleaver
-  const B = OGRE_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J, skin = MG ? M.BLOODY : M.OGRE;   // (b6 v2) deep blood red, not bright brick
-  const GR = !!look.gorr || MG, IJ = !!look.ironjaw;   // art B4: Gorr the Minebreaker (boss) and the Ironjaw Enforcer (elite)
+  const B = MG ? MALG_B_OF(OGRE_B) : OGRE_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J, skin = MG ? M.BLOODY : M.OGRE;   // (b6 v2) deep blood red, not bright brick
+  const GR = !!look.gorr || MG, IJ = !!look.ironjaw;
+  // (b6 v5) Malgrath's molten cracks: wavy glowing veins through the hide, pulsing wider and narrower over the idle
+  const crW = st.clip === 'idle' ? [0.16, 0.21, 0.26, 0.21][st.f % 4] : 0.21;
+  const crack = p => MG && Math.abs(Math.sin(p[2] * 0.42 + Math.sin(p[1] * 0.55 + p[0] * 0.3) * 1.3)) < crW ? (Math.abs(Math.sin(p[2] * 0.42 + Math.sin(p[1] * 0.55 + p[0] * 0.3) * 1.3)) < crW * 0.45 ? M.FIREM : M.MARKB) : 0;   // a few bold veins: glowing core, a dark red rim
+  const crMf = MG ? { mf: crack } : undefined;   // art B4: Gorr the Minebreaker (boss) and the Ironjaw Enforcer (elite)
   for (const [hip, knee, ank] of [[J.hipL, J.kneeL, J.ankL], [J.hipR, J.kneeR, J.ankR]]) {
     r.cone(hip, knee, 3.4, 3.0, skin); r.cone(knee, ank, 3.0, 2.6, skin);
     r.ell(V.add(ank, [2.2, 0, -0.8]), GR ? [4.8, 3.6, 1.9] : look.grunt ? [4.4, 3.3, 1.8] : [3.8, 2.8, 1.6], MG ? M.CLOTH_DARK : M.LEATHER, null, MG ? { mf: p => Math.abs(V.dot(V.sub(p, ank), sideR)) < 0.35 && V.dot(V.sub(p, ank), fwd) > 2.4 ? M.DARK : 0 } : undefined);   // (b6) Malgrath: cloven hooves
@@ -1162,9 +1167,9 @@ function ogreRig(look, st) {
   // art B4, Ironjaw: a leather strap from the right shoulder across to the left hip, front and back
   const ijStrap = p => { const q = V.sub(p, J.chest), s2 = V.dot(q, sideR) - 6, z2 = V.dot(q, up) - 4; return Math.abs(s2 * 0.737 - z2 * 0.676) < 1.1 ? M.LEATHER : 0; };
   if (GR) r.group(() => {   // art B4, Gorr: a barrel chest over a heavy belly, the head sunk into a ridge of trapezius
-    r.ell(V.mad(J.pelvis, up, 2), [6.0, 7.0, 5.4], skin);
-    r.ell(V.mad(J.chest, up, 1.0), [6.6, 10.6, 6.6], skin, frameAlong(fwd, up));
-    r.ell(V.add(V.mad(J.chest, up, 5.4), V.mul(fwd, -1.6)), [4.6, 8.0, 3.6], skin, frameAlong(fwd, up));
+    r.ell(V.mad(J.pelvis, up, 2), [6.0, 7.0, 5.4], skin, null, crMf);
+    r.ell(V.mad(J.chest, up, 1.0), [6.6, 10.6, 6.6], skin, frameAlong(fwd, up), crMf);
+    r.ell(V.add(V.mad(J.chest, up, 5.4), V.mul(fwd, -1.6)), [4.6, 8.0, 3.6], skin, frameAlong(fwd, up), crMf);
   });
   else r.group(() => {   // belly and chest as one mass (the grunts: a slimmer belly under a broad chest, top-heavy)
     r.ell(V.mad(J.pelvis, up, 2), look.grunt ? [4.8, 5.6, 4.8] : [6.4, 7.4, 6], skin);
@@ -1202,11 +1207,18 @@ function ogreRig(look, st) {
     r.ell(oc, [6.9, 10.9, 6.9], MG ? M.CLOTH_DARK : M.LEATHER, lf, { mf: p => { const q = V.sub(p, oc), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up);
       if (f2 > 1.2 && Math.abs(s2) < 4.8 && z2 < 2.4) return MG ? ((Math.abs(Math.abs(s2) - 3.9) < 0.45 && Math.abs(((z2 + 20) % 2.2) - 1.1) < 0.45) ? M.CHAIN : z2 > 1.6 ? M.CLOTH_DARK : 0) : z2 > 1.6 ? M.HAIR : 0;   // the bib, its top hem ((b6) Malgrath: iron, riveted down both edges)
       if (f2 > -1 && z2 >= 1.6 && Math.abs(Math.abs(s2) - 3.8) < 1.0) return MG ? M.LEATHER : 0;   // the braces in front
-      if (MG && f2 <= -1) return Math.abs(Math.abs(s2) - 3.4) < 0.9 ? M.LEATHER : skin;   // (b6 v2) two straight straps down the back
+      if (MG && f2 <= -1) return Math.abs(Math.abs(s2) - 3.4) < 0.9 ? M.LEATHER : crack(p) || skin;   // (b6 v2) two straight straps down the back
       if (f2 <= -1 && (Math.abs(s2 - (z2 - 1) * 0.62) < 1.0 || Math.abs(s2 + (z2 - 1) * 0.62) < 1.0)) return MG ? M.LEATHER : 0;   // crossed on the back
-      return skin; } });
-    r.ell(V.mad(J.pelvis, up, 2), [6.3, 7.3, 5.2], MG ? M.CLOTH_DARK : M.LEATHER, lf, { mf: p => { const q = V.sub(p, J.pelvis); return V.dot(q, fwd) > 0.6 && Math.abs(V.dot(q, sideR)) < 5.0 ? 0 : skin; } });   // the bib carries on down over the belly
-    if (MG) { r.ell(belt, [6.7, 7.7, 1.4], M.LEATHER, lf); r.box(V.mad(belt, fwd, 7.0), [0.5, 1.5, 1.1], M.IRON, lf, { bias: 1 }); }   // (b6) a plain belt and an iron buckle
+      return (MG && crack(p)) || skin; } });
+    r.ell(V.mad(J.pelvis, up, 2), [6.3, 7.3, 5.2], MG ? M.CLOTH_DARK : M.LEATHER, lf, { mf: p => { const q = V.sub(p, J.pelvis); return V.dot(q, fwd) > 0.6 && Math.abs(V.dot(q, sideR)) < 5.0 ? 0 : crack(p) || skin; } });   // the bib carries on down over the belly
+    if (MG) { r.ell(belt, [6.7, 7.7, 1.4], M.LEATHER, lf); r.box(V.mad(belt, fwd, 7.0), [0.5, 1.5, 1.1], M.IRON, lf, { bias: 1 });   // (b6) a plain belt and an iron buckle
+      for (const [a, nl] of [[-1.15, 2], [-1.9, 3], [-2.6, 2]]) {   // (b6 v5) butcher's meat hooks hanging on short chains from the left of the belt
+        const d = V.add(V.mul(fwd, Math.cos(a)), V.mul(sideR, Math.sin(a))); let c0 = V.mad(V.mad(belt, d, 7.4), up, -0.6);
+        for (let k = 0; k < nl; k++) { const c1 = V.mad(c0, up, -1.4); r.ell(V.lerp(c0, c1, 0.5), [0.8, 0.8, 0.9], M.IRON, k % 2 ? frameAlong(d, up) : frameAlong(V.cross(up, d), up)); c0 = c1; }
+        const h1 = V.mad(c0, up, -2.2), h2 = V.add(V.mad(h1, up, -0.9), V.mul(d, 1.3)), h3 = V.add(V.mad(h2, up, 1.4), V.mul(d, 0.7));
+        r.group(() => { r.cone(c0, h1, 0.5, 0.5, M.STEEL); r.cone(h1, h2, 0.5, 0.45, M.STEEL); r.cone(h2, h3, 0.45, 0.15, M.STEEL); });
+      }
+    }
     else r.ell(belt, [6.7, 7.7, 1.4], M.STRAWM, lf, { mf: p => { const q = V.sub(p, belt), ang = Math.atan2(V.dot(q, sideR), V.dot(q, fwd)); return ((ang * 7 + V.dot(q, up) * 1.4) % 1 + 1) % 1 < 0.35 ? M.CLOTH_TAN : 0; } });   // the rope, twisted
     const sk = V.mad(J.pelvis, up, 0.2), hem = V.add(J.pelvis, [0, 0, -5.6]);
     r.group(() => {
@@ -1279,7 +1291,11 @@ function ogreRig(look, st) {
     const a = armTo(J, sh, hand, B, s);
     const ak = look.grunt || GR ? 1.35 : 1;
     if (look.grunt && !look.pads) r.ell(V.add(V.mad(sh, up, 1.0), V.mul(sideR, s * 1.2)), [4.6, 4.6, 4.2], skin, frameAlong(fwd, up));   // a great shoulder muscle
-    r.cone(sh, a.el, 2.8 * ak, 2.4 * ak, skin); r.cone(a.el, a.hand, 2.4 * ak, 2.2 * ak, skin); r.sph(a.hand, 2.7 * ak, skin);
+    r.cone(sh, a.el, 2.8 * ak, 2.4 * ak, skin, crMf); r.cone(a.el, a.hand, 2.4 * ak, 2.2 * ak, skin, crMf); r.sph(a.hand, 2.7 * ak, skin);
+    if (MG && s < 0 && st.clip !== 'death') {   // (b6 v5) a broken shackle chain hanging from the left wrist band
+      const sway = Math.sin((st.f || 0) * 1.3) * 0.5; let c0 = V.lerp(a.el, a.hand, 0.7);
+      for (let k = 0; k < 5; k++) { const c1 = V.add(c0, V.add(V.mul(up, -1.5), V.mul(fwd, sway * 0.3))); r.ell(V.lerp(c0, c1, 0.5), [0.85, k % 2 ? 0.35 : 0.85, 0.95], M.IRON, k % 2 ? frameAlong(fwd, up) : frameAlong(sideR, up)); c0 = c1; }
+    }
     if (MG) { const w0 = V.lerp(a.el, a.hand, 0.5), w1 = V.lerp(a.el, a.hand, 0.85), wd = V.norm(V.sub(w1, w0)); r.cyl(w0, w1, 2.3 * ak + 0.7, M.CLOTH_DARK); for (let k = 0; k < 5; k++) { const ang = k / 5 * Math.PI * 2, d = V.norm(V.add(V.mul(V.norm(V.cross(wd, up)), Math.cos(ang)), V.mul(V.norm(V.cross(wd, V.cross(wd, up))), Math.sin(ang)))); r.sph(V.mad(V.lerp(w0, w1, 0.5), d, 2.3 * ak + 0.7), 0.75, M.IRON, { noShadow: true }); } }   // (b6) studded iron wrist bands
     else if (!grunt || look.pads) r.cyl(V.lerp(a.el, a.hand, 0.3), V.lerp(a.el, a.hand, 0.7), grunt ? 2.3 * ak + 0.6 : GR ? 2.3 * ak + 0.5 : 2.6, M.LEATHER);   // bracers
     else if (IJ) r.cyl(V.lerp(a.el, a.hand, 0.55), V.lerp(a.el, a.hand, 0.78), 2.3 * ak + 0.5, M.LEATHER);   // art B4: leather wrist bands
@@ -1313,6 +1329,7 @@ function ogreRig(look, st) {
       const ed = Wd - v;   // distance in from the cutting edge
       const chip = [-3.6, 0.8, 4.4].some((c, i) => Math.abs(u - c) < [0.8, 0.55, 0.7][i] && ed < [1.1, 0.8, 1.0][i] - Math.abs(u - c) * 0.6);   // three chips bitten out of the edge, uneven
       if (chip) return M.DARK;
+      if (MG && ed < 0.5) return M.FIREM;   // (b6 v5) the edge glows forge-hot
       if (ed < 1.25) return M.BLADE;   // the honed bevel, bright
       if (ed < 1.6) return M.DSTEEL;
       if (Math.hypot((u + 1.8) * 0.7, ed - 2.4) < 1.0 || Math.hypot((u - 2.6) * 0.8, ed - 1.9) < 0.75) return M.MARKB;   // two blood smears near the edge
@@ -1341,12 +1358,14 @@ function ogreRig(look, st) {
   if (!grunt && !GR) for (let k = 0; k < 7; k++) { const a = k * 2.4, t = 7 + (k % 3) * 2, ax = V.norm(V.add(V.mul(V.cross(bd, up), Math.cos(a)), V.mul(V.cross(bd, V.norm(V.cross(bd, up))), Math.sin(a)))); const b = V.mad(V.mad(g, bd, t), ax, 2.8); r.cone(b, V.mad(b, ax, 2.4), 0.9, 0.2, M.BLADE, { noShadow: true }); }   // art B2: spikes in pale steel
   if (sw && sw.smear && st.prev) smearArc(r, pivot, fwd, U, st.prev.a + (st.prev.ck || 0), sw.a + (sw.ck || 0), 8, 22);
   // head: big, a heavy brow over small yellow eyes, an underbite with two tusks, a top-knot
-  const hd = grunt ? V.add(V.mad(J.head, fwd, 1.4), V.mul(up, -2.0)) : GR ? V.add(V.mad(J.head, fwd, 1.8), V.mul(up, -1.6)) : J.head, h0 = r.p.length;   // the grunts hunch, the head thrust forward and low
-  r.ell(hd, [4.6, 4.8, 4.2], skin, frameAlong(fwd, up), { mf: p => { const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = Math.abs(V.dot(q, sideR)), z2 = V.dot(q, up); if (f2 > 2.4 && Math.abs(s2 - 1.7) < 0.55 && Math.abs(z2 - 0.4) < 0.5) return MG ? M.FIREM : M.EYE_YEL; if (f2 > 2.4 && Math.abs(z2 - 1.3) < 0.35 && s2 < 3) return M.DARK; if (f2 > 3 && z2 < -1.6 && z2 > -2.6 && s2 < 2.2) return M.DARK; return 0; } });
+  const hd = grunt ? V.add(V.mad(J.head, fwd, 1.4), V.mul(up, -2.0)) : MG ? V.add(V.mad(J.head, fwd, 3.2), V.mul(up, -0.4)) : GR ? V.add(V.mad(J.head, fwd, 1.8), V.mul(up, -1.6)) : J.head, h0 = r.p.length;   // (b6 v5) Malgrath's head thrust out ahead of the hunched shoulders, so the glowing eyes show   // the grunts hunch, the head thrust forward and low
+  r.ell(hd, [4.6, 4.8, 4.2], skin, frameAlong(fwd, up), { mf: p => { const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = Math.abs(V.dot(q, sideR)), z2 = V.dot(q, up); if (MG && f2 > 2.0 && Math.abs(s2 - 1.8) < 0.95 && Math.abs(z2 - 0.5) < 0.6) return M.FIREM;   // (b6 v5) big glowing eyes
+    if (f2 > 2.4 && Math.abs(s2 - 1.7) < 0.55 && Math.abs(z2 - 0.4) < 0.5) return MG ? M.FIREM : M.EYE_YEL; if (f2 > 2.4 && Math.abs(z2 - 1.3) < 0.35 && s2 < 3) return M.DARK; if (f2 > 3 && z2 < -1.6 && z2 > -2.6 && s2 < 2.2) return MG ? M.FIREM : M.DARK; return 0; } });
   r.ell(V.add(V.mad(hd, fwd, 2.4), V.mul(up, -2.4)), [2.6, 3.8, 1.8], skin, frameAlong(fwd, up));   // jaw
   for (const s of [-1, 1]) {
     const b = IJ ? V.add(V.add(V.mad(hd, fwd, 3.9), V.mul(sideR, s * 3.0)), V.mul(up, -2.0)) : V.add(V.add(V.mad(hd, fwd, 4.2), V.mul(sideR, s * 1.8)), V.mul(up, -2.2));   // art B4: Ironjaw's tusks poke out either side of the jaw guard
-    r.cone(b, V.add(b, V.add(V.add(V.mul(up, 1.9), V.mul(fwd, 0.7)), V.mul(sideR, s * 0.6))), 1.15, 0.35, M.BONE, { noShadow: true });   // art B2: short thick tusks splayed out
+    if (MG) { const bm = V.add(V.add(V.mad(hd, fwd, 3.6), V.mul(sideR, s * 2.4)), V.mul(up, -2.9)); r.cone(bm, V.add(bm, V.add(V.add(V.mul(up, 1.1), V.mul(fwd, 0.6)), V.mul(sideR, s * 1.3))), 1.05, 0.3, M.BONE, { noShadow: true }); }   // (b6 v5) lower tusks splayed outward, clear of the eyes
+    else r.cone(b, V.add(b, V.add(V.add(V.mul(up, 1.9), V.mul(fwd, 0.7)), V.mul(sideR, s * 0.6))), 1.15, 0.35, M.BONE, { noShadow: true });   // art B2: short thick tusks splayed out
     r.cone(V.add(V.mad(hd, up, 0.6), V.mul(sideR, s * 4.2)), V.add(V.add(V.mad(hd, up, 1.6), V.mul(sideR, s * 6.6)), V.mul(fwd, -1)), 1.4, 0.3, skin);   // ears
   }
   if (MG) for (const s of [-1, 1]) {   // (b6) big ram horns: up out of the brow, curling back, down and forward round the ear
