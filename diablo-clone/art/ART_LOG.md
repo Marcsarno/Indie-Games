@@ -452,3 +452,4 @@ Placeholder stats near Gorr, `unique: true`, `minLevel: 99`. Other monsters cmp-
 red) instead of FLESH, horns BOAR tan with HAIR tips instead of cream, eyes glow FIREM, apron/pauldrons/wrist bands
 CLOTH_DARK (brown-black iron) with IRON rivets instead of slate with white rivets, HAIR skirt, an IRON cleaver, and
 two straight straps down the back instead of a crossed X. Others still cmp-identical; 0 edge hits.
+**Malgrath v3 cleaver (user: 'looks like a plain sheet of metal'):** own MG branch: iron pommel, wrapped grip, iron collar; IRON blade with a bright BLADE honed edge and a DSTEEL bevel line, three uneven chips, two MARKB blood smears, two RUST patches, a hanging hole, a thick DSTEEL spine. The Enforcer's cleaver is unchanged.

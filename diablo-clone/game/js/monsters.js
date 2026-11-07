@@ -1299,7 +1299,26 @@ function ogreRig(look, st) {
     const mc = V.mad(g, bd, 10.4), hx0 = V.sub(fwd, V.mul(bd, V.dot(fwd, bd))), hx = V.len(hx0) > 0.2 ? V.norm(hx0) : up;
     r.cyl(V.mad(mc, hx, -4.2), V.mad(mc, hx, 4.2), 3.3, M.WOOD, { mf: p => { const q = V.sub(p, mc), t = Math.abs(V.dot(q, hx)); if (t > 3.9) return M.PLANK; if (Math.abs(t - 2.5) < 0.75) { const rr = V.sub(q, V.mul(hx, V.dot(q, hx))), ang = Math.atan2(V.dot(rr, bd), V.dot(rr, V.cross(hx, bd))); return Math.abs(t - 2.5) < 0.35 && ((ang * 4 / Math.PI) % 2 + 2) % 2 < 0.45 ? M.BONE : M.IRON; } return 0; } });
   }
-  else if (look.cleaver || MG) {   // a heavy square cleaver: short wooden grip, a broad steel blade ((b6) Malgrath's is bigger, notched, with a hole)
+  else if (MG) {   // (b6 v3) Malgrath's butcher cleaver: a wrapped grip, a dark iron blade with a bright honed edge
+    // chipped into notches, rust patches and blood, a thick spine and a hanging hole near the top
+    const fn = V.norm(V.add(fwd, V.mul(sideR, -0.55))), side = V.norm(V.sub(fn, V.mul(bd, V.dot(fn, bd)))), nrm = V.norm(V.cross(bd, side)), cf = [bd, side, nrm];
+    r.sph(V.mad(g, bd, -3.4), 1.25, M.IRON);   // pommel
+    r.cone(V.mad(g, bd, -3), V.mad(g, bd, 2.2), 1.15, 1.15, M.LEATHER, { mf: p => { const t = V.dot(V.sub(p, g), bd); return ((t * 1.1 % 1) + 1) % 1 < 0.35 ? M.HAIR : 0; } });   // grip, wrapped
+    r.cyl(V.mad(g, bd, 2.0), V.mad(g, bd, 3.0), 1.55, M.IRON);   // iron collar
+    const L = 6.6, Wd = 5.0, bc = V.add(V.mad(g, bd, 2.8 + L), V.mul(side, Wd - 1.6));
+    r.box(bc, [L, Wd, 0.55], M.IRON, cf, { mf: p => { const q = V.sub(p, bc), u = V.dot(q, bd), v = V.dot(q, side);
+      if (Math.hypot(u - (L - 2.2), v + Wd - 2.4) < 1.0) return M.DARK;   // the hanging hole
+      const ed = Wd - v;   // distance in from the cutting edge
+      const chip = [-3.6, 0.8, 4.4].some((c, i) => Math.abs(u - c) < [0.8, 0.55, 0.7][i] && ed < [1.1, 0.8, 1.0][i] - Math.abs(u - c) * 0.6);   // three chips bitten out of the edge, uneven
+      if (chip) return M.DARK;
+      if (ed < 1.25) return M.BLADE;   // the honed bevel, bright
+      if (ed < 1.6) return M.DSTEEL;
+      if (Math.hypot((u + 1.8) * 0.7, ed - 2.4) < 1.0 || Math.hypot((u - 2.6) * 0.8, ed - 1.9) < 0.75) return M.MARKB;   // two blood smears near the edge
+      if (Math.hypot((u - 4.4) * 0.6, v + 1.6) < 1.1 || Math.hypot((u + 4.6) * 0.7, v + 2.6) < 0.8) return M.RUST;   // two rust patches by the spine
+      return 0; } });
+    r.box(V.add(V.mad(g, bd, 2.8 + L), V.mul(side, -1.6)), [L, 0.55, 0.95], M.DSTEEL, cf);   // the thick back spine
+  }
+  else if (look.cleaver) {   // a heavy square cleaver: short wooden grip, a broad steel blade ((b6) Malgrath's is bigger, notched, with a hole)
     const ck = MG ? 1.35 : 1;
     r.cone(V.mad(g, bd, -3), V.mad(g, bd, 2.5), 1.2, 1.2, M.WOOD);
     const fn = V.norm(V.add(fwd, V.mul(sideR, -0.55))), side = V.norm(V.sub(fn, V.mul(bd, V.dot(fn, bd)))), cf = [bd, side, V.norm(V.cross(bd, side))];
