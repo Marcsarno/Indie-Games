@@ -453,3 +453,4 @@ red) instead of FLESH, horns BOAR tan with HAIR tips instead of cream, eyes glow
 CLOTH_DARK (brown-black iron) with IRON rivets instead of slate with white rivets, HAIR skirt, an IRON cleaver, and
 two straight straps down the back instead of a crossed X. Others still cmp-identical; 0 edge hits.
 **Malgrath v3 cleaver (user: 'looks like a plain sheet of metal'):** own MG branch: iron pommel, wrapped grip, iron collar; IRON blade with a bright BLADE honed edge and a DSTEEL bevel line, three uneven chips, two MARKB blood smears, two RUST patches, a hanging hole, a thick DSTEEL spine. The Enforcer's cleaver is unchanged.
+**Malgrath v4 grip (user: the hand grips the blade, not a handle):** the fist (radius ~3.6) had covered the whole grip. The grip now runs from a pommel below the fist to an iron collar well above it (blade starts 7 units up the haft), so a wrapped handle shows between hand and blade. 0 edge hits.
