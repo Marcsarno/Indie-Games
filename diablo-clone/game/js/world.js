@@ -283,7 +283,7 @@ function placeTorches(D) {
     if (!LV.tall[tIdx(i, j)]) continue;
     const faceR = tileAt(i + 1, j) === FLOOR, faceL = tileAt(i, j + 1) === FLOOR;
     if (!faceR && !faceL) continue;
-    if (hash(i, j, LV.seed) > TH().torch || torches.some(t => Math.abs(t.i - i) + Math.abs(t.j - j) < 5)) continue;
+    if (hash(i, j, LV.seed) > TH().torch || torches.some(t => Math.abs(t.i - i) + Math.abs(t.j - j) < 5) || wallFeature(i, j)) continue;   // (round 68c: not on a niche or a collapsed stretch)
     torches.push({ kind: 'torch', i, j, face: faceL ? 'L' : 'R' });
   }
   D.push(...torches);
@@ -613,8 +613,21 @@ function runeDeco(a, b) {
   const on = Math.abs(x) < 0.7 || (Math.abs(y - 3) < 0.7 && Math.abs(x) < 3.5) || (Math.abs(Math.abs(x) - y * 0.5 - 1) < 0.6 && y < 0);
   return on ? (LAVA[3] | EMIS) : 0;
 }
+// round 68c (the face-lift goes into the dungeon's contents, from the concept art): features on the crypt's
+// tall walls, one per wall tile at most, only on a face that looks onto floor and never where a torch hangs:
+// a skull niche (two skulls and a candle in a dark arched recess, with its own small light) or a collapsed
+// stretch (the wall broken down to half height, rubble on the floor in front). Banners stay (mostly red now)
+function wallFeature(i, j) {
+  if (LV.outdoor || LV.theme !== 'crypt' || !LV.tall[tIdx(i, j)]) return null;
+  const faceR = tileAt(i + 1, j) === FLOOR, faceL = tileAt(i, j + 1) === FLOOR; if (!faceR && !faceL) return null;
+  if (faceR && faceL) return null;   // (a corner tile: both faces show)
+  const h = hash(i, j, 77);
+  if (h >= 0.1 && h < 0.16) return { kind: 'niche', face: faceL ? 'L' : 'R' };
+  if (h >= 0.16 && h < 0.2 && tileAt(i + (faceL ? 1 : 0), j + (faceL ? 0 : 1)) === WALL && tileAt(i - (faceL ? 1 : 0), j - (faceL ? 0 : 1)) === WALL) return { kind: 'collapse', face: faceL ? 'L' : 'R' };   // (mid-wall only, so both ends stay standing)
+  return null;
+}
 function wallTex(i, j, tall) {
-  const deco = tall ? hash(i, j, 77) : 1;
+  const deco = tall ? hash(i, j, 77) : 1, feat = tall ? wallFeature(i, j) : null;
   return (face, a, b) => {
     if (face === 'top') {
       const gi = i * 16 + a, gj = j * 16 + b;
@@ -626,7 +639,13 @@ function wallTex(i, j, tall) {
     }
     const g = (face === 'L' ? i * 16 : j * 16) + a;
     if (LV.theme === 'caves') return rockTex(g, b, face);
-    if (tall && deco < 0.1 && TH().banners) { const d = bannerDeco(a, b, 54, deco < 0.05 || LV.theme === 'hell' ? RED : BLUE); if (d) return d; }
+    if (feat && feat.kind === 'collapse' && face === feat.face) {   // a ragged hole broken through the wall, black beyond (concept art B)
+      const x = a - 8, y = b - 20, n = (hash(Math.floor(a / 2), Math.floor(b / 3), i * 5 + j) - 0.5) * 3;
+      const r = Math.hypot(x * 1.15, y * 0.62) + n;   // a tall, ragged oval
+      if (r < 7.2 && b > 3) return BLK;
+      if (r < 8.6 && b > 2) return ST(r < 8 ? 1 : 6);   // the broken edge: shadowed inside, a lit lip
+    }
+    if (tall && deco < 0.1 && TH().banners) { const d = bannerDeco(a, b, 54, deco < 0.07 || LV.theme === 'hell' ? RED : BLUE); if (d) return d; }   // (round 68c: crypt banners mostly deep red, like the concept)
     if (LV.theme === 'hell' && tall && deco > 0.86 && b < 30) { const d = runeDeco(a, b); if (d) return d; }
     if (tall && deco > 0.93 && b > 6 && b < 40) {   // cracked, mossy patch
       const h = hash(g | 0, b | 0, 13);
@@ -792,6 +811,33 @@ const PROPS = {
     for (const [x, y, s] of [[0, 0, 1], [-4, 3, 0.75], [3.5, 3.5, 0.65]]) r.ell([x, y, 4.6 * s], [3.8 * s, 3.6 * s, 4.8 * s], M.OLDBONE, null, { mf: veins });
     for (const a of [0.4, 2.2, 4.1]) r.cone([0, 0, 1], [Math.cos(a) * 9, Math.sin(a) * 9, 0.2], 0.35, 0.3, M.BONE, { noShadow: true });
   }, [30, 26, 15, 18]),
+  // round 68c: a skull niche in the crypt wall (concept art D): a dressed stone frame with a lintel and
+  // keystone round a dark recess, a shelf, two skulls looking out, and a lit candle
+  niche: (face) => propSprite('niche' + face, r => {
+    const out = face === 'L' ? [0, 1, 0] : [1, 0, 0], up = [0, 0, 1], tan = V.cross(up, out), ax = [out, tan, up];
+    const at = (o, t, z) => V.add(V.add(V.mul(out, o), V.mul(tan, t)), [0, 0, z]);
+    r.box(at(-0.4, 0, 10), [0.4, 7.4, 9.4], M.VOID, ax);   // the dark recess
+    for (const sd of [-1, 1]) r.box(at(0.8, sd * 8.6, 10), [1.0, 1.6, 10.2], M.STONE, ax);   // the jambs
+    r.box(at(0.9, 0, 21.2), [1.2, 10.2, 1.6], M.STONE, ax);   // the lintel
+    r.box(at(1.6, 0, 21.4), [0.9, 1.8, 2.2], M.STONE, ax);   // its keystone
+    r.box(at(1.2, 0, 1.6), [1.8, 8.6, 1.1], M.STONE, ax);   // the shelf
+    for (const [t, z] of [[-4.2, 5.4], [0.4, 5.2]]) {   // two skulls looking out
+      const c = at(1.8, t, z);
+      r.sph(c, 2.6, M.BONE, { mf: p => { const q = V.sub(p, c), fo = V.dot(q, out), ft = V.dot(q, tan); return fo > 1.2 && q[2] > -0.4 && q[2] < 1.2 && Math.abs(Math.abs(ft) - 1.0) < 0.6 ? M.DARK : fo > 1.6 && q[2] < -1.2 && Math.abs(ft) < 0.4 ? M.DARK : 0; } });
+      r.box(V.add(c, [0, 0, -2.2]), [1.2, 1.4, 0.5], M.BONE, ax);   // the jaw
+    }
+    r.cyl(at(1.5, 5.4, 2.6), at(1.5, 5.4, 8.6), 1.1, M.WAX);
+    r.sph(at(1.5, 5.4, 9.8), 1.1, M.FIREM, { noShadow: true });
+  }, [48, 52, 24, 38]),
+  // round 68c: fallen blocks at the foot of a collapsed wall
+  rubble: (seed) => propSprite('rubble' + seed, r => {
+    const R = rng(seed * 97 + 5);
+    for (let n = 0; n < 13; n++) {   // a heap: bigger blocks low and in the middle, smaller ones tumbled out round it
+      const a = R() * 6.283, d = Math.sqrt(R()) * 9, sz = 1.0 + (1 - d / 9) * 1.6 + R() * 0.6, yaw = R() * 3, tilt = (R() - 0.5) * 0.9;
+      const fx = [Math.cos(yaw) * Math.cos(tilt), Math.sin(yaw) * Math.cos(tilt), Math.sin(tilt)], fy = [-Math.sin(yaw), Math.cos(yaw), 0], fz = V.norm(V.cross(fx, fy));
+      r.box([Math.cos(a) * d, Math.sin(a) * d * 1.2, sz * 0.9 + (d < 3 ? 1.6 : 0)], [sz * 1.3, sz, sz * 0.8], M.STONE, [fx, fy, fz]);
+    }
+  }, [48, 34, 24, 20]),
   torch: (face) => propSprite('torch' + face, r => {
     // iron sconce (mock-up): riveted wall plate, bracket arm, a caged cup glowing from inside
     const out = face === 'L' ? [0, 1, 0] : [1, 0, 0], up = [0, 0, 1], tan = V.cross(up, out);
@@ -952,8 +998,20 @@ function buildWorld() {
   for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
     if (tileAt(i, j) !== WALL) continue;
     const tall = LV.tall[tIdx(i, j)];
+    const feat = tall ? wallFeature(i, j) : null;
     const sp = makeBox(1, 1, tall ? WALL_TALL : WALL_LOW, wallTex(i, j, tall));
     const [wx, wy] = iso(i, j);
+    if (feat && feat.kind === 'niche') {   // round 68c: a skull niche on the face toward the floor, its candle a little flame and light
+      const [x, y] = feat.face === 'L' ? iso(i + 0.5, j + 1) : iso(i + 1, j + 0.5);
+      back.push({ depth: i + j + 1.5, sp: PROPS.niche(feat.face), wx: x, wy: y - 12, z: 12, tile: tIdx(i, j) });
+      const c = feat.face === 'L' ? iso(i + 0.5 + 3.8 / TILE_U * 0, j + 1 + 1.2 / TILE_U) : iso(i + 1 + 1.2 / TILE_U, j + 0.5);
+      fires.push({ wx: c[0] + (feat.face === 'L' ? -5.4 : 5.4) * 0.7, wy: c[1] - 12 - 10, h: 4, w: 1.2, seed: i * 7 + j, tile: tIdx(i, j), ember: 0 });
+      const g = feat.face === 'L' ? iso(i + 0.5, j + 1.5) : iso(i + 1.5, j + 0.5);
+      lights.push({ x: g[0], y: g[1], z: 22, r: 70, i: 0.55, seed: i * 13 + j });
+    } else if (feat && feat.kind === 'collapse') {   // round 68c: the fallen blocks lie on the floor in front
+      const [x, y] = feat.face === 'L' ? iso(i + 0.5, j + 1.45) : iso(i + 1.45, j + 0.5);
+      props.push({ depth: i + j + 1.9, sp: PROPS.rubble((i * 31 + j * 7) % 5), wx: x, wy: y, tile: tIdx(i + (feat.face === 'R' ? 1 : 0), j + (feat.face === 'L' ? 1 : 0)) });
+    }
     (tall ? back : props).push({ depth: i + j + 1, sp, wx, wy, tile: tIdx(i, j) });
   }
   const add = (list, i, j, wi, wj, hgt, tex, inset = 0, zBase = 0, depthAdd = 0) => {

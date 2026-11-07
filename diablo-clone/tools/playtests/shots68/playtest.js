@@ -24,4 +24,12 @@ L.push({ cor, great: !!great.great, room: [r.w, r.h] });
 startLevel(3, 4242); G.actCard = 0; LV.act = 1; enemies = []; hero.hp = STAT.maxHp = 94;
 { const r = LV.rooms.find(q => !q.great && q.w >= 10 && q.h >= 10 && LV.decor.filter(d => d.kind === 'pillar' && d.i >= q.x && d.i < q.x + q.w && d.j >= q.y && d.j < q.y + q.h).length >= 3); if (r) { hero.fi = r.cx + 0.5; hero.fj = r.cy + 1.5; updateFov(hero.fi, hero.fj); settle(); shots.room4 = cvs.toDataURL(); } }
 { const r = LV.rooms.find(q => q.great); hero.fi = r.cx + 0.5; hero.fj = r.cy + 1.5; updateFov(hero.fi, hero.fj); settle(); shots.great = cvs.toDataURL(); }
+// round 68c: a niche and a collapsed stretch, close up
+for (const [kind, sd] of [['niche', 4242], ['collapse', 4242], ['niche', 99], ['collapse', 99], ['collapse', 777], ['collapse', 5]]) {
+  if (shots[kind]) continue;
+  startLevel(3, sd); G.actCard = 0; LV.act = 1; enemies = [];
+  let f = null; for (let j = 0; j < MH && !f; j++) for (let i = 0; i < MW && !f; i++) { const w = tileAt(i, j) === WALL && wallFeature(i, j); if (w && w.kind === kind) f = [i, j, w.face]; }
+  if (!f) continue;
+  hero.fi = f[0] + 0.5 + (f[2] === 'R' ? 2.2 : 0.8); hero.fj = f[1] + 0.5 + (f[2] === 'L' ? 2.2 : 0.8); updateFov(hero.fi, hero.fj); settle(); shots[kind] = cvs.toDataURL(); L.push({ [kind]: sd });
+}
 window.__out = { log: L, shots };
