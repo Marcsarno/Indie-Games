@@ -613,57 +613,12 @@ function runeDeco(a, b) {
   const on = Math.abs(x) < 0.7 || (Math.abs(y - 3) < 0.7 && Math.abs(x) < 3.5) || (Math.abs(Math.abs(x) - y * 0.5 - 1) < 0.6 && y < 0);
   return on ? (LAVA[3] | EMIS) : 0;
 }
-// round 68b (the crypt face-lift, concept art D): dressed stone instead of small bricks. Big blocks
-// (16 x 12) in staggered courses, a heavy capstone course along the top with a dark seam under it, a
-// darker base course at the floor, and every third tile a pilaster built into the wall (lighter, edged
-// with shadow lines, with its own capital under the cap). b = height on the face, g = distance along it
-function blockTex(g, b, face, top, seed, jamb = false) {
-  const R = face === 'R' ? -1 : 0, gi = Math.floor(g), bi = Math.floor(b);
-  const capH = top > 30 ? 7 : 4, baseH = top > 30 ? 7 : 4;
-  if (b >= top - capH) {   // the capstone course: long slabs, lit on top, a dark seam beneath
-    if (b < top - capH + 1) return ST(0);
-    const cx = Math.floor((g + 6) / 24), mx = ((Math.floor(g + 6) % 24) + 24) % 24;
-    if (mx === 0) return ST(1);
-    let t = 5 + Math.floor(hash(cx, 7, seed) * 2) + R; if (b >= top - 1.5) t += 1; if (hash(gi, bi, seed + 3) < 0.06) t -= 1;
-    return ST(t);
-  }
-  if (b < baseH) {   // the base course: one long, darker plinth
-    if (b >= baseH - 1) return ST(1);
-    const mx = ((Math.floor(g) % 32) + 32) % 32; if (mx === 0) return ST(1);
-    return ST(2 + R + (hash(Math.floor(g / 32), 3, seed) < 0.5 ? 0 : 1) - (b < 1.5 ? 1 : 0));
-  }
-  const pg = ((Math.floor(g) % 48) + 48) % 48;
-  if ((top > 30 || jamb) && pg < 11) {   // a pilaster built into the wall
-    if (pg === 0 || pg === 10) return ST(1);
-    if (b >= top - capH - 5) return ST((b >= top - capH - 1.5 ? 2 : 6) + R);   // its capital
-    if (((bi - baseH) % 12) === 0) return ST(2 + R);
-    let t = 5 + R; if (pg === 1) t += 1; if (pg === 9) t -= 1; if (hash(gi, bi, seed + 5) < 0.05) t -= 1;
-    return ST(t);
-  }
-  const z = b - baseH, row = Math.floor(z / 12), mz = ((Math.floor(z) % 12) + 12) % 12, off = (row & 1) * 8;
-  const gx = gi + off, bx = Math.floor(gx / 16), mx = ((gx % 16) + 16) % 16;
-  if (mz === 0 || mx === 0) return ST(1);
-  let t = 3 + Math.floor(hash(bx, row, seed) * 2.6) + R;
-  if (mz === 11) t += 1; else if (mz === 1) t -= 1;   // lit top edge, shaded bottom edge
-  if (mx === 1) t += 1;
-  const ph = hash(gi, bi, seed + 1); if (ph < 0.07) t -= 1; else if (ph > 0.985) t += 1;
-  return ST(t);
-}
-// round 68b: a doorway's jamb: a wall tile touching both a room's floor and a corridor's (the posts either
-// side of where a hall opens into a room), drawn as a full pilaster so every opening reads as a doorway
-function isJamb(i, j) {
-  if (LV.outdoor || !LV.roomOf) return false;
-  let room = false, cor = false;
-  for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) { if (tileAt(i + a, j + b) !== FLOOR) continue; if (LV.roomOf[tIdx(i + a, j + b)] >= 0) room = true; else cor = true; }
-  return room && cor;
-}
 function wallTex(i, j, tall) {
-  const deco = tall ? hash(i, j, 77) : 1, jamb = LV.theme === 'crypt' && isJamb(i, j);
+  const deco = tall ? hash(i, j, 77) : 1;
   return (face, a, b) => {
     if (face === 'top') {
       const gi = i * 16 + a, gj = j * 16 + b;
       if (LV.theme === 'caves') return ST(2 + Math.floor(vnoise(gi, gj, 6, 11) * 3));
-      if (LV.theme === 'crypt') { if (((gi | 0) % 24) < 1 || ((gj | 0) % 24) < 1) return ST(2); return ST(5 + Math.floor(hash(Math.floor(gi / 24), Math.floor(gj / 24), 11) * 2) - (hash(gi | 0, gj | 0, 5) < 0.08 ? 1 : 0)); }   // round 68b: the capstones' tops
       if (((gi | 0) % 16) < 1 || ((gj | 0) % 16) < 1) return ST(1);
       let t = 2 + Math.floor(hash(Math.floor(gi / 16), Math.floor(gj / 16), 11) * 2);
       if (hash(gi | 0, gj | 0, 5) < 0.1) t--;
@@ -671,14 +626,13 @@ function wallTex(i, j, tall) {
     }
     const g = (face === 'L' ? i * 16 : j * 16) + a;
     if (LV.theme === 'caves') return rockTex(g, b, face);
-    if (tall && !jamb && deco < 0.1 && TH().banners) { const d = bannerDeco(a, b, 54, deco < 0.05 || LV.theme === 'hell' ? RED : BLUE); if (d) return d; }
+    if (tall && deco < 0.1 && TH().banners) { const d = bannerDeco(a, b, 54, deco < 0.05 || LV.theme === 'hell' ? RED : BLUE); if (d) return d; }
     if (LV.theme === 'hell' && tall && deco > 0.86 && b < 30) { const d = runeDeco(a, b); if (d) return d; }
     if (tall && deco > 0.93 && b > 6 && b < 40) {   // cracked, mossy patch
       const h = hash(g | 0, b | 0, 13);
       if (h < 0.12) return ST(1);
       if (b < 18 && h > 0.7 && LV.theme === 'crypt') return GREEN[0];
     }
-    if (LV.theme === 'crypt') return blockTex(jamb ? 1 + a * 9 / 16 : g, b, face, tall ? WALL_TALL : WALL_LOW, face === 'L' ? 3 : 4, jamb);   // round 68b (a jamb: the whole face a pilaster)
     return brick(g, b, face === 'R' ? -1 : 0, face === 'L' ? 3 : 4);
   };
 }
@@ -893,7 +847,6 @@ function genFloor() {
         floorBuf[k] = ST(tone);
         continue;
       }
-      if (LV.theme === 'crypt') { floorBuf[k] = cryptFloor(x, y, A, B, ti, tj, room); continue; }   // round 68b
       const cell = room ? 16 : 8;   // flagstones in rooms, cobbles in corridors
       const sb = Math.floor(B / cell), A2 = A + (sb & 1) * (cell / 2);
       const ma = ((A2 % cell) + cell) % cell, mb = ((B % cell) + cell) % cell;
@@ -915,26 +868,6 @@ function genFloor() {
     }
     floorBuf[k] = v;
   }
-}
-// round 68b: the crypt floor (concept art): big square flagstones on the tile grid, rooms and halls alike,
-// bevelled (lit on the far edges, shaded on the near), a cracked slab now and then, and moss creeping in
-// from the walls. A, B: floor coordinates (32 a tile)
-function cryptFloor(x, y, A, B, ti, tj, room) {
-  const cell = 16, sa = Math.floor(A / cell), sb = Math.floor(B / cell), ma = ((A % cell) + cell) % cell, mb = ((B % cell) + cell) % cell;
-  const fa = A / 32 - ti, fb = B / 32 - tj;
-  const wallN = Math.min(tileAt(ti - 1, tj) === WALL ? fa : 9, tileAt(ti, tj - 1) === WALL ? fb : 9, tileAt(ti + 1, tj) === WALL ? 1 - fa : 9, tileAt(ti, tj + 1) === WALL ? 1 - fb : 9);
-  if (ma < 1.5 || mb < 1.5) return wallN < 0.3 && vnoise(A, B, 9, 21) > 0.55 ? GREEN[0] : K2;   // the joints (moss grows in them by the walls)
-  const h = hash(sa, sb, 7 + LV.level);
-  let tone = (room ? 3 : 2) + Math.floor(h * 2.4);
-  if (ma < 3 || mb < 3) tone += 1; else if (ma >= cell - 1.5 || mb >= cell - 1.5) tone -= 1;   // the bevel
-  if (h > 0.9) {   // a cracked slab: a jagged line across it
-    const c = Math.abs((ma - 8) - (mb - 8) * (h > 0.95 ? 0.6 : -0.8) + Math.sin(mb * 1.3 + h * 20) * 1.4);
-    if (c < 0.8) return K2;
-  }
-  const ph = hash(x, y, 3); if (ph < 0.06) tone -= 1; else if (ph > 0.98) tone += 1;
-  if (wallN < 0.14) tone -= 2; else if (wallN < 0.24) tone -= 1;   // contact shadow
-  if (wallN < 0.32 && vnoise(A, B, 11, 22) > 0.62 && ph > 0.35) return ph > 0.8 ? GREEN[1] : GREEN[0];   // moss along the walls
-  return ST(tone);
 }
 // a molten pool: emissive lava indices (they flow through the palette cycle) with a dark crust rim
 function stampLava(wx, wy, size, seed) {
