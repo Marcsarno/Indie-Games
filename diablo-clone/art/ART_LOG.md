@@ -32,6 +32,14 @@ vs a pre-change copy + `cmp`; hero hash script pattern in the B2 section; edge c
 the sprite canvas edge over idle/walk/attack/hit/death x 8 dirs. Renderer has an opt-in `ff` fur hook (rig.js) unused now.
 **Known existing bug for the main chat:** Dire Bear and Gorr death frames clip at the canvas bottom (needs taller `size`).
 
+## C2: Azhruk rebuilt from scratch (2026-11-08, in progress)
+The user accepted Malgrath at C1 pass 4 ("good enough") and asked for the next one. New family `furnace` (`furnaceRig`, `AZH_B`): his own
+long-legged body, not Gorr's. Three traits from the concept: dark plate with a horned bucket helm (FIREM visor), a furnace in the chest, and a
+two-handed hammer held low across the body (slam attack). Lesson from C1: give the 2x renderer real detail (1 px plate seams via `lames`, metal
+with specular highlights), judged beside Gorr. Rough directions under review as TEMP ids `azh_a` (IRON plate, a 3-slit chest grate), `azh_b`
+(matte ROCK, a barrel belly with a round fire grate) and `azh_c` (A with molten FIREM seams). All are `minLevel: 99`; `azhruk` still points at the
+old ogreRig build until the user picks. Images: `art/review/c2-azhruk/`.
+
 ## C1: Malgrath rebuilt from scratch, back on the original rules (2026-11-08)
 New family `butcher` (`butcherRig`, `BUTCH_B`) in `game/js/monsters.js`: his own body instead of a Gorr/ogreRig reskin.
 He's a tall V-shaped demon on long legs, with a small head, a dark apron slab, iron bracers, one iron pauldron, and a cleaver on a long handle.

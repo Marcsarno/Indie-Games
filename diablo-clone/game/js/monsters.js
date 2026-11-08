@@ -2065,6 +2065,83 @@ function butcherRig(look, st) {
   return r;
 }
 
+// art C2: Azhruk rebuilt from scratch on his own body (not Gorr's): a tall plated knight-demon on long legs.
+// Three traits from the concept: dark plate with a horned bucket helm, a furnace in the chest, a two-handed hammer.
+// look.v picks the rough direction under review: 'a' blackened shiny plate; 'b' a matte iron barrel-bellied furnace;
+// 'c' a's plate with molten light in every seam
+const AZH_B = { ...BUTCH_B, hipH: 12, thigh: 6.3, shin: 6.1, shW: 9.0, hipW: 3.8, hunch: 0.06, upper: 7.2, fore: 6.8 };
+function furnaceRig(look, st) {
+  const v = look.v || 'a', B = AZH_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J;
+  const ARM = v === 'b' ? M.ROCK : M.IRON, SEAM = v === 'c' ? M.FIREM : M.IRON;
+  const at = (p, f, s, u) => V.add(V.add(p, V.mul(fwd, f)), V.add(V.mul(sideR, s), V.mul(up, u)));
+  const lf = frameAlong(fwd, up);
+  const lames = (c, step) => p => { const z = V.dot(V.sub(p, c), up); return Math.abs((((z + 40) % step) + step) % step - step / 2) < 0.28 ? SEAM : 0; };   // 1 px seams between plates
+  // legs: plated thighs, knee cops, greaves, broad sabatons
+  for (const [hip, knee, ank] of [[J.hipL, J.kneeL, J.ankL], [J.hipR, J.kneeR, J.ankR]]) {
+    r.cone(hip, knee, 3.2, 2.7, ARM, { mf: lames(hip, 2.2) });
+    r.cone(knee, ank, 2.7, 2.3, ARM);
+    r.sph(V.mad(knee, fwd, 1.0), 2.1, ARM);
+    r.ell(V.add(ank, [1.6, 0, -0.7]), [3.0, 2.3, 1.4], ARM);
+  }
+  // tassets: a short plated skirt round the hips; a red tabard hanging in front and behind
+  r.cone(at(J.pelvis, 0, 0, 1.2), at(J.pelvis, 0.4, 0, -3.4), 5.0, 5.9, ARM, { mf: lames(J.pelvis, 1.6) });
+  for (const s of [1, -1]) { const t0 = at(J.pelvis, s * 5.4, 0, 0.6); r.box(V.mad(t0, up, -4.0), [0.4, 1.9, 4.4], M.CLOTH_RED, lf, { mf: p => { const q = V.sub(p, t0), z = V.dot(q, up), y = V.dot(q, sideR); return z < -7.0 + Math.abs(Math.sin(y * 2.2)) * 1.2 ? M.MARKB : 0; } }); }
+  // torso: the furnace chest
+  const chC = V.mad(J.chest, up, 0.8);
+  if (v === 'b') {   // a barrel belly with a round grate, the fire showing between the bars
+    r.ell(at(J.pelvis, 0.6, 0, 5.0), [7.0, 8.0, 7.2], ARM, lf, { mf: p => { const q = V.sub(p, J.pelvis), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up) - 5.6;
+      if (f2 < 3.6) return Math.abs(((z2 + 40) % 3.0) - 1.5) < 0.22 ? SEAM : 0; const rr = Math.hypot(s2, z2);
+      if (rr < 3.6) return Math.abs(((s2 + 40) % 1.6) - 0.8) < 0.38 ? M.IRON : (rr < 2.2 ? M.FIREM : M.LAVAM); return rr < 4.3 ? M.IRON : 0; } });
+    r.ell(at(J.chest, -0.6, 0, 2.2), [5.0, 8.4, 4.4], ARM, lf, { mf: lames(J.chest, 2.4) });
+  } else {
+    r.ell(at(J.pelvis, 0.2, 0, 4.2), [4.6, 5.8, 4.6], ARM, lf, { mf: lames(J.pelvis, 2.0) });
+    r.ell(chC, [6.2, 9.0, 6.4], ARM, lf, { mf: p => { const q = V.sub(p, chC), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up);
+      if (f2 > 3.0 && Math.abs(s2) < 3.4 && z2 > -2.6 && z2 < 2.0) return [-1.8, 0, 1.8].some(c => Math.abs(s2 - c) < 0.6) && z2 > -1.9 && z2 < 1.3 ? M.FIREM : M.IRON;   // the grate: three glowing slits
+      if (f2 < -3.4 && Math.abs(s2) < 1.4 && z2 > -1.2 && z2 < 2.8) return Math.abs(s2) < 0.55 && z2 > -0.5 && z2 < 2.1 ? M.FIREM : M.IRON;   // one on the back
+      return 0; } });
+  }
+  r.cyl(at(J.pelvis, 0, 0, 1.0), at(J.pelvis, 0, 0, 2.2), 5.2, M.IRON, { mf: p => Math.abs(V.dot(V.sub(p, J.pelvis), sideR)) < 1.0 && V.dot(V.sub(p, J.pelvis), fwd) > 3 ? M.STEEL : 0 });   // belt, a bright buckle
+  // pauldrons: two stepped plates per shoulder, wide
+  for (const [sh, s] of [[J.shR, 1], [J.shL, -1]]) {
+    const out = V.norm(V.add(V.mul(up, 0.75), V.mul(sideR, s * 0.65)));
+    r.ell(at(sh, -0.2, s * 0.6, 1.8), [4.6, 4.4, 2.2], ARM, frameAlong(fwd, out));
+    r.ell(at(sh, -0.2, s * 2.0, -0.6), [4.0, 3.6, 1.8], ARM, frameAlong(fwd, V.norm(V.add(V.mul(up, 0.4), V.mul(sideR, s * 0.9)))));
+  }
+  // arms and the hammer: held across the body in both hands (left low on the haft, right higher); a slam to attack
+  const sw = atkIndex(st.clip) >= 0 ? st.key : null;
+  const pivot = at(J.chest, 1, 3.5, 4), U = V.norm(V.add(V.mul(up, Math.cos(0.22)), V.mul(sideR, Math.sin(0.22)))), inPlane = a => V.norm(V.add(V.mul(fwd, Math.cos(a)), V.mul(U, Math.sin(a))));
+  let handR, handL, bd;
+  if (sw) { handR = V.mad(pivot, inPlane(sw.a), (sw.r || 6.5) * 1.3); bd = inPlane(sw.a + (sw.ck || 0)); handL = V.mad(handR, bd, -5.5); }
+  else { handL = at(J.pelvis, 6.4 + J.swingArm * 0.6, -2.6, 4.6); bd = V.norm(V.add(V.add(V.mul(fwd, 0.15), V.mul(up, -0.28)), V.mul(sideR, 0.95))); handR = V.mad(handL, bd, 6.0); }   // held low across the body, the head at the right hip
+  if (st.clip === 'death') { handR = V.add(J.shR, [3, 3, -12]); bd = V.norm([0.6, 0.6, -0.5]); handL = V.add(J.shL, [2, -3, -11]); }
+  for (const [sh, hand, s] of [[J.shR, handR, 1], [J.shL, handL, -1]]) {
+    const a = armTo(J, sh, hand, B, s);
+    r.cone(sh, a.el, 2.6, 2.3, ARM); r.sph(V.mad(a.el, fwd, -0.6), 2.0, ARM);
+    r.cone(a.el, a.hand, 2.4, 2.2, ARM, { mf: lames(a.el, 1.8) });
+    r.sph(a.hand, 2.5, ARM);
+  }
+  const g = handR, hx0 = V.sub(fwd, V.mul(bd, V.dot(fwd, bd))), hx = V.len(hx0) > 0.2 ? V.norm(hx0) : up;
+  r.cone(V.mad(g, bd, -9), V.mad(g, bd, 9.5), 0.95, 0.95, M.WOOD);
+  const hc = V.mad(g, bd, 11.2), hy = V.norm(V.cross(bd, hx));
+  r.box(hc, [3.2, 2.9, 4.6], v === 'b' ? M.IRON : M.ROCK, [bd, hy, hx], { mf: p => { const q = V.sub(p, hc), a2 = Math.abs(V.dot(q, bd)), b2 = Math.abs(V.dot(q, hy)), c2 = Math.abs(V.dot(q, hx)); return (a2 > 2.7 ? 1 : 0) + (b2 > 2.4 ? 1 : 0) + (c2 > 4.1 ? 1 : 0) >= 2 ? M.IRON : 0; } });   // edges bevelled darker
+  if (sw && sw.smear && st.prev) smearArc(r, pivot, fwd, U, st.prev.a + (st.prev.ck || 0), sw.a + (sw.ck || 0), 9, 26);
+  // tail: a plated, curling tail behind
+  { let p0 = at(J.pelvis, -3.6, 0, 0.8); const pts = [[-6.5, 1.2, -2.0], [-9.0, 2.8, -4.6], [-10.6, 5.2, -6.6], [-10.2, 8.0, -7.0], [-8.4, 9.4, -5.6]];
+    pts.forEach(([f2, s2, z2], i) => { const p1 = at(J.pelvis, f2, s2, z2); r.cone(p0, p1, 1.9 - i * 0.3, 1.6 - i * 0.3, ARM); p0 = p1; }); }
+  // head: a bucket helm with a glowing visor slit and a breath line, two curved horns
+  const hd = at(J.head, 1.0, 0, -0.6);
+  r.cyl(V.mad(hd, up, -2.8), V.mad(hd, up, 2.6), 3.5, ARM, { mf: p => { const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up);
+    if (f2 > 2.0 && z2 > 0.0 && z2 < 0.9 && Math.abs(s2) < 2.4) return M.FIREM;   // visor slit
+    if (f2 > 2.6 && Math.abs(s2) < 0.3 && z2 < -0.4 && z2 > -2.4) return SEAM;   // breath line
+    if (Math.abs(z2 - 2.2) < 0.3) return SEAM;   // crown seam
+    return 0; } });
+  for (const s of [-1, 1]) { let p0 = at(hd, -0.2, s * 2.8, 1.6); const pts = [[-0.2, 4.4, 2.6], [-0.4, 5.6, 4.6], [-0.2, 5.2, 6.8], [0.4, 4.0, 8.2]];
+    pts.forEach(([f2, s2, z2], i) => { const p1 = at(hd, f2, s * s2, z2); r.cone(p0, p1, 1.4 - i * 0.28, 1.15 - i * 0.28, M.BOAR); p0 = p1; }); }
+  if (st.clip === 'death') deathTip(r, B, st.f, -1);
+  if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
+  return r;
+}
+
 // ---------------------------------------------------------------- family table
 // size: sprite canvas; swing: attack timing; looks: variants (materials, size, gear) of one body
 const FAMILIES = {
@@ -2086,6 +2163,7 @@ const FAMILIES = {
   toad: { size: [84, 64, 42, 46], gait: 0.2, rig: toadRig, swing: () => FEEL_OLD ? SWINGS.bite : TOAD_LASH },
   zombie: { size: [72, 78, 36, 55], gait: gaitFrameTiles(ZOMBIE_B), rig: zombieRig, swing: () => FEEL_OLD ? SWINGS.claw : ZOMBIE_GRAB },
   butcher: { size: [140, 154, 70, 112], gait: gaitFrameTiles(BUTCH_B, 1.5), rig: butcherRig, swing: () => SWINGS.heavy },   // art C1: Malgrath's own body
+  furnace: { size: [150, 160, 75, 116], gait: gaitFrameTiles(AZH_B, 1.5), rig: furnaceRig, swing: () => SWINGS.slam },   // art C2: Azhruk's own body
 };
 // Variants: same family, different look and stats. `kind` is what the roster ledger counts.
 const MONSTERS = {
@@ -2123,6 +2201,9 @@ const MONSTERS = {
   oenforcer: { family: 'ogre', name: 'OGRE ENFORCER', minLevel: 99, look: { grunt: true, pads: true, cleaver: true, scale: 1.05 }, hp: 50, dmg: [8, 13], speed: 24, reach: 1.7, xp: 60, chest: 32, shadow: 10, where: 'out' },
   // art B4: from the user's concepts (art/concepts/monsters/gorr.png, ironjaw_enforcer.png); minLevel 99, placeholder stats
   // art B6: infernal boss from the user's Hellbound sheet (art/concepts/monsters/malgrath.png); minLevel 99, placeholder stats near Gorr
+  azh_a: { family: 'furnace', name: 'AZHRUK A', minLevel: 99, look: { v: 'a', scale: 1.5 }, hp: 220, dmg: [11, 18], speed: 18, reach: 2.4, xp: 230, chest: 50, shadow: 14, unique: true },   // TEMP C2 direction
+  azh_b: { family: 'furnace', name: 'AZHRUK B', minLevel: 99, look: { v: 'b', scale: 1.5 }, hp: 220, dmg: [11, 18], speed: 18, reach: 2.4, xp: 230, chest: 50, shadow: 14, unique: true },   // TEMP C2 direction
+  azh_c: { family: 'furnace', name: 'AZHRUK C', minLevel: 99, look: { v: 'c', scale: 1.5 }, hp: 220, dmg: [11, 18], speed: 18, reach: 2.4, xp: 230, chest: 50, shadow: 14, unique: true },   // TEMP C2 direction
   azhruk: { family: 'ogre', name: 'AZHRUK', title: 'THE FURNACE GUARD', minLevel: 99, look: { azh: true, scale: 1.5, size: [150, 156, 75, 112] }, hp: 220, dmg: [11, 18], speed: 18, reach: 2.4, xp: 230, chest: 50, shadow: 14, unique: true },
   malgrath: { family: 'butcher', name: 'MALGRATH', title: 'THE IRON BUTCHER', minLevel: 99, look: { v: 'b', scale: 1.5 }, hp: 170, dmg: [10, 17], speed: 22, reach: 2.2, xp: 200, chest: 48, shadow: 13, unique: true },   // art C1: rebuilt on his own body (butcherRig), direction B picked by the user
   gorr: { family: 'ogre', name: 'GORR', title: 'THE MINEBREAKER', minLevel: 99, look: { gorr: true, scale: 1.5 }, hp: 150, dmg: [9, 15], speed: 20, reach: 2.3, xp: 170, chest: 46, shadow: 13, unique: true, boss: 'slam' },
