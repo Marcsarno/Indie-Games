@@ -32,6 +32,14 @@ vs a pre-change copy + `cmp`; hero hash script pattern in the B2 section; edge c
 the sprite canvas edge over idle/walk/attack/hit/death x 8 dirs. Renderer has an opt-in `ff` fur hook (rig.js) unused now.
 **Known existing bug for the main chat:** Dire Bear and Gorr death frames clip at the canvas bottom (needs taller `size`).
 
+## C1: Malgrath rebuilt from scratch, back on the original rules (2026-11-08, in progress)
+New family `butcher` (`butcherRig`, `BUTCH_B`) in `game/js/monsters.js`: his own body instead of a Gorr/ogreRig reskin.
+It's a tall V-shaped demon on long legs, with a small head, a dark apron slab, iron bracers, one iron pauldron, and a cleaver on a long handle (dark iron with a bright edge).
+Three rough directions are under review as TEMP ids `malg_a` (ram horns, bare face), `malg_b` (charred palette, glowing face, FIREM edge)
+and `malg_c` (hunched, black executioner's hood, bull horns). All are `minLevel: 99`; the ones not picked get deleted.
+`malgrath` still points at the old ogreRig build until the user picks.
+Review images (game size beside the skeleton and Gorr, floor bands, silhouettes; plus a 4x close-up): `art/review/c1-malgrath/`.
+
 ## A1: refine three existing monsters to the user's concept sheets (2026-11-04)
 The user's concept sheets ("EXISTING MONSTERS - REFINEMENT TARGETS", "IMPS - FALLEN KIN") asked to
 bring existing monsters closer to them, starting with the weakest. Picked by comparing the

@@ -1984,6 +1984,87 @@ function zombieRig(look, st) {
   return r;
 }
 
+// art C1: Malgrath rebuilt from scratch on his own body (not Gorr's): a tall V-shaped demon on long legs,
+// small head, a few big shapes. look.v picks the rough direction under review: 'a' ram horns, bare face;
+// 'b' the same in a charred palette with a glowing face; 'c' a hunched hooded executioner with bull horns
+const BUTCH_B = { hipH: 12.5, thigh: 6.6, shin: 6.4, ankle: 1.6, spine: 9.5, shW: 8.6, shZ: 2.4, neck: 8.6, upper: 7.6, fore: 7.0, hipW: 3.4, stride: 5, lift: 2.4, duty: 0.55, bob: 0.8, sway: 0.6, runLean: 0.1, counter: 0.1, stance: 1.6, hunch: 0.1 };
+const BUTCH_C = { ...BUTCH_B, hunch: 0.3, neck: 7.4, shZ: 3.4 };
+function butcherRig(look, st) {
+  const v = look.v || 'a', B = v === 'c' ? BUTCH_C : BUTCH_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J;
+  const skin = v === 'b' ? M.HELLSTONE : M.BLOODY, apronM = v === 'b' ? M.BLOODY : M.IRON, hoofM = M.CLOTH_DARK;
+  const at = (p, f, s, u) => V.add(V.add(p, V.mul(fwd, f)), V.add(V.mul(sideR, s), V.mul(up, u)));
+  const lf = frameAlong(fwd, up);
+  // legs: heavy thighs, lean shins, big dark hooves
+  for (const [hip, knee, ank] of [[J.hipL, J.kneeL, J.ankL], [J.hipR, J.kneeR, J.ankR]]) {
+    r.group(() => { r.cone(hip, knee, 3.1, 2.4, skin); r.cone(knee, ank, 2.3, 1.6, skin); });
+    r.ell(V.add(ank, [1.4, 0, -0.7]), [2.6, 2.1, 1.4], hoofM);
+  }
+  // torso: a narrow waist under a huge chest and a ridge of trapezius, one mass
+  const strap = p => { const q = V.sub(p, J.chest), s2 = V.dot(q, sideR), z2 = V.dot(q, up); return Math.abs(Math.abs(s2) - 3.4) < 0.9 && z2 > -1.5 ? M.LEATHER : 0; };
+  r.group(() => {
+    r.ell(J.pelvis, [3.8, 4.8, 3.4], skin);
+    r.ell(V.mad(J.pelvis, up, 4.2), [4.2, 5.4, 4.2], skin);
+    r.ell(V.mad(J.chest, up, 0.8), [6.0, 9.6, 6.2], skin, lf, { mf: strap });
+    r.ell(at(J.chest, -1.6, 0, 4.8), [4.2, 7.0, 3.0], skin, lf, { mf: strap });
+  });
+  // the apron: one dark slab from the chest to the knees, hung straight
+  const aTop = at(J.chest, 5.4, 0, -0.6), aBot = V.add(at(J.pelvis, 4.2, 0, 0), [0, 0, -6.2]);
+  const ad = V.norm(V.sub(aTop, aBot)), an = V.norm(V.sub(fwd, V.mul(ad, V.dot(fwd, ad)))), as = V.norm(V.cross(ad, an));
+  r.box(V.lerp(aTop, aBot, 0.5), [0.6, 4.4, V.len(V.sub(aTop, aBot)) / 2], apronM, [an, as, ad]);
+  r.cyl(at(J.pelvis, 0, 0, 0.6), at(J.pelvis, 0, 0, 1.8), 5.0, M.LEATHER);   // belt
+  // arms: big shoulders, long thick arms, iron bracers
+  const sw = atkIndex(st.clip) >= 0 ? st.key : null;
+  const pivot = at(J.chest, 1, 3.5, 4), U = V.norm(V.add(V.mul(up, Math.cos(0.22)), V.mul(sideR, Math.sin(0.22)))), inPlane = a => V.norm(V.add(V.mul(fwd, Math.cos(a)), V.mul(U, Math.sin(a))));
+  let handR, bd;
+  if (sw) { handR = V.mad(pivot, inPlane(sw.a), (sw.r || 6.5) * 1.4); bd = inPlane(sw.a + (sw.ck || 0)); }
+  else { handR = at(J.shR, 2.5 + J.swingArm * 1.5, 2.6, -11.5); bd = V.norm(V.add(V.mul(fwd, 0.5), V.mul(up, -0.8))); }
+  let handL = at(J.shL, 3 - J.swingArm * 2, -2.6, -11.5);
+  if (st.clip === 'death') { handR = V.add(J.shR, [3, 3, -12]); bd = V.norm([1, 0.4, -0.6]); handL = V.add(J.shL, [2, -3, -11]); }
+  for (const [sh, hand, s] of [[J.shR, handR, 1], [J.shL, handL, -1]]) {
+    const a = armTo(J, sh, hand, B, s);
+    r.group(() => { r.sph(sh, 3.7, skin); r.cone(sh, a.el, 3.0, 2.5, skin); r.cone(a.el, a.hand, 2.5, 2.3, skin); });
+    r.cyl(V.lerp(a.el, a.hand, 0.35), V.lerp(a.el, a.hand, 0.8), 2.9, M.IRON);
+    r.sph(a.hand, 2.8, skin);
+  }
+  r.ell(at(J.shL, -0.3, -0.6, 1.6), [4.6, 4.4, 3.0], M.IRON, lf);   // one big iron pauldron, left shoulder
+  // the cleaver: a long wrapped handle in the fist, a broad blade beyond it (dark body, bright edge, a hole)
+  const g = handR, fn = V.norm(V.add(fwd, V.mul(sideR, -0.55))), side = V.norm(V.sub(fn, V.mul(bd, V.dot(fn, bd)))), nrm = V.norm(V.cross(bd, side));
+  r.cone(V.mad(g, bd, -4.2), V.mad(g, bd, 5.2), 1.1, 1.1, M.LEATHER);
+  const L0 = 4.8, BL = 6.8, BW = 5.2, bc = V.add(V.mad(g, bd, L0 + BL), V.mul(side, BW - 1.4));
+  r.box(bc, [BL, BW, 0.6], M.IRON, [bd, side, nrm], { mf: p => { const q = V.sub(p, bc), u = V.dot(q, bd), e = BW - V.dot(q, side);
+    if (Math.hypot(u - (BL - 2.4), V.dot(q, side) + BW - 2.4) < 1.1) return M.DARK;
+    return e < 1.3 ? (v === 'b' && e < 0.6 ? M.FIREM : M.BLADE) : e < 1.7 ? M.DSTEEL : 0; } });
+  if (sw && sw.smear && st.prev) smearArc(r, pivot, fwd, U, st.prev.a + (st.prev.ck || 0), sw.a + (sw.ck || 0), 8, 24);
+  // head: small on the big frame, pushed forward
+  const hd = at(J.head, 1.6, 0, -0.4), h0 = r.p.length;
+  if (v === 'c') {   // a black executioner's hood, two glowing slits, bull horns through it sweeping forward
+    r.group(() => { r.ell(hd, [3.8, 3.6, 4.0], M.CLOTH_DARK, lf); r.cone(at(hd, -1, 0, -2.6), at(J.chest, -0.5, 0, 3.5), 3.4, 5.6, M.CLOTH_DARK); });
+    for (const s of [-1, 1]) r.ell(at(hd, 3.4, s * 1.4, 0.2), [0.5, 0.9, 0.45], M.FIREM, lf, { noShadow: true });
+    for (const s of [-1, 1]) { let p0 = at(hd, -0.2, s * 2.8, 1.8); const pts = [[0.2, 2.6, 1.0], [1.4, 4.8, 1.8], [3.2, 6.0, 3.2], [5.0, 6.2, 5.0]];
+      pts.forEach(([f2, s2, z2], i) => { const p1 = at(hd, f2, s * s2, z2); r.cone(p0, p1, 1.6 - i * 0.3, 1.3 - i * 0.3, M.HORN); p0 = p1; }); }
+  } else {
+    r.group(() => {
+      r.ell(hd, [3.4, 3.3, 3.4], skin, lf);
+      r.ell(at(hd, 1.2, 0, -1.8), [2.6, 3.4, 2.0], skin, lf, v === 'b' ? { mf: p => { const q = V.sub(p, hd); return V.dot(q, fwd) > 2.6 && Math.abs(V.dot(q, up) + 2.0) < 0.45 && Math.abs(V.dot(q, sideR)) < 1.8 ? M.FIREM : 0; } } : undefined);
+      r.ell(at(hd, 2.2, 0, 1.0), [1.3, 3.2, 0.9], skin, lf);   // heavy brow
+    });
+    for (const s of [-1, 1]) {
+      r.sph(at(hd, 3.0, s * 1.3, 0.1), 0.65, v === 'b' ? M.FIREM : M.EYE_YEL, { noShadow: true });
+      r.cone(at(hd, 2.8, s * 2.0, -2.4), at(hd, 3.4, s * 2.4, -0.4), 0.7, 0.25, M.BONE);   // tusks
+      // ram horns: up from the temple, back, down round the ear and forward
+      const R0 = 3.6, root = at(hd, -0.4, s * 2.6, 2.0), N = 12; let p0 = root;
+      for (let i = 1; i <= N; i++) { const t = i / N, th = t * 1.55 * Math.PI, R = R0 * (1 - 0.35 * t);
+        const out = R * Math.sin(th);   // the curl turns out to the side and back, so it shows from the front as a wide spiral
+        const p1 = at(root, -out * 0.55 + 0.8 * t, s * (out * 0.85 + 1.4 * t), R * Math.cos(th) - R0);
+        r.cone(p0, p1, 1.7 - 1.1 * (t - 1 / N), 1.7 - 1.1 * t, v === 'b' ? M.BONE : M.BOAR); p0 = p1; }
+    }
+  }
+  bigHead(r, h0, hd, 1.0);
+  if (st.clip === 'death') deathTip(r, B, st.f, -1);
+  if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
+  return r;
+}
+
 // ---------------------------------------------------------------- family table
 // size: sprite canvas; swing: attack timing; looks: variants (materials, size, gear) of one body
 const FAMILIES = {
@@ -2004,6 +2085,7 @@ const FAMILIES = {
   bat: { size: [84, 72, 42, 56], gait: 0.22, rig: batRig, swing: () => FEEL_OLD ? SWINGS.bite : MON_SWINGS.lunge },
   toad: { size: [84, 64, 42, 46], gait: 0.2, rig: toadRig, swing: () => FEEL_OLD ? SWINGS.bite : TOAD_LASH },
   zombie: { size: [72, 78, 36, 55], gait: gaitFrameTiles(ZOMBIE_B), rig: zombieRig, swing: () => FEEL_OLD ? SWINGS.claw : ZOMBIE_GRAB },
+  butcher: { size: [140, 154, 70, 112], gait: gaitFrameTiles(BUTCH_B, 1.5), rig: butcherRig, swing: () => SWINGS.heavy },   // art C1: Malgrath's own body
 };
 // Variants: same family, different look and stats. `kind` is what the roster ledger counts.
 const MONSTERS = {
@@ -2042,6 +2124,9 @@ const MONSTERS = {
   // art B4: from the user's concepts (art/concepts/monsters/gorr.png, ironjaw_enforcer.png); minLevel 99, placeholder stats
   // art B6: infernal boss from the user's Hellbound sheet (art/concepts/monsters/malgrath.png); minLevel 99, placeholder stats near Gorr
   azhruk: { family: 'ogre', name: 'AZHRUK', title: 'THE FURNACE GUARD', minLevel: 99, look: { azh: true, scale: 1.5, size: [150, 156, 75, 112] }, hp: 220, dmg: [11, 18], speed: 18, reach: 2.4, xp: 230, chest: 50, shadow: 14, unique: true },
+  malg_a: { family: 'butcher', name: 'MALGRATH A', minLevel: 99, look: { v: 'a', scale: 1.5 }, hp: 170, dmg: [10, 17], speed: 22, reach: 2.2, xp: 200, chest: 48, shadow: 13, unique: true },   // TEMP C1 direction
+  malg_b: { family: 'butcher', name: 'MALGRATH B', minLevel: 99, look: { v: 'b', scale: 1.5 }, hp: 170, dmg: [10, 17], speed: 22, reach: 2.2, xp: 200, chest: 48, shadow: 13, unique: true },   // TEMP C1 direction
+  malg_c: { family: 'butcher', name: 'MALGRATH C', minLevel: 99, look: { v: 'c', scale: 1.5 }, hp: 170, dmg: [10, 17], speed: 22, reach: 2.2, xp: 200, chest: 48, shadow: 13, unique: true },   // TEMP C1 direction
   malgrath: { family: 'ogre', name: 'MALGRATH', title: 'THE IRON BUTCHER', minLevel: 99, look: { malg: true, scale: 1.5, size: [140, 154, 70, 112] }, hp: 170, dmg: [10, 17], speed: 22, reach: 2.2, xp: 200, chest: 48, shadow: 13, unique: true },
   gorr: { family: 'ogre', name: 'GORR', title: 'THE MINEBREAKER', minLevel: 99, look: { gorr: true, scale: 1.5 }, hp: 150, dmg: [9, 15], speed: 20, reach: 2.3, xp: 170, chest: 46, shadow: 13, unique: true, boss: 'slam' },
   ironjaw: { family: 'ogre', name: 'IRONJAW ENFORCER', minLevel: 99, look: { grunt: true, ironjaw: true, scale: 1.2 }, hp: 64, dmg: [9, 14], speed: 24, reach: 1.8, xp: 75, chest: 34, shadow: 11, where: 'out', elite: true },
