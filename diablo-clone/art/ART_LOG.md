@@ -3,33 +3,34 @@
 Each entry is art the main chat can merge from `art` into `main`. Stats, spawns and loot are the
 main chat's; the art chat only changes how things look.
 
-## Resume here (art chat state, saved 2026-11-04 before a context compaction)
-**Role:** the ART chat. Only art: monsters, hero armor/weapons/headgear, icons, props. Work on branch `art`
-(never `main`, no PRs); the main chat merges, wires items/spawns/stats, and republishes the real game
-(https://claude.ai/artifact/7EX2mEMH4cSGuKC2c3K29g, never republish it from here). `.claude/worktrees/` is
-excluded locally in `.git/info/exclude` (reviewer worktrees; never commit them).
-**How the user works:** sends concept sheets from ChatGPT (front + back views work best); I rebuild them in the
-rig, judge each pass side by side vs the best so far in BOTH left/right orders (rubric in `art/RUBRIC.md`),
-at least 3 passes when asked, check regressions (other monsters/looks pixel-identical via
-`tools/capture/artcompare.cjs`, frame hashes) and clipping, then publish a review page and log here.
-For big batches: one reviewer agent per body family/class in its own worktree, each told to
-`git reset --hard <art tip>` FIRST (worktrees start from `main` otherwise), merge into `art`, re-verify
-each class/family against its branch after the merge, push.
-**Pages:** progress (every monster concept vs game) https://claude.ai/artifact/UvkjQNh5GRCUcxMagioEcM
-(source `art/progress/`, statuses in its index.html; not yet updated for hero work) ·
-**test copy of the art branch to play** https://claude.ai/artifact/GAaWc5wJU5BP7HeVK9YxLG (source
-`art/test-build/`: `index.html` = `tools/pages/game-artifact.html` + `art-test.js`, a TEST-ONLY OUTFIT button
-cycling every new set and ranger headpiece; republish with `js/*` from `game/js`, `sfx/*`, music copied from
-the main game artifact; for small updates republish just the changed files) · review pages per round below.
-**Done (A1-A10):** 18 monsters refined/built with 3+ passes each (A1-A4); warrior helms snug (A5); hero head
-1.5x -> 1.0x (A7, A9; `HERO_HK` in actors.js); 31 new hero sets + refined ranger jerkins and mage robes
-(A6, A8); 12 ranger headpieces (A10). New monsters and all new hero looks need the main chat to add
-MONSTERS levels / ITEM_BASES (tables in each section below).
-**Open / next:** user is play-testing the 1.0x head and the outfits in the test copy and may ask for another
-pass on specific pieces (weakest: epic ranger helms at game size, wizard cuffs read as mitts, flanged mace
-looks like a fork from behind, skirts fixed at the hips). Palette gaps (no pink, true navy, indigo, bronze,
-teal): adding cloth ramps needs the user's OK. Not yet done from earlier asks: true BACK views of the A6 sets
-(user would need to give ChatGPT the old concept image itself); (B1/B2 done: Mastiff removed, every monster passed again, all concept monsters built; see B2); the main chat should also update `NOTES.md` when it merges.
+## Resume here (art chat state, saved 2026-11-08 before a context compaction)
+**Role:** the ART chat. Only art: monsters, hero armor/weapons/headgear, icons, props. Branch `art` (never `main`, no
+PRs); the main chat merges, wires spawns/stats, republishes the real game (never republish it from here).
+`.claude/worktrees/` is excluded locally (reviewer worktrees; remove finished ones, they fill the disk: ~2 GB each).
+**NEXT (the user's plan):** redo some monsters FROM SCRATCH following the ORIGINAL RULES. The user felt recent work
+drifted ("many of these are bad"; the art chat's own ideas came out better than concept-copying). Agreed fixes:
+1. Follow `art/RUBRIC.md` and the `pixel-sprite` skill exactly: contact sheet + `node tools/art.cjs lint`, flat-black
+   silhouette row, pairwise judging in BOTH left/right orders, log disagreements, at most 3 passes per round.
+2. Judge at GAME SIZE (zoom 1-2, beside regular monsters), not only 3-6x close-ups: small details turn to noise.
+3. Use a concept as a THEME, not a checklist: pick 2-3 defining traits; design for what the engine does well
+   (strong silhouette, big color blocks, emissive glow); avoid many small lumps (rivets, chips, ridges, moss, mushrooms).
+4. Build a new body when the character needs one instead of reskinning Gorr/ogreRig.
+5. Show the user 2-3 rough directions before polishing.
+Ask the user which monsters to redo first (likely Malgrath, Azhruk, the B5 secret bosses, B4 bosses).
+**Pages:** progress https://claude.ai/artifact/UvkjQNh5GRCUcxMagioEcM · test copy
+https://claude.ai/artifact/GAaWc5wJU5BP7HeVK9YxLG (republish `js/monsters.js`/`js/actors.js` for updates) ·
+B2 https://claude.ai/artifact/2jxgvecw5Ay861S1hw1g8d · B4 https://claude.ai/artifact/U8ZU9PUjZiF46HLshWdwxS ·
+B5 https://claude.ai/artifact/CyW6uZHyzvQcJXftLNf4SY (B6 has images only, in `art/review/b6-infernal/`).
+**Done:** A1-A10 (monsters, hero sets, heads, ranger headpieces); B1 Mastiff removed; B2 pass on all monsters + 7 new
+(cave bat, bog toad, restless dead, venom spitter, stoneback, brood guard, bandit crossbowman); B3 Restless Dead skull;
+B4 Greyfang, Rook, Skeleton King, Gorr + elites Ironjaw, Ashhex, Gravespine, Bulwark; B5 secret bosses Drowned Warden,
+Flintback Matriarch, Brother Cinder (user disliked all; simpler v2 concepts saved as `*_v2.png`, not redone);
+Old Mossback DELETED; B6 Malgrath (v6) and Azhruk built on ogreRig (user unhappy with direction); Vexara and Baelgor
+(winged) not started. Concepts: `art/concepts/monsters/` (infernal-bosses-sheet + crops, secret-bosses v1/v2).
+**Tools:** `tools/capture/artcompare.cjs` (strips; `silhouette:` label), regression = artcompare zoom 1 of all other ids
+vs a pre-change copy + `cmp`; hero hash script pattern in the B2 section; edge check = no opaque pixel within 2 px of
+the sprite canvas edge over idle/walk/attack/hit/death x 8 dirs. Renderer has an opt-in `ff` fur hook (rig.js) unused now.
+**Known existing bug for the main chat:** Dire Bear and Gorr death frames clip at the canvas bottom (needs taller `size`).
 
 ## A1: refine three existing monsters to the user's concept sheets (2026-11-04)
 The user's concept sheets ("EXISTING MONSTERS - REFINEMENT TARGETS", "IMPS - FALLEN KIN") asked to
