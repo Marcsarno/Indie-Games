@@ -1143,6 +1143,34 @@ function shockwave(fi, fj, r, dur, cols, arc = null, emis = true) {
 }
 function impactFlash(fi, fj, z, size) { G.impacts.push({ fi, fj, z, size, t: 0.09, t0: 0.09 }); }
 // round 67: where a magic missile bursts: a rune ring that spreads and thins, six rays, a white flash
+// round 68d: a shaft of moonlight through a crack in a chapel's ceiling (concept art C): a pale beam slanting
+// down from the upper left, a dithered pool where it lands, and dust motes turning slowly in it
+function drawShafts() {
+  if (!LV.shafts || !LV.shafts.length) return;
+  for (const sh of LV.shafts) {
+    const [gx, gy] = iso(sh.fi, sh.fj), X = gx * SPX - cam2x, Y = gy * SPX - cam2y;
+    if (X < -200 || X > OW + 200 || Y < -60 || Y > OH + 400) continue;
+    const top = [X - 130, Y - 360], n = 360;
+    for (let s2 = 0; s2 < n; s2++) {   // the beam: wider as it falls, sparse dither, a brighter core
+      const u = s2 / n, cx = top[0] + (X - top[0]) * u, cy = top[1] + (Y - top[1]) * u, w = 10 + u * 26;
+      for (let k = -w; k <= w; k++) {
+        const x = Math.round(cx + k), y = Math.round(cy - k * 0.18), e = Math.abs(k) / w;
+        const dens = (0.07 + 0.07 * (1 - e)) * (0.6 + 0.4 * u) * (0.85 + 0.15 * Math.sin(G.t * 1.3 + u * 6));
+        if (BAYER[((y & 3) << 2) | (x & 3)] < dens) ovSet(x, y, e < 0.35 && u > 0.3 ? 32 : 31);
+      }
+    }
+    for (let b = -24; b <= 24; b++) for (let a = -56; a <= 56; a++) {   // the pool on the floor
+      const d = Math.hypot(a / 56, b / 24); if (d > 1) continue;
+      const x = Math.round(X + a), y = Math.round(Y + b);
+      if (BAYER[((y & 3) << 2) | (x & 3)] < 0.22 * (1 - d * d)) ovSet(x, y, d < 0.5 ? 32 : 31);
+    }
+    for (let m = 0; m < 14; m++) {   // dust motes drifting in the light
+      const ph = hash(m, 7, 3), u = ((G.t * 0.05 + ph) % 1), cx = top[0] + (X - top[0]) * u, cy = top[1] + (Y - top[1]) * u;
+      const x = Math.round(cx + Math.sin(G.t * 0.7 + m) * (6 + u * 18)), y = Math.round(cy + Math.cos(G.t * 0.5 + m * 2) * 4);
+      ovSet(x, y, 27); if (m % 3 === 0) ovSet(x + 1, y, 32);
+    }
+  }
+}
 function arcaneHit(p) { (G.arcHits = G.arcHits || []).push({ fi: p.fi, fj: p.fj, z: p.z, t: 0.32, t0: 0.32, big: p.small ? 0.6 : p.orb ? 1.5 : 1, rot: Math.random() * 6.283 }); }
 function drawArcHits() {
   if (!G.arcHits) return;
@@ -1238,7 +1266,7 @@ function drawStreaks() {   // the blink's streak: a white core in an arcane band
   }
 }
 function drawImpactFlashes() {
-  drawSlamFx(); drawFrostFx(); drawLightning(); drawRangerKit(); drawArcHits();   // round 65, 66, 67
+  drawShafts(); drawSlamFx(); drawFrostFx(); drawLightning(); drawRangerKit(); drawArcHits();   // round 65, 66, 67, 68d
   drawStreaks(); drawHookChains(); drawMods30(); drawStrikes(); drawRangerFx(); drawDebris();
   for (const f of G.impacts) {
     const [x, y] = iso(f.fi, f.fj), X0 = Math.round(x * SPX - cam2x), Y0 = Math.round((y - f.z) * SPX - cam2y), p = 1 - f.t / f.t0, R = f.size * (0.6 + p * 0.6);

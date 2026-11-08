@@ -283,7 +283,7 @@ function placeTorches(D) {
     if (!LV.tall[tIdx(i, j)]) continue;
     const faceR = tileAt(i + 1, j) === FLOOR, faceL = tileAt(i, j + 1) === FLOOR;
     if (!faceR && !faceL) continue;
-    if (hash(i, j, LV.seed) > TH().torch || torches.some(t => Math.abs(t.i - i) + Math.abs(t.j - j) < 5) || wallFeature(i, j)) continue;   // (round 68c: not on a niche or a collapsed stretch)
+    if (hash(i, j, LV.seed) > TH().torch || torches.some(t => Math.abs(t.i - i) + Math.abs(t.j - j) < 5) || wallFeature(i, j) || (LV.ossuaryWalls && LV.ossuaryWalls.has(tIdx(i, j)))) continue;   // (round 68c: not on a niche or a collapsed stretch; 68d: nor an ossuary's shelves)
     torches.push({ kind: 'torch', i, j, face: faceL ? 'L' : 'R' });
   }
   D.push(...torches);
@@ -469,10 +469,20 @@ function trySolid(i, j) {
 function placeDecor(R, level) {
   const D = LV.decor = [];
   const wallSide = (i, j) => tileAt(i - 1, j) === WALL || tileAt(i, j - 1) === WALL || tileAt(i + 1, j) === WALL || tileAt(i, j + 1) === WALL;
+  // round 68d (the face-lift, concept art B and C): in the crypt, up to one room of each job a floor: a chapel
+  // (the largest), an ossuary and a burial hall, never the start, the stairs' room or a leader's room
+  LV.ossuaryWalls = new Set(); LV.ossuaryLow = new Set(); LV.shafts = []; LV.stamps = [];
+  if (LV.theme === 'crypt' && !LV.arena) {
+    const ok = LV.rooms.map((r, n) => n).filter(n => n > 0 && n !== LV.stairs.room && n !== LV.leaderRoom && LV.rooms[n].shape === 'rect' && LV.rooms[n].w >= 8 && LV.rooms[n].h >= 8);
+    ok.sort((a, b) => LV.rooms[b].w * LV.rooms[b].h - LV.rooms[a].w * LV.rooms[a].h);
+    const take = (job, pickLargest) => { if (!ok.length || R() > 0.85) return; const k = pickLargest ? 0 : R.int(0, ok.length - 1); LV.rooms[ok[k]].job = job; ok.splice(k, 1); };
+    take('chapel', true); take('ossuary', false); take('burial', false);
+  }
   LV.rooms.forEach((r, n) => {
     const mine = (i, j) => LV.roomOf[tIdx(i, j)] === n;   // (shaped rooms: only tiles of this room's own floor)
     const th = LV.theme, interior = () => { for (let t = 0; t < 30; t++) { const i = R.int(r.x + 1, r.x + r.w - 2), j = R.int(r.y + 1, r.y + r.h - 2); if (mine(i, j) && Math.abs(i - r.cx) + Math.abs(j - r.cy) > 1) return [i, j]; } return [r.cx, r.cy]; };
     const nearWall = () => { for (let t = 0; t < 40; t++) { const i = R.int(r.x, r.x + r.w - 1), j = R.int(r.y, r.y + r.h - 1); if (mine(i, j) && wallSide(i, j)) return [i, j]; } return null; };
+    if (r.job) { roomJob(r, n, D, R, mine); return; }   // round 68d: a room with a job is laid out on its own
     if (th === 'crypt') {
       if (R() < 0.4) { const q = nearWall(); if (q && trySolid(...q)) D.push({ kind: 'coffin', i: q[0], j: q[1], yaw: tileAt(q[0] - 1, q[1]) === WALL || tileAt(q[0] + 1, q[1]) === WALL ? Math.PI / 2 : 0 }); }
       if (R() < 0.3) { const q = nearWall(); if (q && trySolid(...q)) D.push({ kind: 'candles', i: q[0], j: q[1] }); }
@@ -523,6 +533,35 @@ function placeDecor(R, level) {
     for (let t = 0; t < 60; t++) { const i = R.int(r.x, r.x + r.w - 1), j = t < 20 ? r.y : R.int(r.y, r.y + r.h - 1); if (LV.roomOf[tIdx(i, j)] !== n || !wallSide(i, j)) continue; if (trySolid(i, j)) { D.push({ kind: 'chest', i, j, seed: R.int(1, 1e6) }); break; } }   // against a wall of its own floor (shaped rooms)
   }
   placeTorches(D);
+}
+// round 68d: lay out a room with a job. Along its long axis: u runs the length (0 = the back, toward the
+// top of the screen), v across. Solid pieces go through trySolid so no tile is ever cut off
+function roomJob(r, n, D, R, mine) {
+  const alongI = r.w >= r.h, L = alongI ? r.w : r.h, Wd = alongI ? r.h : r.w;
+  const T = (u, v) => alongI ? [r.x + u, r.y + v] : [r.x + v, r.y + u];   // (u, v) in the room -> tile
+  const mid = Math.floor(Wd / 2), put = (kind, u, v, extra = {}) => { const [i, j] = T(u, v); if (mine(i, j) && !hidesStairs(i, j) && trySolid(i, j)) { D.push(Object.assign({ kind, i, j }, extra)); return true; } return false; };
+  if (r.job === 'chapel') {
+    put('altar', 1, mid);
+    put('candles', 1, mid - 2); put('candles', 1, mid + 2);
+    const [ci, cj] = T(Math.floor(L / 2), mid), [a0i, a0j] = T(2, mid), [a1i, a1j] = T(L - 1, mid);
+    LV.stamps.push({ kind: 'carpet', a: [a0i + 0.5, a0j + 0.5], b: [a1i + 0.5, a1j + 0.5] }, { kind: 'mosaic', fi: ci + 0.5, fj: cj + 0.5 });
+    for (let u = 3; u <= L - 3; u += 2) for (const v of [mid - 2, mid + 2]) put('pew', u, v, { yaw: alongI ? Math.PI / 2 : 0 });
+    LV.shafts.push({ fi: ci + 0.5, fj: cj + 0.5 });
+  } else if (r.job === 'burial') {
+    for (let u = 2; u <= L - 3; u += 3) for (const v of [mid - 2, mid + 2]) put('sarco', u, v, { open: R() < 0.4, yaw: alongI ? Math.PI / 2 : 0 });
+    if (R() < 0.6) put('candles', 1, mid);
+  } else if (r.job === 'ossuary') {
+    for (let j = r.y - 1; j <= r.y + r.h; j++) for (let i = r.x - 1; i <= r.x + r.w; i++) {
+      if (tileAt(i, j) !== WALL) continue;
+      const fL = mine(i, j + 1), fR = mine(i + 1, j), fL2 = mine(i, j - 1), fR2 = mine(i - 1, j);
+      if (LV.tall[tIdx(i, j)]) { if (fL !== fR) LV.ossuaryWalls.add(tIdx(i, j)); }
+      else if (fL || fR || fL2 || fR2) (LV.ossuaryLow = LV.ossuaryLow || new Set()).add(tIdx(i, j));   // the low near walls: skulls along their top
+    }
+    for (let k = 0; k < 4; k++) { for (let t = 0; t < 20; t++) { const i = R.int(r.x, r.x + r.w - 1), j = R.int(r.y, r.y + r.h - 1); if (mine(i, j) && (tileAt(i - 1, j) === WALL || tileAt(i, j - 1) === WALL)) { D.push({ kind: 'mushroom', fi: i + 0.5, fj: j + 0.5, seed: R.int(1, 1e6) % 6, green: true }); break; } } }
+    for (const [u, v] of [[0, 0], [0, Wd - 1], [L - 1, 0], [L - 1, Wd - 1], [Math.floor(L / 2), 0], [0, mid]]) { const [i, j] = T(u, v); if (mine(i, j) && !hidesStairs(i, j) && trySolid(i, j)) D.push({ kind: 'bonepile', i, j, seed: R.int(1, 1e6) % 5 }); }
+    for (const [u, v] of [[Math.floor(L / 2), mid]]) { const [i, j] = T(u, v); if (mine(i, j) && trySolid(i, j)) D.push({ kind: 'bonepile', i, j, seed: R.int(1, 1e6) % 5 }); }   // a heap in the middle
+    LV.shafts.length; for (let b = 0; b < 8; b++) { const i = R.int(r.x + 1, r.x + r.w - 2), j = R.int(r.y + 1, r.y + r.h - 2); D.push({ kind: 'bones', fi: i + 0.5, fj: j + 0.5, seed: R.int(1, 1e6) }); }
+  }
 }
 // Monsters (round 26): every room but the start gets a danger budget that grows with its walking
 // distance from the start (0.6x near, 1.4x at the far end; the same total as before) plus a bonus
@@ -618,7 +657,7 @@ function runeDeco(a, b) {
 // a skull niche (two skulls and a candle in a dark arched recess, with its own small light) or a collapsed
 // stretch (the wall broken down to half height, rubble on the floor in front). Banners stay (mostly red now)
 function wallFeature(i, j) {
-  if (LV.outdoor || LV.theme !== 'crypt' || !LV.tall[tIdx(i, j)]) return null;
+  if (LV.outdoor || LV.theme !== 'crypt' || !LV.tall[tIdx(i, j)] || (LV.ossuaryWalls && LV.ossuaryWalls.has(tIdx(i, j)))) return null;
   const faceR = tileAt(i + 1, j) === FLOOR, faceL = tileAt(i, j + 1) === FLOOR; if (!faceR && !faceL) return null;
   if (faceR && faceL) return null;   // (a corner tile: both faces show)
   const h = hash(i, j, 77);
@@ -631,6 +670,10 @@ function wallTex(i, j, tall) {
   return (face, a, b) => {
     if (face === 'top') {
       const gi = i * 16 + a, gj = j * 16 + b;
+      if (!tall && LV.ossuaryLow && LV.ossuaryLow.has(tIdx(i, j))) {   // round 68d: a row of skulls along the ossuary's low walls
+        const sa = ((a % 5.33) + 5.33) % 5.33 - 2.66, sb = b - 8, d = Math.hypot(sa, sb * 0.8);
+        if (d < 2.4) return d < 1.1 && sb > -0.5 && sb < 0.8 && Math.abs(sa) > 0.4 ? BLK : sa < 0 ? BONE[2] : BONE[1];
+      }
       if (LV.theme === 'caves') return ST(2 + Math.floor(vnoise(gi, gj, 6, 11) * 3));
       if (((gi | 0) % 16) < 1 || ((gj | 0) % 16) < 1) return ST(1);
       let t = 2 + Math.floor(hash(Math.floor(gi / 16), Math.floor(gj / 16), 11) * 2);
@@ -811,6 +854,34 @@ const PROPS = {
     for (const [x, y, s] of [[0, 0, 1], [-4, 3, 0.75], [3.5, 3.5, 0.65]]) r.ell([x, y, 4.6 * s], [3.8 * s, 3.6 * s, 4.8 * s], M.OLDBONE, null, { mf: veins });
     for (const a of [0.4, 2.2, 4.1]) r.cone([0, 0, 1], [Math.cos(a) * 9, Math.sin(a) * 9, 0.2], 0.35, 0.3, M.BONE, { noShadow: true });
   }, [30, 26, 15, 18]),
+  // round 68d: rooms with a job. A chapel pew: a plank seat on two legs with a back rail
+  pew: (yaw) => propSprite('pew', r => {
+    r.box([0, 0, 4.2], [9.5, 2.4, 0.7], M.WOOD);   // the seat
+    for (const x of [-7.5, 7.5]) r.box([x, 0, 2], [0.8, 2.2, 2], M.WOOD);   // the legs
+    r.box([0, -2.2, 7.2], [9.5, 0.6, 2.4], M.WOOD, null, { mf: p => Math.abs(p[0] + 3) < 0.6 && p[2] > 6 ? M.LEATHER : 0 });   // the back, a crack across it
+    for (const x of [-9, 9]) r.box([x, -2.2, 5.5], [0.7, 0.7, 4], M.WOOD);   // its posts
+  }, [44, 32, 22, 22], yaw),
+  // a stone coffin: carved band round it, a lid with a cross; open ones have the lid shoved half off and a skull inside
+  sarcophagus: (open, yaw) => propSprite('sarco' + (open ? 'o' : ''), r => {
+    r.box([0, 0, 4.6], [13, 5.8, 4.6], M.STONE, null, { mf: p => Math.abs(p[2] - 6.2) < 0.6 || Math.abs(p[2] - 1.2) < 0.5 ? M.ROCK : 0 });   // carved bands
+    if (!open) { r.box([0, 0, 9.9], [13.6, 6.4, 0.9], M.STONE, null, { mf: p => p[2] > 10.4 && ((Math.abs(p[1]) < 0.8 && Math.abs(p[0] - 1.5) < 7) || (Math.abs(p[0] - 4.8) < 0.8 && Math.abs(p[1]) < 3.4)) ? M.ROCK : 0 }); return; }
+    r.box([0, 0, 9.0], [12, 4.8, 0.3], M.VOID);   // the dark inside
+    r.sph([-7.5, 0, 8.6], 2.3, M.BONE, { mf: p => p[2] > 8.9 && Math.abs(Math.abs(p[1]) - 0.9) < 0.5 && p[0] > -8.4 ? M.DARK : 0 });
+    r.cone([-4.5, -1.2, 9.2], [3, 1, 9.2], 0.7, 0.7, M.BONE);
+    const lid = [Math.cos(0.25), Math.sin(0.25), 0], up = V.norm([0.15, -0.35, 1]);
+    r.box([4, 6.4, 11], [13.6, 6.4, 0.9], M.STONE, [lid, V.norm(V.cross(up, lid)), up]);   // shoved across, hanging over the side
+  }, [68, 56, 34, 34], yaw),
+  // ossuary shelves on a wall: three shelves of skulls, crossed long bones under each row, dark behind
+  ossuary: (face) => propSprite('ossuary' + face, r => {
+    const out = face === 'L' ? [0, 1, 0] : [1, 0, 0], up = [0, 0, 1], tan = V.cross(up, out), ax = [out, tan, up];
+    const at = (o, t, z) => V.add(V.add(V.mul(out, o), V.mul(tan, t)), [0, 0, z]);
+    r.box(at(-0.3, 0, 15), [0.3, 10.8, 15], M.VOID, ax);
+    for (const z of [2, 13, 24]) {
+      r.box(at(1.4, 0, z), [1.8, 11, 0.7], M.STONE, ax);   // the shelf
+      for (let k = 0; k < 5; k++) { const c = at(1.7, -8.4 + k * 4.2, z + 2.6); r.sph(c, 1.9, M.BONE, { mf: p => { const q = V.sub(p, c); return V.dot(q, out) > 1 && q[2] > -0.3 && q[2] < 0.8 && Math.abs(Math.abs(V.dot(q, tan)) - 0.7) < 0.4 ? M.DARK : 0; } }); }
+      if (z > 2) for (const sd of [-1, 1]) r.cone(at(1.6, -9, z - 3.2 + sd * 1.2), at(1.6, 9, z - 3.2 - sd * 1.2), 0.7, 0.7, M.BONE);   // crossed long bones
+    }
+  }, [52, 66, 26, 52]),
   // round 68c: a skull niche in the crypt wall (concept art D): a dressed stone frame with a lintel and
   // keystone round a dark recess, a shelf, two skulls looking out, and a lit candle
   niche: (face) => propSprite('niche' + face, r => {
@@ -990,8 +1061,31 @@ function blitWorld(sp, wx, wy, zBase = 0, tile = -1, asFloor = false) {
     }
   }
 }
+// round 68d: the chapel's floor: a red carpet runner with a gold border from the door to the altar, and a
+// mosaic star inlaid under its middle (stamped into the floor before anything stands on it)
+function stampFloorArt() {
+  for (const st of LV.stamps || []) {
+    if (st.kind === 'carpet') {
+      const [a0, a1] = st.a, [b0, b1] = st.b, len = Math.hypot(b0 - a0, b1 - a1), ux = (b0 - a0) / len, uy = (b1 - a1) / len;
+      for (let y = 0; y < WH; y++) for (let x = 0; x < WW; x++) {
+        const A = (x - WX0) + 2 * (y - WY0), B = 2 * (y - WY0) - (x - WX0), fi = A / 32, fj = B / 32;
+        const t = (fi - a0) * ux + (fj - a1) * uy, w = Math.abs(-(fi - a0) * uy + (fj - a1) * ux); if (t < -0.2 || t > len + 0.3 || w > 0.72) continue;
+        const k = y * WW + x; if (floorBuf[k] === BLK) continue;
+        const tile = tileAt(Math.floor(fi), Math.floor(fj)); if (tile !== FLOOR) continue;
+        floorBuf[k] = w > 0.62 ? K2 : w > 0.5 ? GOLD[1] : ((Math.floor(t * 6) + Math.floor(w * 8)) % 7 === 0 ? RED[1] : hash(x, y, 31) < 0.06 ? RED[1] : RED[2]);
+      }
+    } else if (st.kind === 'mosaic') {
+      for (let y = 0; y < WH; y++) for (let x = 0; x < WW; x++) {
+        const A = (x - WX0) + 2 * (y - WY0), B = 2 * (y - WY0) - (x - WX0), di = A / 32 - st.fi, dj = B / 32 - st.fj, d = Math.hypot(di, dj); if (d > 1.9) continue;
+        const k = y * WW + x; if (floorBuf[k] === BLK) continue;
+        const a = Math.atan2(dj, di), star = 1.55 * (0.55 + 0.45 * Math.abs(Math.cos(a * 4)));
+        floorBuf[k] = d > 1.8 ? K2 : d > 1.62 ? BONE[1] : d < star ? (Math.cos(a * 8) > 0 ? RED[2] : BONE[2]) : d < star + 0.12 ? K2 : STEEL[1];
+      }
+    }
+  }
+}
 function buildWorld() {
-  genFloor(); wIdx2.fill(0);
+  genFloor(); stampFloorArt(); wIdx2.fill(0);
   props.length = 0; dynProps.length = 0; fires.length = 0; lights.length = 0;
   const back = [];
   if (LV.outdoor) buildOutdoor(back);
@@ -1001,6 +1095,10 @@ function buildWorld() {
     const feat = tall ? wallFeature(i, j) : null;
     const sp = makeBox(1, 1, tall ? WALL_TALL : WALL_LOW, wallTex(i, j, tall));
     const [wx, wy] = iso(i, j);
+    if (tall && LV.ossuaryWalls && LV.ossuaryWalls.has(tIdx(i, j))) {   // round 68d: the ossuary's skull shelves
+      const face = tileAt(i, j + 1) === FLOOR && LV.roomOf[tIdx(i, j + 1)] >= 0 ? 'L' : 'R', [x, y] = face === 'L' ? iso(i + 0.5, j + 1) : iso(i + 1, j + 0.5);
+      back.push({ depth: i + j + 1.5, sp: PROPS.ossuary(face), wx: x, wy: y - 6, z: 6, tile: tIdx(i, j) });
+    }
     if (feat && feat.kind === 'niche') {   // round 68c: a skull niche on the face toward the floor, its candle a little flame and light
       const [x, y] = feat.face === 'L' ? iso(i + 0.5, j + 1) : iso(i + 1, j + 0.5);
       back.push({ depth: i + j + 1.5, sp: PROPS.niche(feat.face), wx: x, wy: y - 12, z: 12, tile: tIdx(i, j) });
@@ -1042,6 +1140,11 @@ function buildWorld() {
         }
         lights.push({ x, y, z: 14, r: 80, i: 0.65, seed: d.i + d.j });
       }
+    } else if (d.kind === 'pew' || d.kind === 'sarco' || d.kind === 'altar') {   // round 68d
+      const [x, y] = iso(d.i + 0.5, d.j + 0.5);
+      const sp = d.kind === 'pew' ? PROPS.pew(d.yaw) : d.kind === 'sarco' ? PROPS.sarcophagus(!!d.open, d.yaw) : BUILD.altar();   // (Osric's altar, from the camp)
+      props.push({ depth: d.i + d.j + 1, sp, wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
+      if (d.kind === 'altar') lights.push({ x, y, z: 20, r: 110, i: 0.8, seed: d.i * 5 + d.j });
     } else if (d.kind === 'mushroom') {
       const [x, y] = iso(d.fi, d.fj);
       props.push({ depth: d.fi + d.fj, sp: PROPS.mushroom(d.seed), wx: x, wy: y, tile: tIdx(Math.floor(d.fi), Math.floor(d.fj)) });

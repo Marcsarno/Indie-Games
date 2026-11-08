@@ -32,4 +32,13 @@ for (const [kind, sd] of [['niche', 4242], ['collapse', 4242], ['niche', 99], ['
   if (!f) continue;
   hero.fi = f[0] + 0.5 + (f[2] === 'R' ? 2.2 : 0.8); hero.fj = f[1] + 0.5 + (f[2] === 'L' ? 2.2 : 0.8); updateFov(hero.fi, hero.fj); settle(); shots[kind] = cvs.toDataURL(); L.push({ [kind]: sd });
 }
+// round 68d: the rooms with a job, one shot each (the first floor of a few that has it)
+for (const job of ['chapel', 'ossuary', 'burial']) {
+  for (const sd of [4242, 99, 777, 5, 11, 31337, 2024]) {
+    startLevel(3, sd); G.actCard = 0; LV.act = 1; enemies = [];
+    const r = LV.rooms.find(q => q.job === job); if (!r) continue;
+    hero.fi = r.x + r.w * 0.45; hero.fj = r.y + r.h * 0.45; updateFov(hero.fi, hero.fj); settle(); shots[job] = cvs.toDataURL(); L.push({ [job]: sd, size: r.w + 'x' + r.h }); break;
+  }
+}
+{ let n = { chapel: 0, ossuary: 0, burial: 0 }, floors = 0; for (const sd of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) { for (const lv of [3, 4]) { genLevel(lv, sd); floors++; for (const r of LV.rooms) if (r.job) n[r.job]++; } } L.push({ floors, jobs: n }); }
 window.__out = { log: L, shots };
