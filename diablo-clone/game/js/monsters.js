@@ -1158,10 +1158,15 @@ function ogreRig(look, st) {
   const GR = !!look.gorr || MG, IJ = !!look.ironjaw;
   // (b6 v5) Malgrath's molten cracks: wavy glowing veins through the hide, pulsing wider and narrower over the idle
   const crW = st.clip === 'idle' ? [0.16, 0.21, 0.26, 0.21][st.f % 4] : 0.21;
-  const crack = p => MG && Math.abs(Math.sin(p[2] * 0.42 + Math.sin(p[1] * 0.55 + p[0] * 0.3) * 1.3)) < crW ? (Math.abs(Math.sin(p[2] * 0.42 + Math.sin(p[1] * 0.55 + p[0] * 0.3) * 1.3)) < crW * 0.45 ? M.FIREM : M.MARKB) : 0;   // a few bold veins: glowing core, a dark red rim
+  // (b6 v6) a jagged crack network like cooling lava: the borders between cells of a 3D cell noise (F2 - F1 small)
+  const CELL = 5.6, cellPt = (i, j, k) => { const h = n => { const v = Math.sin(i * 127.1 + j * 311.7 + k * 74.7 + n * 19.19) * 43758.5453; return v - Math.floor(v); }; return [(i + h(1)) * CELL, (j + h(2)) * CELL, (k + h(3)) * CELL]; };
+  const crack = p => { if (!MG) return 0;
+    const ci = Math.floor(p[0] / CELL), cj = Math.floor(p[1] / CELL), ck = Math.floor(p[2] / CELL); let f1 = 1e9, f2 = 1e9;
+    for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (let c = -1; c <= 1; c++) { const q = cellPt(ci + a, cj + b, ck + c), d = Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]); if (d < f1) { f2 = f1; f1 = d; } else if (d < f2) f2 = d; }
+    const e = f2 - f1, w = crW * 2.0; return e < w * 0.42 ? M.FIREM : e < w ? M.MARKB : 0; };   // glowing core, a dark red rim
   const crMf = MG ? { mf: crack } : undefined;   // art B4: Gorr the Minebreaker (boss) and the Ironjaw Enforcer (elite)
   for (const [hip, knee, ank] of [[J.hipL, J.kneeL, J.ankL], [J.hipR, J.kneeR, J.ankR]]) {
-    r.cone(hip, knee, 3.4, 3.0, skin); r.cone(knee, ank, 3.0, 2.6, skin);
+    r.cone(hip, knee, 3.4, 3.0, skin); r.cone(knee, ank, 3.0, 2.6, skin, MG ? { mf: p => V.dot(V.sub(p, ank), up) < 2.4 ? M.CLOTH_DARK : 0 } : undefined);   // (b6 v6) Malgrath's shins darken toward the hooves
     r.ell(V.add(ank, [2.2, 0, -0.8]), GR ? [4.8, 3.6, 1.9] : look.grunt ? [4.4, 3.3, 1.8] : [3.8, 2.8, 1.6], MG ? M.CLOTH_DARK : M.LEATHER, null, MG ? { mf: p => Math.abs(V.dot(V.sub(p, ank), sideR)) < 0.35 && V.dot(V.sub(p, ank), fwd) > 2.4 ? M.DARK : 0 } : undefined);   // (b6) Malgrath: cloven hooves
   }
   // art B4, Ironjaw: a leather strap from the right shoulder across to the left hip, front and back
@@ -1253,6 +1258,10 @@ function ogreRig(look, st) {
     const c2 = V.add(V.mad(c, up, -2.2 * pk), V.mul(sideR, sd * 1.6 * pk));
     r.ell(c2, [4.6 * pk, 3.6 * pk, 2.6 * pk], MG ? M.CLOTH_DARK : M.SLATE, fr, { mf: riv(c2) });
     r.ell(c, [5.0 * pk, 4.6 * pk, 3.4 * pk], MG ? M.CLOTH_DARK : M.SLATE, fr, { mf: riv(c) });
+    if (MG) for (const [u, v] of [[0.45, 0.3], [-0.45, 0.3], [0, 0.75]]) {   // (b6 v6) three iron spikes on each pauldron
+      const b0 = V.add(c, V.add(V.add(V.mul(fwd, u * 3.6 * pk), V.mul(sideR, sd * v * 3.6 * pk)), V.mul(up, 2.6 * pk))), dir = V.norm(V.add(V.add(V.mul(up, 1), V.mul(sideR, sd * (0.5 + v * 0.5))), V.mul(fwd, u * 0.4)));
+      r.cone(b0, V.mad(b0, dir, 3.4 * pk), 1.0 * pk, 0.15, M.IRON, { noShadow: true });
+    }
     for (const [u, v] of [[0.55, 0.45], [-0.55, 0.45], [0, 0.85]]) r.sph(V.add(c, V.add(V.add(V.mul(fwd, u * 4.6 * pk), V.mul(sideR, sd * v * 4.2 * pk)), V.mul(up, 2.2 * pk))), GR ? 0.95 : 0.8, MG ? M.IRON : M.BONE, { noShadow: true });   // big rivet heads
   }
   if ((!grunt && !GR) || look.pads) for (const [sh, sd] of [[J.shL, -1], [J.shR, 1]]) {   // shoulder pads with spikes
@@ -1371,7 +1380,7 @@ function ogreRig(look, st) {
   if (MG) for (const s of [-1, 1]) {   // (b6) big ram horns: up out of the brow, curling back, down and forward round the ear
     const pts = [[0.4, 2.6, 2.6], [-0.8, 5.0, 4.4], [-2.4, 7.2, 3.6], [-2.6, 8.4, 0.8], [-0.8, 7.8, -1.4], [1.2, 6.6, -0.6]].map(([f, sd, z]) => V.add(V.add(V.mad(hd, fwd, f), V.mul(sideR, s * sd)), V.mul(up, z)));
     const rad = [2.1, 2.0, 1.8, 1.5, 1.1, 0.55];
-    r.group(() => { for (let k = 0; k < pts.length - 1; k++) r.cone(pts[k], pts[k + 1], rad[k], rad[k + 1], k > 3 ? M.HAIR : M.BOAR); });   // (b6 v2) dark tan horn, near-black tips   // (b6) plain cream, darker toward the tip (fine ridges read as dots at this size)
+    r.group(() => { for (let k = 0; k < pts.length - 1; k++) r.cone(pts[k], pts[k + 1], rad[k], rad[k + 1], k === 4 ? M.FIREM : k > 2 ? M.HAIR : M.BOAR); });   // (b6 v6) smoldering tips   // (b6 v2) dark tan horn, near-black tips   // (b6) plain cream, darker toward the tip (fine ridges read as dots at this size)
   }
   else r.cone(V.add(V.mad(hd, up, 3.6), V.mul(fwd, -1)), V.add(V.mad(hd, up, 8), V.mul(fwd, -3)), 1.6, 0.4, M.HAIR);   // top-knot
   if (IJ) {   // art B4: an iron jaw guard, a barred muzzle grille over the lower face, bolted at the sides

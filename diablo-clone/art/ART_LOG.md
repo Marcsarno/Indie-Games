@@ -460,3 +460,6 @@ on the cleaver edge; glowing mouth and bigger FIREM eyes; three meat hooks on sh
 broken shackle chain hanging from the left wrist; a hunched body (`MALG_B_OF`: hunch 0.18, longer arms, shorter
 legs) with the head thrust forward of the shoulders; tusks moved low and splayed so they no longer cover the eyes.
 Other monsters cmp-identical; 304 frames, 0 edge hits.
+**Malgrath v6:** the wavy veins became a jagged crack network (borders of a 3D cell noise, cell 5.6, glowing FIREM
+core with a MARKB rim, still pulsing on idle); three iron spikes on each pauldron; FIREM smoldering horn tips;
+shins darken to CLOTH_DARK toward the hooves. Others cmp-identical; 0 edge hits.
