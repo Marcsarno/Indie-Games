@@ -32,13 +32,19 @@ vs a pre-change copy + `cmp`; hero hash script pattern in the B2 section; edge c
 the sprite canvas edge over idle/walk/attack/hit/death x 8 dirs. Renderer has an opt-in `ff` fur hook (rig.js) unused now.
 **Known existing bug for the main chat:** Dire Bear and Gorr death frames clip at the canvas bottom (needs taller `size`).
 
-## C1: Malgrath rebuilt from scratch, back on the original rules (2026-11-08, in progress)
+## C1: Malgrath rebuilt from scratch, back on the original rules (2026-11-08)
 New family `butcher` (`butcherRig`, `BUTCH_B`) in `game/js/monsters.js`: his own body instead of a Gorr/ogreRig reskin.
-It's a tall V-shaped demon on long legs, with a small head, a dark apron slab, iron bracers, one iron pauldron, and a cleaver on a long handle (dark iron with a bright edge).
-Three rough directions are under review as TEMP ids `malg_a` (ram horns, bare face), `malg_b` (charred palette, glowing face, FIREM edge)
-and `malg_c` (hunched, black executioner's hood, bull horns). All are `minLevel: 99`; the ones not picked get deleted.
-`malgrath` still points at the old ogreRig build until the user picks.
-Review images (game size beside the skeleton and Gorr, floor bands, silhouettes; plus a 4x close-up): `art/review/c1-malgrath/`.
+He's a tall V-shaped demon on long legs, with a small head, a dark apron slab, iron bracers, one iron pauldron, and a cleaver on a long handle.
+Three rough directions were shown (A ram horns, B charred, C hooded executioner). The user picked **B**: a HELLSTONE hide, pale BONE ram horns,
+FIREM eyes and mouth, a BLOODY apron, and a cleaver with a FIREM edge. `malgrath` now uses `family: 'butcher', look: { v: 'b' }`; the temp ids are gone.
+The rig code for A and C (`v: 'a'`/`'c'`) is still in `butcherRig`, unused. The old ogreRig Malgrath code (`look.malg`) is also unused now.
+**Passes (rubric, judged at game size, pairwise in both orders):** pass 0 = the rough B. Its gate failures: d2/d3 the cleaver goes edge-on; the apron is
+one flat tone (also the user's notes: grey ball pauldron, flat bracers). Pass 1 (curved apron + thick blade spine) lost both orders
+(the apron read as a belly patch). Pass 2 (apron as two angled panels + spine) split the orders: a tie, so pass 0 was kept. Pass 3 (a flat outward
+pauldron + spine) lost both orders (a big dark disc from the side). **Order disagreements: 1 of 3.** After the 3-pass limit, **pass 0 is kept**.
+Lint at pass 0: lightDirection 0.27-0.36, noise < 0.7%. Edge check: 200 frames, none clip. No other monster changed (the diff only touches Malgrath's entry).
+Open issues for a future round: the apron is a flat tone, the pauldron reads as a ball, the bracers are flat bands, and the cleaver goes edge-on at d2/d3.
+Images: `art/review/c1-malgrath/` (directions, pass0 contact sheet, every pass vs pass 0 in both orders, passes-summary.png).
 
 ## A1: refine three existing monsters to the user's concept sheets (2026-11-04)
 The user's concept sheets ("EXISTING MONSTERS - REFINEMENT TARGETS", "IMPS - FALLEN KIN") asked to
