@@ -43,7 +43,12 @@ one flat tone (also the user's notes: grey ball pauldron, flat bracers). Pass 1 
 (the apron read as a belly patch). Pass 2 (apron as two angled panels + spine) split the orders: a tie, so pass 0 was kept. Pass 3 (a flat outward
 pauldron + spine) lost both orders (a big dark disc from the side). **Order disagreements: 1 of 3.** After the 3-pass limit, **pass 0 is kept**.
 Lint at pass 0: lightDirection 0.27-0.36, noise < 0.7%. Edge check: 200 frames, none clip. No other monster changed (the diff only touches Malgrath's entry).
-Open issues for a future round: the apron is a flat tone, the pauldron reads as a ball, the bracers are flat bands, and the cleaver goes edge-on at d2/d3.
+**Round 2 (passes 4-6; the user asked for 3 more):** pass 4 (the grey pauldron removed; the bracers turned into CLOTH_DARK wraps, so the cleaver is the
+only iron) won both orders against pass 0 and became the new best. Pass 5 (the resting blade turned half to the side) split the orders: a tie, so pass 4 was kept
+(the front cleaver got broader but d3 went edge-on). Pass 6 (a CLOTH_DARK apron) lost both orders (it read as a hole). **Kept: pass 4.**
+Disagreements: 2 of 6 comparisons in total. Lint at pass 4: light 0.28-0.37, noise < 0.6%; edge check 200 frames, none clip.
+Still open: the apron is a flat tone, and the cleaver goes edge-on at d2 (any flat blade is edge-on from some facing).
+Round 1 notes, open issues for a future round: the apron is a flat tone, the pauldron reads as a ball, the bracers are flat bands, and the cleaver goes edge-on at d2/d3.
 Images: `art/review/c1-malgrath/` (directions, pass0 contact sheet, every pass vs pass 0 in both orders, passes-summary.png).
 
 ## A1: refine three existing monsters to the user's concept sheets (2026-11-04)

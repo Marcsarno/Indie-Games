@@ -2023,10 +2023,10 @@ function butcherRig(look, st) {
   for (const [sh, hand, s] of [[J.shR, handR, 1], [J.shL, handL, -1]]) {
     const a = armTo(J, sh, hand, B, s);
     r.group(() => { r.sph(sh, 3.7, skin); r.cone(sh, a.el, 3.0, 2.5, skin); r.cone(a.el, a.hand, 2.5, 2.3, skin); });
-    r.cyl(V.lerp(a.el, a.hand, 0.35), V.lerp(a.el, a.hand, 0.8), 2.9, M.IRON);
+    r.cyl(V.lerp(a.el, a.hand, 0.35), V.lerp(a.el, a.hand, 0.8), 2.9, v === 'b' ? M.CLOTH_DARK : M.IRON);   // (C1 pass 4) dark wraps: the cleaver is the only iron
     r.sph(a.hand, 2.8, skin);
   }
-  r.ell(at(J.shL, -0.3, -0.6, 1.6), [4.6, 4.4, 3.0], M.IRON, lf);   // one big iron pauldron, left shoulder
+  // (C1 pass 4) no pauldron: it read as a grey ball; the bare shoulders keep the V clean
   // the cleaver: a long wrapped handle in the fist, a broad blade beyond it (dark body, bright edge, a hole)
   const g = handR, fn = V.norm(V.add(fwd, V.mul(sideR, -0.55))), side = V.norm(V.sub(fn, V.mul(bd, V.dot(fn, bd)))), nrm = V.norm(V.cross(bd, side));
   r.cone(V.mad(g, bd, -4.2), V.mad(g, bd, 5.2), 1.1, 1.1, M.LEATHER);
