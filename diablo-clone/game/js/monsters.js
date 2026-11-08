@@ -2104,8 +2104,9 @@ function furnaceRig(look, st) {
   // pauldrons: two stepped plates per shoulder, wide
   for (const [sh, s] of [[J.shR, 1], [J.shL, -1]]) {
     const out = V.norm(V.add(V.mul(up, 0.75), V.mul(sideR, s * 0.65)));
-    r.ell(at(sh, -0.2, s * 0.6, 1.8), [4.6, 4.4, 2.2], ARM, frameAlong(fwd, out));
-    r.ell(at(sh, -0.2, s * 2.0, -0.6), [4.0, 3.6, 1.8], ARM, frameAlong(fwd, V.norm(V.add(V.mul(up, 0.4), V.mul(sideR, s * 0.9)))));
+    const PA = v === 'b' ? M.IRON : ARM;   // (C2 pass 2) darker iron pauldrons with a glint, so the shoulders separate from the charcoal body
+    r.ell(at(sh, -0.2, s * 0.6, 1.8), [4.6, 4.4, 2.2], PA, frameAlong(fwd, out));
+    r.ell(at(sh, -0.2, s * 2.0, -0.6), [4.0, 3.6, 1.8], PA, frameAlong(fwd, V.norm(V.add(V.mul(up, 0.4), V.mul(sideR, s * 0.9)))));
   }
   // arms and the hammer: held across the body in both hands (left low on the haft, right higher); a slam to attack
   const sw = atkIndex(st.clip) >= 0 ? st.key : null;
@@ -2121,13 +2122,10 @@ function furnaceRig(look, st) {
     r.sph(a.hand, 2.5, ARM);
   }
   const g = handR, hx0 = V.sub(fwd, V.mul(bd, V.dot(fwd, bd))), hx = V.len(hx0) > 0.2 ? V.norm(hx0) : up;
-  r.cone(V.mad(g, bd, -9), V.mad(g, bd, 9.5), 0.95, 0.95, M.WOOD);
-  const hc = V.mad(g, bd, 11.2), hy = V.norm(V.cross(bd, hx));
-  r.box(hc, [3.2, 2.9, 4.6], v === 'b' ? M.IRON : M.ROCK, [bd, hy, hx], { mf: p => { const q = V.sub(p, hc), a2 = Math.abs(V.dot(q, bd)), b2 = Math.abs(V.dot(q, hy)), c2 = Math.abs(V.dot(q, hx)); return (a2 > 2.7 ? 1 : 0) + (b2 > 2.4 ? 1 : 0) + (c2 > 4.1 ? 1 : 0) >= 2 ? M.IRON : 0; } });   // edges bevelled darker
+  r.cone(V.mad(g, bd, -9), V.mad(g, bd, 9.5), 1.1, 1.1, M.WOOD);
+  const hc = V.mad(g, bd, 12.0), hy = V.norm(V.cross(bd, hx));   // (C2 pass 1) a bigger head, so the slam reads
+  r.box(hc, [3.9, 3.5, 5.4], v === 'b' ? M.IRON : M.ROCK, [bd, hy, hx], { mf: p => { const q = V.sub(p, hc), a2 = Math.abs(V.dot(q, bd)), b2 = Math.abs(V.dot(q, hy)), c2 = Math.abs(V.dot(q, hx)); return (a2 > 3.3 ? 1 : 0) + (b2 > 2.9 ? 1 : 0) + (c2 > 4.8 ? 1 : 0) >= 2 ? M.IRON : 0; } });   // edges bevelled darker
   if (sw && sw.smear && st.prev) smearArc(r, pivot, fwd, U, st.prev.a + (st.prev.ck || 0), sw.a + (sw.ck || 0), 9, 26);
-  // tail: a plated, curling tail behind
-  { let p0 = at(J.pelvis, -3.6, 0, 0.8); const pts = [[-6.5, 1.2, -2.0], [-9.0, 2.8, -4.6], [-10.6, 5.2, -6.6], [-10.2, 8.0, -7.0], [-8.4, 9.4, -5.6]];
-    pts.forEach(([f2, s2, z2], i) => { const p1 = at(J.pelvis, f2, s2, z2); r.cone(p0, p1, 1.9 - i * 0.3, 1.6 - i * 0.3, ARM); p0 = p1; }); }
   // head: a bucket helm with a glowing visor slit and a breath line, two curved horns
   const hd = at(J.head, 1.0, 0, -0.6);
   r.cyl(V.mad(hd, up, -2.8), V.mad(hd, up, 2.6), 3.5, ARM, { mf: p => { const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up);
@@ -2201,7 +2199,7 @@ const MONSTERS = {
   oenforcer: { family: 'ogre', name: 'OGRE ENFORCER', minLevel: 99, look: { grunt: true, pads: true, cleaver: true, scale: 1.05 }, hp: 50, dmg: [8, 13], speed: 24, reach: 1.7, xp: 60, chest: 32, shadow: 10, where: 'out' },
   // art B4: from the user's concepts (art/concepts/monsters/gorr.png, ironjaw_enforcer.png); minLevel 99, placeholder stats
   // art B6: infernal boss from the user's Hellbound sheet (art/concepts/monsters/malgrath.png); minLevel 99, placeholder stats near Gorr
-  azhruk: { family: 'furnace', name: 'AZHRUK', title: 'THE FURNACE GUARD', minLevel: 99, look: { v: 'b', scale: 1.5 }, hp: 220, dmg: [11, 18], speed: 18, reach: 2.4, xp: 230, chest: 50, shadow: 14, unique: true },   // art C2: rebuilt on his own body (furnaceRig), direction B picked by the user
+  azhruk: { family: 'furnace', name: 'AZHRUK', title: 'THE FURNACE GUARD', minLevel: 99, look: { v: 'b', scale: 1.7, size: [170, 180, 85, 132] }, hp: 220, dmg: [11, 18], speed: 18, reach: 2.4, xp: 230, chest: 50, shadow: 14, unique: true },   // art C2: rebuilt on his own body (furnaceRig), direction B picked by the user
   malgrath: { family: 'butcher', name: 'MALGRATH', title: 'THE IRON BUTCHER', minLevel: 99, look: { v: 'b', scale: 1.5 }, hp: 170, dmg: [10, 17], speed: 22, reach: 2.2, xp: 200, chest: 48, shadow: 13, unique: true },   // art C1: rebuilt on his own body (butcherRig), direction B picked by the user
   gorr: { family: 'ogre', name: 'GORR', title: 'THE MINEBREAKER', minLevel: 99, look: { gorr: true, scale: 1.5 }, hp: 150, dmg: [9, 15], speed: 20, reach: 2.3, xp: 170, chest: 46, shadow: 13, unique: true, boss: 'slam' },
   ironjaw: { family: 'ogre', name: 'IRONJAW ENFORCER', minLevel: 99, look: { grunt: true, ironjaw: true, scale: 1.2 }, hp: 64, dmg: [9, 14], speed: 24, reach: 1.8, xp: 75, chest: 34, shadow: 11, where: 'out', elite: true },

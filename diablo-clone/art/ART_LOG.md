@@ -39,6 +39,12 @@ two-handed hammer held low across the body (slam attack). Lesson from C1: give t
 with specular highlights), judged beside Gorr. The user picked **B**; `azhruk` now uses `family: 'furnace', look: { v: 'b' }` and the temp ids are gone. Rough directions were TEMP ids `azh_a` (IRON plate, a 3-slit chest grate), `azh_b`
 (matte ROCK, a barrel belly with a round fire grate) and `azh_c` (A with molten FIREM seams). All are `minLevel: 99`; `azhruk` still points at the
 old ogreRig build until the user picks. Images: `art/review/c2-azhruk/`.
+**User change before the passes:** the tail was removed. **Passes (rubric, at game size, pairwise in both orders; strike frames compared too):**
+pass 1, a bigger hammer head (box half [3.9, 3.5, 5.4], thicker haft) so the slam reads: won both orders. Pass 2, IRON pauldrons (darker, with a glint)
+so the shoulders separate from the ROCK body: won both. Pass 3, scale 1.5 -> 1.7 with `size: [170, 180, 85, 132]`: won both. **Kept: pass 3.**
+Disagreements: 0 of 3. Lint at pass 3: light 0.30-0.50, noise < 0.8%; edge check 200 frames, none clip. No other monster changed.
+The A and C code paths (`v: 'a'`/`'c'`) are still in `furnaceRig`, unused, and so is the old ogreRig Azhruk code (`look.azh`).
+Images: `art/review/c2-azhruk/` (every pass in both orders, the attack rows, the final contact sheet, the final beside Gorr and Malgrath).
 
 ## C1: Malgrath rebuilt from scratch, back on the original rules (2026-11-08)
 New family `butcher` (`butcherRig`, `BUTCH_B`) in `game/js/monsters.js`: his own body instead of a Gorr/ogreRig reskin.
