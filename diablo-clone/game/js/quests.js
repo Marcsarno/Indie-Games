@@ -421,6 +421,9 @@ function sideExtras(kind) {
     if (!f.aldoFree && storyOn()) LV.npcs.push({ role: 'aldo', name: 'ALDO', fi: i + 0.5, fj: j + 0.5, caged: true });
   }
   const trySolidBlocks = (i, j) => { LV.solid[tIdx(i, j)] = 1; const d = bfs(LV.start.cx, LV.start.cy); LV.solid[tIdx(i, j)] = 0; for (let q = 0; q < MW * MH; q++) if (LV.map[q] === FLOOR && !LV.solid[q] && q !== tIdx(i, j) && d[q] < 0) return true; return false; };
+  if (kind === 'den') {   // round 69: the wolves' nests: straw and gnawed bones in every room but the first
+    for (const [n, r] of LV.rooms.entries()) { if (!n) continue; for (let q = 0; q < 2; q++) { const fi = r.x + 1 + R() * (r.w - 2), fj = r.y + 1 + R() * (r.h - 2); LV.stamps.push({ kind: 'straw', fi, fj, seed: R.int(1, 1e6) }); LV.decor.push({ kind: 'bones', fi: fi + 0.4, fj: fj + 0.3, seed: R.int(1, 1e6) }); } }
+  }
   if (kind === 'barrow2') {   // the hoard: two chests at the back of the Wight's room
     const r = LV.rooms[LV.leaderRoom], c = (roomFloor(r, 1).filter(([i, j]) => clearOf(i, j)).length >= 3 ? roomFloor(r, 1) : roomFloor(r, 0)).filter(([i, j]) => clearOf(i, j) && !(LV.down && Math.abs(i - LV.down.i) <= 2 && Math.abs(j - LV.down.j) <= 2)).sort((p, q) => Math.hypot(q[0] - r.cx, q[1] - r.cy) - Math.hypot(p[0] - r.cx, p[1] - r.cy));
     for (let k = 0, n = 0; k < c.length && n < 2; k++) { const [i, j] = c[k]; if (LV.decor.some(d => Math.abs(d.i - i) <= 1 && Math.abs(d.j - j) <= 1) || trySolidBlocks(i, j)) continue; n++; LV.decor.push({ kind: 'chest', i, j, seed: R.int(0, 999) }); LV.solid[tIdx(i, j)] = 1; }
