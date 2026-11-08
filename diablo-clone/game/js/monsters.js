@@ -1153,9 +1153,10 @@ function houndRig(look, st) {
 const MALG_B_OF = b => ({ ...b, hunch: 0.18, upper: 8.2, fore: 7.8, thigh: 5.6, shin: 5.2, hipH: 10.6 });   // (b6 v5) Malgrath: hunched forward on shorter legs, long arms
 const OGRE_B = { hipH: 12, thigh: 6.4, shin: 6, ankle: 1.4, spine: 9, shW: 8.4, shZ: 3, neck: 10.5, upper: 7, fore: 6.5, hipW: 4, stride: 5, lift: 2.4, duty: 0.55, bob: 0.8, sway: 0.6, runLean: 0.1, counter: 0.1, stance: 1.5 };
 function ogreRig(look, st) {
-  const MG = !!look.malg;   // art B6: Malgrath the Iron Butcher (infernal boss): Gorr's build in red hide, an iron apron, ram horns, hooves and a cleaver
-  const B = MG ? MALG_B_OF(OGRE_B) : OGRE_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J, skin = MG ? M.BLOODY : M.OGRE;   // (b6 v2) deep blood red, not bright brick
-  const GR = !!look.gorr || MG, IJ = !!look.ironjaw;
+  const MG = !!look.malg, AZ = !!look.azh;   // art B6: AZ = Azhruk the Furnace Guard (infernal boss): Gorr's build sealed in dark plate, a furnace in his chest
+  const ARM = M.ROCK;   // Azhruk's plate: a matte dark grey   // art B6: Malgrath the Iron Butcher (infernal boss): Gorr's build in red hide, an iron apron, ram horns, hooves and a cleaver
+  const B = MG ? MALG_B_OF(OGRE_B) : OGRE_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J, skin = MG ? M.BLOODY : AZ ? ARM : M.OGRE;   // (b6 v2) deep blood red, not bright brick
+  const GR = !!look.gorr || MG || AZ, IJ = !!look.ironjaw;
   // (b6 v5) Malgrath's molten cracks: wavy glowing veins through the hide, pulsing wider and narrower over the idle
   const crW = st.clip === 'idle' ? [0.16, 0.21, 0.26, 0.21][st.f % 4] : 0.21;
   // (b6 v6) a jagged crack network like cooling lava: the borders between cells of a 3D cell noise (F2 - F1 small)
@@ -1166,14 +1167,19 @@ function ogreRig(look, st) {
     const e = f2 - f1, w = crW * 2.0; return e < w * 0.42 ? M.FIREM : e < w ? M.MARKB : 0; };   // glowing core, a dark red rim
   const crMf = MG ? { mf: crack } : undefined;   // art B4: Gorr the Minebreaker (boss) and the Ironjaw Enforcer (elite)
   for (const [hip, knee, ank] of [[J.hipL, J.kneeL, J.ankL], [J.hipR, J.kneeR, J.ankR]]) {
+    if (AZ) r.sph(V.add(knee, V.mul(fwd, 1.2)), 2.6, ARM, { mf: p => V.dot(V.sub(p, knee), fwd) > 2.6 ? M.IRON : 0 });   // (b6) Azhruk: knee cops
     r.cone(hip, knee, 3.4, 3.0, skin); r.cone(knee, ank, 3.0, 2.6, skin, MG ? { mf: p => V.dot(V.sub(p, ank), up) < 2.4 ? M.CLOTH_DARK : 0 } : undefined);   // (b6 v6) Malgrath's shins darken toward the hooves
-    r.ell(V.add(ank, [2.2, 0, -0.8]), GR ? [4.8, 3.6, 1.9] : look.grunt ? [4.4, 3.3, 1.8] : [3.8, 2.8, 1.6], MG ? M.CLOTH_DARK : M.LEATHER, null, MG ? { mf: p => Math.abs(V.dot(V.sub(p, ank), sideR)) < 0.35 && V.dot(V.sub(p, ank), fwd) > 2.4 ? M.DARK : 0 } : undefined);   // (b6) Malgrath: cloven hooves
+    r.ell(V.add(ank, [2.2, 0, -0.8]), GR ? [4.8, 3.6, 1.9] : look.grunt ? [4.4, 3.3, 1.8] : [3.8, 2.8, 1.6], MG ? M.CLOTH_DARK : AZ ? ARM : M.LEATHER, null, MG ? { mf: p => Math.abs(V.dot(V.sub(p, ank), sideR)) < 0.35 && V.dot(V.sub(p, ank), fwd) > 2.4 ? M.DARK : 0 } : undefined);   // (b6) Malgrath: cloven hooves
   }
   // art B4, Ironjaw: a leather strap from the right shoulder across to the left hip, front and back
   const ijStrap = p => { const q = V.sub(p, J.chest), s2 = V.dot(q, sideR) - 6, z2 = V.dot(q, up) - 4; return Math.abs(s2 * 0.737 - z2 * 0.676) < 1.1 ? M.LEATHER : 0; };
   if (GR) r.group(() => {   // art B4, Gorr: a barrel chest over a heavy belly, the head sunk into a ridge of trapezius
     r.ell(V.mad(J.pelvis, up, 2), [6.0, 7.0, 5.4], skin, null, crMf);
-    r.ell(V.mad(J.chest, up, 1.0), [6.6, 10.6, 6.6], skin, frameAlong(fwd, up), crMf);
+    const chC = V.mad(J.chest, up, 1.0);
+    r.ell(chC, [6.6, 10.6, 6.6], skin, frameAlong(fwd, up), AZ ? { mf: p => { const q = V.sub(p, chC), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up);   // (b6) Azhruk's furnace: three glowing slits in an iron grate on the chest, one on the back
+      if (f2 > 2.8 && Math.abs(s2) < 4.0 && z2 > -3.2 && z2 < 2.4) return [-2.0, 0, 2.0].some(c => Math.abs(s2 - c) < 0.75) && z2 > -2.4 && z2 < 1.6 ? M.FIREM : M.IRON;
+      if (f2 < -3.2 && Math.abs(s2) < 1.6 && z2 > -1.4 && z2 < 3.4) return Math.abs(s2) < 0.6 && z2 > -0.6 && z2 < 2.6 ? M.FIREM : M.IRON;
+      return Math.abs(((z2 + 30) % 3.0) - 1.5) < 0.18 ? M.CLOTH_DARK : 0; } } : crMf);   // lames
     r.ell(V.add(V.mad(J.chest, up, 5.4), V.mul(fwd, -1.6)), [4.6, 8.0, 3.6], skin, frameAlong(fwd, up), crMf);
   });
   else r.group(() => {   // belly and chest as one mass (the grunts: a slimmer belly under a broad chest, top-heavy)
@@ -1204,6 +1210,14 @@ function ogreRig(look, st) {
     if (look.vest) {   // a sleeveless leather vest, open at the neck
       const vc = V.mad(J.chest, up, 1.2);
       r.ell(vc, [6.4, 10.2, 6.6], M.LEATHER, lf, { mf: p => { const q = V.sub(p, vc); return V.dot(q, fwd) > 3 && Math.abs(V.dot(q, sideR)) < 2.6 - (3.2 - V.dot(q, up)) * 0.45 && V.dot(q, up) > -1 ? M.OGRE : 0; } });
+    }
+  } else if (AZ) {   // (b6) Azhruk: an iron belt, plate tassets over the hips, a torn red tabard front and back
+    r.ell(belt, [6.9, 7.9, 1.4], M.IRON, lf); r.box(V.mad(belt, fwd, 7.2), [0.6, 1.7, 1.3], M.DSTEEL, lf, { bias: 1 });
+    const sk = V.mad(J.pelvis, up, 0.2), hem = V.add(J.pelvis, [0, 0, -3.6]);
+    r.group(() => r.cone(sk, hem, 6.6, 7.6, ARM, { mf: p => Math.abs(((V.dot(V.sub(p, sk), up) + 30) % 1.8) - 0.9) < 0.14 ? M.CLOTH_DARK : 0 }));
+    for (const s of [1, -1]) {   // the tabard: a long red cloth hanging between the legs, torn into points
+      const tc = V.add(V.mad(J.pelvis, fwd, s * 7.6), V.mul(up, -5.6)), tf = frameAlong(V.mul(fwd, s), up);
+      r.box(tc, [0.4, 3.0, 6.2], M.MARKB, tf, { mf: p => { const q = V.sub(p, tc), z2 = V.dot(q, up), w = V.dot(q, sideR); return z2 < -3.6 + Math.abs(Math.sin(w * 2.4)) * 1.6 ? M.DARK : z2 < -2.4 ? M.BLOODY : 0; } });
     }
   } else if (GR) {
     // art B4, Gorr: leather overalls (a bib up the chest, braces over the shoulders that cross on the back),
@@ -1254,15 +1268,23 @@ function ogreRig(look, st) {
   // art B4: riveted steel pauldrons, layered: a dome over a lower lame (Gorr both shoulders, Ironjaw the right one)
   if (GR || IJ) for (const [sh, sd] of GR ? [[J.shL, -1], [J.shR, 1]] : [[J.shR, 1]]) {
     const pk = GR ? 1.15 : 1, c = V.add(V.mad(sh, up, 1.6 * pk), V.mul(sideR, sd * 1.2)), fr = frameAlong(fwd, up);
-    const riv = cc => p => { const n = V.norm(V.sub(p, cc)), a = V.dot(n, fwd), b = V.dot(n, sideR) * sd, z2 = V.dot(n, up); return z2 > 0.25 && Math.abs(Math.abs(a) - 0.45) < 0.2 && Math.abs(b - 0.5) < 0.24 ? (MG ? M.IRON : M.BONE) : 0; };
+    const riv = cc => p => { const n = V.norm(V.sub(p, cc)), a = V.dot(n, fwd), b = V.dot(n, sideR) * sd, z2 = V.dot(n, up); return z2 > 0.25 && Math.abs(Math.abs(a) - 0.45) < 0.2 && Math.abs(b - 0.5) < 0.24 ? (MG || AZ ? M.IRON : M.BONE) : 0; };
     const c2 = V.add(V.mad(c, up, -2.2 * pk), V.mul(sideR, sd * 1.6 * pk));
-    r.ell(c2, [4.6 * pk, 3.6 * pk, 2.6 * pk], MG ? M.CLOTH_DARK : M.SLATE, fr, { mf: riv(c2) });
-    r.ell(c, [5.0 * pk, 4.6 * pk, 3.4 * pk], MG ? M.CLOTH_DARK : M.SLATE, fr, { mf: riv(c) });
+    if (AZ) {   // (b6) Azhruk: angular pauldrons, three overlapping plates stepping down the shoulder, dark-rimmed
+      for (let k = 0; k < 3; k++) {
+        const nz = V.norm(V.add(V.mul(up, 0.85 - k * 0.2), V.mul(sideR, sd * (0.5 + k * 0.25)))), ny = V.norm(V.cross(nz, fwd)), pc = V.add(V.mad(c, up, 1.0 - k * 2.1), V.mul(sideR, sd * (0.4 + k * 1.3)));
+        const hx = 4.8 - k * 0.5, hy = 3.6 - k * 0.4;
+        r.box(pc, [hx, hy, 1.0], ARM, [fwd, ny, nz], { bias: -1, mf: p => { const q = V.sub(p, pc), u = Math.abs(V.dot(q, fwd)), v = Math.abs(V.dot(q, ny)); return u > hx - 0.45 || v > hy - 0.45 ? M.CLOTH_DARK : 0; } });
+      }
+      continue;
+    }
+    r.ell(c2, [4.6 * pk, 3.6 * pk, 2.6 * pk], MG ? M.CLOTH_DARK : AZ ? ARM : M.SLATE, fr, { mf: riv(c2) });
+    r.ell(c, [5.0 * pk, 4.6 * pk, 3.4 * pk], MG ? M.CLOTH_DARK : AZ ? ARM : M.SLATE, fr, { mf: riv(c) });
     if (MG) for (const [u, v] of [[0.45, 0.3], [-0.45, 0.3], [0, 0.75]]) {   // (b6 v6) three iron spikes on each pauldron
       const b0 = V.add(c, V.add(V.add(V.mul(fwd, u * 3.6 * pk), V.mul(sideR, sd * v * 3.6 * pk)), V.mul(up, 2.6 * pk))), dir = V.norm(V.add(V.add(V.mul(up, 1), V.mul(sideR, sd * (0.5 + v * 0.5))), V.mul(fwd, u * 0.4)));
       r.cone(b0, V.mad(b0, dir, 3.4 * pk), 1.0 * pk, 0.15, M.IRON, { noShadow: true });
     }
-    for (const [u, v] of [[0.55, 0.45], [-0.55, 0.45], [0, 0.85]]) r.sph(V.add(c, V.add(V.add(V.mul(fwd, u * 4.6 * pk), V.mul(sideR, sd * v * 4.2 * pk)), V.mul(up, 2.2 * pk))), GR ? 0.95 : 0.8, MG ? M.IRON : M.BONE, { noShadow: true });   // big rivet heads
+    for (const [u, v] of [[0.55, 0.45], [-0.55, 0.45], [0, 0.85]]) r.sph(V.add(c, V.add(V.add(V.mul(fwd, u * 4.6 * pk), V.mul(sideR, sd * v * 4.2 * pk)), V.mul(up, 2.2 * pk))), GR ? 0.95 : 0.8, MG || AZ ? M.IRON : M.BONE, { noShadow: true });   // big rivet heads
   }
   if ((!grunt && !GR) || look.pads) for (const [sh, sd] of [[J.shL, -1], [J.shR, 1]]) {   // shoulder pads with spikes
     const c = grunt ? V.add(V.mad(sh, up, 1.4), V.mul(sideR, sd * 1.2)) : V.mad(sh, up, 1.2), pk = grunt ? 1.25 : 1;
@@ -1306,7 +1328,8 @@ function ogreRig(look, st) {
       for (let k = 0; k < 5; k++) { const c1 = V.add(c0, V.add(V.mul(up, -1.5), V.mul(fwd, sway * 0.3))); r.ell(V.lerp(c0, c1, 0.5), [0.85, k % 2 ? 0.35 : 0.85, 0.95], M.IRON, k % 2 ? frameAlong(fwd, up) : frameAlong(sideR, up)); c0 = c1; }
     }
     if (MG) { const w0 = V.lerp(a.el, a.hand, 0.5), w1 = V.lerp(a.el, a.hand, 0.85), wd = V.norm(V.sub(w1, w0)); r.cyl(w0, w1, 2.3 * ak + 0.7, M.CLOTH_DARK); for (let k = 0; k < 5; k++) { const ang = k / 5 * Math.PI * 2, d = V.norm(V.add(V.mul(V.norm(V.cross(wd, up)), Math.cos(ang)), V.mul(V.norm(V.cross(wd, V.cross(wd, up))), Math.sin(ang)))); r.sph(V.mad(V.lerp(w0, w1, 0.5), d, 2.3 * ak + 0.7), 0.75, M.IRON, { noShadow: true }); } }   // (b6) studded iron wrist bands
-    else if (!grunt || look.pads) r.cyl(V.lerp(a.el, a.hand, 0.3), V.lerp(a.el, a.hand, 0.7), grunt ? 2.3 * ak + 0.6 : GR ? 2.3 * ak + 0.5 : 2.6, M.LEATHER);   // bracers
+    else if (!grunt || look.pads) r.cyl(V.lerp(a.el, a.hand, 0.3), V.lerp(a.el, a.hand, 0.7), grunt ? 2.3 * ak + 0.6 : GR ? 2.3 * ak + 0.5 : 2.6, AZ ? M.IRON : M.LEATHER);
+    if (AZ) r.sph(a.el, 2.6 * ak, ARM);   // (b6) Azhruk: elbow cops   // bracers
     else if (IJ) r.cyl(V.lerp(a.el, a.hand, 0.55), V.lerp(a.el, a.hand, 0.78), 2.3 * ak + 0.5, M.LEATHER);   // art B4: leather wrist bands
   }
   const g = handR;
@@ -1316,8 +1339,9 @@ function ogreRig(look, st) {
     r.cone(V.mad(hamG, bd, -2.2), V.mad(hc, bd, -1), 1.15, 1.15, M.WOOD);
     r.cyl(V.mad(hamG, bd, -1.6), V.mad(hamG, bd, 0.2), 1.45, M.LEATHER);   // a leather grip at the butt
     // an eight-sided block of stone: two square prisms turned 45 degrees about the striking axis, the faces darker
-    const w2 = V.norm(V.add(bd, w)), b2 = V.norm(V.sub(bd, w)), face = p => Math.abs(V.dot(V.sub(p, hc), n)) > 4.9 ? M.ROCK : 0;
-    r.group(() => { r.box(hc, [3.9, 3.9, 5.8], M.RUIN, [bd, w, n], { mf: face }); r.box(hc, [4.1, 4.1, 5.8], M.RUIN, [w2, b2, n], { mf: face }); });
+    const w2 = V.norm(V.add(bd, w)), b2 = V.norm(V.sub(bd, w)), face = p => Math.abs(V.dot(V.sub(p, hc), n)) > 4.9 ? (AZ ? 0 : M.ROCK) : 0;
+    const hm = AZ ? M.ROCK : M.RUIN;   // (b6) Azhruk's is a block of iron
+    r.group(() => { r.box(hc, [3.9, 3.9, 5.8], hm, [bd, w, n], { mf: face }); r.box(hc, [4.1, 4.1, 5.8], hm, [w2, b2, n], { mf: face }); });
   }
   else if (IJ) {   // art B4: a big wooden mallet, its barrel head bound with two studded iron bands
     r.cone(V.mad(g, bd, -3), V.mad(g, bd, 9), 1.15, 1.25, M.WOOD);
@@ -1366,8 +1390,25 @@ function ogreRig(look, st) {
   if (!grunt && !GR) r.cone(V.mad(g, bd, -3), V.mad(g, bd, 12), 1.4, 3.4, M.WOOD);
   if (!grunt && !GR) for (let k = 0; k < 7; k++) { const a = k * 2.4, t = 7 + (k % 3) * 2, ax = V.norm(V.add(V.mul(V.cross(bd, up), Math.cos(a)), V.mul(V.cross(bd, V.norm(V.cross(bd, up))), Math.sin(a)))); const b = V.mad(V.mad(g, bd, t), ax, 2.8); r.cone(b, V.mad(b, ax, 2.4), 0.9, 0.2, M.BLADE, { noShadow: true }); }   // art B2: spikes in pale steel
   if (sw && sw.smear && st.prev) smearArc(r, pivot, fwd, U, st.prev.a + (st.prev.ck || 0), sw.a + (sw.ck || 0), 8, 22);
+  if (AZ) {   // (b6) Azhruk: an armored tail of plated segments sweeping round and ending in a hook
+    const sw2 = Math.sin((st.f || 0) * 0.9) * 0.6, base = V.add(V.mad(J.pelvis, fwd, -5.0), V.mul(up, -0.5));
+    const pts = [[0, 0, 0], [-4, 1.5, -3.5], [-7, 4.5 + sw2, -6.5], [-7.5, 9 + sw2, -8.5], [-4.5, 12 + sw2, -8.2], [-1.6, 12.6 + sw2, -6.4]].map(([f, sd, z]) => V.add(V.add(V.mad(base, fwd, f), V.mul(sideR, sd)), V.mul(up, z)));
+    const rad = [2.4, 2.1, 1.8, 1.5, 1.1, 0.25];
+    for (let k = 0; k < pts.length - 1; k++) r.cone(pts[k], pts[k + 1], rad[k], rad[k + 1], ARM, { mf: p => V.len(V.sub(p, pts[k + 1])) < 0.6 ? M.CLOTH_DARK : 0 });
+  }
   // head: big, a heavy brow over small yellow eyes, an underbite with two tusks, a top-knot
   const hd = grunt ? V.add(V.mad(J.head, fwd, 1.4), V.mul(up, -2.0)) : MG ? V.add(V.mad(J.head, fwd, 3.2), V.mul(up, -0.4)) : GR ? V.add(V.mad(J.head, fwd, 1.8), V.mul(up, -1.6)) : J.head, h0 = r.p.length;   // (b6 v5) Malgrath's head thrust out ahead of the hunched shoulders, so the glowing eyes show   // the grunts hunch, the head thrust forward and low
+  if (AZ) {   // (b6) Azhruk: a great helm, a glowing visor slit, a ridge down the front, bull horns curving up
+    r.cyl(V.mad(hd, up, -2.6), V.mad(hd, up, 3.6), 4.6, ARM, { mf: p => { /* a flat-topped bucket helm */ const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = Math.abs(V.dot(q, sideR)), z2 = V.dot(q, up);
+      if (f2 > 2.6 && Math.abs(z2 - 0.9) < 0.45 && s2 < 2.5) return M.FIREM;
+      if (f2 > 2.8 && s2 < 0.35 && z2 < 0.4) return M.IRON;
+      return Math.abs(z2 + 1.6) < 0.25 ? M.CLOTH_DARK : 0; } });
+    for (const s of [-1, 1]) {
+      const pts = [[-0.4, 3.6, 2.4], [0, 5.6, 3.6], [0.6, 6.6, 5.8], [1.4, 6.0, 8.2], [2.4, 4.8, 9.4]].map(([f, sd, z]) => V.add(V.add(V.mad(hd, fwd, f), V.mul(sideR, s * sd)), V.mul(up, z)));
+      const rad = [1.8, 1.6, 1.3, 0.9, 0.3];
+      r.group(() => { for (let k = 0; k < pts.length - 1; k++) r.cone(pts[k], pts[k + 1], rad[k], rad[k + 1], k > 2 ? M.HORN : M.BOAR); });
+    }
+  } else {
   r.ell(hd, [4.6, 4.8, 4.2], skin, frameAlong(fwd, up), { mf: p => { const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = Math.abs(V.dot(q, sideR)), z2 = V.dot(q, up); if (MG && f2 > 2.0 && Math.abs(s2 - 1.8) < 0.95 && Math.abs(z2 - 0.5) < 0.6) return M.FIREM;   // (b6 v5) big glowing eyes
     if (f2 > 2.4 && Math.abs(s2 - 1.7) < 0.55 && Math.abs(z2 - 0.4) < 0.5) return MG ? M.FIREM : M.EYE_YEL; if (f2 > 2.4 && Math.abs(z2 - 1.3) < 0.35 && s2 < 3) return M.DARK; if (f2 > 3 && z2 < -1.6 && z2 > -2.6 && s2 < 2.2) return MG ? M.FIREM : M.DARK; return 0; } });
   r.ell(V.add(V.mad(hd, fwd, 2.4), V.mul(up, -2.4)), [2.6, 3.8, 1.8], skin, frameAlong(fwd, up));   // jaw
@@ -1383,6 +1424,7 @@ function ogreRig(look, st) {
     r.group(() => { for (let k = 0; k < pts.length - 1; k++) r.cone(pts[k], pts[k + 1], rad[k], rad[k + 1], k === 4 ? M.FIREM : k > 2 ? M.HAIR : M.BOAR); });   // (b6 v6) smoldering tips   // (b6 v2) dark tan horn, near-black tips   // (b6) plain cream, darker toward the tip (fine ridges read as dots at this size)
   }
   else r.cone(V.add(V.mad(hd, up, 3.6), V.mul(fwd, -1)), V.add(V.mad(hd, up, 8), V.mul(fwd, -3)), 1.6, 0.4, M.HAIR);   // top-knot
+  }
   if (IJ) {   // art B4: an iron jaw guard, a barred muzzle grille over the lower face, bolted at the sides
     const jc = V.add(V.mad(hd, fwd, 4.5), V.mul(up, -2.1));
     r.box(jc, [1.1, 2.8, 1.7], M.IRON, frameAlong(fwd, up), { bias: 1, mf: p => { const q = V.sub(p, jc), s2 = V.dot(q, sideR), z2 = V.dot(q, up); if (Math.abs(z2) > 1.1 || Math.abs(s2) > 2.2) return 0; return (((s2 + 10) % 1.3) + 1.3) % 1.3 < 0.5 ? M.DARK : 0; } });
@@ -1398,6 +1440,7 @@ function ogreRig(look, st) {
     r.ell(hc, [4.9, 5.1, 2.9], M.SLATE, frameAlong(fwd, up));
     r.cyl(V.mad(hc, up, -0.9), V.mad(hc, up, -0.4), 6.0, M.SLATE);
   }
+  if (AZ) for (const q of r.p) if (q.m === ARM) q.bias = (q.bias || 0) - 1;   // (b6) Azhruk's plate one step darker: charcoal
   bigHead(r, h0, hd, GR ? 1.0 : IJ ? 1.15 : look.grunt ? 1.4 : 1.2);   // art B4: the concepts draw Gorr's and Ironjaw's heads small on their bodies   // the grunts' heads are bigger, as the concepts draw them
   if (st.clip === 'death') deathTip(r, B, st.f, -1);
   if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
@@ -1956,7 +1999,7 @@ const FAMILIES = {
   shroom: { size: [44, 48, 22, 36], gait: gaitFrameTiles(SHROOM_B), rig: shroomRig, swing: () => SWINGS.claw },
   wraith: { size: [56, 60, 28, 46], gait: 0.2, rig: wraithRig, swing: () => SWINGS.claw },
   treant: { size: [150, 160, 75, 132], gait: gaitFrameTiles(TREANT_B, 1.4), rig: treantRig, swing: () => SWINGS.heavy },
-  ogre: { size: [140, 140, 70, 112], gait: gaitFrameTiles(OGRE_B, 1.5), rig: ogreRig, swing: e => e.look.rock ? SWINGS.bow : e.look.gorr ? SWINGS.slam : SWINGS.heavy },
+  ogre: { size: [140, 140, 70, 112], gait: gaitFrameTiles(OGRE_B, 1.5), rig: ogreRig, swing: e => e.look.rock ? SWINGS.bow : e.look.gorr || e.look.azh ? SWINGS.slam : SWINGS.heavy },
   // art B2: new families (cave bat, bog toad, restless dead)
   bat: { size: [84, 72, 42, 56], gait: 0.22, rig: batRig, swing: () => FEEL_OLD ? SWINGS.bite : MON_SWINGS.lunge },
   toad: { size: [84, 64, 42, 46], gait: 0.2, rig: toadRig, swing: () => FEEL_OLD ? SWINGS.bite : TOAD_LASH },
@@ -1998,6 +2041,7 @@ const MONSTERS = {
   oenforcer: { family: 'ogre', name: 'OGRE ENFORCER', minLevel: 99, look: { grunt: true, pads: true, cleaver: true, scale: 1.05 }, hp: 50, dmg: [8, 13], speed: 24, reach: 1.7, xp: 60, chest: 32, shadow: 10, where: 'out' },
   // art B4: from the user's concepts (art/concepts/monsters/gorr.png, ironjaw_enforcer.png); minLevel 99, placeholder stats
   // art B6: infernal boss from the user's Hellbound sheet (art/concepts/monsters/malgrath.png); minLevel 99, placeholder stats near Gorr
+  azhruk: { family: 'ogre', name: 'AZHRUK', title: 'THE FURNACE GUARD', minLevel: 99, look: { azh: true, scale: 1.5, size: [150, 156, 75, 112] }, hp: 220, dmg: [11, 18], speed: 18, reach: 2.4, xp: 230, chest: 50, shadow: 14, unique: true },
   malgrath: { family: 'ogre', name: 'MALGRATH', title: 'THE IRON BUTCHER', minLevel: 99, look: { malg: true, scale: 1.5, size: [140, 154, 70, 112] }, hp: 170, dmg: [10, 17], speed: 22, reach: 2.2, xp: 200, chest: 48, shadow: 13, unique: true },
   gorr: { family: 'ogre', name: 'GORR', title: 'THE MINEBREAKER', minLevel: 99, look: { gorr: true, scale: 1.5 }, hp: 150, dmg: [9, 15], speed: 20, reach: 2.3, xp: 170, chest: 46, shadow: 13, unique: true, boss: 'slam' },
   ironjaw: { family: 'ogre', name: 'IRONJAW ENFORCER', minLevel: 99, look: { grunt: true, ironjaw: true, scale: 1.2 }, hp: 64, dmg: [9, 14], speed: 24, reach: 1.8, xp: 75, chest: 34, shadow: 11, where: 'out', elite: true },

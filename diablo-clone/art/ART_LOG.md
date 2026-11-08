@@ -463,3 +463,13 @@ Other monsters cmp-identical; 304 frames, 0 edge hits.
 **Malgrath v6:** the wavy veins became a jagged crack network (borders of a 3D cell noise, cell 5.6, glowing FIREM
 core with a MARKB rim, still pulsing on idle); three iron spikes on each pauldron; FIREM smoldering horn tips;
 shins darken to CLOTH_DARK toward the hooves. Others cmp-identical; 0 edge hits.
+
+## B6, 2 of 4: Azhruk, the Furnace Guard (2026-11-08)
+`azhruk` (family ogre, `look.azh`, scale 1.5, size [150,156,75,112], `unique`, minLevel 99, placeholder stats above
+Malgrath; swings `SWINGS.slam` like Gorr). Gorr's body and two-handed hammer handling (`GR` includes AZ) sealed in
+plate: armor material ROCK (one step darker via bias), CLOTH_DARK lames; a furnace grate on the chest with three
+glowing FIREM slits and one on the back; a flat-topped bucket great helm with a glowing visor slit and tan bull
+horns; angular pauldrons of three stepped dark-rimmed plates; knee and elbow cops; iron belt and buckle, plate
+tassets, a torn red tabard front and back; an armored tail of segments ending in a hook; a block of iron for the
+hammer head. Passes: CHITIN read as a shiny chocolate blob -> ROCK; bone rivets -> iron; tabard and slits enlarged;
+ball helm -> bucket; balloon pauldrons -> stepped plates. Other monsters, Malgrath included, cmp-identical; 0 edge hits.
