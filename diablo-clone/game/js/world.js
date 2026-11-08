@@ -476,13 +476,14 @@ function placeDecor(R, level) {
     const ok = LV.rooms.map((r, n) => n).filter(n => n > 0 && n !== LV.stairs.room && n !== LV.leaderRoom && LV.rooms[n].shape === 'rect' && LV.rooms[n].w >= 8 && LV.rooms[n].h >= 8);
     ok.sort((a, b) => LV.rooms[b].w * LV.rooms[b].h - LV.rooms[a].w * LV.rooms[a].h);
     const take = (job, pickLargest) => { if (!ok.length || R() > 0.85) return; const k = pickLargest ? 0 : R.int(0, ok.length - 1); LV.rooms[ok[k]].job = job; ok.splice(k, 1); };
-    take('chapel', true); take('ossuary', false); take('burial', false);
+    take('chapel', true); take('ossuary', false); take('burial', false); take('prison', false); take('library', false);
   }
   LV.rooms.forEach((r, n) => {
     const mine = (i, j) => LV.roomOf[tIdx(i, j)] === n;   // (shaped rooms: only tiles of this room's own floor)
     const th = LV.theme, interior = () => { for (let t = 0; t < 30; t++) { const i = R.int(r.x + 1, r.x + r.w - 2), j = R.int(r.y + 1, r.y + r.h - 2); if (mine(i, j) && Math.abs(i - r.cx) + Math.abs(j - r.cy) > 1) return [i, j]; } return [r.cx, r.cy]; };
     const nearWall = () => { for (let t = 0; t < 40; t++) { const i = R.int(r.x, r.x + r.w - 1), j = R.int(r.y, r.y + r.h - 1); if (mine(i, j) && wallSide(i, j)) return [i, j]; } return null; };
     if (r.job) { roomJob(r, n, D, R, mine); return; }   // round 68d: a room with a job is laid out on its own
+    if (th === 'crypt' && n && r.w >= 9 && r.h >= 9 && R() < 0.22 && LV.shafts) { const fi = r.x + r.w * (0.3 + R() * 0.4), fj = r.y + r.h * (0.3 + R() * 0.4); LV.shafts.push({ fi, fj }); LV.stamps.push({ kind: 'debris', fi, fj }); }   // a crack in the ceiling: moonlight and fallen stones
     if (th === 'crypt') {
       if (R() < 0.4) { const q = nearWall(); if (q && trySolid(...q)) D.push({ kind: 'coffin', i: q[0], j: q[1], yaw: tileAt(q[0] - 1, q[1]) === WALL || tileAt(q[0] + 1, q[1]) === WALL ? Math.PI / 2 : 0 }); }
       if (R() < 0.3) { const q = nearWall(); if (q && trySolid(...q)) D.push({ kind: 'candles', i: q[0], j: q[1] }); }
@@ -545,11 +546,20 @@ function roomJob(r, n, D, R, mine) {
     put('candles', 1, mid - 2); put('candles', 1, mid + 2);
     const [ci, cj] = T(Math.floor(L / 2), mid), [a0i, a0j] = T(2, mid), [a1i, a1j] = T(L - 1, mid);
     LV.stamps.push({ kind: 'carpet', a: [a0i + 0.5, a0j + 0.5], b: [a1i + 0.5, a1j + 0.5] }, { kind: 'mosaic', fi: ci + 0.5, fj: cj + 0.5 });
-    for (let u = 3; u <= L - 3; u += 2) for (const v of [mid - 2, mid + 2]) put('pew', u, v, { yaw: alongI ? Math.PI / 2 : 0 });
+    for (let u = 3; u <= L - 3; u += 2) for (const v of [mid - 3, mid - 2, mid + 2, mid + 3]) put('pew', u, v, { yaw: alongI ? Math.PI / 2 : 0 });   // (benches two tiles long each side of the carpet)
     LV.shafts.push({ fi: ci + 0.5, fj: cj + 0.5 });
   } else if (r.job === 'burial') {
     for (let u = 2; u <= L - 3; u += 3) for (const v of [mid - 2, mid + 2]) put('sarco', u, v, { open: R() < 0.4, yaw: alongI ? Math.PI / 2 : 0 });
     if (R() < 0.6) put('candles', 1, mid);
+  } else if (r.job === 'prison') {   // a row of cells along the back: bars across the front with a door gap in each, chains and a slumped prisoner's bones inside, straw
+    for (let v = 0; v < Wd; v++) { if (v % 4 === 2) continue; const [i, j] = T(2, v); if (mine(i, j) && !hidesStairs(i, j) && trySolid(i, j)) D.push({ kind: 'bars', i, j, yaw: alongI ? 0 : Math.PI / 2 }); }
+    for (let v = 1; v < Wd - 1; v += 4) { const [i, j] = T(0, v); D.push({ kind: 'bones', fi: i + 0.6, fj: j + 0.6, seed: R.int(1, 1e6) }); LV.stamps.push({ kind: 'straw', fi: i + 0.5, fj: j + 0.5 }); }
+    if (R() < 0.7) put('candles', L - 2, mid);
+  } else if (r.job === 'library') {   // shelves along the back walls, a reading table in the middle, pages scattered
+    for (let k = 0; k < L; k++) { const [i, j] = T(k, 0); if (mine(i, j) && (tileAt(i - 1, j) === WALL || tileAt(i, j - 1) === WALL) && !hidesStairs(i, j) && trySolid(i, j)) D.push({ kind: 'bookshelf', i, j, yaw: tileAt(i - 1, j) === WALL ? 0 : Math.PI / 2 }); }
+    for (let k = 1; k < Wd; k++) { const [i, j] = T(0, k); if (mine(i, j) && (tileAt(i - 1, j) === WALL || tileAt(i, j - 1) === WALL) && !hidesStairs(i, j) && trySolid(i, j)) D.push({ kind: 'bookshelf', i, j, yaw: tileAt(i - 1, j) === WALL ? 0 : Math.PI / 2 }); }
+    put('table', Math.floor(L / 2), mid, { yaw: alongI ? 0 : Math.PI / 2 });
+    LV.stamps.push({ kind: 'pages', fi: r.cx + 0.5, fj: r.cy + 0.5, seed: R.int(1, 1e6) });
   } else if (r.job === 'ossuary') {
     for (let j = r.y - 1; j <= r.y + r.h; j++) for (let i = r.x - 1; i <= r.x + r.w; i++) {
       if (tileAt(i, j) !== WALL) continue;
@@ -855,13 +865,35 @@ const PROPS = {
     for (const a of [0.4, 2.2, 4.1]) r.cone([0, 0, 1], [Math.cos(a) * 9, Math.sin(a) * 9, 0.2], 0.35, 0.3, M.BONE, { noShadow: true });
   }, [30, 26, 15, 18]),
   // round 68d: rooms with a job. A chapel pew: a plank seat on two legs with a back rail
-  pew: (yaw) => propSprite('pew', r => {
-    r.box([0, 0, 4.2], [9.5, 2.4, 0.7], M.WOOD);   // the seat
-    for (const x of [-7.5, 7.5]) r.box([x, 0, 2], [0.8, 2.2, 2], M.WOOD);   // the legs
-    r.box([0, -2.2, 7.2], [9.5, 0.6, 2.4], M.WOOD, null, { mf: p => Math.abs(p[0] + 3) < 0.6 && p[2] > 6 ? M.LEATHER : 0 });   // the back, a crack across it
-    for (const x of [-9, 9]) r.box([x, -2.2, 5.5], [0.7, 0.7, 4], M.WOOD);   // its posts
-  }, [44, 32, 22, 22], yaw),
-  // a stone coffin: carved band round it, a lid with a cross; open ones have the lid shoved half off and a skull inside
+  pew: (yaw) => propSprite('pew', r => {   // one tile long, so pews side by side join into a long bench
+    r.box([0, 0, 4.2], [11.3, 2.6, 0.7], M.WOOD);   // the seat
+    for (const x of [-10, 10]) r.box([x, 0, 2], [0.8, 2.3, 2], M.WOOD);   // the legs
+    r.box([0, -2.4, 7.6], [11.3, 0.6, 2.6], M.WOOD, null, { mf: p => Math.abs(p[2] - 8.6) < 0.4 ? M.LEATHER : 0 });   // the back, with a rail line
+  }, [52, 34, 26, 22], yaw),
+  // round 68d (improve): iron bars for a prison cell's front, one tile wide, a rail top and bottom
+  bars: (yaw) => propSprite('bars', r => {
+    for (const y of [-11.3, 11.3]) r.box([0, y * 0.98, 13], [0.9, 0.9, 13], M.IRON);   // the posts
+    for (const z of [1, 25]) r.box([0, 0, z], [0.6, 11.3, 0.7], M.IRON);   // the rails
+    for (let k = -4; k <= 4; k++) r.cyl([0, k * 2.4, 1], [0, k * 2.4, 25], 0.5, M.IRON);
+  }, [40, 52, 20, 40], yaw),
+  // a bookshelf against a wall (its back to the wall, facing +x): shelves of leaning books in a few colors
+  bookshelf: (yaw) => propSprite('bookshelf', r => {
+    r.box([-8, 0, 14], [3, 10.6, 14], M.WOOD);   // the case (its back against the wall)
+    for (const z of [3, 10, 17, 24]) {
+      r.box([-4.8, 0, z - 0.6], [0.4, 10, 0.5], M.WOOD);
+      const R = rng(z * 7 + 3);
+      for (let y = -9; y < 9; ) { const w = 0.9 + R() * 0.8, h = 4 + R() * 2, c = [M.CLOTH_RED, M.LEATHER, M.CLOTH_NAVY, M.CLOTH_GREEN, M.HAIR][Math.floor(R() * 5)]; if (R() < 0.15) { y += w + 0.6; continue; } r.box([-4.8, y + w / 2, z + h / 2], [2.4, w / 2, h / 2], c); y += w + 0.15; }
+    }
+  }, [40, 60, 20, 46], yaw),
+  // a reading table: a plank top on trestles, an open book and a candle
+  table: (yaw) => propSprite('table', r => {
+    r.box([0, 0, 9], [13, 7, 0.8], M.WOOD);   // the top
+    for (const x of [-10, 10]) r.box([x, 0, 4.2], [1, 5.6, 4.2], M.WOOD);   // the trestles
+    r.box([-2, 0, 10.2], [4.2, 3.2, 0.4], M.CLOTH_WHITE, null, { mf: p => Math.abs(p[0] + 2) < 0.35 ? M.LEATHER : 0 });   // the open book
+    r.box([6, 3, 10.4], [2.2, 1.6, 0.6], M.CLOTH_RED);   // a closed one
+    r.cyl([8, -3.5, 9.8], [8, -3.5, 14.5], 1, M.WAX); r.sph([8, -3.5, 15.5], 1, M.FIREM, { noShadow: true });
+  }, [64, 48, 32, 30], yaw),
+  // a stone coffin: carved band  // a stone coffin: carved band round it, a lid with a cross; open ones have the lid shoved half off and a skull inside
   sarcophagus: (open, yaw) => propSprite('sarco' + (open ? 'o' : ''), r => {
     r.box([0, 0, 4.6], [13, 5.8, 4.6], M.STONE, null, { mf: p => Math.abs(p[2] - 6.2) < 0.6 || Math.abs(p[2] - 1.2) < 0.5 ? M.ROCK : 0 });   // carved bands
     if (!open) { r.box([0, 0, 9.9], [13.6, 6.4, 0.9], M.STONE, null, { mf: p => p[2] > 10.4 && ((Math.abs(p[1]) < 0.8 && Math.abs(p[0] - 1.5) < 7) || (Math.abs(p[0] - 4.8) < 0.8 && Math.abs(p[1]) < 3.4)) ? M.ROCK : 0 }); return; }
@@ -1074,6 +1106,13 @@ function stampFloorArt() {
         const tile = tileAt(Math.floor(fi), Math.floor(fj)); if (tile !== FLOOR) continue;
         floorBuf[k] = w > 0.62 ? K2 : w > 0.5 ? GOLD[1] : ((Math.floor(t * 6) + Math.floor(w * 8)) % 7 === 0 ? RED[1] : hash(x, y, 31) < 0.06 ? RED[1] : RED[2]);
       }
+    } else if (st.kind === 'straw' || st.kind === 'pages' || st.kind === 'debris') {   // straw in a cell; loose pages; stones fallen from a cracked ceiling
+      const R = rng(st.seed || Math.round(st.fi * 131 + st.fj * 7)), n = st.kind === 'straw' ? 60 : st.kind === 'pages' ? 9 : 14;
+      for (let q = 0; q < n; q++) {
+        const fi = st.fi + (R() - 0.5) * (st.kind === 'pages' ? 3 : 1.4), fj = st.fj + (R() - 0.5) * (st.kind === 'pages' ? 3 : 1.4), x0 = Math.round(WX0 + (fi - fj) * 16), y0 = Math.round(WY0 + (fi + fj) * 8);
+        const w = st.kind === 'straw' ? 3 : st.kind === 'pages' ? 3 : 2, h = st.kind === 'straw' ? 1 : 2;
+        for (let b = 0; b < h; b++) for (let a = 0; a < w; a++) { const x = x0 + a + (st.kind === 'straw' ? b : 0), y = y0 + b; if (x < 0 || y < 0 || x >= WW || y >= WH) continue; const k = y * WW + x; if (floorBuf[k] === BLK || tileAt(Math.floor(fi), Math.floor(fj)) !== FLOOR) continue; floorBuf[k] = st.kind === 'straw' ? (R() < 0.5 ? STRAW[2] : STRAW[1]) : st.kind === 'pages' ? (b === h - 1 ? BONE[1] : BONE[3]) : (b ? ST(2) : ST(5)); }
+      }
     } else if (st.kind === 'mosaic') {
       for (let y = 0; y < WH; y++) for (let x = 0; x < WW; x++) {
         const A = (x - WX0) + 2 * (y - WY0), B = 2 * (y - WY0) - (x - WX0), di = A / 32 - st.fi, dj = B / 32 - st.fj, d = Math.hypot(di, dj); if (d > 1.9) continue;
@@ -1140,9 +1179,10 @@ function buildWorld() {
         }
         lights.push({ x, y, z: 14, r: 80, i: 0.65, seed: d.i + d.j });
       }
-    } else if (d.kind === 'pew' || d.kind === 'sarco' || d.kind === 'altar') {   // round 68d
+    } else if (d.kind === 'pew' || d.kind === 'sarco' || d.kind === 'altar' || d.kind === 'bars' || d.kind === 'bookshelf' || d.kind === 'table') {   // round 68d
       const [x, y] = iso(d.i + 0.5, d.j + 0.5);
-      const sp = d.kind === 'pew' ? PROPS.pew(d.yaw) : d.kind === 'sarco' ? PROPS.sarcophagus(!!d.open, d.yaw) : BUILD.altar();   // (Osric's altar, from the camp)
+      if (d.kind === 'table') lights.push({ x, y, z: 12, r: 70, i: 0.55, seed: d.i * 3 + d.j });
+      const sp = d.kind === 'bars' ? PROPS.bars(d.yaw) : d.kind === 'bookshelf' ? PROPS.bookshelf(d.yaw) : d.kind === 'table' ? PROPS.table(d.yaw) : d.kind === 'pew' ? PROPS.pew(d.yaw) : d.kind === 'sarco' ? PROPS.sarcophagus(!!d.open, d.yaw) : BUILD.altar();   // (Osric's altar, from the camp)
       props.push({ depth: d.i + d.j + 1, sp, wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
       if (d.kind === 'altar') lights.push({ x, y, z: 20, r: 110, i: 0.8, seed: d.i * 5 + d.j });
     } else if (d.kind === 'mushroom') {
