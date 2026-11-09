@@ -1,0 +1,507 @@
+{
+ "name": "ASHFORD VALE",
+ "act": 2,
+ "region": 1,
+ "size": 100,
+ "note": "Coordinates (u, s) as in hollow.json: u east(+)/west(-) across the screen, s north(0) to south(100) down it. Tile i = s + u, j = s - u. Made by mk-ashford.py from ChatGPT-map coordinates.",
+ "clearings": [
+  {
+   "id": "arrival",
+   "name": "FROM ACT I",
+   "u": -7.5,
+   "s": 14.3,
+   "r": 4,
+   "level": 0
+  },
+  {
+   "id": "town",
+   "name": "ASHFORD",
+   "u": -19.5,
+   "s": 48.5,
+   "r": 10,
+   "level": 0,
+   "kind": "camp"
+  },
+  {
+   "id": "cartway",
+   "name": "CARTWAY",
+   "u": 3.8,
+   "s": 48.5,
+   "r": 8,
+   "level": 7
+  },
+  {
+   "id": "pityard",
+   "name": "RESCUE PIT YARD",
+   "u": 12.0,
+   "s": 31.8,
+   "r": 8,
+   "level": 7,
+   "lvlTo": 8
+  },
+  {
+   "id": "rennyard",
+   "name": "RENN'S YARD",
+   "u": 20.2,
+   "s": 58.4,
+   "r": 7,
+   "level": 8
+  },
+  {
+   "id": "haul",
+   "name": "HAUL GATE",
+   "u": 33.8,
+   "s": 46.2,
+   "r": 4,
+   "level": 8
+  },
+  {
+   "id": "copse",
+   "name": "CHARCOAL COPSE",
+   "u": 9.0,
+   "s": 72.8,
+   "r": 8,
+   "level": 7,
+   "lvlTo": 8
+  },
+  {
+   "id": "graveroad",
+   "name": "GRAVE ROAD",
+   "u": -6.0,
+   "s": 66.7,
+   "r": 6,
+   "level": 7
+  },
+  {
+   "id": "forecourt",
+   "name": "BLACKWAKE",
+   "u": -17.2,
+   "s": 72.8,
+   "r": 6,
+   "level": 11,
+   "lvlTo": 12,
+   "danger": true
+  },
+  {
+   "id": "oak",
+   "name": "HOLLOW OAK",
+   "u": 25.5,
+   "s": 69.8,
+   "r": 5,
+   "level": 8
+  }
+ ],
+ "roads": [
+  {
+   "from": "arrival",
+   "via": [
+    [
+     -15.0,
+     27.2
+    ]
+   ],
+   "to": "town",
+   "w": 3,
+   "main": true
+  },
+  {
+   "from": "town",
+   "via": [
+    [
+     -6.0,
+     45.4
+    ]
+   ],
+   "to": "cartway",
+   "w": 4,
+   "main": true
+  },
+  {
+   "from": "cartway",
+   "via": [
+    [
+     4.5,
+     36.3
+    ]
+   ],
+   "to": "pityard",
+   "w": 3,
+   "main": true
+  },
+  {
+   "from": "pityard",
+   "via": [
+    [
+     19.5,
+     40.9
+    ]
+   ],
+   "to": "rennyard",
+   "w": 3
+  },
+  {
+   "from": "cartway",
+   "via": [
+    [
+     13.5,
+     50.0
+    ]
+   ],
+   "to": "rennyard",
+   "w": 4,
+   "main": true
+  },
+  {
+   "from": "rennyard",
+   "via": [
+    [
+     28.5,
+     48.5
+    ]
+   ],
+   "to": "haul",
+   "w": 4,
+   "main": true
+  },
+  {
+   "from": "cartway",
+   "via": [
+    [
+     0.0,
+     60.6
+    ]
+   ],
+   "to": "copse",
+   "w": 3
+  },
+  {
+   "from": "copse",
+   "via": [
+    [
+     19.5,
+     62.2
+    ]
+   ],
+   "to": "rennyard",
+   "w": 2
+  },
+  {
+   "from": "cartway",
+   "via": [
+    [
+     0.0,
+     60.6
+    ]
+   ],
+   "to": "graveroad",
+   "w": 2
+  },
+  {
+   "from": "graveroad",
+   "to": "forecourt",
+   "w": 2
+  },
+  {
+   "from": "copse",
+   "to": "oak",
+   "w": 1
+  }
+ ],
+ "water": [],
+ "cliffs": [
+  {
+   "name": "north crags",
+   "path": [
+    [
+     6.0,
+     19.6
+    ],
+    [
+     18.0,
+     16.6
+    ],
+    [
+     27.0,
+     22.6
+    ],
+    [
+     30.0,
+     34.8
+    ]
+   ],
+   "w": 3
+  },
+  {
+   "name": "haul gate cliffs south",
+   "path": [
+    [
+     33.0,
+     53.0
+    ],
+    [
+     31.5,
+     62.2
+    ],
+    [
+     33.0,
+     72.8
+    ]
+   ],
+   "w": 3
+  },
+  {
+   "name": "tomb crags",
+   "path": [
+    [
+     -27.0,
+     68.2
+    ],
+    [
+     -24.0,
+     78.9
+    ]
+   ],
+   "w": 2
+  }
+ ],
+ "doors": [
+  {
+   "id": "rescuepit",
+   "name": "RESCUE PIT",
+   "u": 15.0,
+   "s": 22.6,
+   "dungeon": "caves",
+   "floors": 1,
+   "boss": "oenforcer",
+   "labelUp": true,
+   "note": "mine-works caves; the Pit Enforcer (ogre enforcer); Renn and two miners behind a barricade"
+  },
+  {
+   "id": "blackwake",
+   "name": "BLACKWAKE TOMB",
+   "u": -19.5,
+   "s": 78.9,
+   "dungeon": "crypt",
+   "floors": 1,
+   "level": 11,
+   "danger": true,
+   "note": "DANGER LV 11-12 sign; elite tomb guard + two crossbowmen; burial ledger, a rare"
+  }
+ ],
+ "gates": [
+  {
+   "id": "haulgate",
+   "label": "Haul Gate (opens when Renn is free)",
+   "at": [
+    31.5,
+    46.2
+   ],
+   "opens": "rennFree",
+   "note": "timber gate between cliffs, windlass, mining banner; Renn waits here after the rescue"
+  }
+ ],
+ "landmarks": [
+  {
+   "name": "town bell",
+   "u": -19.5,
+   "s": 48.5
+  },
+  {
+   "name": "timber shelter",
+   "u": 4.5,
+   "s": 30.2
+  },
+  {
+   "name": "charcoal kiln",
+   "u": 12.0,
+   "s": 77.4
+  },
+  {
+   "name": "giant hollow oak",
+   "u": 30.0,
+   "s": 65.2
+  },
+  {
+   "name": "DANGER posts",
+   "u": -10.5,
+   "s": 68.2
+  },
+  {
+   "name": "dropped helmet",
+   "u": -12.0,
+   "s": 22.6
+  }
+ ],
+ "packs": [
+  {
+   "at": "cartway",
+   "id": "wolf",
+   "n": 3,
+   "count": 1
+  },
+  {
+   "at": "cartway",
+   "id": "goblin",
+   "n": 3,
+   "count": 1
+  },
+  {
+   "at": "pityard",
+   "id": "digger",
+   "n": 3,
+   "count": 2
+  },
+  {
+   "at": "rennyard",
+   "id": "goblin",
+   "n": 3,
+   "count": 1,
+   "with": "gshaman"
+  },
+  {
+   "at": "copse",
+   "id": "boar",
+   "n": 2,
+   "count": 1
+  },
+  {
+   "at": "copse",
+   "id": "goblin",
+   "n": 3,
+   "count": 1
+  },
+  {
+   "at": "graveroad",
+   "id": "wolf",
+   "n": 3,
+   "count": 1
+  },
+  {
+   "at": "forecourt",
+   "id": "tombguard",
+   "n": 1,
+   "count": 1
+  },
+  {
+   "at": "forecourt",
+   "id": "gravebow",
+   "n": 1,
+   "count": 1
+  },
+  {
+   "at": "oak",
+   "id": "goblin",
+   "n": 2,
+   "count": 1
+  }
+ ],
+ "caches": [
+  {
+   "name": "lost satchel",
+   "u": 5.2,
+   "s": 27.2
+  },
+  {
+   "name": "Tamsin's ore",
+   "u": 24.0,
+   "s": 61.4
+  },
+  {
+   "name": "memorial offering",
+   "u": -3.8,
+   "s": 75.8
+  },
+  {
+   "name": "hollow oak cache",
+   "u": 27.8,
+   "s": 72.8
+  }
+ ],
+ "town": {
+  "r": 10,
+  "gates": [
+   {
+    "name": "north gate (from Act I)",
+    "du": -2,
+    "ds": -9.5
+   },
+   {
+    "name": "east gate (to the Cartway)",
+    "du": 9.5,
+    "ds": -1
+   }
+  ],
+  "stations": [
+   {
+    "who": "MARA VENN",
+    "role": "reeve, quests",
+    "du": -1.6,
+    "ds": 0.2,
+    "prop": "the bell (centre)",
+    "pdu": 0,
+    "pds": 0
+   },
+   {
+    "who": "TAMSIN FLINT",
+    "role": "smith",
+    "du": -5.2,
+    "ds": 0.4,
+    "prop": "forge + anvil",
+    "pdu": -7,
+    "pds": -0.6
+   },
+   {
+    "who": "BRAM TOLL",
+    "role": "merchant",
+    "du": -5,
+    "ds": 4.4,
+    "prop": "wagon stall",
+    "pdu": -6.6,
+    "pds": 4
+   },
+   {
+    "who": "NELLA REED",
+    "role": "potions",
+    "du": 2.6,
+    "ds": -4.2,
+    "prop": "potion counter",
+    "pdu": 3.8,
+    "pds": -4.4
+   },
+   {
+    "who": "SISTER EDDA",
+    "role": "keeper of the dead",
+    "du": 5,
+    "ds": 4.2,
+    "prop": "memorial stone",
+    "pdu": 6.2,
+    "pds": 4
+   },
+   {
+    "who": "RENN PIKE",
+    "role": "foreman (after the rescue)",
+    "du": -3.6,
+    "ds": -4.4,
+    "prop": "mine-office desk + map",
+    "pdu": -4.4,
+    "pds": -5
+   }
+  ],
+  "props": [
+   {
+    "name": "well",
+    "du": 2.2,
+    "ds": 1.4
+   },
+   {
+    "name": "houses (scenery, round the square)",
+    "du": 0,
+    "ds": 8
+   }
+  ]
+ },
+ "woodsFringe": 6,
+ "roadFringe": 4,
+ "gridRows": 8,
+ "note2": "As the Hollow: walkable = clearings + open woods near them and the roads; thick forest (pines) is the wall. The town is a palisade with a north gate (arrival) and an east gate (Cartway)."
+}

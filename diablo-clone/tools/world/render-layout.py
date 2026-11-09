@@ -39,7 +39,7 @@ for c in C.values():
                 if T[j][i] in ('clear', 'woods') and math.hypot(i - ci, j - cj) < c['r'] + 3: T[j][i] = 'danger'
 COL = {'thick': (22, 46, 28), 'woods': (58, 96, 50), 'clear': (104, 150, 70), 'road': (156, 118, 74), 'water': (64, 118, 170), 'cliff': (112, 104, 112), 'danger': (110, 70, 64)}
 TW, TH, M = 14, 7, 40
-W, H = N * TW + 2 * M, N * TH + 2 * M + 60
+W, H = N * TW + 2 * M, N * TH + 2 * M + 60 + (150 if D.get('act', 1) > 1 else 0)
 im = Image.new('RGB', (W, H), (14, 10, 9)); g = ImageDraw.Draw(im)
 X = lambda i, j: (M + (i - j) * TW / 2 + N * TW / 2, M + 50 + (i + j) * TH / 2)
 random.seed(4)
@@ -63,7 +63,9 @@ for dr in D['doors']:
     g.rectangle([x - 8, y - 8, x + 8, y + 6], fill=(12, 8, 8), outline=col, width=3)
 for ca in D['caches']:
     x, y = at(ca['u'], ca['s']); g.rectangle([x - 5, y - 4, x + 5, y + 4], fill=(240, 196, 60), outline=(90, 60, 10))
-PC = {'wolf': (220, 60, 40), 'slime': (90, 200, 80), 'boar': (180, 120, 70), 'goblin': (120, 200, 60), 'skeleton': (240, 240, 230)}
+PC = {'wolf': (220, 60, 40), 'slime': (90, 200, 80), 'boar': (180, 120, 70), 'goblin': (120, 200, 60), 'skeleton': (240, 240, 230), 'digger': (200, 150, 90), 'tombguard': (200, 200, 220), 'gravebow': (240, 240, 230), 'spearman': (240, 240, 230)}
+for lm in D.get('landmarks', []):
+    if D.get('act', 1) > 1: x, y = at(lm['u'], lm['s']); g.polygon([(x, y - 7), (x + 5, y), (x, y + 7), (x - 5, y)], fill=(200, 160, 240), outline=(0, 0, 0))
 for pk in D['packs']:
     c = C[pk['at']]; ci, cj = ij(c['u'], c['s'])
     for k in range(pk['count']):
@@ -75,14 +77,17 @@ for c in C.values():
     txt(c['name'], x, y - c['r'] * TH * 0.55 - 8, (255, 120, 110) if c.get('danger') else (255, 240, 200)); 
     if lv: txt(lv, x, y - c['r'] * TH * 0.55 + 7, (230, 225, 200), f)
 for dr in D['doors']:
-    x, y = at(dr['u'], dr['s']); txt(dr['name'] + f" ({dr['dungeon']}, {dr['floors']} fl)", x, y + 16, (255, 150, 140) if dr.get('danger') else (250, 220, 140), f)
-for gt in D['gates']: x, y = at(*gt['at']); txt('fallen tree (Aldo clears it)', x, y + 20, (250, 210, 150), f)
+    x, y = at(dr['u'], dr['s']); y = y - 32 if dr.get('labelUp') else y; txt(dr['name'] + f" ({dr['dungeon']}, {dr['floors']} fl" + (f", LV {dr['level']}+" if dr.get('level') else '') + ")", x, y + 16, (255, 150, 140) if dr.get('danger') else (250, 220, 140), f)
+for gt in D['gates']: x, y = at(*gt['at']); txt(gt.get('label', 'fallen tree (Aldo clears it)'), x - (20 if gt.get('label') else 0), y + 22, (250, 210, 150), f)
+if D.get('act', 1) > 1:
+    for lm in D.get('landmarks', []): x, y = at(lm['u'], lm['s']); txt(lm['name'], x, y - 13, (215, 190, 245), f)
 # a lettered grid for markup notes
-cols, rows = 8, 5
-for k in range(cols + 1): xx = M + k * (N * TW) / cols; g.line([(xx, 50), (xx, H - 10)], fill=(255, 255, 255, 40), width=1)
-for k in range(rows + 1): yy = 50 + k * (H - 60) / rows; g.line([(M, yy), (W - M, yy)], fill=(255, 255, 255, 40), width=1)
+cols, rows = 8, D.get('gridRows', 5)
+GH = H - (150 if D.get('act', 1) > 1 else 0)
+for k in range(cols + 1): xx = M + k * (N * TW) / cols; g.line([(xx, 50), (xx, GH - 10)], fill=(255, 255, 255, 40), width=1)
+for k in range(rows + 1): yy = 50 + k * (GH - 60) / rows; g.line([(M, yy), (W - M, yy)], fill=(255, 255, 255, 40), width=1)
 for k in range(cols): txt('ABCDEFGHIJ'[k], M + (k + 0.5) * (N * TW) / cols, 58, (200, 200, 200), f)
-for k in range(rows): txt(str(k + 1), M - 14, 50 + (k + 0.5) * (H - 60) / rows, (200, 200, 200), f)
+for k in range(rows): txt(str(k + 1), M - 14, 50 + (k + 0.5) * (GH - 60) / rows, (200, 200, 200), f)
 txt(f"{D['name']}: LAYOUT (north up, as the game shows it)", W / 2, 22, (255, 230, 170), FT)
 # legend
 lx, ly = 14, H - 150
