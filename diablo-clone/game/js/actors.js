@@ -408,6 +408,25 @@ HAT_STYLE.hat_maelis = { m: M.CLOTH_DARK, band: M.HAIR_O };   // round 67: Maeli
 const TEAM = { red: M.CLOTH_RED, blue: M.CLOTH_BLUE, green: M.CLOTH_GREEN, tan: M.CLOTH_TAN, purple: M.CLOTH_PURPLE, white: M.CLOTH_WHITE };
 // townsfolk share the hero's rig: hair color, a beard, or no weapon at all
 const HAIRM = { orange: M.HAIR_O, brown: M.HAIR, blond: M.STRAWM, grey: M.CLOTH_WHITE };
+// round 71: the face. Eyes with a glint, brows, a mouth, cheeks; a nose and ears as shapes; hair
+// showing under a hat or hood. One painter for every open-faced head (heroes and townsfolk).
+// o: { line: paint the hairline (bare head), under: hair under a hat/cap/hood, hair: material }
+defMat('GLINT', [27], 0, { flat: true }); defMat('CHEEK', [62, 62, 63, 63], 2, { span: 0.45 }); defMat('BROW', [33], 0, { flat: true });
+function faceMf(hd, fwd, sideR, up, o = {}) {
+  return p => {
+    const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up), as = Math.abs(s2), ex = as - 1.65;
+    if (o.line && (z2 > 1.55 + Math.max(0, f2 - 2.5) * 0.2 || f2 < -1.2 || (as > 3.4 && z2 > -0.6))) return o.hair;
+    if (o.under && (f2 < -0.9 || (as > 3.35 && z2 > -1.5 && f2 < 1.6) || (z2 > (o.under === 2 ? 1.75 : 2.15) && f2 > -0.9))) return o.hair;
+    if (f2 > 2.0 && Math.abs(ex) < 0.62 && z2 > -1.2 && z2 < 0.85) return z2 > 0.1 && (s2 - Math.sign(s2) * 1.65) < -0.12 ? M.GLINT : M.EYE;
+    if (f2 > 1.9 && as > 0.9 && as < 2.5 && z2 > 1.12 && z2 < 1.5) return o.brow || M.BROW;
+    if (f2 > 3.0 && as < 0.42 && Math.abs(z2 + 2.2) < 0.2) return M.CHEEK;   // a small mouth, one tone under the skin
+    return 0;
+  };
+}
+function faceParts(r, hd, fwd, sideR, up, ears) {   // the nose, and ears where nothing covers them
+  r.sph(V.add(V.mad(hd, fwd, 4.3), V.mul(up, -0.7)), 0.6, M.FACE, { noShadow: true });
+  if (ears) for (const sd of [-1, 1]) r.sph(V.add(V.add(V.mad(hd, sideR, sd * 3.85), V.mul(up, -0.5)), V.mul(fwd, -0.2)), 0.9, M.FACE, { noShadow: true });
+}
 
 // Equipment is visual family ids, separate from item stats: many items share one look.
 const GEAR_LOOKS = {
@@ -842,12 +861,7 @@ function shieldVarA8(r, id, sh0) {
 }
 // the roadwarden's kettle helm: a round steel cap with a brim and a nasal bar, the face open
 GEAR_EXTRA.helm.kettle = (r, { hd, fwd, up, sideR, helmF }) => {
-  r.ell(hd, [4.3, 4.3, 4.5], M.FACE, helmF, { mf: p => {
-    const q = V.sub(p, hd), f2 = V.dot(q, fwd), as = Math.abs(V.dot(q, sideR)), z2 = V.dot(q, up);
-    if (f2 > 2.3 && Math.abs(as - 1.6) < 0.5 && z2 > -1.0 && z2 < 0.7) return M.EYE;
-    if (f2 > 3.2 && as < 0.45 && Math.abs(z2 + 1.9) < 0.22) return M.MOUTH;
-    return 0;
-  } });
+  r.ell(hd, [4.3, 4.3, 4.5], M.FACE, helmF, { mf: faceMf(hd, fwd, sideR, up, { under: 1, hair: M.HAIR_O }) }); faceParts(r, hd, fwd, sideR, up, false);   // (round 71: the shared face; hair shows under the helm)
   const hc = V.mad(hd, up, 2.1);
   r.group(() => {
     r.ell(hc, [4.6, 4.5, 3.6], M.STEEL, helmF);
@@ -885,12 +899,7 @@ GEAR_LEN.caxe = 16; GEAR_LEN.fmace = 16; GEAR_LEN.fhammer = 18;
 Object.assign(WARRIOR_SETS, { gatewatch: { base: 'brigandine' }, duskduelist: { base: 'brigandine' }, winterbulwark: { base: 'plate' }, royalexecutor: { base: 'plate' } });
 // art A8: the gatewatch's open helm: a steel dome on a riveted iron band, a nasal bar, the face open
 GEAR_EXTRA.helm.nasal = (r, { hd, fwd, up, sideR, helmF }) => {
-  r.ell(hd, [4.3, 4.3, 4.5], M.FACE, helmF, { mf: p => {
-    const q = V.sub(p, hd), f2 = V.dot(q, fwd), as = Math.abs(V.dot(q, sideR)), z2 = V.dot(q, up);
-    if (f2 > 2.3 && Math.abs(as - 1.6) < 0.5 && z2 > -1.0 && z2 < 0.7) return M.EYE;
-    if (f2 > 3.2 && as < 0.45 && Math.abs(z2 + 1.9) < 0.22) return M.MOUTH;
-    return 0;
-  } });
+  r.ell(hd, [4.3, 4.3, 4.5], M.FACE, helmF, { mf: faceMf(hd, fwd, sideR, up, { under: 1, hair: M.HAIR_O }) }); faceParts(r, hd, fwd, sideR, up, false);   // (round 71: the shared face; hair shows under the helm)
   const hc = V.mad(hd, up, 1.6);
   r.ell(hc, [4.65, 4.6, 4.1], M.STEEL, helmF, { mf: p => { const q = V.sub(p, hc), z2 = V.dot(q, up); if (z2 > -0.6) return 0;   // the band, rivets round it
     const a = Math.atan2(V.dot(q, sideR), V.dot(q, fwd)); return Math.abs(z2 + 1.25) < 0.4 && Math.abs(Math.sin(a * 5)) > 0.8 ? M.STEEL : M.IRON; } });
@@ -1173,7 +1182,7 @@ function heroRig(eq, st) {
   const sleeve = eq.chest === 'tunic' ? team : robe ? robeM : jerk ? (JERKIN[eq.chest] || JERKIN.jerkin).sleeve : armM, foreM = eq.chest === 'tunic' ? M.FACE : robe ? robeM : jerk ? (JERKIN[eq.chest] || JERKIN.jerkin).fore || M.LEATHER : armM, handM = plate ? PL : eq.chest === 'tunic' || robe || jerk ? M.FACE : M.LEATHER;   // the jerkin: green sleeves, leather bracers
   if (robe) ar[2] += 1.1;   // bell sleeves widen toward the wrist
   r.cone(J.shR, aR.el, ar[0], ar[1], sleeve); r.cone(aR.el, aR.hand, ar[1], ar[2], foreM);
-  r.sph(aR.hand, ar[3], handM);
+  { const h = r.sph(aR.hand, ar[3], handM); h.thumb = r.sph(V.add(V.add(aR.hand, V.mul(fwd, 0.9)), V.add(V.mul(sideR, -1.0), V.mul(up, 0.7))), ar[3] * 0.56, handM, { noShadow: true }); }   // round 71: a thumb
   const robeCuff = (a, sh) => {   // round a6: a cuff at the bell sleeve's mouth, and gloves (magus)
     if (!robe) return;
     const d = V.norm(V.sub(a.hand, a.el));
@@ -1220,7 +1229,7 @@ function heroRig(eq, st) {
   const aL = armTo(J, J.shL, handL, B, -1);
   if (st.clip === 'drink') flask(drinkR ? aR.hand : aL.hand);
   r.cone(J.shL, aL.el, ar[0], ar[1], sleeve); r.cone(aL.el, aL.hand, ar[1], ar[2], foreM);
-  r.sph(aL.hand, ar[3], handM);
+  { const h = r.sph(aL.hand, ar[3], handM); h.thumb = r.sph(V.add(V.add(aL.hand, V.mul(fwd, 0.9)), V.add(V.mul(sideR, 1.0), V.mul(up, 0.7))), ar[3] * 0.56, handM, { noShadow: true }); }
   robeCuff(aL, J.shL);
   if (st.clip === 'storm') r.sph(V.mad(aL.hand, up, 1.6), 1.9, M.ARCANE, { noShadow: true });   // round 43: the storm crackling in the raised hand
   if (st.clip === 'channel' && st.f >= 9) { if (st.f === 9) { const fb = V.add(V.mad(aL.hand, up, 2.6), V.mul(fwd, 0.8)); r.sph(fb, 3.3, M.FIREM, { noShadow: true }); r.sph(V.mad(fb, up, 2.6), 1.6, M.FIREM, { noShadow: true }); } }   // the hurl: a fireball held in the cocked hand, gone once thrown
@@ -1244,6 +1253,7 @@ function heroRig(eq, st) {
     r.ell(c, [4.4, 4.4, 2.9], RS.mantle, frameAlong(fwd, up), { mf: RS.trim ? (p => V.dot(V.sub(p, c), up) < (RS.tz || -0.9) ? RS.trim : 0) : null });
   }
   if (wset) warriorSet(r, wset, J);
+  for (const q of r.p) if (q.thumb) { q.thumb.m = q.m; q.thumb.mf = q.mf; }   // a thumb wears what its hand wears
   // slim every body part made so far (centers stay put), then build the head at normal size and
   // scale it up about its center
   for (const q of r.p) { if (q.a) { q.ra *= HERO_BK; q.rb *= HERO_BK; } if (q.r) q.r *= HERO_BK; if (q.rad) q.rad = V.mul(q.rad, HERO_BK); if (q.half) q.half = V.mul(q.half, HERO_BK); }
@@ -1281,13 +1291,10 @@ function heroRig(eq, st) {
   else if (eq.helm === 'none' || eq.helm === 'cap' || eq.helm === 'spangen' || eq.helm === 'hat' || eq.helm === 'hat_conj' || eq.helm.startsWith('hood') || eq.helm.startsWith('rhood')) {
     // chibi face (round 13 pass 2): light, nearly flat skin; small dark eyes under short brows, a
     // tiny mouth; the hairline is painted on the head and the hair mass sits on top
-    r.ell(hd, [4.3, 4.3, 4.5], M.FACE, helmF, { mf: p => {
-      const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up), as = Math.abs(s2);
-      if (f2 > 2.3 && Math.abs(as - 1.6) < 0.5 && z2 > -1.0 && z2 < 0.7) return M.EYE;
-      if (f2 > 3.2 && as < 0.45 && Math.abs(z2 + 1.9) < 0.22) return M.MOUTH;
-      if (eq.helm === 'none' && !bald && (z2 > 1.55 + Math.max(0, f2 - 2.5) * 0.2 || f2 < -1.2 || (as > 3.4 && z2 > -0.6))) return hairM;
-      return 0;
-    } });
+    { const bare = eq.helm === 'none' && !bald, hood = eq.helm.startsWith('rhood') || eq.helm.startsWith('hood'), under = bald || bare ? 0 : hood ? 2 : 1;
+      const uh = HAIRM[eq.hair] || (eq.helm.startsWith('hat') || eq.helm.startsWith('hood') ? M.HAIR : eq.helm.startsWith('rhood') ? M.STRAWM : M.HAIR_O);
+      r.ell(hd, [4.3, 4.3, 4.5], M.FACE, helmF, { mf: faceMf(hd, fwd, sideR, up, { line: bare, under, hair: bare ? hairM : uh, brow: eq.hair === 'grey' ? M.IRON : 0 }) });
+      faceParts(r, hd, fwd, sideR, up, !hood); }
     if (eq.helm === 'cap') r.ell(V.mad(hd, up, 2.0), [4.7, 4.6, 3.3], M.STEEL, helmF, { mf: p => V.dot(V.sub(p, hd), up) < 0.6 ? M.LEATHER : 0 });
     if (eq.helm === 'hat' || eq.helm === 'hat_conj') {   // wizard hat: a wide brim, a tall crown that bends back to a point, gold band (round 43: the conjurer's in navy)
       const hm = eq.hatV ? eq.hatV.m : eq.helm === 'hat_conj' ? M.CLOTH_NAVY : M.CLOTH_PURPLE, base = V.add(V.mad(hd, up, 3.3), V.mul(fwd, -0.8));   // set high and tipped back so the eyes show
