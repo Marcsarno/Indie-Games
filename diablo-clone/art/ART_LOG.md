@@ -32,6 +32,19 @@ vs a pre-change copy + `cmp`; hero hash script pattern in the B2 section; edge c
 the sprite canvas edge over idle/walk/attack/hit/death x 8 dirs. Renderer has an opt-in `ff` fur hook (rig.js) unused now.
 **Known existing bug for the main chat:** Dire Bear and Gorr death frames clip at the canvas bottom (needs taller `size`).
 
+## D1: boss move animations for Malgrath and Azhruk (2026-11-09)
+The user asked for interesting boss abilities and animations; split agreed: the art chat designs (`art/BOSS_ABILITIES.md`) and builds
+every animation, and the main chat wires the gameplay (wiring notes at the end of that file).
+Malgrath (`butcherRig`): new clips `throw` (3 frames) and `hook` (3 frames; chain and hook in CHAIN/BLADE grey), the look flag `frenzy`
+(rising embers, flared eyes and mouth, a wider glowing edge), and a new projectile family `cleaverspin` (`cleaverSpinRig`, 8 frames,
+spun flat). The cleaver drawing moved into a shared `butcherCleaver()`. Azhruk (`furnaceRig`): new clip `blast` (3 frames: the grate door
+swung open and white-hot; then a flame jet) and the look flag `hot` (FIREM seams, a white-hot visor and core). Quake reuses his slam.
+Passes: the spinning cleaver (1: it spun end over end and went edge-on, so it is now spun flat), the hook (1: thicker chain, a bright
+BLADE hook) and the frenzy embers (1: more, bigger). The flame jet: pass 1 (a cone plus tongues) still read as a tube; pass 2 (puffs that
+cool from EYE_YEL through FIREM to LAVAM, plus tongues) won both orders against the tube. No frame of the new clips clips the canvas;
+a hash of every monster's existing frames is identical before and after (nothing old changed).
+Images: `art/review/d1-boss-moves/`.
+
 ## C2: Azhruk rebuilt from scratch (2026-11-08, in progress)
 The user accepted Malgrath at C1 pass 4 ("good enough") and asked for the next one. New family `furnace` (`furnaceRig`, `AZH_B`): his own
 long-legged body, not Gorr's. Three traits from the concept: dark plate with a horned bucket helm (FIREM visor), a furnace in the chest, and a

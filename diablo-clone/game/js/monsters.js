@@ -1984,13 +1984,37 @@ function zombieRig(look, st) {
   return r;
 }
 
+// art D1: Malgrath's cleaver, shared by his rig and the thrown, spinning projectile: a wrapped handle from g along bd,
+// a broad dark blade beyond it with a bright edge (forge-hot when `hot`, wider glow in a frenzy) and a hanging hole
+function butcherCleaver(r, g, bd, fn, hot, wide) {
+  const side = V.norm(V.sub(fn, V.mul(bd, V.dot(fn, bd)))), nrm = V.norm(V.cross(bd, side));
+  r.cone(V.mad(g, bd, -4.2), V.mad(g, bd, 5.2), 1.1, 1.1, M.LEATHER);
+  const L0 = 4.8, BL = 6.8, BW = 5.2, bc = V.add(V.mad(g, bd, L0 + BL), V.mul(side, BW - 1.4));
+  r.box(bc, [BL, BW, 0.6], M.IRON, [bd, side, nrm], { mf: p => { const q = V.sub(p, bc), u = V.dot(q, bd), e = BW - V.dot(q, side);
+    if (Math.hypot(u - (BL - 2.4), V.dot(q, side) + BW - 2.4) < 1.1) return M.DARK;
+    return e < 1.3 ? (hot && e < (wide ? 1.0 : 0.6) ? M.FIREM : M.BLADE) : e < 1.7 ? M.DSTEEL : 0; } });
+}
+// the thrown cleaver: 8 frames tumbling end over end around its middle, in the vertical plane of its flight (dir = flight)
+function cleaverSpinRig(look, st) {
+  const r = new Rig(), a = (st.f || 0) / 8 * Math.PI * 2;
+  // (D1 pass 1) spun flat like a saw blade, so its broad face shows from the overhead camera in every direction
+  const bd = [Math.cos(a), Math.sin(a), 0], mid = [0, 0, 10];
+  butcherCleaver(r, V.mad(mid, bd, -9), bd, [-Math.sin(a), Math.cos(a), 0], true, true);
+  if (look.scale && look.scale !== 1) scaleRig(r, look.scale);
+  return r;
+}
+
 // art C1: Malgrath rebuilt from scratch on his own body (not Gorr's): a tall V-shaped demon on long legs,
 // small head, a few big shapes. look.v picks the rough direction under review: 'a' ram horns, bare face;
 // 'b' the same in a charred palette with a glowing face; 'c' a hunched hooded executioner with bull horns
 const BUTCH_B = { hipH: 12.5, thigh: 6.6, shin: 6.4, ankle: 1.6, spine: 9.5, shW: 8.6, shZ: 2.4, neck: 8.6, upper: 7.6, fore: 7.0, hipW: 3.4, stride: 5, lift: 2.4, duty: 0.55, bob: 0.8, sway: 0.6, runLean: 0.1, counter: 0.1, stance: 1.6, hunch: 0.1 };
 const BUTCH_C = { ...BUTCH_B, hunch: 0.3, neck: 7.4, shZ: 3.4 };
 function butcherRig(look, st) {
-  const v = look.v || 'a', B = v === 'c' ? BUTCH_C : BUTCH_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J;
+  const v = look.v || 'a', B = v === 'c' ? BUTCH_C : BUTCH_B, r = new Rig();
+  // art D1 boss moves: 'throw' (0 wind-up, 1 release, 2 follow-through) borrows the body poses of the hero's 'hook' clip;
+  // 'hook' (0 swing overhead, 1 cast, 2 haul) uses them as they are; look.frenzy is the half-life state
+  const TH = st.clip === 'throw', HK = st.clip === 'hook', FR = !!look.frenzy, ff = st.f || 0;
+  const J = bipedJoints(B, TH ? { clip: 'hook', f: Math.min(ff, 1) } : st), { fwd, sideR, up } = J;
   const skin = v === 'b' ? M.HELLSTONE : M.BLOODY, apronM = v === 'b' ? M.BLOODY : M.IRON, hoofM = M.CLOTH_DARK;
   const at = (p, f, s, u) => V.add(V.add(p, V.mul(fwd, f)), V.add(V.mul(sideR, s), V.mul(up, u)));
   const lf = frameAlong(fwd, up);
@@ -2018,7 +2042,18 @@ function butcherRig(look, st) {
   let handR, bd;
   if (sw) { handR = V.mad(pivot, inPlane(sw.a), (sw.r || 6.5) * 1.4); bd = inPlane(sw.a + (sw.ck || 0)); }
   else { handR = at(J.shR, 2.5 + J.swingArm * 1.5, 2.6, -11.5); bd = V.norm(V.add(V.mul(fwd, 0.5), V.mul(up, -0.8))); }
-  let handL = at(J.shL, 3 - J.swingArm * 2, -2.6, -11.5);
+  let handL = at(J.shL, 3 - J.swingArm * 2, -2.6, -11.5), cleaver = true;
+  if (TH) {   // the cleaver cocked over the right shoulder, then flung (it leaves the hand), then the arm follows through across the body
+    if (ff === 0) { handR = at(J.shR, -3.0, 1.2, 5.0); bd = V.norm(V.add(V.mul(up, 0.75), V.mul(fwd, -0.65))); }
+    else if (ff === 1) { handR = at(J.shR, 9.5, -1.0, 0.5); cleaver = false; }
+    else { handR = at(J.shR, 7.0, -5.0, -5.5); cleaver = false; }
+  }
+  let hookAt = null, chainTo = null;
+  if (HK) {   // the meat hook on a chain in the left hand: whirled overhead, cast forward, hauled back
+    if (ff === 0) { handL = at(J.shL, -0.5, -1.5, 7.0); hookAt = at(handL, -3.0, -2.5, 3.5); }
+    else if (ff === 1) { handL = at(J.shL, 9.5, 0.5, 0.5); chainTo = at(handL, 7, 0, -1); }
+    else { handL = at(J.shL, 2.0, 0.5, -3.0); chainTo = at(handL, 8, 1, -2); }
+  }
   if (st.clip === 'death') { handR = V.add(J.shR, [3, 3, -12]); bd = V.norm([1, 0.4, -0.6]); handL = V.add(J.shL, [2, -3, -11]); }
   for (const [sh, hand, s] of [[J.shR, handR, 1], [J.shL, handL, -1]]) {
     const a = armTo(J, sh, hand, B, s);
@@ -2028,13 +2063,22 @@ function butcherRig(look, st) {
   }
   // (C1 pass 4) no pauldron: it read as a grey ball; the bare shoulders keep the V clean
   // the cleaver: a long wrapped handle in the fist, a broad blade beyond it (dark body, bright edge, a hole)
-  const g = handR, fn = V.norm(V.add(fwd, V.mul(sideR, -0.55))), side = V.norm(V.sub(fn, V.mul(bd, V.dot(fn, bd)))), nrm = V.norm(V.cross(bd, side));
-  r.cone(V.mad(g, bd, -4.2), V.mad(g, bd, 5.2), 1.1, 1.1, M.LEATHER);
-  const L0 = 4.8, BL = 6.8, BW = 5.2, bc = V.add(V.mad(g, bd, L0 + BL), V.mul(side, BW - 1.4));
-  r.box(bc, [BL, BW, 0.6], M.IRON, [bd, side, nrm], { mf: p => { const q = V.sub(p, bc), u = V.dot(q, bd), e = BW - V.dot(q, side);
-    if (Math.hypot(u - (BL - 2.4), V.dot(q, side) + BW - 2.4) < 1.1) return M.DARK;
-    return e < 1.3 ? (v === 'b' && e < 0.6 ? M.FIREM : M.BLADE) : e < 1.7 ? M.DSTEEL : 0; } });
+  if (cleaver) butcherCleaver(r, handR, bd, V.norm(V.add(fwd, V.mul(sideR, -0.55))), v === 'b', FR);
   if (sw && sw.smear && st.prev) smearArc(r, pivot, fwd, U, st.prev.a + (st.prev.ck || 0), sw.a + (sw.ck || 0), 8, 24);
+  if (HK) {   // iron links from the fist; on the cast and the haul they run out of the sprite toward the hero (the main chat draws the rest)
+    const hk = J.chest && armTo(J, J.shL, handL, B, -1).hand;
+    if (hookAt) {
+      for (let k = 1; k <= 4; k++) r.sph(V.lerp(hk, hookAt, k / 5), 1.0, M.CHAIN, { noShadow: true });
+      // (D1 pass 1) a big bright hook: a thick shank and a curved point, so it reads at game size
+      const h1 = at(hookAt, 0, 0, -3.6), h2 = at(hookAt, 2.4, 0, -5.2), h3 = at(hookAt, 3.4, 0, -3.0);
+      r.cone(hookAt, h1, 1.0, 0.9, M.BLADE); r.cone(h1, h2, 0.9, 0.7, M.BLADE); r.cone(h2, h3, 0.7, 0.3, M.BLADE);
+    }
+    if (chainTo) for (let k = 1; k <= 6; k++) r.sph(V.lerp(hk, chainTo, k / 6), 1.0, M.CHAIN, { noShadow: true });
+  }
+  if (FR) for (let k = 0; k < 5; k++) {   // frenzy: embers rising off the shoulders and head, drifting with the frame ((D1 pass 1) more and bigger)
+    const t = ((ff + k * 0.8) % 4) / 4, sd = [-7, -3, 1, 4, 7.5][k];
+    r.sph(at(J.chest, -1 + (k % 2) * 2, sd + Math.sin(t * 6) * 0.8, 5.5 + t * 9), 1.4 - t * 0.7, t < 0.55 ? M.FIREM : M.LAVAM, { noShadow: true });
+  }
   // head: small on the big frame, pushed forward
   const hd = at(J.head, 1.6, 0, -0.4), h0 = r.p.length;
   if (v === 'c') {   // a black executioner's hood, two glowing slits, bull horns through it sweeping forward
@@ -2045,11 +2089,11 @@ function butcherRig(look, st) {
   } else {
     r.group(() => {
       r.ell(hd, [3.4, 3.3, 3.4], skin, lf);
-      r.ell(at(hd, 1.2, 0, -1.8), [2.6, 3.4, 2.0], skin, lf, v === 'b' ? { mf: p => { const q = V.sub(p, hd); return V.dot(q, fwd) > 2.6 && Math.abs(V.dot(q, up) + 2.0) < 0.45 && Math.abs(V.dot(q, sideR)) < 1.8 ? M.FIREM : 0; } } : undefined);
+      r.ell(at(hd, 1.2, 0, -1.8), [2.6, 3.4, 2.0], skin, lf, v === 'b' ? { mf: p => { const q = V.sub(p, hd); return V.dot(q, fwd) > 2.6 && Math.abs(V.dot(q, up) + 2.0) < (FR ? 0.8 : 0.45) && Math.abs(V.dot(q, sideR)) < (FR ? 2.2 : 1.8) ? M.FIREM : 0; } } : undefined);
       r.ell(at(hd, 2.2, 0, 1.0), [1.3, 3.2, 0.9], skin, lf);   // heavy brow
     });
     for (const s of [-1, 1]) {
-      r.sph(at(hd, 3.0, s * 1.3, 0.1), 0.65, v === 'b' ? M.FIREM : M.EYE_YEL, { noShadow: true });
+      r.sph(at(hd, 3.0, s * 1.3, 0.1), FR ? 0.95 : 0.65, FR ? M.EYE_YEL : v === 'b' ? M.FIREM : M.EYE_YEL, { noShadow: true });
       r.cone(at(hd, 2.8, s * 2.0, -2.4), at(hd, 3.4, s * 2.4, -0.4), 0.7, 0.25, M.BONE);   // tusks
       // ram horns: up from the temple, back, down round the ear and forward
       const R0 = 3.6, root = at(hd, -0.4, s * 2.6, 2.0), N = 12; let p0 = root;
@@ -2071,8 +2115,12 @@ function butcherRig(look, st) {
 // 'c' a's plate with molten light in every seam
 const AZH_B = { ...BUTCH_B, hipH: 12, thigh: 6.3, shin: 6.1, shW: 9.0, hipW: 3.8, hunch: 0.06, upper: 7.2, fore: 6.8 };
 function furnaceRig(look, st) {
-  const v = look.v || 'a', B = AZH_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J;
-  const ARM = v === 'b' ? M.ROCK : M.IRON, SEAM = v === 'c' ? M.FIREM : M.IRON;
+  const v = look.v || 'a', B = AZH_B, r = new Rig();
+  // art D1 boss moves: 'blast' (0 the grate swings open, white-hot inside, weight back; 1-2 a jet of fire out of the belly,
+  // braced forward, flickering) with the hammer planted beside him; look.hot (half life) is the overheat: every seam glows
+  const BL = st.clip === 'blast', HOT = !!look.hot, ff = st.f || 0;
+  const J = bipedJoints(B, BL ? (ff === 0 ? { clip: 'stop', f: 0 } : { clip: 'channel', f: 1 }) : st), { fwd, sideR, up } = J;
+  const ARM = v === 'b' ? M.ROCK : M.IRON, SEAM = v === 'c' || HOT ? M.FIREM : M.IRON;
   const at = (p, f, s, u) => V.add(V.add(p, V.mul(fwd, f)), V.add(V.mul(sideR, s), V.mul(up, u)));
   const lf = frameAlong(fwd, up);
   const lames = (c, step) => p => { const z = V.dot(V.sub(p, c), up); return Math.abs((((z + 40) % step) + step) % step - step / 2) < 0.28 ? SEAM : 0; };   // 1 px seams between plates
@@ -2091,7 +2139,24 @@ function furnaceRig(look, st) {
   if (v === 'b') {   // a barrel belly with a round grate, the fire showing between the bars
     r.ell(at(J.pelvis, 0.6, 0, 5.0), [7.0, 8.0, 7.2], ARM, lf, { mf: p => { const q = V.sub(p, J.pelvis), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up) - 5.6;
       if (f2 < 3.6) return Math.abs(((z2 + 40) % 3.0) - 1.5) < 0.22 ? SEAM : 0; const rr = Math.hypot(s2, z2);
-      if (rr < 3.6) return Math.abs(((s2 + 40) % 1.6) - 0.8) < 0.38 ? M.IRON : (rr < 2.2 ? M.FIREM : M.LAVAM); return rr < 4.3 ? M.IRON : 0; } });
+      if (BL && rr < 3.6) return rr < 2.4 ? M.EYE_YEL : M.FIREM;   // the grate thrown open: white-hot at the heart
+      if (rr < 3.6) return Math.abs(((s2 + 40) % 1.6) - 0.8) < 0.38 ? M.IRON : (rr < 2.2 ? (HOT ? M.EYE_YEL : M.FIREM) : M.LAVAM); return rr < 4.3 ? M.IRON : 0; } });
+    if (BL) {   // the grate door swung out on its hinge (his left side), and on frames 1-2 the jet of fire
+      const gc = at(J.pelvis, 6.6, 0, 5.6), hinge = at(gc, 0.2, -4.0, 0), dd = V.norm(V.add(V.mul(fwd, 0.85), V.mul(sideR, -0.5)));
+      r.ell(V.mad(hinge, dd, 3.4), [3.6, 0.5, 3.6], M.IRON, frameAlong(dd, up), { mf: p => Math.abs(((V.dot(V.sub(p, hinge), dd) + 40) % 1.6) - 0.8) < 0.38 ? M.DARK : 0 });
+      if (ff > 0) {   // (D1 pass 2) a flame, not a tube: puffs that grow and cool from white-hot to red along the jet,
+        // each its own color band, with tongues tapering up and out of the plume
+        const fl = ff === 2 ? 1 : -1;
+        for (let k = 0; k < 7; k++) {
+          const u = 1.5 + k * 2.2, wob = Math.sin(k * 1.9 + ff * 2.3), c = at(gc, u, wob * 0.9, 0.3 + k * 0.45 + Math.abs(wob) * 0.3);
+          r.sph(c, 1.5 + k * 0.32, k < 2 ? M.EYE_YEL : k < 4 ? M.FIREM : M.LAVAM, { noShadow: true });
+        }
+        for (const [u, s2, rr] of [[5, -2.2, 1.0], [8, 2.6, 1.1], [11, -2.8, 1.0], [13.5, 2.2 * fl, 0.9], [15, -0.6, 1.0]]) {
+          const p0 = at(gc, u, s2 * 0.5, 1.4 + u * 0.12), p1 = at(gc, u + 3.5, s2 * 1.1, 4.4 + u * 0.22 + (ff === 2 ? 1.0 : 0));
+          r.cone(p0, p1, rr, 0.15, u < 9 ? M.FIREM : M.LAVAM, { noShadow: true });
+        }
+      }
+    }
     r.ell(at(J.chest, -0.6, 0, 2.2), [5.0, 8.4, 4.4], ARM, lf, { mf: lames(J.chest, 2.4) });
   } else {
     r.ell(at(J.pelvis, 0.2, 0, 4.2), [4.6, 5.8, 4.6], ARM, lf, { mf: lames(J.pelvis, 2.0) });
@@ -2115,6 +2180,7 @@ function furnaceRig(look, st) {
   if (sw) { handR = V.mad(pivot, inPlane(sw.a), (sw.r || 6.5) * 1.3); bd = inPlane(sw.a + (sw.ck || 0)); handL = V.mad(handR, bd, -5.5); }
   else { handL = at(J.pelvis, 6.4 + J.swingArm * 0.6, -2.6, 4.6); bd = V.norm(V.add(V.add(V.mul(fwd, 0.15), V.mul(up, -0.28)), V.mul(sideR, 0.95))); handR = V.mad(handL, bd, 6.0); }   // held low across the body, the head at the right hip
   if (st.clip === 'death') { handR = V.add(J.shR, [3, 3, -12]); bd = V.norm([0.6, 0.6, -0.5]); handL = V.add(J.shL, [2, -3, -11]); }
+  if (BL) { bd = V.norm(V.add(V.mul(up, -1), V.mul(sideR, 0.15))); handR = at(J.pelvis, 1.5, 8.5, 9.5); handL = V.mad(handR, bd, -3.2); }   // the hammer planted head-down by his right foot, both hands on its butt
   for (const [sh, hand, s] of [[J.shR, handR, 1], [J.shL, handL, -1]]) {
     const a = armTo(J, sh, hand, B, s);
     r.cone(sh, a.el, 2.6, 2.3, ARM); r.sph(V.mad(a.el, fwd, -0.6), 2.0, ARM);
@@ -2129,7 +2195,7 @@ function furnaceRig(look, st) {
   // head: a bucket helm with a glowing visor slit and a breath line, two curved horns
   const hd = at(J.head, 1.0, 0, -0.6);
   r.cyl(V.mad(hd, up, -2.8), V.mad(hd, up, 2.6), 3.5, ARM, { mf: p => { const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up);
-    if (f2 > 2.0 && z2 > 0.0 && z2 < 0.9 && Math.abs(s2) < 2.4) return M.FIREM;   // visor slit
+    if (f2 > 2.0 && z2 > 0.0 && z2 < 0.9 && Math.abs(s2) < 2.4) return HOT || BL ? M.EYE_YEL : M.FIREM;   // visor slit
     if (f2 > 2.6 && Math.abs(s2) < 0.3 && z2 < -0.4 && z2 > -2.4) return SEAM;   // breath line
     if (Math.abs(z2 - 2.2) < 0.3) return SEAM;   // crown seam
     return 0; } });
@@ -2161,6 +2227,7 @@ const FAMILIES = {
   toad: { size: [84, 64, 42, 46], gait: 0.2, rig: toadRig, swing: () => FEEL_OLD ? SWINGS.bite : TOAD_LASH },
   zombie: { size: [72, 78, 36, 55], gait: gaitFrameTiles(ZOMBIE_B), rig: zombieRig, swing: () => FEEL_OLD ? SWINGS.claw : ZOMBIE_GRAB },
   butcher: { size: [140, 154, 70, 112], gait: gaitFrameTiles(BUTCH_B, 1.5), rig: butcherRig, swing: () => SWINGS.heavy },   // art C1: Malgrath's own body
+  cleaverspin: { size: [64, 64, 32, 44], rig: cleaverSpinRig, swing: () => SWINGS.bite },   // art D1: Malgrath's thrown cleaver (a projectile sprite, frames 0-7)
   furnace: { size: [150, 160, 75, 116], gait: gaitFrameTiles(AZH_B, 1.5), rig: furnaceRig, swing: () => SWINGS.slam },   // art C2: Azhruk's own body
 };
 // Variants: same family, different look and stats. `kind` is what the roster ledger counts.
