@@ -149,6 +149,17 @@ function tipRig(rig, pivot, pitch, roll = 0, drop = 0) {
 let SMEAR_MODE = 'subtle';   // user disliked the long bright crescent (round 9); 'subtle' is a short thin streak, 'none' turns it off
 function smearArc(rig, pivot, F, U, a0, a1, r0, r1) {
   if (SMEAR_MODE === 'none') return;
+  const dir = a => V.add(V.mul(F, Math.cos(a)), V.mul(U, Math.sin(a)));
+  if (SMEAR_MODE === 'taper') {   // round 72: a slash that tapers: the blade's width where the blade is, thinning to a point behind it, white-hot fading to steel, only its tail dotted
+    const N = 9;
+    for (let s = 0; s < N; s++) {
+      const t0 = s / N, t1 = (s + 1) / N, A0 = lerp(a1, a0, t0), A1 = lerp(a1, a0, t1);
+      const w = t => 6.2 * Math.pow(1 - t, 1.25), col = t0 < 0.3 ? 32 : t0 < 0.62 ? 31 : 30;
+      const p00 = V.mad(pivot, dir(A0), r1 - w(t0)), p01 = V.mad(pivot, dir(A0), r1 + 0.3), p10 = V.mad(pivot, dir(A1), r1 - w(t1)), p11 = V.mad(pivot, dir(A1), r1 + 0.3);
+      rig.tri(p00, p01, p11, col, t0 >= 0.62); rig.tri(p00, p11, p10, col, t0 >= 0.62);
+    }
+    return;
+  }
   const subtle = SMEAR_MODE === 'subtle', N = subtle ? 5 : 7, span = subtle ? 0.6 : 1;
   for (let s = 0; s < N; s++) {
     const t0 = s / N * span, t1 = (s + 1) / N * span;
@@ -156,7 +167,6 @@ function smearArc(rig, pivot, F, U, a0, a1, r0, r1) {
     const age = t0 / span, col = subtle ? (age < 0.4 ? 32 : 31) : age < 0.3 ? 27 : age < 0.65 ? 26 : 25;
     // subtle: a thin line following the blade tip (a wide band read as a forked tip)
     const ri = subtle ? r1 - 1.4 + age * 0.4 : lerp(r0, r1, 0.35 + 0.65 * age);   // the trail thins as it ages
-    const dir = a => V.add(V.mul(F, Math.cos(a)), V.mul(U, Math.sin(a)));
     const p00 = V.mad(pivot, dir(A0), ri), p01 = V.mad(pivot, dir(A0), r1), p10 = V.mad(pivot, dir(A1), ri), p11 = V.mad(pivot, dir(A1), r1);
     const dith = subtle;   // dotted along its whole length: a solid stroke read as a hooked tip
     rig.tri(p00, p01, p11, col, dith); rig.tri(p00, p11, p10, col, dith);
