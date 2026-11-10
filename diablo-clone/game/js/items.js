@@ -282,7 +282,7 @@ function rollItem(R, level, forceBase) {
   const base = ITEM_BASES[baseId], mf = findK();
   const it = { id: itemSerial++, base: baseId, rarity: 'normal', mods: {} };
   if (base.slot === 'potion') return it;
-  it.lvl = Math.max(1, Math.round(level));   // round 75: every item carries the level it dropped at
+  it.lvl = Math.max(1, Math.round(level) + [-1, 0, 0, 1][Math.floor(R() * 4)]);   // round 75: every item carries the level it dropped at (round 77: the area's, give or take one)
   if (!forceBase && R() < (0.008 + level * 0.002) * mf) { const x = rollLegendary(R); x.lvl = it.lvl; return x; }
   if (!forceBase && R() < 0.015 + level * 0.002) { const x = rollSetItem(R); x.lvl = it.lvl; return x; }
   const q = R();
@@ -303,8 +303,21 @@ function rollItem(R, level, forceBase) {
 // rough worth of an item in its slot, for the bag's upgrade arrows and the comparison lines
 // an item's level: the level it dropped at (older saves: its base's)
 const itemLvl = it => it.lvl || ITEM_BASES[it.base].lvl || 1;
+// round 77: an item's level counts. A piece found above its base's level is stronger along the gear
+// curve the tempered tiers already use: damage by ((L + 2) / (l + 2)) ^ 0.8, armor by its square
+// root (armor cuts damage steeply); block stays. So a short sword from a level 9 area beats one
+// from level 1, while a higher base at the same level is still the better blade. Items from before
+// this (no level of their own) are exactly what they were.
+function itemStats(it) {
+  const b = ITEM_BASES[it.base], L = Math.max(b.lvl || 1, it.lvl || 0), k = (L + 2) / ((b.lvl || 1) + 2);
+  if (k <= 1 || b.slot === 'potion') return b;
+  const kd = Math.pow(k, 0.8), o = { dmg: b.dmg, armor: b.armor, block: b.block, slow: b.slow };
+  if (b.dmg) o.dmg = [Math.round(b.dmg[0] * kd), Math.round(b.dmg[1] * kd)];
+  if (b.armor) o.armor = Math.round(b.armor * Math.sqrt(k));
+  return o;
+}
 function itemScore(it) {
-  const b = ITEM_BASES[it.base], m = it.mods || {};
+  const b = itemStats(it), m = it.mods || {};
   const avg = b.dmg ? (b.dmg[0] + b.dmg[1]) / 2 : 0;
   return (avg + (m.dmgFlat || 0)) * (1 + (m.dmgPct || 0) / 100) * (b.slow ? 0.9 : 1) + (b.armor || 0) + (m.armorFlat || 0) + (b.block || 0) * 0.3
     + (m.hp || 0) * 0.25 + (m.mana || 0) * 0.1 + (m.leech || 0) * 0.6 + (m.crit || 0) * 0.5 + (m.atkSpeed || 0) * 0.35 + (m.speed || 0) * 0.3
@@ -314,7 +327,7 @@ function itemScore(it) {
 }
 // what changes if `it` replaces `cur`: [text, color] lines, green for gains and red for losses
 function compareLines(it, cur) {
-  const b = ITEM_BASES[it.base], c = ITEM_BASES[cur.base], m = it.mods || {}, n = cur.mods || {}, out = [];
+  const b = itemStats(it), c = itemStats(cur), m = it.mods || {}, n = cur.mods || {}, out = [];
   const dmg = x => x.dmg ? (x.dmg[0] + x.dmg[1]) / 2 : 0;
   const d = (dmg(b) + (m.dmgFlat || 0)) * (1 + (m.dmgPct || 0) / 100) - (dmg(c) + (n.dmgFlat || 0)) * (1 + (n.dmgPct || 0) / 100);
   if (Math.abs(d) >= 0.5) out.push([`${d > 0 ? '+' : ''}${d.toFixed(1)} AVG DAMAGE`, d > 0 ? 55 : 23]);
@@ -338,8 +351,7 @@ function itemLines(it) {
   const b = ITEM_BASES[it.base], m = it.mods, L = [];
   if (b.slot === 'potion') return [b.mana ? 'RESTORES ' + b.mana + ' MANA' : 'RESTORES ' + b.heal + ' LIFE'];
   if (it.rarity === 'rare' || it.rarity === 'legend' || it.rarity === 'set') L.push(b.name);
-  if (b.dmg) L.push(`DAMAGE ${b.dmg[0]}-${b.dmg[1]}${b.slow ? ' (SLOW)' : ''}`);
-  if (b.armor) L.push(`ARMOR ${b.armor}`);
+  { const q = itemStats(it); if (q.dmg) L.push(`DAMAGE ${q.dmg[0]}-${q.dmg[1]}${b.slow ? ' (SLOW)' : ''}`); if (q.armor) L.push(`ARMOR ${q.armor}`); }
   if (b.block) L.push(`BLOCK ${b.block}%`);
   if (m.dmgPct) L.push(`+${m.dmgPct}% DAMAGE`);
   if (m.dmgFlat) L.push(`+${m.dmgFlat} DAMAGE`);

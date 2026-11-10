@@ -36,7 +36,7 @@ const hero = {
 let enemies = [], groundItems = [], projectiles = [], floaters = [];
 const STAT = {};   // derived hero stats, recomputed on equip
 function recalcHero() {
-  const e = hero.equip, it = s => e[s] ? ITEM_BASES[e[s].base] : null, mods = {};
+  const e = hero.equip, it = s => e[s] ? itemStats(e[s]) : null, mods = {};   // (round 77: a piece's own level scales its base)
   for (const s in e) if (e[s]) for (const k in e[s].mods) mods[k] = (mods[k] || 0) + e[s].mods[k];
   for (const k in SETS) {   // set bonuses: two pieces, then all three
     const n = Object.values(e).filter(it => it && it.set === k).length;
@@ -104,9 +104,13 @@ function makeEnemy(id, fi, fj, n, lvl) {
   // x2.3, uniques x1.5), and it climbs faster with the level (0.27 a level, compounding 1.5%) so
   // deeper floors outpace old gear and upgrades are felt. Damage keeps the old curve.
   const scale = 1 + (lv - 1) * 0.22, hpScale = !HEAVY ? scale : (1 + (lv - 1) * 0.27) * Math.pow(1.015, lv - 1) * (m.unique ? 1.5 : m.hp < 12 ? 1.6 : m.hp < 30 ? 2 : 2.3);
+  // round 77: gear now grows with its level (itemStats). Measured over 40 heroes in the best of 60 drops per
+  // area level: damage x1.02-1.14 at levels 2-6 and x1.11-1.32 from 8 on, armor x1.05-1.29. So monsters gain
+  // 1.8% health and 1.2% damage a level past 2 (x1.07 / x1.05 at 6, x1.18 / x1.12 at 12): the fights stay as long.
+  const gearHp = 1 + Math.max(0, lv - 2) * 0.018, gearDmg = 1 + Math.max(0, lv - 2) * 0.012, hpK = hpScale * gearHp;
   return {
     id, def: m, fam: m.family, look: m.look, fi, fj, home: [fi, fj], dir: (n * 3) % 8, clip: 'idle', clock: n * 0.13, walk: 0,
-    hp: Math.round(m.hp * hpScale), maxHp: Math.round(m.hp * hpScale), dmg: [Math.round(m.dmg[0] * scale), Math.round(m.dmg[1] * scale)],
+    hp: Math.round(m.hp * hpK), maxHp: Math.round(m.hp * hpK), dmg: [Math.round(m.dmg[0] * scale * gearDmg), Math.round(m.dmg[1] * scale * gearDmg)],
     lvl: lv, state: 'sleep', atk: -1, hitDone: false, stop: 0, flash: 0, kb: [0, 0], hurt: 0, dying: -1, cool: 0.5 + hash(n, 3) * 1.5, seed: n,
   };
 }
