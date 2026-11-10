@@ -523,6 +523,15 @@ function edgeArrow(sx, sy, c0 = 51, c1 = 50) {
   arrowHead(cx + dx * k - ux * bob, cy + dy * k - uy * bob, ux, uy, c0, c1);
   return true;
 }
+// a small diamond at the edge of the view toward an off-screen point; false when it is on screen
+function edgePip(sx, sy, c) {
+  const X0 = 10, X1 = W - 10, Y0 = 118, Y1 = Math.round(H * 0.62);   // (below the tracker's lines)
+  if (sx > X0 && sx < X1 && sy > 46 && sy < Y1) return false;
+  const cx = W / 2, cy = (Y0 + Y1) / 2, dx = sx - cx, dy = sy - cy, k = Math.min((dx > 0 ? X1 - cx : cx - X0) / Math.abs(dx || 1e-6), (dy > 0 ? Y1 - cy : cy - Y0) / Math.abs(dy || 1e-6));
+  const px = Math.round(cx + dx * k), py = Math.round(cy + dy * k);
+  for (let b = -4; b <= 4; b++) for (let a = -4; a <= 4; a++) { const d = Math.abs(a) + Math.abs(b); if (d <= 4) put(px + a, py + b, d === 4 ? BLK : a + b < 0 ? c : c - 1); }
+  return true;
+}
 // a filled arrowhead 14 px long pointing along (ux, uy), with a black edge
 function arrowHead(ax, ay, ux, uy, c0, c1) {
   for (let b = -10; b <= 10; b++) for (let a = -10; a <= 10; a++) {
@@ -546,6 +555,7 @@ function arrowHead(ax, ay, ux, uy, c0, c1) {
 const QA = { aim: null, tgt: null, ang: null, at: 0, ring: false, on: false, t0: 0 };
 function drawStoryMark() {
   if (G.mode !== 'play' || hero.dead || G.fadeTo) { QA.ang = null; return; }
+  if (LV.hub && storyOn() && storyStage() === 'hollow3') { const f = storyF(), pk = h3Pick(); for (const o of H3) { if (f[o.flag] || o === pk) continue; const [x, y] = iso(...h3Pos(o)), sx = x - camX, sy = y - camY - 16; if (!edgePip(sx, sy, o.col)) arrowHead(sx, sy - 14, 0, 1, o.col, o.col - 1); } }   // round 78: the other open objectives: a small mark at the edge, or over the place
   const t = storyTarget(); if (!t) { QA.aim = null; QA.ang = null; return; }
   const dt = Math.min(0.1, Math.max(0, G.t - QA.t0)); QA.t0 = G.t;
   const d = Math.hypot(t[0] - hero.fi, t[1] - hero.fj); if (d < 1.6) { QA.ang = null; return; }
@@ -564,13 +574,14 @@ function drawStoryMark() {
   // the goal on screen (with slack: in when well inside, out when well outside)
   const [x, y] = iso(t[0], t[1]), sx = x - camX, sy = y - camY - 16, m = QA.on ? 4 : 18;
   QA.on = sx > m && sx < W - m && sy > 40 + m && sy < Math.round(H * 0.6) - m;
-  if (QA.on && !(t.npc && typeof storyMarkFor === 'function' && storyMarkFor(t))) arrowHead(sx, sy - 14 + Math.sin(G.t * 4) * 1.5, 0, 1, 27, 26);
+  const ac = t.col || 27, ac2 = t.col ? t.col - 1 : 26;
+  if (QA.on && !(t.npc && typeof storyMarkFor === 'function' && storyMarkFor(t))) arrowHead(sx, sy - 14 + Math.sin(G.t * 4) * 1.5, 0, 1, ac, ac2);
   // the ring arrow round the hero: shown while the goal is off screen or the way is a long way round
   QA.ring = !QA.on || (QA.around && d > 6);
   if (QA.ring) {
     const ux = Math.cos(QA.ang), uy = Math.sin(QA.ang), cx = hx0 - camX, cy = hy0 - camY - 14, bob = Math.sin(G.t * 4) * 1.5;
     const ax = clamp(cx + ux * 104, 16, W - 16), ay = clamp(cy + uy * 92, 52, Math.round(H * 0.62));   // out near the edge of the view, clear of the hero and the fight
-    arrowHead(Math.round(ax + ux * bob), Math.round(ay + uy * bob), ux, uy, 27, 26);
+    arrowHead(Math.round(ax + ux * bob), Math.round(ay + uy * bob), ux, uy, ac, ac2);
   }
 }
 // the ! or ? a person on the story's next step already shows
@@ -583,6 +594,7 @@ function actionTarget() {
   const n = nearTrader();
   if (n) return { n, label: n.role === 'merchant' ? `BUY POTION ${potionPrice()}G` : n.role === 'smith' ? 'SELL LOOT' : n.role === 'aldo' && LV.side === 'den' && G.story && G.story.f.alphaDead && !G.story.f.aldoFree ? 'FREE ALDO' : 'TALK' };
   const m = mineAction(); if (m) return m;
+  const sa = stonesAction(); if (sa) return sa;
   return null;
 }
 function doAction(a) {
@@ -1127,6 +1139,7 @@ cvs.addEventListener('pointerdown', e => {
   for (let i = 0; i < UI.skills.length; i++) if (hitCircle(p, UI.skills[i], 5)) { press.skill = i; useSkill(i); return; }
   if (ULTS[hero.cls] && hitCircle(p, UI.ult, 4)) { useUlt(); return; }
   { const a = actionTarget(); if (a && UI.act && inRect(p, UI.act)) { doAction(a); return; } }
+  if (UI.h3 && G.mode === 'play') for (const r of UI.h3) if (inRect(p, r)) { G.h3sel = r.k; QA.aim = null; sfx('tap'); return; }   // round 78: pick which of the three the arrow leads to
   if (UI.tpPrompt && inRect(p, UI.tpPrompt)) { usePortal(); return; }   // round 64: the town portal prompt   // round 43b: the action button
   // round 42b: tap a person to walk over and talk. Round 51: on the move side a touch on a person still
   // starts the stick; it counts as a tap on them only if it lifts quickly without moving (endPointer),

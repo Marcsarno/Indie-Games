@@ -18,10 +18,76 @@
 //   Maelis -> unlock the mine -> the King -> back to Osric.
 // G.story = { f: { flags }, n: bandits killed }. The stage is worked out from the flags, so things
 // done out of order (the Alpha killed before Wren asks) still count.
-const STORY_NAMES = { woodcutter: 'THE MISSING WOODCUTTER', farm: 'THE STOLEN FARM', king: 'THE KING BELOW' };
+const STORY_NAMES = { hollow: 'CLEAR THE HOLLOW', woodcutter: 'THE MISSING WOODCUTTER', farm: 'THE STOLEN FARM', king: 'THE KING BELOW' };
 function storyF() { if (!G.story) G.story = { f: {}, n: 0 }; return G.story.f; }
 const storyOn = () => LV.act === 0 && !(LV.loop > 0);   // the story is Act I's, first time through
 const mineOpen = () => { const f = storyF(); return !!(f.mineOpen || f.kingDead || (G.gates && G.gates[0]) || LV.loop > 0); };
+// ---------------------------------------------------------------- round 78: three at once
+// The user: following the quest you see under half the Hollow. After Aldo is home the road north
+// stays shut until three places are dealt with, in any order: the Old Watchtower (goblins and their
+// chieftain), the Standing Stones (an outdoor fight: wake them and hold the ring against three waves
+// out of the woods) and the Barrow (the shielded dead and the wraith). Whichever you take first is
+// set at level 3, the next at 4, the last at 5, so no order is the wrong one. Each pays on the spot
+// with loot of its own kind. The tracker lists all three in their colours; tap a line to have the
+// arrow lead there (else it leads to the nearest), and the others show as small marks at the edge.
+const H3 = [
+  { k: 'tower', flag: 'h3tower', name: 'THE WATCHTOWER', text: 'CLEAR THE OLD WATCHTOWER', col: 55, side: 'tower', boss: 'gchief', lean: ['weapon'] },
+  { k: 'stones', flag: 'h3stones', name: 'THE STANDING STONES', text: 'HOLD THE STANDING STONES', col: 40, lean: ['ring', 'amulet'] },
+  { k: 'barrow', flag: 'h3barrow', name: 'THE BARROW', text: 'QUIET THE BARROW', col: 59, side: 'barrow', boss: 'wraith', lean: ['helm', 'chest', 'shield'] },
+];
+const h3Count = () => { const f = storyF(); return H3.filter(o => f[o.flag]).length; }, h3Done = () => h3Count() === 3;
+const h3Legacy = f => !!(f.treeCleared || f.sawChain || f.farmTold || f.chiefDead || f.mineOpen || f.kingDead || (G.gates && G.gates[0]));   // a save from before this step: already past it
+const h3Level = () => 3 + Math.min(2, h3Count());
+const STONES_AT = () => { const [a, b] = US(-20, 48); return [a + 0.5, b + 0.5]; };
+const h3Pos = o => o.k === 'stones' ? STONES_AT() : SIDES[o.side].door();
+// a side area's level: the three follow the order they are taken in until each is done
+function sideDiff(side) { const o = H3.find(o => o.side === side), f = storyF(); return o && storyOn() && !f[o.flag] && !h3Legacy(f) ? h3Level() : SIDES[side].diff; }
+function h3Pick() {
+  const f = storyF(), open = H3.filter(o => !f[o.flag]); if (!open.length) return null;
+  const sel = open.find(o => o.k === G.h3sel); if (sel) return sel;
+  return open.reduce((b, o) => { const p = h3Pos(o), q = h3Pos(b); return Math.hypot(p[0] - hero.fi, p[1] - hero.fj) < Math.hypot(q[0] - hero.fi, q[1] - hero.fj) ? o : b; });
+}
+function h3Complete(o) {
+  const f = storyF(); if (f[o.flag]) return;
+  const lvl = h3Level(); f[o.flag] = true; if (h3Done()) f.h3all = true;   // (h3all: this hero took the long way, about two levels more: the rest of the act is raised to match)
+  const R = rng((Math.random() * 1e9) | 0), gold = 40 * lvl, xp = 110 * lvl;
+  let it = null; for (let t = 0; t < 300 && !it; t++) { const x = rollItem(R, lvl + 1); if (x.rarity !== 'normal' && o.lean.includes(ITEM_BASES[x.base].slot)) it = x; }
+  if (it) groundItems.push({ item: it, fi: hero.fi + 0.7, fj: hero.fj + 0.3, t: 0 });
+  hero.gold += gold; gainXp(xp); sfx('levelUp');
+  questBanner(o.name + ': DONE', h3Done() ? 'THE HOLLOW IS SAFE. THE ROAD NORTH WILL OPEN' : `${h3Count()}/3. +${gold} GOLD, +${xp} XP`, o.col);
+  if (G.h3sel === o.k) G.h3sel = null;
+  saveGame();
+}
+// the Standing Stones: wake them and hold the ring against three waves out of the woods
+const STONE_WAVES = [[['boar', 3]], [['shroom', 4], ['sporecap', 2]], [['bear', 1], ['boar', 2]]];
+function stonesAction() {
+  if (!LV.hub || !storyOn() || G.stones) return null;
+  const f = storyF(), c = STONES_AT(); if (f.h3stones || !f.met || Math.hypot(hero.fi - c[0], hero.fj - c[1]) > 3.2) return null;
+  return { label: 'WAKE THE STONES', go: () => { G.stones = { wave: 0, t: 1.6, list: [] }; sfx('cry'); sfx('crack'); say('THE STONES WAKE. HOLD THE RING', 40, 3); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.4); } };
+}
+function updateStones(dt) {
+  const S = G.stones; if (!S) return;
+  const c = STONES_AT();
+  if (!LV.hub || hero.dead || Math.hypot(hero.fi - c[0], hero.fj - c[1]) > 15) {   // left the ring, or fell: the stones sleep again
+    for (const e of S.list) { const k = enemies.indexOf(e); if (k >= 0 && alive(e)) enemies.splice(k, 1); }
+    G.stones = null; if (LV.hub && !hero.dead) say('THE STONES FALL SILENT', 24, 3); return;
+  }
+  if (Math.random() < dt * 26) { const a = Math.random() * 6.283, [x, y] = iso(c[0] + Math.cos(a) * 2.6, c[1] + Math.sin(a) * 2.6); pspawn(4, x, y, 4 + Math.random() * 22, 0, 0, 26, 0.7, Math.random() < 0.5 ? 40 : 118); }   // light climbing the stones
+  if (S.list.some(alive)) return;
+  S.t -= dt; if (S.t > 0) return;
+  if (S.wave >= STONE_WAVES.length) { G.stones = null; shockwave(c[0], c[1], 4, 0.4, [118, 40]); h3Complete(H3[1]); return; }
+  const lvl = h3Level(); S.list = []; let n = 0;
+  for (const [id, cnt] of STONE_WAVES[S.wave]) for (let k = 0; k < cnt; k++) {
+    for (let t = 0; t < 40; t++) {   // out of the woods, all round
+      const a = Math.random() * 6.283, d = 8 + Math.random() * 2.5, fi = c[0] + Math.cos(a) * d, fj = c[1] + Math.sin(a) * d;
+      if (blocked(fi, fj) || blocked(fi + 0.3, fj + 0.3) || blocked(fi - 0.3, fj - 0.3)) continue;
+      const e = makeEnemy(id, fi, fj, enemies.length + n++, lvl); e.wave = true; enemies.push(e); S.list.push(e); wake(e, true);
+      const [x, y] = iso(fi, fj); for (let q = 0; q < 6; q++) pspawn(5, x + (Math.random() - 0.5) * 10, y, 2, (Math.random() - 0.5) * 30, 0, 30 + Math.random() * 30, 0.6, 96);
+      break;
+    }
+  }
+  S.wave++; S.t = 1.4; questBanner(`WAVE ${S.wave}/${STONE_WAVES.length}`, S.wave === STONE_WAVES.length ? 'SOMETHING BIG IS COMING' : 'THEY COME OUT OF THE WOODS', 40); sfx('growl');
+}
 function storyStage() {
   const f = storyF();
   if (G.gates && G.gates[0]) f.kingDead = true;
@@ -29,6 +95,7 @@ function storyStage() {
   if (!f.woodTold && !f.aldoFree) return 'wren';
   if (!f.aldoFree) return f.alphaDead ? 'cage' : 'den';
   if (!f.woodPaid) return 'aldoBack';
+  if (!h3Done() && !h3Legacy(f)) return 'hollow3';   // round 78: the Hollow's three dangers, in any order
   if (!f.sawChain && !f.farmTold && !f.chiefDead) return 'mine';
   if (!f.farmTold && !f.chiefDead) return 'hollis';
   if (!f.chiefDead) return (G.story.n || 0) >= 4 ? 'cellar' : 'farm';
@@ -39,8 +106,9 @@ function storyStage() {
   if (!f.kingPaid) return 'kingBack';
   return 'done';
 }
-const STAGE_QUEST = { wren: 'woodcutter', den: 'woodcutter', cage: 'woodcutter', aldoBack: 'woodcutter', mine: 'woodcutter', hollis: 'farm', farm: 'farm', cellar: 'farm', farmBack: 'farm', letter: 'king', unlock: 'king', king: 'king', kingBack: 'king' };
+const STAGE_QUEST = { hollow3: 'hollow', wren: 'woodcutter', den: 'woodcutter', cage: 'woodcutter', aldoBack: 'woodcutter', mine: 'woodcutter', hollis: 'farm', farm: 'farm', cellar: 'farm', farmBack: 'farm', letter: 'king', unlock: 'king', king: 'king', kingBack: 'king' };
 function stageText(st) {
+  if (st === 'hollow3') return `THREE DANGERS BAR THE ROAD NORTH ${h3Count()}/3`;
   return { meet: 'SPEAK TO BROTHER OSRIC', wren: 'TALK TO WREN BY THE TENTS', den: 'FIND ALDO IN THE WOLF DEN (NORTHEAST)', cage: 'FREE ALDO', aldoBack: 'RETURN TO WREN',
     mine: 'LOOK AT THE OLD MINE (NORTH, THE RIVERLANDS)', hollis: 'ASK HOLLIS ABOUT THE CHAINS', farm: `DRIVE THE BANDITS FROM THE FARM ${Math.min(4, G.story.n || 0)}/4`, cellar: 'FIND THEIR CHIEF IN THE CELLAR',
     farmBack: 'RETURN TO HOLLIS', letter: 'SHOW THE LETTER TO BROTHER OSRIC', unlock: 'UNLOCK THE OLD MINE (THE RIVERLANDS)', king: 'PUT THE KING TO REST, BELOW THE MINE', kingBack: 'RETURN TO BROTHER OSRIC', done: 'THE ROAD ON IS OPEN (PAST THE RIVERLANDS)' }[st] || '';
@@ -57,6 +125,7 @@ function storyMark(role) {
 function questKill(id) {
   if (!storyOn()) return;
   const f = storyF();
+  { const o3 = H3.find(o => o.boss === id && o.side === LV.side); if (o3) h3Complete(o3); }   // (round 78: done out of order still counts)
   if (id === 'alpha' && !f.alphaDead) { f.alphaDead = true; if (!f.aldoFree) say('THE ALPHA IS DEAD. FREE ALDO', 51, 3); }
   if (id === 'brigand' && f.farmTold && !f.chiefDead) { G.story.n = (G.story.n || 0) + 1; if (G.story.n === 4) say('THE FARM IS CLEAR. THEIR CHIEF IS IN THE CELLAR', 51, 3); }
   if (id === 'banditchief' && !f.chiefDead) { f.chiefDead = true; say('THE CHIEF DROPS THE MINE KEY', 51, 3.5); say('AND A LETTER, SIGNED M.', 51, 3.5); sfx('levelUp'); }
@@ -171,7 +240,8 @@ function talkTo(n) {
       [Al, 'THEY HAD ME IN A CAGE. A CAGE, LIKE A HEN FOR THE POT. WOLVES DO NOT BUILD CAGES.'],
       [Al, 'AND THEY WERE NOT HUNTING. THEY WERE RUNNING. SOMETHING IN THE NORTH HILLS DROVE THEM OUT.'],
       [Al, 'BEFORE THEY TOOK ME I SAW A HOODED MAN AT THE OLD MINE, WITH A LANTERN THAT BURNED GREEN. LOOK THERE.'],
-      [Wn, 'TAKE SOMETHING. AND FATHER WILL KEEP THE CAMPFIRE HIGH: REST BY IT AND IT WILL MEND YOU.']], 'COLLECT', () => { f.woodPaid = true; payQuest('woodcutter'); say('REST BY THE CAMPFIRE TO HEAL', 26, 3); }, rewardChoice());
+      [Wn, 'TAKE SOMETHING. AND FATHER WILL KEEP THE CAMPFIRE HIGH: REST BY IT AND IT WILL MEND YOU.'],
+      ['ALDO', 'THE ROAD NORTH? NOT WHILE GOBLINS HOLD THE TOWER, THE STONES ARE STIRRING AND THE BARROW IS OPEN. DEAL WITH THOSE THREE, ANY ORDER YOU LIKE, AND I WILL CUT THE TREE.']], 'COLLECT', () => { f.woodPaid = true; payQuest('woodcutter'); say('REST BY THE CAMPFIRE TO HEAL', 26, 3); }, rewardChoice());
     return openTalk([[Wn, f.aldoFree ? 'FATHER IS HOME. I CAN SLEEP AGAIN.' : 'PLEASE FIND HIM.']]);
   }
   if (n.role === 'aldo') {   // in the den's cage, or at home by his woodpile
@@ -256,9 +326,10 @@ function updateStory(dt) {
   storyFlow(dt);
   // Aldo leaves the den: he walks off and fades
   for (let k = npcs.length - 1; k >= 0; k--) { const n = npcs[k]; if (n.leaving === undefined) continue; n.leaving -= dt; n.clip = 'walk'; n.walk += dt * 8; tryMove(n, dt * 1.5, -dt * 1.5, 0.2); if (n.leaving <= 0) npcs.splice(k, 1); }
+  updateStones(dt);
   if (LV.side === 'cellar' && !f.cellarSeen) { f.cellarSeen = true; say('SACKS OF BONES, STACKED TO THE ROOF.', 26, 4); say('THE GRAVES WERE DUG FOR THIS.', 26, 4); }
   // round 48c: the fallen tree on the road north: a word when one walks up to it; once Aldo is home, it's cleared
-  if (LV.treeBlock && Math.hypot(hero.fi - LV.treeBlock[0], hero.fj - LV.treeBlock[1]) < 3.2 && !(G.sealT > 0)) { say('A FALLEN TREE BLOCKS THE ROAD NORTH', 22, 2.5); if (!f.aldoFree) say('ONLY A WOODCUTTER COULD MOVE IT', 26, 2.5); G.sealT = 3; }
+  if (LV.treeBlock && Math.hypot(hero.fi - LV.treeBlock[0], hero.fj - LV.treeBlock[1]) < 3.2 && !(G.sealT > 0)) { say('A FALLEN TREE BLOCKS THE ROAD NORTH', 22, 2.5); if (!f.aldoFree) say('ONLY A WOODCUTTER COULD MOVE IT', 26, 2.5); else say('ALDO WILL NOT CUT IT WHILE THE HOLLOW IS UNSAFE', 26, 2.5); G.sealT = 3; }
   if (LV.hub && hollowOpen() && storyOn() && !f.treeCleared) { f.treeCleared = true; say('ALDO HAS CLEARED THE FALLEN TREE', 51, 3.5); say('THE ROAD NORTH IS OPEN', 51, 3.5); }
   if (!LV.hub) return;
   // Aldo's wood feeds the fire: resting by it mends life and mana
@@ -311,6 +382,7 @@ function storyTarget() {
   if (LV.side) {
     if (LV.side === 'den' && (st === 'den' || st === 'cage')) return nearest(live('alpha')) || npc('aldo') || stairs();
     if (LV.side === 'cellar' && (st === 'farm' || st === 'cellar')) return nearest(live('banditchief')) || stairs();
+    { const o3 = H3.find(o => o.side === LV.side); if (st === 'hollow3' && o3 && !storyF()[o3.flag]) return nearest(live(o3.boss)) || stairs(); }
     return stairs();   // done here (or not this step's place): the way out
   }
   if (LV.riv) {   // the Riverlands: the farm, its cellar and the mine are here; everything else is back south in the Hollow
@@ -326,6 +398,7 @@ function storyTarget() {
   }
   // the Hollow: the camp's people and the den here; the rest is north, past the fallen tree, on the road to the Riverlands
   const north = stairs();
+  if (st === 'hollow3') { const o3 = h3Pick(); if (!o3) return null; const p = h3Pos(o3).slice(); p.col = o3.col; return p; }
   return { meet: npc('priest'), wren: npc('wren'), aldoBack: npc('wren') || npc('aldo'), den: SIDES.den.door(), cage: SIDES.den.door(), mine: north, hollis: npc('hollis'), farm: north,
     cellar: north, farmBack: npc('hollis'), letter: npc('priest'), unlock: north, king: north, kingBack: npc('priest'), done: north }[st] || null;
 }
@@ -338,6 +411,16 @@ function rollRare(R, level) {
 function drawQuestTracker() {
   if (G.mode !== 'play' || !storyOn()) return;
   const st = storyStage(); if (st === 'done' && !(G.gates && G.gates[0] && (LV.hub || LV.riv))) return;
+  UI.h3 = null;
+  if (st === 'hollow3') {   // round 78: three lines in their colours, ticked off; tap one to be led there
+    text(STORY_NAMES.hollow + `  ${h3Count()}/3`, 4, 68, 26);
+    const f = storyF(), pick = LV.hub ? h3Pick() : H3.find(o => o.side === LV.side); UI.h3 = [];
+    H3.forEach((o, n) => { const y = 78 + n * 11, done = !!f[o.flag], on = pick === o && !done;
+      fillRect(4, y, 6, 6, done ? 5 : o.col); frame(4, y, 6, 6, BLK, BLK); if (done) { line(5, y + 3, 6, y + 4, 55); line(6, y + 4, 9, y + 1, 55); }
+      text((on ? '> ' : '') + o.text + (done ? ': DONE' : ''), 13, y, done ? 24 : on ? 51 : 26);
+      if (!done) UI.h3.push({ x: 0, y: y - 2, w: 150, h: 11, k: o.k }); });
+    return;
+  }
   const q = STAGE_QUEST[st];
   if (q) text(STORY_NAMES[q], 4, 68, 24);
   text(portalHome() && TURN_IN[st] ? 'QUEST COMPLETE: CLAIM YOUR REWARD IN CAMP' : stageText(st), 4, q ? 76 : 68, 51);
@@ -400,7 +483,7 @@ PROPS.sacks = v => propSprite('sacks' + v, r => {
 const SIDES = {
   den: { name: 'THE WOLF DEN', theme: 'caves', rooms: 5, pool: ['wolf'], boss: 'alpha', at: 'hub', door: () => [HUB.den[0] + 1.6, HUB.den[1] + 0.6], label: 'WOLF DEN', seed: 0xd3d },
   // round 48c: the Hollow's other doors (the barrow: dangerous, level 6; the watchtower: goblins and their shaman)
-  barrow: { name: 'THE BARROW', down: 'barrow2', theme: 'crypt', rooms: 6, pool: ['spearman', 'axeman', 'gravebow', 'tombguard', 'skeleton'], boss: 'wraith', at: 'hub', diff: 6, door: () => [HUB.barrow[0] + 1.6, HUB.barrow[1] + 0.6], label: 'THE BARROW: DANGER', labelCol: 22, seed: 0xba770 },
+  barrow: { name: 'THE BARROW', down: 'barrow2', theme: 'crypt', rooms: 6, pool: ['spearman', 'axeman', 'skeleton', 'skeleton', 'spearman', 'axeman', 'gravebow', 'tombguard'], boss: 'wraith', at: 'hub', diff: 6,   /* round 78: on the main path now: one in eight a crossbow or a shield wall (was one in five each; the ranger bot died 13 times to bolts from out of sight) */ door: () => [HUB.barrow[0] + 1.6, HUB.barrow[1] + 0.6], label: 'THE BARROW: DANGER', labelCol: 22, seed: 0xba770 },
   // round 67: the barrow's second floor, down the stairs in the wraith's room: bigger and harder, its
   // dead led by the Barrow Wight (it raises the dead and calls frost orbs); its hoard is in two chests
   barrow2: { name: 'THE BARROW: THE DEEP TOMB', theme: 'crypt', rooms: 7, pool: ['spearman', 'axeman', 'gravebow', 'tombguard', 'tombguard', 'wraith'], boss: 'barrowwight', bigLeader: true, at: 'below', diff: 7, label: '', seed: 0xba772 },

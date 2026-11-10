@@ -73,10 +73,11 @@ function resizeWorld(mw, mh) {
 function genLevel(level, seed, side = null) {
   // levels cycle town -> forest -> three dungeon floors (outdoor.js); LV.diff drives difficulty.
   // A side area (quests.js SIDES) is a short dungeon floor hanging off the hub at the hub's level
-  const A0 = areaOf(level), sd = side && SIDES[side].diff ? SIDES[side].diff + A0.cyc * 3 : A0.diff, A = side ? { kind: 'dungeon', cyc: A0.cyc, act: A0.act, loop: A0.loop, floor: 1, depth: A0.cyc * 3 + 1, diff: sd } : A0;   // (round 48c: a side area may be harder than its hub: the barrow)
+  const A0 = areaOf(level), sd = side && sideDiff(side) ? sideDiff(side) + A0.cyc * 3 : A0.diff, A = side ? { kind: 'dungeon', cyc: A0.cyc, act: A0.act, loop: A0.loop, floor: 1, depth: A0.cyc * 3 + 1, diff: sd } : A0;   // (round 48c: a side area may be harder than its hub: the barrow)
   LV.side = side; LV.sideCfg = side ? SIDES[side] : null;
   { const big = A.kind === 'forest' || A.hub, floorBig = A.kind === 'dungeon' && !side && !A.arena; const hs = (A.hub || A.reg) && !side ? 100 : big ? 64 : floorBig ? 62 : 46; resizeWorld(hs, hs); }   // (round 68a: wider halls and rooms further apart: 62 / 46, were 56 / 40)   // round 41: the hub 84x84   // round 38: dungeon floors 56x56 (were 40)
   LV.area = A.kind; LV.cyc = A.cyc; LV.act = A.act; LV.loop = A.loop; LV.floor = A.floor || 0; LV.arena = A.arena || null;
+  if (A0.act === 0 && !A0.loop && !A0.hub && typeof storyF === 'function' && storyF().h3all) A.diff += 2;   // round 78: after the Hollow's three dangers the hero is about two levels up: the Riverlands, the cellar, the crypt and the King follow
   LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.hub = !!A.hub; LV.riv = !!A.riv && !side; LV.gateSign = null; LV.gateOpen = false; LV.autumn = A.act === 1 && !A.reg; LV.reg = (!side && A.reg) || null; LV.night = A.kind !== 'dungeon' && A.act === 2; LV.plaza = null; LV.npcs = []; LV.critters = []; LV.champsPlanned = false; LV.genFail = null;
   if (typeof syncLightTables === 'function') syncLightTables(LV.outdoor);   // round 48
   if (LV.outdoor) { LV.theme = A.kind; genOutdoor(level, seed, A); LV.level = level; LV.seed = seed; return; }

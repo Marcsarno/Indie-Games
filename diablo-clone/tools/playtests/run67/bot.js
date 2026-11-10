@@ -56,7 +56,7 @@
       const d = Math.hypot(tg[0] - hero.fi, tg[1] - hero.fj);
       const n = tg.npc ? npcs.find(q => Math.abs(q.fi - tg[0]) < 0.01 && Math.abs(q.fj - tg[1]) < 0.01) : null;
       if (n && d < 1.4) { if (!(hero.tradeT > G.t)) { hero.tradeT = G.t + 0.8; trade(n); } }
-      else go(pathDir(tg));
+      else { const act = typeof stonesAction === 'function' && stonesAction(); if (act) act.go(); else if (!(G.stones && d < 2)) go(pathDir(tg)); }   // (round 78: wake the stones, then hold the ring)
     } else { const n = npcs.find(q => q.role === 'priest'); if (n) go(pathDir([n.fi, n.fj])); }
     if (back > 0) { back -= dt; jig = 0; let bd = [1, 1]; for (let q = 0; q < 8; q++) { const a = q * 0.785, v = [Math.cos(a), Math.sin(a)]; if (!blocked(hero.fi + v[0] * 2, hero.fj + v[1] * 2)) { bd = v; break; } } go(bd); }   // standing on a door that has not re-armed: step off it first
     else if (jig > 0) { jig -= dt; go([Math.cos(jig * 3 + t), Math.sin(jig * 3 + t)]); }

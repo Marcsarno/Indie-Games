@@ -393,7 +393,7 @@ HUB.start = [HUB.camp[0] + 1.6, HUB.camp[1] + 2.4];
 // the people's places in the camp, as (u, s) offsets from the fire (as in the camp concept: Osric's
 // chapel tent on the left, the merchant's wagon on the right, Hollis's tent and the smith below)
 const CAMP_AT = (du, ds) => { const [a, b] = US(du, ds); return [HUB.camp[0] + a * 0.7071, HUB.camp[1] + b * 0.7071]; };   // (offsets in tiles across and down the screen)
-const hollowOpen = () => { const f = (G.story && G.story.f) || {}; return !!(f.aldoFree || LV.loop > 0 || (G.gates && G.gates[0])); };   // the fallen tree cleared
+const hollowOpen = () => { const f = (G.story && G.story.f) || {}; return !!((f.aldoFree && (typeof h3Done !== 'function' || h3Done() || h3Legacy(f))) || LV.loop > 0 || (G.gates && G.gates[0])); };   // the fallen tree cleared (round 78: once the Hollow's three dangers are dealt with)
 function genHollow(R, A) {
   const H = HUB, [cx, cy] = H.camp, autumn = false;
   // ---- roads (the layout's widths are full widths in tiles)
