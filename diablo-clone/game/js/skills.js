@@ -553,7 +553,7 @@ function explodeAt(fi, fj, r, k, pow, big = false, cold = false) {
   shockwave(fi, fj, r * 1.05, big ? 0.36 : 0.26, [18, 16]); impactFlash(fi, fj, big ? 10 : 7, big ? 10 : 6);   // round 25: the blast's front and its first white frames
   if (big) { rubble(x, y, 20, 80); const q = { fi, fj, a0: 0, ring: true, R: 2.4, t: 0.7, t0: 0.7, seed: (Math.random() * 1e6) | 0 }; G.quakes.push(q); stampCracks(q); }
   G.flashes.push({ fi, fj, t: big ? 0.45 : 0.25, t0: big ? 0.45 : 0.25, r: big ? 150 : 100 });
-  G.blasts.push({ fi, fj, r, t: big ? 0.32 : 0.22, t0: big ? 0.32 : 0.22 });
+  G.blasts.push({ fi, fj, r, t: big ? 0.6 : 0.46, t0: big ? 0.6 : 0.46, big, bloom: true, seed: Math.random() * 100 });   // (round 73: it lives longer, for the fireball that rises out of it)
   if (SHAKE) G.trauma = Math.min(1, G.trauma + (big ? 0.6 : 0.28));
   sfx('boom'); sfx('sizzle'); if (big) sfx('crack');
 }
@@ -707,7 +707,7 @@ function drawMeteors() {
     for (let k = -L; k <= L; k++) for (const [a, b] of [[k, 0], [0, k]]) { const xx = x + a, yy = y + b; if (xx >= 0 && yy >= 0 && xx < W && yy < H) scr[yy * W + xx] = (Math.abs(k) < 2 ? 27 : s.col) | EMIS; }
   }
   for (const bl of G.blasts) {
-    const [cx0, cy0] = iso(bl.fi, bl.fj), cx = cx0 - camX, cy = cy0 - camY, p = 1 - bl.t / bl.t0;
+    const [cx0, cy0] = iso(bl.fi, bl.fj), cx = cx0 - camX, cy = cy0 - camY, p = Math.min(1, (1 - bl.t / bl.t0) * (bl.bloom ? 2 : 1)); if (p >= 1) continue;
     const R = bl.r * 22.6 * (0.45 + 0.55 * Math.min(1, p * 2.2)), hole = Math.max(0, p - 0.35) / 0.65;
     for (let y = Math.floor(cy - R / 2); y <= cy + R / 2; y++) for (let x = Math.floor(cx - R); x <= cx + R; x++) {
       if (x < 0 || y < 0 || x >= W || y >= H) continue;
@@ -730,7 +730,7 @@ function drawMeteors() {
         scr[y * W + x] = (k === 1 ? C[1] : C[0]) | EMIS;
       }
     }
-    if (m.t < 0.45) {   // the rock: a glowing ball coming in from the upper left
+    if (false && m.t < 0.45) {   // (round 73: the rock is drawn at full detail in drawMeteorRocks)
       const k = Math.max(0, m.t) / 0.45, rx0 = Math.round(cx - k * 50), ry0 = Math.round(cy - k * 150), q = m.small ? 0.6 : 1;
       for (let b = -7; b <= 7; b++) for (let a = -7; a <= 7; a++) {
         const d = (a * a + b * b) / (q * q), x = rx0 + a, y = ry0 + b;
@@ -1265,7 +1265,66 @@ function drawStreaks() {   // the blink's streak: a white core in an arcane band
     }
   }
 }
+// round 73: the fire that rises out of a blast: a white flash, then a ball of flame that swells, lifts off the
+// ground and cools from yellow through orange to dark smoke, its edge ragged and boiling
+function drawBlooms() {
+  for (const bl of G.blasts) {
+    if (!bl.bloom) continue;
+    const [x0, y0] = iso(bl.fi, bl.fj), p = 1 - bl.t / bl.t0, Rg = bl.r * 22.6 * SPX, fr = Math.floor(G.t * 20);
+    const grow = Math.min(1, p / 0.3), R = Rg * (0.26 + 0.2 * grow) * (bl.big ? 1.1 : 1), rise = Rg * 0.5 * p * p + R * 0.55;
+    const cx = Math.round(x0 * SPX - cam2x), cy = Math.round(y0 * SPX - cam2y - rise), cool = Math.max(0, (p - 0.25) / 0.75);
+    const RR = Math.ceil(R * 1.25);
+    for (let b = -RR; b <= RR; b++) for (let a = -RR; a <= RR; a++) {
+      const ang = Math.atan2(b, a), lump = 1 + 0.08 * Math.sin(ang * 4 + bl.seed + p * 5) + 0.06 * Math.sin(ang * 7 - bl.seed * 2 - p * 8);
+      const d = Math.hypot(a, b * 1.12) / (R * lump) + (hash((a + 512) >> 1, (b + 512) >> 1, fr) - 0.5) * 0.14;
+      if (d > 1) continue;
+      const x = cx + a, y = cy + b;
+      if (p > 0.72 && BAYER[((y & 3) << 2) | (x & 3)] < (p - 0.72) / 0.28 * 1.05) continue;   // it thins to nothing
+      // hottest low and in the middle; the top and the rim cool first
+      const heat = (1 - d) * 0.9 + 0.25 + b / R * 0.18 - cool * 1.05;
+      ovSet(x, y, p < 0.1 ? (d < 0.6 ? 27 : 18) : heat > 0.72 ? 18 : heat > 0.5 ? 17 : heat > 0.28 ? 16 : heat > 0.08 ? 15 : heat > -0.15 ? 14 : heat > -0.4 ? 5 : 4);
+    }
+    if (p < 0.5) for (let k = 0; k < 7; k++) {   // tongues of flame flung out along the ground
+      const a = bl.seed + k * 0.9, len = Rg * (0.35 + 0.6 * Math.min(1, p / 0.25)) * (0.7 + 0.3 * Math.sin(k * 2.3 + bl.seed)), bx = Math.round(x0 * SPX - cam2x), by = Math.round(y0 * SPX - cam2y);
+      for (let sI = Math.round(len * 0.45); sI < len; sI++) { const u = sI / len, x = Math.round(bx + Math.cos(a) * sI), y = Math.round(by + Math.sin(a) * sI * 0.5 - Math.sin(u * 3.14) * 5); if (p > 0.3 && ((x + y) & 1)) continue; const c = u > 0.85 ? 15 : u > 0.6 ? 16 : 17; ovSet(x, y, c); ovSet(x, y - 1, c); if (u < 0.8) ovSet(x + 1, y, c); }
+    }
+  }
+}
+// round 73: the meteor itself: a dark rock, cracked and glowing, wrapped in flame that is white-hot on its leading
+// face, dragging a long wavering tail down the sky (the Comet: the same in ice)
+function drawMeteorRocks() {
+  for (const m of G.meteors) {
+    if (m.t >= 0.45) continue;
+    const [x0, y0] = iso(m.fi, m.fj), k = Math.max(0, m.t) / 0.45, q = m.small ? 0.62 : 1, t = G.t, fr = Math.floor(t * 24);
+    const X0 = Math.round((x0 - k * 50) * SPX - cam2x), Y0 = Math.round((y0 - k * 150) * SPX - cam2y), fx = 0.316, fy = 0.949;   // it falls down and to the right
+    const C = m.cold ? [27, 118, 117, 116, 114] : [18, 17, 16, 15, 14], L = Math.round(70 * q);
+    for (let sI = L; sI >= 4; sI--) {
+      const u = sI / L, wv = Math.sin(t * 20 - sI * 0.3) * 4 * u, w = 13 * q * Math.pow(1 - u, 0.7), cx = X0 - fx * sI - fy * wv, cy = Y0 - fy * sI + fx * wv;
+      for (let c = -Math.ceil(w); c <= Math.ceil(w); c++) {
+        const e = Math.abs(c) / Math.max(1, w); if (e > 1) continue;
+        const x = Math.round(cx - fy * c), y = Math.round(cy + fx * c);
+        if (u > 0.55 && ((x + y + fr) & 1)) continue;
+        const col = u < 0.2 ? (e < 0.5 ? C[1] : C[2]) : u < 0.5 ? (e < 0.5 ? C[2] : C[3]) : e < 0.5 ? C[3] : C[4];
+        ovSet(x, y, col); ovSet(x + 1, y, col);
+      }
+    }
+    const R = 15 * q, RR = Math.ceil(R * 1.3);
+    for (let b = -RR; b <= RR; b++) for (let a = -RR; a <= RR; a++) {
+      const al = a * fx + b * fy, d = Math.hypot(a, b) / R + (hash((a + 64) >> 1, (b + 64) >> 1, fr) - 0.5) * 0.22;
+      if (d > 1.15) continue;
+      const x = X0 + a, y = Y0 + b;
+      if (d > 1) { if ((x + y + fr) & 1) ovSet(x, y, C[4]); continue; }
+      if (d < 0.56) {   // the rock inside the fire, glowing along its cracks
+        const crack = hash((a + 64) >> 2, (b + 64) >> 2, 5) < 0.3;
+        ovSet(x, y, crack ? C[2] : m.cold ? (al > 2 ? 116 : 114) : al > 2 ? 75 : 73); continue;
+      }
+      const hot = d - Math.max(0, al) / R * 0.5;   // hottest on the face it falls on
+      ovSet(x, y, hot < 0.42 ? C[0] : hot < 0.62 ? C[1] : hot < 0.85 ? C[2] : C[3]);
+    }
+  }
+}
 function drawImpactFlashes() {
+  drawMeteorRocks(); drawBlooms();
   drawShafts(); drawSlamFx(); drawFrostFx(); drawLightning(); drawRangerKit(); drawArcHits();   // round 65, 66, 67, 68d
   drawStreaks(); drawHookChains(); drawMods30(); drawStrikes(); drawRangerFx(); drawDebris();
   for (const f of G.impacts) {

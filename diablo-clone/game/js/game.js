@@ -1843,14 +1843,28 @@ function drawProjectile(p) {
     for (let k = 0; k < (p.orb ? 5 : 3); k++) { const a = sp + k * 6.283 / (p.orb ? 5 : 3), x = Math.round(X0 + Math.cos(a) * 13 * B), y = Math.round(Y0 + Math.sin(a) * 6.5 * B); ovSet(x, y, 27); ovSet(x + 1, y, 40); ovSet(x, y + 1, 39); }
     return;
   }
-  if (p.kind === 'hfire') {   // the hero's fireball: a flickering ball of flame with a hot core, tail streaming behind
-    const l = Math.hypot(p.vx, p.vy) || 1, tx = -(p.vx - p.vy) / l * 0.75, ty = -(p.vx + p.vy) / l * 0.38;
-    const B = p.big ? 1.7 : 1;   // the Great Fireball is drawn bigger
-    for (let s = 2; s <= 7 * B; s++) { const w = Math.max(0, 3 * B - s * 0.4); for (let k = -Math.round(w); k <= Math.round(w); k++) put(Math.round(tx * s - ty * k * 0.6), Math.round(ty * s + tx * k * 0.6), (s < 4 * B ? 16 : s < 6 * B ? 15 : 14) | EMIS); }
-    const R4 = Math.ceil(4 * B);
-    for (let b = -R4; b <= R4; b++) for (let a = -R4; a <= R4; a++) {
-      const d = Math.hypot(a, b) / B + (hash(a + Math.floor(G.t * 20), b, 9) - 0.5) * 1.6;   // a ragged, flickering edge
-      if (d <= 3.9) put(a, b, (d < 1.4 ? 18 : d < 2.4 ? 17 : d < 3.2 ? 16 : 15) | EMIS);
+  if (p.kind === 'hfire') {   // round 73: the hero's fireball at full detail: a white-hot heart in a ragged ball of flame, three tones deep, with a long tail that wavers as it streams back
+    const vl = Math.hypot(p.vx, p.vy) || 1, ux = (p.vx - p.vy) / vl * 0.707, uy = (p.vx + p.vy) / vl * 0.354, ul = Math.hypot(ux, uy) || 1, fx = ux / ul, fy = uy / ul;
+    const B = p.big ? 1.7 : 1, t = G.t, L = Math.round(30 * B), ph = (p.age || 0) * 0 + (p.fi + p.fj) * 3;
+    for (let sI = L; sI >= 3; sI--) {   // the tail, drawn from its end forward so the hot part overlaps the cool
+      const u = sI / L, wv = Math.sin(t * 22 - sI * 0.42 + ph) * 3.2 * u * B + Math.sin(t * 13 + sI * 0.9) * 1.2 * u, w = 7.5 * B * Math.pow(1 - u, 0.75);
+      const cx = X0 - fx * sI - fy * wv, cy = Y0 - fy * sI + fx * wv;
+      for (let k = -Math.ceil(w); k <= Math.ceil(w); k++) {
+        const e = Math.abs(k) / Math.max(1, w); if (e > 1) continue;
+        const x = Math.round(cx - fy * k), y = Math.round(cy + fx * k);
+        if (u > 0.62 && ((x + y + Math.floor(t * 30)) & 1)) continue;   // the end breaks up
+        ovSet(x, y, u < 0.22 ? (e < 0.45 ? 17 : 16) : u < 0.5 ? (e < 0.5 ? 16 : 15) : u < 0.8 ? (e < 0.5 ? 15 : 14) : 14); ovSet(x + 1, y, u < 0.22 ? 16 : u < 0.5 ? 15 : 14);
+      }
+    }
+    const rx = 9.5 * B, ry = 8 * B, RR = Math.ceil(rx * 1.5), fr = Math.floor(t * 24);
+    for (let b2 = -RR; b2 <= RR; b2++) for (let a2 = -RR; a2 <= RR; a2++) {
+      const al = a2 * fx + b2 * fy, pe = -a2 * fy + b2 * fx;
+      const kk = al < 0 ? 1 / (1 + 0.7 * Math.min(1, -al / rx)) : 1;   // drawn out behind
+      const d = Math.sqrt((al * kk) * (al * kk) / (rx * rx) + pe * pe / (ry * ry)) + (hash((a2 + 64) >> 1, (b2 + 64) >> 1, fr) - 0.5) * 0.3;   // a ragged edge that flickers
+      if (d > 1.22) continue;
+      const x = X0 + a2, y = Y0 + b2, hot = d - Math.max(0, al) / rx * 0.22;
+      if (d > 1) { if (((x + y + fr) & 1) === 0) ovSet(x, y, 14); continue; }   // a dark red fringe
+      ovSet(x, y, hot < 0.2 ? 27 : hot < 0.42 ? 18 : hot < 0.68 ? 17 : hot < 0.9 ? 16 : 15);
     }
     return;
   }
