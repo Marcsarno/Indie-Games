@@ -32,6 +32,15 @@ vs a pre-change copy + `cmp`; hero hash script pattern in the B2 section; edge c
 the sprite canvas edge over idle/walk/attack/hit/death x 8 dirs. Renderer has an opt-in `ff` fur hook (rig.js) unused now.
 **Known existing bug for the main chat:** Dire Bear and Gorr death frames clip at the canvas bottom (needs taller `size`).
 
+## E1: review of every enemy design (2026-11-10, review done; improvements waiting on the user's pick)
+The user asked to review and improve all enemy designs. All 56 MONSTERS entries were rendered at game size (zoom 2, three facings, dark and mid
+floor bands, silhouettes) in family lineups: `art/review/e1-roster-review/`. Lint ran on all 56: 50 pass; flagged on lightDirection (< 0.15):
+spitter -0.31, flintback 0.02, blueslime 0.03, broodguard 0.04, slime 0.07, burning 0.14 (burning is the known always-bright flames case). Noise is fine everywhere.
+Ranked weakest by eye at game size: Restless Dead (small brown blob), Cave Bat (messy side silhouette, brown on dark), Drowned Warden (blotchy
+moss), Flintback Matriarch (flat slabs on the back), Dire Bear and Boar (lumpy "balls" shading, tusks don't read), the fallen trio and the
+goblin trio (variants identical in silhouette), Brother Cinder (reads as a bigger shaman), Venom Spitter (lint: lit from the wrong side).
+Nothing has been changed yet.
+
 ## D1: boss move animations for Malgrath and Azhruk (2026-11-09)
 The user asked for interesting boss abilities and animations; split agreed: the art chat designs (`art/BOSS_ABILITIES.md`) and builds
 every animation, and the main chat wires the gameplay (wiring notes at the end of that file).
