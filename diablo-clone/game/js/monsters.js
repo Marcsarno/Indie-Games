@@ -1906,10 +1906,13 @@ function toadRig(look, st) {
 // sunken sockets and a hanging jaw; a torn brown tunic and ragged dark trousers, bare feet. One arm
 // reaches out ahead, the other hangs; it lurches, dragging the left foot. Both arms come down on the attack.
 const ZOMBIE_B = { hipH: 11.5, thigh: 6, shin: 5.6, ankle: 1.2, spine: 7, shW: 4.6, shZ: 2.6, neck: 8.6, upper: 5.6, fore: 5.2, hipW: 2.6, stride: 3.4, lift: 1.6, duty: 0.66, bob: 0.9, sway: 1.1, runLean: 0.1, counter: 0.12, hunch: 0.28 };
+const ZOMBIE_TALL = { ...ZOMBIE_B, hipH: 13.4, thigh: 7, shin: 6.6, spine: 7.8, upper: 6.8, fore: 6.6, shW: 5.0, hunch: 0.34, neck: 8.4 };   // art E2: direction a
 const ZOMBIE_GRAB = [{ a: 1.6, ms: 320, tele: true }, { a: 1.7, ms: 120 }, { a: 0.6, ms: 80, mv: 0.3 }, { a: -0.3, ms: 70, hit: true }, { a: -0.5, ms: 320, open: true }, { a: 0, ms: 130 }];
 function zombieRig(look, st) {
-  const B = ZOMBIE_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J, { clip, f } = st;
-  const flesh = M.OLDBONE, bony = M.BONE, rag = M.LEATHER, pants = M.CLOTH_SHADOW;   // pale grey corpse flesh, paler bony hands and feet
+  // art E2: rough directions for the Restless Dead redo (look.v; none = the current look): 'a' a tall gaunt corpse in grey-green
+  // rotting hide with a dark torn shroud and bare ribs; 'b' a bloated one, the belly split; 'c' wound in pale grave cloth
+  const Z = look.v || '', B = Z === 'a' ? ZOMBIE_TALL : ZOMBIE_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J, { clip, f } = st;
+  const flesh = Z === 'a' || Z === 'b' ? M.OGRE : M.OLDBONE, bony = M.BONE, rag = Z === 'a' ? M.CLOTH_SHADOW : Z === 'c' ? M.CLOTH_WHITE : M.LEATHER, pants = Z === 'c' ? M.CLOTH_WHITE : Z === 'a' ? M.CLOTH_DARK : M.CLOTH_SHADOW;   // pale grey corpse flesh, paler bony hands and feet
   if (clip === 'walk') {   // the lurch: the left foot drags, barely leaving the floor
     const g = gaitFoot(B, f / 8), L = ik(J.hipL, [g[0], -B.hipW, g[1] * 0.2 + B.ankle], B.thigh, B.shin, [1, 0, 0.1]);
     J.kneeL = L.joint; J.ankL = L.end;
@@ -1924,12 +1927,24 @@ function zombieRig(look, st) {
   // the tunic: a torn sack from the hips to the shoulders, with ragged tails hanging below the hem
   const hem = V.mad(J.pelvis, up, 1.2), top = V.mad(J.chest, up, 2.6);
   r.group(() => {
-    r.cone(hem, top, 3.7, 4.2, rag, { mf: p => { const q = V.sub(p, J.chest); return [[1.5, 3.4, -2], [-2, 3.8, 1.5], [3.6, -1.8, -4]].some(([x, y, z]) => (V.dot(q, fwd) - x) ** 2 + (V.dot(q, sideR) - y) ** 2 + (V.dot(q, up) - z) ** 2 < 1.3) ? M.DARK : 0; } });
+    r.cone(hem, top, 3.7, 4.2, rag, { mf: p => { const q = V.sub(p, J.chest); if (Z === 'c') { const w = V.dot(q, up) + V.dot(q, sideR) * 0.35; return Math.abs((((w + 20) % 1.9) + 1.9) % 1.9 - 0.95) < 0.22 ? M.OLDBONE : 0; }   /* the windings */ return [[1.5, 3.4, -2], [-2, 3.8, 1.5], [3.6, -1.8, -4]].some(([x, y, z]) => (V.dot(q, fwd) - x) ** 2 + (V.dot(q, sideR) - y) ** 2 + (V.dot(q, up) - z) ** 2 < 1.3) ? M.DARK : 0; } });
     for (const [a, l] of [[0.3, 3.4], [1.5, 2.2], [2.6, 3.6], [3.7, 2.4], [4.8, 3.2], [5.8, 2.0]]) {
       const d = V.add(V.mul(fwd, Math.cos(a)), V.mul(sideR, Math.sin(a))), p0 = V.mad(hem, d, 3.2);
       r.cone(p0, V.add(V.mad(p0, up, -l), V.mul(d, 0.7)), 1.3, 0.3, rag);
     }
   });
+  if (Z === 'a') {   // bare ribs through the torn shroud on his left side: 1 px bone lines over a dark hollow
+    const rc = V.add(V.add(J.chest, V.mul(fwd, 2.2)), V.add(V.mul(sideR, -2.4), V.mul(up, 0.2)));
+    r.ell(rc, [2.2, 2.4, 2.8], M.DARK, frameAlong(fwd, up), { noShadow: true, mf: p => { const z = V.dot(V.sub(p, rc), up); return Math.abs((((z + 20) % 1.3) + 1.3) % 1.3 - 0.65) < 0.3 ? M.BONE : 0; } });
+  }
+  if (Z === 'b') {   // the bloated belly pushing out under the tunic, split by a dark wound
+    const bc = V.add(V.add(J.pelvis, V.mul(fwd, 2.2)), V.mul(up, 2.6));
+    r.ell(bc, [4.6, 5.0, 4.4], flesh, frameAlong(fwd, up), { mf: p => { const q = V.sub(p, bc); return V.dot(q, fwd) > 2.6 && Math.abs(V.dot(q, sideR) + V.dot(q, up) * 0.4) < 0.55 && Math.abs(V.dot(q, up)) < 2.6 ? M.BLOODY : 0; } });
+  }
+  if (Z === 'c') for (const [a, l] of [[0.9, 5.5], [2.2, 6.5], [4.0, 6.0], [5.3, 5.0]]) {   // long trailing strips of grave cloth
+    const d = V.add(V.mul(fwd, Math.cos(a)), V.mul(sideR, Math.sin(a))), p0 = V.mad(V.mad(J.chest, up, -1), d, 3.6);
+    r.cone(p0, V.add(V.mad(p0, up, -l), V.mul(d, 1.6 + (clip === 'walk' ? Math.sin(f / 8 * 6.28 + a) * 0.8 : 0))), 1.1, 0.25, rag);
+  }
   // arms: the right reaches straight ahead, the left hangs low and forward; both come up and down on the attack
   const sw = st.key || null, sh = J.swingArm || 0;
   let hR = V.add(V.mad(J.shR, fwd, 9.5 + sh), V.add(V.mul(up, -1.5), V.mul(sideR, -0.8)));
@@ -2300,6 +2315,9 @@ const MONSTERS = {
   // main chat sets their levels, stats and loot; stats here are placeholders near a similar monster
   cavebat: { family: 'bat', name: 'CAVE BAT', minLevel: 99, look: {}, hp: 8, dmg: [1, 4], speed: 50, reach: 1.2, xp: 9, chest: 8, shadow: 6, pack: true },
   bogtoad: { family: 'toad', name: 'BOG TOAD', minLevel: 99, look: {}, hp: 22, dmg: [3, 6], speed: 26, reach: 1.5, xp: 20, chest: 14, shadow: 10 },
+  rest_a: { family: 'zombie', name: 'RESTLESS DEAD', minLevel: 99, look: { v: 'a', scale: 1.2, size: [92, 100, 46, 72], }, hp: 20, dmg: [3, 6], speed: 18, reach: 1.3, xp: 16, chest: 20, shadow: 7 },   // TEMP E2 direction
+  rest_b: { family: 'zombie', name: 'RESTLESS DEAD', minLevel: 99, look: { v: 'b', scale: 1.2, size: [92, 100, 46, 72], }, hp: 20, dmg: [3, 6], speed: 18, reach: 1.3, xp: 16, chest: 20, shadow: 7 },   // TEMP E2 direction
+  rest_c: { family: 'zombie', name: 'RESTLESS DEAD', minLevel: 99, look: { v: 'c', scale: 1.2, size: [92, 100, 46, 72], }, hp: 20, dmg: [3, 6], speed: 18, reach: 1.3, xp: 16, chest: 20, shadow: 7 },   // TEMP E2 direction
   restless: { family: 'zombie', name: 'RESTLESS DEAD', minLevel: 99, look: {}, hp: 20, dmg: [3, 6], speed: 18, reach: 1.3, xp: 16, chest: 20, shadow: 7 },
   // art B2: new spiders from the user's concepts; minLevel 99 keeps them out of the spawn pools, stats are placeholders
   spitter: { family: 'spider', name: 'VENOM SPITTER', minLevel: 99, look: { spit: true, scale: 0.85 }, hp: 9, dmg: [2, 5], speed: 40, reach: 6, ranged: 'arrow', xp: 13, chest: 8, shadow: 11 },
