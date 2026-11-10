@@ -558,6 +558,13 @@ const VSTAT = {                                  // per-vehicle handling (multip
   moto: { acc: 1.7, top: 1.12, steer: 1.4, grip: 1.5, ram: .2 } };     // Chris: very fast, tightest turns, most grip, no ramming (a car hit stops the bike)
 const VDEF = { acc: 1, top: 1, steer: 1, grip: 1, ram: 1 };
 const CC_TOP = WN === 'cc' ? 1.15 : 1;     // round 47 (user: "the car's a little bit slow"): +15 % top speed on the new map, acceleration unchanged
+// round 54 (user: "I want the driving to feel Arcady"): the arcade layer on the new maps (the old small map keeps its handling).
+// Punchier pull (acc x, and it holds on longer toward top speed), a DRIFT button that slides the car without killing its speed, and a drift boost:
+// hold a drift for chargeMin s and letting it straighten fires a boost (longer drift = longer boost; sparks go blue, then orange when it is full).
+const ARC = WN !== 'coconut' && WN !== 'chinatown';
+// The drift itself: the nose swings in at driftYaw rad/s, the car's travel direction follows it (slip angle eases back at `drift` per s, never past maxSlip),
+// and the speed is kept (sideways speed is turned into forward speed, not thrown away). Letting go straightens it at `recover` per s.
+const ARCADE = { acc: 1.2, handGas: 1.6, drift: 2.3, recover: 5, maxSlip: .68, driftYaw: 1.75, chargeMin: .55, chargeMax: 1.6, boostT: [.9, 2.0], boostTop: 1.32, boostAcc: 2.4, kick: 3.5, over: 7 };
 function makeVeh(name, car) { const g = car.group; const D_ = car.dims, M_ = 320 * D_[0] * D_[1]; return vehs[name] = { st: VSTAT[car.kind] || VDEF, car, name, mass: M_, perf: ({ coupe: 1.15, police: 1.1, hatchback: .95, suv: .95, minivan: .9, pickup: .95, van: .85, tow: .8, ambulance: .85, boxtruck: .72, flatbed: .75, garbage: .65, bus: .62 })[car.kind] || 1, I: M_ * (D_[0] * D_[0] + D_[1] * D_[1]) / 12, x: g.position.x, z: g.position.z, th: g.rotation.y, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, mode: 'parked', hardest: 0, hits: 0 }; }
 for (const [name, car] of Object.entries(allCars)) makeVeh(name, car);
 let ride = 'player';                              // the hero vehicle's name in vehs ('player' = Marc's Jeep, 'hero_tesla', 'hero_moto')
@@ -993,6 +1000,15 @@ function roadDir(x, z, th) {                      // road assist: turn (rad) fro
       let df = wrapA(Math.atan2(-hx, -hz) - th); if (Math.abs(df) > Math.PI / 2) df = wrapA(df + Math.PI); if (Math.abs(df) > lim) continue; const sc = d + Math.abs(df) * 10; if (sc < bs) { bs = sc; best = df; } } }
   return best;
 }
+function boostFx(c) { ensureAudio(); whooshSound(0); rig.shake = Math.min(1, rig.shake + .3); }
+let arcT = 0;
+function arcadeFx(dt) {                              // drift sparks at the rear wheels (white -> blue = boost ready -> orange = full) and a flame while boosting
+  if (!ARC || !drive || hmode !== 'driving') return; const c = drive; arcT -= dt; if (arcT > 0) return; arcT = .045;
+  const fx = -Math.sin(c.th), fz = -Math.cos(c.th), rx = Math.cos(c.th), rz = -Math.sin(c.th), ch = c.dcharge || 0;
+  if (ch > .12) { const col = ch >= ARCADE.chargeMax * .98 ? 0xff9a2a : ch >= ARCADE.chargeMin ? 0x4fc3ff : 0xf2f2f2;
+    for (const s_ of [-1, 1]) puff(c.x - fx * 1.5 + rx * s_ * .8, .18, c.z - fz * 1.5 + rz * s_ * .8, ch >= ARCADE.chargeMin ? .7 : .45, col, .28, 1.4, .6, ch >= ARCADE.chargeMin); }
+  if (c.boostT > 0) for (const s_ of [-.45, .45]) puff(c.x - fx * 2.3 + rx * s_, .45, c.z - fz * 2.3 + rz * s_, .8, Math.random() < .5 ? 0xffb030 : 0xff5a1e, .22, .3, .9, true);
+}
 function physicsStep(dt) {
   if (!drive) { gasOn = false; return; }
   const c = drive, driving = c.mode === 'driving'; c.px = c.x; c.pz = c.z; c.pth = c.th;     // last pose, for drawing between steps
@@ -1026,18 +1042,32 @@ function physicsStep(dt) {
   gasOn = gasK > .1; c.tgt = tgt;      // input.gas stays the real Gas key (the joystick used to overwrite it, and it leaked into walking as auto-run)
   c.steer += (tgt - c.steer) * (1 - Math.exp(-(tgt === 0 ? TUNE.steerOut : TUNE.steerIn) * dt));
   let a = 0;
-  if (gasK > 0) a += TUNE.accel * pf * st.acc * gasK * Math.max(0, 1 - Math.max(0, vf) / TOP);
+  const boosting = ARC && c.boostT > 0, TOPB = TOP * (boosting ? ARCADE.boostTop : 1);
+  if (gasK > 0) { const u = Math.max(0, vf) / TOPB; a += TUNE.accel * pf * st.acc * gasK * (ARC ? ARCADE.acc * Math.max(0, 1 - u * u) * (boosting ? ARCADE.boostAcc : 1) : Math.max(0, 1 - u)); }
+  if (ARC && vf > TOPB) a -= Math.min((vf - TOPB) / dt, ARCADE.over);                          // past top speed (a boost just ended): ease back down
   a -= Math.sign(vf) * Math.min(Math.abs(vf) / dt, slow);
   if (driving && (brk || rev)) a -= vf > .8 ? TUNE.brake : TUNE.accel * TUNE.revAcc * Math.min(st.acc, 1.2) * Math.max(0, 1 - Math.max(0, -vf) / (TUNE.top * TUNE.revTop));
   vf += a * dt;
   const hand = !driving || input.hand;
-  if (hand) { const hb = Math.min(Math.abs(vf), TUNE.hand * dt); vf -= Math.sign(vf) * hb; }
+  if (hand) { const hb = Math.min(Math.abs(vf), (ARC && driving && gasK > 0 ? ARCADE.handGas : TUNE.hand) * dt); vf -= Math.sign(vf) * hb; }     // arcade: DRIFT with the gas down barely slows you
   const roll = Math.min(Math.abs(vf), (TUNE.coast + TUNE.coastK * Math.abs(vf)) * dt); if (!(gasK > 0)) vf -= Math.sign(vf) * roll;
   c.slide = c.slide ? (Math.abs(vl) > TUNE.slideOut || (hand && driving)) : ((hand && driving && Math.abs(vf) > 4) || Math.abs(vl) > TUNE.slideIn);
-  vl *= Math.exp(-(c.slide ? TUNE.drift : TUNE.grip) * (c.st ? c.st.grip : 1) * dt); c.slip = Math.atan2(Math.abs(vl), Math.max(1, Math.abs(vf))) * 180 / Math.PI;
+  const adrift = ARC && driving && c.slide && vf > 5;
+  if (adrift) { let s_ = Math.hypot(vf, vl); if (s_ > TOPB) s_ = Math.max(TOPB, s_ - ARCADE.over * dt); const sl = clamp(Math.atan2(vl, vf) * Math.exp(-(input.hand ? ARCADE.drift : ARCADE.recover) * dt), -ARCADE.maxSlip, ARCADE.maxSlip); vf = s_ * Math.cos(sl); vl = s_ * Math.sin(sl); }
+  else vl *= Math.exp(-(c.slide ? TUNE.drift : TUNE.grip) * (c.st ? c.st.grip : 1) * dt); c.slip = Math.atan2(Math.abs(vl), Math.max(1, Math.abs(vf))) * 180 / Math.PI;
   const sp = Math.abs(vf), maxSteer = (rad(TUNE.lockLow) + (rad(TUNE.lockHigh) - rad(TUNE.lockLow)) * Math.min(1, sp / TUNE.top) ** TUNE.lockCurve) * TUNE.steer * (c.st ? c.st.steer : 1);     // lockCurve < 1: the wheel angle falls off sooner, so mid-speed steering is calmer while parking stays sharp
-  let wT = -Math.tan(c.steer * maxSteer) * vf / (c.car.dims[2] || CAR.wb); if (c.slide) wT *= 1.2; if (driving && input.hand) wT += -c.steer * TUNE.handYaw * Math.min(1, Math.hypot(vf, vl) / 5);     // handbrake + steer swings the car round (the GTA U-turn); total speed, so it keeps turning once the car is sliding sideways
+  let wT = -Math.tan(c.steer * maxSteer) * vf / (c.car.dims[2] || CAR.wb); if (adrift && input.hand) wT = -c.steer * ARCADE.driftYaw * (c.st ? Math.min(1.15, c.st.steer + .1) : 1); else { if (c.slide) wT *= 1.2; if (driving && input.hand) wT += -c.steer * TUNE.handYaw * Math.min(1, Math.hypot(vf, vl) / 5); }     // handbrake + steer swings the car round (the GTA U-turn); total speed, so it keeps turning once the car is sliding sideways
   c.w += (wT - c.w) * (1 - Math.exp(-TUNE.yawEase * dt));
+  if (ARC && c === drive && driving) {                                                          // drift charge -> boost
+    const drifting = c.slide && input.hand && !air && Math.hypot(vf, vl) > 9 && Math.abs(vl) > 2.2 && !c.inContact;      // only while DRIFT is held and the car is really sideways
+    if (drifting) { c.dcharge = Math.min(ARCADE.chargeMax, (c.dcharge || 0) + dt); c.dgrace = .22; }
+    else if (c.inContact) c.dcharge = 0;                                                        // hit something: the charge is lost
+    else if ((c.dcharge || 0) > 0 && (c.dgrace = (c.dgrace || 0) - dt) <= 0) {
+      if (c.dcharge >= ARCADE.chargeMin) { const k = (c.dcharge - ARCADE.chargeMin) / (ARCADE.chargeMax - ARCADE.chargeMin); c.boostT = ARCADE.boostT[0] + (ARCADE.boostT[1] - ARCADE.boostT[0]) * k; vf += ARCADE.kick; boostFx(c); }
+      c.dcharge = 0;
+    }
+    if (c.boostT > 0) c.boostT -= dt;
+  }
   c.vx = fx * vf + rx * vl; c.vz = fz * vf + rz * vl;
   if (!air) { const [gx, gz] = groundGrad(c.x, c.z); if (gx || gz) { c.vx -= 9.8 * gx * dt * .85; c.vz -= 9.8 * gz * dt * .85; } }     // hills: gravity pulls the car down the slope
   c.x += c.vx * dt; c.z += c.vz * dt; c.th += c.w * dt;
@@ -1108,7 +1138,7 @@ function hornSound() {
 function resetCar(x = world.start.x, z = -world.start.y, th = rad(world.start.rz)) {      // put the player's own car back and the hero in it
   if (drive && drive !== heroVeh()) parkVehicle(drive);
   const v = heroVeh(); removeCarCollider(v); drive = v; hmode = 'driving';
-  Object.assign(v, { air: 0, x, z, th, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, hardest: 0, hits: 0, mode: 'driving' }); v.car.setDamage(0); v.car.setAll(false); clearMarks(v.car);
+  Object.assign(v, { air: 0, boostT: 0, dcharge: 0, x, z, th, vx: 0, vz: 0, w: 0, steer: 0, slide: false, damage: 0, hardest: 0, hits: 0, mode: 'driving' }); v.car.setDamage(0); v.car.setAll(false); clearMarks(v.car);
   v.car.group.position.set(x, 0, z); v.car.group.rotation.y = th; pilot.root.visible = false; v.car.occupants.FL = pilot; seatRider(v);
 }
 
@@ -1118,6 +1148,7 @@ function hold(el, key) {
   const up = () => { input[key] = false; el.classList.remove('on'); };
   el.addEventListener('pointerdown', dn); for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) el.addEventListener(t, up);
 }
+if (ARC) $('b-hand').textContent = 'Drift';
 hold($('b-left'), 'left'); hold($('b-right'), 'right'); hold($('b-gas'), 'gas'); hold($('b-brake'), 'brake'); hold($('b-hand'), 'hand'); hold($('b-run'), 'run');
 const KEYS = { ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right', ArrowUp: 'gas', w: 'gas', W: 'gas', ArrowDown: 'brake', s: 'brake', S: 'brake', ' ': 'hand' };
 addEventListener('keydown', e => {
@@ -1706,11 +1737,11 @@ function update(dt, draw = true) {
   if (CAM_AHEAD) { fx += -Math.sin(drive.th) * CAM_AHEAD; fz += -Math.cos(drive.th) * CAM_AHEAD; }
   if (playView && !SW.on && !CINE.shots && !CAMHOLD.on) { const ck = 1 - Math.exp(-TUNE.camFollow * dt); rig.tx += (fx + fvx * la - rig.tx) * ck; rig.tz += (fz + fvz * la - rig.tz) * ck; }
   if (upd.bench) { rig.tx = upd.bench.x; rig.tz = upd.bench.z; }                 // ?bench=1 drives the camera on a fixed path
-  upd.speedZoom += ((playView && hmode === 'driving' ? Math.min(speed, 28) / 28 * TUNE.camZoom : 0) - upd.speedZoom) * (1 - Math.exp(-2 * dt));
+  upd.speedZoom += ((playView && hmode === 'driving' ? Math.min(speed, 28) / 28 * TUNE.camZoom + (ARC && drive && drive.boostT > 0 ? .1 : 0) : 0) - upd.speedZoom) * (1 - Math.exp(-(ARC && drive && drive.boostT > 0 ? 5 : 2) * dt));
   { const ext = track.active ? 1e5 : world.extent; rig.tx = clamp(rig.tx, -ext, ext); rig.tz = clamp(rig.tz, -ext, ext); }
   if (rig.mode === 'drive') cullStep(dt); else for (const c of cullables) c.o.visible = true;
   compassStep();
-  rampStep();
+  rampStep(); arcadeFx(dt);
   HYD.step(dt, Object.values(vehs));
   BRK_V.length = 0; for (const v of Object.values(vehs)) BRK_V.push(v); if (cops) for (const c of cops.cops) if (c.on && c.v > 2.5) BRK_V.push({ x: c.x, z: c.z, vx: -Math.sin(c.th) * c.v, vz: -Math.cos(c.th) * c.v }); BRKS.step(dt, BRK_V);
   if (!SW.on && !CINE.shots && !CAMHOLD.on) { let ty = 0; const dv = hmode === 'driving' && drive;           // camera yaw: turns with the car while driving (eases, holds when nearly stopped, reversing or handbraking), back to north-up on foot
