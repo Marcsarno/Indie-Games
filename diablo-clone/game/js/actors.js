@@ -146,11 +146,16 @@ function tipRig(rig, pivot, pitch, roll = 0, drop = 0) {
 // a swept blade: emissive crescent from angle a0 to a1 in the swing plane (age-graded colors)
 // SMEAR_MODE: 'full' = bright crescent; 'subtle' = a short, thin, dithered steel streak at the
 // blade tip; 'none' = no trail
-let SMEAR_MODE = 'subtle';   // user disliked the long bright crescent (round 9); 'subtle' is a short thin streak, 'none' turns it off
+let SMEAR_MODE = 'taper';   // user disliked the long bright crescent (round 9); 'subtle' is a short thin streak, 'none' turns it off
 function smearArc(rig, pivot, F, U, a0, a1, r0, r1) {
   if (SMEAR_MODE === 'none') return;
   const dir = a => V.add(V.mul(F, Math.cos(a)), V.mul(U, Math.sin(a)));
   if (SMEAR_MODE === 'taper') {   // round 72: a slash that tapers: the blade's width where the blade is, thinning to a point behind it, white-hot fading to steel, only its tail dotted
+    if (Math.abs(a0 - a1) < 0.3) {   // a thrust: no arc to draw, so two speed lines run beside the blade and meet past its point
+      const d = dir(a1), pp = dir(a1 + Math.PI / 2), tipP = V.mad(pivot, d, r1 + 3);
+      for (const sd of [-1, 1]) { const b0 = V.add(V.mad(pivot, d, r1 * 0.3), V.mul(pp, sd * 2.6)), b1 = V.add(V.mad(pivot, d, r1 * 0.3), V.mul(pp, sd * 1.5)); rig.tri(b0, b1, tipP, sd < 0 ? 32 : 31, sd > 0); }
+      return;
+    }
     const N = 9;
     for (let s = 0; s < N; s++) {
       const t0 = s / N, t1 = (s + 1) / N, A0 = lerp(a1, a0, t0), A1 = lerp(a1, a0, t1);
@@ -269,7 +274,7 @@ function bipedJoints(B, st) {
       footL = [3, -B.hipW - 0.5, 0]; footR = [-2.5, B.hipW + 0.5, 0];
       bob = k.hit ? -1.4 : k.a > 1.5 ? 0.4 : -0.6;
     }
-    if (clip === 'shoot' || clip === 'cast') { twist = 0.25 * k.a; lean = st.sky ? -0.24 : 0.02; }
+    if (clip === 'shoot' || clip === 'cast') { if (k.tw === undefined) { twist = 0.25 * k.a; lean = 0.02; } if (st.sky) lean = -0.24; }
   }
   // round 40a: the hero's new poses
   if (clip === 'hit') {   // knocked from where the blow came: 0 front, 1 left, 2 right, 3 behind
@@ -421,7 +426,7 @@ const HAIRM = { orange: M.HAIR_O, brown: M.HAIR, blond: M.STRAWM, grey: M.CLOTH_
 // round 71: the face. Eyes with a glint, brows, a mouth, cheeks; a nose and ears as shapes; hair
 // showing under a hat or hood. One painter for every open-faced head (heroes and townsfolk).
 // o: { line: paint the hairline (bare head), under: hair under a hat/cap/hood, hair: material }
-defMat('GLINT', [27], 0, { flat: true }); defMat('CHEEK', [62, 62, 63, 63], 2, { span: 0.45 }); defMat('BROW', [33], 0, { flat: true });
+defMat('FLASH', [18], 0, { flat: true, emis: true }); defMat('GLINT', [27], 0, { flat: true }); defMat('CHEEK', [62, 62, 63, 63], 2, { span: 0.45 }); defMat('BROW', [33], 0, { flat: true });
 function faceMf(hd, fwd, sideR, up, o = {}) {
   return p => {
     const q = V.sub(p, hd), f2 = V.dot(q, fwd), s2 = V.dot(q, sideR), z2 = V.dot(q, up), as = Math.abs(s2), ex = as - 1.65;
@@ -481,8 +486,11 @@ for (const name in HERO_PRE) {
   HERO_SWINGS_H[name] = withTilt(hk, sw.tilt, { twoHand: sw.twoHand, free: th, chain: th + hk[hi + 1].ms });
 }
 // round 33: the ranger's shot, a short draw: nock, draw, loose (the arrow leaves on 'hit'), recover
-const RANGER_BOW = [{ a: 0.2, ms: 50 }, { a: 1, ms: 110 }, { a: 1, ms: 40, hit: true }, { a: 0.3, ms: 110 }];
-const RANGER_BOW_H = [{ a: 0.2, ms: 60 }, { a: 1, ms: 150 }, { a: 1, ms: 45, hit: true }, { a: 0.3, ms: 130 }];   // round 62: a fuller draw
+// round 72: the shot is posed like a swing: nock (square on), full draw (side-on, leaning back, a wide stance),
+// the loose (rel: the string hand flies back past the ear, the bow kicks, the string snaps straight), and settling
+const BOW_POSE = [{ tw: 0.12, ln: 0.08, bob: -0.6, fl: 2.5, fr: -2.5 }, { tw: 0.55, ln: -0.12, bob: -1.2, fl: 4.5, fr: -4.2 }, { rel: true, tw: 0.62, ln: -0.2, bob: -0.8, fl: 4.5, fr: -4.2 }, { tw: 0.2, ln: 0.02, bob: -0.5, fl: 3.5, fr: -3.2 }];
+const RANGER_BOW = [{ a: 0.2, ms: 50 }, { a: 1, ms: 110 }, { a: 1, ms: 40, hit: true }, { a: 0.3, ms: 110 }].map((k, i) => Object.assign(k, BOW_POSE[i]));
+const RANGER_BOW_H = [{ a: 0.2, ms: 60 }, { a: 1, ms: 150 }, { a: 1, ms: 45, hit: true }, { a: 0.3, ms: 130 }].map((k, i) => Object.assign(k, BOW_POSE[i]));   // round 62: a fuller draw
 const isBow = w => typeof w === 'string' && w.startsWith('bow');
 // round 41b: gear looks from outside the hero's body code (the art kit). A helm, chest or weapon
 // look id found here is drawn by its function instead of a built-in one; GEAR_SWING picks a
@@ -1118,7 +1126,7 @@ function heroRig(eq, st) {
   let handR, bd, acrossG = false;
   let bothG = false;   // art A8: the kingsguard greatsword held in both hands at rest
   const staff = eq.weapon.startsWith('staff');
-  const draw = bow && st.clip === 'shoot' && st.key ? st.key.a : 0;
+  const rel = bow && st.clip === 'shoot' && st.key && !!st.key.rel, draw = bow && st.clip === 'shoot' && st.key ? (rel ? 0 : st.key.a) : 0, pull = rel ? 1.32 : draw;   // (round 72: on the loose the string is straight and the hand has flown back)
   // round 40a: the hero's new poses for the weapon hand
   const fk = [0, 1, 1, 0.4][st.f % 4];
   const flask = hd => { const fl = V.add(V.mad(hd, fwd, 2.2), V.mul(up, 1.8)); r.sph(fl, 2.3, M.EYE_RED, { noShadow: true }); r.cone(fl, V.mad(fl, V.norm(V.add(V.mul(fwd, -0.9), up)), 2.2), 0.7, 0.6, M.WOOD, { noShadow: true }); };   // the flask, glowing red, tipped to the mouth
@@ -1138,7 +1146,7 @@ function heroRig(eq, st) {
   } else if (bow && st.clip === 'vault') {   // in the air the free arm flies out for balance
     handR = V.add(V.add(J.shR, V.mul(fwd, st.f === 1 ? -2 : 2)), V.add(V.mul(up, st.f === 1 ? -2 : -6.5), V.mul(sideR, st.f === 1 ? 5 : 2))); bd = fwd;
   } else if (bow && st.clip === 'shoot') {   // drawing: the string hand comes back to the cheek
-    handR = st.sky ? V.add(V.add(J.shR, V.mul(fwd, 7 - draw * 6)), V.add(V.mul(up, 5.5 - draw * 4.8), V.mul(sideR, -2.4))) : V.add(V.add(J.shR, V.mul(fwd, 9 - draw * 7.5)), V.add(V.mul(up, -0.6), V.mul(sideR, -2.6))); bd = fwd;
+    handR = st.sky ? V.add(V.add(J.shR, V.mul(fwd, 7 - draw * 6)), V.add(V.mul(up, 5.5 - draw * 4.8), V.mul(sideR, -2.4))) : V.add(V.add(J.shR, V.mul(fwd, 9 - pull * 7.5)), V.add(V.mul(up, rel ? 1.0 : -0.6), V.mul(sideR, rel ? -0.6 : -2.6))); bd = fwd;
   } else if (bow && st.clip !== 'death') {   // walking: the free right hand pumps with the stride
     handR = V.add(V.add(J.shR, V.mul(fwd, 3.5 + J.swingArm * 3)), V.add(V.mul(up, -7.5 + Math.max(0, J.swingArm) * 0.8), V.mul(sideR, 0.6))); bd = fwd;
   } else if (staff && st.clip === 'channel') {   // casting: gather (staff drawn back), release (thrust at the target), follow-through
@@ -1207,7 +1215,7 @@ function heroRig(eq, st) {
   const offSw = -J.swingArm * (eq.shield === 'none' ? 3.6 : 1.6);
   let handL = V.add(V.add(J.shL, V.mul(fwd, 5.5 + offSw)), V.add(V.mul(up, -7.5 + Math.max(0, offSw) * (eq.shield === 'none' ? 0.7 : 0.3)), V.mul(sideR, -0.5)));
   if (bow && st.clip !== 'death') handL = st.clip === 'shoot' && st.sky ? V.add(V.add(J.shL, V.mul(fwd, 7)), V.add(V.mul(up, 5.5), V.mul(sideR, 0.8)))   // Rain of Arrows: the bow arm up at the sky
-    : st.clip === 'shoot' ? V.add(V.add(J.shL, V.mul(fwd, 9.5)), V.add(V.mul(up, -0.6), V.mul(sideR, 0.6)))   // bow arm straight at the target
+    : st.clip === 'shoot' ? V.add(V.add(J.shL, V.mul(fwd, rel ? 10 : 9.5)), V.add(V.mul(up, rel ? 0.6 : -0.6), V.mul(sideR, 0.6)))   // bow arm straight at the target
     : V.add(V.add(J.shL, V.mul(fwd, 3.2 - J.swingArm * 1.2)), V.add(V.mul(up, -7.2), V.mul(sideR, -3.2)));   // bow carried at the side, held out from the leg
   if (xbL) handL = xbL;   // a6: the crossbow's fore-end
   if (st.clip === 'death') handL = !FEEL_OLD && st.f === 0 ? V.add(J.shL, V.add(V.mul(up, 2), V.mul(sideR, -5))) : V.add(J.shL, [2, -3, -9]);   // round 43: flung out by the blow
@@ -1482,7 +1490,7 @@ function heroRig(eq, st) {
     if (hasFx(eq, 'wind')) for (const sd2 of [1, -1]) { const t = tip(sd2); r.cone(t, V.add(V.mad(t, bowUp, -sd2 * 0.5), V.add(V.mul(back, 2.5), V.mul(up, -3.5))), 0.7, 0.3, M.CLOTH_GREEN, { noShadow: true }); }   // round 43: Windrunner: silver limbs, green ribbons at the tips
     if (eq.weapon === 'bow_war') for (const sd2 of [1, -1]) r.cone(tip(sd2), V.mad(tip(sd2), bowUp, sd2 * 1.8), 1.0, 0.2, M.STEEL);   // round 43: the war bow: dark wood, iron-capped tips
     if (eq.ench) for (const sd2 of [1, -1]) r.sph(tip(sd2), 1.3, eq.ench === 'fire' ? M.FIREM : M.ICE, { noShadow: true });   // round 43: Burning or Chilling: the limb tips glow
-    const nock = st.clip === 'shoot' ? aR.hand : V.add(c, V.mul(back, bend + 0.4));
+    const nock = st.clip === 'shoot' && !rel ? aR.hand : V.add(c, V.mul(back, bend + 0.4));
     r.cone(tip(1), nock, 0.3, 0.3, M.CLOTH_WHITE, { noShadow: true }); r.cone(nock, tip(-1), 0.3, 0.3, M.CLOTH_WHITE, { noShadow: true });
     if (st.clip === 'shoot' && draw > 0.5) for (const fan of volley ? [-0.28, 0, 0.28] : [0]) { const ad = V.norm(V.add(aim, V.mul(bowUp, fan))); r.cone(aR.hand, V.mad(aR.hand, ad, 12), 0.4, 0.4, M.WOOD, { noShadow: true }); r.cone(V.mad(aR.hand, ad, 11.5), V.mad(aR.hand, ad, 13.2), 0.7, 0.2, M.STEEL, { noShadow: true }); }
     if (st.clip === 'death') deathTip(r, B, st.f, -1);
@@ -1505,6 +1513,12 @@ function heroRig(eq, st) {
       r.sph(top, 2.7, orbM, { noShadow: true });
     }
     if (cinder) { r.cone(V.mad(top, bd, 2), V.mad(top, bd, 6.5), 1.8, 0.2, M.FIREM, { noShadow: true }); }
+    if (st.clip === 'channel' && Math.floor(st.f / 3) !== 3) {   // round 72: the orb answers the cast: it swells and draws motes in on the gather, bursts into a star on the release, and settles
+      const ph = st.f % 3, wf2 = V.norm(V.cross(bd, wide));
+      if (ph === 0) { r.sph(top, 3.7, orbM, { noShadow: true }); for (const [a, d] of [[0.6, 6.5], [2.7, 5.4], [4.6, 6.0]]) r.sph(V.add(top, V.add(V.mul(wide, Math.cos(a) * d), V.mul(wf2, Math.sin(a) * d))), 0.9, orbM, { noShadow: true }); }
+      else if (ph === 1) { r.sph(top, 4.3, orbM, { noShadow: true }); for (const v of [bd, wide, V.mul(wide, -1), wf2, V.mul(wf2, -1)]) r.cone(V.mad(top, v, 3.2), V.mad(top, v, 8.5), 1.1, 0.2, M.FLASH, { noShadow: true }); }
+      else r.sph(top, 3.2, orbM, { noShadow: true });
+    }
     if (eq.ench) enchantGlow(r, eq, g, bd, wide, st, span[2]);
     if (eq.weapon === 'staff_rune') for (const z of [8, 12.5]) r.cyl(V.mad(g, bd, z), V.mad(g, bd, z + 0.9), 1.5, M.GOLD);   // round 43: gold bands (round a6: the motes that circled the orb are gone; the crystal carries it)
     if (st.clip === 'death') deathTip(r, B, st.f, -1);
