@@ -32,6 +32,15 @@ vs a pre-change copy + `cmp`; hero hash script pattern in the B2 section; edge c
 the sprite canvas edge over idle/walk/attack/hit/death x 8 dirs. Renderer has an opt-in `ff` fur hook (rig.js) unused now.
 **Known existing bug for the main chat:** Dire Bear and Gorr death frames clip at the canvas bottom (needs taller `size`).
 
+## E2: Restless Dead redone (2026-11-10), first fix from the E1 review
+Three rough directions were shown (A gaunt, B bloated, C grave cloth); the user picked **A**. `restless` now has
+`look: { v: 'a', scale: 1.2, size: [92, 100, 46, 72] }` on `zombieRig` with the taller body `ZOMBIE_TALL`: grey-green rotting hide (M.OGRE),
+a dark torn shroud (CLOTH_SHADOW), bare ribs on his left side (1 px bone lines), brown trousers, and a rip down the back with the spine showing.
+**Passes (at game size, both orders):** pass 1 brown trousers instead of near-black (the legs sank into dark floors): won both. Pass 2 the back rip
+with spine knobs (the back views were a plain slab): won both. Pass 3 a torn scalp showing skull: lost both (it read as a white flower). **Kept: pass 2.**
+Disagreements: 0 of 3. Lint: light 0.30-0.60, noise < 1.4%; edge check 200 frames, none clip; every other monster's frames hash identical.
+The `v: 'b'`/`'c'` code paths are still in `zombieRig`, unused. Images: `art/review/e2-restless/`. Next on the E1 list: the Cave Bat.
+
 ## E1: review of every enemy design (2026-11-10, review done; improvements waiting on the user's pick)
 The user asked to review and improve all enemy designs. All 56 MONSTERS entries were rendered at game size (zoom 2, three facings, dark and mid
 floor bands, silhouettes) in family lineups: `art/review/e1-roster-review/`. Lint ran on all 56: 50 pass; flagged on lightDirection (< 0.15):

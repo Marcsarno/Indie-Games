@@ -1912,7 +1912,7 @@ function zombieRig(look, st) {
   // art E2: rough directions for the Restless Dead redo (look.v; none = the current look): 'a' a tall gaunt corpse in grey-green
   // rotting hide with a dark torn shroud and bare ribs; 'b' a bloated one, the belly split; 'c' wound in pale grave cloth
   const Z = look.v || '', B = Z === 'a' ? ZOMBIE_TALL : ZOMBIE_B, J = bipedJoints(B, st), r = new Rig(), { fwd, sideR, up } = J, { clip, f } = st;
-  const flesh = Z === 'a' || Z === 'b' ? M.OGRE : M.OLDBONE, bony = M.BONE, rag = Z === 'a' ? M.CLOTH_SHADOW : Z === 'c' ? M.CLOTH_WHITE : M.LEATHER, pants = Z === 'c' ? M.CLOTH_WHITE : Z === 'a' ? M.CLOTH_DARK : M.CLOTH_SHADOW;   // pale grey corpse flesh, paler bony hands and feet
+  const flesh = Z === 'a' || Z === 'b' ? M.OGRE : M.OLDBONE, bony = M.BONE, rag = Z === 'a' ? M.CLOTH_SHADOW : Z === 'c' ? M.CLOTH_WHITE : M.LEATHER, pants = Z === 'c' ? M.CLOTH_WHITE : Z === 'a' ? M.LEATHER : M.CLOTH_SHADOW;   /* (E2 pass 1) a: brown trousers, so the legs read on dark floors */   // pale grey corpse flesh, paler bony hands and feet
   if (clip === 'walk') {   // the lurch: the left foot drags, barely leaving the floor
     const g = gaitFoot(B, f / 8), L = ik(J.hipL, [g[0], -B.hipW, g[1] * 0.2 + B.ankle], B.thigh, B.shin, [1, 0, 0.1]);
     J.kneeL = L.joint; J.ankL = L.end;
@@ -1936,6 +1936,10 @@ function zombieRig(look, st) {
   if (Z === 'a') {   // bare ribs through the torn shroud on his left side: 1 px bone lines over a dark hollow
     const rc = V.add(V.add(J.chest, V.mul(fwd, 2.2)), V.add(V.mul(sideR, -2.4), V.mul(up, 0.2)));
     r.ell(rc, [2.2, 2.4, 2.8], M.DARK, frameAlong(fwd, up), { noShadow: true, mf: p => { const z = V.dot(V.sub(p, rc), up); return Math.abs((((z + 20) % 1.3) + 1.3) % 1.3 - 0.65) < 0.3 ? M.BONE : 0; } });
+  }
+  if (Z === 'a') {   // (E2 pass 2) a long rip down the back of the shroud, the knobs of the spine showing in it
+    const sc = V.add(V.lerp(J.pelvis, J.chest, 0.6), V.mul(fwd, -3.0));
+    r.ell(sc, [1.6, 1.5, 4.6], M.DARK, frameAlong(fwd, up), { noShadow: true, mf: p => { const q = V.sub(p, sc), z = V.dot(q, up); return Math.abs(V.dot(q, sideR)) < 0.7 && Math.abs((((z + 20) % 1.5) + 1.5) % 1.5 - 0.75) < 0.42 ? M.BONE : 0; } });
   }
   if (Z === 'b') {   // the bloated belly pushing out under the tunic, split by a dark wound
     const bc = V.add(V.add(J.pelvis, V.mul(fwd, 2.2)), V.mul(up, 2.6));
@@ -2315,10 +2319,7 @@ const MONSTERS = {
   // main chat sets their levels, stats and loot; stats here are placeholders near a similar monster
   cavebat: { family: 'bat', name: 'CAVE BAT', minLevel: 99, look: {}, hp: 8, dmg: [1, 4], speed: 50, reach: 1.2, xp: 9, chest: 8, shadow: 6, pack: true },
   bogtoad: { family: 'toad', name: 'BOG TOAD', minLevel: 99, look: {}, hp: 22, dmg: [3, 6], speed: 26, reach: 1.5, xp: 20, chest: 14, shadow: 10 },
-  rest_a: { family: 'zombie', name: 'RESTLESS DEAD', minLevel: 99, look: { v: 'a', scale: 1.2, size: [92, 100, 46, 72], }, hp: 20, dmg: [3, 6], speed: 18, reach: 1.3, xp: 16, chest: 20, shadow: 7 },   // TEMP E2 direction
-  rest_b: { family: 'zombie', name: 'RESTLESS DEAD', minLevel: 99, look: { v: 'b', scale: 1.2, size: [92, 100, 46, 72], }, hp: 20, dmg: [3, 6], speed: 18, reach: 1.3, xp: 16, chest: 20, shadow: 7 },   // TEMP E2 direction
-  rest_c: { family: 'zombie', name: 'RESTLESS DEAD', minLevel: 99, look: { v: 'c', scale: 1.2, size: [92, 100, 46, 72], }, hp: 20, dmg: [3, 6], speed: 18, reach: 1.3, xp: 16, chest: 20, shadow: 7 },   // TEMP E2 direction
-  restless: { family: 'zombie', name: 'RESTLESS DEAD', minLevel: 99, look: {}, hp: 20, dmg: [3, 6], speed: 18, reach: 1.3, xp: 16, chest: 20, shadow: 7 },
+  restless: { family: 'zombie', name: 'RESTLESS DEAD', minLevel: 99, look: { v: 'a', scale: 1.2, size: [92, 100, 46, 72], }, hp: 20, dmg: [3, 6], speed: 18, reach: 1.3, xp: 16, chest: 20, shadow: 7 },
   // art B2: new spiders from the user's concepts; minLevel 99 keeps them out of the spawn pools, stats are placeholders
   spitter: { family: 'spider', name: 'VENOM SPITTER', minLevel: 99, look: { spit: true, scale: 0.85 }, hp: 9, dmg: [2, 5], speed: 40, reach: 6, ranged: 'arrow', xp: 13, chest: 8, shadow: 11 },
   stoneback: { family: 'spider', name: 'STONEBACK SPIDER', minLevel: 99, look: { stone: true, size: [96, 70, 48, 52] }, hp: 26, dmg: [4, 8], speed: 30, reach: 1.5, xp: 24, chest: 8, shadow: 13 },
