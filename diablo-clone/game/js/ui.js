@@ -549,9 +549,13 @@ function drawStoryMark() {
   if (!QA.aim || G.t > QA.at || Math.hypot(QA.aim[0] - hero.fi, QA.aim[1] - hero.fj) < 1.5 || !clearLine(hero.fi, hero.fj, QA.aim[0], QA.aim[1])) {
     const w = wayTo(t); QA.aim = [hero.fi + w.dir[0], hero.fj + w.dir[1]]; QA.around = w.around; QA.at = G.t + 1.5;
   }
-  const [hx0, hy0] = iso(hero.fi, hero.fj), [ax0, ay0] = iso(QA.aim[0], QA.aim[1]), want = Math.atan2(ay0 - hy0, ax0 - hx0);
+  // round 75 (the user: it sits too close to the hero and still jumps; the general direction is fine from far off).
+  // Far from the goal (and no long way round) it points straight at the goal, which barely moves as you walk;
+  // close in, or when the path doubles back, it follows the path. It turns slowly, ignores small changes,
+  // and rides near the screen's edge.
+  const far = d > 12 && !QA.around, [hx0, hy0] = iso(hero.fi, hero.fj), [ax0, ay0] = far ? iso(t[0], t[1]) : iso(QA.aim[0], QA.aim[1]), want = Math.atan2(ay0 - hy0, ax0 - hx0);
   if (QA.ang === null) QA.ang = want;
-  else { let da = want - QA.ang; da = Math.atan2(Math.sin(da), Math.cos(da)); QA.ang += Math.sign(da) * Math.min(Math.abs(da), Math.max(Math.abs(da) * 7, 1.5) * dt); }
+  else { let da = want - QA.ang; da = Math.atan2(Math.sin(da), Math.cos(da)); if (Math.abs(da) > (far ? 0.06 : 0.14)) QA.ang += Math.sign(da) * Math.min(Math.abs(da), Math.max(Math.abs(da) * 2.2, 0.5) * dt); }
   // the goal on screen (with slack: in when well inside, out when well outside)
   const [x, y] = iso(t[0], t[1]), sx = x - camX, sy = y - camY - 16, m = QA.on ? 4 : 18;
   QA.on = sx > m && sx < W - m && sy > 40 + m && sy < Math.round(H * 0.6) - m;
@@ -559,8 +563,9 @@ function drawStoryMark() {
   // the ring arrow round the hero: shown while the goal is off screen or the way is a long way round
   QA.ring = !QA.on || (QA.around && d > 6);
   if (QA.ring) {
-    const ux = Math.cos(QA.ang), uy = Math.sin(QA.ang), cx = hx0 - camX, cy = hy0 - camY - 14, R = 30;
-    arrowHead(Math.round(cx + ux * R), Math.round(cy + uy * R * 0.8), ux, uy, 27, 26);
+    const ux = Math.cos(QA.ang), uy = Math.sin(QA.ang), cx = hx0 - camX, cy = hy0 - camY - 14, bob = Math.sin(G.t * 4) * 1.5;
+    const ax = clamp(cx + ux * 104, 16, W - 16), ay = clamp(cy + uy * 92, 52, Math.round(H * 0.62));   // out near the edge of the view, clear of the hero and the fight
+    arrowHead(Math.round(ax + ux * bob), Math.round(ay + uy * bob), ux, uy, 27, 26);
   }
 }
 // the ! or ? a person on the story's next step already shows
@@ -647,8 +652,8 @@ function invLayout() {
   const L = { slots: {}, bag: [], btns: [] };
   SLOTS.forEach((s, n) => L.slots[s] = n < 4 ? { x: 14, y: 30 + n * 34, w: 30, h: 30 } : { x: W - 44, y: 30 + (n - 4) * 34, w: 30, h: 30 });   // jewelry on the right (round 42a)
   for (let n = 0; n < BAG_SIZE; n++) L.bag.push({ x: 15 + (n % 6) * 41, y: 176 + Math.floor(n / 6) * 34, w: 34, h: 30 });
-  L.close = { x: W - 30, y: 6, w: 24, h: 14 };
-  L.tabs = { inv: { x: W / 2 - 64, y: 5, w: 62, h: 16 }, skills: { x: W / 2 + 2, y: 5, w: 62, h: 16 } };
+  L.close = { x: W - 56, y: 3, w: 52, h: 20 };   // round 75: a real button (it was a 24 x 14 'X' the user could not find)
+  L.tabs = { inv: { x: 8, y: 5, w: 62, h: 16 }, skills: { x: 74, y: 5, w: 62, h: 16 } };
   L.color = { x: W - 66, y: 150, w: 54, h: 14 };
   L.best = { x: W - 66, y: 130, w: 54, h: 14 };
   L.junk = { x: W - 66, y: 110, w: 54, h: 14 };
@@ -664,7 +669,7 @@ function drawTabs(L, on) {
     if (k === 'skills' && !sel && modsUnseen()) dot(r.x + r.w - 5, r.y + 4, 59);
     if (k === 'inv' && !sel && bagUpgrades().length) arrowUp(r.x + r.w - 6, r.y + 3, 55, 3);
   }
-  frame(L.close.x, L.close.y, L.close.w, L.close.h, 8, 3); textC('X', L.close.x + 12, L.close.y + 5, 27);
+  fillRect(L.close.x, L.close.y, L.close.w, L.close.h, 20); frame(L.close.x, L.close.y, L.close.w, L.close.h, 51, 49); textC('CLOSE', L.close.x + L.close.w / 2, L.close.y + 7, 27);
 }
 // a round badge with a white up-arrow (or a plain colored dot)
 function badge(cx, cy, c, arrow) { for (let y = -5; y <= 5; y++) for (let x = -5; x <= 5; x++) { const d = Math.hypot(x, y); if (d <= 5.2) put(cx + x, cy + y, d > 4.2 ? BLK : (x + y < -2 ? c + 1 : c)); } if (arrow) { arrowUp(cx, cy - 3, 27, 3); fillRect(cx - 1, cy, 3, 3, 27); } else fillRect(cx - 1, cy - 1, 3, 3, 27); }
@@ -728,7 +733,7 @@ function drawInventory() {
     vy += 18;
     // this item on the left, the worn one on the right
     text(cut(itemName(it)), C.x + 6, vy, RARITY_COL[it.rarity]);
-    itemLines(it).slice(0, 7).forEach((l, n) => text(cut(l), C.x + 6, vy + 9 + n * 7, 26));
+    [...(b.slot === 'potion' ? [] : ['ITEM LEVEL ' + itemLvl(it)]), ...itemLines(it)].slice(0, 7).forEach((l, n) => text(cut(l), C.x + 6, vy + 9 + n * 7, n === 0 && b.slot !== 'potion' ? 24 : 26));
     if (cur) {
       const x2 = C.x + C.w / 2 + 2;
       for (let y = vy - 2; y < vy + 64; y++) put(C.x + C.w / 2 - 2, y, 5);

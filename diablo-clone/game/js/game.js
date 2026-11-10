@@ -1062,13 +1062,15 @@ function updateEnemy(e, dt) {
   else if (see && d < 3) mv = [dx / d, dy / d];
   else mv = flowDir(e.fi, e.fj);
   if (!mv || d > 18) { e.clip = 'idle'; return; }
-  if (!FEEL_OLD && see && d > 1.6 && d < 8 && e.fam === 'hound' && !fleeing) { const l0 = Math.hypot(mv[0], mv[1]) || 1, w = Math.sin(G.t * 5 + e.seed) * 0.7; mv = [mv[0] / l0 - mv[1] / l0 * w, mv[1] / l0 + mv[0] / l0 * w]; }   // round 35: hounds weave in
+  if (!FEEL_OLD && see && d > 1.6 && d < 8 && e.fam === 'hound' && !fleeing) { const l0 = Math.hypot(mv[0], mv[1]) || 1, w = Math.sin(G.t * 2.2 + e.seed) * 0.22; mv = [mv[0] / l0 - mv[1] / l0 * w, mv[1] / l0 + mv[0] / l0 * w]; }   // round 35: hounds weave in (round 75: a slow, shallow curve; it swung 35 degrees each way almost once a second and the body snapped between facings)
   const l = Math.hypot(mv[0], mv[1]) || 1, sp = m.speed / 16 * 1.2 * (e.speedK || 1) * (e.slowT > 0 ? 0.5 : 1) * (see && !fleeing ? pace(e, d, dt) : 1) * dt;   // cone of cold slows to half
   if (e.rootT > 0) { e.clip = 'idle'; return; }   // round 33: snared: can swing and shoot, can't walk
   const f0 = e.fi, j0 = e.fj;
   tryMove(e, mv[0] / l * sp, mv[1] / l * sp, 0.25);
   e.walk += Math.hypot(e.fi - f0, e.fj - j0) / (FAMILIES[e.fam].gait || 0.32);
-  e.dir = dirFrom(mv[0], mv[1]); e.clip = 'walk';
+  { const want = dirFrom(mv[0], mv[1]);   // round 75: a facing has to hold a moment before the body turns to it, so a curving run doesn't flick between two sprites
+    if (e.fam !== 'hound' || FEEL_OLD || want === e.dir) { e.dir = want; e.turnT = 0; } else { e.turnT = (e.turnT || 0) + dt; if (e.turnT > 0.14) { e.dir = want; e.turnT = 0; } } }
+  e.clip = 'walk';
 }
 function hurtHero(dmg, src) {
   if (hero.dead || hero.leap || hero.roll || (hero.ultOn && hero.ultOn.kind === 'wrath')) return;   // nothing touches him in the air
@@ -1133,6 +1135,7 @@ function pace(e, d, dt) {
   if (FEEL_OLD || e.def.unique) return 1;
   e.paceT = (e.paceT ?? Math.random()) - dt;
   if (e.fam === 'skeleton') return 0.85;
+  if (e.fam === 'hound') return d < 3.5 ? 1.3 : 1.12;   // round 75: a steady lope that quickens for the last few strides (it surged and stalled every half second)
   if (e.fam === 'spider') { if (e.paceT <= 0) { e.paceOn = !e.paceOn; e.paceT = e.paceOn ? 0.22 + Math.random() * 0.12 : 0.18 + Math.random() * 0.25; } return e.paceOn ? 1.8 : 0.05; }
   if (d < 2.2) return 1.1;
   if (e.paceT <= 0) { e.paceOn = !e.paceOn; e.paceT = e.paceOn ? 0.35 + Math.random() * 0.35 : 0.5 + Math.random() * 0.6; }

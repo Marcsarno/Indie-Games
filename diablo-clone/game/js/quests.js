@@ -79,9 +79,9 @@ function talkLines() {
   return out;
 }
 function talkLayout() {
-  const T = G.talk, lines = talkLines(), textH = 14 + lines.length * 8, h = Math.min(H - 40, textH + (T.reward ? 96 : 0) + 30), y = H - h - 8;
+  const T = G.talk, lines = talkLines(), textH = 14 + lines.length * 8, h = Math.min(H - 40, textH + (T.reward ? 110 : 0) + 30), y = H - h - 8;
   const L = { box: { x: 6, y, w: W - 12, h }, btn: null, cards: [], lines };
-  if (T.reward) T.reward.forEach((it, n) => L.cards.push({ x: 12 + n * 84, y: y + textH + 14, w: 78, h: 56, it }));
+  if (T.reward) T.reward.forEach((it, n) => L.cards.push({ x: 12 + n * 84, y: y + textH + 14, w: 78, h: 68, it }));
   L.btn = { x: W / 2 - 40, y: y + h - 24, w: 80, h: 18 };
   return L;
 }
@@ -98,9 +98,13 @@ function drawTalk() {
       fillRect(c.x, c.y, c.w, c.h, on ? 5 : 4); frame(c.x, c.y, c.w, c.h, on ? 51 : RARITY_COL[it.rarity], 3);
       sprite(itemIcon(it), c.x + c.w / 2, c.y + 24, 1, 4);
       const nm = wrapText(itemName(it), 18); nm.slice(0, 2).forEach((l, k) => textC(l, c.x + c.w / 2, c.y + 32 + k * 7, RARITY_COL[it.rarity]));
-      textC(ITEM_BASES[it.base].slot === 'shield' ? 'OFF HAND' : ITEM_BASES[it.base].slot.toUpperCase(), c.x + c.w / 2, c.y + 48, 24);
+      textC((ITEM_BASES[it.base].slot === 'shield' ? 'OFF HAND' : ITEM_BASES[it.base].slot.toUpperCase()) + ' LV ' + itemLvl(it), c.x + c.w / 2, c.y + 48, 24);
+      // round 75 (the user: you can't tell whether a reward is an upgrade): the verdict against what is worn, on every card
+      { const cur = hero.equip[ITEM_BASES[it.base].slot], u = upgradeOf(it), v = !canWear(it) ? 'NOT YOURS' : !cur ? 'EMPTY SLOT' : u > 0 ? 'UPGRADE' : u < 0 ? 'WORSE' : 'SAME', vc = !canWear(it) ? 23 : u > 0 ? 55 : u < 0 ? 23 : 25;
+        fillRect(c.x + 2, c.y + c.h - 12, c.w - 4, 10, u > 0 && canWear(it) ? 52 : 3); textC(v, c.x + c.w / 2 + (u ? 4 : 0), c.y + c.h - 10, vc);
+        const ax = c.x + c.w / 2 - textWidth(v) / 2 - 4; if (u > 0 && canWear(it)) arrowUp(ax, c.y + c.h - 11, 55, 4); else if (u < 0) arrowDown(ax, c.y + c.h - 5, 23, 4); }
     }
-    if (T.pick >= 0) itemLines(T.reward[T.pick]).slice(0, 2).forEach((l, n) => textC(l, W / 2, L.cards[0].y + 60 + n * 7, 25));
+    if (T.pick >= 0) itemLines(T.reward[T.pick]).slice(0, 2).forEach((l, n) => textC(l, W / 2, L.cards[0].y + 72 + n * 7, 25));
   }
   const ok = !T.reward || T.pick >= 0, r = L.btn;
   fillRect(r.x, r.y, r.w, r.h, ok ? 5 : 3); frame(r.x, r.y, r.w, r.h, ok ? 51 : 6, 2); textC(T.btn || 'OK', r.x + r.w / 2, r.y + 6, ok ? 27 : 24);

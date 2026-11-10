@@ -282,8 +282,9 @@ function rollItem(R, level, forceBase) {
   const base = ITEM_BASES[baseId], mf = findK();
   const it = { id: itemSerial++, base: baseId, rarity: 'normal', mods: {} };
   if (base.slot === 'potion') return it;
-  if (!forceBase && R() < (0.008 + level * 0.002) * mf) return rollLegendary(R);
-  if (!forceBase && R() < 0.015 + level * 0.002) return rollSetItem(R);
+  it.lvl = Math.max(1, Math.round(level));   // round 75: every item carries the level it dropped at
+  if (!forceBase && R() < (0.008 + level * 0.002) * mf) { const x = rollLegendary(R); x.lvl = it.lvl; return x; }
+  if (!forceBase && R() < 0.015 + level * 0.002) { const x = rollSetItem(R); x.lvl = it.lvl; return x; }
   const q = R();
   it.rarity = q < (0.06 + level * 0.01) * mf ? 'rare' : q < 0.34 + (mf - 1) * 0.3 ? 'magic' : 'normal';
   if (it.rarity === 'normal' && JEWELRY[base.slot]) it.rarity = 'magic';   // a plain ring is nothing
@@ -300,6 +301,8 @@ function rollItem(R, level, forceBase) {
   return it;
 }
 // rough worth of an item in its slot, for the bag's upgrade arrows and the comparison lines
+// an item's level: the level it dropped at (older saves: its base's)
+const itemLvl = it => it.lvl || ITEM_BASES[it.base].lvl || 1;
 function itemScore(it) {
   const b = ITEM_BASES[it.base], m = it.mods || {};
   const avg = b.dmg ? (b.dmg[0] + b.dmg[1]) / 2 : 0;
