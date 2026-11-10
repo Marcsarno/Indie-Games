@@ -213,11 +213,16 @@ const glyphHook = (cx, cy) => {   // a chain running up to a barbed hook
   line(cx + 8, cy + 2, cx + 7, cy - 1, 27); line(cx + 8, cy + 2, cx + 6, cy + 1, 27);   // barb
   fillRect(cx, cy - 8, 4, 2, 50);   // the ring the chain hangs from
 };
+const glyphCharge = (cx, cy) => {   // a shield driving forward, speed lines behind it
+  for (let b = -6; b <= 6; b++) { const w = b < 2 ? 5 : 5 - (b - 2) * 1.2; for (let a = 0; a <= w; a++) { put(cx + 1 + a, cy + b, a >= w - 1 || b === -6 ? 31 : a < 1 ? 27 : 30); } }
+  line(cx + 3, cy - 3, cx + 3, cy + 3, 50); line(cx + 2, cy, cx + 5, cy, 50);
+  for (const [y0, x0, x1] of [[-4, -9, -3], [0, -10, -2], [4, -9, -3]]) line(cx + x0, cy + y0, cx + x1, cy + y0, 27);
+};
 const glyphLeap = (cx, cy) => {   // an arc up and down, landing in a burst
   for (let a = 0; a <= 16; a++) { const u = a / 16; put(cx - 7 + u * 12, cy + 4 - Math.sin(u * Math.PI) * 10, a > 12 ? 51 : 27); }
   for (const [a, b] of [[-3, 0], [3, 0], [0, -3], [2, -2], [-2, -2]]) line(cx + 5, cy + 5, cx + 5 + a, cy + 5 + b, 50);
 };
-const SPELL_LOOK = { multi: [[33, 34, 35, 36], (x, y) => glyphMulti(x, y)], trap: [[28, 29, 30, 31], (x, y) => glyphTrap(x, y)], roll: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)], mark: [[19, 20, 21, 22], (x, y) => glyphMark(x, y)], slam: [[13, 14, 15, 16], glyphSlam], hook: [[28, 29, 30, 31], glyphHook], whirl: [[19, 20, 21, 22], glyphWhirl], leap: [[48, 49, 50, 51], glyphLeap], fireball: [[13, 14, 15, 16], glyphFire], cone: [[114, 115, 116, 117], glyphCone], meteor: [[19, 20, 21, 22], glyphMeteor], blink: [[56, 57, 58, 59], glyphBlink], chain: [[37, 38, 39, 40], glyphChain], pierce: [[48, 49, 50, 51], glyphPierce], cluster: [[13, 14, 15, 16], glyphCluster], sentry: [[33, 34, 35, 36], glyphSentry], hawk: [[28, 29, 30, 31], glyphHawk], vault: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)] };
+const SPELL_LOOK = { multi: [[33, 34, 35, 36], (x, y) => glyphMulti(x, y)], trap: [[28, 29, 30, 31], (x, y) => glyphTrap(x, y)], roll: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)], mark: [[19, 20, 21, 22], (x, y) => glyphMark(x, y)], slam: [[13, 14, 15, 16], glyphSlam], charge: [[28, 29, 30, 31], glyphCharge], hook: [[28, 29, 30, 31], glyphHook], whirl: [[19, 20, 21, 22], glyphWhirl], leap: [[48, 49, 50, 51], glyphLeap], fireball: [[13, 14, 15, 16], glyphFire], cone: [[114, 115, 116, 117], glyphCone], meteor: [[19, 20, 21, 22], glyphMeteor], blink: [[56, 57, 58, 59], glyphBlink], chain: [[37, 38, 39, 40], glyphChain], pierce: [[48, 49, 50, 51], glyphPierce], cluster: [[13, 14, 15, 16], glyphCluster], sentry: [[33, 34, 35, 36], glyphSentry], hawk: [[28, 29, 30, 31], glyphHawk], vault: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)] };
 const glyphBolt = (cx, cy) => { for (let a = 0; a < 8; a++) { const t = a * Math.PI / 4; line(cx, cy, cx + Math.cos(t) * 7, cy + Math.sin(t) * 7, a % 2 ? 50 : 51); } put(cx, cy, 27); };
 const glyphBag = (cx, cy) => { fillRect(cx - 5, cy - 3, 11, 9, 35); frame(cx - 5, cy - 3, 11, 9, 36, 33); line(cx - 3, cy - 3, cx - 1, cy - 6, 36); line(cx + 3, cy - 3, cx + 1, cy - 6, 36); fillRect(cx - 1, cy, 3, 2, 50); };
 const glyphSound = (cx, cy) => {
@@ -933,6 +938,10 @@ const SKILL_TEXT = {
   'slam/ring': 'HITS ALL AROUND YOU WITH A SHORTER REACH. FOR WHEN THEY SURROUND YOU.',
   'slam/fissure': 'A LONG NARROW CRACK THAT RACES OUT AHEAD AND HITS FOES FAR AWAY IN A LINE.',
   'slam/after': 'A SECOND, WEAKER SLAM HALF A SECOND LATER. MORE DAMAGE FOR THE SAME FURY.',
+  charge: 'SPRINT A LONG WAY BEHIND YOUR SHIELD, STRAIGHT THROUGH EVERY FOE IN THE WAY. NOTHING CAN HURT YOU AS YOU RUN. IT GOES WHERE YOU STEER.',
+  'charge/ram': 'THE FIRST FOES YOU HIT ARE CARRIED ALONG AND CRUSHED AGAINST WHATEVER STOPS YOU.',
+  'charge/again': 'AFTER A CHARGE YOU MAY CHARGE ONCE MORE WITHIN 2 SECONDS, FREE, ANY WAY YOU LIKE.',
+  'charge/tremor': 'A FISSURE RACES UP THE PATH BEHIND YOU AND HITS EVERYTHING ON IT AGAIN.',
   hook: 'THROW A CHAIN THAT DRAGS A FOE TO YOU AND DAZES IT. PULL IN ARCHERS AND CASTERS.',
   'hook/line': 'REACHES FARTHER AND DRAGS IN EVERY FOE IT PASSES.',
   'hook/barbed': 'HITS HARDER AND DAZES TWICE AS LONG.',

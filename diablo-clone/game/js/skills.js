@@ -6,7 +6,7 @@ const SKILLSETS = {
   warrior: [
     // round 24: the warrior's kit. Mana works as fury: every enemy his blows hit gives some back
     { id: 'slam', name: 'GROUND SLAM', lvl: 1, mana: 8, cd: 2.5 },
-    { id: 'hook', name: 'CHAIN HOOK', lvl: 2, mana: 6, cd: 4 },
+    { id: 'charge', name: 'SHIELD CHARGE', lvl: 2, mana: 6, cd: 5 },   // round 76: replaces the Chain Hook as a test (the user: the unlocks felt boring; mobility is fun). The hook's code stays: swap this line back to { id: 'hook', name: 'CHAIN HOOK', lvl: 2, mana: 6, cd: 4 }
     { id: 'whirl', name: 'WHIRLWIND', lvl: 3, mana: 10, cd: 4 },
     { id: 'leap', name: 'LEAP', lvl: 4, mana: 10, cd: 5 },
   ],
@@ -27,8 +27,8 @@ const SKILLSETS = {
 };
 let SKILLS = SKILLSETS.warrior;
 function setSkillsFor(cls) { SKILLS = SKILLSETS[cls] || SKILLSETS.warrior; }
-const CD = { bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, leap: 0, fireball: 0, cone: 0, meteor: 0, blink: 0, chain: 0, multi: 0, trap: 0, roll: 0, mark: 0, pierce: 0, cluster: 0, sentry: 0, hawk: 0, vault: 0 };
-function resetSkills() { for (const k in CD) CD[k] = 0; hero.whirl = 0; hero.dash = 0; hero.buff = 0; }
+const CD = { charge: 0, bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, leap: 0, fireball: 0, cone: 0, meteor: 0, blink: 0, chain: 0, multi: 0, trap: 0, roll: 0, mark: 0, pierce: 0, cluster: 0, sentry: 0, hawk: 0, vault: 0 };
+function resetSkills() { for (const k in CD) CD[k] = 0; hero.whirl = 0; hero.dash = 0; hero.buff = 0; hero.charge = null; hero.chargeAgain = 0; hero.chargeSecond = false; }
 const heroBusy = () => hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0 || !!hero.leap || !!hero.ultOn || !!hero.roll;
 // one hit's damage, with the war cry bonus
 const heroDmg = (k = 1) => Math.max(1, Math.round((roll(STAT.dmg) + (STAT.fireDmg || 0)) * k * (hero.buff > 0 ? 1.4 : 1) * (HEAVY ? 1.25 : 1)));   // round 62: heavier blows   // fire damage from gear rides on every hit (round 42a)
@@ -41,6 +41,7 @@ function useSkill(i) {
   const s = SKILLS[i];
   if (G.mode !== 'play' || hero.dead || !s) return;
   if (hero.lvl < s.lvl) { say(`${s.name} UNLOCKS AT LEVEL ${s.lvl}`, 25, 1.4); return; }
+  if (s.id === 'charge' && hero.chargeAgain > 0 && !heroBusy()) { hero.chargeAgain = 0; CD.charge = s.cd; btnFx(i).press = 0.16; startCharge(); return; }   // Second Wind: the free second charge
   if (CD[s.id] > 0) return;
   if (s.id === 'bolt') { heroCast(); if (hero.cast >= 0) CD.bolt = s.cd; return; }
   // a spell may cut a magic-missile cast short; anything else waits for the hero to be free
@@ -51,6 +52,7 @@ function useSkill(i) {
   if (s.id === 'bash') startBash();
   if (s.id === 'cry') warCry();
   if (s.id === 'slam') groundSlam();
+  if (s.id === 'charge') startCharge();
   if (s.id === 'hook') { if (!chainHook()) { hero.mana += s.mana; CD.hook = 0; } }
   if (s.id === 'leap') { if (!startLeap()) { hero.mana += s.mana; CD.leap = 0; } }
   if (s.id === 'fireball') castFireball();
@@ -183,6 +185,11 @@ const SKILL_MODS = {
     { id: 'after', name: 'AFTERSHOCK', desc: 'A SECOND, WEAKER SLAM HALF A SECOND LATER' },
   ],
   // round 30: the rest of both kits
+  charge: [
+    { id: 'ram', name: 'BATTERING RAM', desc: 'CARRIES FOES ALONG AND SLAMS THEM INTO WHAT STOPS YOU' },
+    { id: 'again', name: 'SECOND WIND', desc: 'CHARGE A SECOND TIME WITHIN 2 SECONDS, FREE' },
+    { id: 'tremor', name: 'TREMOR', desc: 'THE GROUND YOU CROSSED SPLITS OPEN BEHIND YOU' },
+  ],
   hook: [
     { id: 'line', name: 'LONG CHAIN', desc: 'REACHES FARTHER, DRAGS IN ALL IT PASSES' },
     { id: 'barbed', name: 'BARBED HOOK', desc: 'HITS HARDER, DAZES TWICE AS LONG' },
@@ -749,6 +756,76 @@ function nearestEnemy(range, needLos = false) {
   }
   return best;
 }
+// round 76: SHIELD CHARGE. A long sprint behind the shield, straight through everything in the way:
+// each foe passed is hit, staggered and shouldered aside, and nothing can touch him while he runs.
+// It goes where the stick points (so it is as much a way out as a way in); with the stick at rest
+// it aims at the nearest foe in sight, else the way he faces. Upgrades: Battering Ram (the first
+// foes are carried along and slammed into whatever stops the run), Second Wind (a second charge
+// within 2 s, free, in any direction) and Tremor (a fissure races up the path behind him).
+const CHARGE = { dist: 8.5, speed: 19 };
+function startCharge() {
+  let gi, gj;
+  if (Math.hypot(input.mx, input.my) > 0.2) [gi, gj] = stickToGround(input.mx, input.my);
+  else { const t = nearestEnemy(9, true); if (t) { gi = t.fi - hero.fi; gj = t.fj - hero.fj; } else [gi, gj] = dirVec(hero.dir); }
+  const l = Math.hypot(gi, gj) || 1; gi /= l; gj /= l;
+  hero.dir = dirFrom(gi, gj);
+  hero.charge = { gi, gj, d: 0, from: [hero.fi, hero.fj], hit: new Set(), carry: [], mod: skillMod('charge'), again: hero.chargeSecond || false, dustT: 0 };
+  hero.chargeSecond = false; hero.dash = 0.1; hero.bashDone = true; hero.bashTarget = null; hero.atk = -1; hero.walk = 0;
+  sfx('heavySwing'); sfx('whoomp'); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.12);
+}
+function endCharge(wall) {
+  const C = hero.charge; if (!C) return;
+  hero.charge = null; hero.dash = 0; hero.stop = Math.max(hero.stop, 0.08); hero.stopT = 0.18;
+  const [x, y] = screenOf(hero), dust = LV.outdoor ? DIRT[3] : S[5];
+  for (let k = 0; k < 10; k++) pspawn(5, x + (Math.random() - 0.5) * 10, y, 2, (C.gi - C.gj) * 30 + (Math.random() - 0.5) * 40, (C.gi + C.gj) * 15 + (Math.random() - 0.5) * 16, 30 + Math.random() * 40, 0.7, dust);
+  if (C.carry.length) {   // Battering Ram: what he carried is thrown off the shield; into a wall it is crushed
+    for (const e of C.carry) {
+      if (!alive(e)) continue; e.leapZ = 0;
+      G.pierce = true; G.elem = 'heavy'; damageEnemy(e, heroDmg(wall ? 2.4 : 1.3), hero.fi, hero.fj, wall && Math.random() < 0.5); G.elem = null; G.pierce = false;
+      if (alive(e)) { e.stun = Math.max(e.stun || 0, wall ? 2 : 1.2); e.atk = -1; if (!wall) e.kb = [C.gi * 9, C.gj * 9]; }
+      impactFlash(e.fi, e.fj, e.def.chest * 0.6, wall ? 8 : 5);
+    }
+    if (wall) { rubble(x + (C.gi - C.gj) * 14, y + (C.gi + C.gj) * 7, 14, 70); shockwave(hero.fi + C.gi * 0.8, hero.fj + C.gj * 0.8, 1.6, 0.24, [27, 31]); sfx('boom'); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.55); }
+    else sfx('kill');
+  } else if (wall) { sfx('thud'); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.2); }
+  if (C.mod === 'tremor' && C.d > 1.5) { G.fissures.push({ fi: C.from[0], fj: C.from[1], a0: Math.atan2(C.gj, C.gi), reach: 0.5, R: C.d + 0.6, half: 0.2, hit: new Set() }); sfx('crack'); }
+  if (C.mod === 'again' && !C.again) { hero.chargeAgain = 2; hero.chargeSecond = true; hero.chargeCd = CD.charge; CD.charge = 0; say('SECOND WIND!', 51, 1.2); }
+}
+function updateCharge(dt) {
+  const C = hero.charge; hero.dash = 0.1; hero.clip = 'bash';
+  let left = CHARGE.speed * dt, blockedNow = false;
+  while (left > 1e-4 && !blockedNow) {
+    const st = Math.min(0.22, left); left -= st;
+    const f0 = hero.fi, j0 = hero.fj;
+    // straight on or not at all: a charge does not slide round corners
+    const r = 0.28, ni = f0 + C.gi * st, nj = j0 + C.gj * st;
+    if (blocked(ni - r, nj - r) || blocked(ni + r, nj - r) || blocked(ni - r, nj + r) || blocked(ni + r, nj + r)) { blockedNow = true; break; }
+    hero.fi = ni; hero.fj = nj; C.d += st;
+    for (const e of enemies) {
+      if (!alive(e) || C.hit.has(e) || Math.hypot(e.fi - hero.fi, e.fj - hero.fj) > 1.05 + (e.def.unique ? 0.4 : 0)) continue;
+      C.hit.add(e); wake(e);
+      const crit = Math.random() < CRIT_CHANCE, ram = C.mod === 'ram' && !e.def.unique && C.carry.length < 4;
+      G.pierce = true; G.elem = 'stagger'; damageEnemy(e, heroDmg((crit ? 2 : 1) * (ram ? 0.6 : 1.1)), hero.fi - C.gi, hero.fj - C.gj, crit); G.elem = null; G.pierce = false;
+      const [ex, ey] = screenOf(e); for (let q = 0; q < 7; q++) pspawn(2, ex, ey, e.def.chest * 0.6, (Math.random() - 0.5) * 120, (Math.random() - 0.5) * 60, Math.random() * 40, 0.18, q % 2 ? 31 : 27);
+      impactFlash(e.fi, e.fj, e.def.chest * 0.6, 4); sfx('block'); hero.mana = Math.min(STAT.maxMana || 99, hero.mana + 1);
+      if (!alive(e)) continue;
+      e.atk = -1; e.stun = Math.max(e.stun || 0, e.def.unique ? 0.25 : 0.6);
+      if (ram) C.carry.push(e);
+      else if (!e.def.unique) { const side = ((e.fi - hero.fi) * -C.gj + (e.fj - hero.fj) * C.gi) >= 0 ? 1 : -1; e.kb = [(-C.gj * side * 0.8 + C.gi * 0.5) * 7, (C.gi * side * 0.8 + C.gj * 0.5) * 7]; }   // shouldered aside
+    }
+    C.carry.forEach((e, k) => { if (alive(e)) { const o = 0.85 + (k >> 1) * 0.5, sd = (k % 2 ? 1 : -1) * (k ? 0.35 : 0); e.fi = hero.fi + C.gi * o - C.gj * sd; e.fj = hero.fj + C.gj * o + C.gi * sd; e.leapZ = 3; e.stun = Math.max(e.stun || 0, 0.3); if (blocked(e.fi + C.gi * 0.4, e.fj + C.gj * 0.4)) blockedNow = true; } });
+    for (const p of dynProps) if (!p.broken && (p.kind === 'barrel' || p.kind === 'egg') && Math.hypot(p.i + 0.5 - hero.fi, p.j + 0.5 - hero.fj) < 1.1) hitProp(p);
+  }
+  hero.walk += CHARGE.speed * dt / 0.5;
+  C.dustT -= dt;
+  if (C.dustT <= 0) {   // dust kicked up behind, an after-image every few strides
+    C.dustT = 0.03; const [x, y] = screenOf(hero), dust = LV.outdoor ? DIRT[3] : S[5];
+    for (let k = 0; k < 2; k++) pspawn(5, x + (Math.random() - 0.5) * 8, y, 1, -(C.gi - C.gj) * 20 + (Math.random() - 0.5) * 20, -(C.gi + C.gj) * 10, 20 + Math.random() * 30, 0.5, dust);
+    if (Math.floor(C.d * 1.2) !== C.gh) { C.gh = Math.floor(C.d * 1.2); const [x0, y0] = iso(hero.fi, hero.fj); G.ghosts.push({ sp: getSprite('hero', hero.look, hero.dir, 'bash', 0, hero), x: x0, y: y0, t: 0.22, t0: 0.22 }); }
+  }
+  if (blockedNow) return endCharge(true);
+  if (C.d >= CHARGE.dist) endCharge(false);
+}
 // shield bash: a short dash at the nearest enemy, then a heavy knockback and a stun
 function startBash() {
   const t = nearestEnemy(3);
@@ -781,7 +858,9 @@ function updateSkills(dt) {
       sfx('swing'); sfx('whoomp');   // each turn of the spin has a low whoosh under the swish
     }
   }
-  if (hero.dash > 0) {
+  if (hero.charge) updateCharge(dt);
+  else if (hero.chargeAgain > 0) { hero.chargeAgain -= dt; if (hero.chargeAgain <= 0) CD.charge = Math.max(CD.charge, hero.chargeCd || 0); }
+  if (hero.dash > 0 && !hero.charge) {
     hero.dash -= dt;
     const [fx, fy] = dirVec(hero.dir), sp = 9 * dt;
     const t = hero.bashTarget;

@@ -1073,7 +1073,7 @@ function updateEnemy(e, dt) {
   e.clip = 'walk';
 }
 function hurtHero(dmg, src) {
-  if (hero.dead || hero.leap || hero.roll || (hero.ultOn && hero.ultOn.kind === 'wrath')) return;   // nothing touches him in the air
+  if (hero.dead || hero.leap || hero.roll || hero.charge || (hero.ultOn && hero.ultOn.kind === 'wrath')) return;   // nothing touches him in the air
   if (Math.random() * 100 < STAT.block) { floater('BLOCK', hero.fi, hero.fj, 44, 31); sfx('block'); return; }
   dmg = Math.max(1, Math.round(dmg * 40 / (40 + STAT.armor * (hero.buff > 0 ? 1.5 : 1) * 2.5) * (hero.stoneskin > 0 ? 0.5 : 1)));
   if (hero.cls === 'warrior') dmg = Math.max(1, Math.round(dmg * 0.75));   // round 67: he fights where the blows land (Diablo III's melee classes take 30% less); bots died 2-4 times a run as him, never as the others
