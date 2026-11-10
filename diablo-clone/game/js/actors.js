@@ -146,12 +146,12 @@ function tipRig(rig, pivot, pitch, roll = 0, drop = 0) {
 // a swept blade: emissive crescent from angle a0 to a1 in the swing plane (age-graded colors)
 // SMEAR_MODE: 'full' = bright crescent; 'subtle' = a short, thin, dithered steel streak at the
 // blade tip; 'none' = no trail
-let SMEAR_MODE = 'taper';   // user disliked the long bright crescent (round 9); 'subtle' is a short thin streak, 'none' turns it off
-function smearArc(rig, pivot, F, U, a0, a1, r0, r1) {
+let SMEAR_MODE = 'taper'; const SPIN_TRAIL = -1;   // (which side the whirlwind's sweep trails on)   // user disliked the long bright crescent (round 9); 'subtle' is a short thin streak, 'none' turns it off
+function smearArc(rig, pivot, F, U, a0, a1, r0, r1, cols = null, wide = 6.2) {
   if (SMEAR_MODE === 'none') return;
   const dir = a => V.add(V.mul(F, Math.cos(a)), V.mul(U, Math.sin(a)));
   if (SMEAR_MODE === 'taper') {   // round 72: a slash that tapers: the blade's width where the blade is, thinning to a point behind it, white-hot fading to steel, only its tail dotted
-    if (Math.abs(a0 - a1) < 0.3) {   // a thrust: no arc to draw, so two speed lines run beside the blade and meet past its point
+    if (Math.abs(a0 - a1) < 0.3 && !cols) {   // a thrust: no arc to draw, so two speed lines run beside the blade and meet past its point
       const d = dir(a1), pp = dir(a1 + Math.PI / 2), tipP = V.mad(pivot, d, r1 + 3);
       for (const sd of [-1, 1]) { const b0 = V.add(V.mad(pivot, d, r1 * 0.3), V.mul(pp, sd * 2.6)), b1 = V.add(V.mad(pivot, d, r1 * 0.3), V.mul(pp, sd * 1.5)); rig.tri(b0, b1, tipP, sd < 0 ? 32 : 31, sd > 0); }
       return;
@@ -159,7 +159,7 @@ function smearArc(rig, pivot, F, U, a0, a1, r0, r1) {
     const N = 9;
     for (let s = 0; s < N; s++) {
       const t0 = s / N, t1 = (s + 1) / N, A0 = lerp(a1, a0, t0), A1 = lerp(a1, a0, t1);
-      const w = t => 6.2 * Math.pow(1 - t, 1.25), col = t0 < 0.3 ? 32 : t0 < 0.62 ? 31 : 30;
+      const w = t => wide * Math.pow(1 - t, 1.25), col = (cols || [32, 31, 30])[t0 < 0.3 ? 0 : t0 < 0.62 ? 1 : 2];
       const p00 = V.mad(pivot, dir(A0), r1 - w(t0)), p01 = V.mad(pivot, dir(A0), r1 + 0.3), p10 = V.mad(pivot, dir(A1), r1 - w(t1)), p11 = V.mad(pivot, dir(A1), r1 + 0.3);
       rig.tri(p00, p01, p11, col, t0 >= 0.62); rig.tri(p00, p11, p10, col, t0 >= 0.62);
     }
@@ -1249,6 +1249,14 @@ function heroRig(eq, st) {
   r.cone(J.shL, aL.el, ar[0], ar[1], sleeve); r.cone(aL.el, aL.hand, ar[1], ar[2], foreM);
   { const h = r.sph(aL.hand, ar[3], handM); h.thumb = r.sph(V.add(V.add(aL.hand, V.mul(fwd, 0.9)), V.add(V.mul(sideR, 1.0), V.mul(up, 0.7))), ar[3] * 0.56, handM, { noShadow: true }); }
   robeCuff(aL, J.shL);
+  // round 72b: skills that sweep an arm or a blade leave an arc too
+  if (st.clip === 'hook' && st.f === 1) smearArc(r, J.shR, fwd, up, 2.1, 0.15, 0, V.len(V.sub(aR.hand, J.shR)) + 2.5, [32, 30, 29], 3.2);   // the throw: over the shoulder and out
+  if (st.clip === 'toss' && st.f === 1) smearArc(r, J.shR, fwd, up, -1.8, 0.1, 0, V.len(V.sub(aR.hand, J.shR)) + 2, [27, 26, 25], 2.6);   // the underhand swing
+  if (st.clip === 'channel' && st.f === 10) {   // the hurl: a streak of fire from behind the ear to the open hand, embers shaken loose
+    smearArc(r, J.shL, fwd, up, 2.3, 0.0, 0, V.len(V.sub(aL.hand, J.shL)) + 5, [17, 16, 15], 5.6);
+    for (const [f2, z2, rr] of [[5, 6.5, 1.0], [1.5, 8.5, 0.8], [-2, 8, 0.7]]) r.sph(V.add(V.add(J.shL, V.mul(fwd, f2)), V.mul(up, z2)), rr, M.FIREM, { noShadow: true });
+  }
+  if (st.clip === 'channel' && st.f === 9) { const fb = V.add(V.mad(aL.hand, up, 2.6), V.mul(fwd, 0.8)); for (const [f2, s2, z2] of [[-2.2, 0, 5.5], [-0.6, 1.8, 4.6], [-0.6, -1.8, 4.6]]) r.cone(fb, V.add(V.add(fb, V.mul(fwd, f2)), V.add(V.mul(sideR, s2), V.mul(up, z2))), 1.7, 0.3, M.FIREM, { noShadow: true }); }   // the fire held by the ear licks upward
   if (st.clip === 'storm') r.sph(V.mad(aL.hand, up, 1.6), 1.9, M.ARCANE, { noShadow: true });   // round 43: the storm crackling in the raised hand
   if (st.clip === 'channel' && st.f >= 9) { if (st.f === 9) { const fb = V.add(V.mad(aL.hand, up, 2.6), V.mul(fwd, 0.8)); r.sph(fb, 3.3, M.FIREM, { noShadow: true }); r.sph(V.mad(fb, up, 2.6), 1.6, M.FIREM, { noShadow: true }); } }   // the hurl: a fireball held in the cocked hand, gone once thrown
   else if (st.clip === 'channel' && st.f >= 6) { if (st.f === 7) { const ft = V.add(V.mad(aR.hand, up, -12), V.mul(fwd, 1.5)); for (const [s, h] of [[-1, 2.2], [0, 3.4], [1, 2.2]]) r.cone(V.add(ft, V.mul(sideR, s * 3.6)), V.add(V.mad(ft, up, h + 2.5), V.mul(sideR, s * 5)), 1.6, 0.4, M.ICE, { noShadow: true }); } }   // ice shards spring up round the staff's foot   // the slam: frost bursting at the staff's foot
@@ -1513,6 +1521,7 @@ function heroRig(eq, st) {
       r.sph(top, 2.7, orbM, { noShadow: true });
     }
     if (cinder) { r.cone(V.mad(top, bd, 2), V.mad(top, bd, 6.5), 1.8, 0.2, M.FIREM, { noShadow: true }); }
+    if (st.clip === 'storm') { const wf2 = V.norm(V.cross(bd, wide)), big = st.f % 2 === 1; r.sph(top, big ? 4.4 : 3.5, orbM, { noShadow: true }); for (const [k, v] of [bd, wide, V.mul(wide, -1), wf2, V.mul(wf2, -1)].entries()) if (big || k % 2 === 0) r.cone(V.mad(top, v, 3.2), V.mad(top, v, big ? 9 : 6.5), 1.0, 0.2, M.FLASH, { noShadow: true }); }   // round 72b: the storm's orb blazes, pulsing
     if (st.clip === 'channel' && Math.floor(st.f / 3) !== 3) {   // round 72: the orb answers the cast: it swells and draws motes in on the gather, bursts into a star on the release, and settles
       const ph = st.f % 3, wf2 = V.norm(V.cross(bd, wide));
       if (ph === 0) { r.sph(top, 3.7, orbM, { noShadow: true }); for (const [a, d] of [[0.6, 6.5], [2.7, 5.4], [4.6, 6.0]]) r.sph(V.add(top, V.add(V.mul(wide, Math.cos(a) * d), V.mul(wf2, Math.sin(a) * d))), 0.9, orbM, { noShadow: true }); }
@@ -1567,6 +1576,10 @@ function heroRig(eq, st) {
     }
   }
   if (eq.ench) enchantGlow(r, eq, g, bd, wide, st);   // round 43
+  if (st.clip === 'spin') {   // round 72b: the whirlwind drags a wide sweep behind the blade (the turn carries it round)
+    const bh = V.norm([bd[0], bd[1], 0]), tr = V.cross(up, bh), reach2 = V.len(V.sub(g, J.shR)) + (WEAPON_LEN[eq.weapon] || GEAR_LEN[eq.weapon] || 16);
+    smearArc(r, V.mad(J.shR, up, -2), bh, V.mul(tr, SPIN_TRAIL), 2.3, 0, 0, reach2, null, 7.5);
+  }
   if (sw && sw.smear && st.prev) {
     const reach = (sw.r || 6.5) + (WEAPON_LEN[eq.weapon] || GEAR_LEN[eq.weapon] || 16);
     smearArc(r, pivot, F, U, bladeA(st.prev), bladeA(sw), reach - 9, reach);
