@@ -509,8 +509,8 @@ function genHollow(R, A) {
   thing('pot', [cx + 0.02, cy + 0.02], { solid: false });
   for (const [u, v] of [[-1.7, -1.7], [1.9, 1.6], [2.1, -1.9]]) LV.decor.push({ kind: 'log', fi: C(u, v)[0], fj: C(u, v)[1], yaw: tangent(u, v) });
   for (const [u, v] of [[-2.2, 0.4], [-0.6, 2.4]]) thing('seat', C(u, v));
-  // OSRIC'S SHRINE (left): pale flagstones, a white and gold canopy over his altar, sun banners on poles, cushions to kneel on
-  pad('flag', -6.8, -0.8, 2.9);
+  // OSRIC'S SHRINE (left): trodden earth, a white and gold canopy over his altar, sun banners on poles, cushions to kneel on
+  pad('dirt', -6.8, -0.8, 2.9);
   put('chapel', C(-7.4, -1.2), 3, 3);
   for (const [u, v] of [[-4.6, -2.8], [-4.8, 1.4]]) thing('banner', C(u, v), { yaw: tangent(u, v) });
   for (const [u, v] of [[-5.4, -0.9], [-5.6, 0.4]]) thing('cushion', C(u, v), { solid: false });
@@ -520,15 +520,15 @@ function genHollow(R, A) {
   put('bigtent', C(-6.4, 4.8), 4, 4); thing('sacks', C(-3.4, 7.6)); thing('plough', C(-2.2, 8.2), { solid: false }); thing('bedroll', C(-8.2, 2.2), { solid: false });
   // Aldo's woodpile and chopping block, by the unfinished fence
   put('woodpile', C(...WOODPILE), 2, 1);
-  // THE WELL SQUARE (top right): cobbles round a roofed well, a trough, buckets
-  pad('cobble', 4.4, -6.4, 2.6);
+  // THE WELL (top right): mud round a roofed well, a trough, buckets
+  pad('wetmud', 4.4, -6.4, 2.4);
   small('well', ...C(4.4, -6.6).map(Math.floor)); thing('trough', C(6.6, -6.0), { yaw: tangent(6.6, -6.0) }); thing('bucket', C(2.9, -6.2), { solid: false }); thing('bucket', C(5.4, -4.8), { solid: false, seed: 1 });
-  // THE MARKET (right): the potion seller's wagon and her stall (a purple awning, glowing bottles, a bubbling cauldron, a bottle sign), a trader's stall of goods, straw underfoot
-  pad('straw', 7.4, 0.0, 3.4);
+  // THE MARKET (right): the potion seller's wagon and her stall (a purple awning, glowing bottles, a bubbling cauldron, a bottle sign), a trader's stall of goods, trodden earth underfoot
+  pad('dirt', 7.4, 0.0, 3.4);
   put('wagon', C(8.4, -3.4), 2, 2); put('potstall', C(6.6, -1.4), 2, 1); thing('cauldron', C(5.0, -2.6)); thing('sign', C(4.4, -0.2), { icon: 'potion', solid: false });
   put('stall', C(7.2, 2.4), 2, 1); thing('crates', C(9.4, 0.8)); thing('barrels', C(9.6, -1.4));
-  // THE FORGE (bottom right): soot-black ground, the open forge, the anvil, a grindstone, coal, the quench tub, the rack of blades, an anvil sign
-  pad('soot', 5.8, 6.0, 3.2);
+  // THE FORGE (bottom right): dark trampled mud, the open forge, the anvil, a grindstone, coal, the quench tub, the rack of blades, an anvil sign
+  pad('mud', 5.8, 6.0, 3.2);
   put('shed', C(7.2, 5.8), 3, 3); thing('anvil', C(4.6, 7.0)); thing('grind', C(3.2, 5.0)); thing('coal', C(5.2, 8.6)); thing('tub', C(6.6, 8.2)); thing('rack', C(8.8, 7.6), { yaw: tangent(8.8, 7.6) }); thing('sign', C(3.0, 3.4), { icon: 'anvil', solid: false });
   // crates and a barrel by the fence
   thing('crates', C(-9.2, -3.2), { flip: 1 }); thing('barrels', C(-9.6, 1.4), { one: 1 }); thing('crates', C(1.8, 9.6), { flip: 1 });
@@ -892,33 +892,18 @@ function outdoorFloor(x, y, A, B, ti, tj) {
   if (pd < 0.3) return GRASS[clamp(Math.floor(1.5 + vnoise(A, B, 6, 23) * 1.5), 0, 6)];   // trodden edge
   return grassAt(x, y, A, B);
 }
-// round 93: the camp's grounds. flag: pale flagstones in staggered courses (the shrine); cobble:
-// rounded grey stones (the well); soot: black earth, cinders and a few live embers (the forge);
-// straw: strewn straw over the ground (the market). A, B are world tile coordinates times 32.
+// round 93: the camp's grounds (round 94, the user: no paving, no bricks; the ground is dirt, mud or
+// grass). dirt: trodden earth (the shrine, the market); mud: dark trampled earth (the forge); wetmud:
+// the well's mud, darker, with a few small puddles. A, B are world tile coordinates times 32.
 function padAt(kind, x, y, A, B) {
-  if (kind === 'flag') {
-    const row = Math.floor(B / 11), a = A + (row % 2) * 7, col = Math.floor(a / 14), h = hash(col, row, 131);
-    if (B % 11 < 1.2 || a % 14 < 1.4) return 24;
-    return h < 0.3 ? 25 : h > 0.85 ? 27 : 26;
+  if (kind === 'dirt') return dirtAt(x, y, A, B);
+  const n = vnoise(A, B, 7, 136), h = hash(x, y, 135);
+  if (kind === 'wetmud') {
+    const pu = vnoise(A + 400, B, 5, 139);
+    if (pu > 0.78) return pu > 0.84 ? WATER[1] : DIRT[0];   // a puddle and its dark edge
+    return h < 0.05 ? DIRT[2] : n < 0.45 ? DIRT[0] : DIRT[1];
   }
-  if (kind === 'cobble') {
-    const cx = Math.floor(A / 6), cy = Math.floor(B / 6), ox = (hash(cx, cy, 132) - 0.5) * 2, oy = (hash(cx, cy, 133) - 0.5) * 2;
-    const dx = (A % 6) - 3 - ox * 0.6, dy = (B % 6) - 3 - oy * 0.6, d = dx * dx + dy * dy;
-    if (d > 7.5) return 65;
-    return dx + dy < -2 ? 69 : hash(cx, cy, 134) < 0.4 ? 67 : 68;
-  }
-  if (kind === 'soot') {
-    const h = hash(x, y, 135), n = vnoise(A, B, 8, 136);
-    if (h < 0.006) return FIRE[3];   // an ember
-    if (h < 0.05) return 2;
-    return n < 0.35 ? 3 : n < 0.7 ? DIRT[0] : 5;
-  }
-  if (kind === 'straw') {
-    const lane = Math.floor((A * 0.7 + B * 1.3) / 2.2), h = hash(lane, Math.floor((A - B) / 7), 137);
-    if (h < 0.5) return h < 0.12 ? 107 : h < 0.3 ? 106 : 105;
-    return hash(x, y, 138) < 0.3 ? 104 : DIRT[2];
-  }
-  return grassAt(x, y, A, B);
+  return h < 0.04 ? DIRT[2] : n < 0.35 ? 5 : n < 0.7 ? DIRT[0] : DIRT[1];   // mud
 }
 // a flower meadow: clusters of white, yellow and pink dots where the grass is lush
 function stampMeadow(seed) {
