@@ -78,7 +78,7 @@ function genLevel(level, seed, side = null) {
   { const big = A.kind === 'forest' || A.hub, floorBig = A.kind === 'dungeon' && !side && !A.arena; const hs = (A.hub || A.reg) && !side ? 100 : big ? 64 : floorBig ? 62 : 46; resizeWorld(hs, hs); }   // (round 68a: wider halls and rooms further apart: 62 / 46, were 56 / 40)   // round 41: the hub 84x84   // round 38: dungeon floors 56x56 (were 40)
   LV.area = A.kind; LV.cyc = A.cyc; LV.act = A.act; LV.loop = A.loop; LV.floor = A.floor || 0; LV.arena = A.arena || null;
   if (A0.act === 0 && !A0.loop && !A0.hub && typeof storyF === 'function' && storyF().h3all) A.diff += 2;   // round 78: after the Hollow's three dangers the hero is about two levels up: the Riverlands, the cellar, the crypt and the King follow
-  LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.hub = !!A.hub; LV.riv = !!A.riv && !side; LV.gateSign = null; LV.gateOpen = false; LV.autumn = A.act === 1 && !A.reg; LV.reg = (!side && A.reg) || null; LV.night = A.kind !== 'dungeon' && A.act === 2; LV.plaza = null; LV.npcs = []; LV.critters = []; LV.champsPlanned = false; LV.genFail = null;
+  LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.hub = !!A.hub; LV.dusk = false; LV.riv = !!A.riv && !side; LV.gateSign = null; LV.gateOpen = false; LV.autumn = A.act === 1 && !A.reg; LV.reg = (!side && A.reg) || null; LV.night = A.kind !== 'dungeon' && A.act === 2; LV.plaza = null; LV.npcs = []; LV.critters = []; LV.champsPlanned = false; LV.genFail = null;
   if (typeof syncLightTables === 'function') syncLightTables(LV.outdoor);   // round 48
   if (LV.outdoor) { LV.theme = A.kind; genOutdoor(level, seed, A); LV.level = level; LV.seed = seed; return; }
   LV.theme = LV.sideCfg ? LV.sideCfg.theme : ACTS[A.act].theme;   // each act's dungeon keeps one theme: crypt, caves, hell
@@ -1400,7 +1400,21 @@ function bakeLightMaps() {
       L.map = null;
     });
   }
+  bakeDusk();
   bakeAO();
+}
+// round 92: evening in the camp (the user's dusk mock-up): the daylight dims toward the fire, so the
+// fire, the lanterns and the forge's glow pool warm in it; outside the fence it lifts back to day over
+// a few tiles. One byte per world pixel, how much of the ambient light is taken away (DUSK_K at 255).
+let DUSK = null, DUSK_ON = true;
+const DUSK_K = 0.18;
+try { const q = new URLSearchParams(location.search).get('dusk'); if (q !== null) DUSK_ON = q !== '0'; } catch (e) { /* ignore */ }
+function bakeDusk() {
+  if (!LV.dusk || !DUSK_ON || typeof HUB === 'undefined') { DUSK = null; return; }
+  if (!DUSK || DUSK.length !== WW * WH) DUSK = new Uint8Array(WW * WH);
+  const [fx, fy] = iso(...HUB.camp), F = HUB.fence, cy = fy + F.c[1] * 11.31, R0 = F.r + 0.5, R1 = F.r + 7;
+  for (let wy = 0; wy < WH; wy++) { const dv = (wy - cy) / 11.31, row = wy * WW; if (Math.abs(dv) > R1 + 1) { DUSK.fill(0, row, row + WW); continue; }
+    for (let wx = 0; wx < WW; wx++) { const du = (wx - fx) / 22.63, d = Math.hypot(du, dv), t = d <= R0 ? 1 : d >= R1 ? 0 : 1 - (d - R0) / (R1 - R0); DUSK[row + wx] = Math.round(t * t * (3 - 2 * t) * 255); } }
 }
 // round 48: ambient occlusion for the new dungeon light: the floor darkens toward the walls and
 // into corners, round the foot of props, and walls darken toward their base, so rooms get shape

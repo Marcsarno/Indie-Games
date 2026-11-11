@@ -1573,7 +1573,7 @@ function drawGlows() {
     const big = f.h >= 10, R = big ? 26 : 12, k = (day ? 0.18 : big ? 0.5 : 0.35) * fl;
     glowAt(f.wx, f.wy - f.h * 0.45, R, k, f.blue ? GLOW_BLUE : GLOW_WARM);
   }
-  if (LV.night) for (const d of LV.decor) if (d.kind === 'lantern') { const [x, y] = iso(d.fi, d.fj); glowAt(x + 4, y - 20, 14, 0.4 * fl, GLOW_GOLD); }
+  if (LV.night || DUSK) for (const d of LV.decor) if (d.kind === 'lantern' && (LV.night || inCamp(d.fi, d.fj, 1))) { const [x, y] = iso(d.fi, d.fj); glowAt(x + 4, y - 20, 14, (LV.night ? 0.4 : 0.32) * fl, GLOW_GOLD); }   // (round 92: and the camp's at dusk)
   for (const p of projectiles) {
     if (p.kind === 'arrow') continue;
     const [x, y] = iso(p.fi, p.fj), col = p.kind === 'missile' || p.kind === 'frostbolt' ? GLOW_ARC : p.kind === 'holy' ? GLOW_GOLD : GLOW_WARM;
@@ -2038,7 +2038,8 @@ function lightPass(chars, kx, ky) {
     if (wy < 0 || wy >= WH) { lbuf.fill(0, o0, o0 + W); continue; }
     const row = wy * WW + camX, xa = Math.max(0, -camX), xb = Math.min(W, WW - camX);   // (round 57: the world's edges worked out once per row)
     for (let x = 0; x < xa; x++) lbuf[o0 + x] = amb;
-    for (let x = xa; x < xb; x++) lbuf[o0 + x] = amb + A[row + x] * f0 + B[row + x] * f1;
+    if (DUSK) { const k = DUSK_K / 255; for (let x = xa; x < xb; x++) lbuf[o0 + x] = amb - DUSK[row + x] * k + A[row + x] * f0 + B[row + x] * f1; }   // round 92: evening in the camp
+    else for (let x = xa; x < xb; x++) lbuf[o0 + x] = amb + A[row + x] * f0 + B[row + x] * f1;
     for (let x = Math.max(xa, xb); x < W; x++) lbuf[o0 + x] = amb;
   }
   let tintOn = false;

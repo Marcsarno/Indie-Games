@@ -383,29 +383,37 @@ const HOLLOW = {"woodsFringe":7,"roadFringe":4.5,"clearings":[{"id":"camp","name
 const US = (u, s) => [s + u, s - u];
 const HCL = Object.fromEntries(HOLLOW.clearings.map(c => [c.id, c]));
 const HUB = (() => {
-  const c = id => US(HCL[id].u, HCL[id].s), door = id => { const d = HOLLOW.doors.find(d => d.id === id); return US(d.u, d.s); }, camp = c('camp');
-  return {
-    camp: [camp[0] + 0.5, camp[1] + 0.5], wallR: 8.2, safe: 15, gateA: -2.356,   // the camp's one gate faces north (up the screen)
+  const c = id => US(HCL[id].u, HCL[id].s), door = id => { const d = HOLLOW.doors.find(d => d.id === id); return US(d.u, d.s); }, camp = US(HCL.camp.u, HCL.camp.s - 3.5);
+  return {   // (round 92: the fire 3.5 tiles north of the clearing's middle: the new fence reaches further south)
+    camp: [camp[0] + 0.5, camp[1] + 0.5], wallR: 9.4, safe: 15, gateA: -2.356,   // the camp's one gate faces north (up the screen)
+    fence: { c: [0, 1.4], r: 8.6, gate: 2.0 },   // round 92: the fence's ring in (across, down) tiles from the fire, and the gate's half width
     den: door('den'), barrow: door('barrow'), tower: door('towerdoor'), exit: c('exit'), tree: US(...HOLLOW.gates[0].at),
   };
 })();
-HUB.start = [HUB.camp[0] + 1.6, HUB.camp[1] + 2.4];
 // the people's places in the camp, as (u, s) offsets from the fire (as in the camp concept: Osric's
 // chapel tent on the left, the merchant's wagon on the right, Hollis's tent and the smith below)
 const CAMP_AT = (du, ds) => { const [a, b] = US(du, ds); return [HUB.camp[0] + a * 0.7071, HUB.camp[1] + b * 0.7071]; };   // (offsets in tiles across and down the screen)
+const CAMP_UV = (fi, fj) => { const a = fi - HUB.camp[0], b = fj - HUB.camp[1]; return [(a - b) * 0.7071, (a + b) * 0.7071]; };   // and back
+const inCamp = (fi, fj, m = 0) => { const [u, v] = CAMP_UV(fi, fj), F = HUB.fence; return Math.hypot(u - F.c[0], v - F.c[1]) < F.r + m; };
+HUB.start = CAMP_AT(0.4, -5.2);   // round 92: you arrive just inside the gate, looking down into the camp
 const hollowOpen = () => { const f = (G.story && G.story.f) || {}; return !!((f.aldoFree && (typeof h3Done !== 'function' || h3Done() || h3Legacy(f))) || LV.loop > 0 || (G.gates && G.gates[0])); };   // the fallen tree cleared (round 78: once the Hollow's three dangers are dealt with)
 function genHollow(R, A) {
   const H = HUB, [cx, cy] = H.camp, autumn = false;
   // ---- roads (the layout's widths are full widths in tiles)
   const road = (pts, w) => { for (let k = 0; k + 1 < pts.length; k++) addPath(pts[k], pts[k + 1], w, R); };
   const cAt = id => { const c = HCL[id]; return US(c.u, c.s).map(v => v + 0.5); };
-  const gateOut = [cx + Math.cos(H.gateA) * (H.wallR + 2.5), cy + Math.sin(H.gateA) * (H.wallR + 2.5)];
+  const gateOut = CAMP_AT(0, H.fence.c[1] - H.fence.r - 1.6);
   for (const r of HOLLOW.roads) {
     const a = r.from === 'camp' ? gateOut : cAt(r.from), pts = [a, ...(r.via || []).map(p => US(p[0], p[1]).map(v => v + 0.5)), cAt(r.to)];
     if (r.from === 'crossing' && r.to === 'exit') { const t = H.tree.map(v => v + 0.5); addPath(pts[0], t, r.w * 0.3, () => 0.5); addPath(t, pts[1], r.w * 0.3, () => 0.5); road(pts.slice(1), r.w * 0.3); continue; }   // straight through the fallen tree
     road(pts, r.w * 0.3);
   }
-  road([[cx, cy], gateOut], 0.95);   // out of the camp gate
+  road([CAMP_AT(0, -5), gateOut], 0.95);   // out of the camp gate
+  // round 92: the camp's footpaths, worn from the gate to the fire and from the fire out to each place (as in the user's mock-up)
+  { const fp = (pts, w) => { for (let k = 0; k + 1 < pts.length; k++) addPath(CAMP_AT(...pts[k]), CAMP_AT(...pts[k + 1]), w, () => 0.5); };
+    fp([[0, -5], [0.2, -2.6], [0, 0]], 0.8);
+    fp([[0, 0], [-2.2, -0.9], [-4.2, -1.0]], 0.55); fp([[0.1, -3.6], [-1.4, -4.0], [-2.2, -4.2]], 0.45); fp([[0, 0], [-2.4, 1.8], [-4.0, 2.6]], 0.55); fp([[-3.6, 2.8], [-4.0, 4.8], [-3.8, 6.2]], 0.4);
+    fp([[0, 0], [2.2, -0.6], [3.8, -0.8]], 0.55); fp([[0.1, -3.4], [1.6, -4.2], [2.6, -4.6]], 0.4); fp([[0, 0], [2.0, 2.2], [3.4, 4.0]], 0.55); fp([[0, 0], [0.1, 3.2], [0, 5.4]], 0.45); }
   // ---- the brook: a stream along its line; a plank bridge wherever a road crosses it
   for (const wtr of HOLLOW.water) { const P = wtr.path.map(p => US(p[0], p[1])); for (let k = 0; k + 1 < P.length; k++) LV.river.push([P[k][0], P[k][1], P[k + 1][0], P[k + 1][1], wtr.w * 0.48]); }
   bakePathField();
@@ -456,35 +464,61 @@ function genHollow(R, A) {
       for (let s = 0; s <= n; s++) { const t = s / n, fi = a + (c - a) * t, fj = b + (d - b) * t; for (let q = -(cl.w - 1) / 2; q <= (cl.w - 1) / 2; q++) { const i = Math.floor(fi + q * 0.7), j = Math.floor(fj - q * 0.7); if (i >= 0 && j >= 0 && i < MW && j < MH && LV.decor.some(e => e.kind === 'rock' && e.i === i && e.j === j)) continue; small('rock', i, j, { seed: (i * 3 + j) % 5, big: true }); } }
     }
   }
-  // ---- the camp: a ring of sharpened logs with one gate north, lanterns at the gate
-  const RAD = H.wallR, at = (a, r) => [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
-  for (let k = 0; k < 140; k++) {
-    const a = k / 140 * Math.PI * 2;
-    if (Math.abs(((a - H.gateA + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < 0.2) continue;
-    const [fi, fj] = at(a, RAD), i = Math.floor(fi), j = Math.floor(fj);
-    if (LV.decor.some(d => d.kind === 'palisade' && d.i === i && d.j === j)) continue;
-    LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'palisade', i, j, a });
+  // ---- the camp (round 92, from the user's mock-up): a palisade of sharpened logs in straight runs
+  // between corner posts round the clearing, one gate north with a crossbeam and two lanterns; the
+  // fire in the middle with its cooking pot, log benches and stumps; worn paths out to each place,
+  // each its own: Wren's patched family tent with washing on a line, Osric's pale chapel tent and
+  // altar, Hollis's tent with seed sacks and a plough, Aldo's woodpile, two small tents, an open
+  // forge, the potion wagon and its stall, the well; crates and barrels in piles against the fence.
+  const F = H.fence, RAD = F.r;
+  const thing = (what, p, extra = {}) => { LV.decor.push({ kind: 'thing', what, fi: p[0], fj: p[1], ...extra }); if (extra.solid !== false) LV.solid[tIdx(Math.floor(p[0]), Math.floor(p[1]))] = 1; };
+  const rimP = (deg, r = RAD) => [F.c[0] + Math.cos(deg * Math.PI / 180) * r, F.c[1] + Math.sin(deg * Math.PI / 180) * r];
+  { const g = Math.asin(F.gate / RAD) * 180 / Math.PI, corners = [-90 + g, -57, -33, -9, 15, 39, 63, 90, 117, 141, 165, 189, 213, 237, 270 - g];
+    const f0 = (G.story && G.story.f) || {}, aldoHome = !!(f0.aldoFree || A.loop > 0 || (G.gates && G.gates[0]));
+    for (let k = 0; k + 1 < corners.length; k++) {
+      const pa = CAMP_AT(...rimP(corners[k])), pb = CAMP_AT(...rimP(corners[k + 1])), dx = pb[0] - pa[0], dy = pb[1] - pa[1], L = Math.hypot(dx, dy), n = Math.ceil(L / 0.98), yaw = Math.atan2(dy, dx) - Math.PI / 2;
+      for (let q = 0; q < n; q++) {
+        const t = (q + 0.5) / n, fi = pa[0] + dx * t, fj = pa[1] + dy * t;
+        const gap = k === 8 && q >= 1 && q <= 2;   // round 92: by Aldo's woodpile the fence is unfinished until he is home (stakes stacked across the gap); then closed with fresh logs
+        if (gap && !aldoHome) { if (q === 1) LV.decor.push({ kind: 'thing', what: 'stakepile', fi: pa[0] + dx * (2 / n), fj: pa[1] + dy * (2 / n), yaw }); }
+        else LV.decor.push({ kind: 'thing', what: 'stakes', fi, fj, yaw, fresh: gap });
+      }
+      for (let t = 0; t <= 1.0001; t += 0.08 / L) LV.solid[tIdx(Math.floor(pa[0] + dx * t), Math.floor(pa[1] + dy * t))] = 1;
+      if (k > 0) thing('post', pa);
+    }
+    const gy = F.c[1] - Math.sqrt(RAD * RAD - F.gate * F.gate); thing('campgate', CAMP_AT(0, gy), { solid: false });
+    for (const sd of [-1, 1]) { const pp = CAMP_AT(sd * F.gate, gy); LV.solid[tIdx(Math.floor(pp[0]), Math.floor(pp[1]))] = 1; }
   }
-  for (const sd of [-1, 1]) { const [fi, fj] = at(H.gateA + sd * 0.26, RAD + 0.4); LV.decor.push({ kind: 'lantern', fi, fj }); }
-  LV.plaza = { x: cx, y: cy, r: 3.2 };
+  LV.plaza = { x: cx, y: cy, r: 2.4 }; LV.dusk = true;   // (round 92: evening in the camp; world.js bakeDusk)
   const solidRect = (i0, j0, w, h) => { for (let j = j0; j < j0 + h; j++) for (let i = i0; i < i0 + w; i++) LV.solid[tIdx(i, j)] = 1; };
   const put = (kind, p, w, h, extra = {}) => { const i = Math.round(p[0] - w / 2), j = Math.round(p[1] - h / 2); solidRect(i, j, w, h); LV.decor.push({ kind, i, j, w, h, ...extra }); };   // (p: the middle of its footprint)
   const lamp = p => LV.decor.push({ kind: 'lantern', fi: p[0], fj: p[1] });
+  const C = (u, v) => CAMP_AT(u, v);
+  const SPOTS = { osric: C(-4.0, -0.6), smith: C(3.0, 4.6), potions: C(3.7, -1.3), tents: C(-2.0, -4.2), woodcutter: C(-3.4, 6.4), hollis: C(-4.1, 3.1) };   // the people at their places
+  // the fire: a ring of stones, a cooking pot on a tripod over it, log benches and stumps round it
   LV.decor.push({ kind: 'campfire', i: Math.floor(cx), j: Math.floor(cy) }); LV.solid[tIdx(Math.floor(cx), Math.floor(cy))] = 1;
-  for (const [a, yaw] of [[0.4, 2.0], [2.5, 0.9], [4.3, 2.6]]) LV.decor.push({ kind: 'log', fi: cx + Math.cos(a) * 2.1, fj: cy + Math.sin(a) * 2.1, yaw });
-  const SPOTS = { osric: CAMP_AT(-3.6, -1.4), smith: CAMP_AT(3.2, 3.6), potions: CAMP_AT(3.4, -1.4), tents: CAMP_AT(-1.6, -3.8), woodcutter: CAMP_AT(-1.4, 4.6), hollis: CAMP_AT(-3.6, 3.4) };
-  // Osric's chapel: a tent with his altar before it (the cathedral is the act's end now, far off)
-  put('tent', CAMP_AT(-5.6, -1.8), 2, 2); small('altar', ...CAMP_AT(-4.4, -0.2).map(Math.floor)); lamp(CAMP_AT(-3.0, -2.6));
-  // the merchant's wagon and a stall of herbs
-  put('wagon', CAMP_AT(5.0, -1.6), 2, 2); put('stall', CAMP_AT(4.4, 0.8), 2, 1); small('barrel', ...CAMP_AT(6.4, 0.4).map(Math.floor)); lamp(CAMP_AT(2.6, -2.8));
-  // the smith's forge, below right
-  put('forge', CAMP_AT(4.6, 4.2), 3, 3); small('crate', ...CAMP_AT(2.6, 5.8).map(Math.floor)); small('barrel', ...CAMP_AT(6.6, 3.0).map(Math.floor));
-  // tents: two by the gate, Hollis's below left with sacks of seed, one at the bottom
-  put('tent', CAMP_AT(-3.4, -5.0), 2, 2); put('tent', CAMP_AT(3.0, -5.4), 2, 2); put('tent', CAMP_AT(-5.6, 3.2), 2, 2); put('tent', CAMP_AT(0.2, 6.4), 2, 2);
-  small('crate', ...CAMP_AT(-4.8, 5.4).map(Math.floor)); small('well', ...CAMP_AT(1.8, -3.4).map(Math.floor));
-  // Aldo's woodpile, empty until he is home
-  put('woodpile', CAMP_AT(-2.2, 6.0), 2, 1);
-  lamp(CAMP_AT(-1.2, 2.6)); lamp(CAMP_AT(1.6, 2.2));
+  thing('pot', [cx + 0.02, cy + 0.02], { solid: false });
+  const tangent = (u, v) => { const a = C(u, v), b = C(u - v * 0.1, v + u * 0.1); return Math.atan2(b[1] - a[1], b[0] - a[0]); };
+  for (const [u, v] of [[-1.5, -1.5], [1.7, 1.4], [1.9, -1.9]]) LV.decor.push({ kind: 'log', fi: C(u, v)[0], fj: C(u, v)[1], yaw: tangent(u, v) });
+  for (const [u, v] of [[-1.9, 0.3], [1.9, -0.4]]) thing('seat', C(u, v));
+  // Wren's family tent by the gate: patched, a washing line, a bedroll, a child's toy cart
+  put('tentfamily', C(-3.6, -4.8), 3, 3); thing('laundry', C(-1.9, -6.3), { yaw: tangent(0, 6) + 0.05, solid: false }); thing('bedroll', C(-5.0, -3.4), { solid: false }); thing('toy', C(-2.4, -3.6), { solid: false });
+  // Brother Osric's chapel tent with his altar before it
+  put('tentchapel', C(-5.8, -1.6), 3, 3); small('altar', ...C(-4.5, 0.3).map(Math.floor));
+  // Hollis's tent, his seed sacks and a broken plough
+  put('tentfarm', C(-5.8, 2.9), 3, 3); thing('sacks', C(-4.6, 4.5)); thing('plough', C(-3.6, 4.9), { solid: false });
+  // Aldo's woodpile and chopping block, by the unfinished fence
+  put('woodpile', C(-4.6, 6.9), 2, 1);
+  // two small tents along the bottom, nothing alike
+  put('tentgreen', C(-1.6, 6.4), 2, 2); put('tentpatch', C(1.9, 6.6), 2, 2);
+  // the smith's open forge: a roof on posts over a stone hearth, an anvil on a stump, a water tub, a rack of blades
+  put('shed', C(5.2, 3.6), 3, 3); thing('anvil', C(3.4, 5.4)); thing('tub', C(4.6, 6.0)); thing('rack', C(6.0, 5.0), { yaw: tangent(6.6, 5.4) });
+  // the potion seller's wagon and her stall, barrels behind
+  put('wagon', C(5.0, -2.8), 2, 2); put('stall', C(4.8, -0.6), 2, 1); thing('barrels', C(7.0, 0.6));
+  // the well, crates and a barrel by the fence beside it; crates in the far corners
+  small('well', ...C(3.2, -5.0).map(Math.floor)); thing('crates', C(5.2, -5.6)); thing('crates', C(-6.8, -3.6), { flip: 1 }); thing('crates', C(6.0, 6.6), { flip: 1 }); thing('barrels', C(-7.4, 1.0), { one: 1 });
+  // lanterns along the paths round the fire
+  for (const [u, v] of [[-2.8, -1.6], [-2.8, 2.6], [3.0, -1.4], [1.4, 3.6], [-0.9, -5.6], [0.9, 5.4]]) lamp(C(u, v));
   // ---- the fallen tree across the road north (cleared once Aldo is free: its trunk lies cut at the roadside)
   { const nx = -rd[1], ny = rd[0];   // along the trunk
     if (!hollowOpen()) {
@@ -508,12 +542,12 @@ function genHollow(R, A) {
     for (let r = 0; r < 6; r++) { let done = false; for (let t = 0; t < 8 && !done; t++) { const i = Math.floor(a + Math.cos(t * 0.785) * r), j = Math.floor(b + Math.sin(t * 0.785) * r); if (walk[tIdx(i, j)] && !LV.solid[tIdx(i, j)] && pathD(i + 0.5, j + 0.5) > 0.4) { LV.solid[tIdx(i, j)] = 1; LV.decor.push({ kind: 'chest', i, j, seed: R.int(1, 1e6) }); done = true; } } if (done) break; }
   }
   // ---- open woods: clumps of trees in the fringe (never in a clearing or on a road), bushes and ferns
-  const keep = (i, j) => Math.hypot(i - cx, j - cy) < RAD + 2.5 || [H.den, H.barrow, H.tower, H.exit].some(p => Math.hypot(i - p[0], j - p[1]) < 3.4) || Math.hypot(i - tree[0], j - tree[1]) < 4;
+  const keep = (i, j) => inCamp(i, j, 2.5) || [H.den, H.barrow, H.tower, H.exit].some(p => Math.hypot(i - p[0], j - p[1]) < 3.4) || Math.hypot(i - tree[0], j - tree[1]) < 4;
   plantClumps(R, (i, j) => walk[tIdx(i, j)] && !clear[tIdx(i, j)] && !keep(i + 0.5, j + 0.5) && pathD(i + 0.5, j + 0.5) >= 1.6 && riverD(i + 0.5, j + 0.5) > 1,
     (x, y) => 0.42 + vnoise(Math.floor(x), Math.floor(y), 5, 31) * 0.2, { cell: 6, gap: 2, rockAt: () => 0.08, tree: () => ({ tree: R() < 0.55 ? 'pine' : 'oak', seed: R.int(0, 5) }) });
   for (let n = 0; n < MW * MH * 0.03; n++) {
     const fi = 2 + R() * (MW - 4), fj = 2 + R() * (MH - 4), i = Math.floor(fi), j = Math.floor(fj), k = tIdx(i, j);
-    if (!walk[k] || LV.solid[k] || pathD(fi, fj) < 1.1 || Math.hypot(fi - cx, fj - cy) < RAD + 1) continue;
+    if (!walk[k] || LV.solid[k] || pathD(fi, fj) < 1.1 || inCamp(fi, fj, 1)) continue;
     LV.decor.push({ kind: R() < 0.65 ? 'bush' : R() < 0.6 ? 'fern' : 'shroom', fi, fj, seed: R.int(0, 5) });
   }
   LV.decor.push({ kind: 'meadow', seed: R.int(1, 1e6) });
@@ -526,7 +560,7 @@ function genHollow(R, A) {
     { role: 'priest', name: 'BROTHER OSRIC', fi: SPOTS.osric[0], fj: SPOTS.osric[1] },
     { role: 'smith', name: 'SMITHY', fi: SPOTS.smith[0], fj: SPOTS.smith[1] },
     { role: 'merchant', name: 'POTIONS', fi: SPOTS.potions[0], fj: SPOTS.potions[1] },
-    { role: 'villager', fi: CAMP_AT(1.2, -2.0)[0], fj: CAMP_AT(1.2, -2.0)[1] }, { role: 'villager', fi: CAMP_AT(-1.8, 2.8)[0], fj: CAMP_AT(-1.8, 2.8)[1] },
+    { role: 'villager', fi: CAMP_AT(2.6, -3.0)[0], fj: CAMP_AT(2.6, -3.0)[1] }, { role: 'villager', fi: CAMP_AT(-1.8, 1.9)[0], fj: CAMP_AT(-1.8, 1.9)[1] },
   ];
   { const f = (G.story && G.story.f) || {};
     LV.npcs.push({ role: 'wren', name: 'WREN', fi: SPOTS.tents[0], fj: SPOTS.tents[1] });
@@ -1052,6 +1086,30 @@ function gableRoof(r, hx, hy, z0, rise, mat, stripe) {
   }
 }
 let TENT_YAW = 5.9;
+// round 92: the A-frame tent (round 38) with options: size (HW, HT, HL), cloth, seam, patches, a gold sun, gold finials
+function campTent(r, o) {
+    const HW = o.HW || 16, HT = o.HT || 25, HL = o.HL || 13, L = Math.hypot(HW, HT), cl = o.cloth || M.CLOTH_TAN, seam = o.seam || M.LEATHER;   // half width at the base, height, half length
+    for (const s of [-1, 1]) {   // the two sloped panels
+      const a0 = V.norm([-s * HW, 0, HT]), a1 = [0, 1, 0], a2 = V.cross(a0, a1);
+      r.box([s * HW / 2, 0, HT / 2], [L / 2, HL, 0.8], cl, [a0, a1, a2], { mf: p => { if (Math.abs(((p[1] + HL) % 9) - 4.5) < 0.4) return seam; if (o.patches) { const pi = Math.floor((p[1] + 40) / 7), pz = Math.floor(p[2] / 7), h = hash(pi * 3 + s, pz, 17); if (h < 0.24 && Math.abs(((p[1] + 40) % 7) - 3.5) < 2.6 && Math.abs((p[2] % 7) - 3.5) < 2.4) return o.patches[Math.floor(h * 12) % o.patches.length]; } if (o.sun && s > 0) { const d = Math.hypot(p[1] - 1, p[2] - HT * 0.48); if (d < 4.2) return M.GOLD; if (d < 7 && Math.abs(Math.sin(Math.atan2(p[2] - HT * 0.48, p[1] - 1) * 4)) > 0.7) return M.GOLD; } return 0; } });   // seams down the canvas
+    }
+    for (const yEnd of [-HL, HL]) {   // the gable ends: stacked strips narrowing to the ridge, the front one with its flap open
+      for (let k = 0; k < 7; k++) {
+        const z0 = k * HT / 7, z1 = (k + 1) * HT / 7, w = HW * (1 - (z0 + z1) / 2 / HT);
+        r.box([0, yEnd, (z0 + z1) / 2], [w, 0.7, (z1 - z0) / 2 + 0.2], cl, null, { mf: p => yEnd > 0 && Math.abs(p[0]) < 8 * (1 - p[2] / 19) && p[2] < 18 ? M.DARK : 0 });
+      }
+    }
+    r.cyl([0, -HL - 3, HT + 0.6], [0, HL + 3, HT + 0.6], 0.9, M.WOOD); if (o.finials) for (const sy of [-1, 1]) r.sph([0, sy * (HL + 3), HT + 1.2], 1.4, M.GOLD);   // the ridge pole, sticking out at the ends
+    // one door flap folded back against the canvas, lighter where the inside shows
+    { const a0 = V.norm([-8, 0, 18]), a1 = V.norm([1, 0.9, 0]), a2 = V.cross(a0, a1); r.box([-6.5, HL + 1.6, 7.5], [9, 3.6, 0.5], o.cloth === M.CLOTH_WHITE ? M.CLOTH_TAN : M.CLOTH_WHITE, [a0, a1, a2], { noShadow: true }); }
+    for (const yEnd of [-HL - 1.5, HL + 1.5]) {
+      if (yEnd < 0) r.cyl([0, yEnd, 0], [0, yEnd, HT + 1.5], 0.8, M.WOOD);   // an upright at the back (the front stays clear of the door)
+      const sy = Math.sign(yEnd), peg = [0, yEnd + sy * 9, 0];
+      r.cone([0, yEnd, HT], peg, 0.35, 0.3, M.WOOD, { noShadow: true });   // a guy rope to a peg
+      r.cyl(peg, V.add(peg, [0, 0, 2]), 0.6, M.WOOD);
+    }
+    for (const [x, y] of [[-HW - 1, -HL + 3], [-HW - 1, HL - 3], [HW + 1, -HL + 3], [HW + 1, HL - 3]]) r.cyl([x, y, 0], [x, y, 1.6], 0.5, M.WOOD);   // pegs along the sides
+}
 // a mine mouth cut into a rock face: a heavy timber frame, a lamp, rails running out (barred: two planks
 // nailed across the mouth and a chain with a padlock, until the bandit chief's key opens it)
 function mineRig(r, barred) {
@@ -1256,29 +1314,112 @@ const BUILD = {
     r.ell([-0.5, 0, 14.5], [10, 6.4, 5.2], M.STRAWM, null, { mf: p => hash(Math.floor(p[0] * 1.5), Math.floor(p[1] + p[2] * 2), 3) < 0.2 ? M.WOOD : 0 });
     r.cone([-14, 8, 0], [-9, 4, 22], 0.6, 0.5, M.WOOD); for (const d of [-0.9, 0, 0.9]) r.cone([-9 + d * 0.3, 4 + d, 22], [-8.4 + d * 0.3, 3.6 + d, 26], 0.35, 0.2, M.IRON);
   }, [64, 60, 32, 42], -0.6),
-  tent: () => propSprite('tent', r => {
-    const HW = 16, HT = 25, HL = 13, L = Math.hypot(HW, HT);   // half width at the base, height, half length
-    for (const s of [-1, 1]) {   // the two sloped panels
-      const a0 = V.norm([-s * HW, 0, HT]), a1 = [0, 1, 0], a2 = V.cross(a0, a1);
-      r.box([s * HW / 2, 0, HT / 2], [L / 2, HL, 0.8], M.CLOTH_TAN, [a0, a1, a2], { mf: p => (Math.abs(((p[1] + HL) % 9) - 4.5) < 0.4) ? M.LEATHER : 0 });   // seams down the canvas
+  tent: () => propSprite('tent', r => campTent(r, {}), [84, 84, 42, 56], TENT_YAW),
+  // round 92, the camp's own tents (the user's mock-up: every tent with its own purpose)
+  tentfamily: () => propSprite('tentfamily', r => campTent(r, { HW: 20, HT: 29, HL: 16, cloth: M.CLOTH_WINE, patches: [M.CLOTH_TAN, M.LEATHER, M.CLOTH_SHADOW] }), [104, 100, 52, 66], TENT_YAW),
+  tentchapel: () => propSprite('tentchapel', r => campTent(r, { HW: 19, HT: 33, HL: 16, cloth: M.CLOTH_WHITE, seam: M.CLOTH_TAN, sun: true, finials: true }), [104, 108, 52, 74], TENT_YAW),
+  tentfarm: () => propSprite('tentfarm', r => campTent(r, { HW: 19, HT: 28, HL: 15, cloth: M.STRAWM, seam: M.LEATHER }), [100, 96, 50, 64], TENT_YAW),
+  tentgreen: () => propSprite('tentgreen', r => campTent(r, { HW: 14, HT: 21, HL: 12, cloth: M.CLOTH_GREEN, finials: true }), [76, 72, 38, 48], TENT_YAW - 0.35),
+  tentpatch: () => propSprite('tentpatch', r => campTent(r, { HW: 15, HT: 22, HL: 12, cloth: M.CLOTH_TAN, seam: M.CLOTH_WHITE, patches: [M.CLOTH_BLUE, M.CLOTH_WINE, M.CLOTH_WHITE] }), [80, 76, 40, 50], TENT_YAW + 0.3),
+  // the smith's open forge: four posts and a plank roof over a stone hearth with an arched mouth of glowing coals, a chimney
+  shed: () => propSprite('shed', r => {
+    const hx = 20, hy = 22, H0 = 32;
+    for (const [x, y] of [[-hx, -hy], [hx, -hy], [hx, hy], [-hx, hy]]) r.box([x, y, H0 / 2], [1.7, 1.7, H0 / 2], M.WOOD, null, { mf: p => Math.abs(p[2] - 24) < 0.5 ? M.BARK : 0 });
+    for (const sy of [-1, 1]) r.box([0, sy * hy, H0], [hx + 2, 1.5, 1.5], M.WOOD);
+    gableRoof(r, hx, hy + 2, H0, 14, M.PLANK, p => Math.abs((p[1] * 0.9) % 4) < 0.5 ? M.BARK : 0);
+    // the hearth: a stone block at the back with a big arched mouth of coals facing the camp, its chimney up through the roof
+    r.box([-8, -4, 10], [9, 13, 10], M.STONE, null, { mf: p => (Math.floor(p[2] / 3.2) % 2 ? Math.floor((p[0] + p[1]) / 5) : Math.floor((p[0] + p[1]) / 5 + 0.5)) % 3 === 0 ? M.ROCK : 0 });
+    r.box([1.2, -4, 7], [0.5, 8, 6], M.DARK, null, { mf: p => { const d = Math.hypot(p[1] + 4, Math.max(0, p[2] - 7) * 1.4); return d > 7.6 ? M.STONE : p[2] < 5.2 ? M.FIREM : 0; } });
+    r.cyl([-10, -6, 20], [-10, -6, H0 + 22], 4.2, M.STONE, { mf: p => (Math.floor(p[2] / 3) + Math.floor(Math.atan2(p[1] + 6, p[0] + 10) * 2)) % 2 ? M.ROCK : 0 });
+    r.box([-6, 13, 7], [5, 4, 0.8], M.PLANK); r.box([-6, 13, 3.4], [0.8, 3, 3.4], M.WOOD);   // a bench of tools
+    for (let k = 0; k < 3; k++) r.cone([-9 + k * 3, 13, 8], [-9 + k * 3 + 1, 14, 13], 0.5, 0.4, k === 1 ? M.IRON : M.WOOD);
+  }, [112, 128, 56, 92]),
+};
+
+
+// ---------------------------------------------------------------- round 92: the camp's small things
+// Each stands at its own spot (fi, fj; not snapped to a tile) and is drawn by its depth there. The
+// fence is single sharpened logs in panels laid exactly along each straight run (the old ring put a
+// panel on every tile of a circle, turned to the curve: the panels overlapped, gapped, and seen
+// edge on became loose poles).
+const qy = y => Math.round(y * 16) / 16;
+const THING = {
+  stakes: (yaw, fresh) => propSprite('stakes' + (fresh ? 'f' : ''), r => {   // a panel of five sharpened logs bound by a rope (fresh: just cut, pale)
+    for (let k = -2; k <= 2; k++) { const y = k * 4.6, h = 22 + ((k + 7) * 37 % 5); r.cyl([0, y, 0], [0, y, h], 2.45, fresh ? M.PLANK : M.BARK, { mf: p => fresh ? 0 : Math.abs(p[2] - h * 0.62) < 0.5 ? M.WOOD : 0 }); r.cone([0, y, h], [0, y, h + 4.6], 2.45, 0.3, fresh ? M.STRAWM : M.PLANK); }
+    r.box([0.4, 0, 9], [2.3, 11.6, 0.6], M.LEATHER); r.box([0.4, 0, 17], [2.3, 11.6, 0.6], M.LEATHER);
+  }, [44, 60, 22, 46], qy(yaw)),
+  stakepile: (yaw) => propSprite('stakepile', r => {   // the gap: sharpened logs stacked across it, waiting to be stood up
+    for (let row = 0; row < 3; row++) for (let k = 0; k < 4 - row; k++) { const y = -20 + k * 5.4 + row * 2.7, z = 2.4 + row * 4.4; r.cyl([-3, y - 12, z], [-3, y + 12, z], 2.3, k % 2 ? M.PLANK : M.BARK, { mf: p => Math.abs(p[1] - (y + 12)) < 0.6 ? M.STRAWM : 0 }); r.cone([-3, y + 12, z], [-3, y + 16, z], 2.3, 0.3, M.STRAWM); }
+    for (const y of [-14, 14]) { r.box([-3, y, 5], [3, 0.7, 5], M.WOOD, [V.norm([1, 0, 0.6]), [0, 1, 0], V.norm([-0.6, 0, 1])]); r.box([-3, y, 5], [3, 0.7, 5], M.WOOD, [V.norm([1, 0, -0.6]), [0, 1, 0], V.norm([0.6, 0, 1])]); }   // two sawhorses
+  }, [64, 44, 32, 30], qy(yaw)),
+  post: () => propSprite('post', r => {   // a corner post: thicker and taller, its top cut flat with a pale ring
+    r.cyl([0, 0, 0], [0, 0, 32], 3.6, M.BARK, { mf: p => p[2] > 31.6 ? (Math.floor(Math.hypot(p[0], p[1]) * 1.4) % 2 ? M.PLANK : M.STRAWM) : Math.abs(p[2] - 20) < 0.6 ? M.WOOD : 0 });
+    r.box([0, 0, 13], [3.9, 3.9, 0.7], M.LEATHER);
+  }, [24, 56, 12, 44]),
+  campgate: () => propSprite('campgate', r => {   // two heavy posts, a crossbeam with braces, a lantern hanging each side, the two leaves swung open against the fence
+    const Y = 45.2;   // (two tiles from the middle: the posts' tiles must not touch, or the way through is shut)
+    for (const sy of [-1, 1]) {
+      r.cyl([0, sy * Y, 0], [0, sy * Y, 46], 4.2, M.BARK, { mf: p => p[2] > 45.6 ? M.PLANK : Math.abs(p[2] - 16) < 0.6 || Math.abs(p[2] - 30) < 0.6 ? M.WOOD : 0 });
+      r.box([0, sy * (Y - 8), 36], [1.2, 6.4, 1.2], M.WOOD, [[1, 0, 0], V.norm([0, 1, -sy * 0.75]), V.norm([0, sy * 0.75, 1])]);   // a brace
+      r.cyl([0, sy * (Y - 9), 41], [0, sy * (Y - 9), 36], 0.3, M.IRON);   // the lantern's hook and lantern
+      r.box([0, sy * (Y - 9), 33.5], [2, 2, 2.6], M.IRON, null, { mf: p => Math.abs(p[2] - 33.5) < 1.8 && (Math.abs(p[0]) < 1.3 || Math.abs(p[1] - sy * (Y - 9)) < 1.3) ? M.LAMP : 0 }); r.cone([0, sy * (Y - 9), 36], [0, sy * (Y - 9), 37.6], 2.6, 0.4, M.IRON);
+      r.box([3.5, sy * (Y + 12), 13], [0.9, 10, 13], M.PLANK, null, { mf: p => Math.abs(((p[1] + 60) % 4.6) - 2.3) < 0.4 ? M.BARK : Math.abs(p[2] - 6) < 0.8 || Math.abs(p[2] - 20) < 0.8 ? M.WOOD : 0 });   // the leaf, open
     }
-    for (const yEnd of [-HL, HL]) {   // the gable ends: stacked strips narrowing to the ridge, the front one with its flap open
-      for (let k = 0; k < 7; k++) {
-        const z0 = k * HT / 7, z1 = (k + 1) * HT / 7, w = HW * (1 - (z0 + z1) / 2 / HT);
-        r.box([0, yEnd, (z0 + z1) / 2], [w, 0.7, (z1 - z0) / 2 + 0.2], M.CLOTH_TAN, null, { mf: p => yEnd > 0 && Math.abs(p[0]) < 8 * (1 - p[2] / 19) && p[2] < 18 ? M.DARK : 0 });
-      }
+    r.cyl([0, -Y - 6, 43], [0, Y + 6, 43], 3, M.BARK, { mf: p => Math.abs(p[1]) > Y + 5.5 ? M.PLANK : 0 });   // the crossbeam
+  }, [160, 104, 80, 76], -3 * Math.PI / 4),
+  pot: () => propSprite('pot', r => {   // a tripod over the fire with a black pot hung from it
+    for (let k = 0; k < 3; k++) { const a = k * 2.094 + 0.5; r.cone([Math.cos(a) * 10, Math.sin(a) * 10, 0], [0, 0, 24], 0.9, 0.7, M.WOOD); }
+    r.cyl([0, 0, 24], [0, 0, 14], 0.3, M.IRON);
+    r.ell([0, 0, 11], [4.4, 4.4, 3.6], M.IRON, null, { mf: p => p[2] > 13.4 ? M.DARK : 0 }); r.cyl([0, 0, 13.6], [0, 0, 14.4], 4, M.IRON, { mf: p => p[2] > 14.2 && Math.hypot(p[0], p[1]) < 3 ? M.CLOTH_TAN : 0 });
+  }, [36, 52, 18, 40]),
+  seat: () => propSprite('seat', r => {   // a stump to sit on
+    r.cyl([0, 0, 0], [0, 0, 6.5], 4.6, M.BARK, { mf: p => p[2] > 6.3 ? (Math.floor(Math.hypot(p[0], p[1]) * 1.2) % 2 ? M.PLANK : M.STRAWM) : 0 });
+  }, [24, 22, 12, 15]),
+  laundry: (yaw) => propSprite('laundry', r => {   // a washing line between two poles, three things pegged on it
+    for (const y of [-20, 20]) r.cyl([0, y, 0], [0, y, 22], 0.8, M.WOOD);
+    r.cyl([0, -20, 20.5], [0, 20, 20.5], 0.25, M.CLOTH_TAN, { noShadow: true });
+    [[-12, M.CLOTH_WHITE, 6, 9], [-1, M.CLOTH_BLUE, 5, 11], [9, M.CLOTH_TAN, 6, 7]].forEach(([y, m, w, h]) => r.box([0, y, 20.5 - h / 2], [0.4, w, h / 2], m, null, { mf: p => Math.abs(p[2] - (20.5 - h * 0.7)) < 0.5 ? (m === M.CLOTH_WHITE ? M.CLOTH_TAN : M.CLOTH_WHITE) : 0 }));
+  }, [56, 44, 28, 34], qy(yaw)),
+  bedroll: () => propSprite('bedroll', r => { r.cyl([0, -7, 2.6], [0, 7, 2.6], 2.6, M.CLOTH_RED, { mf: p => Math.abs(p[1]) > 6.6 ? M.CLOTH_TAN : Math.abs(p[1] - 3) < 0.6 || Math.abs(p[1] + 3) < 0.6 ? M.LEATHER : 0 }); }, [28, 20, 14, 13], 0.5),
+  toy: () => propSprite('toy', r => {   // a child's wooden cart on four wheels, a pull string
+    r.box([0, 0, 3.2], [4, 2.6, 1.6], M.PLANK); r.box([-1, 0, 5.2], [1.6, 1.6, 1.4], M.CLOTH_RED);
+    for (const [x, y] of [[-3, -3], [3, -3], [-3, 3], [3, 3]]) r.cyl([x, y, 1.5], [x, y * 1.2, 1.5], 1.5, M.WOOD);
+    r.cone([4, 0, 3], [9, 2, 0.4], 0.25, 0.25, M.CLOTH_TAN, { noShadow: true });
+  }, [24, 18, 12, 12], 0.7),
+  sacks: () => propSprite('sacks', r => {   // seed sacks, tied at the neck, a wheat mark on each
+    for (const [x, y, s2] of [[0, -5, 1], [-1, 4, 0.9], [6, 0, 0.8]]) {
+      r.ell([x, y, 5.4 * s2], [4.6 * s2, 4.4 * s2, 5.6 * s2], M.CLOTH_TAN, null, { mf: p => { const dy = p[1] - y, dz = p[2] - 5.4 * s2; return p[0] > x + 2 && Math.abs(dy) < 0.5 && Math.abs(dz) < 3 ? M.GOLD : p[0] > x + 2 && Math.abs(Math.abs(dy) - (2.4 - dz * 0.4) * 0.5) < 0.5 && dz > -1 && dz < 2.6 ? M.GOLD : 0; } });
+      r.cyl([x, y, 10.6 * s2], [x, y, 12.4 * s2], 1.4 * s2, M.CLOTH_TAN); r.cyl([x, y, 10.6 * s2], [x, y, 11.2 * s2], 1.8 * s2, M.LEATHER);
     }
-    r.cyl([0, -HL - 3, HT + 0.6], [0, HL + 3, HT + 0.6], 0.9, M.WOOD);   // the ridge pole, sticking out at the ends
-    // one door flap folded back against the canvas, lighter where the inside shows
-    { const a0 = V.norm([-8, 0, 18]), a1 = V.norm([1, 0.9, 0]), a2 = V.cross(a0, a1); r.box([-6.5, HL + 1.6, 7.5], [9, 3.6, 0.5], M.CLOTH_WHITE, [a0, a1, a2], { noShadow: true }); }
-    for (const yEnd of [-HL - 1.5, HL + 1.5]) {
-      if (yEnd < 0) r.cyl([0, yEnd, 0], [0, yEnd, HT + 1.5], 0.8, M.WOOD);   // an upright at the back (the front stays clear of the door)
-      const sy = Math.sign(yEnd), peg = [0, yEnd + sy * 9, 0];
-      r.cone([0, yEnd, HT], peg, 0.35, 0.3, M.WOOD, { noShadow: true });   // a guy rope to a peg
-      r.cyl(peg, V.add(peg, [0, 0, 2]), 0.6, M.WOOD);
-    }
-    for (const [x, y] of [[-HW - 1, -HL + 3], [-HW - 1, HL - 3], [HW + 1, -HL + 3], [HW + 1, HL - 3]]) r.cyl([x, y, 0], [x, y, 1.6], 0.5, M.WOOD);   // pegs along the sides
-  }, [84, 84, 42, 56], TENT_YAW),
+  }, [36, 34, 18, 24], 0.3),
+  plough: () => propSprite('plough', r => {   // a broken plough: the beam on the ground, a handle up, the share rusted
+    r.cone([-10, 0, 2], [10, 0, 3.5], 1.2, 1.0, M.WOOD);
+    r.cone([-7, -2, 2], [-12, -4, 13], 0.8, 0.7, M.WOOD); r.cone([-7, 2, 2], [-12, 4, 13], 0.8, 0.7, M.WOOD);
+    r.box([7, 0, 2.4], [3, 0.6, 2], M.RUST, [V.norm([1, 0, -0.5]), [0, 1, 0], V.norm([0.5, 0, 1])]);
+  }, [36, 28, 18, 20], 0.9),
+  anvil: () => propSprite('anvil', r => {   // the anvil on its stump
+    r.cyl([0, 0, 0], [0, 0, 7], 4.4, M.BARK, { mf: p => p[2] > 6.8 ? M.PLANK : 0 });
+    r.box([0, 0, 8.6], [5.2, 2.2, 1.6], M.IRON); r.box([0, 0, 10.6], [5.6, 2.6, 0.9], M.STEEL); r.cone([5.6, 0, 10.6], [9.6, 0, 11], 1.6, 0.3, M.STEEL);
+    r.cyl([-3, 3.4, 11.4], [-1, 5, 14], 0.5, M.WOOD); r.box([-1, 5, 14.4], [1.4, 0.9, 0.9], M.IRON);   // a hammer leaning on it
+  }, [30, 30, 15, 20], 0.3),
+  tub: () => propSprite('tub', r => {   // the quench tub: staves and hoops, water in it
+    r.cyl([0, 0, 0], [0, 0, 8], 5.4, M.PLANK, { mf: p => p[2] > 7.6 && Math.hypot(p[0], p[1]) < 4.6 ? M.WATERM : Math.abs(p[2] - 2) < 0.6 || Math.abs(p[2] - 6.4) < 0.6 ? M.IRON : Math.floor(Math.atan2(p[1], p[0]) * 3) % 2 ? M.WOOD : 0 });
+  }, [26, 22, 13, 15]),
+  rack: (yaw) => propSprite('rack', r => {   // a rack of finished blades and an axe
+    for (const y of [-9, 9]) { r.box([0, y, 9], [0.9, 0.9, 9], M.WOOD); r.box([0, y, 1], [4, 0.9, 0.9], M.WOOD); }
+    r.box([0, 0, 15], [0.8, 10, 0.8], M.WOOD); r.box([0, 0, 4], [0.8, 10, 0.8], M.WOOD);
+    for (const y of [-6, -2, 2]) { r.box([1.4, y, 10.5], [0.3, 0.9, 7], M.BLADE); r.box([1.4, y, 3], [0.6, 2.2, 0.6], M.GOLD); r.box([1.4, y, 2], [0.5, 0.6, 1.4], M.LEATHER); }
+    r.cyl([1.4, 6, 2.4], [1.4, 6, 16], 0.6, M.WOOD); r.box([1.4, 7.4, 14], [0.4, 2, 2], M.STEEL);
+  }, [32, 40, 16, 28], qy(yaw)),
+  crates: (flip) => propSprite('crates' + (flip ? 'b' : ''), r => {   // two crates stacked and one beside, a sack leaning
+    const cr = (x, y, z, h) => r.box([x, y, z + h], [h, h, h], M.PLANK, null, { mf: p => { const ex = Math.abs(p[0] - x) > h - 0.9, ey = Math.abs(p[1] - y) > h - 0.9, ez = Math.abs(p[2] - z - h) > h - 0.9; return (ex && ey) || (ey && ez) || (ex && ez) ? M.WOOD : ((ex || ey) && Math.abs(Math.abs(p[2] - z - h) - Math.abs((ex ? p[1] - y : p[0] - x))) < 0.7) ? M.WOOD : 0; } });
+    cr(0, flip ? 4 : -4, 0, 5); cr(0, flip ? 4 : -4, 10, 4); cr(1, flip ? -6 : 6, 0, 4);
+    r.ell([5, flip ? -1 : 1, 4], [3, 3, 4], M.CLOTH_TAN);
+  }, [40, 46, 20, 32], 0.25),
+  barrels: (one) => propSprite('barrels' + (one ? '1' : ''), r => {
+    const br = (x, y) => r.cyl([x, y, 0], [x, y, 11], 4.2, M.WOOD, { mf: p => Math.abs(p[2] - 2.4) < 0.6 || Math.abs(p[2] - 8.6) < 0.6 ? M.IRON : p[2] > 10.7 ? M.PLANK : Math.floor(Math.atan2(p[1] - y, p[0] - x) * 4) % 2 ? M.BARK : 0 });
+    br(0, -4); if (!one) br(1, 5);
+  }, [30, 36, 15, 24], 0.2),
 };
 
 // ---------------------------------------------------------------- building the outdoor world
@@ -1322,18 +1463,24 @@ function buildOutdoor(back) {
       const [x, y] = iso(d.i + 0.5, d.j + 0.5);
       props.push({ depth: d.i + d.j + 1, sp: OUT.pedestal(), wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
       shadows.push([x + 3, y + 3, 10, 5]);
+    } else if (d.kind === 'thing') {   // round 92: the camp's things, each at its own spot
+      const [x, y] = iso(d.fi, d.fj), sp = THING[d.what](d.what === 'stakes' ? d.yaw : d.what === 'crates' ? d.flip : d.what === 'barrels' ? d.one : d.yaw, d.fresh);
+      props.push({ depth: d.fi + d.fj + (d.what === 'pot' ? 0.06 : 0), sp, wx: x, wy: y + (d.what === 'pot' ? 0 : 2), tile: tIdx(Math.floor(d.fi), Math.floor(d.fj)) });
+      const sh = { stakes: [6, 3], post: [5, 3], campgate: 0, pot: 0, laundry: 0, toy: [4, 2], bedroll: [7, 3], sacks: [8, 4], plough: [7, 3], anvil: [6, 3], tub: [6, 3], rack: [7, 3], crates: [10, 5], barrels: [8, 4], seat: [5, 3], stakepile: [12, 5] }[d.what];
+      if (sh) shadows.push([x + 2, y + 2, sh[0], sh[1]]);
+      if (d.what === 'campgate') for (const sd of [-1, 1]) { const q = CAMP_AT(sd * 1.6, CAMP_UV(d.fi, d.fj)[1]), [lx, ly] = iso(q[0], q[1]); lights.push({ x: lx, y: ly, z: 34, r: LV.night ? 110 : LV.dusk && DUSK_ON ? 88 : 64, i: LV.night ? 0.7 : LV.dusk && DUSK_ON ? 0.45 : 0.3, seed: Math.floor(lx) }); }
     } else if (d.kind === 'palisade') {
       const [x, y] = iso(d.i + 0.5, d.j + 0.5);
       props.push({ depth: d.i + d.j + 1, sp: OUT.palisade(d.a), wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
     } else if (d.kind === 'lantern' || d.kind === 'signpost' || d.kind === 'pumpkin') {
       const [x, y] = iso(d.fi, d.fj), sp = d.kind === 'lantern' ? OUT.lantern() : d.kind === 'signpost' ? OUT.signpost() : OUT.pumpkin(d.seed);
       props.push({ depth: d.fi + d.fj, sp, wx: x, wy: y + 1, tile: tIdx(Math.floor(d.fi), Math.floor(d.fj)) });
-      if (d.kind === 'lantern') lights.push({ x: x + 4, y, z: 20, r: LV.night ? 110 : 60, i: LV.night ? 0.7 : 0.25, seed: Math.floor(x) });
+      if (d.kind === 'lantern') { const dk = LV.dusk && DUSK_ON && inCamp(d.fi, d.fj, 1); lights.push({ x: x + 4, y, z: 20, r: LV.night ? 110 : dk ? 92 : 60, i: LV.night ? 0.7 : dk ? 0.42 : 0.25, seed: Math.floor(x) }); }
     } else if (d.kind === 'campfire') {
       const [x, y] = iso(d.i + 0.5, d.j + 0.5);
       props.push({ depth: d.i + d.j + 1, sp: OUT.campfire(), wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
       fires.push({ wx: x, wy: y - 2, h: 14, w: 5, seed: d.i * 31 + d.j, ember: 0.12, tile: tIdx(d.i, d.j) });
-      lights.push({ x, y, z: 16, r: LV.night ? 150 : 90, i: LV.night ? 0.9 : 0.35, seed: d.i + d.j * 7 });
+      { const dk = LV.dusk && DUSK_ON; lights.push({ x, y, z: 16, r: LV.night ? 150 : dk ? 150 : 90, i: LV.night ? 0.9 : dk ? 0.62 : 0.35, seed: d.i + d.j * 7 }); }
     } else if (BUILD[d.kind.replace('2', '')] || d.kind === 'stall2') {   // (the open gate 'gateo' has no footprint: it is walked through)
       const dw = d.w || 1, dh = d.h || 1, ci = d.i + dw / 2, cj = d.j + dh / 2, [x, y] = iso(ci, cj);   // forest tents have no footprint size
       const sp = d.kind === 'stall' ? BUILD.stall(0) : d.kind === 'stall2' ? BUILD.stall(1) : BUILD[d.kind]();
@@ -1343,6 +1490,10 @@ function buildOutdoor(back) {
       if (d.kind === 'forge') {
         const [fx, fy] = iso(ci + 1.2, cj + 0.15);
         lights.push({ x: fx, y: fy, z: 8, r: 60, i: 0.3, seed: 5 });
+      }
+      if (d.kind === 'shed') {   // round 92: the open forge's hearth
+        const [fx, fy] = iso(ci + 0.15, cj - 0.2);
+        lights.push({ x: fx, y: fy, z: 8, r: LV.dusk && DUSK_ON ? 78 : 56, i: LV.dusk && DUSK_ON ? 0.5 : 0.3, seed: 7 });
       }
     } else if (d.kind === 'well' || d.kind === 'bell') {
       const [x, y] = iso(d.i + 0.5, d.j + 0.5);
