@@ -50,7 +50,7 @@ const THEME = { crypt: { floor: [0x5a4a3c, 0x66543f, 0x4e4238, 0x6e5b44], wall: 
   hell: { floor: [0x4d1c18, 0x6b2a1f, 0x3a1614], wall: [0x341414, 0x4d1c18, 0x2a1010] }, outdoor: { floor: [0x5f7a3a, 0x688442, 0x587236, 0x6f8a46], wall: [0x2e4a2a, 0x355230, 0x284224] } };
 function hash2(i, j) { let h = (i * 374761393 + j * 668265263) ^ 0x5bd1e995; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
 function buildLevel() {
-  if (levelGroup) { scene.remove(levelGroup); levelGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); }); if (levelGroup.userData.gtex) levelGroup.userData.gtex.dispose(); }
+  if (levelGroup) { scene.remove(levelGroup); levelGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); }); if (levelGroup.userData.gtex) levelGroup.userData.gtex.dispose(); if (levelGroup.userData.wtex) levelGroup.userData.wtex.dispose(); }
   levelGroup = new THREE.Group(); scene.add(levelGroup);
   const th = LV.outdoor ? THEME.outdoor : THEME[LV.theme || 'crypt'] || THEME.crypt;
   const floors = [], walls = [];
@@ -66,16 +66,86 @@ function buildLevel() {
   ggeo.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3)); ggeo.setAttribute('uv', new THREE.Float32BufferAttribute(guv, 2)); ggeo.setIndex([0, 2, 1, 0, 3, 2]); ggeo.computeVertexNormals();
   const ground = new THREE.Mesh(ggeo, new THREE.MeshStandardMaterial({ map: gtex, roughness: 1, metalness: 0, alphaTest: 0.5 })); ground.receiveShadow = true; ground.frustumCulled = false;
   levelGroup.userData.gtex = gtex;
-  const wgeo = new THREE.BoxGeometry(1, 1, 1), wmat = new THREE.MeshStandardMaterial({ roughness: 0.95, metalness: 0 });
-  const wm = new THREE.InstancedMesh(wgeo, wmat, walls.length); wm.castShadow = true; wm.receiveShadow = true;
-  const sc = new THREE.Vector3(), q = new THREE.Quaternion(), p = new THREE.Vector3();
-  walls.forEach(([i, j, h], n) => { m4.compose(p.set(i + 0.5, h / 2, j + 0.5), q, sc.set(1, h, 1)); wm.setMatrixAt(n, m4); wm.setColorAt(n, col.setHex(th.wall[Math.floor(hash2(i, j) * th.wall.length)])); });
-  wm.frustumCulled = false;
-  levelGroup.add(ground, wm);
+  const wm = buildWalls(walls);
+  levelGroup.add(ground); if (wm) levelGroup.add(wm);
+  buildRigProps(levelGroup);
   hemi.intensity = LV.outdoor ? (LV.night ? 0.5 : 1.1) : 0.5; sun.intensity = LV.outdoor ? (LV.night ? 0.5 : 2.2) : 0.9; sun.color.setHex(LV.outdoor && !LV.night ? 0xfff2d8 : 0xc8d4ff);
   scene.background.setHex(LV.outdoor ? 0x1a2a18 : 0x050406);
   levelToken++; buildProps(levelGroup, levelToken);
   builtLevel = R3D_LEVEL;
+}
+
+// ---------------------------------------------------------------- walls
+// Each wall block shows three faces to this camera: its top, the face toward +j ('L' in the 2D game) and the face toward +i ('R').
+// Their look comes from the game's own wall painter (wallTex), sampled once per block into one texture for the level.
+function buildWalls(walls) {
+  if (!walls.length) return null;
+  const hpx = (i, j) => tileAt(i, j) === WALL ? (LV.tall[j * MW + i] ? WALL_TALL : WALL_LOW) : 0;
+  const AW = 2048, cells = walls.map(([i, j]) => ({ i, j, h: hpx(i, j) })).sort((a, b) => b.h - a.h);
+  let x = 0, y = 0, rowh = 0; for (const c of cells) { const ch = 16 + 2 * c.h; if (x + 16 > AW) { x = 0; y += rowh; rowh = 0; } c.x = x; c.y = y; x += 16; rowh = Math.max(rowh, ch); }
+  let AH = 64; while (AH < y + rowh) AH *= 2;
+  const px = new Uint8Array(AW * AH * 4), P = [], N = [], UV = [], IDX = [];
+  const put = (X, Y, v) => { v &= 127; if (!v) v = 2; const c = PAL32[v], o = (Y * AW + X) * 4; px[o] = c & 255; px[o + 1] = (c >> 8) & 255; px[o + 2] = (c >> 16) & 255; px[o + 3] = 255; };
+  const quad = (pts, n, u0, v0, uw, vh) => { const b = P.length / 3; for (const [X, Y, Z, a, bb] of pts) { P.push(X, Y, Z); N.push(n[0], n[1], n[2]); UV.push((u0 + 0.5 + a * (uw - 1)) / AW, (v0 + 0.5 + bb * (vh - 1)) / AH); } IDX.push(b, b + 1, b + 2, b, b + 2, b + 3); };
+  for (const c of cells) {
+    const { i, j, h } = c, tex = wallTex(i, j, h === WALL_TALL), H = h / UPX, hL = hpx(i, j + 1), hR = hpx(i + 1, j);
+    for (let b = 0; b < 16; b++) for (let a = 0; a < 16; a++) put(c.x + a, c.y + b, tex('top', a + 0.5, b + 0.5));
+    quad([[i, H, j, 0, 0], [i, H, j + 1, 0, 1], [i + 1, H, j + 1, 1, 1], [i + 1, H, j, 1, 0]], [0, 1, 0], c.x, c.y, 16, 16);
+    if (hL < h) { for (let z = 0; z < h; z++) for (let a = 0; a < 16; a++) put(c.x + a, c.y + 16 + z, tex('L', a + 0.5, z + 0.5));
+      quad([[i, 0, j + 1, 0, 0], [i + 1, 0, j + 1, 1, 0], [i + 1, H, j + 1, 1, 1], [i, H, j + 1, 0, 1]], [0, 0, 1], c.x, c.y + 16, 16, h); }
+    if (hR < h) { for (let z = 0; z < h; z++) for (let a = 0; a < 16; a++) put(c.x + a, c.y + 16 + h + z, tex('R', a + 0.5, z + 0.5));
+      quad([[i + 1, 0, j + 1, 1, 0], [i + 1, 0, j, 0, 0], [i + 1, H, j, 0, 1], [i + 1, H, j + 1, 1, 1]], [1, 0, 0], c.x, c.y + 16 + h, 16, h); }
+  }
+  const tex = new THREE.DataTexture(px, AW, AH, THREE.RGBAFormat); tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearFilter; tex.needsUpdate = true;
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2)); geo.setIndex(IDX);
+  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, metalness: 0, side: THREE.DoubleSide })); m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
+  levelGroup.userData.wtex = tex; return m;
+}
+// stairs and doorways: the game builds each from a rig of its own (no name), so the model is made here
+const rigModels = new WeakMap();
+function buildRigProps(group) {
+  for (const pr of props) {
+    const sp = pr.sp; if (!sp || sp.__name || !sp.__rig) continue;
+    let g = rigModels.get(sp);
+    if (g === undefined) { try { g = buildModel(RD.build('rig', [{ clip: 'idle', t: 0, rig: sp.__rig }], { low: true })); prep(g); } catch (e) { console.error('3d: stairs', e); g = null; } rigModels.set(sp, g); }
+    if (!g) continue;
+    const o = SkeletonUtils.clone(g.scene), [fi, fj] = groundToTile(pr.wx, pr.wy); o.position.set(fi, 0, fj); o.rotation.y = -(sp.__ryaw || 0); group.add(o);
+  }
+}
+
+// ---------------------------------------------------------------- ground effects and flames
+// The ground layer (loot, warning marks, rings): the game's own pixels, laid on the floor where the screen shows them.
+let gfx = null;
+function syncGroundFx() {
+  if (!gfx || gfx.w !== W || gfx.h !== H) {
+    if (gfx) { scene.remove(gfx.mesh); gfx.tex.dispose(); gfx.mesh.geometry.dispose(); }
+    const data = new Uint8Array(W * H * 4), tex = new THREE.DataTexture(data, W, H, THREE.RGBAFormat); tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter;
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(12), 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 1], 2)); geo.setIndex([0, 2, 1, 0, 3, 2]);
+    const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false, side: THREE.DoubleSide })); mesh.frustumCulled = false; mesh.renderOrder = 2; scene.add(mesh);
+    gfx = { w: W, h: H, data, tex, mesh };
+  }
+  const d = gfx.data; let any = false;
+  for (let o = 0, n = W * H; o < n; o++) { const v = scr[o], k = o * 4; if (!v) { d[k + 3] = 0; continue; } const c = PAL32[CYCLE[v & 127] || (v & 127)]; d[k] = c & 255; d[k + 1] = (c >> 8) & 255; d[k + 2] = (c >> 16) & 255; d[k + 3] = 255; any = true; }
+  gfx.mesh.visible = any; if (!any) return;
+  gfx.tex.needsUpdate = true;
+  const pos = gfx.mesh.geometry.attributes.position; [[0, 0], [W, 0], [W, H], [0, H]].forEach(([x, y], n) => { const [fi, fj] = groundToTile(camX + x, camY + y); pos.setXYZ(n, fi, 0.03, fj); }); pos.needsUpdate = true;
+}
+// Flames: a soft glowing sprite at every fire the level lists (torches, braziers, campfires, candles).
+const flameTex = (() => { const c = document.createElement('canvas'); c.width = 64; c.height = 96; const x = c.getContext('2d');
+  const g = x.createRadialGradient(32, 62, 2, 32, 56, 34); g.addColorStop(0, 'rgba(255,250,220,1)'); g.addColorStop(0.25, 'rgba(255,200,90,0.95)'); g.addColorStop(0.6, 'rgba(255,110,20,0.55)'); g.addColorStop(1, 'rgba(180,40,0,0)');
+  x.fillStyle = g; x.beginPath(); x.moveTo(32, 2); x.bezierCurveTo(52, 34, 62, 58, 54, 76); x.bezierCurveTo(46, 94, 18, 94, 10, 76); x.bezierCurveTo(2, 58, 12, 34, 32, 2); x.fill();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+const flames = [];
+function syncFlames() {
+  let n = 0;
+  for (const f of fires) {
+    const ti = f.tile % MW, tj = Math.floor(f.tile / MW), z = Math.max(0, 8 * (ti + tj + 1.8) + WY0 - f.wy), [fi, fj] = groundToTile(f.wx, f.wy + z);
+    if (Math.abs(fi - hero.fi) + Math.abs(fj - hero.fj) > 26) continue;
+    let s = flames[n]; if (!s) { s = flames[n] = new THREE.Sprite(new THREE.SpriteMaterial({ map: flameTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, toneMapped: false })); s.renderOrder = 3; scene.add(s); }
+    n++; const fl = 0.9 + 0.1 * Math.sin(G.t * 11 + f.seed) + 0.06 * Math.sin(G.t * 27 + f.seed * 3), hh = Math.max(0.28, f.h * 2.1 / UPX) * fl, ww = Math.max(0.2, f.w * 3.4 / TPX);
+    s.visible = true; s.scale.set(ww, hh, 1); s.position.set(fi, z / UPX + hh * 0.38, fj); s.material.color.setHex(f.blue ? 0x66aaff : 0xffffff);
+  }
+  for (let k = n; k < flames.length; k++) flames[k].visible = false;
 }
 
 // ---------------------------------------------------------------- scenery
@@ -200,7 +270,7 @@ function frame(menu) {
   for (const e of enemies) syncActor(e, dt, visAt(e.fi, e.fj) > 0.25 && Math.abs(e.fi - cf) + Math.abs(e.fj - cj) < 26);
   for (const n of npcs) syncActor(n, dt, Math.abs(n.fi - cf) + Math.abs(n.fj - cj) < 26);
   for (const [c, a] of actors) if (a.seen !== frameNo) { scene.remove(a.root); actors.delete(c); }
-  syncDyn(); buildNext();
+  syncDyn(); buildNext(); syncGroundFx(); syncFlames();
   renderer.render(scene, cam);
 }
 try { MANIFEST = await (await fetch('models/manifest.json')).json(); } catch (e) { console.error('3d: no model list', e); }

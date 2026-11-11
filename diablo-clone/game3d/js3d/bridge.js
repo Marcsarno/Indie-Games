@@ -14,6 +14,8 @@ const R3D_PROPS = {};   // name -> the function that builds its rig (for the exp
     if (!propCache[k]) { const sp = propCache[k] = { w: 1, h: 1, ax: 0, ay: 0, data: new Uint8Array(1), z: new Uint8Array(1) }; sp.__name = name; sp.__yaw = yaw; R3D_PROPS[name] = build; }
     return propCache[k];
   }; }
+// anything else the game renders from a rig (stairs, doorways): keep the rig with the sprite so the 3D layer can build it
+{ const _rr = renderRig; renderRig = function (rig, yaw, ...rest) { const sp = _rr(rig, yaw, ...rest); sp.__rig = rig; sp.__ryaw = yaw; return sp; }; }
 const R3D_SAFE = (name, fn) => { try { fn(); } catch (e) { if (!R3D_SAFE.seen[name]) { R3D_SAFE.seen[name] = 1; console.error('3d: ' + name, e); } } };
 R3D_SAFE.seen = {};
 render = function () {
@@ -27,6 +29,19 @@ render = function () {
   cam2x = Math.round((vx0 - W / 2) * SPX) + shx * SPX + kx2; cam2y = Math.round((vy0 - H * 0.47) * SPX) + shy * SPX + ky2;
   camX = Math.floor(cam2x / SPX); camY = Math.floor(cam2y / SPX); hx = cam2x - camX * SPX; hy = cam2y - camY * SPX;
   ov32.fill(0); levB.fill(L_ID); scr.fill(0); tbuf.fill(-1);
+  // the ground layer: loot, warning marks, rings and scorches. The game paints these on the floor before the bodies; here they
+  // go into the same buffer (cleared), which the 3D layer lays on the ground under the characters.
+  { const base = [];
+    for (const g of groundItems) {
+      const [x, y] = iso(g.fi, g.fj), bounce = g.t < 0.4 ? Math.round(Math.sin(g.t / 0.4 * Math.PI) * 8) : 0, tile = tIdx(Math.floor(g.fi), Math.floor(g.fj));
+      base.push({ depth: g.fi + g.fj - 0.3, draw: () => { if (g.gold) return drawGold(x, y - bounce, tile); if (g.gem) return drawGem(x, y - bounce, tile, g.gem); if (g.item.rarity !== 'normal' && g.t > 0.4) drawBeam(x, y, RARITY_COL[g.item.rarity], tile, g.item.id, g.item.rarity === 'legend'); blit(itemIcon(g.item), x, y - bounce + 4, false, 0, tile); } });
+    }
+    R3D_SAFE('shrines', () => shrineCrystals(base));
+    R3D_SAFE('heroRing', () => heroRing(kx, ky + 1));
+    base.sort((a, b) => a.depth - b.depth);
+    for (const d of base) R3D_SAFE('ground item', d.draw);
+    for (const [n, f] of [['telegraph', drawTelegraph], ['impactFx', drawImpactFx], ['rocks', drawRocks], ['rangerGround', drawRangerGround], ['eliteGround', drawEliteGround], ['meteors', drawMeteors], ['lichFx', drawLichFx], ['warriorFx', drawWarriorFx]]) R3D_SAFE(n, f);
+  }
   if (R && R.ready) R.frame(false);
   else { ov32.fill(0xff06070a); }
   // effects still drawn as pixels over the 3D picture (same projection, so they land in the right place)
