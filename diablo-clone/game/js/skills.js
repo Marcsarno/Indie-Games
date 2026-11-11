@@ -1346,6 +1346,7 @@ function drawStreaks() {   // the blink's streak: a white core in an arcane band
 }
 // round 73: the fire that rises out of a blast: a white flash, then a ball of flame that swells, lifts off the
 // ground and cools from yellow through orange to dark smoke, its edge ragged and boiling
+const BLOOM_LUMP = new Float32Array(64);
 function drawBlooms() {
   for (const bl of G.blasts) {
     if (!bl.bloom) continue;
@@ -1353,16 +1354,23 @@ function drawBlooms() {
     const grow = Math.min(1, p / 0.3), R = Rg * (0.26 + 0.2 * grow) * (bl.big ? 1.1 : 1), rise = Rg * 0.5 * p * p + R * 0.55;
     const cx = Math.round(x0 * SPX - cam2x), cy = Math.round(y0 * SPX - cam2y - rise), cool = Math.max(0, (p - 0.25) / 0.75);
     const RR = Math.ceil(R * 1.25);
-    for (let b = -RR; b <= RR; b++) for (let a = -RR; a <= RR; a++) {
-      const ang = Math.atan2(b, a), lump = 1 + 0.08 * Math.sin(ang * 4 + bl.seed + p * 5) + 0.06 * Math.sin(ang * 7 - bl.seed * 2 - p * 8);
-      const d = Math.hypot(a, b * 1.12) / (R * lump) + (hash((a + 512) >> 1, (b + 512) >> 1, fr) - 0.5) * 0.14;
+    // round 79: the lumpy edge comes from a 64-step table round the ball and the boil from one hash per 2x2 block
+    // (it was an atan2, two sines and a hash for every pixel: 4 ms a blast on a slowed CPU)
+    const LUMP = BLOOM_LUMP; for (let k = 0; k < 64; k++) { const ang = k / 64 * 6.2832 - 3.1416; LUMP[k] = 1 / (R * (1 + 0.08 * Math.sin(ang * 4 + bl.seed + p * 5) + 0.06 * Math.sin(ang * 7 - bl.seed * 2 - p * 8))); }
+    for (let b = -RR; b <= RR; b++) { const b2 = b * 1.12, bb = b2 * b2; let hv = 0;
+     for (let a = -RR; a <= RR; a++) {
+      const r2 = a * a + bb; if (r2 > RR * RR * 1.3) continue;
+      // which of the 64 directions: octant by signs and the larger axis, then the ratio (no atan2)
+      const aa = a < 0 ? -a : a, ab = b < 0 ? -b : b, t8 = aa > ab ? (ab / (aa || 1)) * 8 : 16 - (aa / (ab || 1)) * 8, q = (a >= 0 ? (b >= 0 ? t8 : 64 - t8) : (b >= 0 ? 32 - t8 : 32 + t8)) | 0;
+      if ((a & 1) === 0 || a === -RR) hv = (hash((a + 512) >> 1, (b + 512) >> 1, fr) - 0.5) * 0.14;
+      const d = Math.sqrt(r2) * LUMP[(q + 32) & 63] + hv;
       if (d > 1) continue;
       const x = cx + a, y = cy + b;
       if (p > 0.72 && BAYER[((y & 3) << 2) | (x & 3)] < (p - 0.72) / 0.28 * 1.05) continue;   // it thins to nothing
       // hottest low and in the middle; the top and the rim cool first
       const heat = (1 - d) * 0.9 + 0.25 + b / R * 0.18 - cool * 1.05;
       ovSet(x, y, p < 0.1 ? (d < 0.6 ? 27 : 18) : heat > 0.72 ? 18 : heat > 0.5 ? 17 : heat > 0.28 ? 16 : heat > 0.08 ? 15 : heat > -0.15 ? 14 : heat > -0.4 ? 5 : 4);
-    }
+    } }
     if (p < 0.5) for (let k = 0; k < 7; k++) {   // tongues of flame flung out along the ground
       const a = bl.seed + k * 0.9, len = Rg * (0.35 + 0.6 * Math.min(1, p / 0.25)) * (0.7 + 0.3 * Math.sin(k * 2.3 + bl.seed)), bx = Math.round(x0 * SPX - cam2x), by = Math.round(y0 * SPX - cam2y);
       for (let sI = Math.round(len * 0.45); sI < len; sI++) { const u = sI / len, x = Math.round(bx + Math.cos(a) * sI), y = Math.round(by + Math.sin(a) * sI * 0.5 - Math.sin(u * 3.14) * 5); if (p > 0.3 && ((x + y) & 1)) continue; const c = u > 0.85 ? 15 : u > 0.6 ? 16 : 17; ovSet(x, y, c); ovSet(x, y - 1, c); if (u < 0.8) ovSet(x + 1, y, c); }

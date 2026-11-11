@@ -361,7 +361,7 @@ function drawHud() {
   drawGuide();   // round 45
   if (G.paused) { fade(0.6); textC('PAUSED', W / 2, H * 0.4, 26, 2); textC('TAP TO RESUME', W / 2, H * 0.4 + 16, 25); }
   if (G.fade > 0) fade(G.fade);
-  if (params.get('fps') === '1') text(`${fpsShown} FPS ${spriteBuilds} SPR`, 4, 20, 31);
+  if (SHOW_FPS || params.get('fps') === '1') { const tx = `${fpsShown} FPS  ${workShown.toFixed(0)} MS  WORST ${workWorst.toFixed(0)}`; fillRect(2, 54, textWidth(tx) + 6, 10, 2); text(tx, 5, 56, fpsShown >= 55 ? 55 : fpsShown >= 40 ? 51 : 23); }   // round 79: OPTIONS, SPEED: frames a second, and the work per frame (average and worst in the last second)
 }
 function fade(a) {
   for (let y = 0, o = 0; y < H; y++) for (let x = 0; x < W; x++, o++) if (BAYER[((y & 3) << 2) | (x & 3)] < a) out32[o] = PAL32[BLK];
@@ -484,6 +484,7 @@ function drawTitle() {
     btn(WORLD2X ? 'DETAIL: SHARP' : 'DETAIL: CLASSIC', 93, oy - 22, 84, 16, () => setWorld2x(!WORLD2X), 25, 3, 6);
     btn(HUE_LIGHT ? 'LIGHT: NEW' : 'LIGHT: OLD', 180, oy - 22, 84, 16, () => setLightNew(!HUE_LIGHT), 25, 3, 6);
     btn(HEAVY ? 'WEIGHT: HEAVY' : 'WEIGHT: LIGHT', 93, oy - 44, 84, 16, () => setHeavy(!HEAVY), 25, 3, 6);   // round 62
+    btn(SHOW_FPS ? 'SPEED: SHOWN' : 'SPEED: HIDDEN', 180, oy - 44, 84, 16, () => { SHOW_FPS = !SHOW_FPS; try { localStorage.setItem('dcg-fps', SHOW_FPS ? '1' : '0'); } catch (e) { /* storage blocked */ } }, 25, 3, 6);   // round 79: a speed readout to check a real phone
     btn('HERO LIGHT: ' + (CHAR_CAP === L_ID ? 'DRAWN' : '+' + (CHAR_CAP - L_ID)), 6, oy - 44, 84, 16, () => setCharCap(CHAR_CAP >= L_ID + 2 ? L_ID : CHAR_CAP + 1), 25, 3, 6);   // round 60
     btn(DL48 ? 'DUNGEONS: NEW' : 'DUNGEONS: OLD', 6, oy, 84, 16, () => setDL48(!DL48), 25, 3, 6);   // round 48: the dungeon light
     btn(SFX.synth ? 'SOUND: SYNTH' : 'SOUND: REAL', 180, oy, 84, 16, () => { setSynthSfx(!SFX.synth); sfx('hit'); }, 25, 3, 6);   // round 44: compare the recorded sounds with the old synth
@@ -1216,14 +1217,17 @@ function fitCanvas() {
   if (s >= 2) s = Math.floor(s);
   cvs.style.width = (W * s) + 'px'; cvs.style.height = (H * s) + 'px';
 }
-let last = performance.now(), fpsN = 0, fpsT = 0, fpsShown = 0;
+let last = performance.now(), fpsN = 0, fpsT = 0, fpsShown = 0, workSum = 0, workMax = 0, workShown = 0, workWorst = 0;
+let SHOW_FPS = false; try { SHOW_FPS = localStorage.getItem('dcg-fps') === '1'; } catch (e) { /* storage blocked */ }
 function tick(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
-  fpsN++; fpsT += dt; if (fpsT > 1) { fpsShown = fpsN; fpsN = 0; fpsT = 0; }
+  fpsN++; fpsT += dt; if (fpsT > 1) { fpsShown = fpsN; workShown = workSum / fpsN; workWorst = workMax; fpsN = 0; fpsT = 0; workSum = 0; workMax = 0; }
+  const w0 = performance.now();
   update(dt);
   warmStep(G.mode === 'play' ? 2 : 10);
   if (G.mode === 'title' && !LV.rooms.length) titleScene();
   render();
+  { const w = performance.now() - w0; workSum += w; if (w > workMax) workMax = w; }
   requestAnimationFrame(tick);
 }
 // the title screen shows a real level behind it
