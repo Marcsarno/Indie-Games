@@ -39,9 +39,11 @@ function wantModel(file) {
   return null;
 }
 function whenModel(file) { wantModel(file); return (LOADING[file] || Promise.resolve()).then(() => MODELS[file]); }
+// Characters get a soft rim of light on the edges turned away from the camera, so they stand out from a dark room
+const rimLight = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n{ float rim = pow(1.0 - clamp(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0)), 0.0, 1.0), 2.6); totalEmissiveRadiance += diffuseColor.rgb * vec3(0.75, 0.85, 1.1) * rim * 0.55; }'); };
 function spawnModel(file) {
   const g = MODELS[file], root = SkeletonUtils.clone(g.scene), mats = [];
-  const own = m => { const c = m.clone(); c.userData.e0 = c.emissive.getHex(); c.userData.i0 = c.emissiveIntensity; mats.push(c); return c; };
+  const own = m => { const c = m.clone(); c.userData.e0 = c.emissive.getHex(); c.userData.i0 = c.emissiveIntensity; c.onBeforeCompile = rimLight; c.customProgramCacheKey = () => 'rim'; mats.push(c); return c; };
   root.traverse(o => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(own) : own(o.material); });
   let mixer = null, acts = null;
   if (g.animations.length) { mixer = new THREE.AnimationMixer(root); const clip = g.animations[0]; acts = [mixer.clipAction(clip), mixer.clipAction(clip.clone())]; for (const a of acts) { a.play(); a.paused = true; a.setEffectiveWeight(0); } }
@@ -76,7 +78,10 @@ function buildLevel() {
   levelGroup.userData.gtex = gtex;
   const wm = buildWalls(walls);
   levelGroup.add(ground); if (wm) levelGroup.add(wm);
-  hemi.intensity = LV.outdoor ? (LV.night ? 0.5 : 1.1) : 0.5; sun.intensity = LV.outdoor ? (LV.night ? 0.5 : 2.2) : 0.9; sun.color.setHex(LV.outdoor && !LV.night ? 0xfff2d8 : 0xc8d4ff);
+  // light by place: a warm afternoon sun outdoors, cold moonlight at night, and in the dungeons only a faint cold fill so the torches and the hero's light do the work
+  const day = LV.outdoor && !LV.night;
+  hemi.intensity = day ? 1.0 : LV.outdoor ? 0.45 : 0.32; hemi.color.setHex(day ? 0xbfd4ff : 0x6f84c8); hemi.groundColor.setHex(day ? 0x54603a : 0x1c1410);
+  sun.intensity = day ? 2.6 : LV.outdoor ? 0.7 : 0.5; sun.color.setHex(day ? 0xffe9c4 : 0xa8c0ff);
   scene.background.setHex(LV.outdoor ? 0x1a2a18 : 0x050406);
   R3D_FLOOR.dirty = false; R3D_FLOOR.y0 = 1e9; R3D_FLOOR.y1 = -1;
   levelToken++; buildProps(levelGroup, levelToken); buildRigProps(levelGroup, levelToken); buildGrass(levelGroup, levelToken);
@@ -122,7 +127,7 @@ function buildGrass(group, token) {
     const mat = addWind(src.material, 0.02, 0.22); mat.side = THREE.DoubleSide; const chunks = new Map(), CG = 8;
     for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
       if (LV.map[j * MW + i] !== FLOOR) continue;
-      for (let n = 0; n < 3; n++) {
+      for (let n = 0; n < 2; n++) {
         const fi = i + hash2(i * 3 + n, j), fj = j + hash2(j * 5 + n, i + 7), [x, y] = iso(fi, fj), v = floorBuf[Math.round(y) * WW + Math.round(x)] & 127; if (!v) continue;
         const c = PAL32[v], r = c & 255, gg = (c >> 8) & 255, bb = (c >> 16) & 255; if (!(gg > r * 1.06 && gg > bb * 1.25 && gg > 60)) continue;
         const k = Math.floor(i / CG) + ',' + Math.floor(j / CG); (chunks.get(k) || chunks.set(k, []).get(k)).push([fi, fj, r, gg, bb, hash2(i + n * 11, j * 3)]);
@@ -199,6 +204,21 @@ function syncGroundFx() {
   gfx.mesh.visible = any; if (!any) return;
   gfx.tex.needsUpdate = true;
   const pos = gfx.mesh.geometry.attributes.position; [[0, 0], [W, 0], [W, H], [0, H]].forEach(([x, y], n) => { const [fi, fj] = groundToTile(camX + x, camY + y); pos.setXYZ(n, fi, 0.03, fj); }); pos.needsUpdate = true;
+}
+// The skill-effect layer: the game's own effect pixels for this frame (bridge.js), stretched smooth over the picture and
+// bright enough to bloom, so lightning, frost and fire read as light instead of as squares.
+let ofx = null;
+function syncOverlayFx() {
+  if (!ofx || ofx.w !== OW || ofx.h !== OH) {
+    if (ofx) { scene.remove(ofx.mesh); ofx.tex.dispose(); }
+    const tex = new THREE.DataTexture(new Uint8Array(ov32.buffer), OW, OH, THREE.RGBAFormat); tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearFilter; tex.flipY = true;
+    const mat = new THREE.ShaderMaterial({ uniforms: { map: { value: tex } }, transparent: true, depthTest: false, depthWrite: false,
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+      fragmentShader: 'varying vec2 vUv; uniform sampler2D map; void main(){ vec4 c = texture2D(map, vUv); float l = max(c.r, max(c.g, c.b)); gl_FragColor = vec4(c.rgb * (1.0 + 1.6 * l * l), c.a); }' });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat); mesh.frustumCulled = false; mesh.renderOrder = 20; scene.add(mesh);
+    ofx = { w: OW, h: OH, tex, mesh };
+  }
+  ofx.tex.needsUpdate = true;
 }
 // Flames: a soft glowing sprite at every fire the level lists (torches, braziers, campfires, candles).
 const flameTex = (() => { const c = document.createElement('canvas'); c.width = 64; c.height = 96; const x = c.getContext('2d');
@@ -352,16 +372,16 @@ function frame(menu) {
   cam.left = -hw; cam.right = hw; cam.top = hh; cam.bottom = -hh; cam.updateProjectionMatrix();
   cam.position.set(cf, 0, cj).addScaledVector(CAMDIR, 80); cam.lookAt(cf, 0, cj);
   sun.target.position.set(hero.fi, 0, hero.fj); sun.position.set(hero.fi - 7, 14, hero.fj + 5);
-  heroLight.position.set(hero.fi + 0.4, 2.6, hero.fj + 0.4); heroLight.intensity = LV.outdoor && !LV.night ? 0 : 6;
+  heroLight.position.set(hero.fi + 0.4, 2.6, hero.fj + 0.4); heroLight.intensity = LV.outdoor && !LV.night ? 0 : 9;
   // torches: the nearest few of the level's lights
   const near = lights.map(l => { const [fi, fj] = groundToTile(l.x, l.y); return { l, fi, fj, d: Math.hypot(fi - hero.fi, fj - hero.fj) }; }).sort((a, b) => a.d - b.d);
-  torchLights.forEach((tl, k) => { const n = near[k]; if (!n || n.d > 16) { tl.intensity = 0; return; } tl.position.set(n.fi, Math.max(0.8, n.l.z / UPX), n.fj); tl.distance = Math.max(5, n.l.r / TPX * 1.4); tl.intensity = 14 * (n.l.i || 1) * (0.88 + 0.12 * Math.sin(G.t * 9 + (n.l.seed || 0))); });
+  torchLights.forEach((tl, k) => { const n = near[k]; if (!n || n.d > 16) { tl.intensity = 0; return; } tl.position.set(n.fi, Math.max(0.8, n.l.z / UPX), n.fj); tl.distance = Math.max(5, n.l.r / TPX * 1.4); tl.intensity = 20 * (n.l.i || 1) * (0.88 + 0.12 * Math.sin(G.t * 9 + (n.l.seed || 0))); });
   const visAt = (fi, fj) => LV.vis[Math.max(0, Math.min(MH - 1, Math.floor(fj))) * MW + Math.max(0, Math.min(MW - 1, Math.floor(fi)))];
   syncActor(hero, dt, true);
   for (const e of enemies) syncActor(e, dt, visAt(e.fi, e.fj) > 0.25 && Math.abs(e.fi - cf) + Math.abs(e.fj - cj) < 26);
   for (const n of npcs) syncActor(n, dt, Math.abs(n.fi - cf) + Math.abs(n.fj - cj) < 26);
   for (const [c, a] of actors) if (a.seen !== frameNo) { scene.remove(a.root); actors.delete(c); }
-  syncDyn(); syncGroundFx(); syncFlames(); syncFloor(dt); adapt(dt);
+  syncDyn(); syncGroundFx(); syncOverlayFx(); syncFlames(); syncFloor(dt); adapt(dt);
   WIND.value = G.t;
   fx.update(dt, lastW * quality / (2 * hw), heroBlade(), /^(attack|spin|bash)/.test(hero.clip || ''));
   fx.render(quality);

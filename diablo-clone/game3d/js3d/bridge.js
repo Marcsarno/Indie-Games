@@ -51,13 +51,13 @@ render = function () {
     for (const d of base) R3D_SAFE('ground item', d.draw);
     for (const [n, f] of [['telegraph', drawTelegraph], ['impactFx', drawImpactFx], ['rocks', drawRocks], ['rangerGround', drawRangerGround], ['eliteGround', drawEliteGround], ['meteors', drawMeteors], ['lichFx', drawLichFx], ['warriorFx', drawWarriorFx]]) R3D_SAFE(n, f);
   }
-  if (R && R.ready) R.frame(false);
-  else { ov32.fill(0xff06070a); }
-  // effects still drawn as pixels over the 3D picture (same projection, so they land in the right place)
+  // the skill effects the game still paints itself (lightning, frost, slam waves, chains, rings, the portal, exit marks):
+  // painted into the frame buffer as before, then handed to the 3D layer, which draws them soft and glowing in the scene
   R3D_SAFE('exitPads', drawExitPads);
-  // (projectiles and particles are drawn in 3D: js3d/fx.js)
   if (G.tp) R3D_SAFE('portal', drawPortal);
   R3D_SAFE('eliteFx', drawEliteFx);
   R3D_SAFE('impactFlashes', drawImpactFlashes);
+  if (R && R.ready) { R.frame(false); ov32.fill(0); }
+  else { ov32.fill(0xff06070a); }
   drawHudLayer();
 };

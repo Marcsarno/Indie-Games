@@ -14,6 +14,6 @@ const { chromium } = require('playwright');
     if (skill >= 0) { CD[SKILLS[skill].id] = 0; hero.mana = 9999; hero.fury = 99; useSkill(skill); } else input.attack = true;
     step(frames);
   }, [cls, lvl, skill, frames]);
-  console.log(await p.evaluate(() => JSON.stringify({ models: Object.keys(R3D.MODELS).length, nulls: Object.entries(R3D.MODELS).filter(e => !e[1]).map(e => e[0]).slice(0, 5), glb: performance.getEntriesByType('resource').filter(r => r.name.endsWith('.glb')).length, loading: Object.keys(R3D.MODELS).length, actors: [...R3D.actors.values()].slice(0, 4).map(a => [a.file, !!a.placeholder]) })));
+  console.log(await p.evaluate(() => JSON.stringify({ models: Object.keys(R3D.MODELS).length, nulls: Object.entries(R3D.MODELS).filter(e => !e[1]).map(e => e[0]).slice(0, 5), glb: performance.getEntriesByType('resource').filter(r => r.name.endsWith('.glb')).length, loading: Object.keys(R3D.MODELS).length, missing: [...R3D.missingChars].slice(0, 4), hero: R3D.actors.get(hero) && R3D.actors.get(hero).key })));
   await p.screenshot({ path: out, timeout: 120000 }); await b.close();
 })();
