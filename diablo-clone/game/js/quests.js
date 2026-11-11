@@ -528,8 +528,8 @@ function updateSideDoors() {
   if (G.fadeTo || LV.side) return;
   for (const k of sidesHere()) {
     const [fi, fj] = SIDES[k].door(), d = Math.hypot(fi - hero.fi, fj - hero.fj);
-    if (d > 1.2) { G['armed_' + k] = true; continue; }
-    if (d < 0.5 && G['armed_' + k] !== false) enterSide(k);
+    if (d > EXIT_R.door + 0.75) { G['armed_' + k] = true; continue; }
+    if (d < EXIT_R.door && G['armed_' + k] !== false && (Math.hypot(input.mx, input.my) >= 0.18 || input.keys.size > 0 || !!hero.goTalk)) enterSide(k);   // round 81: a wide doorway, walked into
   }
 }
 function enterSide(kind) {
@@ -564,7 +564,7 @@ function leaveSide() {
     enemies = S.enemies; boss = S.boss; groundItems = S.groundItems; LV.seen.set(S.seen);
     S.props.forEach((q, n) => { if (dynProps[n]) Object.assign(dynProps[n], q); });
     // back at the door, a step out so it doesn't take you straight in again
-    hero.fi = R0.door[0] + 1.3; hero.fj = R0.door[1] + 0.8; G.sideBack = null; G.sideDown = null;   // (round 68a: 1.5 out, past the 1.2 that re-arms the door: at 1.17 you couldn't turn straight back in)
+    hero.fi = R0.door[0] + 1.5; hero.fj = R0.door[1] + 1.0; G.sideBack = null; G.sideDown = null;   // (round 68a: 1.5 out, past the 1.2 that re-arms the door: at 1.17 you couldn't turn straight back in)
     for (const k in SIDES) G['armed_' + k] = false;
     updateFov(hero.fi, hero.fj); saveGame();
   };

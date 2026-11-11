@@ -66,7 +66,7 @@ defMat('ROCK', [65, 66, 67, 68, 69], 2, { span: 1.0 });
 defMat('HELLSTONE', [73, 74, 75, 76, 77], 2, { span: 0.9 });
 defMat('STONE', [5, 6, 7, 8, 9, 10], 2, { span: 0.9 });
 // the stairs' lit step edges and shaded step fronts, one pair per floor theme
-defMat('STONELIP', [5, 6, 7, 8, 9, 10], 4, { span: 0.5 }); defMat('STONERISE', [4, 5, 6, 7, 8], 0, { span: 0.5 });
+defMat('DAYLIGHT', [27], 0, { flat: true, emis: true }); defMat('STONELIP', [5, 6, 7, 8, 9, 10], 4, { span: 0.5 }); defMat('STONERISE', [4, 5, 6, 7, 8], 0, { span: 0.5 });
 defMat('ROCKLIP', [65, 66, 67, 68, 69], 4, { span: 0.5 }); defMat('ROCKRISE', [64, 65, 66, 67], 0, { span: 0.5 });
 defMat('HELLLIP', [73, 74, 75, 76, 77], 4, { span: 0.5 }); defMat('HELLRISE', [73, 74, 75, 76], 0, { span: 0.5 });
 defMat('FUNGUS', [71], 0, { flat: true, emis: true });

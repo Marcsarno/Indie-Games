@@ -619,7 +619,7 @@ function placeSpawns(R, level) {
     const base = (2 + Math.floor(level * 0.8)) * clamp(Math.pow((r.area || r.w * r.h) / 64, 0.6), 0.75, 1.8);   // round 38: more in bigger rooms (capped so a great hall isn't a crowd)
     let budget = Math.round(base * (0.6 + 0.8 * r.depth) * (cfg ? 0.6 : 1)) + (r.dead ? 1 : 0);   // side areas are lighter
     while (budget > 0) {
-      const id = R.pick(pool), m = MONSTERS[id], count = m.pack ? R.int(2, HEAVY ? 5 : 4) : 1;   // (round 62: HEAVY packs run a little bigger)
+      const id = R.pick(pool), m = MONSTERS[id], count = m.pack ? (SWARM ? R.int(3, 6) : R.int(2, HEAVY ? 5 : 4)) : 1;   // (round 62: HEAVY packs run a little bigger)
       budget -= m.pack ? 2 : 1;
       const c = spot(r); if (!c) continue;
       const g = { room: n, at: c, members: [] };
@@ -841,6 +841,25 @@ function stairwellSprite(theme) {
     else sp.data[k] = 0;
   }
   return (stairCache[theme] = sp);
+}
+// round 81: the way UP and out. A flight of stone steps climbing away from the camera to an arched
+// doorway full of daylight, so leaving a dungeon no longer means walking down a hole. Standing art
+// (a prop, depth-sorted with the hero), not baked into the floor like the stairwell.
+function stairsUpSprite(theme) {
+  const key = theme + ':up'; if (stairCache[key]) return stairCache[key];
+  const T = theme === 'caves' ? 'ROCK' : theme === 'hell' ? 'HELL' : 'STONE', mat = M[T === 'HELL' ? 'HELLSTONE' : T], lipM = M[T + 'LIP'], riseM = M[T + 'RISE'];
+  const r = new Rig(), X = 17, Y = 11, n = 7, len = 2 * X / n, rise = 3.2, top = n * rise;
+  for (let k = 0; k < n; k++) {   // step k = 0 is nearest the camera and lowest
+    const x1 = X - len * k, x0 = x1 - len, h = rise * (k + 1);
+    r.box([(x0 + x1) / 2, 0, h / 2], [len / 2, Y, h / 2], mat, null, { noShadow: true, bias: k, mf: (q, nn) => nn[0] > 0.5 ? riseM : nn[2] > 0.5 && q[0] > x1 - 1.4 ? lipM : 0 });
+  }
+  // the doorway at the top: two posts, a lintel with a keystone, and the daylight between them
+  const dx = -X - 3, ph = 30;
+  r.box([dx, 0, top + ph / 2], [0.6, Y - 2.5, ph / 2], M.DAYLIGHT, null, { noShadow: true });
+  for (const sy of [-1, 1]) r.box([dx, sy * (Y + 0.5), (top + ph) / 2], [3.5, 3, (top + ph) / 2], mat, null, { noShadow: true, bias: 2 });
+  r.box([dx, 0, top + ph + 3], [3.5, Y + 3.5, 3.5], mat, null, { noShadow: true, bias: 3, mf: q => Math.abs(q[1]) < 2.2 ? lipM : 0 });
+  r.box([dx - 5, 0, (top + ph) / 2], [2, Y + 3.5, (top + ph) / 2 + 3], mat, null, { noShadow: true, bias: -3, mf: () => riseM });   // the wall behind, in shade
+  return (stairCache[key] = renderRig(r, 0, 96, 112, 48, 84));
 }
 const PROPS = {
   barrel: () => propSprite('barrel', r => {
@@ -1325,6 +1344,7 @@ function buildWorld() {
   if (!LV.outdoor) for (const s of [LV.stairs, LV.down]) {
     if (!s) continue;
     const [x, y] = iso(s.i + 0.5, s.j + 0.5);
+    if (s.up) { props.push({ depth: s.i + s.j + 0.2, sp: stairsUpSprite(LV.theme || 'crypt'), wx: x, wy: y, tile: tIdx(s.i, s.j) }); lights.push({ x: x - 14, y: y - 7, z: 34, r: 90, i: 0.8, seed: s.i * 7 + s.j }); s.wx = x; s.wy = y; continue; }   // round 81: the way out climbs to a lit doorway
     s.sp = stairwellSprite(LV.theme || 'crypt'); s.wx = x; s.wy = y;
     for (const [ox, oy] of [[-STW.x - 4.5, STW.y + 4.5], [STW.x + 4.5, -STW.y - 4.5]]) {
       const fi = s.i + 0.5 + ox / TILE_U, fj = s.j + 0.5 + oy / TILE_U, [bx, by] = iso(fi, fj);

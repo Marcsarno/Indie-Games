@@ -98,16 +98,20 @@ function startLevel(level, seed, side = null) {
   if (LV.area === 'town') { G.town = { level, seed }; if (G.portal) openPortalNear(hero.fi + 1.4, hero.fj + 0.4, true); }
   if (LV.area === 'forest') say(LV.autumn ? 'A TREANT ELDER HOLDS THE WAY DOWN' : 'AN OGRE WARLORD HOLDS THE WAY DOWN', 22, 4);
 }
+// round 81: the user: the first pack took too long, skills had no weight, you spam the basic attack.
+// Measured: a new warrior hits for 5.2 and a level 1 wolf had 28 health. Now it has 12, and packs are
+// PACK_K times the size (kill XP is scaled by XP_K so levelling keeps its pace).
+let SWARM = true; const SWARM_DMG = 1.3, PACK_K = 2, XP_K = 0.7;
 function makeEnemy(id, fi, fj, n, lvl) {
   const m = MONSTERS[id], lv = lvl || LV.diff;   // round 48c: a spawn may carry its own level (the Hollow's clearings climb in bands)
   // round 62 (HEAVY): more health, more for the big ones (fodder x1.6, the rank and file x2, bruisers
   // x2.3, uniques x1.5), and it climbs faster with the level (0.27 a level, compounding 1.5%) so
   // deeper floors outpace old gear and upgrades are felt. Damage keeps the old curve.
-  const scale = 1 + (lv - 1) * 0.22, hpScale = !HEAVY ? scale : (1 + (lv - 1) * 0.27) * Math.pow(1.015, lv - 1) * (m.unique ? 1.5 : m.hp < 12 ? 1.6 : m.hp < 30 ? 2 : 2.3);
+  const scale = 1 + (lv - 1) * 0.22, hpScale = !HEAVY ? scale : (1 + (lv - 1) * 0.27) * Math.pow(1.015, lv - 1) * (m.unique ? 1.5 : SWARM ? (m.hp < 12 ? 0.75 : m.hp < 30 ? 0.85 : 1.3) : m.hp < 12 ? 1.6 : m.hp < 30 ? 2 : 2.3);   // round 81 (SWARM): the rank and file have well under half the health they had, and come in bigger packs (PACK_K), so skills kill
   // round 77: gear now grows with its level (itemStats). Measured over 40 heroes in the best of 60 drops per
   // area level: damage x1.02-1.14 at levels 2-6 and x1.11-1.32 from 8 on, armor x1.05-1.29. So monsters gain
   // 1.8% health and 1.2% damage a level past 2 (x1.07 / x1.05 at 6, x1.18 / x1.12 at 12): the fights stay as long.
-  const gearHp = 1 + Math.max(0, lv - 2) * 0.018, gearDmg = 1 + Math.max(0, lv - 2) * 0.012, hpK = hpScale * gearHp;
+  const gearHp = 1 + Math.max(0, lv - 2) * 0.018, gearDmg = (1 + Math.max(0, lv - 2) * 0.012) * (SWARM && !m.unique ? SWARM_DMG : 1), hpK = hpScale * gearHp;
   return {
     id, def: m, fam: m.family, look: m.look, fi, fj, home: [fi, fj], dir: (n * 3) % 8, clip: 'idle', clock: n * 0.13, walk: 0,
     hp: Math.round(m.hp * hpK), maxHp: Math.round(m.hp * hpK), dmg: [Math.round(m.dmg[0] * scale * gearDmg), Math.round(m.dmg[1] * scale * gearDmg)],
@@ -414,7 +418,7 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
     const streak = killStreak();
     questKill(e.id); guideKill(e);
     if (e.pw) eliteDeath(e);
-    gainXp(e.def.xp * (1 + ((e.lvl || LV.diff) - 1) * 0.3) * (e.champ ? 3 + (e.pw ? e.pw.length - 1 : 0) : 1) * (e.summonedBy ? 0.2 : 1) * (1 + Math.max(0, streak - 2) * 0.1));
+    gainXp((SWARM && !e.def.unique ? XP_K : 1) * e.def.xp * (1 + ((e.lvl || LV.diff) - 1) * 0.3) * (e.champ ? 3 + (e.pw ? e.pw.length - 1 : 0) : 1) * (e.summonedBy ? 0.2 : 1) * (1 + Math.max(0, streak - 2) * 0.1));
     if (STAT.hpKill) hero.hp = Math.min(STAT.maxHp, hero.hp + STAT.hpKill);
     if (STAT.manaKill) hero.mana = Math.min(STAT.maxMana, hero.mana + STAT.manaKill);
     if (!e.noLoot) dropLoot(e.fi, e.fj, e.def.unique ? 4 : e.champ ? 3 + (e.pw ? e.pw.length - 1 : 0) : e.def.elite ? 3 : 1, e.def.unique || !!e.champ || !!e.def.elite);
@@ -838,15 +842,15 @@ function updateHero(dt) {
   for (const p of dynProps) if (p.kind === 'chest' && !p.open && Math.hypot(p.i + 0.5 - hero.fi, p.j + 0.5 - hero.fj) < 1.15) openChest(p);
   // stairs
   const s = LV.stairs;
-  if (!G.fadeTo && !LV.side && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55 && bossAlive()) {   // (round 67: a side area's way out is never sealed)
+  const steering = Math.hypot(input.mx, input.my) >= 0.18 || input.keys.size > 0 || !!hero.goTalk;   // round 81: every exit takes you only while you are walking, never when knocked onto it
+  if (!G.fadeTo && !LV.side && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < EXIT_R.stairs && bossAlive()) {   // (round 67: a side area's way out is never sealed)
     if (!(G.sealT > 0)) { say(`THE ${boss.def.name} GUARDS THE WAY DOWN`, 22, 2); G.sealT = 3; }
   } else if (LV.side) {   // a side area's stairs lead back up to the hub (once the hero has stepped off them)
     const d = Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj);
-    if (d > 1.2) G.upArmed = true;
-    const steering = Math.hypot(input.mx, input.my) >= 0.18 || input.keys.size > 0 || !!hero.goTalk;   // round 68a: only when walked onto, never when knocked back onto it mid-fight
-    if (!G.fadeTo && G.upArmed && d < 0.55 && steering) { G.upArmed = false; if (LV.side === 'barrow2') climbSide(); else leaveSide(); }
-    if (LV.down) { const dd = Math.hypot(LV.down.i + 0.5 - hero.fi, LV.down.j + 0.5 - hero.fj); if (dd > 1.2) G.downArmed = true; if (!G.fadeTo && G.downArmed && dd < 0.55) { G.downArmed = false; descendSide(); } }
-  } else if (!G.fadeTo && !G.finale && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < 0.55 && !(s.mine && mineBarred())) {   // (round 67: not while Maelis is coming)   // round 42b: the mine is chained until the key
+    if (d > EXIT_R.up + 0.8) G.upArmed = true;
+    if (!G.fadeTo && G.upArmed && d < EXIT_R.up && steering) { G.upArmed = false; if (LV.side === 'barrow2') climbSide(); else leaveSide(); }
+    if (LV.down) { const dd = Math.hypot(LV.down.i + 0.5 - hero.fi, LV.down.j + 0.5 - hero.fj); if (dd > EXIT_R.stairs + 0.8) G.downArmed = true; if (!G.fadeTo && G.downArmed && dd < EXIT_R.stairs && steering) { G.downArmed = false; descendSide(); } }
+  } else if (!G.fadeTo && !G.finale && steering && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < (LV.outdoor ? EXIT_R.road : EXIT_R.stairs) && !(s.mine && mineBarred())) {   // (round 67: not while Maelis is coming)   // round 42b: the mine is chained until the key
     sfx('stairs');
     // the hub's mine leads straight to the first floor; Act I's boss hall leads home to the hub,
     // where the south gate now stands open (round 26)
@@ -858,10 +862,10 @@ function updateHero(dt) {
   updatePortal(dt); updateSideDoors(); updateStory(dt);
   if (LV.backExit && !G.fadeTo) {   // round 48c: the Riverlands' road back south to the Hollow
     const d = Math.hypot(LV.backExit[0] - hero.fi, LV.backExit[1] - hero.fj);
-    if (d > 1.4) G.backArmed = true;
-    if (G.backArmed && d < 0.6) { G.backArmed = false; sfx('stairs'); G.fadeTo = () => { G.portal = null; startLevel(LV.level - 1, (LV.seed * 29 + 5) >>> 0); hero.fi = HUB.exit[0] + 3.2; hero.fj = HUB.exit[1] + 1.4; updateFov(hero.fi, hero.fj); saveGame(); }; }
+    if (d > EXIT_R.road + 0.9) G.backArmed = true;
+    if (G.backArmed && d < EXIT_R.road && steering) { G.backArmed = false; sfx('stairs'); G.fadeTo = () => { G.portal = null; startLevel(LV.level - 1, (LV.seed * 29 + 5) >>> 0); hero.fi = HUB.exit[0] + 3.2; hero.fj = HUB.exit[1] + 1.4; updateFov(hero.fi, hero.fj); saveGame(); }; }
   }
-  if (LV.gatePos && LV.gateOpen && !G.fadeTo && Math.hypot(LV.gatePos[0] - hero.fi, LV.gatePos[1] - hero.fj) < 0.6) {   // through the open gate: on to the next act
+  if (LV.gatePos && LV.gateOpen && !G.fadeTo && steering && Math.hypot(LV.gatePos[0] - hero.fi, LV.gatePos[1] - hero.fj) < EXIT_R.road) {   // through the open gate: on to the next act
     sfx('stairs'); G.fadeTo = () => { G.portal = null; startLevel(LV.level - ((LV.level - 1) % AREA_CYCLE) + AREA_CYCLE, (LV.seed * 31 + 17) >>> 0); saveGame(); };   // (to the next act's town, from whichever of this act's areas the gate is in)
   }
   hatchEggs(dt);
@@ -1132,7 +1136,7 @@ function assignEngage() {
     const list = fams[k], busy = list.filter(e => e.atk >= 0), free = list.filter(e => e.atk < 0 && !(e.engageCd > G.t));
     for (const e of busy) e.mayEngage = true;
     free.sort((a, b) => (a.engageCd || 0) - (b.engageCd || 0) || Math.hypot(a.fi - hero.fi, a.fj - hero.fj) - Math.hypot(b.fi - hero.fi, b.fj - hero.fj));
-    for (let n = 0; n < free.length && n < 2 - busy.length; n++) free[n].mayEngage = true;
+    for (let n = 0, cap = SWARM && list.length >= 5 ? 3 : 2; n < free.length && n < cap - busy.length; n++) free[n].mayEngage = true;   // (round 81: three at once from a big pack)
     if (list.length <= 2) for (const e of list) e.mayEngage = true;   // a pair or a lone one just comes at you
   }
 }
@@ -1358,6 +1362,39 @@ function updateAtmos(dt) {
       let x = hx0 + (Math.random() - 0.5) * 300, y = hy0 + (Math.random() - 0.5) * 220, ok = true;
       if (A.mist === 1) { ok = false; const gx = (x - WX0) / 16, gy = (y - WY0) / 8, fi = (gx + gy) / 2, fj = (gy - gx) / 2; for (const [u, s2, r] of HOLLOW_MIST) { const [a, b] = US(u, s2); if (Math.hypot(fi - a, fj - b) < r) ok = true; } }
       if (ok) G.fog.push({ x, y, w: 36 + Math.random() * 34, vx: (Math.random() < 0.5 ? -1 : 1) * (2 + Math.random() * 3), t: 0, t0: 7 + Math.random() * 6, seed: (Math.random() * 1e4) | 0, k: near });
+    }
+  }
+}
+// round 81: exits are places you walk THROUGH. Each has a wide zone (EXIT_R, in tiles) and a glowing
+// mark on the ground exactly that size: a dashed rim turning slowly and rings drawing inward, gold
+// for the way on, blue for the way back, red while a boss seals it.
+const EXIT_R = { stairs: 1.0, up: 1.15, road: 1.35, door: 1.25, portal: 0.85 };
+function exitZones() {
+  const Z = [], s = LV.stairs;
+  if (s && !(s.mine && typeof mineBarred === 'function' && mineBarred())) Z.push({ fi: s.i + 0.5, fj: s.j + 0.5, r: LV.side ? EXIT_R.up : LV.outdoor ? EXIT_R.road : EXIT_R.stairs, col: LV.side ? 1 : bossAlive() ? 2 : 0 });
+  if (LV.down) Z.push({ fi: LV.down.i + 0.5, fj: LV.down.j + 0.5, r: EXIT_R.stairs, col: 2 });
+  if (LV.backExit) Z.push({ fi: LV.backExit[0], fj: LV.backExit[1], r: EXIT_R.road, col: 1 });
+  if (LV.gatePos && LV.gateOpen) Z.push({ fi: LV.gatePos[0], fj: LV.gatePos[1], r: EXIT_R.road, col: 0 });
+  if (!LV.side && typeof sidesHere === 'function') for (const k of sidesHere()) { const [fi, fj] = SIDES[k].door(); Z.push({ fi, fj, r: EXIT_R.door, col: SIDES[k].danger ? 2 : 0 }); }
+  return Z;
+}
+const EXIT_COLS = [[GOLD[3], GOLD[2]], [40, 39], [RED[4], RED[3]]];
+function drawExitPads() {
+  const t = G.t;
+  for (const z of exitZones()) {
+    const [wx, wy] = iso(z.fi, z.fj), cx = Math.round(wx * SPX) - cam2x, cy = Math.round(wy * SPX) - cam2y, rx = z.r * 22.6 * SPX, ry = rx / 2;
+    if (cx + rx < 0 || cx - rx >= OW || cy + ry < 0 || cy - ry >= OH) continue;
+    const c0 = PAL32[EXIT_COLS[z.col][0]], c1 = PAL32[EXIT_COLS[z.col][1]];
+    for (let b = -ry | 0; b <= ry; b++) {
+      const Y = cy + b; if (Y < 0 || Y >= OH) continue;
+      for (let a = -rx | 0; a <= rx; a++) {
+        const X = cx + a; if (X < 0 || X >= OW) continue;
+        const u = a / rx, v = b / ry, d = Math.sqrt(u * u + v * v); if (d >= 1) continue;
+        if (!envCol((X + hx) >> 1, (Y + hy) >> 1, 5, -2)) continue;   // not over the void
+        if (d > 0.88) { const g = (Math.atan2(v, u) / 6.283 * 10 + t * 0.35) % 1; if ((g + 1) % 1 < 0.55) ov32[Y * OW + X] = c0; continue; }
+        const ring = ((d * 2.5 + t * 0.7) % 1 + 1) % 1;
+        if (ring < 0.16 && BAYER[(((Y >> 1) & 3) << 2) | ((X >> 1) & 3)] < 0.3 + 0.4 * d) ov32[Y * OW + X] = c1;
+      }
     }
   }
 }
@@ -1684,7 +1721,7 @@ function render() {
     }
   }
   if (WORLD2X) frame2.set(ov32);   // the finished world frame, for 2x props redrawn over bodies
-  drawFog();   // round 80: ground mist lies under the bodies
+  drawExitPads(); drawFog();   // round 80: ground mist lies under the bodies
   ov.sort((a, b) => a.depth - b.depth);
   for (const d of ov) d.draw();
   drawEliteFx();
@@ -2093,8 +2130,8 @@ function updatePortal(dt) {
   const P = G.tp; if (!P) return;
   P.t += dt;
   const d = Math.hypot(P.fi - hero.fi, P.fj - hero.fj);
-  if (d > 0.9) P.armed = true;   // one has to step away before the gate will take you
-  if (G.fadeTo || !P.armed || P.t < 0.5 || d > 0.5) return;
+  if (d > EXIT_R.portal + 0.5) P.armed = true;   // one has to step away before the gate will take you
+  if (G.fadeTo || !P.armed || P.t < 0.5 || d > EXIT_R.portal) return;
   sfx('portal');
   if (!P.back) {
     // remember this level as it stands, then go to town

@@ -287,7 +287,7 @@ function genForest(R, A) {
     if (n === 0 || n === far) return;
     let budget = (camps.includes(n) ? 4 : 2) + Math.floor(A.diff * 0.6);
     while (budget > 0) {
-      const id = R.pick(pool), m = MONSTERS[id], count = m.pack ? R.int(2, 3) : 1;
+      const id = R.pick(pool), m = MONSTERS[id], count = m.pack ? (SWARM ? R.int(3, 5) : R.int(2, 3)) : 1;
       for (let c = 0; c < count; c++) { const p = free(r.clr.x, r.clr.y, r.clr.r); if (p) LV.spawns.push({ id, fi: p[0], fj: p[1] }); }
       budget -= m.pack ? 2 : 1;
     }
@@ -538,7 +538,7 @@ function genHollow(R, A) {
     for (let q = 0; q < p.count; q++) {
       const ang = R() * 6.283, rr = c.r * (p.count > 1 ? 0.55 : 0.25) * Math.sqrt(R()), px = a + 0.5 + Math.cos(ang) * rr, py = b + 0.5 + Math.sin(ang) * rr;
       const lvl = c.lvlTo ? R.int(c.level, c.lvlTo) : c.level;
-      for (let m = 0; m < p.n; m++) LV.spawns.push({ id: p.id, fi: px + (R() - 0.5) * 2.2, fj: py + (R() - 0.5) * 2.2, lvl });
+      for (let m = 0, pn = SWARM ? Math.ceil(p.n * PACK_K) : p.n; m < pn; m++) LV.spawns.push({ id: p.id, fi: px + (R() - 0.5) * (SWARM ? 3.2 : 2.2), fj: py + (R() - 0.5) * (SWARM ? 3.2 : 2.2), lvl });
       if (p.with) LV.spawns.push({ id: p.with, fi: px + 0.6, fj: py - 0.6, lvl });
     }
   }
@@ -673,7 +673,7 @@ function genRegion(R, A, D) {
     const c = CL[p.at], [a, b] = US(c.u, c.s);
     for (let q = 0; q < p.count; q++) {
       const ang = R() * 6.283, rr = c.r * (p.count > 1 ? 0.55 : 0.25) * Math.sqrt(R()), px = a + 0.5 + Math.cos(ang) * rr, py = b + 0.5 + Math.sin(ang) * rr, lvl = c.lvlTo ? R.int(c.level, c.lvlTo) : c.level;
-      for (let m = 0; m < p.n; m++) LV.spawns.push({ id: p.id, fi: px + (R() - 0.5) * 2.2, fj: py + (R() - 0.5) * 2.2, lvl });
+      for (let m = 0, pn = SWARM ? Math.ceil(p.n * PACK_K) : p.n; m < pn; m++) LV.spawns.push({ id: p.id, fi: px + (R() - 0.5) * (SWARM ? 3.2 : 2.2), fj: py + (R() - 0.5) * (SWARM ? 3.2 : 2.2), lvl });
       if (p.with) LV.spawns.push({ id: p.with, fi: px + 0.6, fj: py - 0.6, lvl });
     }
   }
