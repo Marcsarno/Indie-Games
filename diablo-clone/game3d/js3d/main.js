@@ -7,6 +7,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { makeFx } from './fx.js';
+import { makeWorld } from './world.js';
 
 const TPX = 16 * Math.SQRT2;            // world pixels (1x) per unit along the screen's x
 const UPX = TPX * Math.cos(Math.PI / 6); // world pixels per unit of height
@@ -18,7 +19,7 @@ const scene = new THREE.Scene(); scene.background = new THREE.Color(0x050406);
 // Two ways to look at the same world: the overhead view of the 2D game (an orthographic camera matching its projection), or
 // 'world' mode (window.R3D_MODE = 'world'): a third-person camera behind the hero, down in the world.
 const TP = window.R3D_MODE === 'world';
-const cam = TP ? new THREE.PerspectiveCamera(50, 1, 0.15, 120) : new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
+const cam = TP ? new THREE.PerspectiveCamera(50, 1, 0.15, 700) : new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
 const CAMDIR = new THREE.Vector3(Math.cos(Math.PI / 6) * Math.SQRT1_2, Math.sin(Math.PI / 6), Math.cos(Math.PI / 6) * Math.SQRT1_2);
 { const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.25; }
 const hemi = new THREE.HemisphereLight(0x8fa0d0, 0x2a1c14, 0.55); scene.add(hemi);
@@ -57,6 +58,7 @@ function spawnModel(file) {
 let levelGroup = null, builtLevel = -1;
 const THEME = { crypt: { floor: [0x5a4a3c, 0x66543f, 0x4e4238, 0x6e5b44], wall: [0x4a4040, 0x554844, 0x403838] }, caves: { floor: [0x3e4048, 0x4a4c58, 0x363844], wall: [0x30323a, 0x3a3c46, 0x2a2b33] },
   hell: { floor: [0x4d1c18, 0x6b2a1f, 0x3a1614], wall: [0x341414, 0x4d1c18, 0x2a1010] }, outdoor: { floor: [0x5f7a3a, 0x688442, 0x587236, 0x6f8a46], wall: [0x2e4a2a, 0x355230, 0x284224] } };
+let world = null;
 function hash2(i, j) { let h = (i * 374761393 + j * 668265263) ^ 0x5bd1e995; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
 function buildLevel() {
   if (levelGroup) { scene.remove(levelGroup); levelGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); }); if (levelGroup.userData.gtex) levelGroup.userData.gtex.dispose(); for (const k of ['wtex', 'wnorm', 'gnorm']) if (levelGroup.userData[k]) levelGroup.userData[k].dispose(); }
@@ -80,7 +82,9 @@ function buildLevel() {
   levelGroup.userData.gnorm = gnorm;
   levelGroup.userData.gtex = gtex;
   const wm = buildWalls(walls);
-  levelGroup.add(ground); if (wm) levelGroup.add(wm);
+  const ownGround = world && LV.outdoor;   // (world mode paints the open country its own way: world.js)
+  if (ownGround) { gtex.dispose(); world.ground(levelGroup); } else { if (world) world.dropGround(); levelGroup.add(ground); }
+  if (wm) levelGroup.add(wm);
   // light by place: a warm afternoon sun outdoors, cold moonlight at night, and in the dungeons only a faint cold fill so the torches and the hero's light do the work
   const day = LV.outdoor && !LV.night;
   hemi.intensity = day ? 0.8 : LV.outdoor ? 0.42 : 0.34; hemi.color.setHex(day ? 0xbfd4ff : 0x6f84c8); hemi.groundColor.setHex(day ? 0x54603a : 0x1c1410);
@@ -88,9 +92,10 @@ function buildLevel() {
   scene.background.setHex(LV.outdoor ? 0x1a2a18 : 0x050406);
   if (TP) {   // world mode: a sky and distance haze. The forest is a bright, storybook afternoon; night is deep blue; dungeons fall off into the dark.
     const sky = day ? 0xa9dcf2 : LV.outdoor ? 0x16203c : 0x06050a; scene.background.setHex(sky);
-    scene.fog = new THREE.Fog(day ? 0xbfe6ee : sky, day ? 16 : LV.outdoor ? 10 : 7, day ? 58 : LV.outdoor ? 40 : 30);
+    scene.fog = new THREE.Fog(day ? 0xd2ecf4 : LV.outdoor ? 0x1b2750 : sky, day ? 30 : LV.outdoor ? 14 : 7, day ? 130 : LV.outdoor ? 70 : 30);
+    world.host(scene); world.setSky(!!LV.outdoor, !day);
     if (day) { hemi.intensity = 1.05; hemi.color.setHex(0xcfeaff); hemi.groundColor.setHex(0x7a9a4a); sun.intensity = 2.0; sun.color.setHex(0xfff0c8); }
-    const far = new THREE.Mesh(new THREE.PlaneGeometry(600, 600).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: LV.outdoor ? (day ? 0x4f7a34 : 0x1c2c1c) : 0x070608, roughness: 1 })); far.position.set(MW / 2, -0.03, MH / 2); far.receiveShadow = true; levelGroup.add(far);
+    if (!ownGround) { const far = new THREE.Mesh(new THREE.PlaneGeometry(600, 600).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x070608, roughness: 1 })); far.position.set(MW / 2, -0.03, MH / 2); far.receiveShadow = true; levelGroup.add(far); }
     CAM.has = false;
   }
   R3D_FLOOR.dirty = false; R3D_FLOOR.y0 = 1e9; R3D_FLOOR.y1 = -1;
@@ -132,6 +137,7 @@ function addWind(mat, from, amount) {
 // Grass: tufts (models/x_grass.glb, made in Blender) wherever the painted ground is green, each tinted by the ground under it
 function buildGrass(group, token) {
   if (!LV.outdoor) return;
+  if (world) return world.grass(group, () => token === levelToken);
   whenModel('x_grass').then(g => {
     if (!g || token !== levelToken) return; let src = null; g.scene.traverse(o => { if (o.isMesh && !src) src = o; }); if (!src) return;
     const mat = addWind(src.material, 0.02, 0.22); mat.side = THREE.DoubleSide; const chunks = new Map(), CG = 8;
@@ -198,6 +204,7 @@ function buildRigProps(group, token) {
 let floorT = 0;
 function syncFloor(dt) {
   floorT -= dt; if (!R3D_FLOOR.dirty || floorT > 0 || !levelGroup || !levelGroup.userData.gtex) return;
+  if (world && world.hasGround) { world.repaint(); R3D_FLOOR.dirty = false; R3D_FLOOR.y0 = 1e9; R3D_FLOOR.y1 = -1; floorT = 1.5; return; }
   const tex = levelGroup.userData.gtex, gpx = tex.image.data;
   for (let y = Math.max(0, R3D_FLOOR.y0); y <= Math.min(WH - 1, R3D_FLOOR.y1); y++) for (let x = 0, k = y * WW; x < WW; x++, k++) { const v = floorBuf[k] & 127, o = k * 4; if (!v) { gpx[o + 3] = 0; continue; } const c = PAL32[v]; gpx[o] = c & 255; gpx[o + 1] = (c >> 8) & 255; gpx[o + 2] = (c >> 16) & 255; gpx[o + 3] = 255; }
   tex.needsUpdate = true; R3D_FLOOR.dirty = false; R3D_FLOOR.y0 = 1e9; R3D_FLOOR.y1 = -1; floorT = 0.6;
@@ -273,6 +280,7 @@ function buildProps(group, token) {
   const by = new Map(); unnamedProps = 0;
   for (const pr of props) { const sp = pr.sp; if (!sp || !sp.__name) { unnamedProps++; continue; } const [fi, fj] = groundToTile(pr.wx, pr.wy); (by.get(sp.__name) || by.set(sp.__name, []).get(sp.__name)).push([fi, fj, sp.__yaw || 0]); }
   for (const d of LV.decor) if (d.kind === 'bones' && d.sp && d.sp.__name) { const [fi, fj] = groundToTile(d.wx, d.wy); (by.get(d.sp.__name) || by.set(d.sp.__name, []).get(d.sp.__name)).push([fi, fj, d.sp.__yaw || 0]); }   // (the game stamps these on the floor)
+  if (world) world.flora(by, group, () => token === levelToken);   // (world mode has a forest of its own: world.js)
   for (const [name, list] of by) {
     const file = MANIFEST.props[name]; if (!file) { missingProps.add(name); continue; }
     const sway = /^(pine|oak|autumn)/.test(name) ? 0.035 : /^(bush|fern|crop)/.test(name) ? 0.05 : 0;
@@ -368,11 +376,13 @@ function syncActor(c, dt, visible) {
 const CAM = { yaw: Math.PI * 0.25, dist: 6.4, pitch: 0.4, cur: 6.4, look: new THREE.Vector3(), has: false };
 function chaseCam(dt) {
   const a = actors.get(hero), hx = hero.fi, hz = hero.fj;
-  if (a && a.vel && Math.hypot(a.vel[0], a.vel[1]) > 0.6 && !hero.dead) {
+  if (a && a.vel && Math.hypot(a.vel[0], a.vel[1]) > 0.6 && !hero.dead && !(CAM.hold > 0)) {
     const head = Math.atan2(a.vel[1], a.vel[0]); let d = head - CAM.yaw; d = Math.atan2(Math.sin(d), Math.cos(d));
     CAM.yaw += Math.sin(d) * Math.min(1, dt * 1.15) * (Math.abs(d) > 2.6 ? 0 : 1);   // sideways running turns it; running at it does not
   }
-  if (CAM.drag) { CAM.yaw += CAM.drag; CAM.drag = 0; }
+  if (CAM.drag) { CAM.yaw += CAM.drag; CAM.drag = 0; CAM.hold = 3.5; }   // (turned by hand: it stays put for a moment before following again)
+  if (CAM.dpitch) { CAM.pitch = Math.max(0.08, Math.min(1.05, CAM.pitch + CAM.dpitch)); CAM.dpitch = 0; }
+  CAM.hold = Math.max(0, (CAM.hold || 0) - dt);
   const fx_ = Math.cos(CAM.yaw), fz_ = Math.sin(CAM.yaw), cp = Math.cos(CAM.pitch), sp = Math.sin(CAM.pitch);
   // how far back it can sit before a wall (or the edge of the floor) gets between it and the hero
   let room = CAM.dist; for (let d = 0.4; d <= CAM.dist; d += 0.2) { const x = hx - fx_ * d * cp, z = hz - fz_ * d * cp; if (tileAt(Math.floor(x), Math.floor(z)) !== FLOOR) { room = Math.max(1.1, d - 0.45); break; } }
@@ -442,7 +452,7 @@ function frame(menu) {
   for (const n of npcs) syncActor(n, dt, Math.abs(n.fi - hero.fi) + Math.abs(n.fj - hero.fj) < (TP ? 44 : 26));
   for (const [c, a] of actors) if (a.seen !== frameNo) { scene.remove(a.root); actors.delete(c); }
   syncDyn(); syncGroundFx(); if (TP) syncWorldMarks(); else syncOverlayFx(); syncFlames(); syncFloor(dt); adapt(dt);
-  WIND.value = G.t;
+  WIND.value = G.t; if (world) world.update(dt, cam);
   fx.update(dt, TP ? lastH * quality / (2 * Math.tan(cam.fov * Math.PI / 360)) : lastW * quality / (2 * hw), heroBlade(), /^(attack|spin|bash)/.test(hero.clip || ''));
   fx.render(quality);
 }
@@ -468,5 +478,6 @@ function heroBlade() {
   a.root.updateMatrixWorld(true); const bone = mesh.skeleton.bones[info.bone]; bm.multiplyMatrices(bone.matrixWorld, mesh.skeleton.boneInverses[info.bone]);
   return { base: info.base.clone().applyMatrix4(bm), tip: info.tip.clone().applyMatrix4(bm) };
 }
+if (TP) world = makeWorld({ whenModel, hash2, WIND });
 try { MANIFEST = Object.assign(MANIFEST, await (await fetch('models/manifest.json')).json()); } catch (e) { console.error('3d: no model list', e); }
 window.R3D = { ready: true, TP, CAM, project, screenDir, get quality() { return quality; }, frame, scene, cam, renderer, actors, THREE, MODELS, missingProps, missingChars, get unnamedProps() { return unnamedProps; }, get manifest() { return MANIFEST; } };

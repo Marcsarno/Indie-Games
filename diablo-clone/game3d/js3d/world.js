@@ -1,0 +1,147 @@
+// "The World": what only the third-person game draws. The overhead game never loads any of this.
+// The forest (big trees, bushes, ferns, boulders, grass and flowers: blender/scripts/flora.py -> models/world/f_*.glb),
+// laid out from the 2D game's own level: every tree the level lists is still there and still solid, but most of them are
+// drawn as undergrowth so the big ones have room to be big.
+import * as THREE from 'three';
+
+export function makeWorld({ whenModel, hash2, WIND }) {
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), p = new THREE.Vector3(), sc = new THREE.Vector3(), col = new THREE.Color();
+  // Leaves sway in the wind (more the higher up), and anything that comes close to the camera thins out to a screen of dots
+  // so a branch between the camera and the hero never hides him.
+  function floraMat(src, from, amount, fade = true, shrink = false) {   // (shrink = grass: it also takes the ground's light, and draws in from nothing at a distance)
+    const m = src.clone(); m.side = THREE.DoubleSide; m.roughness = 0.95; m.metalness = 0; m.envMapIntensity = 0.3;
+    m.onBeforeCompile = sh => { sh.uniforms.uWind = WIND;
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uWind;').replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>' + (shrink ? '\nobjectNormal = vec3(0.0, 1.0, 0.0);' : ''))
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\n{ float sw = max(0.0, position.y - ' + from.toFixed(2) + ') * ' + amount.toFixed(4) + ';\n#ifdef USE_INSTANCING\nvec4 wp = instanceMatrix * vec4(position, 1.0);\n#else\nvec4 wp = vec4(position, 1.0);\n#endif\ntransformed.x += sin(uWind * 1.7 + wp.x * 0.9 + wp.z * 0.7) * sw; transformed.z += cos(uWind * 1.3 + wp.x * 0.5 - wp.z * 0.8) * sw * 0.7;' + (shrink ? '\n#ifdef USE_INSTANCING\ntransformed *= 1.0 - smoothstep(19.0, 31.0, distance((modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz, cameraPosition));\n#endif\n' : '') + ' }');
+      if (fade) sh.fragmentShader = sh.fragmentShader.replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n{ float fd = length(vViewPosition); if (fd < 6.5) { float keep = smoothstep(1.8, 6.5, fd); if (keep < fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))))) discard; } }'); };
+    m.customProgramCacheKey = () => 'flora' + from + ':' + amount + ':' + fade + shrink; return m;
+  }
+  // one InstancedMesh per model per block of tiles; list = [fi, fj, yaw, scale, tint 0..1]
+  function place(file, list, group, alive, { from = 0.5, sway = 0.02, chunk = 12, shadow = true, tinted = null, fade = true, shrink = false } = {}) {
+    if (!list.length) return;
+    whenModel('world/' + file).then(g => {
+      if (!g || !alive()) return; let src = null; g.scene.traverse(o => { if (o.isMesh && !src) src = o; }); if (!src) return;
+      const mat = src.userData.wm || (src.userData.wm = floraMat(src.material, from, sway, fade, shrink)), chunks = new Map();
+      for (const it of list) { const k = Math.floor(it[0] / chunk) + ',' + Math.floor(it[1] / chunk); (chunks.get(k) || chunks.set(k, []).get(k)).push(it); }
+      for (const items of chunks.values()) {
+        const im = new THREE.InstancedMesh(src.geometry, mat, items.length); im.castShadow = shadow; im.receiveShadow = true;
+        items.forEach((it, n) => { const s = it[3] || 1; m4.compose(p.set(it[0], 0, it[1]), q.setFromAxisAngle(up, it[2]), sc.set(s, s * (it[5] || 1), s)); im.setMatrixAt(n, m4);
+          if (tinted) im.setColorAt(n, tinted(it)); else { const t = it[4] === undefined ? 0.5 : it[4]; im.setColorAt(n, col.setRGB(0.86 + 0.2 * t, 0.9 + 0.12 * hash2(it[0] * 31 | 0, it[1] * 17 | 0), 0.84 + 0.22 * (1 - t))); } });
+        im.computeBoundingSphere(); group.add(im);
+        if (!shadow) grassChunks.push({ im, x: im.boundingSphere.center.x, z: im.boundingSphere.center.z });
+      }
+    });
+  }
+  let grassChunks = [];
+
+  // ---- the forest. by: prop name -> [[fi, fj, yaw], ...] from the level. Names this handles are taken out of the map.
+  function flora(by, group, alive) {
+    grassChunks = [];
+    const trees = [], out = {}; const add = (file, it) => (out[file] || (out[file] = [])).push(it);
+    for (const [name, list] of [...by]) {
+      const m = /^(pine|oak|autumn|bush|fern|rock)(\d)$/.exec(name); if (!m) continue; by.delete(name);
+      const fam = m[1], n = +m[2];
+      for (const [fi, fj] of list) {
+        const h = hash2(Math.round(fi * 7) + 13, Math.round(fj * 7) + n), h2 = hash2(Math.round(fj * 5) + 3, Math.round(fi * 9));
+        if (fam === 'pine' || fam === 'oak' || fam === 'autumn') trees.push({ fi, fj, fam, n, h, h2 });
+        else if (fam === 'bush') add('f_bush' + n, [fi, fj, h * 6.28, 0.85 + h2 * 0.5, h]);
+        else if (fam === 'fern') add('f_fern' + n, [fi, fj, h * 6.28, 0.9 + h2 * 0.5, h]);
+        else add('f_rock' + n, [fi, fj, h * 6.28, 0.9 + h2 * 0.9, h, 0.85 + h * 0.5]);
+      }
+    }
+    // Which trees are the big ones: taken in a shuffled order, a tree is big if no big tree stands within 2.7 tiles of it,
+    // a young tree if it has a little room, and otherwise undergrowth (a bush, a fern or a sapling). All stay solid.
+    trees.sort((a, b) => a.h - b.h); const grid = new Map(), key = (x, z) => Math.floor(x / 3) + ',' + Math.floor(z / 3);
+    const near = (t, r, kind) => { const cx = Math.floor(t.fi / 3), cz = Math.floor(t.fj / 3); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (const o of grid.get((cx + a) + ',' + (cz + b)) || []) if (o.kind <= kind && Math.hypot(o.fi - t.fi, o.fj - t.fj) < r) return true; return false; };
+    for (const t of trees) {
+      const tree = t.fam === 'pine' ? 'f_pine' + t.n : t.fam === 'autumn' ? 'f_oak4' : 'f_oak' + (t.n === 5 ? (t.h2 < 0.3 ? 5 : 0) : t.n === 4 ? (t.h2 < 0.45 ? 4 : 2) : t.n);   // (the golden and the blossom trees are the rare ones)
+      const yaw = t.h2 * 6.28;
+      if (!near(t, 2.7, 0)) { t.kind = 0; add(tree, [t.fi, t.fj, yaw, 0.85 + t.h2 * 0.4, t.h]); }
+      else if (!near(t, 1.7, 1)) { t.kind = 1; add(tree, [t.fi, t.fj, yaw, 0.42 + t.h2 * 0.2, t.h]); }
+      else { t.kind = 2; const r = t.h2; if (r < 0.5) add('f_bush' + (t.n % 6), [t.fi, t.fj, yaw, 0.9 + t.h * 0.7, t.h]); else if (r < 0.8) add('f_fern' + (t.n % 6), [t.fi, t.fj, yaw, 1.0 + t.h * 0.6, t.h]); else add(tree, [t.fi, t.fj, yaw, 0.2 + t.h * 0.12, t.h]); }
+      const k = key(t.fi, t.fj); (grid.get(k) || grid.set(k, []).get(k)).push(t);
+    }
+    for (const file in out) { const tree = /pine|oak/.test(file), low = /bush|fern/.test(file);
+      place(file, out[file], group, alive, { from: tree ? 2.0 : 0.15, sway: tree ? 0.012 : low ? 0.05 : 0, fade: !/rock/.test(file) }); }
+  }
+
+  // ---- grass and flowers: tufts wherever the painted ground is green, each tinted by the ground under it; flowers in patches
+  function grass(group, alive) {
+    if (!LV.outdoor) return;
+    const tufts = [[], [], []], blooms = [[], [], []];
+    for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
+      if (LV.map[j * MW + i] !== FLOOR) continue;
+      const patch = hash2(Math.floor(i / 5) * 3 + 1, Math.floor(j / 5) * 7 + 2), kind = Math.floor(hash2(Math.floor(i / 5) + 40, Math.floor(j / 5) + 9) * 3);
+      for (let n = 0; n < 3; n++) {
+        const fi = i + hash2(i * 3 + n, j), fj = j + hash2(j * 5 + n, i + 7), [x, y] = iso(fi, fj), v = floorBuf[Math.round(y) * WW + Math.round(x)] & 127; if (!v) continue;
+        const c = PAL32[v], r = c & 255, gg = (c >> 8) & 255, bb = (c >> 16) & 255; if (!(gg > r * 1.06 && gg > bb * 1.25 && gg > 60)) continue;
+        const h = hash2(i + n * 11, j * 3);
+        if (n === 2) { if (patch > 0.62 && h > 0.3) blooms[kind].push([fi, fj, h * 6.28, 0.55 + h * 0.4]); if (patch > 0.3) continue; }
+        tufts[Math.floor(h * 2.999)].push([fi, fj, h * 6.28, 0.5 + hash2(j + n, i * 3) * 0.5, r, 0.7 + h * 0.5, gg, bb]);
+      }
+    }
+    const tint = it => col.setRGB(Math.min(1, it[4] / 255 * 1.5), Math.min(1, it[6] / 255 * 1.75), Math.min(1, it[7] / 255 * 1.2), THREE.SRGBColorSpace);
+    tufts.forEach((list, k) => place('f_grass' + k, list, group, alive, { from: 0.02, sway: 0.2, chunk: 8, shadow: false, tinted: tint, shrink: true }));
+    blooms.forEach((list, k) => place('f_flower' + k, list, group, alive, { from: 0.02, sway: 0.14, chunk: 8, shadow: false, tinted: () => col.setRGB(1, 1, 1), shrink: true }));
+  }
+
+  // ---- the ground outdoors. Its colours are the 2D game's own painted floor (grass, paths, the camp's cobbles), softened so
+  // one kind of ground blends into the next; the brushwork on top is the detail paint from Blender (terrain.py), laid in
+  // world space so it stays crisp under the hero's feet: grass strokes on green, pebbles and ruts on earth, flagstones on grey.
+  const RES = 4, PAD = 6, texLoader = new THREE.TextureLoader();
+  const det = n => { const t = texLoader.load('models/world/' + n + '.png'); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; return t; };
+  const dGrass = det('d_grass'), dDirt = det('d_dirt'), dStone = det('d_stone');
+  let gnd = null;
+  function repaint() {
+    if (!gnd) return; const { w, h, data } = gnd, off = [[0, 0], [0.2, 0.1], [-0.2, -0.1], [0.1, -0.2], [-0.1, 0.2]]; let ar = 0, ag = 0, ab = 0, an = 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const fi = (x + 0.5) / RES - PAD, fj = (y + 0.5) / RES - PAD, o = (y * w + x) * 4; let r = 0, g = 0, b = 0, n = 0;
+      if (fi > -0.5 && fj > -0.5 && fi < MW + 0.5 && fj < MH + 0.5) for (const [a, c] of off) { const [px, py] = iso(fi + a, fj + c), X = Math.round(px), Y = Math.round(py); if (X < 0 || Y < 0 || X >= WW || Y >= WH) continue; const v = floorBuf[Y * WW + X] & 127; if (!v) continue; const k = PAL32[v]; r += k & 255; g += (k >> 8) & 255; b += (k >> 16) & 255; n++; }
+      if (n) { data[o] = r / n; data[o + 1] = g / n; data[o + 2] = b / n; data[o + 3] = 255; if (g > r * 1.06 * 1) { ar += r / n; ag += g / n; ab += b / n; an++; } } else data[o + 3] = 0;
+    }
+    if (!an) { ar = 90; ag = 122; ab = 58; an = 1; }
+    for (let o = 0; o < data.length; o += 4) if (!data[o + 3]) { data[o] = ar / an; data[o + 1] = ag / an; data[o + 2] = ab / an; data[o + 3] = 255; }
+    gnd.tex.needsUpdate = true;
+  }
+  function ground(group) {
+    const w = (MW + 2 * PAD) * RES, h = (MH + 2 * PAD) * RES, data = new Uint8Array(w * h * 4), tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat);
+    tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearMipmapLinearFilter; tex.generateMipmaps = true;
+    gnd = { w, h, data, tex }; repaint();
+    const E = 700, geo = new THREE.BufferGeometry(), P = [], UV = [];
+    for (const [x, z] of [[-E, -E], [MW + E, -E], [MW + E, MH + E], [-E, MH + E]]) { P.push(x, 0, z); UV.push((x + PAD) / (MW + 2 * PAD), (z + PAD) / (MH + 2 * PAD)); }
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2)); geo.setIndex([0, 2, 1, 0, 3, 2]); geo.computeVertexNormals();
+    const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 1, metalness: 0, envMapIntensity: 0.2 });
+    mat.onBeforeCompile = sh => { sh.uniforms.dGrass = { value: dGrass }; sh.uniforms.dDirt = { value: dDirt }; sh.uniforms.dStone = { value: dStone };
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWp;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvWp = (modelMatrix * vec4(position, 1.0)).xyz;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D dGrass, dDirt, dStone; varying vec3 vWp;')
+        .replace('#include <map_fragment>', `#include <map_fragment>
+{ vec3 bc = diffuseColor.rgb; float mx = max(bc.r, max(bc.g, bc.b)), mn = min(bc.r, min(bc.g, bc.b));
+  float wG = smoothstep(-0.012, 0.03, bc.g - bc.r);
+  float wS = (1.0 - wG) * (1.0 - smoothstep(0.10, 0.22, (mx - mn) / max(mx, 0.03)));
+  vec2 uvd = vWp.xz * 0.25; float far = smoothstep(18.0, 60.0, distance(vWp, cameraPosition));
+  vec3 dg = texture2D(dGrass, uvd).rgb, dd = texture2D(dDirt, uvd * 1.25).rgb, ds = texture2D(dStone, uvd * 1.5).rgb;
+  vec3 dt = mix(mix(mix(dd, ds, wS), dg, wG), vec3(0.5), far * 0.7);
+  float big = texture2D(dDirt, vWp.xz * 0.019).g;
+  bc *= mix(vec3(1.08), vec3(1.0, 1.3, 0.8), wG);
+  diffuseColor.rgb = bc * dt * 2.0 * (0.8 + 0.4 * big); }`); };
+    const mesh = new THREE.Mesh(geo, mat); mesh.receiveShadow = true; mesh.frustumCulled = false; group.add(mesh); group.userData.gtex = tex; return mesh;
+  }
+
+  // ---- the sky: a painted dome, drifting clouds, far mountains and nearer hills (terrain.py -> w_sky.glb). It rides with the camera.
+  let sky = null, skyWant = null;
+  whenModel('world/w_sky').then(g => { if (!g) return; sky = new THREE.Group(); sky.scale.setScalar(620);
+    for (const name of ['dome', 'hills', 'clouds']) { const o = g.scene.getObjectByName(name); if (!o) continue; const mesh = o.isMesh ? o : o.children.find(c => c.isMesh); if (!mesh) continue;
+      const m = new THREE.Mesh(mesh.geometry, new THREE.MeshBasicMaterial({ vertexColors: true, fog: false, depthWrite: false, side: name === 'dome' ? THREE.BackSide : THREE.DoubleSide }));
+      m.name = name; m.frustumCulled = false; m.renderOrder = name === 'dome' ? -30 : name === 'hills' ? -20 : -25; sky.add(m); }
+    sky.visible = false; if (skyHost) skyHost.add(sky); if (skyWant) setSky(...skyWant); });
+  let skyHost = null;
+  function setSky(on, night) { skyWant = [on, night]; if (!sky) return; sky.visible = on; for (const m of sky.children) m.material.color.setHex(night ? (m.name === 'dome' ? 0x1b2750 : 0x2a3760) : 0xffffff); }
+  function host(scene) { skyHost = scene; if (sky && !sky.parent) scene.add(sky); }
+
+  // grass far from the hero is not drawn; the sky keeps the camera at its centre
+  function update(dt, cam) {
+    for (const c of grassChunks) c.im.visible = Math.abs(c.x - hero.fi) < 36 && Math.abs(c.z - hero.fj) < 36;
+    if (sky && sky.visible) { sky.position.set(cam.position.x, -2, cam.position.z); const c = sky.getObjectByName('clouds'); if (c) c.rotation.y += dt * 0.004; }
+  }
+  return { flora, grass, ground, repaint, setSky, host, update, get hasGround() { return !!gnd; }, dropGround() { gnd = null; } };
+}

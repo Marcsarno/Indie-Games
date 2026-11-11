@@ -59,6 +59,25 @@ if (R3D_TP) {
   { const _u2 = update; update = function (dt) { for (const f of F3) { f.t -= dt; f.y += dt * 0.9; } for (let k = F3.length - 1; k >= 0; k--) if (F3[k].t <= 0) F3.splice(k, 1); return _u2(dt); }; }
   // 3. the quest arrow is drawn in the world (an arrow on the ground at the hero's feet), not as a ring on the screen
   drawStoryMark = function () {};
+  // 4. touch. The stick is the bottom-left corner and the buttons are bottom-right, as before; a finger dragged anywhere
+  // else turns the camera (left/right) and tilts it (up/down). A quick tap on a person walks over to talk to them.
+  { const look = { id: null, x: 0, y: 0, x0: 0, y0: 0, t: 0 };
+    const onUi = p => { const cs = [UI.bag, UI.sound, UI.map, UI.portal, UI.potion, UI.attack, ...(UI.skills || [])]; if (ULTS[hero.cls]) cs.push(UI.ult);
+      for (const c of cs) if (c && hitCircle(p, c, 8)) return true;
+      const rs = [UI.tpPrompt, showMap && UI.lightBtn, ...(UI.h3 || [])]; if (UI.act && actionTarget()) rs.push(UI.act);
+      for (const r of rs) if (r && inRect(p, r)) return true; return false; };
+    window.addEventListener('pointerdown', e => {
+      const R = window.R3D; if (!R || !R.ready || e.target !== cvs || G.mode !== 'play' || G.paused || hero.dead || guideFrozen() || look.id !== null) return;
+      const p = toNative(e); if (onUi(p) || (p[0] < W * 0.5 && p[1] > H * 0.52)) return;
+      e.stopPropagation(); e.preventDefault(); audioInit(); capture(e); look.id = e.pointerId; look.x = look.x0 = p[0]; look.y = look.y0 = p[1]; look.t = performance.now();
+    }, true);
+    window.addEventListener('pointermove', e => { if (e.pointerId !== look.id) return; const p = toNative(e), R = window.R3D;
+      R.CAM.drag = (R.CAM.drag || 0) + (p[0] - look.x) * 0.0125; R.CAM.dpitch = (R.CAM.dpitch || 0) + (p[1] - look.y) * 0.006; look.x = p[0]; look.y = p[1]; }, true);
+    const end = e => { if (e.pointerId !== look.id) return; look.id = null; const R = window.R3D;
+      if (e.type === 'pointerup' && performance.now() - look.t < 320 && Math.hypot(look.x - look.x0, look.y - look.y0) < 5) {
+        let best = null, bd = 26; for (const n of npcs) { const q = R.project(n.fi, n.fj, 0.9); if (!q) continue; const d = Math.hypot(q[0] - look.x, q[1] - look.y); if (d < bd) { bd = d; best = n; } }
+        if (best) { hero.goTalk = best; hero.goTalkT = 6; } } };
+    window.addEventListener('pointerup', end, true); window.addEventListener('pointercancel', end, true); }
 }
 const R3D_SAFE = (name, fn) => { try { fn(); } catch (e) { if (!R3D_SAFE.seen[name]) { R3D_SAFE.seen[name] = 1; console.error('3d: ' + name, e); } } };
 R3D_SAFE.seen = {};
