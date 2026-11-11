@@ -207,9 +207,52 @@ function payQuest(id) {
   hero.gold += gold; gainXp(xp); sfx('gold');
   say(`${STORY_NAMES[id]}: DONE`, 51, 3); say(`+${gold} GOLD, +${xp} XP`, 51, 3);
 }
+// ---------------------------------------------------------------- round 91: the quests at the table
+// The user: quests go up to the table and back down. When someone in camp gives you a quest (or
+// your reward), the camera lifts out of the game to Dave's table; Dave tells it in a few words, as
+// whoever is giving it, the game's own monsters marching on the walls behind him; a friend chimes
+// in; a reward is chosen there; then back down into the game (cine.js). [who, as, text, vision]
+// The talks below (talkTo) stay as they were for the game without the table (?cine=0, tests).
+const QUEST_TABLE = {
+  meet: { lines: [
+    ['dave', 'BROTHER OSRIC', 'THANK GOD, A BLADE. SOMEONE HAS BEEN DIGGING UP OUR GRAVES.'],
+    ['dave', 'BROTHER OSRIC', 'ALDO THE WOODCUTTER WENT TO THE WOLF GLADE. HE NEVER CAME BACK.', 'wolves'],
+    ['dave', 'BROTHER OSRIC', 'FIND HIM. BRING HIM HOME TO HIS DAUGHTER.'],
+    ['chris', null, 'WOLVES. GREAT.']],
+    after: () => { const f = storyF(); f.met = true; f.woodTold = true; } },
+  wren: { lines: [
+    ['dave', 'WREN', 'MY FATHER WENT TO THE WOLF GLADE AND NEVER CAME HOME.', 'wolves'],
+    ['dave', 'WREN', 'PLEASE. BRING HIM BACK.']],
+    after: () => { storyF().woodTold = true; } },
+  aldoBack: { lines: [
+    ['dave', 'WREN', 'FATHER! YOU BROUGHT HIM HOME!'],
+    ['dave', 'ALDO', 'I SAW A HOODED MAN AT THE OLD MINE. HIS LANTERN BURNED GREEN.', 'maelis'],
+    ['aaron', null, 'HOODED MAN. GREEN LANTERN. THAT IS OUR VILLAIN.'],
+    ['dave', 'ALDO', 'THREE DANGERS BAR THE ROAD NORTH. CLEAR THEM AND I OPEN IT.']],
+    reward: ['WREN', 'TAKE SOMETHING. AND REST BY THE FIRE: IT WILL MEND YOU.'],
+    after: () => { storyF().woodPaid = true; payQuest('woodcutter'); say('REST BY THE CAMPFIRE TO HEAL', 26, 3); } },
+  hollis: { lines: [
+    ['dave', 'HOLLIS', 'BANDITS TOOK MY FARM AND PUT ME OUT IN MY NIGHTSHIRT.', 'bandits'],
+    ['dave', 'HOLLIS', 'THEIR CHIEF HAS THE MINE KEY. AND HEAVY SACKS IN MY CELLAR.'],
+    ['marc', null, 'HEAVY SACKS. THAT IS NEVER GOOD.']],
+    after: () => { storyF().farmTold = true; G.story.n = 0; } },
+  farmBack: { lines: [
+    ['dave', 'HOLLIS', 'BONES. MY CELLAR WAS FULL OF BONES FROM THE GRAVEYARD.', 'dead'],
+    ['dave', 'HOLLIS', 'THAT LETTER THE CHIEF HAD: SHOW IT TO BROTHER OSRIC.']],
+    reward: ['HOLLIS', 'TAKE ONE. AND POTIONS COST LESS NOW: MY HERBS ARE BACK.'],
+    after: () => { storyF().farmPaid = true; payQuest('farm'); } },
+  letter: { lines: [
+    ['dave', 'THE LETTER', 'EVERY BONE IS PAID IN SILVER. THE KING MUST BE WHOLE. M.'],
+    ['dave', 'BROTHER OSRIC', 'MAELIS, ONCE OF MY ORDER. HE IS RAISING THE OLD KING.', 'king'],
+    ['aaron', null, 'CALLED IT.'],
+    ['dave', 'BROTHER OSRIC', 'TAKE THE KEY. PUT THE KING BACK IN HIS GRAVE.']],
+    after: () => { storyF().letterRead = true; } },
+};
+QUEST_TABLE.mine = QUEST_TABLE.hollis;   // (Hollis gives the farm whether or not you saw the chains first)
 // ---------------------------------------------------------------- what each person says
 function talkTo(n) {
   const f = storyF(), st = storyStage(), on = storyOn();
+  if (on && LV.hub && QUEST_TABLE[st] && CAMP_ROLE[st] === n.role && cineOK()) { startCine('quest', { stage: st }); return; }   // round 91: a quest is told at Dave's table
   const O = 'BROTHER OSRIC', Wn = 'WREN', Ho = 'HOLLIS', Al = 'ALDO';
   if (n.role === 'priest') {
     if (!on) return openTalk([[O, LV.gateOpen ? 'THE ROAD ON IS OPEN, PAST THE RIVERLANDS. GO WITH THE LIGHT.' : 'THE LIGHT KEEPS YOU.']]);
@@ -622,7 +665,7 @@ function updateFinale(dt) {
 function showEnd() {
   const f = storyF(); f.endDue = false; f.endShown = true; G.endStats = Object.assign({ t: 0, deaths: 0, kills: 0 }, hero.stats || {}, { lvl: hero.lvl }); saveGame();
   const go = () => { G.mode = 'end'; G.endT = 0; sfx('levelUp'); };
-  if (cineOK()) startCine('actEnd', go); else go();   // round 89: first back out to Dave's table, where the night ends
+  if (cineOK()) startCine('actEnd', { done: go }); else go();   // round 89: first back out to Dave's table, where the night ends
 }
 function endLayout() { return { btn: { x: W / 2 - 52, y: H - 46, w: 104, h: 20 } }; }
 function drawEnd() {

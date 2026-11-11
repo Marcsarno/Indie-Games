@@ -671,7 +671,7 @@ function update(dt) {
   if (G.fadeTo) { G.fade = Math.min(1, G.fade + dt * 2.5); if (G.fade >= 1) { const f = G.fadeTo; G.fadeTo = null; f(); } }
   else G.fade = Math.max(0, G.fade - dt * 2);
   updateGuide(dt);
-  if (G.cine) updateCine(dt);   // round 89
+  if (G.cine && !G.paused) updateCine(dt);   // round 89
   if (G.mode === 'skills' && !PREVIEW) pvTick(dt);   // round 45: the skill preview runs while its screen is open
   if (G.mode !== 'play' || G.paused) return;
   if (hero.stats && !hero.dead) hero.stats.t += dt;   // round 67: for the end-of-act screen
@@ -1766,6 +1766,7 @@ function drawHudLayer() {
   hud32.fill(0); out32 = hud32;
   drawHud();
   out32 = base32;
+  if (G.hudInT && G.mode !== 'cine') { const a = (G.t - G.hudInT) / 0.45; if (a >= 1) G.hudInT = 0; else for (let y = 0, o = 0; y < H; y++) for (let x = 0; x < W; x++, o++) if (hud32[o] && BAYER[((y & 3) << 2) | (x & 3)] >= a) hud32[o] = 0; }   // round 91: back from the table, the HUD fades in
   for (let y = 0, o = 0; y < H; y++) for (let x = 0; x < W; x++, o++) {
     const c = hud32[o]; if (!c) continue;
     const d = y * SPX * OW + x * SPX;
@@ -2221,7 +2222,7 @@ function beginGame(fromSave, cls = 'warrior') {
   }
 }
 // round 89: from the title, a game starts at Dave's table: the opening for a new hero, a short push into the map for a saved one
-function startGame(fromSave, cls) { beginGame(fromSave, cls); if (cineOK()) startCine(fromSave && loadSave(cls) ? 'resume' : 'open'); }
+function startGame(fromSave, cls) { const resume = fromSave && !!loadSave(cls); beginGame(fromSave, cls); if (cineOK()) startCine(resume ? 'resume' : 'open', { done: resume ? null : openingDone }); }
 function respawn() {
   if (hero.stats) hero.stats.deaths++;
   hero.dead = 0; hero.clip = 'idle'; recalcHero(); hero.hp = STAT.maxHp; hero.mana = STAT.maxMana;

@@ -263,7 +263,12 @@ const glyphMap = (cx, cy) => { fillRect(cx - 6, cy - 5, 13, 11, 26); frame(cx - 
 
 function drawHud() {
   if (PREVIEW) { pvHud(); return; }
-  if (G.mode === 'cine') return drawCineHud();   // round 89: the table: only its own text box
+  if (G.mode === 'cine') {   // round 89: the table: only its own text box. Round 91: rising to it, the game's HUD fades out first
+    const C = G.cine;
+    if (C && C.ph === 'lift' && C.pt < 0.35) { G.mode = 'play'; try { drawHud(); } finally { G.mode = 'cine'; } const a = 1 - C.pt / 0.35; for (let y = 0, o = 0; y < H; y++) for (let x = 0; x < W; x++, o++) if (out32[o] && BAYER[((y & 3) << 2) | (x & 3)] >= a) out32[o] = 0; }
+    return drawCineHud();
+  }
+  if (G.mode === 'title' && G.cine) return drawTitle();   // round 91: the table's title (no camp labels over it)
   drawNpcLabels(); drawQuestTracker();
   // a boss's title card when it first wakes: a dark band slides open with its name and epithet
   if (G.actCard > 0 && G.mode === 'play') {   // entering an act: ACT II / THE BURNING DEEP / the town's name
@@ -446,7 +451,7 @@ function drawSplashImage() {   // over the finished frame, at the canvas's full 
   ctx.drawImage(SPLASH_IMG, (OW - w) / 2, (OH - h) / 2, w, h);
 }
 function drawSplash() {
-  if (splashReady()) { UI.titleBtns = [{ x: 0, y: 0, w: W, h: H, on: () => { TITLE.splash = false; TITLE.pickT = G.t - 9; } }]; return; }
+  if (splashReady()) { UI.titleBtns = [{ x: 0, y: 0, w: W, h: H, on: leaveSplash }]; return; }
   fade(0.55);
   const cy = Math.round(H * 0.3);
   textC('DUNGEONS', W / 2, cy - 30, 22, 4);
@@ -459,16 +464,42 @@ function drawSplash() {
   budgetOn(saved);
   if (Math.floor(G.t * 1.6) % 2 === 0) textC('TAP TO BEGIN', W / 2, Math.round(H * 0.74), 51, 2);
   textC('SOUND ON FOR THE MUSIC', W / 2, Math.round(H * 0.74) + 20, 24);
-  UI.titleBtns = [{ x: 0, y: 0, w: W, h: H, on: () => { TITLE.splash = false; TITLE.pickT = G.t - 9; } }];
+  UI.titleBtns = [{ x: 0, y: 0, w: W, h: H, on: leaveSplash }];
+}
+function leaveSplash() { TITLE.splash = false; TITLE.pickT = G.t - 9; if (cineOK() && !G.cine) startCine('title'); }   // round 91: on to Dave's table
+// round 91: the title's settings and credits (both titles: the table's and, without the table, the old one)
+function drawTitleOptions(btn, oy) {
+  if (TITLE.opts) {
+    btn(FEEL_OLD ? 'COMBAT: OLD' : 'COMBAT: NEW', 6, oy - 22, 84, 16, () => setFeelOld(!FEEL_OLD), 25, 3, 6);
+    btn(WORLD2X ? 'DETAIL: SHARP' : 'DETAIL: CLASSIC', 93, oy - 22, 84, 16, () => setWorld2x(!WORLD2X), 25, 3, 6);
+    btn(HUE_LIGHT ? 'LIGHT: NEW' : 'LIGHT: OLD', 180, oy - 22, 84, 16, () => setLightNew(!HUE_LIGHT), 25, 3, 6);
+    btn(HEAVY ? 'WEIGHT: HEAVY' : 'WEIGHT: LIGHT', 93, oy - 44, 84, 16, () => setHeavy(!HEAVY), 25, 3, 6);   // round 62
+    btn(SHOW_FPS ? 'SPEED: SHOWN' : 'SPEED: HIDDEN', 180, oy - 44, 84, 16, () => { SHOW_FPS = !SHOW_FPS; try { localStorage.setItem('dcg-fps', SHOW_FPS ? '1' : '0'); } catch (e) { /* storage blocked */ } }, 25, 3, 6);   // round 79: a speed readout to check a real phone
+    btn('HERO LIGHT: ' + (CHAR_CAP === L_ID ? 'DRAWN' : '+' + (CHAR_CAP - L_ID)), 6, oy - 44, 84, 16, () => setCharCap(CHAR_CAP >= L_ID + 2 ? L_ID : CHAR_CAP + 1), 25, 3, 6);   // round 60
+    btn(DL48 ? 'DUNGEONS: NEW' : 'DUNGEONS: OLD', 6, oy, 84, 16, () => setDL48(!DL48), 25, 3, 6);   // round 48: the dungeon light
+    btn(SFX.synth ? 'SOUND: SYNTH' : 'SOUND: REAL', 180, oy, 84, 16, () => { setSynthSfx(!SFX.synth); sfx('hit'); }, 25, 3, 6);   // round 44: compare the recorded sounds with the old synth
+  }
+}
+function drawTitleCredits(y) {
+  textC('LEFT THUMB MOVES. RIGHT BUTTONS FIGHT.', W / 2, y, 25);
+  textC('THE GAME ART IS DRAWN IN CODE', W / 2, y + 8, 24);
+  textC('SOUNDS: KENNEY, ARTISTICDUDE, RUBBERDUCK, QUBODUP,', W / 2, y + 17, 24);   // round 44: the sound packs' credits (sfx/CREDITS.md)
+  textC('LITTLE ROBOT SOUND FACTORY, WILL LEAMON, BART, VOICEBOSCH + MORE', W / 2, y + 24, 24);
 }
 function drawTitle() {
   if (!TITLE.looks) {   // each class's starting look (the title's hero is a throwaway)
     TITLE.looks = {};
-    for (const c of ['ranger', 'mage', 'warrior']) { newHero(c); TITLE.looks[c] = { ...hero.look }; }
+    for (const c of ['ranger', 'mage', 'warrior']) { newHero(c); const sv = loadSave(c);   // (round 91: a saved hero's miniature wears its gear)
+      if (sv && sv.hero && sv.hero.equip) try { Object.assign(hero, { lvl: sv.hero.lvl || 1, equip: sv.hero.equip, team: sv.hero.team || hero.team }); recalcHero(); } catch (e) { newHero(c); }
+      TITLE.looks[c] = { ...hero.look }; }
     let last = null; try { last = localStorage.getItem('dcg-cls'); } catch (e) { /* ignore */ }
     TITLE.sel = CLASS_INFO[last] ? last : 'warrior';
   }
   if (TITLE.splash) return drawSplash();
+  if (G.cine && G.cine.kind === 'title') {   // round 91: the game opens at Dave's table
+    UI.titleBtns = [];
+    return drawTableTitle((label, x, y, w, h, on, col = 27, bg = 5, edge = 8) => { fillRect(x, y, w, h, bg); frame(x, y, w, h, edge, 2); textC(label, x + w / 2, y + Math.floor(h / 2) - 2, col); UI.titleBtns.push({ x, y, w, h, on }); });
+  }
   fade(0.7);
   textC('DUNGEONS', W / 2, 34, 22, 4);
   textC('OF BONES', W / 2, 60, 26, 2);
@@ -482,7 +513,6 @@ function drawTitle() {
     fillRect(x, y0, cw, ch, sel ? 4 : 2); frame(x, y0, cw, ch, sel ? 51 : 6, sel ? 49 : 3);
     if (sel) frame(x - 1, y0 - 1, cw + 2, ch + 2, 50, 48);
     textC(info.name, x + cw / 2, y0 + 7, sel ? info.col : 25, 2);
-    textC('PLAYED BY ' + CINE_PEOPLE[PLAYER_OF[cls]].name, x + cw / 2, y0 + 21, sel ? 26 : 24);   // round 89: the player at Dave's table
     // the hero: turning slowly; once picked it faces you and swings
     const ent = { look, cls, combo: 0 };
     let sp;
@@ -508,20 +538,8 @@ function drawTitle() {
   // the developer settings, folded away
   const oy = H - 56;
   btn(TITLE.opts ? 'OPTIONS  -' : 'OPTIONS  +', W / 2 - 40, oy, 80, 16, () => { TITLE.opts = !TITLE.opts; }, 25, 3, 6);
-  if (TITLE.opts) {
-    btn(FEEL_OLD ? 'COMBAT: OLD' : 'COMBAT: NEW', 6, oy - 22, 84, 16, () => setFeelOld(!FEEL_OLD), 25, 3, 6);
-    btn(WORLD2X ? 'DETAIL: SHARP' : 'DETAIL: CLASSIC', 93, oy - 22, 84, 16, () => setWorld2x(!WORLD2X), 25, 3, 6);
-    btn(HUE_LIGHT ? 'LIGHT: NEW' : 'LIGHT: OLD', 180, oy - 22, 84, 16, () => setLightNew(!HUE_LIGHT), 25, 3, 6);
-    btn(HEAVY ? 'WEIGHT: HEAVY' : 'WEIGHT: LIGHT', 93, oy - 44, 84, 16, () => setHeavy(!HEAVY), 25, 3, 6);   // round 62
-    btn(SHOW_FPS ? 'SPEED: SHOWN' : 'SPEED: HIDDEN', 180, oy - 44, 84, 16, () => { SHOW_FPS = !SHOW_FPS; try { localStorage.setItem('dcg-fps', SHOW_FPS ? '1' : '0'); } catch (e) { /* storage blocked */ } }, 25, 3, 6);   // round 79: a speed readout to check a real phone
-    btn('HERO LIGHT: ' + (CHAR_CAP === L_ID ? 'DRAWN' : '+' + (CHAR_CAP - L_ID)), 6, oy - 44, 84, 16, () => setCharCap(CHAR_CAP >= L_ID + 2 ? L_ID : CHAR_CAP + 1), 25, 3, 6);   // round 60
-    btn(DL48 ? 'DUNGEONS: NEW' : 'DUNGEONS: OLD', 6, oy, 84, 16, () => setDL48(!DL48), 25, 3, 6);   // round 48: the dungeon light
-    btn(SFX.synth ? 'SOUND: SYNTH' : 'SOUND: REAL', 180, oy, 84, 16, () => { setSynthSfx(!SFX.synth); sfx('hit'); }, 25, 3, 6);   // round 44: compare the recorded sounds with the old synth
-  }
-  textC('LEFT THUMB MOVES. RIGHT BUTTONS FIGHT.', W / 2, H - 32, 25);
-  textC('THE GAME ART IS DRAWN IN CODE', W / 2, H - 24, 24);
-  textC('SOUNDS: KENNEY, ARTISTICDUDE, RUBBERDUCK, QUBODUP,', W / 2, H - 15, 24);   // round 44: the sound packs' credits (sfx/CREDITS.md)
-  textC('LITTLE ROBOT SOUND FACTORY, WILL LEAMON, BART, VOICEBOSCH + MORE', W / 2, H - 8, 24);
+  drawTitleOptions(btn, oy);
+  drawTitleCredits(H - 32);
 }
 // round 42b: a small speech bubble (over the attack button when a tap would talk)
 function talkBubble(x, y) {
@@ -1222,7 +1240,7 @@ addEventListener('keydown', e => {
   if (k === 'n') setMuted(!SFX.muted);
   if (G.mode === 'talk') { if (k === 'enter' || k === ' ' || k === 'j') { const L = talkLayout(); talkTap(L.btn ? [L.btn.x + 2, L.btn.y + 2] : [W / 2, 10]); } else if (G.talk && G.talk.reward && (k === '1' || k === '2' || k === '3')) talkTap([talkLayout().cards[+k - 1].x + 2, talkLayout().cards[+k - 1].y + 2]); e.preventDefault(); return; }
   if (G.mode === 'cine') { if (k === 'enter' || k === ' ' || k === 'j') cineTap(null); else if (k === 'escape') cineTap([W - 20, 10]); e.preventDefault(); return; }   // round 89
-  if (G.mode === 'title' && TITLE.splash) { TITLE.splash = false; e.preventDefault(); return; }
+  if (G.mode === 'title' && TITLE.splash) { leaveSplash(); e.preventDefault(); return; }
   if (G.mode === 'title' && (k === 'enter' || k === ' ')) { const c = TITLE.sel || 'warrior'; startGame(!!loadSave(c), c); return; }
   if (G.mode === 'title' && (k === 'arrowleft' || k === 'arrowright')) { const L = ['warrior', 'mage', 'ranger'], n = L.indexOf(TITLE.sel || 'warrior'); titlePick(L[(n + (k === 'arrowleft' ? 2 : 1)) % 3]); return; }
   if (guideFrozen() && k !== 'i' && k !== 'b') { e.preventDefault(); return; }   // round 45: stopped for the guide
