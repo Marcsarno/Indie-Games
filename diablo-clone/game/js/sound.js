@@ -63,7 +63,7 @@ const PLAYLISTS = { title: ['title'], forest: ['forest', 'set1', 'forest', 'set2
   dungeon: ['enter', 'dungeon'], lair: ['lair'] };
 const MUS = { decks: [], cur: null, inWoods: false, pos: {}, duck: 1, idx: {}, place: null };
 // round 45: the song keeps playing under the dialogue, the bag and the skills screen, 40% quieter
-const MUSIC_MODES = { play: 1, talk: 0.6, inv: 0.6, skills: 0.6, title: 1, end: 0.8 };
+const MUSIC_MODES = { play: 1, talk: 0.6, inv: 0.6, skills: 0.6, title: 1, end: 0.8, cine: 1, ways: 0.6, shop: 0.6, smith: 0.6 };   // (round 96: Dave's table keeps the title song; the waystone map and the shops dip like the bag)
 // round 46b: the two players exist from page load, the first already downloading the title song,
 // so the first tap on the character screen can start it at once (inside the tap, which phones allow)
 function musicPrep() {
@@ -103,7 +103,7 @@ function musicEnded(d) {
 // which place's music is wanted: title, forest, camp, dungeon or lair
 function musicPlace() {
   if (SFX.muted || !MUSIC_MODES[G.mode]) return null;
-  if (G.mode === 'title') return 'title';
+  if (G.mode === 'title' || G.mode === 'cine') return 'title';   // round 96: Dave's table is one theme, from the splash through the opening and every quest told there
   if (typeof LV === 'undefined' || !LV.area) return null;
   if (LV.area === 'forest' && !LV.side) return 'forest';
   if (LV.arena) return 'lair';   // (round 53: the side caves, the den, the cellar, the barrow and the tower, are dungeons now: the entering song first, not the boss music)
