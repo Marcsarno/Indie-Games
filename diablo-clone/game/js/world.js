@@ -1407,7 +1407,7 @@ function bakeLightMaps() {
 // fire, the lanterns and the forge's glow pool warm in it; outside the fence it lifts back to day over
 // a few tiles. One byte per world pixel, how much of the ambient light is taken away (DUSK_K at 255).
 let DUSK = null, DUSK_ON = true;
-const DUSK_K = 0.18;
+const DUSK_K = 0.15;
 try { const q = new URLSearchParams(location.search).get('dusk'); if (q !== null) DUSK_ON = q !== '0'; } catch (e) { /* ignore */ }
 function bakeDusk() {
   if (!LV.dusk || !DUSK_ON || typeof HUB === 'undefined') { DUSK = null; return; }
