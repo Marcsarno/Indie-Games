@@ -73,7 +73,7 @@ function say(text, col = 26, t = 2.5) { G.msg.push({ text, col, t }); if (G.msg.
 // everything a fight leaves in the air: missiles, effects, particles, floaters (the skill preview
 // clears it between loops too)
 function resetFx() {
-  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.bolts = []; G.spikes = []; G.dust = []; G.mist = []; G.needles = []; G.clusters = []; G.bomblets = []; G.sentries = []; hero.hawks = []; hero.pips = 0; hero.quick = 0; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.arcHits = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; G.debris = []; G.eliteFire = []; G.frostOrbs = []; G.summons = []; G.eliteBursts = []; G.blinkFx = []; G.leech = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
+  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.bolts = []; G.spikes = []; G.dust = []; G.mist = []; G.fog = []; G.needles = []; G.clusters = []; G.bomblets = []; G.sentries = []; hero.hawks = []; hero.pips = 0; hero.quick = 0; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.arcHits = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; G.debris = []; G.eliteFire = []; G.frostOrbs = []; G.summons = []; G.eliteBursts = []; G.blinkFx = []; G.leech = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
 }
 function startLevel(level, seed, side = null) {
   genLevel(level, seed, side);
@@ -130,11 +130,14 @@ function prewarm() {
   for (const [k, v] of fams) if (near.has(k)) for (let d = 0; d < 8; d++) warmQueue.push([v[0], v[1], d, 'idle', 0]);
   // the hero's walk is needed at once; monsters' walks fill in during play
   for (let d = 0; d < 8; d++) for (let f = 0; f < 8; f++) warmQueue.push(['hero', hero.look, d, 'walk', f]);
+  const half = [];   // the in-between walk frames are built after everything else (until then the whole frame before stands in)
+  if (WALK2) for (let d = 0; d < 8; d++) for (let f = 0; f < 8; f++) half.push(['hero', hero.look, d, 'walk', f + 0.5]);
   if (hero.cls === 'mage') for (let d = 0; d < 8; d++) for (let f = 0; f < 12; f++) warmQueue.push(['hero', hero.look, d, 'channel', f]);
   if (hero.cls === 'ranger') for (let d = 0; d < 8; d++) { for (let f = 0; f < 4; f++) warmQueue.push(['hero', hero.look, d, 'shoot', f]); for (let f = 0; f < 3; f++) warmQueue.push(['hero', hero.look, d, 'vault', f]); for (let f = 0; f < 2; f++) warmQueue.push(['hero', hero.look, d, 'toss', f]); for (let f = 0; f < 4; f++) warmQueue.push(['hero', hero.look, d, 'volley', f]); }
   const now = warmQueue.length;
   for (const [k, v] of fams) if (k !== 'hero' && !near.has(k)) for (let d = 0; d < 8; d++) warmQueue.push([v[0], v[1], d, 'idle', 0]);
   for (const [k, v] of fams) if (k !== 'hero') for (let d = 0; d < 8; d++) for (let f = 0; f < 8; f++) warmQueue.push([v[0], v[1], d, 'walk', f]);
+  if (WALK2) { for (const [k, v] of fams) if (k !== 'hero') for (let d = 0; d < 8; d++) for (let f = 0; f < 8; f++) half.push([v[0], v[1], d, 'walk', f + 0.5]); warmQueue.push(...half); }
   return now;
 }
 function warmStep(budgetMs, maxCount = Infinity) {
@@ -1319,11 +1322,73 @@ function updateProjectiles(dt) {
   }
   projectiles = projectiles.filter(p => p.life > 0);
 }
+// round 80: the air of each place. A few motes always drift through the view (dust in the crypt's
+// torchlight, grit sifting down in the caves, embers rising in hell, leaves in the autumn Hollow, ash
+// over Ashford, pollen by the river), and ground mist lies over the graveyard and the night woods.
+// Motes are particles (kind 8 lit by the room, 9 glowing); mist is G.fog wisps drawn dithered.
+let ATMOS = true;
+const HOLLOW_MIST = [[-24, 33, 11], [-31, 40, 8]];   // (u, s, radius in tiles): the graveyard path and the barrow yard
+function atmosOf() {
+  if (!LV.outdoor) {
+    if (LV.theme === 'hell') return { rate: 16, glow: 1, cols: [17, 18, 16], vz: [10, 26], vx: [-5, 5], sway: 6, z: [0, 30], life: [1.5, 3] };
+    if (LV.theme === 'caves') return { rate: 5, cols: [CAVE[5], BONE[2], STEEL[3]], vz: [-9, -4], vx: [-1, 1], sway: 2, z: [30, 70], life: [4, 7] };
+    return { rate: 6, cols: [BONE[3], BONE[2], STRAW[4]], vz: [-2, 3], vx: [-3, 3], sway: 4, z: [6, 44], life: [3, 6] };
+  }
+  if (LV.reg) return { rate: 14, cols: [STEEL[3], STEEL[4], BONE[3], BONE[2]], vz: [-10, -5], vx: [-12, -5], sway: 5, z: [40, 90], life: [5, 9] };
+  if (LV.autumn) return { rate: 3.5, cols: [ORANGE[1], ORANGE[2], AUTUMN[1], AUTUMN[2], STRAW[2]], vz: [-13, -7], vx: [-10, -3], sway: 11, z: [40, 80], life: [5, 9] };
+  if (LV.night) return { rate: 0, mist: 2 };
+  return { rate: 3, cols: [STRAW[3], STRAW[4], BONE[3]], vz: [-1, 3], vx: [3, 8], sway: 5, z: [8, 40], life: [4, 7], mist: LV.hub ? 1 : 0 };
+}
+function updateAtmos(dt) {
+  if (!G.fog) G.fog = [];
+  for (const m of G.fog) { m.t += dt; m.x += m.vx * dt; }
+  G.fog = G.fog.filter(m => m.t < m.t0);
+  if (!ATMOS) return;
+  const A = atmosOf(); if (!A) return;
+  const rnd = r => r[0] + Math.random() * (r[1] - r[0]);
+  const [hx0, hy0] = screenOf(hero);
+  if (A.rate && Math.random() < A.rate * dt) {
+    const z = rnd(A.z), life = rnd(A.life);
+    pspawn(A.glow ? 9 : 8, hx0 + (Math.random() - 0.5) * 300, hy0 + (Math.random() - 0.5) * 240 + z * (A.glow ? 0 : 0.6), z, rnd(A.vx), A.sway, rnd(A.vz), life, A.cols[(Math.random() * A.cols.length) | 0]);
+  }
+  if (A.mist) {
+    let near = A.mist === 2 ? 0.7 : 0;
+    if (A.mist === 1 && LV.hub) for (const [u, s2, r] of HOLLOW_MIST) { const [a, b] = US(u, s2), d = Math.hypot(hero.fi - a, hero.fj - b); if (d < r + 8) near = Math.max(near, Math.min(1, (r + 8 - d) / 8)); }
+    if (near > 0 && G.fog.length < 14 && Math.random() < 4 * near * dt) {
+      let x = hx0 + (Math.random() - 0.5) * 300, y = hy0 + (Math.random() - 0.5) * 220, ok = true;
+      if (A.mist === 1) { ok = false; const gx = (x - WX0) / 16, gy = (y - WY0) / 8, fi = (gx + gy) / 2, fj = (gy - gx) / 2; for (const [u, s2, r] of HOLLOW_MIST) { const [a, b] = US(u, s2); if (Math.hypot(fi - a, fj - b) < r) ok = true; } }
+      if (ok) G.fog.push({ x, y, w: 36 + Math.random() * 34, vx: (Math.random() < 0.5 ? -1 : 1) * (2 + Math.random() * 3), t: 0, t0: 7 + Math.random() * 6, seed: (Math.random() * 1e4) | 0, k: near });
+    }
+  }
+}
+// ground mist: flat wisps hugging the ground, dithered so the ground shows through, thickest in
+// the middle and breathing in and out over their life
+function drawFog() {
+  if (!G.fog || !G.fog.length) return;
+  for (const m of G.fog) {
+    const f = Math.sin(Math.PI * m.t / m.t0), dens = 0.62 * f * (0.6 + 0.4 * m.k);
+    const w = m.w * SPX, h = w * 0.3, cx = Math.round(m.x * SPX) - cam2x, cy = Math.round(m.y * SPX) - cam2y;
+    if (cx + w < 0 || cx - w >= OW || cy + h < 0 || cy - h >= OH) continue;
+    for (let b = -h | 0; b <= h; b++) {
+      const Y = cy + b; if (Y < 0 || Y >= OH) continue;
+      const wob = Math.sin(b * 0.35 + m.seed + m.t * 0.6) * w * 0.12;
+      for (let a = -w | 0; a <= w; a++) {
+        const X = cx + a; if (X < 0 || X >= OW) continue;
+        const u = (a - wob) / w, v = b / h, r2 = u * u + v * v; if (r2 >= 1) continue;
+        const d = (1 - r2) * dens * (0.75 + 0.25 * Math.sin(a * 0.21 + m.seed));
+        if (d <= BAYER[(((Y >> 1) & 3) << 2) | ((X >> 1) & 3)] * 0.9 + 0.08) continue;
+        const c = envCol((X + hx) >> 1, (Y + hy) >> 1, d > 0.4 ? STEEL[4] : STEEL[3], -2);
+        if (c) ov32[Y * OW + X] = c;
+      }
+    }
+  }
+}
 function updateParticles(dt) {
   for (let k = 0; k < PN; k++) {
     const kind = pkind[k]; if (!kind) continue;
     plife[k] -= dt;
     if (kind === 3 || kind === 4) { px_[k] += pvx[k] * dt; pz_[k] += pvz[k] * dt; if (plife[k] <= 0) pkind[k] = 0; continue; }
+    if (kind === 8 || kind === 9) { px_[k] += (pvx[k] + Math.sin(plife[k] * 2.3 + k) * pvy[k]) * dt; pz_[k] += pvz[k] * dt; if (plife[k] <= 0 || pz_[k] <= 0) pkind[k] = 0; continue; }   // round 80: the air of a place (pvy = how much it sways)
     pvz[k] -= 260 * dt; pz_[k] += pvz[k] * dt; px_[k] += pvx[k] * dt; py_[k] += pvy[k] * dt;
     if (kind === 2 && plife[k] <= 0) { pkind[k] = 0; continue; }
     if (pz_[k] <= 0) {
@@ -1336,10 +1401,12 @@ function updateParticles(dt) {
   }
   // fireflies drift through the woods at night
   if (LV.night && LV.area === 'forest' && Math.random() < 0.12) { const [x, y] = screenOf(hero); pspawn(4, x + (Math.random() - 0.5) * 240, y + (Math.random() - 0.5) * 160, 6 + Math.random() * 20, (Math.random() - 0.5) * 10, 0, (Math.random() - 0.5) * 6, 1.5 + Math.random() * 1.5, Math.random() < 0.5 ? 124 : 91); }
+  updateAtmos(dt);
   for (const f of fires) if (f.ember && LV.vis[f.tile] > 0.1 && Math.random() < f.ember) pspawn(3, f.wx + (Math.random() - 0.5) * f.w * 1.2, f.wy + 20, 20 + Math.random() * 4, (Math.random() - 0.5) * 6, 0, 16 + Math.random() * 12, 1 + Math.random(), 16);
 }
 
 // ---------------------------------------------------------------- render
+let WALK2 = true;   // round 80: smoother walking and running for every character (false = the old eight frames)
 function frameOf(e) {
   const pt = e.clock;
   if (e === hero && hero.whirl > 0) return FEEL_OLD ? 3 : Math.floor(G.t / 0.07) % 4;   // the sword held out level, smeared (round 40a: the spin pose, feet shuffling)
@@ -1352,7 +1419,7 @@ function frameOf(e) {
   }
   if (e === hero && hero.dash > 0) return 0;
   if (e.clip === 'idle') return Math.floor(pt / 0.2) % 4;
-  if (e.clip === 'walk') return Math.floor(e.walk) % 8;
+  if (e.clip === 'walk') return WALK2 ? Math.floor(e.walk * 2) % 16 / 2 : Math.floor(e.walk) % 8;   // round 80: sixteen poses to a stride, not eight (the half frames: 0.5, 1.5, ...)
   if (e === hero && e.clip === 'vault' && hero.roll) { const u = hero.roll.t / hero.roll.dur; return u < 0.16 ? 0 : u < 0.78 ? 1 : 2; }   // round 43
   if (e === hero && e.clip === 'toss') return hero.tossT > 0.2 ? 0 : 1;
   if (e === hero && e.clip === 'channel') { const a = hero.castAge || 0, rl = castRel(hero.castKind), ph = a < rl ? 0 : a < rl + 0.13 ? 1 : 2; return (hero.castKind === 'meteor' ? 3 : hero.castKind === 'cone' && !FEEL_OLD ? 6 : (hero.castKind === 'fireball' || hero.castKind === 'chain') && !FEEL_OLD ? 9 : 0) + ph; }   // round 43: the slam and the hurl
@@ -1617,6 +1684,7 @@ function render() {
     }
   }
   if (WORLD2X) frame2.set(ov32);   // the finished world frame, for 2x props redrawn over bodies
+  drawFog();   // round 80: ground mist lies under the bodies
   ov.sort((a, b) => a.depth - b.depth);
   for (const d of ov) d.draw();
   drawEliteFx();
@@ -1626,7 +1694,14 @@ function render() {
     const X = Math.round(px_[k] * SPX) - cam2x, Y = Math.round((py_[k] - pz_[k]) * SPX) - cam2y;
     if (X < 0 || Y < 0 || X >= OW - 1 || Y >= OH - 1) continue;
     const col = kind === 1 ? (pcol[k] === 22 ? RED[3] : pcol[k]) : pcol[k];
-    const emis = kind === 2 || kind === 3 || kind === 4, s = kind === 6 ? 4 : kind === 7 ? 3 : 2;
+    if (kind === 8 || kind === 9) {   // round 80: a mote of the air: a soft plus or a 2x2 speck, flickering out in its last half second
+      if (plife[k] < 0.5 && ((k + (plife[k] * 20 | 0)) & 1)) continue;
+      const c = kind === 9 ? PAL32[CYCLE[pcol[k]]] : envCol((X + hx) >> 1, (Y + hy) >> 1, pcol[k], -2); if (!c) continue;
+      if (k % 3 === 0) { if (X > 0 && Y > 0) { const o = Y * OW + X; ov32[o] = ov32[o - 1] = ov32[o + 1] = ov32[o - OW] = ov32[o + OW] = c; } }
+      else { const o = Y * OW + X; ov32[o] = ov32[o + 1] = ov32[o + OW] = ov32[o + OW + 1] = c; }
+      continue;
+    }
+    const emis = kind === 2 || kind === 3 || kind === 4 || kind === 9, s = kind === 6 ? 4 : kind === 7 ? 3 : 2;
     const c32 = emis ? PAL32[CYCLE[col]] : envCol((X + hx) >> 1, (Y + hy) >> 1, col, -2);
     if (!c32) continue;
     const c2 = kind === 6 ? envCol((X + hx) >> 1, (Y + hy) >> 1, BONE[0], -2) || c32 : kind === 7 ? envCol((X + hx) >> 1, (Y + hy) >> 1, col - 2, -2) || c32 : c32;   // bone chunks are bigger, with a shaded underside
@@ -1891,8 +1966,10 @@ function drawProjectile(p) {
 let CHAR_CAP = L_ID;
 try { const q = new URLSearchParams(location.search).get('charlight') || localStorage.getItem('dcg-charlight'); if (q && +q >= 1 && +q < LEVELS) CHAR_CAP = +q; } catch (e) { /* storage blocked */ }
 function setCharCap(v) { CHAR_CAP = v; try { localStorage.setItem('dcg-charlight', String(v)); } catch (e) { /* ignore */ } }
+let tintB = new Uint8Array(1);   // round 80: which coloured light reaches each world pixel this frame (0 = none)
 function lightPass(chars, kx, ky) {
   const t = G.t;
+  if (tintB.length !== W * H) tintB = new Uint8Array(W * H);
   cyclePalette(t);
   // outdoors: flat daylight at the identity level (the ramps as drawn), no hero light
   // night outdoors (every third town and forest): dim moonlight, the hero carries a light, and the
@@ -1900,9 +1977,9 @@ function lightPass(chars, kx, ky) {
   const amb = LV.outdoor ? (LV.night ? 0.3 : 0.6) : VIEW_FOG ? 0 : DLIGHT.amb;
   const nl = DL48 && !LV.outdoor && AO, tone = nl ? TONE : null;   // round 48: the new dungeon light
   const dyn = LV.outdoor && !LV.night ? [] : [{ x: kx, y: ky, z: 34, r: LV.night ? 120 : LV.outdoor ? 145 : DLIGHT.hr * (nl ? 1.2 : 1), i: LV.night ? 0.42 : LV.outdoor ? 0.62 : DLIGHT.hi * (nl ? 1.05 : 1) }];
-  for (const p of projectiles) if (p.kind !== 'arrow' && dyn.length < 5) { const [x, y] = iso(p.fi, p.fj); dyn.push({ x, y, z: p.z, r: p.kind === 'missile' ? 45 : 70, i: 0.8 }); }
+  for (const p of projectiles) if (p.kind !== 'arrow' && dyn.length < 5) { const [x, y] = iso(p.fi, p.fj); dyn.push({ x, y, z: p.z, r: p.kind === 'missile' ? 55 : p.kind === 'hfire' ? (p.big ? 110 : 85) : 70, i: p.kind === 'hfire' ? 1.0 : 0.8, tint: p.kind === 'hfire' || p.kind === 'fire' ? 1 : p.kind === 'frostbolt' ? 2 : p.kind === 'missile' ? 3 : 0 }); }   // (round 80: in their own colour)
   if (G.tp) { const [x, y] = iso(G.tp.fi, G.tp.fj); dyn.push({ x, y, z: 20, r: 80, i: 0.7 * Math.min(1, G.tp.t / 0.45) }); }   // the portal's blue glow (brightness only)
-  for (const f of G.flashes) if (dyn.length < 7) { const [x, y] = iso(f.fi, f.fj); dyn.push({ x, y, z: 24, r: f.r, i: 1.1 * f.t / f.t0 }); }   // explosions light the room
+  for (const f of G.flashes) if (dyn.length < 7) { const [x, y] = iso(f.fi, f.fj); dyn.push({ x, y, z: 24, r: f.r, i: 1.1 * f.t / f.t0, tint: f.tint || 0 }); }   // explosions light the room
   const fl = g => 1 + 0.07 * Math.sin(t * 11 + g * 2.3) + 0.05 * Math.sin(t * 23.7 + g * 5.1) + 0.04 * Math.sin(t * 37 + g);
   const f0 = fl(0), f1 = fl(1), A = staticLight[0], B = staticLight[1];
   for (let y = 0; y < H; y++) {
@@ -1913,8 +1990,10 @@ function lightPass(chars, kx, ky) {
     for (let x = xa; x < xb; x++) lbuf[o0 + x] = amb + A[row + x] * f0 + B[row + x] * f1;
     for (let x = Math.max(xa, xb); x < W; x++) lbuf[o0 + x] = amb;
   }
+  let tintOn = false;
+  for (const L of dyn) if (L.tint) { if (!tintOn) { tintB.fill(0); tintOn = true; } }
   for (const L of dyn) {
-    const lx = L.x - camX, ly = L.y - camY, r = L.r, r2 = r * r, li = L.i;
+    const lx = L.x - camX, ly = L.y - camY, r = L.r, r2 = r * r, li = L.i, tn = L.tint || 0;
     const X0 = Math.max(0, Math.floor(lx - r) & ~1), X1 = Math.min(W, Math.ceil(lx + r)), Y0 = Math.max(0, Math.floor(ly - r / 2 - ZMAX) & ~1), Y1 = Math.min(H, Math.ceil(ly + r / 2));
     const lp = (x, y, z) => { const dx = x - lx, dy = (y + z - ly) * 2, dz = z - L.z, d2 = dx * dx + dy * dy + dz * dz; if (d2 >= r2) return 0; const f = 1 - d2 / r2; return f * f * li; };
     const lz = L.z, ir2 = 1 / r2;
@@ -1926,8 +2005,8 @@ function lightPass(chars, kx, ky) {
         const zmn = za < zb ? (za < zc ? (za < zd ? za : zd) : (zc < zd ? zc : zd)) : (zb < zc ? (zb < zd ? zb : zd) : (zc < zd ? zc : zd));
         if (zmx - zmn <= 6) {   // (round 57: the flat-block case inlined, no function call or Math.max/min)
           const z = (za + zb + zc + zd) >> 2, dx = x + 0.5 - lx, dy = (yc + z) * 2, dz = z - lz, d2 = dx * dx + dy * dy + dz * dz;
-          if (d2 < r2) { const f = 1 - d2 * ir2, l = f * f * li; lbuf[o] += l; lbuf[o + 1] += l; lbuf[o2] += l; lbuf[o2 + 1] += l; }
-        } else { lbuf[o] += lp(x, y, za); lbuf[o + 1] += lp(x + 1, y, zb); lbuf[o2] += lp(x, y + 1, zc); lbuf[o2 + 1] += lp(x + 1, y + 1, zd); }
+          if (d2 < r2) { const f = 1 - d2 * ir2, l = f * f * li; lbuf[o] += l; lbuf[o + 1] += l; lbuf[o2] += l; lbuf[o2 + 1] += l; if (tn && l > 0.05) { const by = (y & 3) << 2, bx = x & 3; if (l > 0.05 + BAYER[by | bx] * 0.5) tintB[o] = tn; if (l > 0.05 + BAYER[by | (bx + 1)] * 0.5) tintB[o + 1] = tn; if (l > 0.05 + BAYER[(by + 4) | bx] * 0.5) tintB[o2] = tn; if (l > 0.05 + BAYER[(by + 4) | (bx + 1)] * 0.5) tintB[o2 + 1] = tn; } }   // the colour fades out through a dither, like the light itself
+        } else { const l0 = lp(x, y, za), l1 = lp(x + 1, y, zb), l2 = lp(x, y + 1, zc), l3 = lp(x + 1, y + 1, zd); lbuf[o] += l0; lbuf[o + 1] += l1; lbuf[o2] += l2; lbuf[o2 + 1] += l3; if (tn) { const by = (y & 3) << 2, bx = x & 3; if (l0 > 0.05 + BAYER[by | bx] * 0.5) tintB[o] = tn; if (l1 > 0.05 + BAYER[by | (bx + 1)] * 0.5) tintB[o + 1] = tn; if (l2 > 0.05 + BAYER[(by + 4) | bx] * 0.5) tintB[o2] = tn; if (l3 > 0.05 + BAYER[(by + 4) | (bx + 1)] * 0.5) tintB[o2 + 1] = tn; } }
       }
     }
   }
@@ -1955,7 +2034,7 @@ function lightPass(chars, kx, ky) {
         const n = (lr * 320) | 0, l = (nl ? TONE[n < 1023 ? n : 1023] : lr * BANDS) + BAYER[by | (x & 3)];
         const L = (l | 0) < TL ? (l | 0) : TL;
         levB[o] = L;
-        out32[o] = (v & EMIS) ? PAL32[CYCLE[v & 127]] : LCOL[L * NPAL + v];
+        out32[o] = (v & EMIS) ? PAL32[CYCLE[v & 127]] : tintOn && tintB[o] ? TCOL[tintB[o]][L * NPAL + v] : LCOL[L * NPAL + v];
       }
     }
     return charLevel;

@@ -486,7 +486,7 @@ function orbFlare(col, hi, n = 10, up = false) {
   const [fi, fj] = staffTip(), [x, y] = iso(fi, fj), z = up ? ORB_Z + 12 : ORB_Z;
   for (let k = 0; k < n; k++) { const a = k / n * 6.283; pspawn(3, x, y, z, Math.cos(a) * 34, 0, Math.sin(a) * 30, 0.16, k % 2 ? hi : col); }
   G.sparks.push({ x, y, z, t: 0.1, col: hi });
-  G.flashes.push({ fi, fj, t: 0.12, t0: 0.12, r: 70 });
+  G.flashes.push({ fi, fj, t: 0.12, t0: 0.12, r: 70, tint: col === 16 ? 1 : col === 39 ? 3 : col >= 114 && col <= 118 ? 2 : 0 });
 }
 function aimAt(range) {
   const t = nearestEnemy(range, true);
@@ -559,7 +559,7 @@ function explodeAt(fi, fj, r, k, pow, big = false, cold = false) {
   stampBlood(Math.round(x), Math.round(y), big ? 7 : 4, (Math.random() * 1e6) | 0, [2, 3, 3, 4, 5]);   // a scorch mark
   shockwave(fi, fj, r * 1.05, big ? 0.36 : 0.26, [18, 16]); impactFlash(fi, fj, big ? 10 : 7, big ? 10 : 6);   // round 25: the blast's front and its first white frames
   if (big) { rubble(x, y, 20, 80); const q = { fi, fj, a0: 0, ring: true, R: 2.4, t: 0.7, t0: 0.7, seed: (Math.random() * 1e6) | 0 }; G.quakes.push(q); stampCracks(q); }
-  G.flashes.push({ fi, fj, t: big ? 0.45 : 0.25, t0: big ? 0.45 : 0.25, r: big ? 150 : 100 });
+  G.flashes.push({ fi, fj, t: big ? 0.6 : 0.4, t0: big ? 0.6 : 0.4, r: big ? 190 : 130, tint: 1 });   // (round 80: the blast lights the room orange, a little longer and wider)
   G.blasts.push({ fi, fj, r, t: big ? 0.6 : 0.46, t0: big ? 0.6 : 0.46, big, bloom: true, seed: Math.random() * 100 });   // (round 73: it lives longer, for the fireball that rises out of it)
   if (SHAKE) G.trauma = Math.min(1, G.trauma + (big ? 0.6 : 0.28));
   sfx('boom'); sfx('sizzle'); if (big) sfx('crack');
@@ -1482,7 +1482,7 @@ function iceBlast(fi, fj, r, big) {
   G.frost.push({ fi, fj, a0: 0, t: 4, seed: (Math.random() * 1e6) | 0, R: r, half: Math.PI, ring0: 0 });
   if (big) { rubble(x, y, 16, 80); const q = { fi, fj, a0: 0, ring: true, R: 2.4, t: 0.7, t0: 0.7, seed: (Math.random() * 1e6) | 0 }; stampCracks(q); }
   G.blasts.push({ fi, fj, r, t: big ? 0.32 : 0.22, t0: big ? 0.32 : 0.22, cold: true });
-  G.flashes.push({ fi, fj, t: big ? 0.4 : 0.22, t0: big ? 0.4 : 0.22, r: big ? 140 : 90 });
+  G.flashes.push({ fi, fj, t: big ? 0.5 : 0.3, t0: big ? 0.5 : 0.3, r: big ? 170 : 115, tint: 2 });
   if (SHAKE) G.trauma = Math.min(1, G.trauma + (big ? 0.6 : 0.28));
   sfx('boom'); sfx('frost'); sfx('clink'); if (big) sfx('crack');
 }
@@ -1769,7 +1769,7 @@ function updateLightning(dt) {
       impactFlash(B.b[0], B.b[1], B.b[2], B.big ? 7 : 4);
       const [x, y] = iso(B.b[0], B.b[1]);
       for (let q = 0; q < (B.big ? 18 : 10); q++) { const a = Math.random() * 6.283, s = 40 + Math.random() * 60; pspawn(2, x, y, B.b[2], Math.cos(a) * s, Math.sin(a) * s * 0.5, Math.random() * 40, 0.18 + Math.random() * 0.12, q % 3 ? 40 : 32); }
-      G.flashes.push({ fi: B.b[0], fj: B.b[1], t: 0.1, t0: 0.1, r: B.big ? 110 : 70 });
+      G.flashes.push({ fi: B.b[0], fj: B.b[1], t: 0.14, t0: 0.14, r: B.big ? 130 : 95, tint: 2 });
       sfx('zap', B.big ? 1 : 0.6);
     } else if (alive(B.e)) B.b = chestOf(B.e);
     B.t -= dt;

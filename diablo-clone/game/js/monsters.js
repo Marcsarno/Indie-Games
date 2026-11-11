@@ -1094,6 +1094,7 @@ function getSprite(fam, look, dir, clip, f, ent, px = SPX) {
       const lo = spriteCache.get(`${fam}|${lk}|${dir}|${clip}|${f}|1`);
       if (lo) { if (typeof warmQueue !== 'undefined') warmQueue.push([fam, look, dir, clip, f]); return lo; }
     }
+    if (f % 1) { const q = spriteCache.get(`${fam}|${lk}|${dir}|${clip}|${Math.floor(f)}|${px}`); if (q) { if (typeof warmQueue !== 'undefined') warmQueue.push([fam, look, dir, clip, f]); return q; } }   // round 80: an in-between frame not built yet: the frame before it
     for (const c of fallbackOrder[clip] || ['idle']) for (let g = 0; g < 8; g++) {
       const q = spriteCache.get(`${fam}|${lk}|${dir}|${c}|${(f + g) % 8}|${px}`) || spriteCache.get(`${fam}|${lk}|${dir}|${c}|0|${px}`);
       if (q) { if (typeof warmQueue !== 'undefined') warmQueue.push([fam, look, dir, clip, f]); return q; }

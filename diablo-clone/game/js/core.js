@@ -120,6 +120,17 @@ function buildLcol() {
       LCOL[L * NPAL + i] = (255 << 24) | (b << 16) | (g << 8) | r;
     }
   }
+  if (typeof buildTcol === 'function') buildTcol();
+}
+// round 80: coloured light from spells. One table per tint (1 fire, 2 frost and lightning, 3 arcane):
+// the lit colour pulled toward the light's own colour, brighter in its strong channel. The light
+// pass uses a tint's table for the pixels a coloured light reaches.
+const TINTS = [null, [1.2, 0.99, 0.74], [0.82, 1.0, 1.28], [1.1, 0.86, 1.3]], TCOL = [null];   // (gentle: a first try at 1.5 / 0.5 turned the floor red)
+function buildTcol() {
+  for (let t = 1; t < TINTS.length; t++) {
+    const T = TCOL[t] || (TCOL[t] = new Uint32Array(LEVELS * NPAL)), [kr, kg, kb] = TINTS[t];
+    for (let k = 0; k < LEVELS * NPAL; k++) { const c = LCOL[k], r = c & 255, g = (c >> 8) & 255, b = (c >> 16) & 255; T[k] = (255 << 24) | (Math.min(255, Math.round(b * kb)) << 16) | (Math.min(255, Math.round(g * kg)) << 8) | Math.min(255, Math.round(r * kr)); }
+  }
 }
 try { const q = new URLSearchParams(location.search).get('hue'); HUE_LIGHT = q !== null ? q !== '0' : localStorage.getItem('dcg-light') !== 'old'; } catch (e) { /* storage blocked */ }
 buildLcol();
