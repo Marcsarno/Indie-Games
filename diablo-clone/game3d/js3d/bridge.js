@@ -16,6 +16,15 @@ const R3D_PROPS = {};   // name -> the function that builds its rig (for the exp
   }; }
 // anything else the game renders from a rig (stairs, doorways): keep the rig with the sprite so the 3D layer can build it
 { const _rr = renderRig; renderRig = function (rig, yaw, ...rest) { const sp = _rr(rig, yaw, ...rest); sp.__rig = rig; sp.__ryaw = yaw; return sp; }; }
+// The 2D picture of the world is never shown, so nothing is baked into it: no prop or corpse stamps, no light maps.
+// (The painted floor itself, floorBuf, is still made: it is the 3D ground's texture.)
+const R3D_FLOOR = { dirty: false, y0: 1e9, y1: -1 };
+{ blitWorld = function () {}; bakeLightMaps = function () {}; bakeAO = function () {};
+  if (typeof build2Runs === 'function') build2Runs = function () {};
+  setFloor = function (k, v) { floorBuf[k] = v; R3D_FLOOR.dirty = true; const y = (k / WW) | 0; if (y < R3D_FLOOR.y0) R3D_FLOOR.y0 = y; if (y > R3D_FLOOR.y1) R3D_FLOOR.y1 = y; };
+  const _gs = getSprite, stub = { w: 1, h: 1, ax: 0, ay: 0, data: new Uint8Array(1), z: new Uint8Array(1), px: 1 };
+  getSprite = function (fam, look, dir, clip, f, ent, px = SPX) { return clip === 'death' && px === 1 && f === 5 ? stub : _gs(fam, look, dir, clip, f, ent, px); };   // (the corpse stamp)
+  warmStep = function () {}; }   // (no character sprites are needed ahead of time)
 const R3D_SAFE = (name, fn) => { try { fn(); } catch (e) { if (!R3D_SAFE.seen[name]) { R3D_SAFE.seen[name] = 1; console.error('3d: ' + name, e); } } };
 R3D_SAFE.seen = {};
 render = function () {

@@ -20,7 +20,7 @@ const CAMDIR = new THREE.Vector3(Math.cos(Math.PI / 6) * Math.SQRT1_2, Math.sin(
 { const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.25; }
 const hemi = new THREE.HemisphereLight(0x8fa0d0, 0x2a1c14, 0.55); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff0dc, 1.2); sun.castShadow = true; scene.add(sun, sun.target);
-{ const s = sun.shadow; s.mapSize.set(2048, 2048); s.camera.left = s.camera.bottom = -11; s.camera.right = s.camera.top = 11; s.camera.near = 1; s.camera.far = 60; s.bias = -0.0015; s.normalBias = 0.03; }
+{ const s = sun.shadow; const SM = ('ontouchstart' in window || navigator.maxTouchPoints > 0) ? 1024 : 2048; s.mapSize.set(SM, SM); s.camera.left = s.camera.bottom = -11; s.camera.right = s.camera.top = 11; s.camera.near = 1; s.camera.far = 60; s.bias = -0.0015; s.normalBias = 0.03; }
 const heroLight = new THREE.PointLight(0xffd9a8, 6, 9, 2); scene.add(heroLight);
 const torchLights = []; for (let i = 0; i < 6; i++) { const l = new THREE.PointLight(0xff9440, 0, 9, 2); scene.add(l); torchLights.push(l); }
 
@@ -71,6 +71,7 @@ function buildLevel() {
   buildRigProps(levelGroup);
   hemi.intensity = LV.outdoor ? (LV.night ? 0.5 : 1.1) : 0.5; sun.intensity = LV.outdoor ? (LV.night ? 0.5 : 2.2) : 0.9; sun.color.setHex(LV.outdoor && !LV.night ? 0xfff2d8 : 0xc8d4ff);
   scene.background.setHex(LV.outdoor ? 0x1a2a18 : 0x050406);
+  R3D_FLOOR.dirty = false; R3D_FLOOR.y0 = 1e9; R3D_FLOOR.y1 = -1;
   levelToken++; buildProps(levelGroup, levelToken);
   builtLevel = R3D_LEVEL;
 }
@@ -104,7 +105,8 @@ function buildWalls(walls) {
 // stairs and doorways: the game builds each from a rig of its own (no name), so the model is made here
 const rigModels = new WeakMap();
 function buildRigProps(group) {
-  for (const pr of props) {
+  const extra = [LV.stairs, LV.down].filter(x => x && x.sp && x.wx !== undefined);   // the stairs down are stamped on the floor in 2D
+  for (const pr of [...props, ...extra]) {
     const sp = pr.sp; if (!sp || sp.__name || !sp.__rig) continue;
     let g = rigModels.get(sp);
     if (g === undefined) { try { g = buildModel(RD.build('rig', [{ clip: 'idle', t: 0, rig: sp.__rig }], { low: true })); prep(g); } catch (e) { console.error('3d: stairs', e); g = null; } rigModels.set(sp, g); }
@@ -113,6 +115,14 @@ function buildRigProps(group) {
   }
 }
 
+// the game repaints bits of the floor as you play (blood, scorch marks, cracks): copy those rows into the texture now and then
+let floorT = 0;
+function syncFloor(dt) {
+  floorT -= dt; if (!R3D_FLOOR.dirty || floorT > 0 || !levelGroup || !levelGroup.userData.gtex) return;
+  const tex = levelGroup.userData.gtex, gpx = tex.image.data;
+  for (let y = Math.max(0, R3D_FLOOR.y0); y <= Math.min(WH - 1, R3D_FLOOR.y1); y++) for (let x = 0, k = y * WW; x < WW; x++, k++) { const v = floorBuf[k] & 127, o = k * 4; if (!v) { gpx[o + 3] = 0; continue; } const c = PAL32[v]; gpx[o] = c & 255; gpx[o + 1] = (c >> 8) & 255; gpx[o + 2] = (c >> 16) & 255; gpx[o + 3] = 255; }
+  tex.needsUpdate = true; R3D_FLOOR.dirty = false; R3D_FLOOR.y0 = 1e9; R3D_FLOOR.y1 = -1; floorT = 0.6;
+}
 // ---------------------------------------------------------------- ground effects and flames
 // The ground layer (loot, warning marks, rings): the game's own pixels, laid on the floor where the screen shows them.
 let gfx = null;
@@ -167,6 +177,7 @@ function addInstances(g, list, group) {
 function buildProps(group, token) {
   const by = new Map(); unnamedProps = 0;
   for (const pr of props) { const sp = pr.sp; if (!sp || !sp.__name) { unnamedProps++; continue; } const [fi, fj] = groundToTile(pr.wx, pr.wy); (by.get(sp.__name) || by.set(sp.__name, []).get(sp.__name)).push([fi, fj, sp.__yaw || 0]); }
+  for (const d of LV.decor) if (d.kind === 'bones' && d.sp && d.sp.__name) { const [fi, fj] = groundToTile(d.wx, d.wy); (by.get(d.sp.__name) || by.set(d.sp.__name, []).get(d.sp.__name)).push([fi, fj, d.sp.__yaw || 0]); }   // (the game stamps these on the floor)
   for (const [name, list] of by) {
     const file = MANIFEST['prop|' + name]; if (!file) { missingProps.add(name); continue; }
     whenModel(file).then(g => { if (g && token === levelToken) addInstances(g, list, group); });
@@ -226,6 +237,11 @@ function syncActor(c, dt, visible) {
   const yaw = -c.dir * Math.PI / 4;
   if (a.yaw === null) a.yaw = yaw; else { let d = yaw - a.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); a.yaw += d * Math.min(1, dt * 16); }
   a.root.rotation.y = a.yaw; a.root.scale.setScalar((c.look && c.look.scale) || 1);
+  // how it is hurting: frozen = ice blue, chilled = pale blue, burning = flickering orange, the sting after a hit = red; ash and shatter deaths sink away
+  const ash = c.deathKind === 'ash' && c.dying >= 0, shat = c.deathKind === 'shatter' && c.dying >= 0;
+  const st = ash || (c.burnT > 0 && Math.floor(G.t * 16 + (c.seed || 0)) % 3 === 0) ? 4 : c.frozen > 0 || shat ? 1 : c.tint > 0 ? 3 : c.slowT > 0 || c.chillT > 0 ? 2 : 0;
+  if (st !== a.st) { a.st = st; const col = [0xffffff, 0x66b8ff, 0xb8dcff, 0xff7060, 0xff9a3a][st]; for (const m of a.mats) m.color.setHex(col); }
+  if (ash || shat) { const k = Math.max(0.02, 1 - Math.min(1, c.dying / (ash ? 0.55 : 0.15))); a.root.scale.multiplyScalar(ash ? 1 : k); a.root.position.y -= ash ? (1 - k) * 1.2 : 0; }
   const fl = c.flash > 0 ? 1 : 0;
   if (fl !== a.fl) { a.fl = fl; for (const m of a.mats) { if (m.userData.e0 === undefined) continue; m.emissive.setHex(fl ? 0xffffff : m.userData.e0); m.emissiveIntensity = fl ? 0.7 : m.userData.i0; } }
   if (!a.mixer) return;
@@ -246,10 +262,19 @@ function syncActor(c, dt, visible) {
 // ---------------------------------------------------------------- frame
 let frameNo = 0, lastT = performance.now(), lastW = 0, lastH = 0;
 const V3 = new THREE.Vector3();
+// Speed: if frames come slowly the picture is drawn with fewer pixels (and comes back up when there is room)
+let quality = Math.min(window.devicePixelRatio || 1, 2), slowT = 0, fastT = 0, avgDt = 1 / 60;
+const TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+function adapt(dt) {
+  avgDt += (dt - avgDt) * 0.05; const top = Math.min(window.devicePixelRatio || 1, 2);
+  if (avgDt > 1 / 45) { slowT += dt; fastT = 0; } else if (avgDt < 1 / 57) { fastT += dt; slowT = 0; } else slowT = fastT = 0;
+  if (slowT > 1.5 && quality > 0.75) { quality = Math.max(0.75, quality - 0.25); slowT = 0; lastW = 0; }
+  if (fastT > 6 && quality < top) { quality = Math.min(top, quality + 0.25); fastT = 0; lastW = 0; }
+}
 function fit() {
   const w = parseFloat(cvs.style.width) || cvs.clientWidth, h = parseFloat(cvs.style.height) || cvs.clientHeight;
   if (w === lastW && h === lastH) return; lastW = w; lastH = h;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); renderer.setSize(w, h, false); glc.style.width = w + 'px'; glc.style.height = h + 'px';
+  renderer.setPixelRatio(quality); renderer.setSize(w, h, false); glc.style.width = w + 'px'; glc.style.height = h + 'px';
 }
 function frame(menu) {
   const now = performance.now(), dt = Math.min(0.05, (now - lastT) / 1000); lastT = now; frameNo++;
@@ -270,8 +295,8 @@ function frame(menu) {
   for (const e of enemies) syncActor(e, dt, visAt(e.fi, e.fj) > 0.25 && Math.abs(e.fi - cf) + Math.abs(e.fj - cj) < 26);
   for (const n of npcs) syncActor(n, dt, Math.abs(n.fi - cf) + Math.abs(n.fj - cj) < 26);
   for (const [c, a] of actors) if (a.seen !== frameNo) { scene.remove(a.root); actors.delete(c); }
-  syncDyn(); buildNext(); syncGroundFx(); syncFlames();
+  syncDyn(); buildNext(); syncGroundFx(); syncFlames(); syncFloor(dt); adapt(dt);
   renderer.render(scene, cam);
 }
 try { MANIFEST = await (await fetch('models/manifest.json')).json(); } catch (e) { console.error('3d: no model list', e); }
-window.R3D = { ready: true, frame, scene, cam, renderer, actors, THREE, MODELS, missingProps, get unnamedProps() { return unnamedProps; }, get manifest() { return MANIFEST; } };
+window.R3D = { ready: true, get quality() { return quality; }, frame, scene, cam, renderer, actors, THREE, MODELS, missingProps, get unnamedProps() { return unnamedProps; }, get manifest() { return MANIFEST; } };

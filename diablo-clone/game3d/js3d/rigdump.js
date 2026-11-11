@@ -82,10 +82,10 @@ const RD = (() => {
   let LOW = false;   // scenery: fewer faces
   function rows(kind, F, painted) {
     const out = [];
-    if (kind === 'sph' || kind === 'ell') { const n = LOW ? (painted ? 8 : 5) : F.s[0] > 0.2 || painted ? 10 : 7; for (let k = 0; k <= n; k++) { const ph = Math.PI * k / n; out.push([-F.s[1] * Math.cos(ph), F.s[0] * Math.sin(ph), F.s[2] * Math.sin(ph), k / n, 0]); } return out; }
+    if (kind === 'sph' || kind === 'ell') { const n = LOW ? (painted ? 8 : 5) : F.s[0] > 0.2 || painted ? 8 : 6; for (let k = 0; k <= n; k++) { const ph = Math.PI * k / n; out.push([-F.s[1] * Math.cos(ph), F.s[0] * Math.sin(ph), F.s[2] * Math.sin(ph), k / n, 0]); } return out; }
     const ra = F.ra, rb = F.rb, L = F.L;
     if (kind === 'cone') {
-      const ca = ra * Math.PI / 2, cb = rb * Math.PI / 2, T = ca + L + cb, nc = LOW ? 2 : Math.max(ra, rb) > 0.14 ? 4 : 3;
+      const ca = ra * Math.PI / 2, cb = rb * Math.PI / 2, T = ca + L + cb, nc = LOW ? 2 : Math.max(ra, rb) > 0.14 ? 3 : 2;
       for (let k = 0; k < nc; k++) { const q = (1 - k / nc) * Math.PI / 2; out.push([-ra * Math.sin(q), ra * Math.cos(q), ra * Math.cos(q), (ca * k / nc) / T, 0]); }
       const nb = painted && L > 0.3 ? 4 : 1; for (let k = 0; k <= nb; k++) { const t = k / nb, r = ra + (rb - ra) * t; out.push([t * L, r, r, (ca + L * t) / T, t < 0.5 ? 0 : 1]); }
       for (let k = 1; k <= nc; k++) { const q = k / nc * Math.PI / 2; out.push([L + rb * Math.sin(q), rb * Math.cos(q), rb * Math.cos(q), (ca + L + cb * k / nc) / T, 1]); }
@@ -124,7 +124,7 @@ const RD = (() => {
       const q0 = seen.find(q => kindOf(q) === kind) || seen[0], F0 = frame(q0, kind, null), painted = !!q0.mf;
       const part = { kind, m: useMat(q0.m), o: F0.o.map(r4), q: quat(F0.ex, F0.ey, F0.ez).map(r4), F0, q0, two: kind === 'cone' || kind === 'cyl' };
       if (kind === 'box') part.half = F0.s.map(r4);
-      else { part.rows = rows(kind, F0, painted).map(r => r.map(r4)); part.seg = LOW ? (Math.max(F0.s[0], F0.s[2]) > 0.35 ? 12 : Math.max(F0.s[0], F0.s[2]) > 0.1 ? 8 : 6) : Math.max(F0.s[0], F0.s[2]) > 0.3 ? 20 : Math.max(F0.s[0], F0.s[2]) > 0.12 ? 14 : 10; part.hard = kind === 'cyl'; if (part.two) part.L = r4(F0.L); }
+      else { part.rows = rows(kind, F0, painted).map(r => r.map(r4)); part.seg = LOW ? (Math.max(F0.s[0], F0.s[2]) > 0.35 ? 12 : Math.max(F0.s[0], F0.s[2]) > 0.1 ? 8 : 6) : Math.max(F0.s[0], F0.s[2]) > 0.3 ? 16 : Math.max(F0.s[0], F0.s[2]) > 0.12 ? 12 : 8; part.hard = kind === 'cyl'; if (part.two) part.L = r4(F0.L); }
       if (painted && kind === 'box') {
         const n = Math.max(...F0.s) > 0.25 ? 24 : 12, ids = []; let varied = false;
         for (let j = 0; j < n; j++) for (let f = 0; f < 6; f++) for (let i = 0; i < n; i++) { const m = useMat(matAt(q0, kind, F0, (i + 0.5) / n, (j + 0.5) / n, f)); ids.push(m); if (m !== ids[0]) varied = true; }
