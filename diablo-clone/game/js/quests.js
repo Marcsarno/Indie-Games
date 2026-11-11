@@ -239,7 +239,7 @@ const QUEST_TABLE = {
   farmBack: { lines: [
     ['dave', 'HOLLIS', 'BONES. MY CELLAR WAS FULL OF BONES FROM THE GRAVEYARD.', 'dead'],
     ['dave', 'HOLLIS', 'THAT LETTER THE CHIEF HAD: SHOW IT TO BROTHER OSRIC.']],
-    reward: ['HOLLIS', 'TAKE ONE. AND POTIONS COST LESS NOW: MY HERBS ARE BACK.'],
+    reward: ['HOLLIS', 'TAKE ONE. AND THE MERCHANT OWES ME: HER PRICES ARE FAIRER FOR YOU NOW.'],
     after: () => { storyF().farmPaid = true; payQuest('farm'); } },
   letter: { lines: [
     ['dave', 'THE LETTER', 'EVERY BONE IS PAID IN SILVER. THE KING MUST BE WHOLE. M.'],
@@ -301,7 +301,7 @@ function talkTo(n) {
       [Ho, 'THEIR CHIEF WEARS THE MINE KEY ON HIS BELT. THE FARM IS NORTH, IN THE RIVERLANDS, PAST THE FALLEN TREE. GET IT BACK FOR ME?']], 'ACCEPT', () => { f.farmTold = true; G.story.n = 0; });
     if (on && st === 'farmBack') return openTalk([
       [Ho, 'BONES? MY CELLAR FULL OF BONES. FROM THE GRAVEYARD. GOD HAVE MERCY.'],
-      [Ho, 'I AM GOING HOME ALL THE SAME. AND THE POTION WAGON WILL HAVE FRESH HERBS FROM MY FIELDS: POTIONS COST LESS NOW.'],
+      [Ho, 'I AM GOING HOME ALL THE SAME. AND THE MERCHANT OWES ME FOR HER HERBS: HER PRICES ARE FAIRER FOR YOU NOW.'],
       [Ho, 'THAT LETTER THE CHIEF HAD. SHOW IT TO BROTHER OSRIC. HE READS BETTER THAN ME.']], 'COLLECT', () => { f.farmPaid = true; payQuest('farm'); }, rewardChoice());
     return openTalk([[Ho, f.farmPaid ? 'THE FIELDS WILL TAKE A YEAR TO COME BACK. BUT THEY WILL COME BACK.' : 'I HAD A FARM, ONCE. NORTH, IN THE RIVERLANDS.']]);
   }

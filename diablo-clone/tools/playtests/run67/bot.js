@@ -10,7 +10,7 @@
   newHero(cls); G.mode = 'play'; G.story = { f: {}, n: 0 }; startLevel(1, 4242); G.actCard = 0;
   const marks = [], seen = {};
   if (window.__dbg && !window.__ls) { window.__ls = leaveSide; leaveSide = function () { marks.push(['LEAVE at ' + hero.fi.toFixed(2) + ',' + hero.fj.toFixed(2) + ' stairs ' + LV.stairs.i + ',' + LV.stairs.j + ' input ' + input.mx.toFixed(2) + ',' + input.my.toFixed(2) + ' jig ' + jig.toFixed(2) + ' back ' + back.toFixed(2) + ' foe? ' + enemies.filter(e => alive(e) && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 6).length, 0, 0]); return window.__ls(); }; } let t = 0, last = '', stuckT = 0, lastPos = [hero.fi, hero.fj], cache = { key: '', d: null }, drinks = 0, jig = 0, back = 0, backFrom = null;
-  let minHp = 1; const mark = (k) => { if (seen[k]) return; seen[k] = 1; marks.push([k, +(t / 60).toFixed(1), hero.lvl]); };
+  let minHp = 1; const mark = (k) => { if (seen[k]) return; seen[k] = 1; marks.push([k, +(t / 60).toFixed(1), hero.lvl, hero.gold + hero.bag.reduce((g, it) => g + (ITEM_BASES[it.base].slot === 'potion' ? 0 : itemValue(it)), 0)]); };   // (round 96: gold, and what the bag would salvage for)
   const pathDir = (tg) => {
     const ti = Math.floor(tg[0]), tj = Math.floor(tg[1]), key = LV.level + ':' + LV.seed + ':' + (LV.side || '') + ':' + ti + ',' + tj;
     if (cache.key !== key) { cache.key = key; cache.d = bfs(ti, tj); }

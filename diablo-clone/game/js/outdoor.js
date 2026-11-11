@@ -579,7 +579,7 @@ function genHollow(R, A) {
   LV.npcs = [
     { role: 'priest', name: 'BROTHER OSRIC', fi: SPOTS.osric[0], fj: SPOTS.osric[1] },
     { role: 'smith', name: 'SMITHY', fi: SPOTS.smith[0], fj: SPOTS.smith[1] },
-    { role: 'merchant', name: 'POTIONS', fi: SPOTS.potions[0], fj: SPOTS.potions[1] },
+    { role: 'merchant', name: 'MERCHANT', fi: SPOTS.potions[0], fj: SPOTS.potions[1] },
     { role: 'villager', fi: CAMP_AT(2.6, -3.0)[0], fj: CAMP_AT(2.6, -3.0)[1] }, { role: 'villager', fi: CAMP_AT(-1.8, 1.9)[0], fj: CAMP_AT(-1.8, 1.9)[1] },
   ];
   { const f = (G.story && G.story.f) || {};
@@ -1693,32 +1693,20 @@ function updateNpcs(dt) {
     }
   }
 }
-const TRADER_ROLES = { merchant: 'TAP: POTION 25 GOLD', smith: 'TAP: SELL BAG LOOT', priest: 'TAP: TALK', wren: 'TAP: TALK', hollis: 'TAP: TALK', aldo: 'TAP: TALK' };
+const TRADER_ROLES = { merchant: 'TAP: SHOP', smith: 'TAP: UPGRADE GEAR', priest: 'TAP: TALK', wren: 'TAP: TALK', hollis: 'TAP: TALK', aldo: 'TAP: TALK' };
 const TALKERS = { priest: 1, wren: 1, hollis: 1, aldo: 1 };
-// potions cost less once Hollis is home (round 42b)
-const potionPrice = () => G.story && G.story.f.farmPaid ? 15 : 25;
-const traderLabel = n => n.role === 'merchant' ? `TAP: POTION ${potionPrice()} GOLD` : n.role === 'aldo' && LV.side === 'den' && G.story && G.story.f.alphaDead ? 'TAP: FREE ALDO' : TRADER_ROLES[n.role];
+const traderLabel = n => n.role === 'aldo' && LV.side === 'den' && G.story && G.story.f.alphaDead ? 'TAP: FREE ALDO' : TRADER_ROLES[n.role];
 function nearTrader() {
   let best = null, bd = 1.8;
   for (const n of npcs) if (TRADER_ROLES[n.role] && n.leaving === undefined) { const d = Math.hypot(n.fi - hero.fi, n.fj - hero.fj); if (d < bd) { bd = d; best = n; } }
   return best;
 }
 // what an item fetches at the smith, or salvaged from the bag (round 47)
-const itemValue = it => Math.max(3, Math.round((it.lvl || 1) * ({ normal: 4, magic: 10, rare: 25, legend: 80, set: 45 }[it.rarity] || 4)));
+const itemValue = it => Math.max(3, Math.round((it.lvl || 1) * ({ normal: 4, magic: 10, rare: 25, legend: 80, set: 45 }[it.rarity] || 4) * (1 + 0.3 * (it.up || 0))));   // (round 96: an upgraded piece is worth more)
 function trade(n) {
   if (TALKERS[n.role]) { talkTo(n); return; }
-  if (n.role === 'merchant') {
-    if (hero.gold < potionPrice()) { say('NOT ENOUGH GOLD', 23, 1.5); return; }
-    if (hero.potions >= 9) { say('YOUR BELT IS FULL', 26, 1.5); return; }
-    hero.gold -= potionPrice(); hero.potions++; sfx('gold'); say('BOUGHT A POTION', 51, 1.5);
-  } else {
-    const items = hero.bag.filter(it => !Object.values(hero.equip).includes(it));
-    if (!items.length) { say('NOTHING TO SELL', 26, 1.5); return; }
-    let g = 0;
-    for (const it of items) g += itemValue(it);
-    hero.bag = hero.bag.filter(it => !items.includes(it)); hero.gold += g; sfx('gold'); say(`SOLD ${items.length} FOR ${g} GOLD`, 51, 2);
-  }
-  saveGame();
+  // round 96: the merchant's shop and the blacksmith's upgrades have screens of their own (shop.js); potions only drop now
+  if (n.role === 'merchant') openShop('shop'); else if (n.role === 'smith') openShop('smith');
 }
 // names and a bobbing marker over the townsfolk you can talk to
 function drawNpcLabels() {

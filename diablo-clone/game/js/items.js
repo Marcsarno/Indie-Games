@@ -309,12 +309,12 @@ const itemLvl = it => it.lvl || ITEM_BASES[it.base].lvl || 1;
 // from level 1, while a higher base at the same level is still the better blade. Items from before
 // this (no level of their own) are exactly what they were.
 function itemStats(it) {
-  const b = ITEM_BASES[it.base], L = Math.max(b.lvl || 1, it.lvl || 0), k = (L + 2) / ((b.lvl || 1) + 2);
-  if (k <= 1 || b.slot === 'potion') return b;
-  const kd = Math.pow(k, 0.8), o = Object.assign({}, b);   // (round 85: a copy of the whole base: the look, slot and the rest came through missing, so gear found above its base level was invisible on the hero)
+  const b = ITEM_BASES[it.base], L = Math.max(b.lvl || 1, it.lvl || 0), k = (L + 2) / ((b.lvl || 1) + 2), up = it.up || 0;
+  if ((k <= 1 && !up) || b.slot === 'potion') return b;
+  const kd = Math.pow(Math.max(1, k), 0.8), o = Object.assign({}, b);   // (round 85: a copy of the whole base: the look, slot and the rest came through missing, so gear found above its base level was invisible on the hero)
   if (b.dmg) o.dmg = [Math.round(b.dmg[0] * kd), Math.round(b.dmg[1] * kd)];
-  if (b.armor) o.armor = Math.round(b.armor * Math.sqrt(k));
-  return o;
+  if (b.armor) o.armor = Math.round(b.armor * Math.sqrt(Math.max(1, k)));
+  return up && typeof upStats === 'function' ? upStats(o, up) : o;   // round 96: the blacksmith's +1 to +3 (shop.js)
 }
 function itemScore(it) {
   const b = itemStats(it), m = it.mods || {};
@@ -343,9 +343,10 @@ function compareLines(it, cur) {
 function setCount(k) { return typeof hero === 'undefined' ? 0 : Object.values(hero.equip).filter(it => it && it.set === k).length; }
 function itemName(it) {
   const b = ITEM_BASES[it.base];
-  if (it.rarity === 'legend' || it.rarity === 'set') return it.name;
-  if (it.rarity === 'rare' && it.title) return it.title;
-  return [it.prefix, b.name, it.suffix].filter(Boolean).join(' ');
+  const up = it.up ? ' +' + it.up : '';   // round 96: the blacksmith's work shows in the name
+  if (it.rarity === 'legend' || it.rarity === 'set') return it.name + up;
+  if (it.rarity === 'rare' && it.title) return it.title + up;
+  return [it.prefix, b.name, it.suffix].filter(Boolean).join(' ') + up;
 }
 function itemLines(it) {
   const b = ITEM_BASES[it.base], m = it.mods, L = [];

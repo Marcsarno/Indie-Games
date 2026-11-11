@@ -391,6 +391,9 @@ function drawHud() {
   if (G.mode === 'skills') drawSkills();
   if (G.mode === 'talk') drawTalk();
   if (G.mode === 'end') drawEnd();   // round 67
+  if (G.mode === 'ways') drawWaysScreen();   // round 96
+  if (G.mode === 'shop') drawShop();
+  if (G.mode === 'smith') drawSmith();
   drawGuide();   // round 45
   if (G.paused) { fade(0.6); textC('PAUSED', W / 2, H * 0.4, 26, 2); textC('TAP TO RESUME', W / 2, H * 0.4 + 16, 25); }
   if (G.fade > 0) fade(G.fade);
@@ -640,9 +643,10 @@ const ACT_POS = () => [W / 2 - 16, H - 76];
 function actionTarget() {
   if (G.mode !== 'play' || hero.dead || G.fadeTo) return null;
   const n = nearTrader();
-  if (n) return { n, label: n.role === 'merchant' ? `BUY POTION ${potionPrice()}G` : n.role === 'smith' ? 'SELL LOOT' : n.role === 'aldo' && LV.side === 'den' && G.story && G.story.f.alphaDead && !G.story.f.aldoFree ? 'FREE ALDO' : 'TALK' };
+  if (n) return { n, label: n.role === 'merchant' ? 'SHOP' : n.role === 'smith' ? 'UPGRADE GEAR' : n.role === 'aldo' && LV.side === 'den' && G.story && G.story.f.alphaDead && !G.story.f.aldoFree ? 'FREE ALDO' : 'TALK' };
   const m = mineAction(); if (m) return m;
   const sa = stonesAction(); if (sa) return sa;
+  const wa = wayAction(); if (wa) return wa;   // round 96: standing on a waystone
   return null;
 }
 function doAction(a) {
@@ -1189,6 +1193,9 @@ cvs.addEventListener('pointerdown', e => {
   if (G.mode === 'talk') { talkTap(p); return; }
   if (G.mode === 'end') { endTap(p); return; }
   if (G.mode === 'skills') { sfx('tap'); skillsTap(p); return; }
+  if (G.mode === 'ways') { waysTap(p); return; }   // round 96
+  if (G.mode === 'shop') { shopTap(p); return; }
+  if (G.mode === 'smith') { smithTap(p); return; }
   if (hero.dead > 2) { respawn(); return; }
   if (hitCircle(p, UI.bag)) { openInv('inv'); return; }
   if (guideFrozen()) return;   // round 45: stopped to show the bag button; only it answers
@@ -1257,6 +1264,8 @@ addEventListener('keydown', e => {
   if (k === 'm' || k === 'tab') showMap = !showMap;
   if (k === 'c') { hero.team = hero.team === 'red' ? 'blue' : 'red'; recalcHero(); prewarmHero(); }
   if (k === 'escape' && (G.mode === 'inv' || G.mode === 'skills')) closeInv();
+  if (k === 'escape' && G.mode === 'ways') closeWays();
+  if (k === 'escape' && (G.mode === 'shop' || G.mode === 'smith')) closeShop();
   if (hero.dead > 2 && k === 'enter') respawn();
   if (k.startsWith('arrow') || k === ' ' || k === 'tab') e.preventDefault();
 });

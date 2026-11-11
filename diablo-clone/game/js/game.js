@@ -62,7 +62,7 @@ function recalcHero() {
   // legendaries change how their piece looks (glowing ember blade, oak-leaf crown, ...)
   const lgd = ['weapon', 'helm', 'chest', 'shield'].map(s => e[s] && e[s].rarity === 'legend' ? (e[s].fx || (LEGENDARIES.find(L => L.name === e[s].name) || {}).fx) : null).filter(Boolean).join('|');
   const setOn = Object.keys(SETS).find(k => Object.values(e).filter(it => it && it.set === k).length >= 2) || '';   // round 43: a set's own look from two pieces
-  const wm = (e.weapon && e.weapon.mods) || {}, ench = wm.fireDmg ? 'fire' : wm.chill ? 'cold' : '';   // round 43: a Burning or Chilling weapon shows it
+  const wm = (e.weapon && e.weapon.mods) || {}, ench = wm.fireDmg ? 'fire' : wm.chill ? 'cold' : e.weapon && e.weapon.up >= 3 ? 'holy' : '';   // round 43: a Burning or Chilling weapon shows it (round 96: a +3 one shines gold)
   hero.look = { set: setOn, ench, team: hero.team, helm: it('helm')?.look || 'none', chest: it('chest')?.look || 'tunic', weapon: w?.look || (mage ? 'staff' : ranger ? 'bow' : 'sword'), shield: it('shield')?.look || 'none', lgd };
   hero.hp = Math.min(hero.hp, STAT.maxHp); hero.mana = Math.min(hero.mana, STAT.maxMana);
 }
@@ -77,6 +77,8 @@ function resetFx() {
 }
 function startLevel(level, seed, side = null) {
   genLevel(level, seed, side);
+  if (typeof setupWays === 'function') setupWays();   // round 96: the waystones, before the floor is built
+  if (typeof shopOnLevel === 'function') shopOnLevel();   // round 96: back in camp after a trip out, the merchant has new wares
   buildWorld();
   hero.fi = LV.start.cx + 0.5; hero.fj = LV.start.cy + 0.5; hero.atk = -1; hero.clip = 'idle'; hero.dead = 0;
   enemies = LV.spawns.map((s, n) => makeEnemy(s.id, s.fi, s.fj, n, s.lvl));
@@ -864,7 +866,7 @@ function updateHero(dt) {
     else G.fadeTo = () => { G.portal = null; startLevel(LV.level + 1, (LV.seed * 31 + 17) >>> 0); saveGame(); };   // (round 48c: the Hollow's road leads to the Riverlands, level 2)
   }
   G.sealT = (G.sealT || 0) - dt;
-  updatePortal(dt); updateSideDoors(); updateStory(dt);
+  updatePortal(dt); updateSideDoors(); updateStory(dt); updateWays(dt);
   if (LV.backExit && !G.fadeTo) {   // round 48c: the Riverlands' road back south to the Hollow
     const d = Math.hypot(LV.backExit[0] - hero.fi, LV.backExit[1] - hero.fj);
     if (d > EXIT_R.road + 0.9) G.backArmed = true;
@@ -1581,6 +1583,7 @@ function drawGlows() {
     glowAt(x, y - p.z, p.kind === 'hfire' ? 22 : 14, 0.45, col);
   }
   for (const f of G.flashes) { const [x, y] = iso(f.fi, f.fj); glowAt(x, y - 12, Math.round(f.r * 0.4), 0.7 * f.t / f.t0, GLOW_WARM); }
+  wayGlows();
   if (G.tp) { const [x, y] = iso(G.tp.fi, G.tp.fj); glowAt(x, y - 16, 30, 0.35 * Math.min(1, G.tp.t / 0.45), GLOW_BLUE); }
 }
 function setLightNew(v) { HUE_LIGHT = GLOW = RIM_SHADOW = v; buildLcol(); try { localStorage.setItem('dcg-light', v ? 'new' : 'old'); } catch (e) { /* ignore */ } }
@@ -1734,7 +1737,7 @@ function render() {
     }
   }
   if (WORLD2X) frame2.set(ov32);   // the finished world frame, for 2x props redrawn over bodies
-  drawExitPads(); drawFog();   // round 80: ground mist lies under the bodies
+  drawWays(); drawExitPads(); drawFog();   // round 96: the waystones' slabs.   // round 80: ground mist lies under the bodies
   ov.sort((a, b) => a.depth - b.depth);
   for (const d of ov) d.draw();
   drawEliteFx();
@@ -2194,7 +2197,7 @@ function drawPortal() {
 function saveGame() {
   if (G.mode !== 'play' || hero.dead || PREVIEW) return;   // (the skill preview's copy of the game never saves)
   const data = { v: SAVE_V, level: LV.level, seed: LV.seed, hero: { cls: hero.cls, hp: Math.ceil(hero.hp), mana: Math.ceil(hero.mana), gold: hero.gold, xp: hero.xp, lvl: hero.lvl, potions: hero.potions, team: hero.team, equip: hero.equip, bag: hero.bag, mods: hero.mods || {}, ult: Math.floor(hero.ult || 0), el: hero.el || {}, rage: Math.floor(hero.rage || 0), orbs: hero.orbs || {}, modSeen: hero.modSeen || 0, tut: hero.tut || {}, stats: hero.stats || null }, serial: itemSerial,
-    story: G.story || null, gates: G.gates || null, town: G.town || null, portal: G.portal ? { level: G.portal.level, seed: G.portal.seed, fi: G.portal.fi, fj: G.portal.fj } : null };
+    story: G.story || null, gates: G.gates || null, ways: G.ways || {}, shop: G.shop || null, town: G.town || null, portal: G.portal ? { level: G.portal.level, seed: G.portal.seed, fi: G.portal.fi, fj: G.portal.fj } : null };
   try { localStorage.setItem(saveKey(hero.cls), JSON.stringify(data)); } catch (e) { /* storage can be unavailable; the game still runs */ }
 }
 function loadSave(cls = 'warrior') {
@@ -2217,9 +2220,9 @@ function beginGame(fromSave, cls = 'warrior') {
   const d = fromSave ? loadSave(cls) : null;
   if (d) {
     newHero(cls); Object.assign(hero, d.hero); hero.cls = cls; itemSerial = d.serial || 100; recalcHero();
-    G.mode = 'play'; G.town = d.town || null; G.portal = d.portal || null; G.gates = d.gates || null; G.story = d.story || convertQuests(d.quests, d.gates); G.sideBack = null; G.sideDown = null; startLevel(d.level, d.seed);
+    G.mode = 'play'; G.town = d.town || null; G.portal = d.portal || null; G.gates = d.gates || null; G.story = d.story || convertQuests(d.quests, d.gates); G.ways = d.ways || {}; G.shop = d.shop || null; G.sideBack = null; G.sideDown = null; startLevel(d.level, d.seed);
   } else {
-    G.town = null; G.portal = null; G.story = null; G.gates = null; G.sideBack = null;
+    G.town = null; G.portal = null; G.story = null; G.gates = null; G.sideBack = null; G.ways = {}; G.shop = null;
     newHero(cls); G.mode = 'play'; startLevel(1, (Math.random() * 1e9) >>> 0);
   }
 }

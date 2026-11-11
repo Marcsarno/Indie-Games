@@ -1,0 +1,27 @@
+const { chromium } = require('playwright'); const path = require('path'), fs = require('fs');
+(async () => {
+  const [out] = process.argv.slice(2); fs.mkdirSync(out, { recursive: true });
+  const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 390, height: 780 }, hasTouch: false }); const errs = []; p.on('pageerror', e => errs.push(String(e)));
+  await p.addInitScript(() => window.localStorage.clear());
+  await p.goto('file://' + path.resolve('game/index.html') + '?cine=0');
+  await p.waitForTimeout(800);
+  await p.evaluate(() => { startGame(false, 'warrior'); G.story = { f: { met: true, woodTold: true }, n: 0 }; hero.gold = 900; G.actCard = 0; });
+  await p.waitForTimeout(1500);
+  const click = async (gx, gy) => { const bb = await p.evaluate(() => { const r = cvs.getBoundingClientRect(); return [r.left, r.top, r.width / W]; }); await p.mouse.click(bb[0] + gx * bb[2], bb[1] + gy * bb[2]); await p.waitForTimeout(250); };
+  const log = [];
+  await p.evaluate(() => { const m = npcs.find(n => n.role === 'merchant'); hero.fi = m.fi + 0.9; hero.fj = m.fj + 0.3; });
+  await p.waitForTimeout(600);
+  let a = await p.evaluate(() => UI.act && { ...UI.act, label: actionTarget().label }); log.push('act ' + JSON.stringify(a));
+  await click(a.x + a.w / 2, a.y + a.h / 2); log.push('mode ' + await p.evaluate(() => G.mode));
+  let L = await p.evaluate(() => SHOP.L); await click(L.wares[0].x + 10, L.wares[0].y + 10);
+  L = await p.evaluate(() => SHOP.L); const btn = L.btns[0]; await click(btn.x + 10, btn.y + 10);
+  log.push('after buy gold ' + await p.evaluate(() => hero.gold + ' bag ' + hero.bag.length + ' equip ' + Object.values(hero.equip).filter(Boolean).length));
+  await p.screenshot({ path: out + '/shop-live.png' });
+  await click(L.close.x + 5, L.close.y + 5); log.push('mode ' + await p.evaluate(() => G.mode));
+  await p.evaluate(() => { const c = LV.ways[0]; hero.fi = c.fi; hero.fj = c.fj; }); await p.waitForTimeout(800);
+  a = await p.evaluate(() => UI.act && { ...UI.act, label: actionTarget().label }); log.push('act ' + JSON.stringify(a));
+  await click(a.x + a.w / 2, a.y + a.h / 2); log.push('mode ' + await p.evaluate(() => G.mode));
+  await p.waitForTimeout(300); await p.screenshot({ path: out + '/ways-live.png' });
+  const Lw = await p.evaluate(() => WAYS.L); await click(Lw.close.x + 5, Lw.close.y + 5); log.push('mode ' + await p.evaluate(() => G.mode));
+  console.log(log.join('\n')); console.log(errs.length ? errs.join('\n') : 'ok'); await b.close();
+})();

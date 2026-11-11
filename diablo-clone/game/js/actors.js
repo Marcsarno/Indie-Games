@@ -347,7 +347,8 @@ function enchantGlow(r, eq, g, bd, wide, st, len) {
   const us = len ? [[0.62, 1], [0.74, -1], [0.86, 1]] : [[0.5, 1], [0.7, -1], [0.9, 1]];   // a staff burns near its head
   for (const [u, s] of us) {
     const p = V.add(V.mad(g, bd, L * u), V.mul(wide, s * 1.6));
-    if (fire) r.cone(p, V.add(p, V.add(V.mul([0, 0, 1], 3.4 + k * 1.0), V.mul(wide, s * 0.8))), 1.25, 0.2, M.FIREM, { noShadow: true });
+    if (eq.ench === 'holy') { r.sph(V.add(V.mad(p, wide, -s * 1.2), V.mul([0, 0, 1], 0.4 + k * 0.6)), Math.round(u * 10) % 4 === (k ? 3 : 1) ? 1.45 : 0.9, M.HOLY, { noShadow: true }); }   // round 96: a +3 weapon: gold glints down its length
+    else if (fire) r.cone(p, V.add(p, V.add(V.mul([0, 0, 1], 3.4 + k * 1.0), V.mul(wide, s * 0.8))), 1.25, 0.2, M.FIREM, { noShadow: true });
     else r.cone(V.mad(p, wide, -s * 0.6), V.add(V.add(p, V.mul(wide, s * 2.6)), V.mul([0, 0, 1], 0.8)), 1.2, 0.2, M.ICE, { noShadow: true });
   }
 }
@@ -1489,7 +1490,7 @@ function heroRig(eq, st) {
     const loosed = st.clip === 'shoot' && st.f >= 2, nut = V.mad(xg, xd, loosed ? 6.5 : 1.6);
     r.cone(tipL, nut, 0.3, 0.3, M.CLOTH_WHITE, { noShadow: true }); r.cone(nut, tipR, 0.3, 0.3, M.CLOTH_WHITE, { noShadow: true });
     if (!loosed) { r.cone(V.mad(nut, xu, 0.9), V.add(V.mad(nose, xd, 1.4), V.mul(xu, 0.9)), 0.4, 0.4, M.WOOD, { noShadow: true }); r.cone(V.add(V.mad(nose, xd, 1.2), V.mul(xu, 0.9)), V.add(V.mad(nose, xd, 2.8), V.mul(xu, 0.9)), 0.6, 0.15, M.STEEL, { noShadow: true }); }
-    if (eq.ench) for (const t of [tipL, tipR]) r.sph(t, 1.3, eq.ench === 'fire' ? M.FIREM : M.ICE, { noShadow: true });
+    if (eq.ench) for (const t of [tipL, tipR]) r.sph(t, 1.3, eq.ench === 'fire' ? M.FIREM : eq.ench === 'holy' ? M.HOLY : M.ICE, { noShadow: true });
     // a bolt case at the right hip, three bolts showing
     const bc = V.add(V.add(V.mad(J.pelvis, sideR, 4.3), V.mul(fwd, 0.6)), V.mul(up, -1.2));
     r.box(bc, [1.5, 1.1, 2.2], M.LEATHER, frameAlong(fwd, up));
@@ -1508,7 +1509,7 @@ function heroRig(eq, st) {
     if (BX && BX.bands) for (const sd2 of [1, -1]) for (const [a, b, t] of [[c, mid(sd2), 0.6], [mid(sd2), tip(sd2), 0.5]]) { const q = V.add(a, V.mul(V.sub(b, a), t)), d = V.norm(V.sub(b, a)); r.cyl(V.mad(q, d, -0.4), V.mad(q, d, 0.4), 1.45, BX.bands); }   // a8: steel bands round the longbow's limbs
     if (hasFx(eq, 'wind')) for (const sd2 of [1, -1]) { const t = tip(sd2); r.cone(t, V.add(V.mad(t, bowUp, -sd2 * 0.5), V.add(V.mul(back, 2.5), V.mul(up, -3.5))), 0.7, 0.3, M.CLOTH_GREEN, { noShadow: true }); }   // round 43: Windrunner: silver limbs, green ribbons at the tips
     if (eq.weapon === 'bow_war') for (const sd2 of [1, -1]) r.cone(tip(sd2), V.mad(tip(sd2), bowUp, sd2 * 1.8), 1.0, 0.2, M.STEEL);   // round 43: the war bow: dark wood, iron-capped tips
-    if (eq.ench) for (const sd2 of [1, -1]) r.sph(tip(sd2), 1.3, eq.ench === 'fire' ? M.FIREM : M.ICE, { noShadow: true });   // round 43: Burning or Chilling: the limb tips glow
+    if (eq.ench) for (const sd2 of [1, -1]) r.sph(tip(sd2), 1.3, eq.ench === 'fire' ? M.FIREM : eq.ench === 'holy' ? M.HOLY : M.ICE, { noShadow: true });   // round 43: Burning or Chilling: the limb tips glow
     const nock = st.clip === 'shoot' && !rel ? aR.hand : V.add(c, V.mul(back, bend + 0.4));
     r.cone(tip(1), nock, 0.3, 0.3, M.CLOTH_WHITE, { noShadow: true }); r.cone(nock, tip(-1), 0.3, 0.3, M.CLOTH_WHITE, { noShadow: true });
     if (st.clip === 'shoot' && draw > 0.5) for (const fan of volley ? [-0.28, 0, 0.28] : [0]) { const ad = V.norm(V.add(aim, V.mul(bowUp, fan))); r.cone(aR.hand, V.mad(aR.hand, ad, 12), 0.4, 0.4, M.WOOD, { noShadow: true }); r.cone(V.mad(aR.hand, ad, 11.5), V.mad(aR.hand, ad, 13.2), 0.7, 0.2, M.STEEL, { noShadow: true }); }
