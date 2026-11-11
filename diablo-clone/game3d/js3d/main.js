@@ -54,7 +54,7 @@ const THEME = { crypt: { floor: [0x5a4a3c, 0x66543f, 0x4e4238, 0x6e5b44], wall: 
   hell: { floor: [0x4d1c18, 0x6b2a1f, 0x3a1614], wall: [0x341414, 0x4d1c18, 0x2a1010] }, outdoor: { floor: [0x5f7a3a, 0x688442, 0x587236, 0x6f8a46], wall: [0x2e4a2a, 0x355230, 0x284224] } };
 function hash2(i, j) { let h = (i * 374761393 + j * 668265263) ^ 0x5bd1e995; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
 function buildLevel() {
-  if (levelGroup) { scene.remove(levelGroup); levelGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); }); if (levelGroup.userData.gtex) levelGroup.userData.gtex.dispose(); if (levelGroup.userData.wtex) levelGroup.userData.wtex.dispose(); }
+  if (levelGroup) { scene.remove(levelGroup); levelGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); }); if (levelGroup.userData.gtex) levelGroup.userData.gtex.dispose(); for (const k of ['wtex', 'wnorm', 'gnorm']) if (levelGroup.userData[k]) levelGroup.userData[k].dispose(); }
   levelGroup = new THREE.Group(); scene.add(levelGroup);
   const th = LV.outdoor ? THEME.outdoor : THEME[LV.theme || 'crypt'] || THEME.crypt;
   const floors = [], walls = [];
@@ -68,15 +68,73 @@ function buildLevel() {
   const ggeo = new THREE.BufferGeometry(), gp = [], guv = [];
   for (const [i, j] of [[0, 0], [MW, 0], [MW, MH], [0, MH]]) { gp.push(i, 0, j); const [x, y] = iso(i, j); guv.push(x / WW, y / WH); }
   ggeo.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3)); ggeo.setAttribute('uv', new THREE.Float32BufferAttribute(guv, 2)); ggeo.setIndex([0, 2, 1, 0, 3, 2]); ggeo.computeVertexNormals();
-  const ground = new THREE.Mesh(ggeo, new THREE.MeshStandardMaterial({ map: gtex, roughness: 1, metalness: 0, alphaTest: 0.5 })); ground.receiveShadow = true; ground.frustumCulled = false;
+  // relief: the painted floor's own light and dark (seams, cracks, cobble edges) read as height, so lamps rake across it
+  const gnorm = reliefMap(gpx, WW, WH, 2, 2.6);
+  const gmat = new THREE.MeshStandardMaterial({ map: gtex, normalMap: gnorm, normalScale: new THREE.Vector2(1.1, 1.1), roughness: 0.92, metalness: 0, alphaTest: 0.5 }); addGrain(gmat, 0);
+  const ground = new THREE.Mesh(ggeo, gmat); ground.receiveShadow = true; ground.frustumCulled = false;
+  levelGroup.userData.gnorm = gnorm;
   levelGroup.userData.gtex = gtex;
   const wm = buildWalls(walls);
   levelGroup.add(ground); if (wm) levelGroup.add(wm);
   hemi.intensity = LV.outdoor ? (LV.night ? 0.5 : 1.1) : 0.5; sun.intensity = LV.outdoor ? (LV.night ? 0.5 : 2.2) : 0.9; sun.color.setHex(LV.outdoor && !LV.night ? 0xfff2d8 : 0xc8d4ff);
   scene.background.setHex(LV.outdoor ? 0x1a2a18 : 0x050406);
   R3D_FLOOR.dirty = false; R3D_FLOOR.y0 = 1e9; R3D_FLOOR.y1 = -1;
-  levelToken++; buildProps(levelGroup, levelToken); buildRigProps(levelGroup, levelToken);
+  levelToken++; buildProps(levelGroup, levelToken); buildRigProps(levelGroup, levelToken); buildGrass(levelGroup, levelToken);
   builtLevel = R3D_LEVEL;
+}
+
+// ---------------------------------------------------------------- surfaces
+// A normal map from a painted picture: brightness is taken as height (dark seams sink), at 1/step the picture's size.
+function reliefMap(rgba, w, h, step, strength) {
+  const W2 = Math.floor(w / step), H2 = Math.floor(h / step), hgt = new Float32Array(W2 * H2), out = new Uint8Array(W2 * H2 * 4);
+  for (let y = 0; y < H2; y++) for (let x = 0; x < W2; x++) { let sum = 0, n = 0; for (let b = 0; b < step; b++) for (let a = 0; a < step; a++) { const o = ((y * step + b) * w + x * step + a) * 4; if (rgba[o + 3]) { sum += 0.3 * rgba[o] + 0.59 * rgba[o + 1] + 0.11 * rgba[o + 2]; n++; } } hgt[y * W2 + x] = n ? sum / n / 255 : -1; }
+  for (let y = 0; y < H2; y++) for (let x = 0; x < W2; x++) {
+    const k = y * W2 + x, c = hgt[k], g = (xx, yy) => { if (xx < 0 || yy < 0 || xx >= W2 || yy >= H2) return c; const v = hgt[yy * W2 + xx]; return v < 0 ? c : v; };
+    let nx = 0, ny = 0; if (c >= 0) { nx = (g(x - 1, y) - g(x + 1, y)) * strength; ny = (g(x, y - 1) - g(x, y + 1)) * strength; }
+    const l = Math.hypot(nx, ny, 1), o = k * 4; out[o] = (nx / l * 0.5 + 0.5) * 255; out[o + 1] = (ny / l * 0.5 + 0.5) * 255; out[o + 2] = (1 / l * 0.5 + 0.5) * 255; out[o + 3] = 255;
+  }
+  const t = new THREE.DataTexture(out, W2, H2, THREE.RGBAFormat); t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.needsUpdate = true; return t;
+}
+// A fine grain (baked in Blender, models/x_detail.png) laid over a surface in world space, so it stays crisp close up.
+const grainTex = new THREE.TextureLoader().load('models/x_detail.png'); grainTex.wrapS = grainTex.wrapT = THREE.MirroredRepeatWrapping;
+function addGrain(mat, upright) {
+  mat.onBeforeCompile = sh => {
+    sh.uniforms.grainMap = { value: grainTex };
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWp;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvWp = (modelMatrix * vec4(position, 1.0)).xyz;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D grainMap; varying vec3 vWp;')
+      .replace('#include <map_fragment>', '#include <map_fragment>\n{ vec2 guv = ' + (upright ? 'vec2(vWp.x + vWp.z, vWp.y)' : 'vWp.xz') + ' * 0.55; float gr = texture2D(grainMap, guv).r * 0.6 + texture2D(grainMap, guv * 3.7).r * 0.4; diffuseColor.rgb *= 0.72 + 0.62 * gr; }');
+  };
+}
+// Wind: grass and leaves lean back and forth (more the higher up the plant)
+const WIND = { value: 0 };
+function addWind(mat, from, amount) {
+  const m = mat.clone();
+  m.onBeforeCompile = sh => { sh.uniforms.uWind = WIND;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uWind;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\n{ float sw = max(0.0, position.y - ' + from.toFixed(2) + ') * ' + amount.toFixed(3) + ';\n#ifdef USE_INSTANCING\nvec4 wp = instanceMatrix * vec4(position, 1.0);\n#else\nvec4 wp = vec4(position, 1.0);\n#endif\ntransformed.x += sin(uWind * 1.7 + wp.x * 0.9 + wp.z * 0.7) * sw; transformed.z += cos(uWind * 1.3 + wp.x * 0.5 - wp.z * 0.8) * sw * 0.7; }'); };
+  return m;
+}
+// Grass: tufts (models/x_grass.glb, made in Blender) wherever the painted ground is green, each tinted by the ground under it
+function buildGrass(group, token) {
+  if (!LV.outdoor) return;
+  whenModel('x_grass').then(g => {
+    if (!g || token !== levelToken) return; let src = null; g.scene.traverse(o => { if (o.isMesh && !src) src = o; }); if (!src) return;
+    const mat = addWind(src.material, 0.02, 0.22); mat.side = THREE.DoubleSide; const chunks = new Map(), CG = 8;
+    for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
+      if (LV.map[j * MW + i] !== FLOOR) continue;
+      for (let n = 0; n < 3; n++) {
+        const fi = i + hash2(i * 3 + n, j), fj = j + hash2(j * 5 + n, i + 7), [x, y] = iso(fi, fj), v = floorBuf[Math.round(y) * WW + Math.round(x)] & 127; if (!v) continue;
+        const c = PAL32[v], r = c & 255, gg = (c >> 8) & 255, bb = (c >> 16) & 255; if (!(gg > r * 1.06 && gg > bb * 1.25 && gg > 60)) continue;
+        const k = Math.floor(i / CG) + ',' + Math.floor(j / CG); (chunks.get(k) || chunks.set(k, []).get(k)).push([fi, fj, r, gg, bb, hash2(i + n * 11, j * 3)]);
+      }
+    }
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), p = new THREE.Vector3(), sc = new THREE.Vector3(), col = new THREE.Color();
+    for (const items of chunks.values()) {
+      const im = new THREE.InstancedMesh(src.geometry, mat, items.length); im.receiveShadow = true; im.castShadow = false;
+      items.forEach((it, n) => { const s = 0.7 + it[5] * 0.7; m4.compose(p.set(it[0], 0, it[1]), q.setFromAxisAngle(up, it[5] * 6.28), sc.set(s, s * (0.8 + it[5] * 0.5), s)); im.setMatrixAt(n, m4); im.setColorAt(n, col.setRGB(Math.min(1, it[2] / 255 * 1.75), Math.min(1, it[3] / 255 * 1.75), Math.min(1, it[4] / 255 * 1.5), THREE.SRGBColorSpace)); });
+      im.computeBoundingSphere(); group.add(im);
+    }
+  });
 }
 
 // ---------------------------------------------------------------- walls
@@ -102,8 +160,9 @@ function buildWalls(walls) {
   }
   const tex = new THREE.DataTexture(px, AW, AH, THREE.RGBAFormat); tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearFilter; tex.needsUpdate = true;
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2)); geo.setIndex(IDX);
-  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, metalness: 0, side: THREE.DoubleSide })); m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
-  levelGroup.userData.wtex = tex; return m;
+  const wnorm = reliefMap(px, AW, AH, 1, 3.2), wmat = new THREE.MeshStandardMaterial({ map: tex, normalMap: wnorm, normalScale: new THREE.Vector2(1.2, 1.2), roughness: 0.9, metalness: 0, side: THREE.DoubleSide }); addGrain(wmat, 1);
+  const m = new THREE.Mesh(geo, wmat); m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
+  levelGroup.userData.wtex = tex; levelGroup.userData.wnorm = wnorm; return m;
 }
 // stairs and doorways: the game builds each from a rig of its own (no name); Blender has built the same shape, found by its hash
 function buildRigProps(group, token) {
@@ -130,7 +189,7 @@ let gfx = null;
 function syncGroundFx() {
   if (!gfx || gfx.w !== W || gfx.h !== H) {
     if (gfx) { scene.remove(gfx.mesh); gfx.tex.dispose(); gfx.mesh.geometry.dispose(); }
-    const data = new Uint8Array(W * H * 4), tex = new THREE.DataTexture(data, W, H, THREE.RGBAFormat); tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter;
+    const data = new Uint8Array(W * H * 4), tex = new THREE.DataTexture(data, W, H, THREE.RGBAFormat); tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearFilter;
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(12), 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 1], 2)); geo.setIndex([0, 2, 1, 0, 3, 2]);
     const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false, side: THREE.DoubleSide })); mesh.frustumCulled = false; mesh.renderOrder = 2; scene.add(mesh);
     gfx = { w: W, h: H, data, tex, mesh };
@@ -164,13 +223,14 @@ function syncFlames() {
 // Barrels, chests and cages can change, so each is its own object.
 const missingProps = new Set(); let levelToken = 0, unnamedProps = 0;
 const CH = 12;
-function addInstances(g, list, group) {
+function addInstances(g, list, group, sway = 0) {
   const meshes = []; g.scene.traverse(o => { if (o.isMesh) meshes.push(o); });
   const chunks = new Map();
   for (const it of list) { const k = Math.floor(it[0] / CH) + ',' + Math.floor(it[1] / CH); (chunks.get(k) || chunks.set(k, []).get(k)).push(it); }
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), p = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
   for (const items of chunks.values()) for (const src of meshes) {
-    const im = new THREE.InstancedMesh(src.geometry, src.material, items.length); im.castShadow = true; im.receiveShadow = true;
+    if (sway && !src.userData.windMat) src.userData.windMat = addWind(src.material, 0.5, sway);
+    const im = new THREE.InstancedMesh(src.geometry, sway ? src.userData.windMat : src.material, items.length); im.castShadow = true; im.receiveShadow = true;
     items.forEach((it, n) => { m4.compose(p.set(it[0], 0, it[1]), q.setFromAxisAngle(up, -it[2]), one); im.setMatrixAt(n, m4); });
     im.computeBoundingSphere(); group.add(im);
   }
@@ -181,7 +241,8 @@ function buildProps(group, token) {
   for (const d of LV.decor) if (d.kind === 'bones' && d.sp && d.sp.__name) { const [fi, fj] = groundToTile(d.wx, d.wy); (by.get(d.sp.__name) || by.set(d.sp.__name, []).get(d.sp.__name)).push([fi, fj, d.sp.__yaw || 0]); }   // (the game stamps these on the floor)
   for (const [name, list] of by) {
     const file = MANIFEST.props[name]; if (!file) { missingProps.add(name); continue; }
-    whenModel(file).then(g => { if (g && token === levelToken) addInstances(g, list, group); });
+    const sway = /^(pine|oak|autumn)/.test(name) ? 0.035 : /^(bush|fern|crop)/.test(name) ? 0.05 : 0;
+    whenModel(file).then(g => { if (g && token === levelToken) addInstances(g, list, group, sway); });
   }
 }
 const dyn = new Map();   // a barrel / chest / cage -> { obj, name }
@@ -301,6 +362,7 @@ function frame(menu) {
   for (const n of npcs) syncActor(n, dt, Math.abs(n.fi - cf) + Math.abs(n.fj - cj) < 26);
   for (const [c, a] of actors) if (a.seen !== frameNo) { scene.remove(a.root); actors.delete(c); }
   syncDyn(); syncGroundFx(); syncFlames(); syncFloor(dt); adapt(dt);
+  WIND.value = G.t;
   fx.update(dt, lastW * quality / (2 * hw), heroBlade(), /^(attack|spin|bash)/.test(hero.clip || ''));
   fx.render(quality);
 }

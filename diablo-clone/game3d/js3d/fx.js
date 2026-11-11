@@ -5,6 +5,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
 const TPX = 16 * Math.SQRT2, UPX = TPX * Math.cos(Math.PI / 6);
 const hexOf = v => { const c = PAL32[CYCLE[v & 127] || (v & 127)] || 0xffffffff; return ((c & 255) << 16) | (((c >> 8) & 255) << 8) | ((c >> 16) & 255); };
@@ -16,7 +17,14 @@ export function makeFx(renderer, scene, cam) {
   // ---- glow: bright things bleed light (flames, magic, sparks, lit windows)
   const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 2 }));
   const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.55, 0.6, 0.82);
-  composer.addPass(new RenderPass(scene, cam)); composer.addPass(bloom); composer.addPass(new OutputPass());
+  // the grade: a little more contrast and colour, warm lights against cool shadows, the corners of the screen drawn down
+  const grade = new ShaderPass({ uniforms: { tDiffuse: { value: null }, vig: { value: 0.42 } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+    fragmentShader: `varying vec2 vUv; uniform sampler2D tDiffuse; uniform float vig;
+      void main(){ vec4 c = texture2D(tDiffuse, vUv); float l = dot(c.rgb, vec3(.3, .59, .11));
+        c.rgb = mix(vec3(l), c.rgb, 1.14); c.rgb *= mix(vec3(.94, .98, 1.08), vec3(1.06, 1.0, .93), smoothstep(0., .6, l));
+        c.rgb = (c.rgb - .5 * l) * 1.06 + .5 * l; vec2 d = vUv - .5; c.rgb *= 1. - vig * smoothstep(.25, .85, dot(d, d) * 2.2); gl_FragColor = c; }` });
+  composer.addPass(new RenderPass(scene, cam)); composer.addPass(bloom); composer.addPass(grade); composer.addPass(new OutputPass());
   let useBloom = true;
   function resize(w, h, ratio) { composer.setPixelRatio(ratio); composer.setSize(w, h); }
   function render(quality) { useBloom = quality >= 1; if (useBloom) composer.render(); else renderer.render(scene, cam); }
