@@ -1,0 +1,39 @@
+'use strict';
+// The bridge between the 2D game's code (loaded unchanged before this file) and the 3D layer (js3d/main.js).
+// It replaces render(): the world, characters and props are drawn by Three.js on the canvas underneath;
+// this canvas keeps the HUD and, for now, the effects that are still drawn as pixels.
+const render2d = render;
+let R3D_LEVEL = 0;   // bumped whenever a level is (re)built, so the 3D scene rebuilds
+{ const _start = startLevel; startLevel = function (...a) { const r = _start.apply(this, a); R3D_LEVEL++; return r; }; }
+const R3D_SAFE = (name, fn) => { try { fn(); } catch (e) { if (!R3D_SAFE.seen[name]) { R3D_SAFE.seen[name] = 1; console.error('3d: ' + name, e); } } };
+R3D_SAFE.seen = {};
+render = function () {
+  const R = window.R3D;
+  if ((G.mode === 'inv' || G.mode === 'skills') && G.fade <= 0) { ov32.fill(0); if (R && R.ready) R.frame(true); drawHudLayer(); return; }
+  const t = G.t;
+  const [kx, ky] = screenOf(hero), [vx0, vy0] = G.camAt ? screenOf(G.camAt) : [kx, ky];
+  const sh = G.trauma * G.trauma * 5;
+  const shx = Math.round(sh * (Math.sin(t * 61) * 0.6 + Math.sin(t * 97 + 1) * 0.4)), shy = Math.round(sh * (Math.sin(t * 73 + 2) * 0.6 + Math.sin(t * 89 + 3) * 0.4));
+  const kx2 = G.kick && SHAKE ? Math.round(G.kick[0]) : 0, ky2 = G.kick && SHAKE ? Math.round(G.kick[1]) : 0;
+  cam2x = Math.round((vx0 - W / 2) * SPX) + shx * SPX + kx2; cam2y = Math.round((vy0 - H * 0.47) * SPX) + shy * SPX + ky2;
+  camX = Math.floor(cam2x / SPX); camY = Math.floor(cam2y / SPX); hx = cam2x - camX * SPX; hy = cam2y - camY * SPX;
+  ov32.fill(0); levB.fill(L_ID); scr.fill(0); tbuf.fill(-1);
+  if (R && R.ready) R.frame(false);
+  else { ov32.fill(0xff06070a); }
+  // effects still drawn as pixels over the 3D picture (same projection, so they land in the right place)
+  R3D_SAFE('exitPads', drawExitPads);
+  for (const p of projectiles) R3D_SAFE('projectile', () => drawProjectile(p));
+  if (G.tp) R3D_SAFE('portal', drawPortal);
+  R3D_SAFE('eliteFx', drawEliteFx);
+  R3D_SAFE('particles', () => {
+    for (let k = 0; k < PN; k++) {
+      const kind = pkind[k]; if (!kind || kind === 8 || kind === 9) continue;
+      const X = Math.round(px_[k] * SPX) - cam2x, Y = Math.round((py_[k] - pz_[k]) * SPX) - cam2y;
+      if (X < 0 || Y < 0 || X >= OW - 3 || Y >= OH - 3) continue;
+      const s = kind === 6 ? 4 : kind === 7 ? 3 : 2, c32 = PAL32[CYCLE[pcol[k]] || pcol[k]];
+      for (let b = 0; b < s; b++) for (let a = 0; a < s; a++) ov32[(Y + b) * OW + X + a] = c32;
+    }
+  });
+  R3D_SAFE('impactFlashes', drawImpactFlashes);
+  drawHudLayer();
+};
