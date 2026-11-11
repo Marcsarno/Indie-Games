@@ -269,6 +269,7 @@ function addInstances(g, list, group, sway = 0) {
   const chunks = new Map();
   for (const it of list) { const k = Math.floor(it[0] / CH) + ',' + Math.floor(it[1] / CH); (chunks.get(k) || chunks.set(k, []).get(k)).push(it); }
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), p = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
+  one.setScalar(list.scale || 1);
   for (const items of chunks.values()) for (const src of meshes) {
     if (sway && !src.userData.windMat) src.userData.windMat = addWind(src.material, 0.5, sway);
     const im = new THREE.InstancedMesh(src.geometry, sway ? src.userData.windMat : src.material, items.length); im.castShadow = true; im.receiveShadow = true;
@@ -283,7 +284,7 @@ function buildProps(group, token) {
   if (world) world.flora(by, group, () => token === levelToken);   // (world mode has a forest of its own: world.js)
   for (const [name, list] of by) {
     const file = MANIFEST.props[name]; if (!file) { missingProps.add(name); continue; }
-    const sway = /^(pine|oak|autumn)/.test(name) ? 0.035 : /^(bush|fern|crop)/.test(name) ? 0.05 : 0;
+    const sway = /^(pine|oak|autumn)/.test(name) ? 0.035 : /^(bush|fern|crop)/.test(name) ? 0.05 : 0; if (world) list.scale = world.grow(name);
     whenModel(file).then(g => { if (g && token === levelToken) addInstances(g, list, group, sway); });
   }
 }
@@ -296,7 +297,7 @@ function syncDyn() {
     if (!d) {
       d = { obj: new THREE.Group(), name }; const [fi, fj] = groundToTile(pr.wx, pr.wy); d.obj.position.set(fi, 0, fj); scene.add(d.obj); dyn.set(pr, d);
       for (const sp of sps) { const file = MANIFEST.props[sp.__name]; if (!file) { missingProps.add(sp.__name); continue; }
-        whenModel(file).then(g => { if (!g || dyn.get(pr) !== d) return; const o = g.scene.clone(); o.rotation.y = -(sp.__yaw || 0); d.obj.add(o); }); }
+        whenModel(file).then(g => { if (!g || dyn.get(pr) !== d) return; const o = g.scene.clone(); o.rotation.y = -(sp.__yaw || 0); if (world) o.scale.setScalar(world.grow(sp.__name)); d.obj.add(o); }); }
     }
     d.seen = frameNo; d.obj.visible = !pr.broken;
   }

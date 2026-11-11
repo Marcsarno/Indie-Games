@@ -36,7 +36,7 @@ export function makeWorld({ whenModel, hash2, WIND }) {
 
   // ---- the forest. by: prop name -> [[fi, fj, yaw], ...] from the level. Names this handles are taken out of the map.
   function flora(by, group, alive) {
-    grassChunks = [];
+    grassChunks = []; structures(by, group, alive);
     const trees = [], out = {}; const add = (file, it) => (out[file] || (out[file] = [])).push(it);
     for (const [name, list] of [...by]) {
       const m = /^(pine|oak|autumn|bush|fern|rock)(\d)$/.exec(name); if (!m) continue; by.delete(name);
@@ -83,6 +83,52 @@ export function makeWorld({ whenModel, hash2, WIND }) {
     const tint = it => col.setRGB(Math.min(1, it[4] / 255 * 1.5), Math.min(1, it[6] / 255 * 1.75), Math.min(1, it[7] / 255 * 1.2), THREE.SRGBColorSpace);
     tufts.forEach((list, k) => place('f_grass' + k, list, group, alive, { from: 0.02, sway: 0.2, chunk: 8, shadow: false, tinted: tint, shrink: true }));
     blooms.forEach((list, k) => place('f_flower' + k, list, group, alive, { from: 0.02, sway: 0.14, chunk: 8, shadow: false, tinted: () => col.setRGB(1, 1, 1), shrink: true }));
+  }
+
+  // ---- structures (blender/scripts/buildings.py). Each part of a building is one of a few materials; the game lays that
+  // material's brushwork over the part's painted colour: masonry on stone, planks on timber, shingles on roofs (which run
+  // down the slope whichever way the roof faces), trowel marks on plaster, weave and seams on canvas.
+  const DET = { stone: ['d_stone', 0.5], wood: ['d_wood', 0.62], roof: ['d_shingle', 0.42], plaster: ['d_plaster', 0.4], cloth: ['d_cloth', 0.5] }, dTex = {}, sMats = {};
+  function structMat(name) {
+    if (sMats[name]) return sMats[name];
+    if (name === 'glow') return sMats[name] = new THREE.MeshBasicMaterial({ vertexColors: true, color: new THREE.Color(1.7, 1.7, 1.7), side: THREE.DoubleSide });
+    const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: name === 'plain' ? 0.7 : 0.95, metalness: 0, side: THREE.DoubleSide, envMapIntensity: 0.3 }), d = DET[name];
+    const tex = d ? (dTex[d[0]] || (dTex[d[0]] = det(d[0]))) : null;
+    m.onBeforeCompile = sh => { if (tex) sh.uniforms.dMap = { value: tex };
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWp; varying vec3 vWn;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\n#ifdef USE_INSTANCING\nvWp = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz; vWn = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * objectNormal);\n#else\nvWp = (modelMatrix * vec4(transformed, 1.0)).xyz; vWn = normalize(mat3(modelMatrix) * objectNormal);\n#endif\n');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + (tex ? 'uniform sampler2D dMap; ' : '') + 'varying vec3 vWp; varying vec3 vWn;')
+        .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n{ float fd = length(vViewPosition); if (fd < 5.0) { float keep = smoothstep(1.2, 5.0, fd); if (keep < fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))))) discard; } }')
+        .replace('#include <color_fragment>', '#include <color_fragment>\n' + (!tex ? '' : name === 'roof'
+          ? '{ vec3 wn = normalize(vWn); vec2 hd = normalize(wn.xz + vec2(1e-4)); vec2 duv = vec2(dot(vWp.xz, vec2(-hd.y, hd.x)), vWp.y / max(0.3, length(wn.xz))); diffuseColor.rgb *= texture2D(dMap, duv * ' + d[1].toFixed(2) + ').rgb * 2.0; }'
+          : '{ vec3 wn = abs(normalize(vWn)); vec2 duv = wn.y > 0.75 ? vWp.xz : (wn.x > wn.z ? vec2(vWp.z, vWp.y) : vec2(vWp.x, vWp.y)); diffuseColor.rgb *= texture2D(dMap, duv * ' + d[1].toFixed(2) + ').rgb * 2.0; }')); };
+    m.customProgramCacheKey = () => 'struct' + name; return sMats[name] = m;
+  }
+  const matOf = mesh => structMat((mesh.material && mesh.material.name || 'plain').replace(/\.\d+$/, ''));
+  let spinners = [];
+  // list = [fi, fj, yaw, scale]. Parts named spin_* turn (the windmill's sails).
+  function build(file, list, group, alive) {
+    whenModel('world/' + file).then(g => {
+      if (!g || !alive()) return; g.scene.updateMatrixWorld(true); const meshes = []; g.scene.traverse(o => { if (o.isMesh) meshes.push(o); });
+      for (const src of meshes) {
+        if (/^spin/.test(src.name) || (src.parent && /^spin/.test(src.parent.name))) {
+          for (const it of list) { const piv = new THREE.Group(), hold = new THREE.Group(), s = it[3] || 1; hold.position.set(it[0], 0, it[1]); hold.rotation.y = -it[2]; hold.scale.setScalar(s); src.getWorldPosition(piv.position);
+            const m = new THREE.Mesh(src.geometry, matOf(src)); m.castShadow = true; m.receiveShadow = true; piv.add(m); hold.add(piv); group.add(hold); spinners.push(piv); }
+          continue; }
+        const im = new THREE.InstancedMesh(src.geometry, matOf(src), list.length); im.castShadow = true; im.receiveShadow = true;
+        list.forEach((it, n) => { const s = it[3] || 1; m4.compose(p.set(it[0], 0, it[1]), q.setFromAxisAngle(up, -it[2]), sc.set(s, s, s)); m4.multiply(src.matrixWorld); im.setMatrixAt(n, m4); });
+        im.computeBoundingSphere(); group.add(im);
+      }
+    });
+  }
+  const STRUCT = [[/^palisade\d+$/, 'b_palisade'], [/^tent$/, 'b_tent'], [/^well$/, 'b_well'], [/^wagon$/, 'b_wagon'], [/^stall\d*$/, 'b_stall'], [/^forge$/, 'b_forge'], [/^lantern$/, 'b_lantern'], [/^tower$/, 'b_tower'], [/^cabin$/, 'b_cottage'], [/^windmill$/, 'b_windmill'], [/^stonewall$/, 'b_stonewall']];
+  // Things still drawn with the overhead game's models are simply stood up bigger, to match the hero at this camera
+  const GROW = [[/^grave/, 1.7], [/^menhir/, 2.2], [/^signpost/, 1.7], [/^barrow/, 1.6], [/^den/, 1.6], [/^hay/, 1.35], [/^cart/, 2.1], [/^log\d/, 1.4], [/^woodpile/, 1.35], [/^altar/, 1.3], [/^campfire/, 1.5], [/^crop/, 1.15], [/^shroom/, 2.4], [/^fence/, 1.5], [/^gate/, 1.45], [/^minebarred/, 1.5], [/^(barrel|chest|cage|egg|crate)/, 1.3]];
+  function grow(name) { if (!LV.outdoor) return 1; for (const [re, s] of GROW) if (re.test(name)) return s; return 1; }
+  function structures(by, group, alive) {
+    spinners = [];
+    for (const [name, list] of [...by]) { const hit = STRUCT.find(e => e[0].test(name)); if (!hit) continue; by.delete(name); const all = by.get('\0' + hit[1]) || []; all.push(...list); by.set('\0' + hit[1], all); }
+    for (const [name, list] of [...by]) if (name[0] === '\0') { by.delete(name); build(name.slice(1), list, group, alive); }
   }
 
   // ---- the ground outdoors. Its colours are the 2D game's own painted floor (grass, paths, the camp's cobbles), softened so
@@ -142,6 +188,7 @@ export function makeWorld({ whenModel, hash2, WIND }) {
   function update(dt, cam) {
     for (const c of grassChunks) c.im.visible = Math.abs(c.x - hero.fi) < 36 && Math.abs(c.z - hero.fj) < 36;
     if (sky && sky.visible) { sky.position.set(cam.position.x, -2, cam.position.z); const c = sky.getObjectByName('clouds'); if (c) c.rotation.y += dt * 0.004; }
+    for (const s of spinners) s.rotation.z += dt * 0.45;
   }
-  return { flora, grass, ground, repaint, setSky, host, update, get hasGround() { return !!gnd; }, dropGround() { gnd = null; } };
+  return { flora, grass, grow, ground, repaint, setSky, host, update, get hasGround() { return !!gnd; }, dropGround() { gnd = null; } };
 }
