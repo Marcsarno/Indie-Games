@@ -8,7 +8,7 @@ OUT = os.environ.get("OUT", os.path.join(os.path.dirname(os.path.abspath(__file_
 V = Vector
 
 def reset():
-    bpy.ops.wm.read_factory_settings(use_empty=True); os.makedirs(OUT, exist_ok=True)
+    bpy.ops.wm.read_factory_settings(use_empty=True); os.makedirs(OUT, exist_ok=True); MATS.clear(); SHARED.clear()
 
 MATS = {}
 def mat(name, rgb=None, rough=0.9, metal=0.0, emit=0.0):
@@ -104,6 +104,27 @@ class Parts:
         if me.polygons and (me.polygons[0].normal.dot(nrm) < 0) and not double: me.flip_normals()
         return o_
 
+    def _vcol(self):
+        """Every part's flat material colour becomes a vertex colour; the parts then share three materials
+        (matte, metal, glow), so a whole character is 2-3 draw calls however many colours it has."""
+        for o in self.objs:
+            me = o.data; src = me.materials[0]; b = src.node_tree.nodes["Principled BSDF"]
+            col = tuple(b.inputs["Base Color"].default_value); metal = b.inputs["Metallic"].default_value; emit = b.inputs["Emission Strength"].default_value
+            ca = me.color_attributes.new("Col", "FLOAT_COLOR", "CORNER")
+            for d in ca.data: d.color = col
+            me.color_attributes.active_color = ca; me.color_attributes.render_color_index = 0
+            me.materials.clear(); me.materials.append(shared_mat("glow" if emit > 0 else "metal" if metal > 0.3 else "matte"))
+
+    def _join(self, name):
+        bpy.ops.object.select_all(action="DESELECT")
+        for o in self.objs: o.select_set(True)
+        bpy.context.view_layer.objects.active = self.objs[0]; bpy.ops.object.join()
+        o = bpy.context.object; o.name = name; o.data.name = name; return o
+
+    def static(self, name=None):
+        """Join the parts into one unrigged mesh (props, tiles)."""
+        self._vcol(); return self._join(name or self.name)
+
     def build(self, bones):
         """bones = {name: (parent, head)}. Returns (armature, mesh): one mesh, every part weight 1 to its bone; bone axes = world axes."""
         ad = bpy.data.armatures.new(self.name + "_arm"); arm = bpy.data.objects.new(self.name, ad); bpy.context.scene.collection.objects.link(arm)
@@ -114,13 +135,19 @@ class Parts:
         bpy.ops.object.mode_set(mode="OBJECT")
         for o in self.objs:
             vg = o.vertex_groups.new(name=o["bone"]); vg.add(list(range(len(o.data.vertices))), 1.0, "REPLACE")
-        bpy.ops.object.select_all(action="DESELECT")
-        for o in self.objs: o.select_set(True)
-        bpy.context.view_layer.objects.active = self.objs[0]; bpy.ops.object.join()
-        mesh = bpy.context.object; mesh.name = self.name + "_mesh"
+        self._vcol(); mesh = self._join(self.name + "_mesh")
         mod = mesh.modifiers.new("Armature", "ARMATURE"); mod.object = arm; mesh.parent = arm
         for pb in arm.pose.bones: pb.rotation_mode = "XYZ"
         return arm, mesh
+
+SHARED = {}
+def shared_mat(kind):
+    if kind in SHARED: return SHARED[kind]
+    m = bpy.data.materials.new(kind); m.use_nodes = True; nt = m.node_tree; b = nt.nodes["Principled BSDF"]
+    at = nt.nodes.new("ShaderNodeVertexColor"); at.layer_name = "Col"; nt.links.new(at.outputs["Color"], b.inputs["Base Color"])
+    b.inputs["Roughness"].default_value = 0.42 if kind == "metal" else 0.85; b.inputs["Metallic"].default_value = 0.7 if kind == "metal" else 0.0
+    if kind == "glow": nt.links.new(at.outputs["Color"], b.inputs["Emission Color"]); b.inputs["Emission Strength"].default_value = 3.0
+    SHARED[kind] = m; return m
 
 # ---- animation: a clip is a function t(0..1) -> ({bone: (rx, ry, rz)}, {bone: (x, y, z) offset}) ----------------------
 def ease(x): x = max(0.0, min(1.0, x)); return x * x * (3 - 2 * x)
@@ -154,9 +181,16 @@ def bake(arm, clips, fps=30):
             for pb in arm.pose.bones: pb.keyframe_insert("rotation_euler", frame=f); pb.keyframe_insert("location", frame=f)
         tr = ad.nla_tracks.new(); tr.name = name; tr.strips.new(name, 0, act); ad.action = None
 
-def export(name, anim=True):
+def export(name, anim=True, objs=None):
+    """Writes out/<name>.glb. objs = only these objects (and their children)."""
     p = os.path.join(OUT, name + ".glb")
-    bpy.ops.export_scene.gltf(filepath=p, export_format="GLB", export_yup=True, export_apply=False, export_animations=anim,
+    if objs is not None:
+        bpy.ops.object.select_all(action="DESELECT")
+        for o in objs:
+            o.select_set(True)
+            for c in o.children_recursive: c.select_set(True)
+    bpy.ops.export_scene.gltf(filepath=p, export_format="GLB", export_yup=True, export_apply=False, export_animations=anim, use_selection=objs is not None,
+                              export_vertex_color="ACTIVE", export_all_vertex_colors=False,
                               export_animation_mode="NLA_TRACKS", export_force_sampling=True, export_optimize_animation_size=True)
     print("GLB", p, os.path.getsize(p)); return p
 
