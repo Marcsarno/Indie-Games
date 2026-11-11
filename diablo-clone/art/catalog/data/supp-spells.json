@@ -1,0 +1,269 @@
+{
+ "records": [
+  {
+   "id": "dob-skill-shield-charge",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/warrior-charge.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-reavers-rush",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/warrior-rush.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-hurl",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/warrior-hurl.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-blood-roar",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/warrior-roar.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-flurry",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/warrior-flurry.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-earthsplitter",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/warrior-split.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-uproot",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/warrior-uproot.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-titans-crescent",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/warrior-crescent.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-skyfall",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/warrior-skyfall.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-strafe",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/ranger-strafe.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-spell-chain-lightning",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/mage-chain.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-sentry",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/ranger-sentry.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-spell-inferno",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/mage-ult-fire.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-spell-blizzard",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/mage-ult-frost.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-spell-thunderstorm",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/mage-ult-storm.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-spell-earthquake",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/mage-ult-earth.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-spell-cataclysm",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/mage-ult-all.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-spell-plasma-storm",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/mage-ult-fire+storm.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-spell-steam-burst",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/mage-ult-fire+frost.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-spell-volcano",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/mage-ult-fire+earth.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-spell-shatterstorm",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/mage-ult-frost+storm.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-spell-glacier",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/mage-ult-frost+earth.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-spell-magnetic-pull",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/mage-ult-earth+storm.png",
+     "caption": "captured for this catalog from the current 2D build (main, 2026-11-11): four moments of the cast against a line of skeletons",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-berserker",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/warrior-flurry.png",
+     "caption": "a Berserker-stance move (Flurry), captured from the current build",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-titan",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/warrior-skyfall.png",
+     "caption": "a Titan-stance move (Skyfall), captured from the current build",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-spell-elemental-ultimates",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/mage-ult-all.png",
+     "caption": "Cataclysm, all four elements, captured from the current build",
+     "role": "current"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/strips/mage-ult-fire.png",
+     "caption": "Inferno",
+     "role": "current"
+    }
+   ]
+  }
+ ]
+}

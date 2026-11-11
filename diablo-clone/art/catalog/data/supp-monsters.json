@@ -1,0 +1,584 @@
+{
+ "records": [
+  {
+   "id": "dob-enemy-skeleton",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/skeleton.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-spearman",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/spearman.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-axeman",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/axeman.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-gravebow",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/gravebow.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-bulwark",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/bulwark.png",
+     "caption": "exists only on the art branch: not merged into the shipped game",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-tombguard",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/tombguard.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-archer",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/archer.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-burning",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/burning.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-knifer",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/knifer.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-slinger",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/slinger.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-fallen",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/fallen.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-shaman",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/shaman.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-boss-cinder",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/cinder.png",
+     "caption": "exists only on the art branch: not merged into the shipped game",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-ashhex",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/ashhex.png",
+     "caption": "exists only on the art branch: not merged into the shipped game",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-hound",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/hound.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-boss-lich",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/lich.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-boss-warden",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/warden.png",
+     "caption": "exists only on the art branch: not merged into the shipped game",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-boss-skelking",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/skelking.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-boss-treant",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/treant.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-oclubber",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/oclubber.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-orockthrower",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/orockthrower.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-oshield",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/oshield.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-oenforcer",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/oenforcer.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-boss-azhruk",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/azhruk.png",
+     "caption": "exists only on the art branch: not merged into the shipped game",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-boss-malgrath",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/malgrath.png",
+     "caption": "exists only on the art branch: not merged into the shipped game",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-boss-gorr",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/gorr.png",
+     "caption": "exists only on the art branch: not merged into the shipped game",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-ironjaw",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/ironjaw.png",
+     "caption": "exists only on the art branch: not merged into the shipped game",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-boss-warlord",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/warlord.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-shroom",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/shroom.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-sporecap",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/sporecap.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-wraith",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/wraith.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-slime",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/slime.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-blueslime",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/blueslime.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-bear",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/bear.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-boar",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/boar.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-treasure",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/treasure.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-gchief",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/gchief.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-gshaman",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/gshaman.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-brigand",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/brigand.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-xbowman",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/xbowman.png",
+     "caption": "exists only on the art branch: not merged into the shipped game",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-wolf",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/wolf.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-digger",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/digger.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-alpha",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/alpha.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-banditchief",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/banditchief.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-goblin",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/goblin.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-gravespine",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/gravespine.png",
+     "caption": "exists only on the art branch: not merged into the shipped game",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-ghoulhound",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/ghoulhound.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-spider",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/spider.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-boss-broodmother",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/broodmother.png",
+     "caption": "shipped version on main beside the newer art-branch version",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-cavebat",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/cavebat.png",
+     "caption": "exists only on the art branch: not merged into the shipped game",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-bogtoad",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/bogtoad.png",
+     "caption": "exists only on the art branch: not merged into the shipped game",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-restless",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/restless.png",
+     "caption": "exists only on the art branch: not merged into the shipped game",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-spitter",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/spitter.png",
+     "caption": "exists only on the art branch: not merged into the shipped game",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-stoneback",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/stoneback.png",
+     "caption": "exists only on the art branch: not merged into the shipped game",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-boss-flintback",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/flintback.png",
+     "caption": "exists only on the art branch: not merged into the shipped game",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-broodguard",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/broodguard.png",
+     "caption": "exists only on the art branch: not merged into the shipped game",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-boss-barrowwight",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/barrowwight.png",
+     "caption": "still shipped on main; removed on the art branch",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-enemy-mastiff",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cmp/mastiff.png",
+     "caption": "still shipped on main; removed on the art branch",
+     "role": "current"
+    }
+   ]
+  }
+ ]
+}

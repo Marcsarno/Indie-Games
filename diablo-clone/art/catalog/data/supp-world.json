@@ -1,0 +1,84 @@
+{
+ "records": [
+  {
+   "id": "dob-story-dave-table",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/story-table-opening.png",
+     "role": "current",
+     "caption": "the opening as it plays now (captured for this catalog from the current 2D build on main (2026-11-11), with ?cine=1): the room, Dave asks who you play, the visions, Dave voices Brother Osric"
+    }
+   ]
+  },
+  {
+   "id": "dob-npc-dave",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/cine-room.png",
+     "role": "current",
+     "caption": "Dave behind the DM screen with Marc, Aaron and Chris at the table (captured for this catalog from the current 2D build on main (2026-11-11))"
+    }
+   ]
+  },
+  {
+   "id": "dob-story-table-animatic",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/story-animatic.png",
+     "role": "concept",
+     "caption": "the Claude Design animatic: the first look at the table scene (flat vector, not pixel art)"
+    }
+   ]
+  },
+  {
+   "id": "dob-ui-splash",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/ui-splash.png",
+     "role": "current",
+     "caption": "title screen (captured for this catalog from the current 2D build on main (2026-11-11)); the game spells its title DUNGEONS OF BONES"
+    }
+   ]
+  },
+  {
+   "id": "dob-ui-character-select",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/ui-charselect.png",
+     "role": "current",
+     "caption": "character select (captured for this catalog from the current 2D build on main (2026-11-11))"
+    }
+   ]
+  },
+  {
+   "id": "dob-ui-dialogue",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/table-0.png",
+     "role": "current",
+     "caption": "Brother Osric gives the first quest (captured for this catalog from the current 2D build on main (2026-11-11))"
+    }
+   ]
+  },
+  {
+   "id": "dob-env-camp",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/table-4.png",
+     "role": "current",
+     "caption": "the camp in The Hollow at the start of a game (captured for this catalog from the current 2D build on main (2026-11-11))"
+    }
+   ]
+  },
+  {
+   "id": "dob-ui-hud",
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/catalog/table-4.png",
+     "role": "current",
+     "caption": "the HUD in play: quest tracker, health and mana bars, skill buttons (captured for this catalog from the current 2D build on main (2026-11-11))"
+    }
+   ]
+  }
+ ]
+}

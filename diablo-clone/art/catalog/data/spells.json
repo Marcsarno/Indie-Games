@@ -1,0 +1,5224 @@
+{
+ "records": [
+  {
+   "id": "dob-skill-ground-slam",
+   "project": "dungeon-of-bones",
+   "title": "Ground Slam",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "The warrior jumps, brings his weapon down over his head and splits the ground in a cone in front of him. Everything in the cone is hit hard, knocked back and dazed. Stone slabs burst up in a wave, a crater is pressed into the floor and dust rolls out.",
+   "tags": [
+    "skill",
+    "warrior",
+    "augment",
+    "melee",
+    "area"
+   ],
+   "addedToGame": true,
+   "class": "warrior",
+   "version": "v7",
+   "dates": {
+    "first": null,
+    "last": "2026-11-05",
+    "firstNote": "First version is older than the git history (between 2026-10-28 and 2026-11-03)."
+   },
+   "notes": "Round 88 lists Ground Slam for a later frame-by-frame polish. Modifiers unlock at hero levels 3, 5 and 7 (skill level +2/+4/+6).",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 24, 25, 29b, 40a, 65, 65b, 65c)",
+    "diablo-clone/game/js/skills.js",
+    "358a49f",
+    "cf02926",
+    "d1027dd",
+    "f61965f"
+   ],
+   "related": [
+    "dob-hero-warrior",
+    "dob-skill-modifier-system",
+    "dob-skill-shield-charge",
+    "dob-skill-leap"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round24/combo.png",
+     "caption": "First Ground Slam (round 24), frames 3-4 of the strip",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round40/ground-slam.gif",
+     "caption": "Round 40 hop-and-crash pose",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/slam.gif",
+     "caption": "Round 65 slam: slabs, crater, dust",
+     "role": "current"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/fissure.gif",
+     "caption": "Fissure modifier (round 65)",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-ground-slam@v1",
+     "date": null,
+     "title": "Round 24: Ground Slam added (warrior rework)",
+     "change": "New level-1 skill at the user's request (a cone slam, no jump): overhead chop (new attack4 clip), cone 4.2 tiles, 1.5x damage through shields, 0.7 s daze, glowing cracks, rocks and dust.",
+     "commits": [],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round24/combo.png",
+       "caption": "Round 24 warrior kit: Chain Hook, Ground Slam, Whirlwind, Leap frames",
+       "role": "before"
+      }
+     ],
+     "status": "tested",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-skill-ground-slam@v2",
+     "date": null,
+     "title": "Round 25: Impact kit",
+     "change": "Dust shockwave over the cone, white impact flash, cracks that stay in the floor, stone chunks.",
+     "commits": [],
+     "images": [],
+     "status": "commit-says",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-skill-ground-slam@v3",
+     "date": null,
+     "title": "Round 29b: First skill modifiers",
+     "change": "Full Circle, Fissure and Aftershock modifiers added (the first augmentations, with the Fireball's).",
+     "commits": [],
+     "images": [],
+     "status": "user-approved",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-skill-ground-slam@v4",
+     "date": "2026-11-04",
+     "title": "Round 40a: Hop-and-crash pose",
+     "change": "New gslam swing: crouch, hop, dive, crash, hold, rise; blow still lands at 217 ms.",
+     "commits": [
+      "d1027dd"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round40/ground-slam.gif",
+       "caption": "Round 40 slam hop and crash",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-ground-slam@v5",
+     "date": "2026-11-05",
+     "title": "Round 65: Bigger slam",
+     "change": "User: the ground slam is weak. Stone slabs burst up in a wave, a crater, billowing dust clouds, a hit-pause and camera kick.",
+     "commits": [
+      "cf02926"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/slam.gif",
+       "caption": "Round 65 slam with slabs, crater and dust",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-ground-slam@v6",
+     "date": "2026-11-05",
+     "title": "Round 65b: Real jump",
+     "change": "User asked for a quick jump with the weapon above the head: 18 px jump, weapon straight up, whipped down; blow lands at 317 ms.",
+     "commits": [
+      "f61965f"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-ground-slam@v7",
+     "date": "2026-11-05",
+     "title": "Round 65c: Every version jumps, more oomph",
+     "change": "All four versions jump (25 px), Aftershock hops twice; crater, longer hold, view punch, dust ring on every landing.",
+     "commits": [
+      "358a49f"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/slam2.gif",
+       "caption": "Round 65c slam, second pass",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    }
+   ],
+   "unlockLevel": 1,
+   "costCooldown": "8 fury, 2.5 s cooldown",
+   "animation": "attack4 clip using the gslam swing keys (crouch, weapon up, jump, whip down, crash, hold, rise).",
+   "effects": "Cone of cracks (G.quakes, stamped into the floor), rock slabs (slamEruption), crater, dust clouds, shockwave, impact flash, rubble, screen shake.",
+   "augments": [
+    {
+     "name": "FULL CIRCLE",
+     "does": "Hits all around, shorter reach."
+    },
+    {
+     "name": "FISSURE",
+     "does": "One long narrow crack that races out and throws slabs."
+    },
+    {
+     "name": "AFTERSHOCK",
+     "does": "A second, weaker slam half a second later (he hops again)."
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-shield-charge",
+   "project": "dungeon-of-bones",
+   "title": "Shield Charge",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "A long sprint behind the shield, about 8.5 tiles, straight through every foe in the way. Each foe passed is hit, staggered and shoved aside, and nothing can hurt the warrior while he runs. It goes where the stick points, so it works as an escape or an opener.",
+   "tags": [
+    "skill",
+    "warrior",
+    "augment",
+    "mobility"
+   ],
+   "addedToGame": true,
+   "class": "warrior",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-10",
+    "last": "2026-11-10"
+   },
+   "notes": "No image in the repo: the round 76 clip art-review/round76-charge.gif is gitignored and not in MAIN. The code comment still calls it a test. The old Shield Bash code also uses the bash pose.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 76)",
+    "diablo-clone/game/js/skills.js",
+    "5053824"
+   ],
+   "related": [
+    "dob-hero-warrior",
+    "dob-skill-chain-hook",
+    "dob-skill-shield-bash"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-skill-shield-charge@v1",
+     "date": "2026-11-10",
+     "title": "Round 76: Shield Charge replaces the Chain Hook (as a test)",
+     "change": "User: replace the hook with the shield charge; make it go far, maybe through them; fun upgrades. Level 2, 6 fury, 5 s. Upgrades Battering Ram, Second Wind, Tremor. The hook code stays; one line swaps it back.",
+     "commits": [
+      "5053824"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "unlockLevel": 2,
+   "costCooldown": "6 fury, 5 s cooldown",
+   "animation": "'bash' pose while running; after-image every stride, dust behind.",
+   "effects": "Stagger and shove on each foe passed; Battering Ram ends in a shockwave against walls; Tremor reuses the slam's fissure along the path.",
+   "augments": [
+    {
+     "name": "BATTERING RAM",
+     "does": "Carries the first foes on the shield and slams them into what stops you."
+    },
+    {
+     "name": "SECOND WIND",
+     "does": "Charge a second time within 2 s, free."
+    },
+    {
+     "name": "TREMOR",
+     "does": "The ground you crossed splits open behind you."
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-whirlwind",
+   "project": "dungeon-of-bones",
+   "title": "Whirlwind",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "The warrior spins with his weapon held out, hitting everything in reach several times. It is the one warrior skill kept since the first skill set (round 9). Later passes added a spin pose, a wide blade sweep, sparks and a dust swirl.",
+   "tags": [
+    "skill",
+    "warrior",
+    "augment",
+    "melee",
+    "area"
+   ],
+   "addedToGame": true,
+   "class": "warrior",
+   "version": "v7",
+   "dates": {
+    "first": "2026-10-28",
+    "last": "2026-11-10"
+   },
+   "notes": "Round 88 lists Whirlwind for a later frame-by-frame polish.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 9, 24, 25, 30, 40a, 65c, 72b)",
+    "diablo-clone/game/js/skills.js",
+    "358a49f",
+    "c32f011",
+    "d1027dd",
+    "f43107e"
+   ],
+   "related": [
+    "dob-hero-warrior",
+    "dob-skill-modifier-system"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round24/combo.png",
+     "caption": "Round 24: Whirlwind frame (bottom left)",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round30/whirl.png",
+     "caption": "Round 30 modifiers",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round40/whirlwind.gif",
+     "caption": "Round 40 spin pose",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-whirlwind@v1",
+     "date": "2026-10-28",
+     "title": "Round 9: Whirlwind added",
+     "change": "One of the first four skills: 0.8 s spin hitting everything in reach 4 times.",
+     "commits": [],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round9/stage-a-skills-boss.png",
+       "caption": "Round 9 skills on the first button arc",
+       "role": "before"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-whirlwind@v2",
+     "date": null,
+     "title": "Round 24: Kept in the rework",
+     "change": "The user asked to keep it; it moved to level 3.",
+     "commits": [],
+     "images": [],
+     "status": "tested",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-skill-whirlwind@v3",
+     "date": null,
+     "title": "Round 25: Spinning blade smear",
+     "change": "whirlSmear: steel arcs in front of and behind the hero.",
+     "commits": [],
+     "images": [],
+     "status": "commit-says",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-skill-whirlwind@v4",
+     "date": "2026-11-03",
+     "title": "Round 30: Modifiers",
+     "change": "Dust Devils, Long Spin, Blade Storm.",
+     "commits": [
+      "f43107e"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round30/whirl.png",
+       "caption": "Round 30 whirlwind modifiers sheet",
+       "role": "comparison"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-whirlwind@v5",
+     "date": "2026-11-04",
+     "title": "Round 40a: Spin pose",
+     "change": "New 'spin' clip (weapon straight out, off arm out, feet shuffling) with the spin speeding up and slowing at both ends.",
+     "commits": [
+      "d1027dd"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round40/whirlwind.gif",
+       "caption": "Round 40 spin pose",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-whirlwind@v6",
+     "date": "2026-11-05",
+     "title": "Round 65c: Sparks and dust swirl",
+     "change": "Sparks off each blade hit and a dust swirl round his feet.",
+     "commits": [
+      "358a49f"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-whirlwind@v7",
+     "date": "2026-11-10",
+     "title": "Round 72b: Wide sweep",
+     "change": "A wide sweep trails the blade through the turn.",
+     "commits": [
+      "c32f011"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "unlockLevel": 3,
+   "costCooldown": "10 fury, 4 s cooldown (Long Spin +6 fury)",
+   "animation": "'spin' clip, 4 frames, with spinA ramp.",
+   "effects": "Blade smear arcs (smearArc), sparks, dust swirl; Dust Devils are small wandering whirlwinds.",
+   "augments": [
+    {
+     "name": "DUST DEVILS",
+     "does": "Throws out small whirlwinds as you spin."
+    },
+    {
+     "name": "LONG SPIN",
+     "does": "Spins twice as long, pulls foes in, 6 more fury."
+    },
+    {
+     "name": "BLADE STORM",
+     "does": "Wider reach, faster hits."
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-leap",
+   "project": "dungeon-of-bones",
+   "title": "Leap",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "The warrior jumps in an arc at the nearest enemy (or along the stick) and smashes the ground where he lands. He cannot be hurt in the air. It is both a way to travel and a damage skill.",
+   "tags": [
+    "skill",
+    "warrior",
+    "augment",
+    "mobility",
+    "area"
+   ],
+   "addedToGame": true,
+   "class": "warrior",
+   "version": "v6",
+   "dates": {
+    "first": null,
+    "last": "2026-11-05",
+    "firstNote": "First version is older than the git history (between 2026-10-28 and 2026-11-03)."
+   },
+   "notes": "",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 24, 25, 30, 38, 40a, 65c)",
+    "diablo-clone/game/js/skills.js",
+    "358a49f",
+    "a87e44f",
+    "d1027dd",
+    "f43107e"
+   ],
+   "related": [
+    "dob-hero-warrior",
+    "dob-skill-ground-slam",
+    "dob-skill-wrath-of-the-mountain"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round24/leap.png",
+     "caption": "Round 24 first leap",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round30/leap.png",
+     "caption": "Round 30 modifiers",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round40/leap.gif",
+     "caption": "Round 40 poses",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/leap.gif",
+     "caption": "Round 65c landing with slabs",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-leap@v1",
+     "date": null,
+     "title": "Round 24: Leap added",
+     "change": "Level 4: targets the nearest visible enemy 2-7 tiles away; untouchable; landing r 1.9, 1.8x, daze, ring of cracks, dust, shake.",
+     "commits": [],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round24/leap.png",
+       "caption": "Round 24 leap",
+       "role": "before"
+      }
+     ],
+     "status": "tested",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-skill-leap@v2",
+     "date": null,
+     "title": "Round 25: Impact kit",
+     "change": "Shockwave, flash and cracks on landing.",
+     "commits": [],
+     "images": [],
+     "status": "commit-says",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-skill-leap@v3",
+     "date": "2026-11-03",
+     "title": "Round 30: Modifiers",
+     "change": "Burning Land, Earthquake, Pounce.",
+     "commits": [
+      "f43107e"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round30/leap.png",
+       "caption": "Round 30 leap modifiers",
+       "role": "comparison"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-leap@v4",
+     "date": "2026-11-03",
+     "title": "Round 38: No more stuck in walls",
+     "change": "Landing checks the whole footprint (standable), plus an unstick safety net.",
+     "commits": [
+      "a87e44f"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-leap@v5",
+     "date": "2026-11-04",
+     "title": "Round 40a: Crouch, tuck, dive, land",
+     "change": "Leap uses the gslam keys (crouch, tuck, dive, strike) and a landing pose.",
+     "commits": [
+      "d1027dd"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round40/leap.gif",
+       "caption": "Round 40 leap poses",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-leap@v6",
+     "date": "2026-11-05",
+     "title": "Round 65c: Ground breaks on landing",
+     "change": "The landing calls slamEruption in a ring: slabs, crater, dust.",
+     "commits": [
+      "358a49f"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/leap.gif",
+       "caption": "Round 65c leap landing",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    }
+   ],
+   "unlockLevel": 4,
+   "costCooldown": "10 fury, 5 s cooldown",
+   "animation": "attack4 clip with the gslam keys while in the air (hero.leapZ lifts the sprite).",
+   "effects": "Ring of slabs, crater, dust, cracks, shake; Burning Land leaves fire on the floor.",
+   "augments": [
+    {
+     "name": "BURNING LAND",
+     "does": "The landing leaves fire on the floor."
+    },
+    {
+     "name": "EARTHQUAKE",
+     "does": "A much wider landing that knocks all down."
+    },
+    {
+     "name": "POUNCE",
+     "does": "A longer jump, one huge blow on the target."
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-chain-hook",
+   "project": "dungeon-of-bones",
+   "title": "Chain Hook",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "replaced",
+   "description": "A hook on a chain flies at the nearest enemy; whatever it catches is dragged up to the warrior and dazed. Bosses and elites do not move, so the warrior is pulled to them instead. It was the level-2 skill from round 24 until Shield Charge took its place in round 76.",
+   "tags": [
+    "skill",
+    "warrior",
+    "augment",
+    "replaced"
+   ],
+   "addedToGame": false,
+   "class": "warrior",
+   "version": "v7",
+   "dates": {
+    "first": null,
+    "last": "2026-11-10",
+    "firstNote": "First version is older than the git history (between 2026-10-28 and 2026-11-03)."
+   },
+   "notes": "Round 35 date: 2026-11-03 (commit 757948d). The user did not dislike the hook as such; round 76 asked for more mobility (\"the unlocks felt boring; mobility is fun\", per the code comment). Status of round 76 marked user-rejected in the sense that the user asked for it to be swapped out.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 24, 27, 30, 35, 40a, 72b, 76)",
+    "diablo-clone/game/js/skills.js",
+    "5053824",
+    "757948d",
+    "c32f011",
+    "d1027dd",
+    "f43107e"
+   ],
+   "related": [
+    "dob-skill-shield-charge",
+    "dob-hero-warrior"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round24/combo.png",
+     "caption": "Round 24 hook",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round30/hook.png",
+     "caption": "Round 30 modifiers",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round40/chain-hook.gif",
+     "caption": "Round 40 throw and haul pose",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-chain-hook@v1",
+     "date": null,
+     "title": "Round 24: Chain Hook added",
+     "change": "Claude's suggestion for the level-2 slot: flies 16 tiles/s at the nearest enemy within 7, drags the catch in, daze 0.8 s; bosses reel the hero in.",
+     "commits": [],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round24/combo.png",
+       "caption": "Round 24: Chain Hook frames (top left)",
+       "role": "before"
+      }
+     ],
+     "status": "tested",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-skill-chain-hook@v2",
+     "date": null,
+     "title": "Round 27: Chain drawn properly",
+     "change": "Oval iron links that sag in flight and pull taut, barbed head, impact flash, sparks, clank sound.",
+     "commits": [],
+     "images": [],
+     "status": "commit-says",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-skill-chain-hook@v3",
+     "date": "2026-11-03",
+     "title": "Round 30: Modifiers",
+     "change": "Long Chain, Barbed Hook, Tether.",
+     "commits": [
+      "f43107e"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round30/hook.png",
+       "caption": "Round 30 hook modifiers",
+       "role": "comparison"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-chain-hook@v4",
+     "date": "2026-11-03",
+     "title": "Round 35: Holds its catch",
+     "change": "The hook now holds what it drags so packs do not walk back out mid-pull.",
+     "commits": [
+      "757948d"
+     ],
+     "images": [],
+     "status": "commit-says"
+    },
+    {
+     "id": "dob-skill-chain-hook@v5",
+     "date": "2026-11-04",
+     "title": "Round 40a: Throw and haul pose",
+     "change": "'hook' clip: wind back, throw, haul with both hands on the chain.",
+     "commits": [
+      "d1027dd"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round40/chain-hook.gif",
+       "caption": "Round 40 hook throw and haul",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-chain-hook@v6",
+     "date": "2026-11-10",
+     "title": "Round 72b: Throw arc",
+     "change": "An arc on the throw.",
+     "commits": [
+      "c32f011"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-chain-hook@v7",
+     "date": "2026-11-10",
+     "title": "Round 76: Replaced by Shield Charge",
+     "change": "User: replace the hook with the shield charge. The hook code stays and one line in SKILLSETS swaps it back.",
+     "commits": [
+      "5053824"
+     ],
+     "images": [],
+     "status": "user-rejected"
+    }
+   ],
+   "unlockLevel": 2,
+   "costCooldown": "6 fury, 4 s cooldown",
+   "animation": "'hook' clip (wind back, throw, haul).",
+   "effects": "Chain drawn link by link on the detail layer (drawHookChains), dust from dragged foes.",
+   "augments": [
+    {
+     "name": "LONG CHAIN",
+     "does": "Reaches farther, drags in all it passes."
+    },
+    {
+     "name": "BARBED HOOK",
+     "does": "Hits harder, dazes twice as long."
+    },
+    {
+     "name": "TETHER",
+     "does": "Hauls you to the target for a heavy blow."
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-shield-bash",
+   "project": "dungeon-of-bones",
+   "title": "Shield Bash",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "removed",
+   "description": "A short dash at the nearest enemy, then a heavy knockback (10 tiles) and a 1.4 s stun. One of the warrior's first four skills from round 9. Removed from the button bar in the round 24 warrior rework; the code was kept.",
+   "tags": [
+    "skill",
+    "warrior",
+    "removed"
+   ],
+   "addedToGame": false,
+   "class": "warrior",
+   "version": "v2",
+   "dates": {
+    "first": "2026-10-28",
+    "last": null
+   },
+   "notes": "Its bash pose lives on in Shield Charge. Exact unlock order of the round 9 kit is given only as a list (holy bolt; shield bash; whirlwind; war cry).",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 9, 24)",
+    "diablo-clone/game/js/skills.js"
+   ],
+   "related": [
+    "dob-hero-warrior"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round9/stage-a-skills-boss.png",
+     "caption": "Round 9 screens with the first skill buttons (WAR CRY text visible)",
+     "role": "before"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-shield-bash@v1",
+     "date": "2026-10-28",
+     "title": "Round 9: Shield Bash added",
+     "change": "First skill set: 4 skills on an arc of buttons, unlocked at levels 1/2/3/4 (Holy Bolt, Shield Bash, Whirlwind, War Cry), cooldown dither, keys 1-4.",
+     "commits": [],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round9/stage-a-skills-boss.png",
+       "caption": "Round 9 screens: the first skill buttons, WAR CRY message",
+       "role": "before"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-shield-bash@v2",
+     "date": null,
+     "title": "Round 24: Removed in the warrior rework",
+     "change": "User: the warrior needs a full rework (round 18: abilities \"very poor\"). Shield Bash, War Cry and Holy Bolt left the bar; code kept.",
+     "commits": [],
+     "images": [],
+     "status": "user-rejected",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-war-cry",
+   "project": "dungeon-of-bones",
+   "title": "War Cry",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "removed",
+   "description": "A shout: 8 s of +40% damage and +50% armour, and nearby foes stagger. One of the warrior's first four skills from round 9. Removed from the button bar in the round 24 warrior rework; the code was kept.",
+   "tags": [
+    "skill",
+    "warrior",
+    "removed"
+   ],
+   "addedToGame": false,
+   "class": "warrior",
+   "version": "v2",
+   "dates": {
+    "first": "2026-10-28",
+    "last": null
+   },
+   "notes": "The +40% damage bonus (hero.buff) is still in the damage formula. Exact unlock order of the round 9 kit is given only as a list (holy bolt; shield bash; whirlwind; war cry).",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 9, 24)",
+    "diablo-clone/game/js/skills.js"
+   ],
+   "related": [
+    "dob-hero-warrior"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round9/stage-a-skills-boss.png",
+     "caption": "Round 9 screens with the first skill buttons (WAR CRY text visible)",
+     "role": "before"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-war-cry@v1",
+     "date": "2026-10-28",
+     "title": "Round 9: War Cry added",
+     "change": "First skill set: 4 skills on an arc of buttons, unlocked at levels 1/2/3/4 (Holy Bolt, Shield Bash, Whirlwind, War Cry), cooldown dither, keys 1-4.",
+     "commits": [],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round9/stage-a-skills-boss.png",
+       "caption": "Round 9 screens: the first skill buttons, WAR CRY message",
+       "role": "before"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-war-cry@v2",
+     "date": null,
+     "title": "Round 24: Removed in the warrior rework",
+     "change": "User: the warrior needs a full rework (round 18: abilities \"very poor\"). Shield Bash, War Cry and Holy Bolt left the bar; code kept.",
+     "commits": [],
+     "images": [],
+     "status": "user-rejected",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-holy-bolt",
+   "project": "dungeon-of-bones",
+   "title": "Holy Bolt",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "removed",
+   "description": "A bolt of holy light, the warrior's level-1 ranged skill in the first skill set. One of the warrior's first four skills from round 9. Removed from the button bar in the round 24 warrior rework; the code was kept.",
+   "tags": [
+    "skill",
+    "warrior",
+    "removed"
+   ],
+   "addedToGame": false,
+   "class": "warrior",
+   "version": "v2",
+   "dates": {
+    "first": "2026-10-28",
+    "last": null
+   },
+   "notes": "Its code (bolt) is still referenced in useSkill. Exact unlock order of the round 9 kit is given only as a list (holy bolt; shield bash; whirlwind; war cry).",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 9, 24)",
+    "diablo-clone/game/js/skills.js"
+   ],
+   "related": [
+    "dob-hero-warrior"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round9/stage-a-skills-boss.png",
+     "caption": "Round 9 screens with the first skill buttons (WAR CRY text visible)",
+     "role": "before"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-holy-bolt@v1",
+     "date": "2026-10-28",
+     "title": "Round 9: Holy Bolt added",
+     "change": "First skill set: 4 skills on an arc of buttons, unlocked at levels 1/2/3/4 (Holy Bolt, Shield Bash, Whirlwind, War Cry), cooldown dither, keys 1-4.",
+     "commits": [],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round9/stage-a-skills-boss.png",
+       "caption": "Round 9 screens: the first skill buttons, WAR CRY message",
+       "role": "before"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-holy-bolt@v2",
+     "date": null,
+     "title": "Round 24: Removed in the warrior rework",
+     "change": "User: the warrior needs a full rework (round 18: abilities \"very poor\"). Shield Bash, War Cry and Holy Bolt left the bar; code kept.",
+     "commits": [],
+     "images": [],
+     "status": "user-rejected",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-wrath-of-the-mountain",
+   "project": "dungeon-of-bones",
+   "title": "Wrath of the Mountain",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "replaced",
+   "description": "The warrior's first ultimate: he leaps straight up, hangs gathering light, drives down, and a huge ring of ground shatters; everything is knocked down, then boulders rain over the area. It charged from fighting instead of a cooldown.",
+   "tags": [
+    "skill",
+    "warrior",
+    "ultimate",
+    "replaced"
+   ],
+   "addedToGame": false,
+   "class": "warrior",
+   "version": "v4",
+   "dates": {
+    "first": "2026-11-03",
+    "last": "2026-11-11"
+   },
+   "notes": "Code still in skills.js (startWrath/updateWrath/wrathLand) but unreachable from useUlt as of round 88 (verified: useUlt returns warriorStance() for the warrior).",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 31, 40a, 87, 88)",
+    "diablo-clone/game/js/skills.js",
+    "76cfd4e",
+    "a64f606",
+    "aaa4af7",
+    "d1027dd"
+   ],
+   "related": [
+    "dob-skill-titan",
+    "dob-skill-berserker",
+    "dob-hero-warrior"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round31/wrath.png",
+     "caption": "Round 31 Wrath of the Mountain frames",
+     "role": "before"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-wrath-of-the-mountain@v1",
+     "date": "2026-11-03",
+     "title": "Round 31: Ultimates added",
+     "change": "A fifth button that charges from hits and kills (user picked charging over a cooldown). Ring 5.2 tiles, up to 6x, knockdowns, 16 falling rocks.",
+     "commits": [
+      "76cfd4e"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round31/wrath.png",
+       "caption": "Round 31 Wrath of the Mountain",
+       "role": "before"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-wrath-of-the-mountain@v2",
+     "date": "2026-11-04",
+     "title": "Round 40a: Uses the slam keys",
+     "change": "Leap and Wrath use the gslam keys (crouch, tuck, dive, strike).",
+     "commits": [
+      "d1027dd"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-wrath-of-the-mountain@v3",
+     "date": "2026-11-11",
+     "title": "Round 87: Stand-in for the Titan",
+     "change": "The warrior's ultimate button became the stance button (rage); at full rage in the Berserker, Wrath stood in for the Titan.",
+     "commits": [
+      "aaa4af7"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-wrath-of-the-mountain@v4",
+     "date": "2026-11-11",
+     "title": "Round 88: Replaced by the Titan",
+     "change": "The Titan stance took over full rage; startWrath is no longer reached from the ultimate button.",
+     "commits": [
+      "a64f606"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "Ultimate: charged from fighting (ULT_LVL 4 while testing; 10 planned)",
+   "animation": "attack4 clip; hero.leapZ up to 64 px, hang, drive down.",
+   "effects": "Ring of 16 cracks, two shockwaves, flash, rubble, falling boulders with growing shadows."
+  },
+  {
+   "id": "dob-skill-berserker",
+   "project": "dungeon-of-bones",
+   "title": "Berserker (rage stance)",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "The warrior's RAGE bar fills from blows he lands and takes. At half rage the stance button turns him into the Berserker: his four buttons become Reaver's Rush, Hurl, Blood Roar and Flurry, he moves and hits a seventh harder, and red embers and red after-images follow him. Rage drains while he is in it, and when it runs dry he is himself again.",
+   "tags": [
+    "skill",
+    "warrior",
+    "stance",
+    "ultimate",
+    "rage"
+   ],
+   "addedToGame": true,
+   "class": "warrior",
+   "version": "v2",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "No image in the repo (round 87 GIFs art-review/round87-*.gif are gitignored). The skills screen still lists only the calm four, so there are no previews of the Berserker's moves.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 86, 87)",
+    "diablo-clone/game/js/skills.js",
+    "695e652",
+    "aaa4af7"
+   ],
+   "related": [
+    "dob-skill-reavers-rush",
+    "dob-skill-hurl",
+    "dob-skill-blood-roar",
+    "dob-skill-flurry",
+    "dob-skill-titan",
+    "dob-hero-warrior"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-skill-berserker@v1",
+     "date": "2026-11-11",
+     "title": "Round 86: Idea recorded",
+     "change": "User idea: one stance button that swaps the warrior's bar to four other abilities. Recorded, not started.",
+     "commits": [
+      "695e652"
+     ],
+     "images": [],
+     "status": "commit-says"
+    },
+    {
+     "id": "dob-skill-berserker@v2",
+     "date": "2026-11-11",
+     "title": "Round 87: Rage and the Berserker built",
+     "change": "User picked three stances climbing with rage, each with four new moves; \"Start with the Berserker\". Rage 0-100 (saved), stance button = the old ultimate button, red ring HUD, enterBerserk burst.",
+     "commits": [
+      "aaa4af7"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "Rage 50 to enter (unlocks with ULT_LVL, 4 while testing); drains 2.6/s",
+   "animation": "Moves reuse the hero's own swings stopped at chosen moments (bzPose, swingT).",
+   "effects": "Red shockwave on entry, crimson embers, red after-images while running, breathing red ring underfoot, red slash arcs."
+  },
+  {
+   "id": "dob-skill-reavers-rush",
+   "project": "dungeon-of-bones",
+   "title": "Reaver's Rush",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "He blurs from foe to foe, up to six, with a slash at each (1.8x); nothing can touch him while he goes. It is one of the Berserker stance's four moves.",
+   "tags": [
+    "skill",
+    "warrior",
+    "berserker",
+    "stance"
+   ],
+   "addedToGame": true,
+   "class": "warrior",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "Reachable only in the Berserker stance (half rage, hero level 4+ while testing). No image in the repo.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 87)",
+    "diablo-clone/game/js/skills.js",
+    "aaa4af7"
+   ],
+   "related": [
+    "dob-skill-berserker",
+    "dob-hero-warrior"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-skill-reavers-rush@v1",
+     "date": "2026-11-11",
+     "title": "Round 87: Reaver's Rush added",
+     "change": "One of the Berserker's four moves. Measured (skill-dmg tool): Rush 18.4 basic hits on six skeletons (Ground Slam 11.4 for scale).",
+     "commits": [
+      "aaa4af7"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "10 fury, 6 s",
+   "animation": "Hero swing poses stopped at chosen moments (bzPose).",
+   "effects": "Red streaks and after-images."
+  },
+  {
+   "id": "dob-skill-hurl",
+   "project": "dungeon-of-bones",
+   "title": "Hurl",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "He grabs the nearest foe, swings round once and throws it into the thickest knot of the rest; it knocks down and hits what it passes and lands for 3x. Bosses get a two-handed 4x blow instead. It is one of the Berserker stance's four moves.",
+   "tags": [
+    "skill",
+    "warrior",
+    "berserker",
+    "stance"
+   ],
+   "addedToGame": true,
+   "class": "warrior",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "Reachable only in the Berserker stance (half rage, hero level 4+ while testing). No image in the repo.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 87)",
+    "diablo-clone/game/js/skills.js",
+    "aaa4af7"
+   ],
+   "related": [
+    "dob-skill-berserker",
+    "dob-hero-warrior"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-skill-hurl@v1",
+     "date": "2026-11-11",
+     "title": "Round 87: Hurl added",
+     "change": "One of the Berserker's four moves. Measured (skill-dmg tool): Hurl 27.6 (Ground Slam 11.4 for scale).",
+     "commits": [
+      "aaa4af7"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "8 fury, 5 s",
+   "animation": "Hero swing poses stopped at chosen moments (bzPose).",
+   "effects": "The thrown foe flies as a projectile; burst on landing."
+  },
+  {
+   "id": "dob-skill-blood-roar",
+   "project": "dungeon-of-bones",
+   "title": "Blood Roar",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "Weapon thrown up and a roar: a red shockwave rolls out in a 110-degree cone; ordinary foes panic and run for 2.4 s, big ones are stunned. Adds 20 rage. It is one of the Berserker stance's four moves.",
+   "tags": [
+    "skill",
+    "warrior",
+    "berserker",
+    "stance"
+   ],
+   "addedToGame": true,
+   "class": "warrior",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "Reachable only in the Berserker stance (half rage, hero level 4+ while testing). No image in the repo.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 87)",
+    "diablo-clone/game/js/skills.js",
+    "aaa4af7"
+   ],
+   "related": [
+    "dob-skill-berserker",
+    "dob-hero-warrior"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-skill-blood-roar@v1",
+     "date": "2026-11-11",
+     "title": "Round 87: Blood Roar added",
+     "change": "One of the Berserker's four moves. Measured (skill-dmg tool): Roar 11.3 (Ground Slam 11.4 for scale).",
+     "commits": [
+      "aaa4af7"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "6 fury, 9 s",
+   "animation": "Hero swing poses stopped at chosen moments (bzPose).",
+   "effects": "Red cone shockwave."
+  },
+  {
+   "id": "dob-skill-flurry",
+   "project": "dungeon-of-bones",
+   "title": "Flurry",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "He lunges in and lands 12 blows in about a second at what is in front, each a spark and a red slash, then a 2.5x blow that launches the target into the rest. It is one of the Berserker stance's four moves.",
+   "tags": [
+    "skill",
+    "warrior",
+    "berserker",
+    "stance"
+   ],
+   "addedToGame": true,
+   "class": "warrior",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "Reachable only in the Berserker stance (half rage, hero level 4+ while testing). No image in the repo.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 87)",
+    "diablo-clone/game/js/skills.js",
+    "aaa4af7"
+   ],
+   "related": [
+    "dob-skill-berserker",
+    "dob-hero-warrior"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-skill-flurry@v1",
+     "date": "2026-11-11",
+     "title": "Round 87: Flurry added",
+     "change": "One of the Berserker's four moves. Measured (skill-dmg tool): Flurry 13.6 (Ground Slam 11.4 for scale).",
+     "commits": [
+      "aaa4af7"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "10 fury, 4 s",
+   "animation": "Hero swing poses stopped at chosen moments (bzPose).",
+   "effects": "Crimson crescents (bzSlash) and sparks."
+  },
+  {
+   "id": "dob-skill-titan",
+   "project": "dungeon-of-bones",
+   "title": "Titan (full-rage stance)",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "At full rage in the Berserker, the stance button makes the warrior the Titan for 30 seconds (one more second a kill, up to 45). He is wrapped in a red-gold flame mantle, his steps shake the floor, he takes 40% less damage and deals 30% more, and his plain swings throw a wave of force. His buttons become Earthsplitter, Uproot, Titan's Crescent and Skyfall. When it ends he drops to one knee.",
+   "tags": [
+    "skill",
+    "warrior",
+    "stance",
+    "ultimate",
+    "rage"
+   ],
+   "addedToGame": true,
+   "class": "warrior",
+   "version": "v2",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "The hero rig has no scale, so the Titan does not grow; the flame mantle stands in for size. No image in the repo (round88-*.gif are gitignored).",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 87, 88)",
+    "diablo-clone/game/js/skills.js",
+    "a64f606",
+    "aaa4af7"
+   ],
+   "related": [
+    "dob-skill-earthsplitter",
+    "dob-skill-uproot",
+    "dob-skill-titans-crescent",
+    "dob-skill-skyfall",
+    "dob-skill-berserker",
+    "dob-skill-wrath-of-the-mountain"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-skill-titan@v1",
+     "date": "2026-11-11",
+     "title": "Round 87: Planned",
+     "change": "Third stance designed with the user; Wrath of the Mountain stood in for it.",
+     "commits": [
+      "aaa4af7"
+     ],
+     "images": [],
+     "status": "commit-says"
+    },
+    {
+     "id": "dob-skill-titan@v2",
+     "date": "2026-11-11",
+     "title": "Round 88: The Titan built",
+     "change": "User: \"Build the Titan next.\" First damage numbers were about double and the Titan never ended (uncapped seconds per kill): halved and capped. Bots: Titan 1-2 times a run, 0 deaths.",
+     "commits": [
+      "a64f606"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "Full rage (100) while in the Berserker; 30 s (+1 s a kill, max 45)",
+   "animation": "Normal clips; flame mantle drawn behind the body (drawTitanAura); kneel at the end (updateKneel).",
+   "effects": "Entry burst with gold-red shockwaves and screen flash, flame mantle, orange flicker, gold ring underfoot, footstep shakes, force wave on swings."
+  },
+  {
+   "id": "dob-skill-earthsplitter",
+   "project": "dungeon-of-bones",
+   "title": "Earthsplitter",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "The weapon goes into the floor and a white-hot crack races about 11 tiles at the thickest knot of foes; slabs heave up along it, small foes are thrown in the air, and the crack stays cut into the floor. One of the Titan stance's four moves.",
+   "tags": [
+    "skill",
+    "warrior",
+    "titan",
+    "stance"
+   ],
+   "addedToGame": true,
+   "class": "warrior",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "Reachable only as the Titan. No image in the repo (art-review/round88-*.gif is gitignored).",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 88)",
+    "diablo-clone/game/js/skills.js",
+    "a64f606"
+   ],
+   "related": [
+    "dob-skill-titan",
+    "dob-hero-warrior"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-skill-earthsplitter@v1",
+     "date": "2026-11-11",
+     "title": "Round 88: Earthsplitter added",
+     "change": "Titan move. Measured on six sturdy skeletons, in basic hits: Earthsplitter 55 (after halving the first numbers).",
+     "commits": [
+      "a64f606"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "0 fury, 3.5 s"
+  },
+  {
+   "id": "dob-skill-uproot",
+   "project": "dungeon-of-bones",
+   "title": "Uproot",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "He tears a slab out of the floor (leaving a crater) and hurls it; it bounds about 9.5 tiles through everything in its way and bursts at the end. One of the Titan stance's four moves.",
+   "tags": [
+    "skill",
+    "warrior",
+    "titan",
+    "stance"
+   ],
+   "addedToGame": true,
+   "class": "warrior",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "Reachable only as the Titan. No image in the repo (art-review/round88-*.gif is gitignored).",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 88)",
+    "diablo-clone/game/js/skills.js",
+    "a64f606"
+   ],
+   "related": [
+    "dob-skill-titan",
+    "dob-hero-warrior"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-skill-uproot@v1",
+     "date": "2026-11-11",
+     "title": "Round 88: Uproot added",
+     "change": "Titan move. Measured on six sturdy skeletons, in basic hits: Uproot 28 (after halving the first numbers).",
+     "commits": [
+      "a64f606"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "0 fury, 3.5 s"
+  },
+  {
+   "id": "dob-skill-titans-crescent",
+   "project": "dungeon-of-bones",
+   "title": "Titan's Crescent",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "After a short gather, one enormous swing sends a red-gold crescent of force flying 10 tiles, widening as it goes. One of the Titan stance's four moves.",
+   "tags": [
+    "skill",
+    "warrior",
+    "titan",
+    "stance"
+   ],
+   "addedToGame": true,
+   "class": "warrior",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "Reachable only as the Titan. No image in the repo (art-review/round88-*.gif is gitignored).",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 88)",
+    "diablo-clone/game/js/skills.js",
+    "a64f606"
+   ],
+   "related": [
+    "dob-skill-titan",
+    "dob-hero-warrior"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-skill-titans-crescent@v1",
+     "date": "2026-11-11",
+     "title": "Round 88: Titan's Crescent added",
+     "change": "Titan move. Measured on six sturdy skeletons, in basic hits: Crescent 39 (after halving the first numbers).",
+     "commits": [
+      "a64f606"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "0 fury, 2.5 s"
+  },
+  {
+   "id": "dob-skill-skyfall",
+   "project": "dungeon-of-bones",
+   "title": "Skyfall",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "He leaps out of sight, the view glides to the thickest knot of foes, a shadow grows, and he comes down like a meteor: all knocked down, spikes, a crater. Untouchable throughout. One of the Titan stance's four moves.",
+   "tags": [
+    "skill",
+    "warrior",
+    "titan",
+    "stance"
+   ],
+   "addedToGame": true,
+   "class": "warrior",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "Reachable only as the Titan. No image in the repo (art-review/round88-*.gif is gitignored).",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 88)",
+    "diablo-clone/game/js/skills.js",
+    "a64f606"
+   ],
+   "related": [
+    "dob-skill-titan",
+    "dob-hero-warrior"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-skill-skyfall@v1",
+     "date": "2026-11-11",
+     "title": "Round 88: Skyfall added",
+     "change": "Titan move. Measured on six sturdy skeletons, in basic hits: Skyfall 56 (after halving the first numbers).",
+     "commits": [
+      "a64f606"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "0 fury, 6 s"
+  },
+  {
+   "id": "dob-spell-magic-missile",
+   "project": "dungeon-of-bones",
+   "title": "Magic Missile",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "The mage's attack button: a homing arcane bolt that costs no mana (hits give a little mana back). It began as a fan of thin darts; after the user said they did not like it, it became one slower, heavier bolt, and later a violet comet with a rune-ring burst on impact.",
+   "tags": [
+    "spell",
+    "mage",
+    "augment",
+    "basic-attack",
+    "arcane"
+   ],
+   "addedToGame": true,
+   "class": "mage",
+   "version": "v8",
+   "dates": {
+    "first": null,
+    "last": "2026-11-06",
+    "firstNote": "First version is older than the git history (between 2026-10-28 and 2026-11-03)."
+   },
+   "notes": "Round 58-59: the user picked a whoosh sound for it (commit 027ab92, 2026-11-04). The round 18 status reflects the user saying \"mage feels good\" at the start of round 19.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 18, 19, 27, 29, 30, 62, 65, 67)",
+    "diablo-clone/game/js/skills.js",
+    "7a1ba69",
+    "810a694",
+    "8824b1d",
+    "cf02926",
+    "f43107e"
+   ],
+   "related": [
+    "dob-hero-mage",
+    "dob-skill-modifier-system"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round29/mage.gif",
+     "caption": "Round 29 mage with the single heavier bolt",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round30/missile.png",
+     "caption": "Round 30 modifiers",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round67/missile.gif",
+     "caption": "Round 67 comet missile",
+     "role": "current"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round67/seek.gif",
+     "caption": "Round 67 Seekers modifier",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-spell-magic-missile@v1",
+     "date": null,
+     "title": "Round 18: Missiles added",
+     "change": "Two homing darts (three from level 5), 0.45x staff damage each, 0.3 s cast, no mana.",
+     "commits": [],
+     "images": [],
+     "status": "user-approved",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-spell-magic-missile@v2",
+     "date": null,
+     "title": "Round 19: White core and tail",
+     "change": "Missiles with a white core, twinkling tail and an impact ring of sparks.",
+     "commits": [],
+     "images": [],
+     "status": "tested",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-spell-magic-missile@v3",
+     "date": null,
+     "title": "Round 27: Trail",
+     "change": "Path trail drawn at full detail (ribbon, core, glint), flash and zap sound on impact.",
+     "commits": [],
+     "images": [],
+     "status": "commit-says",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-spell-magic-missile@v4",
+     "date": null,
+     "title": "Round 29: One heavier bolt",
+     "change": "User did not like the missile (\"a little too fast\"). Now one arcane bolt per 0.38 s cast, 5 tiles/s, softer homing, bigger hit; a 19x15 orb with fizzing rim and crackle tail. User: \"feels much better actually\".",
+     "commits": [],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round29/mage.gif",
+       "caption": "Round 29 mage clip",
+       "role": "after"
+      }
+     ],
+     "status": "user-approved",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-spell-magic-missile@v5",
+     "date": "2026-11-03",
+     "title": "Round 30: Modifiers",
+     "change": "Seekers, Piercing Bolt, Arcane Orb. The missile shows as row 1 on the skills screen.",
+     "commits": [
+      "f43107e"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round30/missile.png",
+       "caption": "Round 30 missile modifiers",
+       "role": "comparison"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-magic-missile@v6",
+     "date": "2026-11-05",
+     "title": "Round 62: Heavier",
+     "change": "Weight pass: cast x1.3 slower, bolt damage x1.3.",
+     "commits": [
+      "8824b1d",
+      "7a1ba69"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-magic-missile@v7",
+     "date": "2026-11-05",
+     "title": "Round 65: Mana back",
+     "change": "Missile hits give 3 mana (Seekers 1).",
+     "commits": [
+      "cf02926"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-magic-missile@v8",
+     "date": "2026-11-06",
+     "title": "Round 67: Comet and rune ring",
+     "change": "A comet head with violet rim, 14-point fading trail, motes; on impact a turning rune ring, rays, white flash and spark spray.",
+     "commits": [
+      "810a694"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round67/missile.gif",
+       "caption": "Round 67 missile comet",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    }
+   ],
+   "unlockLevel": 1,
+   "costCooldown": "No mana; 0.38 s cast (x1.3 with WEIGHT HEAVY)",
+   "animation": "'channel' clip frames 0-2 (gather, release, follow-through); round 72: the orb swells, draws three motes in, bursts into a five-point star.",
+   "effects": "Comet projectile, rune-ring impact (arcaneHit/drawArcHits), violet light tint (round 80).",
+   "augments": [
+    {
+     "name": "SEEKERS",
+     "does": "Three small bolts, each finds its own foe."
+    },
+    {
+     "name": "PIERCING BOLT",
+     "does": "A fast straight bolt that goes through."
+    },
+    {
+     "name": "ARCANE ORB",
+     "does": "A slow orb that zaps all near it, then bursts."
+    }
+   ]
+  },
+  {
+   "id": "dob-spell-fireball",
+   "project": "dungeon-of-bones",
+   "title": "Fireball",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "A ball of fire thrown from the free hand that explodes on impact, knocking foes back and setting them burning. Charges the FIRE gauge for the mage's elemental ultimates. Redrawn in round 73 from a 4-pixel ball into a flickering flame with a long tail and a rising fireball blast.",
+   "tags": [
+    "spell",
+    "mage",
+    "augment",
+    "fire",
+    "projectile"
+   ],
+   "addedToGame": true,
+   "class": "mage",
+   "version": "v10",
+   "dates": {
+    "first": null,
+    "last": "2026-11-11",
+    "firstNote": "First version is older than the git history (between 2026-10-28 and 2026-11-03)."
+   },
+   "notes": "Round 73 before/after image art-review/round73-fire-ba.png is gitignored and not in MAIN.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 18, 19, 25, 29, 29b, 43, 72b, 73, 83, 86)",
+    "diablo-clone/game/js/skills.js",
+    "51f5099",
+    "606f790",
+    "695e652",
+    "6f897da",
+    "7af36a6",
+    "968d71a",
+    "c32f011"
+   ],
+   "related": [
+    "dob-hero-mage",
+    "dob-spell-meteor",
+    "dob-spell-inferno",
+    "dob-spell-elemental-ultimates"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round18/strip4.png",
+     "caption": "Round 18 first fireball blast",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round19/cast-frames.png",
+     "caption": "Round 19 three-pose cast",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/mage-casts.png",
+     "caption": "Round 43 hurl cast",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-spell-fireball@v1",
+     "date": null,
+     "title": "Round 18: Fireball added",
+     "change": "Level 1, 9 mana: explodes r 1.7 for 1.6x with heavy knockback; flame ring, fire disk, scorch decal.",
+     "commits": [],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round18/strip4.png",
+       "caption": "Round 18 spell strip (fireball blast, top row)",
+       "role": "before"
+      }
+     ],
+     "status": "user-approved",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-spell-fireball@v2",
+     "date": null,
+     "title": "Round 19: Ragged flame ball",
+     "change": "A ragged flickering flame ball with a tail and smoke; explosions leave smoke. Three-pose cast.",
+     "commits": [],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round19/cast-frames.png",
+       "caption": "Round 19 cast frames",
+       "role": "comparison"
+      }
+     ],
+     "status": "tested",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-spell-fireball@v3",
+     "date": null,
+     "title": "Round 25: Impact kit",
+     "change": "Flash, shockwave and sizzle shared by explosions.",
+     "commits": [],
+     "images": [],
+     "status": "commit-says",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-spell-fireball@v4",
+     "date": null,
+     "title": "Round 29: Burning",
+     "change": "Fire element: burn ticks, flames, ash deaths. Cast wind-up 0.13 s.",
+     "commits": [],
+     "images": [],
+     "status": "user-approved",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-spell-fireball@v5",
+     "date": null,
+     "title": "Round 29b: First modifiers",
+     "change": "Split, Burning Ground, Great Fireball.",
+     "commits": [],
+     "images": [],
+     "status": "user-approved",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-spell-fireball@v6",
+     "date": "2026-11-04",
+     "title": "Round 43: Hurl cast",
+     "change": "Channel frames 9-11: fireball held up in the free hand and thrown with a long step.",
+     "commits": [
+      "968d71a",
+      "606f790",
+      "6f897da"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/mage-casts.png",
+       "caption": "Round 43 mage cast poses (slam and hurl)",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-fireball@v7",
+     "date": "2026-11-10",
+     "title": "Round 72b: Fire on the throw",
+     "change": "Flames lick up from the fire held by the ear; a streak of fire and embers on the throw.",
+     "commits": [
+      "c32f011"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-fireball@v8",
+     "date": "2026-11-10",
+     "title": "Round 73: Redrawn at full detail",
+     "change": "White-hot heart, ragged four-tone flame, 30 px wavering tail; blast now a ball of flame that swells, lifts and cools to smoke.",
+     "commits": [
+      "51f5099"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-fireball@v9",
+     "date": "2026-11-11",
+     "title": "Round 83: Charges FIRE",
+     "change": "Fire damage fills the FIRE gauge (Inferno and the fire pairs).",
+     "commits": [
+      "7af36a6"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-fireball@v10",
+     "date": "2026-11-11",
+     "title": "Round 86: Charge per cast",
+     "change": "Each Fireball cast pays 25 into the gauge (4 casts).",
+     "commits": [
+      "695e652"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "unlockLevel": 1,
+   "costCooldown": "9 mana (Great Fireball +6), 0.7 s cooldown",
+   "animation": "'channel' clip frames 9-11 (the hurl).",
+   "effects": "Flame projectile, explodeAt blast with rising fire bloom, scorch decal, burning ground (modifier), warm light tint.",
+   "augments": [
+    {
+     "name": "SPLIT",
+     "does": "Three smaller fireballs in a spread."
+    },
+    {
+     "name": "BURNING GROUND",
+     "does": "Leaves fire on the floor for 3 seconds."
+    },
+    {
+     "name": "GREAT FIREBALL",
+     "does": "One huge, slow fireball. Costs 6 more mana."
+    }
+   ]
+  },
+  {
+   "id": "dob-spell-cone-of-cold",
+   "project": "dungeon-of-bones",
+   "title": "Cone of Cold",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "A blast of frost in a wedge in front of the mage. Ordinary monsters freeze solid (they cannot move, take more damage and shatter when killed); bosses, elites and champions are slowed instead. It replaced Frost Nova in round 19, and Frost Nova lives on as one of its modifiers.",
+   "tags": [
+    "spell",
+    "mage",
+    "augment",
+    "frost"
+   ],
+   "addedToGame": true,
+   "class": "mage",
+   "version": "v7",
+   "dates": {
+    "first": null,
+    "last": "2026-11-11",
+    "firstNote": "First version is older than the git history (between 2026-10-28 and 2026-11-03)."
+   },
+   "notes": "",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 19, 25, 30, 43, 65, 83, 86)",
+    "diablo-clone/game/js/skills.js",
+    "606f790",
+    "695e652",
+    "6f897da",
+    "7af36a6",
+    "968d71a",
+    "cf02926",
+    "f43107e"
+   ],
+   "related": [
+    "dob-spell-frost-nova",
+    "dob-hero-mage",
+    "dob-spell-blizzard"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round19/strip7.png",
+     "caption": "Round 19 first Cone of Cold",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round30/cone.png",
+     "caption": "Round 30 modifiers",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/mage-casts.png",
+     "caption": "Round 43 cast pose",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/cone.gif",
+     "caption": "Round 65 frost cloud and needles",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-spell-cone-of-cold@v1",
+     "date": null,
+     "title": "Round 19: Cone of Cold replaces the freeze",
+     "change": "User: replace the freeze with a cone of cold (freeze normal monsters, slow bosses). Wedge 4.4 tiles, 0.8x, normal foes frozen 3 s, big ones slowed; dithered frost wedge on the ground.",
+     "commits": [],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round19/strip7.png",
+       "caption": "Round 19 Cone of Cold strip",
+       "role": "before"
+      }
+     ],
+     "status": "user-approved",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-spell-cone-of-cold@v2",
+     "date": null,
+     "title": "Round 25: Lingering frost",
+     "change": "A frost sheet that lingers after the cone.",
+     "commits": [],
+     "images": [],
+     "status": "commit-says",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-spell-cone-of-cold@v3",
+     "date": "2026-11-03",
+     "title": "Round 30: Modifiers",
+     "change": "Frost Nova (the old spell, as a ring), Ice Shards, Deep Freeze.",
+     "commits": [
+      "f43107e"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round30/cone.png",
+       "caption": "Round 30: plain cone, Frost Nova, Ice Shards, Deep Freeze",
+       "role": "comparison"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-cone-of-cold@v4",
+     "date": "2026-11-04",
+     "title": "Round 43: Frost slam cast",
+     "change": "Channel frames 6-8: staff up on the toes, deep crouch planting it, ice shards at its foot.",
+     "commits": [
+      "968d71a",
+      "606f790",
+      "6f897da"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/mage-casts.png",
+       "caption": "Round 43 frost slam cast",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-cone-of-cold@v5",
+     "date": "2026-11-05",
+     "title": "Round 65: Frost cloud and needles",
+     "change": "User: Cone of Cold looks terrible. Now a rolling frost cloud, ice needles streaking ahead, frozen foes in rings of ice crystals with glints.",
+     "commits": [
+      "cf02926"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/cone.gif",
+       "caption": "Round 65 Cone of Cold",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-cone-of-cold@v6",
+     "date": "2026-11-11",
+     "title": "Round 83: Charges FROST",
+     "change": "Cold damage fills the FROST gauge (Blizzard and the frost pairs).",
+     "commits": [
+      "7af36a6"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-cone-of-cold@v7",
+     "date": "2026-11-11",
+     "title": "Round 86: Charge per cast",
+     "change": "Each cast pays 34 into the gauge (3 casts).",
+     "commits": [
+      "695e652"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "unlockLevel": 2,
+   "costCooldown": "12 mana, 5 s cooldown",
+   "animation": "'channel' clip frames 6-8 (the slam cast).",
+   "effects": "Frost cloud (G.mist), ice needles (G.needles), ice crystals round frozen foes, frost sheet on the floor, ice-blue tint on frozen foes, shatter deaths.",
+   "augments": [
+    {
+     "name": "FROST NOVA",
+     "does": "A ring of frost all around you."
+    },
+    {
+     "name": "ICE SHARDS",
+     "does": "A long narrow cone that hits harder."
+    },
+    {
+     "name": "DEEP FREEZE",
+     "does": "Freezes longer. Killed while frozen, they burst."
+    }
+   ]
+  },
+  {
+   "id": "dob-spell-frost-nova",
+   "project": "dungeon-of-bones",
+   "title": "Frost Nova",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "removed",
+   "description": "The mage's first freeze spell: a ring of frost around the mage that froze everything near for 3.2 seconds. The user asked to replace the freeze with a cone, so it was removed as a spell in round 19. It came back in round 30 as a modifier of Cone of Cold.",
+   "tags": [
+    "spell",
+    "mage",
+    "frost",
+    "removed",
+    "augment"
+   ],
+   "addedToGame": false,
+   "class": "mage",
+   "version": "v3",
+   "dates": {
+    "first": null,
+    "last": "2026-11-03",
+    "firstNote": "First version is older than the git history (between 2026-10-28 and 2026-11-03)."
+   },
+   "notes": "The round 18 strip is not labelled; that its bottom row shows Frost Nova is a reading of the picture. As a modifier it is in the game (addedToGame false refers to the standalone spell).",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 18, 19, 30)",
+    "diablo-clone/game/js/skills.js",
+    "f43107e"
+   ],
+   "related": [
+    "dob-spell-cone-of-cold",
+    "dob-hero-mage"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round18/strip4.png",
+     "caption": "Round 18 spells; the frozen blue foes are probably Frost Nova",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round30/cone.png",
+     "caption": "Frost Nova as a modifier (top right panel)",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-spell-frost-nova@v1",
+     "date": null,
+     "title": "Round 18: Frost Nova added",
+     "change": "Level 2, 14 mana, r 3.3: freezes 3.2 s (elites 2, bosses 1); frozen foes hold their pose, take +40%, shatter on death, ice-blue tint.",
+     "commits": [],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round18/strip4.png",
+       "caption": "Round 18 spell strip (frozen foes, bottom row)",
+       "role": "before"
+      }
+     ],
+     "status": "tested",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-spell-frost-nova@v2",
+     "date": null,
+     "title": "Round 19: Removed",
+     "change": "Replaced by Cone of Cold at the user's request (\"replace the freeze with a cone of cold\").",
+     "commits": [],
+     "images": [],
+     "status": "user-rejected",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-spell-frost-nova@v3",
+     "date": "2026-11-03",
+     "title": "Round 30: Back as a modifier",
+     "change": "FROST NOVA is now Cone of Cold's first modifier: a 360-degree ring, R 3.1, freeze 2.2 s.",
+     "commits": [
+      "f43107e"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round30/cone.png",
+       "caption": "Round 30: Frost Nova as a Cone of Cold modifier (top right)",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    }
+   ],
+   "unlockLevel": 2,
+   "costCooldown": "14 mana (round 18)"
+  },
+  {
+   "id": "dob-spell-meteor",
+   "project": "dungeon-of-bones",
+   "title": "Meteor",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "The mage calls a rock down from the sky on the thickest group of foes in sight. A warning ring closes in, then the meteor streaks in and crashes for heavy damage over a wide area. Charges the EARTH gauge.",
+   "tags": [
+    "spell",
+    "mage",
+    "augment",
+    "fire",
+    "earth",
+    "area"
+   ],
+   "addedToGame": true,
+   "class": "mage",
+   "version": "v8",
+   "dates": {
+    "first": null,
+    "last": "2026-11-11",
+    "firstNote": "First version is older than the git history (between 2026-10-28 and 2026-11-03)."
+   },
+   "notes": "",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 18, 19, 25, 30, 65, 73, 83, 86)",
+    "diablo-clone/game/js/skills.js",
+    "51f5099",
+    "695e652",
+    "7af36a6",
+    "cf02926",
+    "f43107e"
+   ],
+   "related": [
+    "dob-hero-mage",
+    "dob-spell-earthquake",
+    "dob-spell-fireball"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round18/strip4.png",
+     "caption": "Round 18 first spells",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round30/meteor.png",
+     "caption": "Round 30 modifiers",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/meteor.gif",
+     "caption": "Round 65 meteor with crater",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-spell-meteor@v1",
+     "date": null,
+     "title": "Round 18: Meteor added",
+     "change": "Level 3, 22 mana: densest group within 8 tiles, orange warning ring 0.95 s, rock streaks in, r 2.4, 3.2x, big shake and dust ring.",
+     "commits": [],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round18/strip4.png",
+       "caption": "Round 18 spell strip",
+       "role": "before"
+      }
+     ],
+     "status": "user-approved",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-spell-meteor@v2",
+     "date": null,
+     "title": "Round 19: Skyward cast",
+     "change": "Channel frames 3-5: the meteor's skyward cast pose.",
+     "commits": [],
+     "images": [],
+     "status": "tested",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-spell-meteor@v3",
+     "date": null,
+     "title": "Round 25: Crater cracks and stones",
+     "change": "Impact kit: crater cracks, stone chunks.",
+     "commits": [],
+     "images": [],
+     "status": "commit-says",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-spell-meteor@v4",
+     "date": "2026-11-03",
+     "title": "Round 30: Modifiers",
+     "change": "Shower, Molten Crater, Comet.",
+     "commits": [
+      "f43107e"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round30/meteor.png",
+       "caption": "Round 30 meteor modifiers",
+       "role": "comparison"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-meteor@v5",
+     "date": "2026-11-05",
+     "title": "Round 65: Crater and dust ring",
+     "change": "A crater, a dust ring, harder shake.",
+     "commits": [
+      "cf02926"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/meteor.gif",
+       "caption": "Round 65 meteor",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-meteor@v6",
+     "date": "2026-11-10",
+     "title": "Round 73: The rock itself redrawn",
+     "change": "A dark cracked rock glowing along its cracks, wrapped in flame white-hot on its leading face, 70 px wavering tail (was a 7 px ball); the Comet the same in ice.",
+     "commits": [
+      "51f5099"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-meteor@v7",
+     "date": "2026-11-11",
+     "title": "Round 83: Charges EARTH",
+     "change": "Damage round the Meteor's blast fills the EARTH gauge.",
+     "commits": [
+      "7af36a6"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-meteor@v8",
+     "date": "2026-11-11",
+     "title": "Round 86: Charge per cast",
+     "change": "Each cast pays 50 (2 casts).",
+     "commits": [
+      "695e652"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "unlockLevel": 3,
+   "costCooldown": "22 mana, 9 s cooldown",
+   "animation": "'channel' clip frames 3-5 (staff raised to the sky).",
+   "effects": "Closing warning ring, falling flaming rock with tail, explodeAt fire bloom, crater, dust ring, shake.",
+   "augments": [
+    {
+     "name": "SHOWER",
+     "does": "Three smaller meteors around the target."
+    },
+    {
+     "name": "MOLTEN CRATER",
+     "does": "The crater burns for 4 seconds."
+    },
+    {
+     "name": "COMET",
+     "does": "A ball of ice: freezes instead of burning."
+    }
+   ]
+  },
+  {
+   "id": "dob-spell-chain-lightning",
+   "project": "dungeon-of-bones",
+   "title": "Chain Lightning",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "A jagged bolt leaps from the staff to the nearest foe and jumps from foe to foe. Since round 82 a second bolt also strikes each foe from the sky and scorches the floor. Shocked foes take more damage from everything. It replaced Blink as the mage's level-4 spell.",
+   "tags": [
+    "spell",
+    "mage",
+    "augment",
+    "lightning"
+   ],
+   "addedToGame": true,
+   "class": "mage",
+   "version": "v5",
+   "dates": {
+    "first": "2026-11-05",
+    "last": "2026-11-11"
+   },
+   "notes": "Round 82 GIF art-review/round82-chain.gif is gitignored and not in MAIN, so the current sky-strike version has no image.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 62, 65, 82, 83, 86)",
+    "diablo-clone/game/js/skills.js",
+    "4a23f9c",
+    "695e652",
+    "7a1ba69",
+    "7af36a6",
+    "8824b1d",
+    "cf02926"
+   ],
+   "related": [
+    "dob-spell-blink",
+    "dob-hero-mage",
+    "dob-spell-thunderstorm"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/chain.gif",
+     "caption": "Round 65 first Chain Lightning",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/overload.gif",
+     "caption": "Round 65 Overload modifier",
+     "role": "comparison"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-spell-chain-lightning@v1",
+     "date": "2026-11-05",
+     "title": "Round 62: Planned",
+     "change": "Notes: next round, Chain Lightning replaces Blink.",
+     "commits": [
+      "8824b1d",
+      "7a1ba69"
+     ],
+     "images": [],
+     "status": "commit-says"
+    },
+    {
+     "id": "dob-spell-chain-lightning@v2",
+     "date": "2026-11-05",
+     "title": "Round 65: Chain Lightning replaces Blink",
+     "change": "User: put Chain Lightning in. Level 4, 14 mana, 2.5 s; bolt with white core, pale blue glow, forks; jumps up to 5 foes; shocked foes take x1.25. Mods Fork, Overload, Conductor.",
+     "commits": [
+      "cf02926"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/chain.gif",
+       "caption": "Round 65 Chain Lightning",
+       "role": "before"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-chain-lightning@v3",
+     "date": "2026-11-11",
+     "title": "Round 82: Strike from the sky",
+     "change": "User: it looks and hits weakest (fine if it looks like an ultimate). Longer charge, thick double-strand bolt, a sky strike on every foe reached with a scorch star; 3x first foe, 1.8x jumps, six foes; 16 mana every 3 s. Damage 4.7 -> 19.7 basic hits.",
+     "commits": [
+      "4a23f9c"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-chain-lightning@v4",
+     "date": "2026-11-11",
+     "title": "Round 83: Charges LIGHTNING",
+     "change": "Shock damage fills the LIGHTNING gauge.",
+     "commits": [
+      "7af36a6"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-chain-lightning@v5",
+     "date": "2026-11-11",
+     "title": "Round 86: Charge per cast",
+     "change": "Each cast pays 34 (3 casts).",
+     "commits": [
+      "695e652"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "unlockLevel": 4,
+   "costCooldown": "16 mana, 3 s cooldown",
+   "animation": "'channel' clip, the fireball's hurl pose.",
+   "effects": "Charge crackling round the orb, jagged bolts (boltLine), sky strikes (skyStrike), white pools, crawling arcs, scorch stars, cold light tint.",
+   "augments": [
+    {
+     "name": "FORK",
+     "does": "Splits in two at every jump: up to ten foes."
+    },
+    {
+     "name": "OVERLOAD",
+     "does": "One huge strike from the sky that stuns everything near it."
+    },
+    {
+     "name": "CONDUCTOR",
+     "does": "Jumps twice as far through chilled and frozen foes."
+    }
+   ]
+  },
+  {
+   "id": "dob-spell-blink",
+   "project": "dungeon-of-bones",
+   "title": "Blink",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "replaced",
+   "description": "The mage vanishes in a burst of arcane light and reappears up to 4.5 tiles away, leaving a fading after-image. It was the mage's level-4 spell from round 19 until Chain Lightning replaced it in round 65; the code is kept but unused.",
+   "tags": [
+    "spell",
+    "mage",
+    "augment",
+    "mobility",
+    "arcane",
+    "replaced"
+   ],
+   "addedToGame": false,
+   "class": "mage",
+   "version": "v6",
+   "dates": {
+    "first": null,
+    "last": "2026-11-05",
+    "firstNote": "First version is older than the git history (between 2026-10-28 and 2026-11-03)."
+   },
+   "notes": "The user did not say they disliked Blink; round 62/65 notes only say Chain Lightning replaces it.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 19, 27, 30, 38, 43, 65)",
+    "diablo-clone/game/js/skills.js",
+    "606f790",
+    "6f897da",
+    "968d71a",
+    "a87e44f",
+    "cf02926",
+    "f43107e"
+   ],
+   "related": [
+    "dob-spell-chain-lightning",
+    "dob-hero-mage"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round30/blink.png",
+     "caption": "Round 30 blink and modifiers",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/blink-arrive.png",
+     "caption": "Round 43 landing pose",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-spell-blink@v1",
+     "date": null,
+     "title": "Round 19: Blink added",
+     "change": "User: try blink as the 4th spell. Level 4, 8 mana, cd 3: along the stick or facing, stops at walls; streak, bursts at both ends, dissolving after-image.",
+     "commits": [],
+     "images": [],
+     "status": "tested",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-spell-blink@v2",
+     "date": null,
+     "title": "Round 27: Polish",
+     "change": "Arcane shockwave at both ends, impact flash, streak.",
+     "commits": [],
+     "images": [],
+     "status": "commit-says",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-spell-blink@v3",
+     "date": "2026-11-03",
+     "title": "Round 30: Modifiers",
+     "change": "Arcane Burst, Double Blink, Frost Step.",
+     "commits": [
+      "f43107e"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round30/blink.png",
+       "caption": "Round 30 blink modifiers",
+       "role": "comparison"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-blink@v4",
+     "date": "2026-11-03",
+     "title": "Round 38: Not into walls",
+     "change": "Lands only where the whole footprint fits.",
+     "commits": [
+      "a87e44f"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-blink@v5",
+     "date": "2026-11-04",
+     "title": "Round 43: Landing pose",
+     "change": "Clip 'arrive': a crouch with staff and free arm flung out, then rising.",
+     "commits": [
+      "968d71a",
+      "606f790",
+      "6f897da"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/blink-arrive.png",
+       "caption": "Round 43 Blink landing pose",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-blink@v6",
+     "date": "2026-11-05",
+     "title": "Round 65: Replaced by Chain Lightning",
+     "change": "Chain Lightning takes the level-4 slot; Blink's code kept, unused.",
+     "commits": [
+      "cf02926"
+     ],
+     "images": [],
+     "status": "commit-says"
+    }
+   ],
+   "unlockLevel": 4,
+   "costCooldown": "8 mana, 3 s cooldown",
+   "animation": "'arrive' clip (round 43).",
+   "effects": "Arcane streak, shockwaves at both ends, after-image ghost (ARC_TINT).",
+   "augments": [
+    {
+     "name": "ARCANE BURST",
+     "does": "A blast where you land that throws foes back."
+    },
+    {
+     "name": "DOUBLE BLINK",
+     "does": "A second blink for free, within 1.5 seconds."
+    },
+    {
+     "name": "FROST STEP",
+     "does": "Freezes what stood near you when you left."
+    }
+   ]
+  },
+  {
+   "id": "dob-spell-arcane-storm",
+   "project": "dungeon-of-bones",
+   "title": "Arcane Storm",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "replaced",
+   "description": "The mage's first ultimate: for 4 seconds lightning strikes from the top of the screen onto every foe in sight, while the mage floats with her staff raised. It was replaced in round 83 by the elemental ultimates; its code is unused.",
+   "tags": [
+    "spell",
+    "mage",
+    "ultimate",
+    "arcane",
+    "lightning",
+    "replaced"
+   ],
+   "addedToGame": false,
+   "class": "mage",
+   "version": "v5",
+   "dates": {
+    "first": "2026-11-03",
+    "last": "2026-11-11"
+   },
+   "notes": "Status of round 83 is user-approved because the user approved the replacement plan. The storm pose is still used by the elemental ultimates (game.js: ultOn.kind storm or elem).",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 31, 43, 65c, 72b, 83)",
+    "diablo-clone/game/js/skills.js",
+    "358a49f",
+    "606f790",
+    "6f897da",
+    "76cfd4e",
+    "7af36a6",
+    "968d71a",
+    "c32f011"
+   ],
+   "related": [
+    "dob-spell-elemental-ultimates",
+    "dob-hero-mage"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round31/storm.png",
+     "caption": "Round 31 first storm",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/ults.png",
+     "caption": "Round 43 storm and skyshot poses",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/storm-play.png",
+     "caption": "Round 43 storm in play",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/storm.gif",
+     "caption": "Round 65c storm bolts",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-spell-arcane-storm@v1",
+     "date": "2026-11-03",
+     "title": "Round 31: Arcane Storm added",
+     "change": "4 s, a strike every 0.11 s on the least-struck foe within 9, 1.4x arcane through shields; she can walk at 0.6x speed.",
+     "commits": [
+      "76cfd4e"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round31/storm.png",
+       "caption": "Round 31 Arcane Storm",
+       "role": "before"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-arcane-storm@v2",
+     "date": "2026-11-04",
+     "title": "Round 43: Floating pose",
+     "change": "Clip 'storm': floating, rising and sinking, staff high, free hand raised with an arcane orb.",
+     "commits": [
+      "968d71a",
+      "606f790",
+      "6f897da"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/ults.png",
+       "caption": "Round 43 storm pose (top row)",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-arcane-storm@v3",
+     "date": "2026-11-05",
+     "title": "Round 65c: Thick bolts",
+     "change": "Strikes drawn with boltLine (thick, from the sky) and a burst where they land.",
+     "commits": [
+      "358a49f"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/storm.gif",
+       "caption": "Round 65c storm",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-arcane-storm@v4",
+     "date": "2026-11-10",
+     "title": "Round 72b: Blazing orb",
+     "change": "The staff's orb blazes and pulses with star spikes.",
+     "commits": [
+      "c32f011"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-arcane-storm@v5",
+     "date": "2026-11-11",
+     "title": "Round 83: Replaced",
+     "change": "The elemental ultimates replace it (\"I love the mage idea\"); startStorm unused. It dealt about 5 basic hits a foe on ten foes.",
+     "commits": [
+      "7af36a6"
+     ],
+     "images": [],
+     "status": "user-approved"
+    }
+   ],
+   "costCooldown": "Ultimate: charged from fighting",
+   "animation": "'storm' clip (also used now while any elemental ultimate plays)."
+  },
+  {
+   "id": "dob-spell-elemental-ultimates",
+   "project": "dungeon-of-bones",
+   "title": "Elemental ultimates (gauges and orbs)",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "The mage's ultimate system since round 83. Four gauges (fire, frost, earth, lightning) fill as the mage casts that element's spell. The ultimate button spends every full gauge: one full casts that element's ultimate, two cast a combined pair ultimate, and lighting all four orbs unlocks the Cataclysm.",
+   "tags": [
+    "spell",
+    "mage",
+    "ultimate",
+    "system"
+   ],
+   "addedToGame": true,
+   "class": "mage",
+   "version": "v4",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "No image in the repo: art-review/round83-*.gif, round83-gauges.png, round84-*.gif and round86-orbs.png are gitignored. Open (round 84): the ultimate button glyph is still the old storm cloud for every combination; no in-game list of what each pair makes.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 83, 84, 85, 86)",
+    "diablo-clone/game/js/skills.js",
+    "695e652",
+    "7067f8e",
+    "7af36a6",
+    "89f8463"
+   ],
+   "related": [
+    "dob-spell-inferno",
+    "dob-spell-blizzard",
+    "dob-spell-thunderstorm",
+    "dob-spell-earthquake",
+    "dob-spell-cataclysm",
+    "dob-spell-plasma-storm",
+    "dob-spell-steam-burst",
+    "dob-spell-volcano",
+    "dob-spell-shatterstorm",
+    "dob-spell-glacier",
+    "dob-spell-magnetic-pull",
+    "dob-spell-arcane-storm"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-spell-elemental-ultimates@v1",
+     "date": "2026-11-11",
+     "title": "Round 83: Gauges, four singles and Cataclysm",
+     "change": "User idea: fill each magic type; one full = its ultimate, two = combined, all four = mega (\"I love the mage idea\"; \"design the new spell animations and effects\"). Gauges filled by damage; 2-3 full cast singles back to back as an interim.",
+     "commits": [
+      "7af36a6"
+     ],
+     "images": [],
+     "status": "user-approved"
+    },
+    {
+     "id": "dob-spell-elemental-ultimates@v2",
+     "date": "2026-11-11",
+     "title": "Round 84: Pair ultimates",
+     "change": "User: \"Build the paired ultimates\". Six pairs; three full = the highest pair in PAIR_ORDER then the third element's own. Cataclysm's last blast raised to 30x.",
+     "commits": [
+      "7067f8e"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-elemental-ultimates@v3",
+     "date": "2026-11-11",
+     "title": "Round 85: Faster charge",
+     "change": "Gauges a third faster.",
+     "commits": [
+      "89f8463"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-elemental-ultimates@v4",
+     "date": "2026-11-11",
+     "title": "Round 86: Charge from casts, orbs",
+     "change": "User: ultimates belong in the normal rotation (a mini every 20-30 s, Cataclysm about every two minutes). Gauges fill per cast; each mini ultimate lights its elements' orbs; four orbs = Cataclysm.",
+     "commits": [
+      "695e652"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "Gauges: Fireball 25, Cone 34, Chain Lightning 34, Meteor 50 a cast; unlock ULT_LVL (4 while testing)",
+   "animation": "Mage holds the 'storm' pose while it plays."
+  },
+  {
+   "id": "dob-spell-inferno",
+   "project": "dungeon-of-bones",
+   "title": "Inferno",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "A mage ultimate (fire). Three rings of fire pillars burst out of the floor one after another (each a swaying column breaking into climbing tongues with a white-hot core); then everything in the fire keeps burning.",
+   "tags": [
+    "spell",
+    "mage",
+    "ultimate",
+    "elemental",
+    "fire"
+   ],
+   "addedToGame": true,
+   "class": "mage",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "No image in the repo (round 83/84 GIFs are gitignored). Drawn over the bodies by drawElemUlt / drawPairs; radius ULT_R 6.4 tiles.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 83)",
+    "diablo-clone/game/js/skills.js",
+    "7af36a6"
+   ],
+   "related": [
+    "dob-spell-elemental-ultimates",
+    "dob-hero-mage"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-spell-inferno@v1",
+     "date": "2026-11-11",
+     "title": "Round 83: Inferno added",
+     "change": "Three rings of fire pillars burst out of the floor one after another (each a swaying column breaking into climbing tongues with a white-hot core); then everything in the fire keeps burning. Measured (ult-dmg tool): 12.7 basic hits a foe on ten foes.",
+     "commits": [
+      "7af36a6"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "Ultimate button with one full gauge",
+   "animation": "Mage in the 'storm' pose."
+  },
+  {
+   "id": "dob-spell-blizzard",
+   "project": "dungeon-of-bones",
+   "title": "Blizzard",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "A mage ultimate (frost). A freezing wave, then about 36 ice spears fall from the sky, each leaving an ice cluster, with snow; then everything shatters at once.",
+   "tags": [
+    "spell",
+    "mage",
+    "ultimate",
+    "elemental",
+    "frost"
+   ],
+   "addedToGame": true,
+   "class": "mage",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "No image in the repo (round 83/84 GIFs are gitignored). Drawn over the bodies by drawElemUlt / drawPairs; radius ULT_R 6.4 tiles.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 83)",
+    "diablo-clone/game/js/skills.js",
+    "7af36a6"
+   ],
+   "related": [
+    "dob-spell-elemental-ultimates",
+    "dob-hero-mage"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-spell-blizzard@v1",
+     "date": "2026-11-11",
+     "title": "Round 83: Blizzard added",
+     "change": "A freezing wave, then about 36 ice spears fall from the sky, each leaving an ice cluster, with snow; then everything shatters at once. Measured (ult-dmg tool): 13.7.",
+     "commits": [
+      "7af36a6"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "Ultimate button with one full gauge",
+   "animation": "Mage in the 'storm' pose."
+  },
+  {
+   "id": "dob-spell-thunderstorm",
+   "project": "dungeon-of-bones",
+   "title": "Thunderstorm",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "A mage ultimate (lightning). A strike from the sky every 0.085 s on the least-struck foe, arcs between the struck, three balls of lightning circling the mage, and a last thunderclap that stuns.",
+   "tags": [
+    "spell",
+    "mage",
+    "ultimate",
+    "elemental",
+    "lightning"
+   ],
+   "addedToGame": true,
+   "class": "mage",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "No image in the repo (round 83/84 GIFs are gitignored). Drawn over the bodies by drawElemUlt / drawPairs; radius ULT_R 6.4 tiles.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 83)",
+    "diablo-clone/game/js/skills.js",
+    "7af36a6"
+   ],
+   "related": [
+    "dob-spell-elemental-ultimates",
+    "dob-hero-mage"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-spell-thunderstorm@v1",
+     "date": "2026-11-11",
+     "title": "Round 83: Thunderstorm added",
+     "change": "A strike from the sky every 0.085 s on the least-struck foe, arcs between the struck, three balls of lightning circling the mage, and a last thunderclap that stuns. Measured (ult-dmg tool): 9.5.",
+     "commits": [
+      "7af36a6"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "Ultimate button with one full gauge",
+   "animation": "Mage in the 'storm' pose."
+  },
+  {
+   "id": "dob-spell-earthquake",
+   "project": "dungeon-of-bones",
+   "title": "Earthquake",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "A mage ultimate (earth). Three rings of stone spikes burst up, further out each time, knocking foes down; 14 boulders fall; a last upheaval throws everything back.",
+   "tags": [
+    "spell",
+    "mage",
+    "ultimate",
+    "elemental",
+    "earth"
+   ],
+   "addedToGame": true,
+   "class": "mage",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "No image in the repo (round 83/84 GIFs are gitignored). Drawn over the bodies by drawElemUlt / drawPairs; radius ULT_R 6.4 tiles.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 83)",
+    "diablo-clone/game/js/skills.js",
+    "7af36a6"
+   ],
+   "related": [
+    "dob-spell-elemental-ultimates",
+    "dob-hero-mage"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-spell-earthquake@v1",
+     "date": "2026-11-11",
+     "title": "Round 83: Earthquake added",
+     "change": "Three rings of stone spikes burst up, further out each time, knocking foes down; 14 boulders fall; a last upheaval throws everything back. Measured (ult-dmg tool): 10.9.",
+     "commits": [
+      "7af36a6"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "Ultimate button with one full gauge",
+   "animation": "Mage in the 'storm' pose."
+  },
+  {
+   "id": "dob-spell-cataclysm",
+   "project": "dungeon-of-bones",
+   "title": "Cataclysm",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "A mage ultimate (all four). The room goes dark, then quake, fire, frost, spears, storm and boulders overlap, ending in one last blast over everything with a white screen flash. Since round 86 it is unlocked by lighting all four orbs.",
+   "tags": [
+    "spell",
+    "mage",
+    "ultimate",
+    "elemental",
+    "mega"
+   ],
+   "addedToGame": true,
+   "class": "mage",
+   "version": "v3",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "No image in the repo (round 83/84 GIFs are gitignored). Drawn over the bodies by drawElemUlt / drawPairs; radius ULT_R 6.4 tiles.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 83, 84, 86)",
+    "diablo-clone/game/js/skills.js",
+    "695e652",
+    "7067f8e",
+    "7af36a6"
+   ],
+   "related": [
+    "dob-spell-elemental-ultimates",
+    "dob-hero-mage"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-spell-cataclysm@v1",
+     "date": "2026-11-11",
+     "title": "Round 83: Cataclysm added",
+     "change": "The room goes dark, then quake, fire, frost, spears, storm and boulders overlap, ending in one last blast over everything with a white screen flash. Since round 86 it is unlocked by lighting all four orbs. Measured (ult-dmg tool): 50.4 over 5.9 s (round 83); 70.7 after its last blast was raised to 30x (round 84).",
+     "commits": [
+      "7af36a6"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-cataclysm@v2",
+     "date": "2026-11-11",
+     "title": "Round 84: Stronger last blast",
+     "change": "Last blast 12x -> 30x so it beats two pairs; screen flash softened.",
+     "commits": [
+      "7067f8e"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-spell-cataclysm@v3",
+     "date": "2026-11-11",
+     "title": "Round 86: Unlocked by orbs",
+     "change": "Lighting all four orbs (from casting mini ultimates) turns the button gold; the Cataclysm spends the orbs and leaves the gauges alone.",
+     "commits": [
+      "695e652"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "Ultimate button with four lit orbs (round 86)",
+   "animation": "Mage in the 'storm' pose."
+  },
+  {
+   "id": "dob-spell-plasma-storm",
+   "project": "dungeon-of-bones",
+   "title": "Plasma Storm",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "A mage ultimate (fire + lightning). Three balls of plasma wheel out from the mage and back in, joined by burning lightning; what they touch is scorched and shocked; flames mark their path; they meet and burst.",
+   "tags": [
+    "spell",
+    "mage",
+    "ultimate",
+    "elemental",
+    "pair"
+   ],
+   "addedToGame": true,
+   "class": "mage",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "No image in the repo (round 83/84 GIFs are gitignored). Drawn over the bodies by drawElemUlt / drawPairs; radius ULT_R 6.4 tiles.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 84)",
+    "diablo-clone/game/js/skills.js",
+    "7067f8e"
+   ],
+   "related": [
+    "dob-spell-elemental-ultimates",
+    "dob-hero-mage"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-spell-plasma-storm@v1",
+     "date": "2026-11-11",
+     "title": "Round 84: Plasma Storm added",
+     "change": "Three balls of plasma wheel out from the mage and back in, joined by burning lightning; what they touch is scorched and shocked; flames mark their path; they meet and burst. Measured (ult-dmg tool): 26.5.",
+     "commits": [
+      "7067f8e"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "Ultimate button with two full gauges",
+   "animation": "Mage in the 'storm' pose."
+  },
+  {
+   "id": "dob-spell-steam-burst",
+   "project": "dungeon-of-bones",
+   "title": "Steam Burst",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "A mage ultimate (fire + frost). Geysers of scalding steam burst up under the foes, a cloud keeps everything in it stunned, then one great burst that blinds.",
+   "tags": [
+    "spell",
+    "mage",
+    "ultimate",
+    "elemental",
+    "pair"
+   ],
+   "addedToGame": true,
+   "class": "mage",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "No image in the repo (round 83/84 GIFs are gitignored). Drawn over the bodies by drawElemUlt / drawPairs; radius ULT_R 6.4 tiles.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 84)",
+    "diablo-clone/game/js/skills.js",
+    "7067f8e"
+   ],
+   "related": [
+    "dob-spell-elemental-ultimates",
+    "dob-hero-mage"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-spell-steam-burst@v1",
+     "date": "2026-11-11",
+     "title": "Round 84: Steam Burst added",
+     "change": "Geysers of scalding steam burst up under the foes, a cloud keeps everything in it stunned, then one great burst that blinds. Measured (ult-dmg tool): 28. Steam puffs first cost 132 ms a frame at 4x slowdown; drawn in 2x2 blocks now (50 ms).",
+     "commits": [
+      "7067f8e"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "Ultimate button with two full gauges",
+   "animation": "Mage in the 'storm' pose."
+  },
+  {
+   "id": "dob-spell-volcano",
+   "project": "dungeon-of-bones",
+   "title": "Volcano",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "A mage ultimate (fire + earth). A cone of dark rock with three rivers of lava heaves up where the foes stand thickest, hurls about 22 lava bombs that leave burning pools, and ends in a last eruption.",
+   "tags": [
+    "spell",
+    "mage",
+    "ultimate",
+    "elemental",
+    "pair"
+   ],
+   "addedToGame": true,
+   "class": "mage",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "No image in the repo (round 83/84 GIFs are gitignored). Drawn over the bodies by drawElemUlt / drawPairs; radius ULT_R 6.4 tiles.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 84)",
+    "diablo-clone/game/js/skills.js",
+    "7067f8e"
+   ],
+   "related": [
+    "dob-spell-elemental-ultimates",
+    "dob-hero-mage"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-spell-volcano@v1",
+     "date": "2026-11-11",
+     "title": "Round 84: Volcano added",
+     "change": "A cone of dark rock with three rivers of lava heaves up where the foes stand thickest, hurls about 22 lava bombs that leave burning pools, and ends in a last eruption. Measured (ult-dmg tool): 28.2.",
+     "commits": [
+      "7067f8e"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "Ultimate button with two full gauges",
+   "animation": "Mage in the 'storm' pose."
+  },
+  {
+   "id": "dob-spell-shatterstorm",
+   "project": "dungeon-of-bones",
+   "title": "Shatterstorm",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "A mage ultimate (frost + lightning). Everything freezes solid, then lightning strikes the frozen one after another, bursting their ice over those nearby; a last bolt shatters all.",
+   "tags": [
+    "spell",
+    "mage",
+    "ultimate",
+    "elemental",
+    "pair"
+   ],
+   "addedToGame": true,
+   "class": "mage",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "No image in the repo (round 83/84 GIFs are gitignored). Drawn over the bodies by drawElemUlt / drawPairs; radius ULT_R 6.4 tiles.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 84)",
+    "diablo-clone/game/js/skills.js",
+    "7067f8e"
+   ],
+   "related": [
+    "dob-spell-elemental-ultimates",
+    "dob-hero-mage"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-spell-shatterstorm@v1",
+     "date": "2026-11-11",
+     "title": "Round 84: Shatterstorm added",
+     "change": "Everything freezes solid, then lightning strikes the frozen one after another, bursting their ice over those nearby; a last bolt shatters all. Measured (ult-dmg tool): 24.1.",
+     "commits": [
+      "7067f8e"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "Ultimate button with two full gauges",
+   "animation": "Mage in the 'storm' pose."
+  },
+  {
+   "id": "dob-spell-glacier",
+   "project": "dungeon-of-bones",
+   "title": "Glacier",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "A mage ultimate (frost + earth). Two walls of ice grind in from the sides, shoving every foe before them, slam together, stand a second and burst.",
+   "tags": [
+    "spell",
+    "mage",
+    "ultimate",
+    "elemental",
+    "pair"
+   ],
+   "addedToGame": true,
+   "class": "mage",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "No image in the repo (round 83/84 GIFs are gitignored). Drawn over the bodies by drawElemUlt / drawPairs; radius ULT_R 6.4 tiles.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 84)",
+    "diablo-clone/game/js/skills.js",
+    "7067f8e"
+   ],
+   "related": [
+    "dob-spell-elemental-ultimates",
+    "dob-hero-mage"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-spell-glacier@v1",
+     "date": "2026-11-11",
+     "title": "Round 84: Glacier added",
+     "change": "Two walls of ice grind in from the sides, shoving every foe before them, slam together, stand a second and burst. Measured (ult-dmg tool): 28.7. The first version ran the walls along the screen's vertical and each drew as a single stack; changed to a tile axis so they read as long walls.",
+     "commits": [
+      "7067f8e"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "Ultimate button with two full gauges",
+   "animation": "Mage in the 'storm' pose."
+  },
+  {
+   "id": "dob-spell-magnetic-pull",
+   "project": "dungeon-of-bones",
+   "title": "Magnetic Pull",
+   "kind": "spell",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "A mage ultimate (lightning + earth). A lodestone with veins of blue light tears out of the ground and hangs over the thickest knot; lightning leashes every foe within 7.6 tiles and hauls them in, then it bursts.",
+   "tags": [
+    "spell",
+    "mage",
+    "ultimate",
+    "elemental",
+    "pair"
+   ],
+   "addedToGame": true,
+   "class": "mage",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "No image in the repo (round 83/84 GIFs are gitignored). Drawn over the bodies by drawElemUlt / drawPairs; radius ULT_R 6.4 tiles.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 84)",
+    "diablo-clone/game/js/skills.js",
+    "7067f8e"
+   ],
+   "related": [
+    "dob-spell-elemental-ultimates",
+    "dob-hero-mage"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-spell-magnetic-pull@v1",
+     "date": "2026-11-11",
+     "title": "Round 84: Magnetic Pull added",
+     "change": "A lodestone with veins of blue light tears out of the ground and hangs over the thickest knot; lightning leashes every foe within 7.6 tiles and hauls them in, then it bursts. Measured (ult-dmg tool): 27.2. The first lodestone was too small and dark to see; now twice the size, higher, in a blue halo.",
+     "commits": [
+      "7067f8e"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "Ultimate button with two full gauges",
+   "animation": "Mage in the 'storm' pose."
+  },
+  {
+   "id": "dob-skill-quick-arrow",
+   "project": "dungeon-of-bones",
+   "title": "Quick arrow (ranger attack)",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "The ranger's attack button looses one quick arrow at the marked foe or the nearest in sight; it costs nothing. Since round 66 each basic arrow that hits fills a combo point (up to three) that Piercing Shot and Cluster Arrow spend.",
+   "tags": [
+    "skill",
+    "ranger",
+    "basic-attack",
+    "bow"
+   ],
+   "addedToGame": true,
+   "class": "ranger",
+   "version": "v4",
+   "dates": {
+    "first": "2026-11-03",
+    "last": "2026-11-10"
+   },
+   "notes": "Round 72 before/after image round72-shot-cast-ba.png is gitignored and not in MAIN.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 33, 65, 66, 72)",
+    "diablo-clone/game/js/skills.js",
+    "4443314",
+    "853b05c",
+    "9df2b0f",
+    "cf02926"
+   ],
+   "related": [
+    "dob-hero-ranger",
+    "dob-skill-piercing-shot",
+    "dob-skill-cluster-arrow"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round66/pips.png",
+     "caption": "Combo point diamonds (round 66)",
+     "role": "current"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/ranger-poses.png",
+     "caption": "Round 43 ranger poses",
+     "role": "reference"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-quick-arrow@v1",
+     "date": "2026-11-03",
+     "title": "Round 33: Arrow attack",
+     "change": "An arrow at 13 tiles/s, 9 tiles range, 1.05x spell damage, on the bow's hit key; splinters and thunk sound.",
+     "commits": [
+      "853b05c"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-quick-arrow@v2",
+     "date": "2026-11-05",
+     "title": "Round 65: Tracer",
+     "change": "Arrows get a tracer streak.",
+     "commits": [
+      "cf02926"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-quick-arrow@v3",
+     "date": "2026-11-05",
+     "title": "Round 66: Combo points",
+     "change": "A basic arrow that hits fills a combo point; three diamonds over the attack button.",
+     "commits": [
+      "9df2b0f"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round66/pips.png",
+       "caption": "Round 66 combo points over the attack button",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-quick-arrow@v4",
+     "date": "2026-11-10",
+     "title": "Round 72: Posed shot",
+     "change": "BOW_POSE: nock square-on, full draw side-on leaning back, the loose (string hand flies back past the ear), settle.",
+     "commits": [
+      "4443314"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "unlockLevel": 1,
+   "costCooldown": "Free",
+   "animation": "'shoot' clip with BOW_POSE keys (round 72)."
+  },
+  {
+   "id": "dob-skill-piercing-shot",
+   "project": "dungeon-of-bones",
+   "title": "Piercing Shot",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "One heavy bolt through every foe in a line, knocking them back. It spends all combo points and grows with each: at three it is a ballista bolt that tears the floor along its path.",
+   "tags": [
+    "skill",
+    "ranger",
+    "augment",
+    "bow"
+   ],
+   "addedToGame": true,
+   "class": "ranger",
+   "version": "v2",
+   "dates": {
+    "first": "2026-11-05",
+    "last": "2026-11-11"
+   },
+   "notes": "",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 66, 82)",
+    "diablo-clone/game/js/skills.js",
+    "4a23f9c",
+    "9df2b0f"
+   ],
+   "related": [
+    "dob-hero-ranger",
+    "dob-skill-quick-arrow"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round66/pierce.gif",
+     "caption": "Round 66 Piercing Shot",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-piercing-shot@v1",
+     "date": "2026-11-05",
+     "title": "Round 66: Piercing Shot added",
+     "change": "User: the ranger kit is boring; every skill lost damage against spamming the shot. New kit on combo points (Diablo 4 rogue). Level 1, 7 mana, 0.9 s; 1.6x + 1.9x a point (7.3x at three).",
+     "commits": [
+      "9df2b0f"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round66/pierce.gif",
+       "caption": "Round 66 Piercing Shot",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-piercing-shot@v2",
+     "date": "2026-11-11",
+     "title": "Round 82: Open issue",
+     "change": "User: Piercing Shot still reads like a basic arrow (not yet changed).",
+     "commits": [
+      "4a23f9c"
+     ],
+     "images": [],
+     "status": "commit-says"
+    }
+   ],
+   "unlockLevel": 1,
+   "costCooldown": "7 focus, 0.9 s cooldown",
+   "animation": "'shoot' clip; bolt drawn thicker and longer per combo point with a streak and glowing head.",
+   "effects": "Dust and rubble along its path at three points.",
+   "augments": [
+    {
+     "name": "FLAMING BOLT",
+     "does": "Sets everything it goes through alight."
+    },
+    {
+     "name": "FROST BOLT",
+     "does": "Chills; with three combo points it freezes."
+    },
+    {
+     "name": "TWIN BOLTS",
+     "does": "Two bolts side by side, each a little weaker."
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-cluster-arrow",
+   "project": "dungeon-of-bones",
+   "title": "Cluster Arrow",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "A lobbed arrow that bursts and scatters bomblets that bounce once and pop. It spends the combo points: more points, more bomblets.",
+   "tags": [
+    "skill",
+    "ranger",
+    "augment",
+    "bow",
+    "area"
+   ],
+   "addedToGame": true,
+   "class": "ranger",
+   "version": "v2",
+   "dates": {
+    "first": "2026-11-05",
+    "last": "2026-11-10"
+   },
+   "notes": "",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 66, 73)",
+    "diablo-clone/game/js/skills.js",
+    "51f5099",
+    "9df2b0f"
+   ],
+   "related": [
+    "dob-hero-ranger"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round66/cluster.gif",
+     "caption": "Round 66 Cluster Arrow",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-cluster-arrow@v1",
+     "date": "2026-11-05",
+     "title": "Round 66: Cluster Arrow added",
+     "change": "Level 2, 12 mana, 2.5 s: burst 1.6 tiles 2.4x with a crater, then 3 + 2 a point bomblets (1 tile, 1.1x).",
+     "commits": [
+      "9df2b0f"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round66/cluster.gif",
+       "caption": "Round 66 Cluster Arrow",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-cluster-arrow@v2",
+     "date": "2026-11-10",
+     "title": "Round 73: Shares the new fire bloom",
+     "change": "Its blast uses the redrawn explodeAt fire bloom.",
+     "commits": [
+      "51f5099"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "unlockLevel": 2,
+   "costCooldown": "12 focus, 2.5 s cooldown",
+   "animation": "Volley-style release ('volley' clip, hero.volleyT).",
+   "augments": [
+    {
+     "name": "NAPALM",
+     "does": "The blasts leave the ground burning."
+    },
+    {
+     "name": "FROST CLUSTER",
+     "does": "The bomblets freeze what they hit."
+    },
+    {
+     "name": "BIG BANG",
+     "does": "No bomblets: one huge blast."
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-sentry",
+   "project": "dungeon-of-bones",
+   "title": "Sentry",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "The ranger plants a crossbow turret. Since round 82 it is a repeating crossbow that sprays bolts for 5 seconds, then shudders, tips over and breaks apart.",
+   "tags": [
+    "skill",
+    "ranger",
+    "augment",
+    "pet",
+    "turret"
+   ],
+   "addedToGame": true,
+   "class": "ranger",
+   "version": "v2",
+   "dates": {
+    "first": "2026-11-05",
+    "last": "2026-11-11"
+   },
+   "notes": "The round 82 repeater has no image in the repo (round82-sentry.gif is gitignored); the only image shows the older tripod version. The TWO SENTRIES text is from round 66; round 82 notes say one at a time, so how Two Sentries works now is unverified.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 66, 82)",
+    "diablo-clone/game/js/skills.js",
+    "4a23f9c",
+    "9df2b0f"
+   ],
+   "related": [
+    "dob-hero-ranger"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round66/sentry.gif",
+     "caption": "Round 66 tripod Sentry (before the repeater)",
+     "role": "before"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-sentry@v1",
+     "date": "2026-11-05",
+     "title": "Round 66: Sentry added",
+     "change": "The user swapped the planned Vault for a Sentry. Level 3, 14 mana, 8 s: a crossbow on a tripod, 12 s, shoots every 0.5 s at 0.65x, up to two out.",
+     "commits": [
+      "9df2b0f"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round66/sentry.gif",
+       "caption": "Round 66 tripod Sentry",
+       "role": "before"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-sentry@v2",
+     "date": "2026-11-11",
+     "title": "Round 82: Repeater that falls over",
+     "change": "User: the turret looks bad, maybe a machine gun for 5 s that then falls over and breaks. Box body, three barrels, turning drum, muzzle flash; bolts every 0.2 s warming to 0.085 s for 5 s; tips over and breaks into wood and iron. One at a time; cd 9. Damage 4.9 -> 13.2.",
+     "commits": [
+      "4a23f9c"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "unlockLevel": 3,
+   "costCooldown": "14 focus, 9 s cooldown",
+   "animation": "Toss pose to plant it; the sentry itself is drawn in code and turns to its target.",
+   "effects": "Muzzle flash, bolts, falling over (SENTRY_FALL) and breaking (sentryBreak chunks, dust).",
+   "augments": [
+    {
+     "name": "BALLISTA",
+     "does": "Slower, heavy bolts that go through everything."
+    },
+    {
+     "name": "FIRE SENTRY",
+     "does": "Burning bolts, and it blows up when it breaks."
+    },
+    {
+     "name": "TWO SENTRIES",
+     "does": "Plants a pair, each a little slower."
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-strafe",
+   "project": "dungeon-of-bones",
+   "title": "Strafe",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "For about 2 seconds the ranger runs free and faster while arrows fly on their own at the three nearest foes, with gold streaks wheeling round her. It replaced the Vault in round 82.",
+   "tags": [
+    "skill",
+    "ranger",
+    "augment",
+    "bow",
+    "mobility"
+   ],
+   "addedToGame": true,
+   "class": "ranger",
+   "version": "v1",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "No image in the repo (round82-strafe.gif is gitignored). Other ideas offered to the user: Explosive Arrow, Tornado Shot, Spirit Wolves, Shadow Clone.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 82)",
+    "diablo-clone/game/js/skills.js",
+    "4a23f9c"
+   ],
+   "related": [
+    "dob-skill-vault",
+    "dob-hero-ranger"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-skill-strafe@v1",
+     "date": "2026-11-11",
+     "title": "Round 82: Strafe replaces Vault",
+     "change": "User: vault and trap feel weak; replace with something more impactful. 2.2 s, 30% faster, an arrow every 0.09 s at 0.6x. Damage 2.1 (Vault) -> 12.5 (Finale 17.5).",
+     "commits": [
+      "4a23f9c"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "unlockLevel": 4,
+   "costCooldown": "14 focus, 7 s cooldown",
+   "animation": "Walk cycle facing the target (no shooting pose while moving: an open issue in round 82).",
+   "effects": "Dust ring and shockwave at the start, gold streaks round the ranger.",
+   "augments": [
+    {
+     "name": "BURNING STRAFE",
+     "does": "Every arrow burns."
+    },
+    {
+     "name": "LONG STRAFE",
+     "does": "Lasts half again as long."
+    },
+    {
+     "name": "FINALE",
+     "does": "Ends with a ring of arrows flying out all round you."
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-rain-of-arrows",
+   "project": "dungeon-of-bones",
+   "title": "Rain of Arrows",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "The ranger's ultimate: she looses into the sky and for 3 seconds arrows rain over the thickest group of foes, pinning those they hit; misses stick in the floor. It is still the ranger's ultimate.",
+   "tags": [
+    "skill",
+    "ranger",
+    "ultimate",
+    "bow",
+    "area"
+   ],
+   "addedToGame": true,
+   "class": "ranger",
+   "version": "v4",
+   "dates": {
+    "first": "2026-11-03",
+    "last": "2026-11-11"
+   },
+   "notes": "Round 83-86 notes: the ranger's ultimate system still awaits the user's pick (ideas: focus, Dead Eye, gadgets).",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 33, 43, 67, 85)",
+    "diablo-clone/game/js/skills.js",
+    "606f790",
+    "6f897da",
+    "810a694",
+    "853b05c",
+    "89f8463",
+    "968d71a"
+   ],
+   "related": [
+    "dob-hero-ranger"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/ults.png",
+     "caption": "Round 43 skyshot pose",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round67/rain.gif",
+     "caption": "Round 67 Rain of Arrows",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-rain-of-arrows@v1",
+     "date": "2026-11-03",
+     "title": "Round 33: Rain of Arrows added",
+     "change": "3 s over the centroid of the thickest group within 9, r 3, an arrow every 0.025 s, 1.2x and a 0.6 s pin; misses stick in the floor.",
+     "commits": [
+      "853b05c"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-rain-of-arrows@v2",
+     "date": "2026-11-04",
+     "title": "Round 43: Shot into the sky",
+     "change": "Clip 'skyshot': body leaning back, aim about 50 degrees up.",
+     "commits": [
+      "968d71a",
+      "606f790",
+      "6f897da"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/ults.png",
+       "caption": "Round 43 skyshot pose (bottom row)",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-rain-of-arrows@v3",
+     "date": "2026-11-06",
+     "title": "Round 67: Volleys and real arrows",
+     "change": "Volleys of 8 every 0.2 s at a slant, real arrows (steel head, shaft, red fletching), ground shadow, closing gold ring, sparks, stuck arrows with bone fletching.",
+     "commits": [
+      "810a694"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round67/rain.gif",
+       "caption": "Round 67 Rain of Arrows",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-rain-of-arrows@v4",
+     "date": "2026-11-11",
+     "title": "Round 85: Faster charge",
+     "change": "The ranger's ultimate bar charges a quarter faster.",
+     "commits": [
+      "89f8463"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ],
+   "costCooldown": "Ultimate: charged from fighting (ULT_LVL 4 while testing)",
+   "animation": "'skyshot' clip."
+  },
+  {
+   "id": "dob-skill-multishot",
+   "project": "dungeon-of-bones",
+   "title": "Multishot",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "removed",
+   "description": "A fan of 5 arrows. Part of the first ranger kit (round 33, level 1); removed in round 66 when the kit was rebuilt around combo points.",
+   "tags": [
+    "skill",
+    "ranger",
+    "augment",
+    "removed"
+   ],
+   "addedToGame": false,
+   "class": "ranger",
+   "version": "v3",
+   "dates": {
+    "first": "2026-11-03",
+    "last": "2026-11-05"
+   },
+   "notes": "Code kept in skills.js (unused). Its three modifiers are still in SKILL_MODS.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 33, 43, 66)",
+    "diablo-clone/game/js/skills.js",
+    "606f790",
+    "6f897da",
+    "853b05c",
+    "968d71a",
+    "9df2b0f"
+   ],
+   "related": [
+    "dob-hero-ranger"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round33/skills.png",
+     "caption": "Round 33 ranger skills in play",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/ranger-poses.png",
+     "caption": "Round 43 ranger poses (volley, toss, vault)",
+     "role": "comparison"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-multishot@v1",
+     "date": "2026-11-03",
+     "title": "Round 33: Multishot added",
+     "change": "Ranger class (user: keep all four skills, no pet). A fan of 5 arrows.",
+     "commits": [
+      "853b05c"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-multishot@v2",
+     "date": "2026-11-04",
+     "title": "Round 43: Volley pose",
+     "change": "Clip 'volley': bow canted over, three arrows on the string.",
+     "commits": [
+      "968d71a",
+      "606f790",
+      "6f897da"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-multishot@v3",
+     "date": "2026-11-05",
+     "title": "Round 66: Removed in the kit rethink",
+     "change": "User: the ranger's kit is boring; every skill loses damage against spamming the shot. Replaced by Piercing Shot, Cluster Arrow, Sentry and Hawk; old code kept.",
+     "commits": [
+      "9df2b0f"
+     ],
+     "images": [],
+     "status": "user-rejected"
+    }
+   ],
+   "unlockLevel": 1,
+   "augments": [
+    {
+     "name": "VOLLEY",
+     "does": "Nine arrows in a wide fan, each a little weaker."
+    },
+    {
+     "name": "PIERCING SHOTS",
+     "does": "The arrows go through every foe in line."
+    },
+    {
+     "name": "FIRE ARROWS",
+     "does": "Burning arrows that set foes alight."
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-snare-trap",
+   "project": "dungeon-of-bones",
+   "title": "Snare Trap",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "removed",
+   "description": "Iron jaws thrown at a foe's feet; they snap shut and root it for 3 s. Part of the first ranger kit (round 33, level 2); removed in round 66 when the kit was rebuilt around combo points.",
+   "tags": [
+    "skill",
+    "ranger",
+    "augment",
+    "removed"
+   ],
+   "addedToGame": false,
+   "class": "ranger",
+   "version": "v5",
+   "dates": {
+    "first": "2026-11-03",
+    "last": "2026-11-05"
+   },
+   "notes": "Code kept in skills.js (unused). Its three modifiers are still in SKILL_MODS. The trap returned in round 66b as part of the Vault.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 33, 43, 65c, 72b, 66)",
+    "diablo-clone/game/js/skills.js",
+    "358a49f",
+    "606f790",
+    "6f897da",
+    "853b05c",
+    "968d71a",
+    "9df2b0f",
+    "c32f011"
+   ],
+   "related": [
+    "dob-hero-ranger"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round33/skills.png",
+     "caption": "Round 33 ranger skills",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/trap.gif",
+     "caption": "Round 65c bigger trap",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-snare-trap@v1",
+     "date": "2026-11-03",
+     "title": "Round 33: Snare Trap added",
+     "change": "Ranger class (user: keep all four skills, no pet). Iron jaws thrown at a foe's feet; they snap shut and root it for 3 s.",
+     "commits": [
+      "853b05c"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-snare-trap@v2",
+     "date": "2026-11-04",
+     "title": "Round 43: Toss pose",
+     "change": "Clip 'toss': iron jaws swung back past the hip, thrown underhand.",
+     "commits": [
+      "968d71a",
+      "606f790",
+      "6f897da"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-snare-trap@v3",
+     "date": "2026-11-05",
+     "title": "Round 65c: Bigger trap",
+     "change": "Jaws twice the size, ten teeth, lit ring, blinking red plate, dashed reach ring.",
+     "commits": [
+      "358a49f"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-snare-trap@v4",
+     "date": "2026-11-10",
+     "title": "Round 72b: Toss arc",
+     "change": "A pale arc on the underhand swing.",
+     "commits": [
+      "c32f011"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-snare-trap@v5",
+     "date": "2026-11-05",
+     "title": "Round 66: Removed in the kit rethink",
+     "change": "User: the ranger's kit is boring; every skill loses damage against spamming the shot. Replaced by Piercing Shot, Cluster Arrow, Sentry and Hawk; old code kept.",
+     "commits": [
+      "9df2b0f"
+     ],
+     "images": [],
+     "status": "user-rejected"
+    }
+   ],
+   "unlockLevel": 2,
+   "augments": [
+    {
+     "name": "SPIKE TRAP",
+     "does": "No snare: it springs for a heavy blow."
+    },
+    {
+     "name": "WIDE NET",
+     "does": "Snares everything in a wider ring, longer."
+    },
+    {
+     "name": "THREE TRAPS",
+     "does": "Throws three smaller traps in a spread."
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-evasive-leap",
+   "project": "dungeon-of-bones",
+   "title": "Evasive Leap",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "removed",
+   "description": "A hop back away from danger, loosing 3 arrows on landing. Planned as Evasive Roll and renamed because the rig cannot tumble. Part of the first ranger kit (round 33, level 3); removed in round 66 when the kit was rebuilt around combo points.",
+   "tags": [
+    "skill",
+    "ranger",
+    "augment",
+    "removed"
+   ],
+   "addedToGame": false,
+   "class": "ranger",
+   "version": "v5",
+   "dates": {
+    "first": "2026-11-03",
+    "last": "2026-11-05"
+   },
+   "notes": "Code kept in skills.js (unused). Its three modifiers are still in SKILL_MODS.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 33, 38, 43, 65c, 66)",
+    "diablo-clone/game/js/skills.js",
+    "358a49f",
+    "606f790",
+    "6f897da",
+    "853b05c",
+    "968d71a",
+    "9df2b0f",
+    "a87e44f"
+   ],
+   "related": [
+    "dob-hero-ranger"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/ranger-poses.png",
+     "caption": "Round 43 vault pose",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/roll.gif",
+     "caption": "Round 65c leap with after-images",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-evasive-leap@v1",
+     "date": "2026-11-03",
+     "title": "Round 33: Evasive Leap added",
+     "change": "Ranger class (user: keep all four skills, no pet). A hop back away from danger, loosing 3 arrows on landing. Planned as Evasive Roll and renamed because the rig cannot tumble.",
+     "commits": [
+      "853b05c"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-evasive-leap@v2",
+     "date": "2026-11-03",
+     "title": "Round 38: Not into walls",
+     "change": "Lands at the farthest standable step before a wall.",
+     "commits": [
+      "a87e44f"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-evasive-leap@v3",
+     "date": "2026-11-04",
+     "title": "Round 43: Vault pose",
+     "change": "Clip 'vault': crouch, tucked jump leaning back, landing.",
+     "commits": [
+      "968d71a",
+      "606f790",
+      "6f897da"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-evasive-leap@v4",
+     "date": "2026-11-05",
+     "title": "Round 65c: Higher hop",
+     "change": "14 px hop (was 9), after-images.",
+     "commits": [
+      "358a49f"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-evasive-leap@v5",
+     "date": "2026-11-05",
+     "title": "Round 66: Removed in the kit rethink",
+     "change": "User: the ranger's kit is boring; every skill loses damage against spamming the shot. Replaced by Piercing Shot, Cluster Arrow, Sentry and Hawk; old code kept.",
+     "commits": [
+      "9df2b0f"
+     ],
+     "images": [],
+     "status": "user-rejected"
+    }
+   ],
+   "unlockLevel": 3,
+   "augments": [
+    {
+     "name": "SMOKE BOMB",
+     "does": "Leaves smoke that dazes foes where you stood."
+    },
+    {
+     "name": "LONG LEAP",
+     "does": "Jumps twice as far."
+    },
+    {
+     "name": "LEAPING VOLLEY",
+     "does": "Five stronger arrows as you land."
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-hunters-mark",
+   "project": "dungeon-of-bones",
+   "title": "Hunter's Mark",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "removed",
+   "description": "Marks the toughest foe in sight: it takes 35% more damage for 8 s and shows through walls. Part of the first ranger kit (round 33, level 4); removed in round 66 when the kit was rebuilt around combo points.",
+   "tags": [
+    "skill",
+    "ranger",
+    "augment",
+    "removed"
+   ],
+   "addedToGame": false,
+   "class": "ranger",
+   "version": "v3",
+   "dates": {
+    "first": "2026-11-03",
+    "last": "2026-11-05"
+   },
+   "notes": "Code kept in skills.js (unused). Its three modifiers are still in SKILL_MODS.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 33, 65c, 66)",
+    "diablo-clone/game/js/skills.js",
+    "358a49f",
+    "853b05c",
+    "9df2b0f"
+   ],
+   "related": [
+    "dob-hero-ranger"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/mark.gif",
+     "caption": "Round 65c Hunter's Mark reticle",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-hunters-mark@v1",
+     "date": "2026-11-03",
+     "title": "Round 33: Hunter's Mark added",
+     "change": "Ranger class (user: keep all four skills, no pet). Marks the toughest foe in sight: it takes 35% more damage for 8 s and shows through walls.",
+     "commits": [
+      "853b05c"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-hunters-mark@v2",
+     "date": "2026-11-05",
+     "title": "Round 65c: Bold reticle",
+     "change": "A thick red reticle pulsing gold with four turning ticks and a bobbing red arrow (the old thin ring was lost on the lit floor).",
+     "commits": [
+      "358a49f"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-hunters-mark@v3",
+     "date": "2026-11-05",
+     "title": "Round 66: Removed in the kit rethink",
+     "change": "User: the ranger's kit is boring; every skill loses damage against spamming the shot. Replaced by Piercing Shot, Cluster Arrow, Sentry and Hawk; old code kept.",
+     "commits": [
+      "9df2b0f"
+     ],
+     "images": [],
+     "status": "user-rejected"
+    }
+   ],
+   "unlockLevel": 4,
+   "augments": [
+    {
+     "name": "SPREADING MARK",
+     "does": "When the marked dies, the mark jumps on."
+    },
+    {
+     "name": "DEATH MARK",
+     "does": "Takes 70% more damage, but only 5 seconds."
+    },
+    {
+     "name": "PREY'S BLOOD",
+     "does": "Hits on the marked heal you."
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-hawk",
+   "project": "dungeon-of-bones",
+   "title": "Hawk",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "removed",
+   "description": "A hawk that circled the ranger for 30 seconds and dived at the last foe she shot, marking it. Added in round 66; the user did not like it and it was replaced by the Vault the same day.",
+   "tags": [
+    "skill",
+    "ranger",
+    "augment",
+    "pet",
+    "removed"
+   ],
+   "addedToGame": false,
+   "class": "ranger",
+   "version": "v2",
+   "dates": {
+    "first": "2026-11-05",
+    "last": "2026-11-05"
+   },
+   "notes": "",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 66, 66b)",
+    "diablo-clone/game/js/skills.js",
+    "9df2b0f",
+    "a9549d1"
+   ],
+   "related": [
+    "dob-skill-vault",
+    "dob-hero-ranger"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round66/hawk.gif",
+     "caption": "Round 66 Hawk",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-hawk@v1",
+     "date": "2026-11-05",
+     "title": "Round 66: Hawk added",
+     "change": "Level 4, 12 mana, 20 s: circles 30 s, dives every 1.4 s (1x and marked 4 s); beating wings and a shadow drawn in code. The user kept the Hawk in the plan.",
+     "commits": [
+      "9df2b0f"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round66/hawk.gif",
+       "caption": "Round 66 Hawk",
+       "role": "current"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-hawk@v2",
+     "date": "2026-11-05",
+     "title": "Round 66b: Removed",
+     "change": "User: doesn't like the Hawk. Vault takes its place; Hawk code kept, unused.",
+     "commits": [
+      "a9549d1"
+     ],
+     "images": [],
+     "status": "user-rejected"
+    }
+   ],
+   "unlockLevel": 4,
+   "costCooldown": "12 focus, 20 s cooldown",
+   "augments": [
+    {
+     "name": "MATED PAIR",
+     "does": "Two hawks."
+    },
+    {
+     "name": "IRON TALONS",
+     "does": "Dives hit twice as hard."
+    },
+    {
+     "name": "SCREECH",
+     "does": "Each dive stuns for a moment."
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-vault",
+   "project": "dungeon-of-bones",
+   "title": "Vault",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "replaced",
+   "description": "A flip back that drops a snare where the ranger stood, then Quickdraw: the next three shots loose two arrows each that always crit. It replaced the Hawk in round 66b and was replaced by Strafe in round 82.",
+   "tags": [
+    "skill",
+    "ranger",
+    "augment",
+    "mobility",
+    "replaced"
+   ],
+   "addedToGame": false,
+   "class": "ranger",
+   "version": "v2",
+   "dates": {
+    "first": "2026-11-05",
+    "last": "2026-11-11"
+   },
+   "notes": "",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 66b, 82)",
+    "diablo-clone/game/js/skills.js",
+    "4a23f9c",
+    "a9549d1"
+   ],
+   "related": [
+    "dob-skill-strafe",
+    "dob-skill-hawk",
+    "dob-hero-ranger"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round66/vault.gif",
+     "caption": "Round 66b Vault",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-vault@v1",
+     "date": "2026-11-05",
+     "title": "Round 66b: Vault added",
+     "change": "User: a vault that drops a trap at your feet instead of the Hawk. Level 4, 8 mana, 4 s; flip back with after-images, snare armed in 0.15 s, Quickdraw (gold tracers).",
+     "commits": [
+      "a9549d1"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round66/vault.gif",
+       "caption": "Round 66b Vault",
+       "role": "current"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-vault@v2",
+     "date": "2026-11-11",
+     "title": "Round 82: Replaced by Strafe",
+     "change": "User: the trap and the vault felt weak. Strafe takes the slot; Vault code kept (one line swaps it back). Vault measured 2.1 basic hits per cast.",
+     "commits": [
+      "4a23f9c"
+     ],
+     "images": [],
+     "status": "user-rejected"
+    }
+   ],
+   "unlockLevel": 4,
+   "costCooldown": "8 focus, 4 s cooldown",
+   "animation": "'vault' clip (round 43 pose).",
+   "augments": [
+    {
+     "name": "SPIKE TRAP",
+     "does": "The trap springs a heavy spike instead of a snare."
+    },
+    {
+     "name": "SMOKE BOMB",
+     "does": "Smoke where you stood dazes those in it."
+    },
+    {
+     "name": "LONG VAULT",
+     "does": "Twice as far, and five quickdraw shots."
+    }
+   ]
+  },
+  {
+   "id": "dob-skill-modifier-system",
+   "project": "dungeon-of-bones",
+   "title": "Skill modifiers (augmentations)",
+   "kind": "skill",
+   "category": "Animations & Rigs",
+   "stage": "in-game",
+   "description": "Like Diablo's runes: every skill has three modifiers that unlock 2, 4 and 6 levels after the skill does. The player picks one per skill (or none) on the skills screen (bag > SKILLS), which since round 45 plays a live preview of what each does. The Berserker and Titan moves have no modifiers.",
+   "tags": [
+    "skill",
+    "augment",
+    "system",
+    "ui"
+   ],
+   "addedToGame": true,
+   "class": "all",
+   "version": "v7",
+   "dates": {
+    "first": null,
+    "last": "2026-11-11",
+    "firstNote": "First version is older than the git history (between 2026-10-28 and 2026-11-03)."
+   },
+   "notes": "The notes call these skill modifiers; the 3D remake brief calls them \"spell augmentations\". The code table is SKILL_MODS; modUnlock = skill level + 2 + 2k.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 29b, 30, 33, 45, 66, 76, 82)",
+    "diablo-clone/game/js/skills.js",
+    "diablo-clone/game/js/preview.js",
+    "diablo-clone/game/js/ui.js",
+    "4a23f9c",
+    "5053824",
+    "853b05c",
+    "9df2b0f",
+    "cec7d2f",
+    "f43107e"
+   ],
+   "related": [
+    "dob-hero-warrior",
+    "dob-hero-mage",
+    "dob-hero-ranger"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round29/skills-screen.png",
+     "caption": "Round 29 first skills screen",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round30/screen.png",
+     "caption": "Round 30 skills screen with all modifiers",
+     "role": "after"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-skill-modifier-system@v1",
+     "date": null,
+     "title": "Round 29b: First modifiers",
+     "change": "Fireball and Ground Slam get three each; skills screen added. User: the new feel \"feels much better actually\".",
+     "commits": [],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round29/skills-screen.png",
+       "caption": "Round 29 skills screen",
+       "role": "before"
+      }
+     ],
+     "status": "user-approved",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-skill-modifier-system@v2",
+     "date": "2026-11-03",
+     "title": "Round 30: Every skill",
+     "change": "Missile, Cone, Meteor, Blink, Hook, Whirlwind, Leap get theirs.",
+     "commits": [
+      "f43107e"
+     ],
+     "images": [
+      {
+       "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round30/screen.png",
+       "caption": "Round 30 skills screen",
+       "role": "after"
+      }
+     ],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-modifier-system@v3",
+     "date": "2026-11-03",
+     "title": "Round 33: Ranger modifiers",
+     "change": "Three per ranger skill.",
+     "commits": [
+      "853b05c"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-modifier-system@v4",
+     "date": "2026-11-04",
+     "title": "Round 45: Live previews",
+     "change": "A guided first modifier (an arrow and a freeze when it opens) and a live animation of each skill and modifier on the skills screen; all 52 skill/modifier pairs run in the preview test. Plan approved by the user.",
+     "commits": [
+      "cec7d2f"
+     ],
+     "images": [],
+     "status": "user-approved"
+    },
+    {
+     "id": "dob-skill-modifier-system@v5",
+     "date": "2026-11-05",
+     "title": "Round 66: New ranger modifiers",
+     "change": "Piercing Shot, Cluster Arrow, Sentry, Hawk.",
+     "commits": [
+      "9df2b0f"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-modifier-system@v6",
+     "date": "2026-11-10",
+     "title": "Round 76: Shield Charge modifiers",
+     "change": "Battering Ram, Second Wind, Tremor.",
+     "commits": [
+      "5053824"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-skill-modifier-system@v7",
+     "date": "2026-11-11",
+     "title": "Round 82: Strafe modifiers",
+     "change": "Burning Strafe, Long Strafe, Finale.",
+     "commits": [
+      "4a23f9c"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ]
+  },
+  {
+   "id": "dob-hero-warrior",
+   "project": "dungeon-of-bones",
+   "title": "Warrior kit",
+   "kind": "hero",
+   "category": "Characters & Zombies",
+   "stage": "in-game",
+   "description": "The warrior fights up close with a weapon and often a shield; his mana is fury, won back by landing blows. His calm kit is Ground Slam, Shield Charge, Whirlwind and Leap. From level 4 (testing value) his RAGE fills, and the stance button takes him into the Berserker and then the Titan, each with four other moves.",
+   "tags": [
+    "hero",
+    "warrior",
+    "skill",
+    "kit"
+   ],
+   "addedToGame": true,
+   "class": "warrior",
+   "version": "v6",
+   "dates": {
+    "first": "2026-10-28",
+    "last": "2026-11-11"
+   },
+   "notes": "Basic attack: a three-blow combo per weapon (round 88 added a body weight shift, a cut mark on the target and the blade arc left in the air).",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 9, 24, 31, 76, 87, 88)",
+    "diablo-clone/game/js/skills.js",
+    "5053824",
+    "76cfd4e",
+    "a64f606",
+    "aaa4af7"
+   ],
+   "related": [
+    "dob-skill-ground-slam",
+    "dob-skill-shield-charge",
+    "dob-skill-whirlwind",
+    "dob-skill-leap",
+    "dob-skill-berserker",
+    "dob-skill-reavers-rush",
+    "dob-skill-hurl",
+    "dob-skill-blood-roar",
+    "dob-skill-flurry",
+    "dob-skill-titan",
+    "dob-skill-earthsplitter",
+    "dob-skill-uproot",
+    "dob-skill-titans-crescent",
+    "dob-skill-skyfall",
+    "dob-skill-chain-hook",
+    "dob-skill-wrath-of-the-mountain",
+    "dob-skill-shield-bash",
+    "dob-skill-war-cry",
+    "dob-skill-holy-bolt"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round24/combo.png",
+     "caption": "Round 24 warrior kit frames",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round40/poses-warrior.png",
+     "caption": "Round 40 warrior pose sheet",
+     "role": "reference"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-hero-warrior@v1",
+     "date": "2026-10-28",
+     "title": "Round 9: First skill set",
+     "change": "Holy Bolt, Shield Bash, Whirlwind, War Cry.",
+     "commits": [],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-hero-warrior@v2",
+     "date": null,
+     "title": "Round 24: Rework",
+     "change": "Ground Slam, Chain Hook, Whirlwind, Leap; fury from hits.",
+     "commits": [],
+     "images": [],
+     "status": "tested",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-hero-warrior@v3",
+     "date": "2026-11-03",
+     "title": "Round 31: Ultimate",
+     "change": "Wrath of the Mountain.",
+     "commits": [
+      "76cfd4e"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-hero-warrior@v4",
+     "date": "2026-11-10",
+     "title": "Round 76: Shield Charge",
+     "change": "Replaces the Chain Hook as a test.",
+     "commits": [
+      "5053824"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-hero-warrior@v5",
+     "date": "2026-11-11",
+     "title": "Round 87: Rage and the Berserker",
+     "change": "Stance button replaces the ultimate.",
+     "commits": [
+      "aaa4af7"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-hero-warrior@v6",
+     "date": "2026-11-11",
+     "title": "Round 88: The Titan",
+     "change": "Full-rage stance; weightier basic attacks.",
+     "commits": [
+      "a64f606"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ]
+  },
+  {
+   "id": "dob-hero-mage",
+   "project": "dungeon-of-bones",
+   "title": "Mage kit",
+   "kind": "hero",
+   "category": "Characters & Zombies",
+   "stage": "in-game",
+   "description": "The mage wears a robe and hat and fights at range with a staff; every spell's damage comes from the staff. The attack button fires magic missiles for free; the four spells are Fireball, Cone of Cold, Meteor and Chain Lightning. Her ultimate is the elemental system: four gauges, single and pair ultimates, and the Cataclysm.",
+   "tags": [
+    "hero",
+    "mage",
+    "spell",
+    "kit"
+   ],
+   "addedToGame": true,
+   "class": "mage",
+   "version": "v5",
+   "dates": {
+    "first": null,
+    "last": "2026-11-11",
+    "firstNote": "First version is older than the git history (between 2026-10-28 and 2026-11-03)."
+   },
+   "notes": "",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 18, 19, 31, 65, 83)",
+    "diablo-clone/game/js/skills.js",
+    "76cfd4e",
+    "7af36a6",
+    "cf02926"
+   ],
+   "related": [
+    "dob-spell-magic-missile",
+    "dob-spell-fireball",
+    "dob-spell-cone-of-cold",
+    "dob-spell-meteor",
+    "dob-spell-chain-lightning",
+    "dob-spell-elemental-ultimates",
+    "dob-spell-inferno",
+    "dob-spell-blizzard",
+    "dob-spell-thunderstorm",
+    "dob-spell-earthquake",
+    "dob-spell-cataclysm",
+    "dob-spell-plasma-storm",
+    "dob-spell-steam-burst",
+    "dob-spell-volcano",
+    "dob-spell-shatterstorm",
+    "dob-spell-glacier",
+    "dob-spell-magnetic-pull",
+    "dob-spell-frost-nova",
+    "dob-spell-blink",
+    "dob-spell-arcane-storm"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round18/mage-sheet.png",
+     "caption": "Round 18 mage sheet",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round19/cast-frames.png",
+     "caption": "Round 19 cast frames",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/mage-casts.png",
+     "caption": "Round 43 cast poses",
+     "role": "current"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-hero-mage@v1",
+     "date": null,
+     "title": "Round 18: Mage class",
+     "change": "User asked for a mage: missiles, Fireball, Frost Nova, Meteor.",
+     "commits": [],
+     "images": [],
+     "status": "user-approved",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-hero-mage@v2",
+     "date": null,
+     "title": "Round 19: Cone and Blink",
+     "change": "Cone of Cold replaces Frost Nova; Blink added; three-pose cast and robe walk.",
+     "commits": [],
+     "images": [],
+     "status": "user-approved",
+     "dateNote": "Round dated only by order: after 2026-10-28 (round 9) and before 2026-11-03; the git history is shallow and starts at round 30."
+    },
+    {
+     "id": "dob-hero-mage@v3",
+     "date": "2026-11-03",
+     "title": "Round 31: Arcane Storm",
+     "change": "First ultimate.",
+     "commits": [
+      "76cfd4e"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-hero-mage@v4",
+     "date": "2026-11-05",
+     "title": "Round 65: Chain Lightning",
+     "change": "Replaces Blink.",
+     "commits": [
+      "cf02926"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-hero-mage@v5",
+     "date": "2026-11-11",
+     "title": "Round 83: Elemental ultimates",
+     "change": "Replace Arcane Storm.",
+     "commits": [
+      "7af36a6"
+     ],
+     "images": [],
+     "status": "user-approved"
+    }
+   ]
+  },
+  {
+   "id": "dob-hero-ranger",
+   "project": "dungeon-of-bones",
+   "title": "Ranger kit",
+   "kind": "hero",
+   "category": "Characters & Zombies",
+   "stage": "in-game",
+   "description": "The ranger wears a hood and leather and fights with a bow; her mana is focus. The attack looses quick arrows that build combo points; her skills are Piercing Shot, Cluster Arrow, Sentry and Strafe, and her ultimate is Rain of Arrows.",
+   "tags": [
+    "hero",
+    "ranger",
+    "skill",
+    "kit"
+   ],
+   "addedToGame": true,
+   "class": "ranger",
+   "version": "v4",
+   "dates": {
+    "first": "2026-11-03",
+    "last": "2026-11-11"
+   },
+   "notes": "Round 82 open items: Piercing Shot reads like a basic arrow; the strafing ranger has no shooting pose while moving. Round 83-86: the ranger's ultimate system awaits the user's pick.",
+   "source": [
+    "diablo-clone/NOTES.md (Results table rows 33, 66, 66b, 82)",
+    "diablo-clone/game/js/skills.js",
+    "4a23f9c",
+    "853b05c",
+    "9df2b0f",
+    "a9549d1"
+   ],
+   "related": [
+    "dob-skill-quick-arrow",
+    "dob-skill-piercing-shot",
+    "dob-skill-cluster-arrow",
+    "dob-skill-sentry",
+    "dob-skill-strafe",
+    "dob-skill-rain-of-arrows",
+    "dob-skill-multishot",
+    "dob-skill-snare-trap",
+    "dob-skill-evasive-leap",
+    "dob-skill-hunters-mark",
+    "dob-skill-hawk",
+    "dob-skill-vault"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round33/lineup.png",
+     "caption": "Round 33 ranger lineup",
+     "role": "reference"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round33/skills.png",
+     "caption": "Round 33 first ranger skills in play",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/ranger-poses.png",
+     "caption": "Round 43 ranger poses",
+     "role": "comparison"
+    }
+   ],
+   "history": [
+    {
+     "id": "dob-hero-ranger@v1",
+     "date": "2026-11-03",
+     "title": "Round 33: Ranger class",
+     "change": "Multishot, Snare Trap, Evasive Leap, Hunter's Mark; Rain of Arrows.",
+     "commits": [
+      "853b05c"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-hero-ranger@v2",
+     "date": "2026-11-05",
+     "title": "Round 66: Kit rethought",
+     "change": "Combo points; Piercing Shot, Cluster Arrow, Sentry, Hawk.",
+     "commits": [
+      "9df2b0f"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-hero-ranger@v3",
+     "date": "2026-11-05",
+     "title": "Round 66b: Vault for the Hawk",
+     "change": "User did not like the Hawk.",
+     "commits": [
+      "a9549d1"
+     ],
+     "images": [],
+     "status": "user-rejected"
+    },
+    {
+     "id": "dob-hero-ranger@v4",
+     "date": "2026-11-11",
+     "title": "Round 82: Strafe for the Vault",
+     "change": "Repeater Sentry, Strafe.",
+     "commits": [
+      "4a23f9c"
+     ],
+     "images": [],
+     "status": "tested"
+    }
+   ]
+  },
+  {
+   "id": "dob-fx-3d-skill-effects",
+   "project": "dungeon-of-bones",
+   "title": "3D remake: skill effects status",
+   "kind": "fx",
+   "category": "Animations & Rigs",
+   "stage": "in-progress",
+   "description": "The 3D remakes run the 2D game's own code, so every skill, spell and augmentation works there. Particles, projectiles, flashes, blasts and the swing trail are true 3D; everything else the 2D game paints for skills (lightning, frost, slam waves, chains, rings, elite effects) is still painted in 2D and laid over the 3D view as a smoothed, bloomed layer. Rebuilding skill effects one by one as true 3D is still on the to-do list, in both the overhead 3D game and The World.",
+   "tags": [
+    "fx",
+    "spell",
+    "skill",
+    "3d",
+    "game3d",
+    "world3d"
+   ],
+   "addedToGame": "unverified",
+   "class": "all",
+   "version": "v4",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "notes": "Not a 2D-game asset: lives in diablo-clone/game3d (fx.js: syncOverlayFx, syncGroundFx, heroBlade) and diablo-clone/world3d. To do (3D REMAKE section): meteor, lightning, frost, slam, hook, traps, rain of arrows, storm as true 3D. The World: \"spell and skill effects rebuilt for this camera (the painted overhead layer is dropped; particles, projectiles, lights and blasts do show)\". User asked for brightness down ~40% after the polished build; effects layer boost lowered. No screenshots of 3D skill effects found in MAIN. addedToGame is unverified because this catalog's game is the 2D build.",
+   "source": [
+    "diablo-clone/NOTES.md (## 3D REMAKE, ## THE WORLD)",
+    "diablo-clone/game3d/js3d/fx.js",
+    "96126de",
+    "361dc31",
+    "daabac5",
+    "b150d7f"
+   ],
+   "related": [
+    "dob-hero-warrior",
+    "dob-hero-mage",
+    "dob-hero-ranger"
+   ],
+   "images": [],
+   "history": [
+    {
+     "id": "dob-fx-3d-skill-effects@v1",
+     "date": "2026-11-11",
+     "title": "3D remake: first effects",
+     "change": "Every model through Blender; 3D particles, projectiles, blast lights, bloom, swing trail (ribbon between the weapon's ends).",
+     "commits": [
+      "96126de"
+     ],
+     "images": [],
+     "status": "commit-says"
+    },
+    {
+     "id": "dob-fx-3d-skill-effects@v2",
+     "date": "2026-11-11",
+     "title": "3D remake: skill effects through the glow pipeline",
+     "change": "The 2D painted skill effects drawn as a smooth, bloomed full-screen layer; ground marks on the floor.",
+     "commits": [
+      "361dc31"
+     ],
+     "images": [],
+     "status": "commit-says"
+    },
+    {
+     "id": "dob-fx-3d-skill-effects@v3",
+     "date": "2026-11-11",
+     "title": "3D remake: toned down after the phone test",
+     "change": "User: \"lighting effects are too bright on land and dungeons\". Bloom, flashes, blast glows, particle glow and the skill-effect layer boost lowered (~40%). Waiting to hear if that is right.",
+     "commits": [
+      "daabac5"
+     ],
+     "images": [],
+     "status": "tested"
+    },
+    {
+     "id": "dob-fx-3d-skill-effects@v4",
+     "date": "2026-11-11",
+     "title": "The World: third-person mode",
+     "change": "The painted overhead effect layer is dropped in the chase-camera view; particles, projectiles, lights and blasts still show. Skill effects for this camera not rebuilt yet.",
+     "commits": [
+      "b150d7f"
+     ],
+     "images": [],
+     "status": "commit-says"
+    }
+   ]
+  }
+ ],
+ "openQuestions": [
+  "Rounds 9-29 have no exact dates: the git history in MAIN is shallow and starts at 2026-11-03 (round 30). NOTES says round 9 was 2026-10-28.",
+  "Images for rounds 72-88 (round73-fire-ba.png, round76-charge.gif, round82-*.gif, round83-*.gif, round84-*.gif, round86-orbs.png, round87-*.gif, round88-*.gif) are named in NOTES but gitignored and not in MAIN; the newest versions of Chain Lightning, Sentry, Shield Charge, Strafe, all elemental ultimates and all Berserker/Titan moves have no image.",
+  "Shield Charge is still labelled a test in the code (one line swaps the Chain Hook back). Has the user confirmed keeping it?",
+  "ULT_LVL is 4 for testing (10 planned for release): ultimates, rage and stances unlock at level 4 in the current build.",
+  "The ranger and warrior ultimate systems: the warrior got stances (rounds 87-88); the ranger still has the round 31-era Rain of Arrows charge bar and awaits the user's pick.",
+  "Two Sentries modifier: round 82 says one sentry at a time; whether the modifier still plants a pair is unverified."
+ ]
+}

@@ -1,0 +1,2009 @@
+{
+ "records": [
+  {
+   "id": "dob-round-059",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "The user's second round of sound picks goes in",
+   "stage": "in-game",
+   "category": "Audio",
+   "description": "The user picked sounds on the Sound Picks II page, including a new magic missile whoosh. Those picks replaced the old missile, zap, frost, hurt, death, block, clank and barrel sounds, and the credits were added to the title screen and CREDITS.md.",
+   "tags": [
+    "audio",
+    "sound-picks"
+   ],
+   "version": "111",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "user-approved",
+   "notes": "Picks are the user's own choices on the picks page; the notes do not record the user hearing them in the game afterward.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md",
+     "diablo-clone/tools/sfx/picks2.json"
+    ],
+    "commits": [
+     "027ab92"
+    ]
+   },
+   "related": [
+    "dob-audio-sfx"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-060",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "User splash picture, and the mage robe hangs straight",
+   "stage": "in-game",
+   "category": "Art Direction",
+   "description": "The user pointed out they had already given a splash picture, and that the mage's robe bulged like a boulder on the character select. Their picture became the splash screen (the game's one image file), and the robe was redrawn to hang nearly straight.",
+   "tags": [
+    "ui",
+    "splash",
+    "hero",
+    "mage",
+    "art"
+   ],
+   "version": "112",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Robe before/after images are said to be in art-review/round60/, but that folder is not in the repository (art-review is git-ignored after round 10).",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "a4f3c01"
+    ]
+   },
+   "related": [
+    "dob-hero-mage",
+    "dob-ui-splash"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/refs/splash-concept.png",
+     "caption": "The user's splash picture, used as the game's splash screen",
+     "role": "reference"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-061",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Characters lit no brighter than drawn, blind-tested",
+   "stage": "in-game",
+   "category": "Art Direction",
+   "description": "The user asked whether lighting made characters look worse and said darker tones help. Characters now top out at their drawn colours everywhere, with a HERO LIGHT option. In a blind test the user picked the as-drawn level in all three dungeons.",
+   "tags": [
+    "lighting",
+    "hero",
+    "blind-ab",
+    "shader"
+   ],
+   "version": "113",
+   "dates": {
+    "first": "2026-11-05",
+    "last": "2026-11-05"
+   },
+   "status": "user-approved",
+   "notes": "Blind A/B page herolight.html; images and key were in art-review/round60/herolight/ which is not in the repository.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md",
+     "diablo-clone/tools/pages/herolight.html"
+    ],
+    "commits": [
+     "e5d2aa9"
+    ]
+   },
+   "related": [
+    "dob-hero-warrior",
+    "dob-hero-mage",
+    "dob-hero-ranger"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-061b",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "The user names the game Dungeons of Bones",
+   "stage": "in-game",
+   "category": "Reference & Documents",
+   "description": "The user chose the name Dungeons of Bones to match their splash picture. The title screens and the page title were changed to it.",
+   "tags": [
+    "ui",
+    "naming",
+    "title"
+   ],
+   "version": "114",
+   "dates": {
+    "first": "2026-11-05",
+    "last": "2026-11-05"
+   },
+   "status": "user-approved",
+   "notes": "No commit names 61b on its own; the notes put it inside round 61 (version 114). The commit is a guess.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "e5d2aa9"
+    ]
+   },
+   "related": [
+    "dob-ui-splash"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-062",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Heavier attacks and tougher enemies for real progression",
+   "stage": "in-game",
+   "category": "Animations & Rigs",
+   "description": "The user wanted slower attacks with more weight, and felt enemies died too fast once they had gear. A HEAVY option (on by default) slows swings, lengthens the hit freeze, kicks the camera and adds a thud. Enemy health went up so a monster takes about 1.5 to 3.7 basic hits instead of 1 to 2.",
+   "tags": [
+    "combat",
+    "balance",
+    "feel"
+   ],
+   "version": "115",
+   "dates": {
+    "first": "2026-11-05",
+    "last": "2026-11-05"
+   },
+   "status": "tested",
+   "notes": "Measured with a hits-to-kill tool; full test suite run.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "8824b1d",
+     "7a1ba69"
+    ]
+   },
+   "related": [],
+   "images": []
+  },
+  {
+   "id": "dob-round-063",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Tempered and Ancient tiers for every set piece",
+   "stage": "in-game",
+   "category": "Weapons",
+   "description": "The user asked whether the art chat's gear sets had loot and then asked for higher-level versions. Every set piece now also comes as TEMPERED (+6 levels) and ANCIENT (+12), 146 new item bases with the same look, so gear keeps improving deeper down.",
+   "tags": [
+    "loot",
+    "gear",
+    "balance"
+   ],
+   "version": "116",
+   "dates": {
+    "first": "2026-11-05",
+    "last": "2026-11-05"
+   },
+   "status": "tested",
+   "notes": "Tests gear49, outfit56, loot2 and others passed.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "86263bd"
+    ]
+   },
+   "related": [
+    "dob-gear-sets"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-064",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Steady quest arrow and a smoother quest flow",
+   "stage": "in-game",
+   "category": "Art Direction",
+   "description": "The user said the quest arrow jittered, quests could be missed and turning in was slow. The arrow now holds its aim and turns smoothly, camp people speak on arrival, and a finished step shows QUEST COMPLETE with a big town-portal button to claim the reward.",
+   "tags": [
+    "ui",
+    "quests",
+    "qol"
+   ],
+   "version": "117",
+   "dates": {
+    "first": "2026-11-05",
+    "last": "2026-11-05"
+   },
+   "status": "tested",
+   "notes": "Test flow64 ran the whole loop. Screens were saved to art-review/round64/ which is not in the repository.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "48d35c8"
+    ]
+   },
+   "related": [
+    "dob-ui-quest-arrow"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-065",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Chain Lightning added and a visual pass on abilities",
+   "stage": "in-game",
+   "category": "Animations & Rigs",
+   "description": "The user asked for Chain Lightning and for every ability to look epic, calling Ground Slam weak and Cone of Cold terrible. Chain Lightning replaced Blink; Ground Slam got bursting stone slabs, a crater and dust; Cone of Cold got a rolling frost cloud and ice needles; Meteor and arrows also got more.",
+   "tags": [
+    "spell",
+    "skill",
+    "fx",
+    "mage",
+    "warrior"
+   ],
+   "version": "118",
+   "dates": {
+    "first": "2026-11-05",
+    "last": "2026-11-05"
+   },
+   "status": "tested",
+   "notes": "Review page tools/pages/round65.html (artifact EgXWmYbrS5TuYKEx7HWjG4).",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "cf02926"
+    ]
+   },
+   "related": [
+    "dob-spell-chain-lightning",
+    "dob-skill-ground-slam",
+    "dob-spell-cone-of-cold",
+    "dob-spell-meteor"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/chain.gif",
+     "caption": "Chain Lightning jumping between foes",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/slam.gif",
+     "caption": "Ground Slam with stone slabs and dust",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/cone.gif",
+     "caption": "Cone of Cold frost cloud",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-065b",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Ground Slam becomes a real jump",
+   "stage": "in-game",
+   "category": "Animations & Rigs",
+   "description": "The user wanted the slam to jump higher, weapon over the head, slamming down fast. The warrior now crouches, rises with the weapon overhead and whips it down, with a real 18-pixel jump.",
+   "tags": [
+    "skill",
+    "warrior",
+    "animation"
+   ],
+   "version": "119",
+   "dates": {
+    "first": "2026-11-05",
+    "last": "2026-11-05"
+   },
+   "status": "tested",
+   "notes": "Image is from the round 65 page; which clip shows 65b exactly is a guess.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "f61965f"
+    ]
+   },
+   "related": [
+    "dob-skill-ground-slam",
+    "dob-hero-warrior"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/slam2.gif",
+     "caption": "The slam with a jump",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-065c",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Every slam jumps, more oomph on all abilities",
+   "stage": "in-game",
+   "category": "Animations & Rigs",
+   "description": "The user asked that every version of the slam jump, for more impact, and another pass on all abilities. All four slams jump higher with dust and a harder landing; Leap breaks the ground, Whirlwind throws sparks, Arcane Storm bolts are thicker, and the trap and Hunter's Mark are easier to see.",
+   "tags": [
+    "skill",
+    "warrior",
+    "ranger",
+    "mage",
+    "fx"
+   ],
+   "version": "120",
+   "dates": {
+    "first": "2026-11-05",
+    "last": "2026-11-05"
+   },
+   "status": "tested",
+   "notes": "Clips from the round 65 page (second pass section).",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "358a49f"
+    ]
+   },
+   "related": [
+    "dob-skill-ground-slam",
+    "dob-skill-leap",
+    "dob-skill-whirlwind",
+    "dob-skill-snare-trap",
+    "dob-skill-hunters-mark"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/after.gif",
+     "caption": "Aftershock slam hopping twice",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/leap.gif",
+     "caption": "Leap landing",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round65/mark.gif",
+     "caption": "Hunter's Mark reticle",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-066",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "A new ranger kit built on combo points",
+   "stage": "replaced",
+   "category": "Animations & Rigs",
+   "description": "The user found the ranger boring because spamming the basic shot beat every skill. Basic hits now build up to three combo points, which Piercing Shot and Cluster Arrow spend; a Sentry crossbow and a Hawk were added. Each skill now out-damages the basic shot.",
+   "tags": [
+    "skill",
+    "ranger",
+    "combat"
+   ],
+   "version": "121",
+   "dates": {
+    "first": "2026-11-05",
+    "last": "2026-11-05"
+   },
+   "status": "tested",
+   "notes": "The Hawk was replaced in 66b and the Sentry reworked in round 82; Piercing Shot and Cluster Arrow are still in the kit.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "9df2b0f"
+    ]
+   },
+   "related": [
+    "dob-hero-ranger",
+    "dob-skill-piercing-shot",
+    "dob-skill-cluster-arrow",
+    "dob-skill-sentry",
+    "dob-skill-hawk"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round66/pierce.gif",
+     "caption": "Piercing Shot",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round66/cluster.gif",
+     "caption": "Cluster Arrow",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round66/hawk.gif",
+     "caption": "The Hawk (later removed)",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-066b",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Vault with a trap replaces the Hawk",
+   "stage": "replaced",
+   "category": "Animations & Rigs",
+   "description": "The user did not like the Hawk and asked for a vault that drops a trap. Vault flips the ranger back, leaves a snare where they stood, and powers up the next shots (Quickdraw).",
+   "tags": [
+    "skill",
+    "ranger"
+   ],
+   "version": "122",
+   "dates": {
+    "first": "2026-11-05",
+    "last": "2026-11-05"
+   },
+   "status": "user-rejected",
+   "notes": "Tested (ranger66). The Hawk itself was user-rejected here. In round 82 the user called the vault/trap weak and it was replaced by Strafe.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "a9549d1"
+    ]
+   },
+   "related": [
+    "dob-skill-vault",
+    "dob-skill-hawk",
+    "dob-hero-ranger"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round66/vault.gif",
+     "caption": "The Vault and its trap",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-067",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Act I finale, barrow second floor, spell visuals, sound balance",
+   "stage": "in-game",
+   "category": "Maps & Layouts",
+   "description": "The user asked to start on the open list. The magic missile and Rain of Arrows were redrawn, all sounds were balanced by measured loudness, the barrow got a second floor with a new boss (the Barrow Wight), and Act I got its finale: Maelis appears over the fallen King, then an end screen. Monsters from the art chat got real roles, and the warrior takes less damage after bot tests.",
+   "tags": [
+    "spell",
+    "audio",
+    "boss",
+    "story",
+    "balance",
+    "map"
+   ],
+   "version": "123",
+   "dates": {
+    "first": "2026-11-06",
+    "last": "2026-11-06"
+   },
+   "status": "tested",
+   "notes": "Sub-rounds 67a-e are separate commits but one row in the notes. The user preferred Maelis's tall charcoal wizard hat to the first hood (user-approved for that detail). Page artifact CgLUb5a3gP8hN35LxBDpEQ.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "810a694",
+     "482c3cc",
+     "a1d57be",
+     "dbd9499",
+     "c806a50"
+    ]
+   },
+   "related": [
+    "dob-spell-magic-missile",
+    "dob-skill-rain-of-arrows",
+    "dob-boss-barrow-wight",
+    "dob-npc-maelis",
+    "dob-boss-skelking"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round67/maelis.png",
+     "caption": "Maelis appears after the King falls",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round67/wight.png",
+     "caption": "The Barrow Wight",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round67/rain.gif",
+     "caption": "Rain of Arrows volleys",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-068a",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Wider halls, pillars only in big rooms",
+   "stage": "in-game",
+   "category": "Maps & Layouts",
+   "description": "The user said the dungeons looked generic with halls too slim, and supplied ChatGPT concept art. Corridors became 3 tiles wide (4 into big rooms) and rooms spread further apart. A first try with pillars in the halls was rejected by the user; pillars now break up big rooms instead.",
+   "tags": [
+    "map",
+    "dungeon",
+    "layout"
+   ],
+   "version": "124",
+   "dates": {
+    "first": "2026-11-06",
+    "last": "2026-11-06"
+   },
+   "status": "tested",
+   "notes": "Colonnade in halls user-rejected; the final layout is tested (seed sweeps, bots). Notes give game version 124.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "d290ce1",
+     "73a34aa",
+     "1e06d06",
+     "3eab57b",
+     "92e1af5"
+    ]
+   },
+   "related": [
+    "dob-map-crypt"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/refs/dungeon/current/crypt-corridor.png",
+     "caption": "Crypt corridor before the face-lift",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/refs/dungeon/concept-A-corridor.png",
+     "caption": "ChatGPT concept for a corridor",
+     "role": "concept"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-068b",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "New crypt stone tried and rejected in blind test",
+   "stage": "removed",
+   "category": "Textures & Decals",
+   "description": "The user asked to begin the stone face-lift from the concept art with a blind A/B. A new mauve-grey stone, dressed-block walls and flagstone floors were built. In the blind test the user picked the existing look in all three scenes, so the new stone was reverted.",
+   "tags": [
+    "dungeon",
+    "textures",
+    "blind-ab"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-07",
+    "last": "2026-11-07"
+   },
+   "status": "user-rejected",
+   "notes": "The code is kept in commit a5ac6c3 if wanted.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "a5ac6c3",
+     "f09398f"
+    ]
+   },
+   "related": [
+    "dob-map-crypt"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/refs/dungeon/concept-B-ossuary.png",
+     "caption": "Concept art the stone was based on",
+     "role": "concept"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/stoneab/pick-hall-1.png",
+     "caption": "One of the blind-test images (which side is which is in a key not in the repository)",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-068c",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Crypt walls get skull niches and broken holes",
+   "stage": "in-game",
+   "category": "Indoor",
+   "description": "The user said to keep the stone and put the face-lift into the contents. Crypt walls now get skull niches with a lit candle, walls broken through with rubble, and mostly red banners.",
+   "tags": [
+    "dungeon",
+    "props",
+    "decor"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-07",
+    "last": "2026-11-07"
+   },
+   "status": "tested",
+   "notes": "Same notes row as 68d; the notes give version 126 for 68c-d together.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "ac3f352"
+    ]
+   },
+   "related": [
+    "dob-prop-niche",
+    "dob-map-crypt"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round68/niche.png",
+     "caption": "A skull niche",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round68/collapse.png",
+     "caption": "A wall broken through",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-068d",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Crypt rooms with a job: chapel, ossuary, burial hall",
+   "stage": "in-game",
+   "category": "Indoor",
+   "description": "Continuing the face-lift, some crypt rooms got a purpose. A chapel with an altar, carpet, pews and a moonlight shaft; an ossuary with skull shelves; a burial hall with rows of coffins.",
+   "tags": [
+    "dungeon",
+    "props",
+    "decor",
+    "lighting"
+   ],
+   "version": "126",
+   "dates": {
+    "first": "2026-11-08",
+    "last": "2026-11-08"
+   },
+   "status": "tested",
+   "notes": "",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "449bddc"
+    ]
+   },
+   "related": [
+    "dob-map-crypt",
+    "dob-prop-pew",
+    "dob-prop-sarcophagus"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round68/chapel.png",
+     "caption": "The chapel",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round68/ossuary.png",
+     "caption": "The ossuary",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round68/burial.png",
+     "caption": "The burial hall",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-068e",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Prison and library rooms, longer pews",
+   "stage": "in-game",
+   "category": "Indoor",
+   "description": "The user said to use best judgment and improve it. Crypts gained prison rooms with barred cells and library rooms with bookshelves and a reading table, chapel pews join into benches, and some plain rooms get moonlight through a cracked ceiling.",
+   "tags": [
+    "dungeon",
+    "props",
+    "decor"
+   ],
+   "version": "127",
+   "dates": {
+    "first": "2026-11-08",
+    "last": "2026-11-08"
+   },
+   "status": "tested",
+   "notes": "",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "935d1c3"
+    ]
+   },
+   "related": [
+    "dob-map-crypt",
+    "dob-prop-bookshelf",
+    "dob-prop-bars"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round68/prison.png",
+     "caption": "The prison",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round68/library.png",
+     "caption": "The library",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-069",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Caves, hell and side areas get the face-lift",
+   "stage": "in-game",
+   "category": "Indoor",
+   "description": "The user asked for the caves, hell and side areas to get the same treatment. Caves gained mine workings and crystal grottos, hell gained ritual and torture rooms, and side areas got their own room sets and wall features.",
+   "tags": [
+    "dungeon",
+    "props",
+    "decor",
+    "caves",
+    "hell"
+   ],
+   "version": "128",
+   "dates": {
+    "first": "2026-11-08",
+    "last": "2026-11-08"
+   },
+   "status": "tested",
+   "notes": "",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "92d6818"
+    ]
+   },
+   "related": [
+    "dob-map-caves",
+    "dob-map-hell"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round69/caves-mineworks.png",
+     "caption": "Cave mine workings",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round69/caves-grotto.png",
+     "caption": "Crystal grotto",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/pages/round69/hell-ritual.png",
+     "caption": "Hell ritual room",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-070",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Act II designed with ChatGPT prompts",
+   "stage": "concept",
+   "category": "Maps & Layouts",
+   "description": "The user asked to start Act II using prompts to ChatGPT. Three prompts were written, and ChatGPT's design for three regions (Ashford Vale, the Cinderworks, the Broken Flank) was reviewed and saved with maps and specs. A layout map of Ashford Vale was drawn for the user to mark up.",
+   "tags": [
+    "act-2",
+    "design",
+    "map",
+    "story"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-08",
+    "last": "2026-11-09"
+   },
+   "status": "commit-says",
+   "notes": "No commit says 'round 70'; dates come from the 'Act II:' commits. Design reviewed, not built.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "d2ddcb9",
+     "8b38732",
+     "301ed08",
+     "0cd7fa0",
+     "7764565",
+     "a53791a",
+     "40c4346"
+    ]
+   },
+   "related": [
+    "dob-map-ashford-vale",
+    "dob-boss-gorath",
+    "dob-npc-maelis"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/refs/act2/overview-map.png",
+     "caption": "ChatGPT's Act II overview map",
+     "role": "concept"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/refs/act2/region1/region-map.png",
+     "caption": "Region 1, Ashford Vale",
+     "role": "concept"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/world/ashford-layout.png",
+     "caption": "Our layout map of Ashford Vale for markup",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-071",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Code review, then faces for heroes and townsfolk",
+   "stage": "in-game",
+   "category": "Characters & Zombies",
+   "description": "On a new model the user asked for a review of code and visuals, a plan, and to start with the main characters. After the review (frame times, dense code, stale tests), every open-faced head got eyes with a glint, brows, mouth, nose, ears and hair under hats; hands got thumbs.",
+   "tags": [
+    "hero",
+    "faces",
+    "art",
+    "review"
+   ],
+   "version": "129",
+   "dates": {
+    "first": "2026-11-09",
+    "last": "2026-11-09"
+   },
+   "status": "tested",
+   "notes": "Plan agreed in chat. Before/after images art-review/round71-*.png are not in the repository.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "aef5d0d"
+    ]
+   },
+   "related": [
+    "dob-hero-warrior",
+    "dob-hero-mage",
+    "dob-hero-ranger"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-072",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "All hero attack animations reviewed and upgraded",
+   "stage": "in-game",
+   "category": "Animations & Rigs",
+   "description": "The user asked to review and upgrade every attack animation of the three heroes. The sword trail is now a tapered slash, the ranger's shot has distinct nock, draw, loose and settle poses, and the mage's staff orb gathers and bursts on a cast.",
+   "tags": [
+    "animation",
+    "hero",
+    "attack"
+   ],
+   "version": "130",
+   "dates": {
+    "first": "2026-11-09",
+    "last": "2026-11-10"
+   },
+   "status": "tested",
+   "notes": "A trial commit on 2026-11-09 then the full round on 2026-11-10. Before/after images art-review/round72-*.png are not in the repository.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "fc7d64c",
+     "4443314"
+    ]
+   },
+   "related": [
+    "dob-hero-warrior",
+    "dob-hero-mage",
+    "dob-hero-ranger"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-072b",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Second pass on the remaining skill animations",
+   "stage": "in-game",
+   "category": "Animations & Rigs",
+   "description": "The user asked for the second pass on the animations left alone. Whirlwind got a wide sweep, the chain hook and trap toss got arcs, the fireball throw got flames and a fire streak, and Arcane Storm's orb blazes.",
+   "tags": [
+    "animation",
+    "skill",
+    "fx"
+   ],
+   "version": "131",
+   "dates": {
+    "first": "2026-11-10",
+    "last": "2026-11-10"
+   },
+   "status": "tested",
+   "notes": "Before/after image art-review/round72b-skills-ba.png is not in the repository.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "c32f011"
+    ]
+   },
+   "related": [
+    "dob-skill-whirlwind",
+    "dob-spell-fireball",
+    "dob-spell-arcane-storm"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-073",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Fireball, blast and meteor redrawn at full detail",
+   "stage": "in-game",
+   "category": "Animations & Rigs",
+   "description": "The user asked for the fireball and other spell effects next. The fireball is now a flickering ball of flame with a wavering tail, explosions swell into a ball of fire that cools to smoke, and the meteor is a cracked burning rock with a long tail.",
+   "tags": [
+    "spell",
+    "fx",
+    "mage"
+   ],
+   "version": "132",
+   "dates": {
+    "first": "2026-11-10",
+    "last": "2026-11-10"
+   },
+   "status": "tested",
+   "notes": "Before/after image art-review/round73-fire-ba.png is not in the repository.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "51f5099"
+    ]
+   },
+   "related": [
+    "dob-spell-fireball",
+    "dob-spell-meteor",
+    "dob-skill-cluster-arrow"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-074",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Act II stage 1: the Ashford Vale map",
+   "stage": "in-game",
+   "category": "Outdoor",
+   "description": "The user approved the Act II layout and said to build it. The Ashford Vale region was generated from layout data, with a palisaded town, a bell, forge, wagon, stall and townspeople at their stations. Dungeons behind the doors, Act II quests and new monsters were not built yet.",
+   "tags": [
+    "act-2",
+    "map",
+    "town"
+   ],
+   "version": "133",
+   "dates": {
+    "first": "2026-11-10",
+    "last": "2026-11-10"
+   },
+   "status": "tested",
+   "notes": "In-game screenshots art-review/round74-ashford-vale.png are not in the repository; images here are the plans. Whether a player can reach Ashford in normal play was not checked here.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "4d80250"
+    ]
+   },
+   "related": [
+    "dob-map-ashford-vale",
+    "dob-prop-bell"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/world/ashford-town.png",
+     "caption": "Ashford town plan",
+     "role": "concept"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/world/ashford-layout.png",
+     "caption": "Ashford Vale layout",
+     "role": "concept"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-075",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Quality of life: arrow, bag button, item levels, rewards, wolves",
+   "stage": "in-game",
+   "category": "Art Direction",
+   "description": "The user listed quality-of-life problems. The quest arrow points straight at far goals and sits further out, the bag has a real CLOSE button, items show their level, reward cards say UPGRADE or WORSE, and wolves move more naturally.",
+   "tags": [
+    "ui",
+    "qol",
+    "loot",
+    "enemy"
+   ],
+   "version": "134",
+   "dates": {
+    "first": "2026-11-10",
+    "last": "2026-11-10"
+   },
+   "status": "tested",
+   "notes": "Before/after image art-review/round75-qol-ba.png is not in the repository.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "d6a0e36"
+    ]
+   },
+   "related": [
+    "dob-ui-quest-arrow",
+    "dob-ui-bag",
+    "dob-enemy-wolf"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-076",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Shield Charge replaces the Chain Hook",
+   "stage": "in-game",
+   "category": "Animations & Rigs",
+   "description": "The user asked to swap the hook for a shield charge that goes far, maybe through enemies, with fun upgrades. The warrior sprints 8.5 tiles straight through foes, staggering each, with upgrades Battering Ram, Second Wind and Tremor.",
+   "tags": [
+    "skill",
+    "warrior"
+   ],
+   "version": "135",
+   "dates": {
+    "first": "2026-11-10",
+    "last": "2026-11-10"
+   },
+   "status": "tested",
+   "notes": "Built as a test; the hook's code stays. Clip art-review/round76-charge.gif not in the repository. Still in the warrior's kit in main's skills.js.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "5053824"
+    ]
+   },
+   "related": [
+    "dob-skill-shield-charge",
+    "dob-skill-chain-hook",
+    "dob-hero-warrior"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-077",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Item level scales gear; monsters keep pace",
+   "stage": "in-game",
+   "category": "Weapons",
+   "description": "The user asked to clean up gear progression, keep enemies from becoming trivial, and lower footsteps. An item found above its base level now gets stronger stats, monsters gain a little health and damage per level, and footsteps are 3 dB quieter.",
+   "tags": [
+    "loot",
+    "balance",
+    "audio"
+   ],
+   "version": "136",
+   "dates": {
+    "first": "2026-11-10",
+    "last": "2026-11-10"
+   },
+   "status": "tested",
+   "notes": "Bot runs showed Act I as hard as before.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "531f974"
+    ]
+   },
+   "related": [
+    "dob-gear-sets"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-078",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Act I's three dangers, in any order",
+   "stage": "in-game",
+   "category": "Maps & Layouts",
+   "description": "The user felt following the quest wasted half the Act I map. After Aldo is home, the Old Watchtower, the Standing Stones and the Barrow must all be cleared, in any order, with coloured markers; their levels follow the order you do them. The Standing Stones became a three-wave outdoor fight.",
+   "tags": [
+    "quests",
+    "map",
+    "act-1",
+    "balance"
+   ],
+   "version": "137",
+   "dates": {
+    "first": "2026-11-10",
+    "last": "2026-11-10"
+   },
+   "status": "tested",
+   "notes": "Told 'trust your judgment'. Shots art-review/round78-three-dangers.png not in the repository.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "49f0b3f"
+    ]
+   },
+   "related": [
+    "dob-map-hollow",
+    "dob-boss-barrow-wraith"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-079",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Frame profiler, speed readout, cheaper fire",
+   "stage": "in-game",
+   "category": "Reference & Documents",
+   "description": "The user dropped the many-enemies idea in favour of looks and asked for a measuring session first. Frame time was measured per area, a SPEED readout was added to OPTIONS, and fire blasts became about four times cheaper to draw.",
+   "tags": [
+    "performance",
+    "tools"
+   ],
+   "version": "138",
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "tested",
+   "notes": "The user replied 'Everything runs very smooth. What's next' (start of round 80).",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "be3879f"
+    ]
+   },
+   "related": [],
+   "images": []
+  },
+  {
+   "id": "dob-round-080",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Smoother walking, coloured spell light, air per place",
+   "stage": "in-game",
+   "category": "Animations & Rigs",
+   "description": "Round 79's three looks items. Walks now show 16 poses per cycle instead of 8, spells light the room in their colour, and each place has its own floating dust, grit, embers, pollen, leaves or ash, with ground mist in some areas.",
+   "tags": [
+    "animation",
+    "lighting",
+    "fx",
+    "atmosphere"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "tested",
+   "notes": "The user has not said whether they like the coloured light or the mist (both are toggles). Images art-review/round80-*.png not in the repository.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "f2aedc3"
+    ]
+   },
+   "related": [],
+   "images": []
+  },
+  {
+   "id": "dob-round-081",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Walk-through exits, stairs that climb out, swarm balance",
+   "stage": "in-game",
+   "category": "Maps & Layouts",
+   "description": "The user said entrances were not obvious, every stairway looked like stairs down, and fights were slow with weak skills. Exits now have large glowing ground marks you walk into, ways out show steps climbing to daylight, and monsters have less health but come in bigger packs.",
+   "tags": [
+    "map",
+    "ui",
+    "balance",
+    "combat"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "user-approved",
+   "notes": "Tested with bots. In round 82 the user said 'combat tuning feels good', read here as approval of this round's balance. Image art-review/round81-exits.png not in the repository.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "65ec8df"
+    ]
+   },
+   "related": [],
+   "images": []
+  },
+  {
+   "id": "dob-round-082",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Chain Lightning from the sky, repeater Sentry, Strafe",
+   "stage": "in-game",
+   "category": "Animations & Rigs",
+   "description": "The user wanted abilities to be more fun: Chain Lightning looked weak, the ranger's vault and turret were weak. Chain Lightning now calls a strike from the sky on each foe, the Sentry is a repeating crossbow that fires for 5 seconds then breaks, and Strafe replaced Vault.",
+   "tags": [
+    "spell",
+    "skill",
+    "mage",
+    "ranger"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "tested",
+   "notes": "Damage measured per skill. Open: the user said Piercing Shot still reads like a basic arrow. GIFs art-review/round82-*.gif not in the repository.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "4a23f9c"
+    ]
+   },
+   "related": [
+    "dob-spell-chain-lightning",
+    "dob-skill-sentry",
+    "dob-skill-strafe",
+    "dob-skill-vault"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-083",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "The mage's elemental ultimates",
+   "stage": "in-game",
+   "category": "Animations & Rigs",
+   "description": "The user proposed ultimates built from skill combinations and approved the mage plan ('I love the mage idea'). Four element gauges fill from damage; a full gauge casts Inferno, Blizzard, Thunderstorm or Earthquake, and all four cast the Cataclysm.",
+   "tags": [
+    "spell",
+    "ultimate",
+    "mage",
+    "fx"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "tested",
+   "notes": "The plan was user-approved; the built result is tested (damage and frame time measured), no user reaction recorded. Images art-review/round83-*.gif not in the repository.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "7af36a6"
+    ]
+   },
+   "related": [
+    "dob-spell-inferno",
+    "dob-spell-blizzard",
+    "dob-spell-thunderstorm",
+    "dob-spell-earthquake",
+    "dob-spell-cataclysm",
+    "dob-hero-mage"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-084",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "The mage's six pair ultimates",
+   "stage": "in-game",
+   "category": "Animations & Rigs",
+   "description": "The user said to build the paired ultimates. Two full gauges now cast one of six combined ultimates: Plasma Storm, Steam Burst, Volcano, Shatterstorm, Glacier and Magnetic Pull.",
+   "tags": [
+    "spell",
+    "ultimate",
+    "mage",
+    "fx"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "tested",
+   "notes": "Three full gauges cast a pair plus the third element's ultimate, which differs from what the user was first told.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "7067f8e"
+    ]
+   },
+   "related": [
+    "dob-spell-plasma-storm",
+    "dob-spell-steam-burst",
+    "dob-spell-volcano",
+    "dob-spell-shatterstorm",
+    "dob-spell-glacier",
+    "dob-spell-magnetic-pull"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-085",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Gear shows on the hero again; faster ultimates",
+   "stage": "in-game",
+   "category": "Characters & Zombies",
+   "description": "The user's phone screenshot showed equipped gear no longer drawn on the hero. A bug from round 77 dropped the item's look; it was fixed, and ultimates now charge faster.",
+   "tags": [
+    "bug",
+    "gear",
+    "ultimate"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "tested",
+   "notes": "Checked all three classes before and after.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "89f8463"
+    ]
+   },
+   "related": [
+    "dob-hero-warrior",
+    "dob-hero-mage",
+    "dob-hero-ranger"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-086",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Ultimates in the normal rotation; orbs build the Cataclysm",
+   "stage": "in-game",
+   "category": "Animations & Rigs",
+   "description": "The user wanted ultimates every 20-30 seconds of a fight and the Cataclysm about every two minutes, with no new buttons. Each spell cast now pays a fixed chunk into its gauge, and casting mini ultimates lights orbs that together unlock the Cataclysm.",
+   "tags": [
+    "ultimate",
+    "mage",
+    "balance",
+    "ui"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "tested",
+   "notes": "Measured with an eager bot: one ultimate every 25-45 s. Image art-review/round86-orbs.png not in the repository. The user's warrior stance idea was recorded, not built.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "695e652"
+    ]
+   },
+   "related": [
+    "dob-spell-cataclysm",
+    "dob-hero-mage"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-087",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Rage and the Berserker stance for the warrior",
+   "stage": "in-game",
+   "category": "Animations & Rigs",
+   "description": "After brainstorming, the user asked for warrior stances that climb with RAGE, each with four new moves, starting with the Berserker. Rage fills from blows; at half it unlocks the Berserker with Reaver's Rush, Hurl, Blood Roar and Flurry.",
+   "tags": [
+    "skill",
+    "warrior",
+    "stance"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "tested",
+   "notes": "Bots used the stance 3-4 times a run. GIFs art-review/round87-*.gif not in the repository.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "aaa4af7"
+    ]
+   },
+   "related": [
+    "dob-hero-warrior",
+    "dob-skill-reavers-rush",
+    "dob-skill-hurl",
+    "dob-skill-blood-roar",
+    "dob-skill-flurry"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-088",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "The Titan stance and weightier warrior swings",
+   "stage": "in-game",
+   "category": "Animations & Rigs",
+   "description": "The user asked to build the Titan and keep polishing the warrior's animations, even the basic attack. Full rage now turns the warrior into the Titan for 30 seconds with Earthsplitter, Uproot, Titan's Crescent and Skyfall. Basic swings coil and lean further, and a bright cut and sparks mark each hit.",
+   "tags": [
+    "skill",
+    "warrior",
+    "stance",
+    "animation"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "tested",
+   "notes": "GIFs art-review/round88-*.gif not in the repository. The Titan does not physically grow.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "a64f606"
+    ]
+   },
+   "related": [
+    "dob-hero-warrior",
+    "dob-skill-earthsplitter",
+    "dob-skill-uproot",
+    "dob-skill-titans-crescent",
+    "dob-skill-skyfall"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-089",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Dave's table: a story cinematic drawn in code",
+   "stage": "replaced",
+   "category": "Reference & Documents",
+   "description": "The user made pixel portraits of four friends (Dave the Dungeon Master, Marc, Aaron, Chris) and asked for the story to be told from the DM's view: a cinematic in code of the four at a D&D table that zooms into the map to start the game. A new cine.js draws the room and the people, and the map on the table is the game itself, so the zoom ends in play.",
+   "tags": [
+    "story",
+    "cinematic",
+    "ui"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "tested",
+   "notes": "Mid-build the user said Dave was 'way too big'; in round 90 they said he was still too fat (user-rejected on that point). No images saved; the source portraits are of real people and are deliberately not in the repository.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "19f1587"
+    ]
+   },
+   "related": [
+    "dob-story-table-opening",
+    "dob-npc-dave"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-090",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "The table opening told in pictures",
+   "stage": "in-game",
+   "category": "Reference & Documents",
+   "description": "The user asked for Dave to look less fat, all four players upgraded, a better D&D area and more cinematic camera moves with less reading. The portraits are now the user's detailed versions in their own colours, and the opening is 8 short shots of about 45 words: lamp, the dead marching on the wall, the King rising behind Dave, a d20 roll, then the push into the map.",
+   "tags": [
+    "story",
+    "cinematic",
+    "art"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "user-approved",
+   "notes": "Tested at several screen sizes. The user then said 'This is excellent' and that the art for Dave, Marc, Aaron and Chris is 'perfect' (start of round 91). The room was redrawn in round 91. No images saved.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "a52d37b"
+    ]
+   },
+   "related": [
+    "dob-story-table-opening",
+    "dob-npc-dave"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-091",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "The game opens at Dave's table",
+   "stage": "in-game",
+   "category": "Reference & Documents",
+   "description": "The user liked the people but wanted the room seen from above like the game, the game to open at the table, the player as an unnamed fifth player, and quests told at the table with a reusable transition. The room was redrawn in the game's angle; the title is now the table, where you pick your hero's miniature; Dave tells Osric's quest and you roll a d20 before diving into the map. Camp quests now lift up to the table and drop back down.",
+   "tags": [
+    "story",
+    "cinematic",
+    "ui",
+    "quests"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "tested",
+   "notes": "Checked with real taps from the splash, every quest visit, the ending, and a ranger bot through Act I. The notes record no user verdict yet: open are the angle, the title at the table and the lift/drop. No images saved.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "0b90a11"
+    ]
+   },
+   "related": [
+    "dob-story-table-opening",
+    "dob-npc-dave",
+    "dob-npc-osric",
+    "dob-ui-title"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-3d-01",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "3D look test: a Blender-made warrior",
+   "stage": "experiment",
+   "category": "Art Direction",
+   "description": "The user asked to remake the game in 3D with headless Blender, keeping style, quests, characters, skills and Act I. A Blender kit, a warrior model with clips and a crypt corner were built for a look test; the user chose the smooth look.",
+   "tags": [
+    "3d",
+    "blender",
+    "look-test"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "user-approved",
+   "notes": "User: 'Smooth is perfect. I love it! Let's build it out'. Look test artifact A4S7zW9WRQv1DvwqFVGCYH. The hand-made warrior is not used by the game. No image saved in the repository.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md",
+     "diablo-clone/game3d/look/warrior-looks.html"
+    ],
+    "commits": [
+     "280578c"
+    ]
+   },
+   "related": [
+    "dob-project-3d-remake",
+    "dob-hero-warrior"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-3d-02",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "The 3D game runs on the 2D game's code",
+   "stage": "in-game",
+   "category": "Packs & Projects",
+   "description": "The 3D version loads the 2D game's code unchanged and draws the world with Three.js underneath the pixel HUD. A converter turns every 2D rig and animation into Blender-built models: all monsters, heroes, about 350 props, the painted floor, walls, flames and stairs.",
+   "tags": [
+    "3d",
+    "blender",
+    "engine"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "tested",
+   "notes": "Test scripts (sweep, shot, probe) in game3d/tools/tests. 'in-game' means live in the 3D build. No screenshots saved in the repository.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "3a4e8e4",
+     "8021e06",
+     "16059ce",
+     "e878e06",
+     "7a9fef5",
+     "82cfcd5",
+     "e28f423",
+     "dbeafc8"
+    ]
+   },
+   "related": [
+    "dob-project-3d-remake"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-3d-03",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "3D remake polish: a modern-remake look",
+   "stage": "in-game",
+   "category": "Art Direction",
+   "description": "The user asked to stop copying the 2D sprites and give it a full 'PS4 remake' polish, all in headless Blender. Heroes are built in gear pieces, and the game gained surface relief, grass with wind, swaying trees, bloom, colour grading, 3D particles and swing trails.",
+   "tags": [
+    "3d",
+    "blender",
+    "fx",
+    "lighting"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "user-approved",
+   "notes": "User after playing: 'I like it, but lighting effects are too bright ... Everything feels sharp so far. I'm ok if UI stays traditional 2d'. No screenshots saved in the repository.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "96126de",
+     "cfdd81c",
+     "361dc31"
+    ]
+   },
+   "related": [
+    "dob-project-3d-remake"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-3d-04",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "3D lighting toned down after phone test",
+   "stage": "in-game",
+   "category": "Art Direction",
+   "description": "The user said lighting was too bright on land and in dungeons. Brightness was cut by roughly 40%: bloom, sun, torches, hero light, exposure and effect glows were all lowered.",
+   "tags": [
+    "3d",
+    "lighting"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "commit-says",
+   "notes": "The notes say 'waiting to hear whether that is the right level'. No screenshots saved.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "daabac5"
+    ]
+   },
+   "related": [
+    "dob-project-3d-remake"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-world-01",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "The World: a third-person mode as its own project",
+   "stage": "in-game",
+   "category": "Packs & Projects",
+   "description": "After playing the overhead 3D build, the user asked for 'true 3D', more World of Warcraft than Diablo, with the camera close behind the hero. The same 3D code got a world mode: a chase camera, a stick relative to the camera, full-height walls, sky and haze, and ground markers, deployed as its own site.",
+   "tags": [
+    "3d",
+    "camera",
+    "world"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "tested",
+   "notes": "The concept art came with the user's later direction; it is a reference, not a result. No in-game screenshots saved.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "b150d7f",
+     "f45654d"
+    ]
+   },
+   "related": [
+    "dob-project-world",
+    "dob-project-3d-remake"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/refs/world3d/concept-forest-crypt.png",
+     "caption": "The user's concept art for the World look",
+     "role": "reference"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-world-02",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "World round 1: forest, buildings and crypts rebuilt",
+   "stage": "in-game",
+   "category": "Outdoor",
+   "description": "The user asked to restyle toward early-2004 World of Warcraft: new trees, bushes, buildings, at a bigger scale, Act I only. Three Blender scripts made new trees, grass, flowers, ground paint, a sky dome, camp and farm buildings and crypt walls with sconces; a chapel and cottages were added, and the hero and villagers stand taller.",
+   "tags": [
+    "3d",
+    "world",
+    "blender",
+    "outdoor",
+    "indoor"
+   ],
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "tested",
+   "notes": "Tested with wsweep (3 classes, several levels, clean). Still to do: monsters re-modelled, effects, caves and hell, water. No screenshots or Blender review sheets saved in the repository.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md"
+    ],
+    "commits": [
+     "1bad030",
+     "f189a71",
+     "d3c25fa",
+     "107d945",
+     "203e5a6"
+    ]
+   },
+   "related": [
+    "dob-project-world"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/refs/world3d/concept-forest-crypt.png",
+     "caption": "Target look (concept art, inspiration only)",
+     "role": "reference"
+    }
+   ]
+  },
+  {
+   "id": "dob-project-3d-remake",
+   "project": "dungeon-of-bones",
+   "kind": "project",
+   "title": "Dungeons of Bones 3D (overhead remake)",
+   "stage": "in-game",
+   "category": "Packs & Projects",
+   "description": "A 3D remake of Act I that runs the 2D game's own code and draws the world with Three.js, using models built by headless Blender from the game's rigs. The camera keeps the 2D game's overhead angle, and the HUD stays the 2D pixel HUD by the user's choice.",
+   "tags": [
+    "3d",
+    "blender",
+    "three.js",
+    "remake"
+   ],
+   "addedToGame": "unverified",
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "user-approved",
+   "notes": "Folder diablo-clone/game3d. Live: https://dungeons-of-bones-3d-marcsarno.vercel.app. The user approved the smooth look and liked the polished build, but found the lighting too bright (toned down, waiting on their view). Act II is paused until Act I is in 3D. addedToGame does not apply in the usual sense: this is a separate build.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md",
+     "diablo-clone/game3d/index.html",
+     "diablo-clone/game3d/js3d/main.js",
+     "diablo-clone/game3d/js3d/bridge.js"
+    ],
+    "commits": [
+     "280578c",
+     "3a4e8e4",
+     "96126de",
+     "daabac5"
+    ]
+   },
+   "related": [
+    "dob-round-3d-01",
+    "dob-round-3d-02",
+    "dob-round-3d-03",
+    "dob-round-3d-04",
+    "dob-project-world"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-project-world",
+   "project": "dungeon-of-bones",
+   "kind": "project",
+   "title": "Dungeons of Bones: The World (third-person)",
+   "stage": "in-progress",
+   "category": "Packs & Projects",
+   "description": "A third-person version of the 3D game, with the camera close behind the hero, aiming for the look of early World of Warcraft. It shares the 3D remake's code through a mode switch and adds its own Blender-made trees, buildings and crypts.",
+   "tags": [
+    "3d",
+    "world",
+    "third-person",
+    "blender"
+   ],
+   "addedToGame": "unverified",
+   "version": null,
+   "dates": {
+    "first": "2026-11-11",
+    "last": "2026-11-11"
+   },
+   "status": "tested",
+   "notes": "Folder diablo-clone/world3d (builds from game, game3d/js3d and game3d/models). Live: https://bones-world-3d-marcsarno.vercel.app. Still to do: monsters re-modelled, effects for this camera, caves and hell, water, and asking the user how it feels on the phone.",
+   "source": {
+    "files": [
+     "diablo-clone/NOTES.md",
+     "diablo-clone/world3d/index.html",
+     "diablo-clone/world3d/build.sh",
+     "diablo-clone/game3d/js3d/world.js"
+    ],
+    "commits": [
+     "b150d7f",
+     "1bad030",
+     "203e5a6"
+    ]
+   },
+   "related": [
+    "dob-round-world-01",
+    "dob-round-world-02",
+    "dob-project-3d-remake"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/refs/world3d/concept-forest-crypt.png",
+     "caption": "The user's concept art: target look",
+     "role": "concept"
+    }
+   ]
+  }
+ ],
+ "openQuestions": [
+  "Asset slugs in `related` are inferred from skill names (e.g. dob-skill-shield-charge, dob-spell-chain-lightning); the in-game ids are short (charge, chain, cone). The assembler should map them to whatever IDs the asset researchers chose.",
+  "Most review images for rounds 60-91 (art-review/roundNN*) are listed in NOTES.md but are git-ignored and not in the repository; only tools/pages/round65-69 and art/refs images exist.",
+  "Rounds 67 (a-e) and 68c-d are single rows in the notes; 67 is one record, 68c and 68d are split. Round 61b shares commit e5d2aa9 with round 61.",
+  "Round 70 has no 'round 70' commit; dates come from the 'Act II:' commits (2026-11-08 to 11-09).",
+  "Rounds 89-91 have no saved images; the source portraits are of real people and intentionally not in the repo.",
+  "3D/World rounds (dob-round-3d-01..04, dob-round-world-01..02) are my grouping of commits; none has a saved screenshot."
+ ]
+}

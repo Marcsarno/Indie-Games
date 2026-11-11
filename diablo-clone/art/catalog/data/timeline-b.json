@@ -1,0 +1,1787 @@
+{
+ "records": [
+  {
+   "id": "dob-round-033",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "The ranger class: a third hero with a bow",
+   "stage": "in-game",
+   "category": "Characters & Zombies",
+   "description": "Step 3 of the agreed plan: a third playable class. The ranger wears a hood and leather jerkin, carries a bow and quiver, shoots quick arrows, and has Multishot, Snare Trap, Evasive Leap, Hunter's Mark and Rain of Arrows. It has its own save slot, ranger gear, two legendaries and a set.",
+   "tags": [
+    "hero",
+    "combat",
+    "skill",
+    "art",
+    "ui"
+   ],
+   "addedToGame": true,
+   "version": "game v62",
+   "dates": {
+    "first": "2026-11-03",
+    "last": "2026-11-03"
+   },
+   "status": "tested",
+   "notes": "The user agreed the plan beforehand (keep all four skills, no pet); no recorded reaction to the finished ranger. Playtest tools/playtests/ranger and the ranger journey pass. Skill slugs are guesses from the skill names.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/skills.js",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/actors.js"
+    ],
+    "commits": [
+     "853b05c"
+    ]
+   },
+   "related": [
+    "dob-hero-ranger",
+    "dob-skill-multishot",
+    "dob-skill-snare-trap",
+    "dob-skill-evasive-leap",
+    "dob-skill-hunters-mark",
+    "dob-skill-rain-of-arrows"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round33/lineup.png",
+     "caption": "The ranger beside the other heroes",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round33/pass0.png",
+     "caption": "Art pass 0 (before the review fixes)",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round33/looks.png",
+     "caption": "Ranger gear looks",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-034",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Monster attacks get a wind-up, lunge and opening",
+   "stage": "in-game",
+   "category": "Animations & Rigs",
+   "description": "The user said combat felt good but enemies were boring to fight, \"marching to their deaths\", and agreed a 3-step plan. Step 1 gave each monster family a readable attack: a wind-up with a glint and growl, a lunge or leap (fallen pounce, skeleton overhead chop, hound lunge, spider rear), then an opening after a miss.",
+   "tags": [
+    "combat",
+    "enemy",
+    "animation"
+   ],
+   "addedToGame": true,
+   "version": "game v63",
+   "dates": {
+    "first": "2026-11-03",
+    "last": "2026-11-03"
+   },
+   "status": "tested",
+   "notes": "Playtest tools/playtests/monattack plus all regressions pass. Turned off under FEEL_OLD.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/actors.js"
+    ],
+    "commits": [
+     "b776fa3"
+    ]
+   },
+   "related": [
+    "dob-enemy-fallen",
+    "dob-enemy-skeleton",
+    "dob-enemy-hound",
+    "dob-enemy-spider"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round34/poses.png",
+     "caption": "Old vs new attack key poses",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round34/attacks.gif",
+     "caption": "The new attacks in motion",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-035",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Monster packs that notice you and take turns",
+   "stage": "in-game",
+   "category": "Animations & Rigs",
+   "description": "Step 2 of the enemy plan, movement with intent. A monster that spots the hero hops and cries out and the alarm ripples through the room; only two pack members press in at a time while the rest circle, stalk and burst in.",
+   "tags": [
+    "combat",
+    "enemy",
+    "ai"
+   ],
+   "addedToGame": true,
+   "version": "game v64",
+   "dates": {
+    "first": "2026-11-03",
+    "last": "2026-11-03"
+   },
+   "status": "tested",
+   "notes": "All playtests and three journeys pass; capture packcap.cjs. The category is a best fit: this is monster behavior, not art.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/game.js"
+    ],
+    "commits": [
+     "757948d"
+    ]
+   },
+   "related": [
+    "dob-enemy-fallen",
+    "dob-enemy-wolf",
+    "dob-enemy-skeleton"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round35/groups.gif",
+     "caption": "Packs taking turns",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round35/pack-frames.png",
+     "caption": "Pack positions frame by frame",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-036",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Monsters live in their space: patrols and guards",
+   "stage": "in-game",
+   "category": "Packs & Projects",
+   "description": "The user said monsters just stood still until you came close, then ran at you, and wanted them to live in their space. Packs now get a leader and a routine (wander, patrol between rooms, or guard), and they only notice the hero from the front or up close. For testing, ultimates unlock at level 4.",
+   "tags": [
+    "combat",
+    "enemy",
+    "ai",
+    "world"
+   ],
+   "addedToGame": true,
+   "version": "game v65",
+   "dates": {
+    "first": "2026-11-03",
+    "last": "2026-11-03"
+   },
+   "status": "tested",
+   "notes": "ULT_LVL is still 4 in main (skills.js) for testing; the notes say put it back to 10 for release.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/game.js"
+    ],
+    "commits": [
+     "51ddbbe"
+    ]
+   },
+   "related": [
+    "dob-enemy-skeleton",
+    "dob-enemy-spider",
+    "dob-enemy-hound",
+    "dob-enemy-fallen"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round36/routes.png",
+     "caption": "Routine paths over 30 seconds",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round36/crypt-routes.png",
+     "caption": "Patrol routes in a crypt floor",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-037",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Deaths with weight: knockback, bounce, flying debris",
+   "stage": "in-game",
+   "category": "Animations & Rigs",
+   "description": "Step 3 of the enemy plan. Killed monsters slide back along the blow with a hop and a thud, each family has its own death cry, and the fallen's weapon and the skeleton's skull fly and bounce. The last kill of a fight can trigger a short slow motion.",
+   "tags": [
+    "combat",
+    "enemy",
+    "fx",
+    "audio"
+   ],
+   "addedToGame": true,
+   "version": "game v66",
+   "dates": {
+    "first": "2026-11-03",
+    "last": "2026-11-03"
+   },
+   "status": "tested",
+   "notes": "Playtest tools/playtests/deaths passes.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/game.js"
+    ],
+    "commits": [
+     "51dc1cf"
+    ]
+   },
+   "related": [
+    "dob-enemy-fallen",
+    "dob-enemy-skeleton",
+    "dob-enemy-hound",
+    "dob-enemy-spider"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round37/deaths.gif",
+     "caption": "Kills with knockback and debris",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-038",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Fix heroes getting stuck in walls after leaps",
+   "stage": "in-game",
+   "category": "Packs & Projects",
+   "description": "From the user's phone notes: tents looked like acorns, dungeons were the weakest area, trees blocked the wolf den, and leap, blink and the ranger's leap could leave the hero stuck in a wall. This round fixed the stuck-in-wall bug: landings now only happen where the whole body fits, and the hero is nudged free if stuck.",
+   "tags": [
+    "combat",
+    "bug",
+    "skill",
+    "world"
+   ],
+   "addedToGame": true,
+   "version": null,
+   "dates": {
+    "first": "2026-11-03",
+    "last": "2026-11-03"
+   },
+   "status": "tested",
+   "notes": "Playtest tools/playtests/stuck: before, 45/178 warrior, 87/180 mage and 55/179 ranger jumps got stuck; after, none (per notes). The den image may belong to the den trail fix mentioned in notes for round 38.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/game.js"
+    ],
+    "commits": [
+     "a87e44f"
+    ]
+   },
+   "related": [
+    "dob-skill-leap",
+    "dob-skill-blink",
+    "dob-skill-evasive-leap",
+    "dob-env-wolf-den"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round38/den-before-after.png",
+     "caption": "Wolf den approach before and after",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-038b",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "A-frame tents, no view fog, bigger dungeons",
+   "stage": "in-game",
+   "category": "Maps & Layouts",
+   "description": "The user chose all three proposed fixes and asked for the fog removed. Tents were redrawn as A-frames with an open door; the fog of war no longer darkens the view; and dungeon floors grew to 56x56 with a great hall, caverns, crossroads, galleries and wide corridors.",
+   "tags": [
+    "world",
+    "art",
+    "dungeon",
+    "environment"
+   ],
+   "addedToGame": true,
+   "version": "game v68",
+   "dates": {
+    "first": "2026-11-03",
+    "last": "2026-11-03"
+   },
+   "status": "user-approved",
+   "notes": "\"user-approved\" is for the plan (the user picked all three and asked for fog removed); no recorded reaction to the result. Seed sweep, playtests and journeys pass. Fog can still be turned back on with ?fog=1.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/world.js",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/outdoor.js"
+    ],
+    "commits": [
+     "3c739c6",
+     "c4c878e"
+    ]
+   },
+   "related": [
+    "dob-prop-tent",
+    "dob-env-dungeon",
+    "dob-env-camp"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round38/tents.png",
+     "caption": "New A-frame tents",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round38/fog-before-after.png",
+     "caption": "View fog before and after",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round38/hall-before-after.png",
+     "caption": "Dungeon hall before and after",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-039",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Elite monsters with special powers lead packs",
+   "stage": "in-game",
+   "category": "Packs & Projects",
+   "description": "The user asked for elites with special powers. Champions now lead packs and carry up to three powers (burning, frozen, blinking, shielded, vampiric, summoner), each with a visible warning, a counter, a payoff and its own death burst; a tip explains a power the first time you meet it.",
+   "tags": [
+    "combat",
+    "enemy",
+    "fx",
+    "ui"
+   ],
+   "addedToGame": true,
+   "version": "game v69",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "New file game/js/elites.js. Three art passes with the pixel-sprite rubric; playtest tools/playtests/elites.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/elites.js"
+    ],
+    "commits": [
+     "3802440"
+    ]
+   },
+   "related": [
+    "dob-enemy-alpha",
+    "dob-enemy-banditchief"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round39/fights-before-after.png",
+     "caption": "Elite fights before and after",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round39/effects-a.png",
+     "caption": "Power effects (sheet A)",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round39/pass1-a.png",
+     "caption": "Art pass 1, where effects did not read yet",
+     "role": "before"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-039b",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "The user's own song plays in the forest",
+   "stage": "in-game",
+   "category": "Audio",
+   "description": "The user gave their own recording (3:02) for the forest area. It now fades in and loops in forest areas and Act I's west woods, and fades out elsewhere; it starts after the first tap because phones need one.",
+   "tags": [
+    "audio",
+    "music"
+   ],
+   "addedToGame": true,
+   "version": "game v70",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Checked in Chromium (fade in, fade out, mute). No images for this round.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/music/forest.mp3",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/sound.js"
+    ],
+    "commits": [
+     "35ecd73"
+    ]
+   },
+   "related": [
+    "dob-audio-forest-music"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-040a",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Hero animation pass: slam, hook, whirlwind, drinking",
+   "stage": "in-game",
+   "category": "Animations & Rigs",
+   "description": "The user asked for another animation pass on the hero and polish to abilities and movement. The warrior's ground slam now hops and crashes, the hook is thrown and hauled, the whirlwind has a spin pose, and heroes drink potions, fidget, pivot, skid and react to hits from the side.",
+   "tags": [
+    "hero",
+    "animation",
+    "skill"
+   ],
+   "addedToGame": true,
+   "version": "game v71",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Playtest tools/playtests/heroanim (timing unchanged). The user also saved a second song for later (4e85fc2).",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/actors.js"
+    ],
+    "commits": [
+     "d1027dd",
+     "4e85fc2"
+    ]
+   },
+   "related": [
+    "dob-hero-warrior",
+    "dob-skill-ground-slam",
+    "dob-skill-chain-hook",
+    "dob-skill-whirlwind",
+    "dob-skill-leap"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round40/strips.png",
+     "caption": "Pose strips",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round40/poses-warrior.png",
+     "caption": "Warrior poses",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round40/ground-slam.gif",
+     "caption": "Ground slam in motion",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-040b",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Live recording cut into camp, dungeon, boss songs",
+   "stage": "in-game",
+   "category": "Audio",
+   "description": "The user's second recording was a live set; they asked to remove the applause. Applause was found by its noisiness and cut, the user checked the cuts by ear and corrected two, and three songs now play: camp, dungeon floors and boss halls, with the forest song kept for forests.",
+   "tags": [
+    "audio",
+    "music"
+   ],
+   "addedToGame": true,
+   "version": "game v72",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "user-approved",
+   "notes": "The user confirmed the cut points on the song breaks page (and caught that the first cuts at 7:03 and 17:42 were already music). No images.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/applause.py",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/sound.js"
+    ],
+    "commits": [
+     "3c7386f",
+     "297fbfa",
+     "34568e8",
+     "6688ac0"
+    ]
+   },
+   "related": [
+    "dob-audio-camp-music",
+    "dob-audio-dungeon-music",
+    "dob-audio-lair-music",
+    "dob-audio-forest-music"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-041",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "A bigger walled camp and clearer character select",
+   "stage": "replaced",
+   "category": "Maps & Layouts",
+   "description": "The user said monsters too close to camp felt wrong, the camp was cramped, and the character select made it hard to tell which hero you were picking; they approved a plan with a palisade. The hub grew to 84 tiles with a palisade ring, four gates, no monsters within 26 tiles of the fire, and a place for each person; the title screen got three hero cards.",
+   "tags": [
+    "world",
+    "ui",
+    "npc",
+    "environment"
+   ],
+   "addedToGame": false,
+   "version": "game v73",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "user-approved",
+   "notes": "\"user-approved\" is for the plan, not a reaction to the result. This hub (genHub) was replaced by The Hollow in round 48c; genHub no longer exists in main. The character cards were later redrawn sharper in round 50.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/outdoor.js",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/ui.js"
+    ],
+    "commits": [
+     "d48b4e9"
+    ]
+   },
+   "related": [
+    "dob-env-camp",
+    "dob-npc-osric",
+    "dob-prop-palisade",
+    "dob-ui-title-screen"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round41/hub-before-after.png",
+     "caption": "Hub before and after",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round41/camp-before-after.png",
+     "caption": "Camp before and after",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round41/title-before-after.png",
+     "caption": "Character select before and after",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-041b",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Art kit so another AI can make assets",
+   "stage": "built-not-in-game",
+   "category": "Reference & Documents",
+   "description": "The user wanted ChatGPT to make more monsters, assets and gear in the same style. An art kit was made: instructions for the other AI, six working example files, and a studio page that draws pasted asset code as a review sheet, plus a test script to check submissions.",
+   "tags": [
+    "tool",
+    "art",
+    "pipeline"
+   ],
+   "addedToGame": false,
+   "version": "game v74",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Not a game feature. The notes say the user would try it; later art came instead through the separate art chat (branch art). No images in the review folders.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-kit/ART_KIT.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-kit/studio.html"
+    ],
+    "commits": [
+     "fbd5787"
+    ]
+   },
+   "related": [
+    "dob-tool-art-kit"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-042a",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "More everyday loot: rings, amulets, tiered bases",
+   "stage": "in-game",
+   "category": "Weapons",
+   "description": "The user approved the quest chain and asked to fill out the ordinary loot table so new legendaries would not crowd it. Rings and amulets were added as new slots, plus 24 tiered weapon and armor bases and 8 everyday affixes.",
+   "tags": [
+    "loot",
+    "gear",
+    "ui",
+    "art"
+   ],
+   "addedToGame": true,
+   "version": "game v75",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Playtest tools/playtests/loot2. The round42 image folder is shared by 42a and 42b; icons and inventory fit 42a best.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/items.js"
+    ],
+    "commits": [
+     "e9374ca"
+    ]
+   },
+   "related": [
+    "dob-gear-ring",
+    "dob-gear-amulet"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round42/icons.png",
+     "caption": "New item icons",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round42/inventory.png",
+     "caption": "Inventory with ring and neck slots",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-042b",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "The Act I story told as one quest chain",
+   "stage": "in-game",
+   "category": "Packs & Projects",
+   "description": "The user approved the tightened story (\"I like this plan\") and picked names and open choices. Act I became one chain: Osric, Wren the woodcutter's quest, the wolf den and Aldo's cage, the chained mine, Hollis's farm, the bandit chief's cellar and a letter signed M. A dialogue box with a choice of rewards, tap-to-talk and goal arrows came with it.",
+   "tags": [
+    "story",
+    "quest",
+    "npc",
+    "ui",
+    "world"
+   ],
+   "addedToGame": true,
+   "version": "game v76",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "user-approved",
+   "notes": "\"user-approved\" is the plan (\"I like this plan\"), recorded before the build. Story test covers stages out of order and old saves.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/quests.js"
+    ],
+    "commits": [
+     "ad8b035"
+    ]
+   },
+   "related": [
+    "dob-npc-osric",
+    "dob-npc-wren",
+    "dob-npc-aldo",
+    "dob-npc-hollis",
+    "dob-npc-maelis",
+    "dob-boss-banditchief",
+    "dob-env-wolf-den",
+    "dob-env-mine"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round42/talk-reward.png",
+     "caption": "Dialogue box with reward choice",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round42/den-cellar.png",
+     "caption": "Aldo's cage in the den and the cellar",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round42/mine-before-after.png",
+     "caption": "The chained mine before and after",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-043",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "An hour on hero art: sets, casts, poses",
+   "stage": "in-game",
+   "category": "Characters & Zombies",
+   "description": "The user asked to spend an hour upgrading character art and animation for all three classes, abilities and armor sets. Armor sets got their own colors and capes, the mage got slam and hurl casts, the ranger got leap, toss and volley poses, heroes got a new death fall, hat tips sway, and many items and legendaries got their own looks.",
+   "tags": [
+    "hero",
+    "art",
+    "animation",
+    "gear",
+    "spell"
+   ],
+   "addedToGame": true,
+   "version": "game v88",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Full regression passed at the end (every playtest, three journeys, 40-seed sweep). Spell slugs are guesses from names.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/actors.js"
+    ],
+    "commits": [
+     "968d71a",
+     "92ada5d",
+     "b5a7586",
+     "6f897da",
+     "606f790",
+     "006d932",
+     "71dbb30",
+     "5dcf160",
+     "1c6538f",
+     "5b0ec63",
+     "358d133",
+     "40396e5",
+     "a4297d1"
+    ]
+   },
+   "related": [
+    "dob-hero-warrior",
+    "dob-hero-mage",
+    "dob-hero-ranger",
+    "dob-spell-cone-of-cold",
+    "dob-spell-frost-nova",
+    "dob-spell-arcane-storm",
+    "dob-skill-rain-of-arrows",
+    "dob-spell-blink"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/sets-before-after.png",
+     "caption": "Armor sets before and after",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/death-before-after.png",
+     "caption": "Hero death before and after",
+     "role": "comparison"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/mage-casts.png",
+     "caption": "New mage cast poses",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/ranger-poses.png",
+     "caption": "New ranger poses",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-043b",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Action button for talking, freeing Aldo, unlocking",
+   "stage": "in-game",
+   "category": "Art Direction",
+   "description": "The user reported that \"tap to free Aldo\" never worked and asked for a speak button for quests. The cause was that talking only worked outdoors, not in the den. A bottom-center action button now appears when something is in reach and names it: TALK, FREE ALDO, BUY POTION, SELL LOOT, UNLOCK or LOOK.",
+   "tags": [
+    "ui",
+    "quest",
+    "bug"
+   ],
+   "addedToGame": true,
+   "version": "game v89",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Story test does a real pointer tap on the button in the den and checks UNLOCK at the mine.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/ui.js"
+    ],
+    "commits": [
+     "a2ae6d5"
+    ]
+   },
+   "related": [
+    "dob-ui-action-button",
+    "dob-npc-aldo",
+    "dob-env-mine"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art-review/round43/action-button.png",
+     "caption": "The new action button",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-044",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Recorded sound effects picked by the user",
+   "stage": "in-game",
+   "category": "Audio",
+   "description": "The user said sound effects were one of the weakest areas and asked for good open-source ones. They picked from a Sound Picks page, and 33 of the 37 game sounds became recordings (43 takes), with the old synthesized sounds as a fallback and a SOUND: REAL / SYNTH option. The user said hurt and death were still the weakest.",
+   "tags": [
+    "audio",
+    "sfx"
+   ],
+   "addedToGame": true,
+   "version": "game v90",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "user-approved",
+   "notes": "The user chose the sounds; all 43 files checked to decode and play over http. Hurt and death were redone in rounds 58-59. No images.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/sfx/CREDITS.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/sound.js"
+    ],
+    "commits": [
+     "bd77d30",
+     "4a0376b"
+    ]
+   },
+   "related": [
+    "dob-audio-sfx"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-045",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Bag refresh, guided first upgrade, live skill previews",
+   "stage": "in-game",
+   "category": "Art Direction",
+   "description": "The user asked for music under dialogue, a clear prompt to open the bag, a scripted first upgrade, an easier-to-read inventory, and better skill explanations with animation; they approved the plan. The bag got GEAR and SKILLS tabs, green and red upgrade arrows, a compare card and WEAR BEST; the first weapon and first skill modifier pause the game with an arrow; the skills screen shows a live preview of each skill.",
+   "tags": [
+    "ui",
+    "audio",
+    "skill",
+    "tutorial"
+   ],
+   "addedToGame": true,
+   "version": "game v91",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "user-approved",
+   "notes": "\"user-approved\" is for the plan (quieter music in menus, WEAR BEST ok, real previews). Playtest tools/playtests/ui45 and full regression pass. Open question in notes: whether the preview shows on the phone. No images in review folders.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/ui.js"
+    ],
+    "commits": [
+     "cec7d2f"
+    ]
+   },
+   "related": [
+    "dob-ui-inventory",
+    "dob-ui-skills-screen"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-046",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Two more recordings cut into playlists per place",
+   "stage": "in-game",
+   "category": "Audio",
+   "description": "The user gave two more recordings: a 13-minute live set to split at its breaks and alternate with the forest song, its second song only for the character screen, and a 3-minute song for going down into a dungeon. The set was cut into parts and each place (title, forest, camp, dungeon, lair) got its own playlist.",
+   "tags": [
+    "audio",
+    "music"
+   ],
+   "addedToGame": true,
+   "version": "game v92",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Checked with stub players. The notes ask the user whether the cuts are right; no answer recorded for this round. No images.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/sound.js"
+    ],
+    "commits": [
+     "326b710"
+    ]
+   },
+   "related": [
+    "dob-audio-title-music",
+    "dob-audio-forest-music",
+    "dob-audio-camp-music",
+    "dob-audio-dungeon-music"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-046b",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Title song starts on the first tap",
+   "stage": "in-game",
+   "category": "Audio",
+   "description": "The user did not hear the song on the character screen. On a phone the song only began downloading at the first tap, so a quick pick missed it. The song now downloads at page load and starts inside the first tap, with a TAP ANYWHERE FOR MUSIC hint.",
+   "tags": [
+    "audio",
+    "music",
+    "bug"
+   ],
+   "addedToGame": true,
+   "version": "game v93",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "The hint was replaced by a splash screen in 46c. No images.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/sound.js"
+    ],
+    "commits": [
+     "978c68a"
+    ]
+   },
+   "related": [
+    "dob-audio-title-music"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-046c",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "A splash screen before character select",
+   "stage": "in-game",
+   "category": "Art Direction",
+   "description": "The user asked for \"just a splash screen before character select\". A DUNGEON OF BONES splash with the three heroes and TAP TO BEGIN now comes first; that tap turns the audio on so the title song plays on the character screen.",
+   "tags": [
+    "ui",
+    "audio"
+   ],
+   "addedToGame": true,
+   "version": "game v94",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Checked in Chromium at phone size. The splash step is still in the game, but in round 60 the user's own picture replaced the drawn splash art (the user: \"I already gave you a splash screen\"); the drawn one is now only a fallback while the picture loads. No images for 46c itself.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/ui.js"
+    ],
+    "commits": [
+     "ad94d2b"
+    ]
+   },
+   "related": [
+    "dob-ui-splash",
+    "dob-audio-title-music"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-046d",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Sharp detail becomes the default setting",
+   "stage": "in-game",
+   "category": "Art Direction",
+   "description": "The user asked whether DETAIL: CLASSIC/SHARP did anything, since it defaulted to the lower setting and still looked sharp. It only redrew scenery props at 2x; characters were always sharp. SHARP is now the default for every phone.",
+   "tags": [
+    "performance",
+    "art",
+    "settings"
+   ],
+   "addedToGame": true,
+   "version": "game v95",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Full regression clean with SHARP on. No images in review folders (crops were in a scratchpad).",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/world.js"
+    ],
+    "commits": [
+     "f4918fd",
+     "a17cc1f"
+    ]
+   },
+   "related": [
+    "dob-direction-detail"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-047a",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Bestiary: every monster and outfit as drawn",
+   "stage": "built-not-in-game",
+   "category": "Reference & Documents",
+   "description": "The user wanted every enemy and character design in its exact art to give an image generator, with new designs coming back through a separate art-only chat. A bestiary was rendered from the game: all 29 monsters, 16 hero outfits, every gear look, item icons and the palette, with a page and a prompt template. The art chat plan was agreed.",
+   "tags": [
+    "art",
+    "tool",
+    "reference"
+   ],
+   "addedToGame": false,
+   "version": null,
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "A reference tool, not a game feature. The request also planned the new opening valley (built in 48c) and movement fixes (47d).",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/bestiary/bestiary.json"
+    ],
+    "commits": [
+     "32b9ea8",
+     "10349c9"
+    ]
+   },
+   "related": [
+    "dob-tool-bestiary",
+    "dob-direction-palette"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/bestiary/sheet-monsters.png",
+     "caption": "Bestiary monster sheet",
+     "role": "reference"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/bestiary/sheet-heroes.png",
+     "caption": "Bestiary hero sheet",
+     "role": "reference"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-047d",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Trees in clumps; the hero glides around obstacles",
+   "stage": "in-game",
+   "category": "Outdoor",
+   "description": "The user asked to start on movement and tree fixes: trees too dense, the hero not sliding off them, packs buried in trees. Trees and rocks are now round obstacles the body glides past, and trees grow in clumps with gaps and clearings around packs instead of an even lattice.",
+   "tags": [
+    "world",
+    "movement",
+    "environment"
+   ],
+   "addedToGame": true,
+   "version": "game v96",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Full regression clean (26 playtests incl. walk). The before/after image was in a scratchpad and is gone.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/outdoor.js",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/world.js"
+    ],
+    "commits": [
+     "ed67080",
+     "9f824b2"
+    ]
+   },
+   "related": [
+    "dob-env-forest",
+    "dob-prop-tree"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-047f",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Quick one-screen quests, salvage, detail-size demo",
+   "stage": "in-game",
+   "category": "Packs & Projects",
+   "description": "After approving The Hollow layout, the user asked to see bigger characters, one-screen quick quests, a quest arrow only when near, salvage from the bag, more grey items, and later plate drops. Dialogue now shows on one screen with one tap, salvage was added, plate drops later, and a demo showed characters at 2x, 3x and 4x.",
+   "tags": [
+    "quest",
+    "ui",
+    "loot",
+    "art"
+   ],
+   "addedToGame": true,
+   "version": "game v97",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "After the demo the user decided character detail stays at 2x. The near-only quest arrow was reversed in 48a. Playtest tools/playtests/quest47.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/quests.js"
+    ],
+    "commits": [
+     "e975150"
+    ]
+   },
+   "related": [
+    "dob-ui-dialogue",
+    "dob-ui-inventory",
+    "dob-direction-detail"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/detail-2x-3x-4x.png",
+     "caption": "The same characters at 2x, 3x and 4x detail",
+     "role": "comparison"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-047g",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Dungeon lighting presets for a blind pick",
+   "stage": "experiment",
+   "category": "Art Direction",
+   "description": "The user found dungeons too dark and the lighting weird. Five lighting presets (current plus four brighter or bigger-torch options) were built and shown on a blind pick page for crypt, caves and hell. The user found all five looked alike: the real problem was flat, shadowless light, not brightness.",
+   "tags": [
+    "lighting",
+    "dungeon",
+    "experiment"
+   ],
+   "addedToGame": false,
+   "version": null,
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "user-rejected",
+   "notes": "The presets are still in game.js (DLIGHTS, ?dl=a..d) but the default stayed as before. The light-*.png images named in the notes are not in the main checkout. Led to round 48b.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/game.js"
+    ],
+    "commits": [
+     "e9706d0",
+     "6f80375"
+    ]
+   },
+   "related": [
+    "dob-env-dungeon"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-048a",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Quest arrow always on, step by step",
+   "stage": "in-game",
+   "category": "Art Direction",
+   "description": "The user changed their mind and wanted the quest arrow always shown, pointing step by step at whatever moves the story on. The arrow now covers every stage everywhere and follows the walking route around walls, trees and houses.",
+   "tags": [
+    "quest",
+    "ui"
+   ],
+   "addedToGame": true,
+   "version": "game v99",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Playtest tools/playtests/arrow: following only the arrow reaches the goal at all 24 checkpoints. Commit 58d7175 is shared with 48b. No images.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/quests.js",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/ui.js"
+    ],
+    "commits": [
+     "58d7175"
+    ]
+   },
+   "related": [
+    "dob-ui-quest-arrow"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-048b",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "New dungeon light: shading, softer pools, mood",
+   "stage": "in-game",
+   "category": "Art Direction",
+   "description": "The user said lit areas were too bright and flat, some areas too dark, with no mood. New dungeon light uses a tone curve so torch pools keep their shading, softer and wider falloff, and darker corners where floor meets wall; an in-game LIGHT: NEW / OLD toggle lets you compare.",
+   "tags": [
+    "lighting",
+    "dungeon",
+    "art"
+   ],
+   "addedToGame": true,
+   "version": "game v99",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Playtest tools/playtests/light48. The before/after art-review/round48/pair-*.png images named in the notes are not in the main checkout. Notes still ask the user whether the mood is better. No blind A/B recorded for this shader change.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/core.js",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/world.js"
+    ],
+    "commits": [
+     "58d7175"
+    ]
+   },
+   "related": [
+    "dob-env-dungeon",
+    "dob-direction-lighting"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-048c",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "The Hollow: Act I hub rebuilt from layout",
+   "stage": "in-game",
+   "category": "Maps & Layouts",
+   "description": "The user asked to build The Hollow from the approved layout, with the camp at the bottom. The round 41 hub was replaced by a 100x100 region: a compact walled camp, roads, clearings with rising monster levels, open woods, thick forest as walls, a brook with bridges, standing stones and dungeon doors.",
+   "tags": [
+    "world",
+    "map",
+    "environment",
+    "story"
+   ],
+   "addedToGame": true,
+   "version": "game v100",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "user-approved",
+   "notes": "\"user-approved\" is the layout, approved before the build; notes still ask how the built region feels. No in-game screenshot of The Hollow was found in main. Playtest tools/playtests/hollow.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/outdoor.js",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/world/hollow.json"
+    ],
+    "commits": [
+     "3445d56"
+    ]
+   },
+   "related": [
+    "dob-map-the-hollow",
+    "dob-env-camp",
+    "dob-env-forest",
+    "dob-npc-osric",
+    "dob-npc-wren"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/world/hollow-layout.png",
+     "caption": "The approved Hollow layout as data",
+     "role": "concept"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/refs/world/hollow/region-map.png",
+     "caption": "Hollow region concept map",
+     "role": "concept"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-049",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Merge the art chat's hero sets and monsters",
+   "stage": "in-game",
+   "category": "Characters & Zombies",
+   "description": "The user asked to pull in the art chat's work. The art branch was merged: smaller hero heads (1.2x), snug warrior helms, refined jerkins and robes, four refined monsters, and 31 new hero sets wired as 73 items.",
+   "tags": [
+    "art",
+    "gear",
+    "hero",
+    "enemy"
+   ],
+   "addedToGame": true,
+   "version": "game v101",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Playtest tools/playtests/gear49. New sets had no set bonuses until round 56. The 11 new monsters arrived with minLevel 99 and were switched on in round 55.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/items.js",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/ART_LOG.md"
+    ],
+    "commits": [
+     "fb45fd4",
+     "965bb51"
+    ]
+   },
+   "related": [
+    "dob-hero-warrior",
+    "dob-hero-mage",
+    "dob-hero-ranger",
+    "dob-enemy-burning",
+    "dob-enemy-treant",
+    "dob-enemy-fallen",
+    "dob-enemy-shaman"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/review/a7-heads/outfits-before.png",
+     "caption": "Hero outfits before the merge (bigger heads)",
+     "role": "before"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/review/a7-heads/outfits-after.png",
+     "caption": "Hero outfits after (1.2x heads, snug helms)",
+     "role": "after"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/review/a6-hero-sets/warrior/sets.png",
+     "caption": "New warrior sets from the art chat",
+     "role": "after"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-050",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Sharp heroes on the character select",
+   "stage": "in-game",
+   "category": "Art Direction",
+   "description": "The user sent a phone screenshot: the heroes on the character select looked terrible. They were low-detail sprites doubled in size; the menus now draw the sharp sprites, so the character cards, splash heroes and bag doll show twice the detail at the same size.",
+   "tags": [
+    "ui",
+    "art",
+    "bug"
+   ],
+   "addedToGame": true,
+   "version": "game v102",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "commit-says",
+   "notes": "No test or capture recorded in the row. No images.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/ui.js"
+    ],
+    "commits": [
+     "c9f42e3"
+    ]
+   },
+   "related": [
+    "dob-ui-title-screen",
+    "dob-hero-warrior",
+    "dob-hero-mage",
+    "dob-hero-ranger"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-051",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "One-person opening, no auto-run, no magnifier",
+   "stage": "in-game",
+   "category": "Packs & Projects",
+   "description": "The user said the opening needed only one person, the hero kept auto-running back to camp, and holding a finger opened the iPhone magnifier. Osric now gives the first quest himself; a thumb on a person starts the joystick instead of walking over; lost touches release the stick; and the magnifier and context menu are blocked.",
+   "tags": [
+    "ui",
+    "story",
+    "bug",
+    "controls"
+   ],
+   "addedToGame": true,
+   "version": "game v103",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Playtest tools/playtests/touch51. No images.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/ui.js",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/quests.js"
+    ],
+    "commits": [
+     "5446b68"
+    ]
+   },
+   "related": [
+    "dob-npc-osric",
+    "dob-npc-wren",
+    "dob-npc-aldo"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-052",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Performance test; no slow motion during ultimates",
+   "stage": "in-game",
+   "category": "Packs & Projects",
+   "description": "The user asked for a performance test because some moments, like the mage ultimate, felt like the phone slowing down. A throttled timing tool showed the light pass is about 40% of each frame; the real cause was the last-kill slow motion firing as ultimates finished groups, so it is now off during and 5 s after an ultimate. The sprite cache also drops its oldest quarter instead of everything.",
+   "tags": [
+    "performance",
+    "combat"
+   ],
+   "addedToGame": true,
+   "version": "game v104",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Measured with tools/capture/perf52.cjs at 2x CPU throttle. No images.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/capture/perf52.cjs",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/game.js"
+    ],
+    "commits": [
+     "a7c999e"
+    ]
+   },
+   "related": [
+    "dob-tool-perf52",
+    "dob-spell-arcane-storm"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-053",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Entering song in side caves; title song kept",
+   "stage": "in-game",
+   "category": "Audio",
+   "description": "The user hardly heard the title song (a favorite) and never heard the 3-minute song in dungeons. Side caves now start with the entering song instead of the boss music. The title song was also added to the woods and camp playlists, then taken back out at the user's word.",
+   "tags": [
+    "audio",
+    "music"
+   ],
+   "addedToGame": true,
+   "version": "game v106",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Playtest tools/playtests/music53. The user rejected the title song in the woods and camp (commit a9f698f), so that part was undone. No images.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/sound.js"
+    ],
+    "commits": [
+     "f33a45b",
+     "a9f698f"
+    ]
+   },
+   "related": [
+    "dob-audio-title-music",
+    "dob-audio-dungeon-music"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-054",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Palette expanded: navy, wine and antique bronze",
+   "stage": "in-game",
+   "category": "Art Direction",
+   "description": "The user asked to expand the palette a little: no pink, yes navy, other dark-fantasy colors. The last two palette slots became a true navy ramp now used on several mage robes and hoods; deep wine and antique bronze were built from existing shades, and the Rose Oracle became the Crimson Oracle.",
+   "tags": [
+    "art",
+    "palette"
+   ],
+   "addedToGame": true,
+   "version": "game v107",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "commit-says",
+   "notes": "No test or capture recorded in the row. The palette is now full. No images.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/core.js",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/rig.js"
+    ],
+    "commits": [
+     "c8c9922"
+    ]
+   },
+   "related": [
+    "dob-direction-palette",
+    "dob-hero-mage"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-055",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "The art chat's 11 new monsters now spawn",
+   "stage": "in-game",
+   "category": "Characters & Zombies",
+   "description": "The user asked to bring in the art chat's monsters. Eleven new monsters were put into the spawn pools: crypt spearmen, bone axemen, grave crossbowmen and tomb guards in dungeons and the barrow, fallen knifers and slingers, brigand mastiffs on the farm, and ogre clubbers, rockthrowers, shieldbearers and enforcers in later forests.",
+   "tags": [
+    "enemy",
+    "art",
+    "world"
+   ],
+   "addedToGame": true,
+   "version": "game v108",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Playtest tools/playtests/mon55 (each spawns, fights, dies). Stats are still the art chat's placeholders. Enemy slugs are the in-game ids seen in monsters.js (e.g. spearman, gravebow, knifer, mastiff, oclubber, oenforcer); orockthrower, oshield, axeman, tombguard and slinger are inferred from image names.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/monsters.js"
+    ],
+    "commits": [
+     "77ed172"
+    ]
+   },
+   "related": [
+    "dob-enemy-spearman",
+    "dob-enemy-gravebow",
+    "dob-enemy-axeman",
+    "dob-enemy-tombguard",
+    "dob-enemy-knifer",
+    "dob-enemy-slinger",
+    "dob-enemy-mastiff",
+    "dob-enemy-oclubber",
+    "dob-enemy-orockthrower",
+    "dob-enemy-oshield",
+    "dob-enemy-oenforcer"
+   ],
+   "images": [
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/review/a4-passes/final-spearman.png",
+     "caption": "Crypt Spearman, final art pass",
+     "role": "current"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/review/a4-passes/final-mastiff.png",
+     "caption": "Brigand Mastiff, final art pass",
+     "role": "current"
+    },
+    {
+     "path": "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/art/review/a4-passes/final-oclubber.png",
+     "caption": "Ogre Clubber, final art pass",
+     "role": "current"
+    }
+   ]
+  },
+  {
+   "id": "dob-round-056",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Set bonuses for the art chat's new gear",
+   "stage": "in-game",
+   "category": "Weapons",
+   "description": "The user asked for set bonuses for the new gear. Each of the 31 new sets is now an outfit whose bonuses grow at 2, 3 and 4 matching pieces worn, and the item card shows how many are worn and the bonus lines.",
+   "tags": [
+    "gear",
+    "loot",
+    "ui"
+   ],
+   "addedToGame": true,
+   "version": "game v109",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Playtest tools/playtests/outfit56. No images.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/items.js"
+    ],
+    "commits": [
+     "df7aaa1"
+    ]
+   },
+   "related": [
+    "dob-gear-outfits"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-057",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Cheaper lighting with the same picture",
+   "stage": "in-game",
+   "category": "Art Direction",
+   "description": "The user asked for cheaper lighting. The light pass was rewritten to do less work per pixel while drawing an identical picture; at 2x CPU throttle it went from about 10-12 ms to 8-9 ms a frame, and whole frames got 2-4 ms faster.",
+   "tags": [
+    "performance",
+    "lighting"
+   ],
+   "addedToGame": true,
+   "version": "game v110",
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "tested",
+   "notes": "Frame hashes identical in 6 scenes before and after. No images.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/game/js/game.js"
+    ],
+    "commits": [
+     "58f9177"
+    ]
+   },
+   "related": [
+    "dob-direction-lighting"
+   ],
+   "images": []
+  },
+  {
+   "id": "dob-round-058",
+   "project": "dungeon-of-bones",
+   "kind": "round",
+   "title": "Second sound picks round: new free packs",
+   "stage": "in-progress",
+   "category": "Audio",
+   "description": "The user wanted to revisit the sounds, especially the magic missile. Seven new free packs were trimmed into 63 candidates for 18 sounds on a new picks page. The user said the first missile candidates sounded like a keyboard tune, so they were replaced with whooshes (58b).",
+   "tags": [
+    "audio",
+    "sfx",
+    "spell"
+   ],
+   "addedToGame": false,
+   "version": null,
+   "dates": {
+    "first": "2026-11-04",
+    "last": "2026-11-04"
+   },
+   "status": "user-approved",
+   "notes": "The round itself only built a picks page; the user rejected the first missile candidates (58b) and then picked sounds in round 59 (027ab92), which put them in the game. \"user-approved\" refers to those round-59 picks. Downloaded packs lived in a scratchpad and are gone. No images.",
+   "source": {
+    "files": [
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/NOTES.md",
+     "/tmp/claude-0/-home-user-Indie-Games/b5cd6639-fe95-57ae-ae57-e37fb9a4e221/scratchpad/main/diablo-clone/tools/sfx/round2.py"
+    ],
+    "commits": [
+     "f906e32",
+     "ea383ec"
+    ]
+   },
+   "related": [
+    "dob-audio-sfx",
+    "dob-spell-magic-missile"
+   ],
+   "images": []
+  }
+ ],
+ "openQuestions": [
+  "Images for rounds 47g (art-review/round47/light-*.png) and 48b (art-review/round48/pair-*.png) are named in NOTES.md but are not in the main checkout; maybe never committed.",
+  "Rounds 44-58 (except 47a, 47f, 48c, 49, 55) have no review images in art-review/ or art/review/.",
+  "Rounds 47b, 47c and 47e are mentioned in the Waiting list (art chat, world plan, Hollow layout) but have no rows in the Results table, so no records were made for them.",
+  "Approval of a plan before building (33, 38b, 41, 42b, 45, 48c) is recorded as user-approved per the brief's 'I like this plan' example; there is no recorded user reaction to most finished results.",
+  "Asset IDs in 'related' are inferred from names (skills, spells, npcs, audio); they should be matched against the asset researchers' IDs.",
+  "ULT_LVL is still 4 in main (testing value since round 36)."
+ ]
+}
