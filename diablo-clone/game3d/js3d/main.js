@@ -45,13 +45,24 @@ function wantModel(file) {
 function whenModel(file) { wantModel(file); return (LOADING[file] || Promise.resolve()).then(() => MODELS[file]); }
 // Characters get a soft rim of light on the edges turned away from the camera, so they stand out from a dark room
 const rimLight = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n{ float rim = pow(1.0 - clamp(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0)), 0.0, 1.0), 2.6); totalEmissiveRadiance += diffuseColor.rgb * vec3(0.75, 0.85, 1.1) * rim * 0.28; }'); };
-function spawnModel(file) {
-  const g = MODELS[file], root = SkeletonUtils.clone(g.scene), mats = [];
-  const own = m => { const c = m.clone(); c.userData.e0 = c.emissive.getHex(); c.userData.i0 = c.emissiveIntensity; c.onBeforeCompile = rimLight; c.customProgramCacheKey = () => 'rim'; mats.push(c); return c; };
+// World mode: people are stood up taller for the close camera. The overhead game's figures are toy-like (a head 40% of the
+// height); here legs and body are stretched and the head made smaller, after the animation has moved every vertex, so every
+// clip still works. Modes: 'v' the hero's body, 'h' his head, 'n' a whole villager, 'r' things he holds (moved as a whole).
+const WARP = { hip: 0.62, neck: 1.03, leg: 1.28, body: 1.28, head: 0.8 };
+const warpY = y => y < WARP.hip ? y * WARP.leg : y < WARP.neck ? WARP.hip * WARP.leg + (y - WARP.hip) * WARP.body : WARP.hip * WARP.leg + (WARP.neck - WARP.hip) * WARP.body + (y - WARP.neck) * WARP.head;
+const WARP_GLSL = `vec3 wWarp(vec3 p, float head) { float y = p.y, yh = ${WARP.hip.toFixed(3)}, yn = ${WARP.neck.toFixed(3)};
+  float y2 = y < yh ? y * ${WARP.leg.toFixed(3)} : (y < yn ? yh * ${WARP.leg.toFixed(3)} + (y - yh) * ${WARP.body.toFixed(3)} : yh * ${WARP.leg.toFixed(3)} + (yn - yh) * ${WARP.body.toFixed(3)} + (y - yn) * ${WARP.head.toFixed(3)});
+  p.xz *= mix(1.0, ${WARP.head.toFixed(3)}, smoothstep(yn - 0.06, yn + 0.05, y) * head); p.y = y2; return p; }`;
+function spawnModel(file, warp) {
+  const g = MODELS[file], root = SkeletonUtils.clone(g.scene), mats = [], uRef = { value: new THREE.Vector3() };
+  const hook = !warp ? rimLight : sh => { rimLight(sh); sh.uniforms.uRef = uRef;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform vec3 uRef;\n' + WARP_GLSL)
+      .replace('#include <skinning_vertex>', '#include <skinning_vertex>\n' + (warp === 'r' ? 'transformed += uRef;' : warp === 'h' ? 'transformed = wWarp(transformed, 1.0);' : warp === 'n' ? 'transformed = wWarp(transformed, smoothstep(0.5, 0.34, length(transformed.xz)));' : 'transformed = wWarp(transformed, 0.0);')); };
+  const own = m => { const c = m.clone(); c.userData.e0 = c.emissive.getHex(); c.userData.i0 = c.emissiveIntensity; c.onBeforeCompile = hook; c.customProgramCacheKey = () => 'rim' + (warp || ''); mats.push(c); return c; };
   root.traverse(o => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(own) : own(o.material); });
   let mixer = null, acts = null;
   if (g.animations.length) { mixer = new THREE.AnimationMixer(root); const clip = g.animations[0]; acts = [mixer.clipAction(clip), mixer.clipAction(clip.clone())]; for (const a of acts) { a.play(); a.paused = true; a.setEffectiveWeight(0); } }
-  return { root, mixer, acts, cur: 0, tl: MANIFEST.tl[file] || {}, mats };
+  return { root, mixer, acts, cur: 0, tl: MANIFEST.tl[file] || {}, mats, warp, uRef };
 }
 
 // ---------------------------------------------------------------- the level: floors and walls from LV.map
@@ -321,7 +332,7 @@ function filesFor(c) {
 }
 function makeActor(c, files) {
   const root = new THREE.Group(), ready = files.length > 0 && files.every(f => MODELS[f]); let a;
-  if (ready) { const models = files.map(spawnModel); for (const m of models) root.add(m.root); a = { root, models }; }
+  if (ready) { const models = files.map(f => spawnModel(f, !TP ? 0 : c === hero ? (f.startsWith('hb_') ? 'v' : f.startsWith('hh_') ? 'h' : 'r') : c.role ? 'n' : 0)); for (const m of models) root.add(m.root); a = { root, models }; }
   else { const mesh = new THREE.Mesh(phGeo, new THREE.MeshStandardMaterial({ color: c.role ? 0x3b62d6 : FAMCOL[c.fam] || 0x888888, roughness: 0.8, transparent: true, opacity: 0.35 })); mesh.position.y = 0.7; root.add(mesh); a = { root, models: [], placeholder: true }; if (!files.length) missingChars.add(RP.keyOf(c.fam, c.look)); }
   a.key = files.join('+'); a.yaw = null; a.clip = null; a.t = 0; a.fade = 1; scene.add(root); actors.set(c, a); return a;
 }
@@ -451,7 +462,7 @@ function frame(menu) {
   const near = lights.map(l => { const [fi, fj] = groundToTile(l.x, l.y); return { l, fi, fj, d: Math.hypot(fi - hero.fi, fj - hero.fj) }; }).sort((a, b) => a.d - b.d);
   torchLights.forEach((tl, k) => { const n = near[k]; if (!n || n.d > 16) { tl.intensity = 0; return; } tl.position.set(n.fi, Math.max(0.8, n.l.z / UPX), n.fj); tl.distance = Math.max(5, n.l.r / TPX * 1.4); tl.intensity = (TP ? 16 : 10) * (n.l.i || 1) * (0.88 + 0.12 * Math.sin(G.t * 9 + (n.l.seed || 0))); });
   const visAt = (fi, fj) => LV.vis[Math.max(0, Math.min(MH - 1, Math.floor(fj))) * MW + Math.max(0, Math.min(MW - 1, Math.floor(fi)))];
-  syncActor(hero, dt, true);
+  syncActor(hero, dt, true); if (TP) warpHeld(actors.get(hero));
   for (const e of enemies) syncActor(e, dt, (TP || visAt(e.fi, e.fj) > 0.25) && Math.abs(e.fi - hero.fi) + Math.abs(e.fj - hero.fj) < (TP ? 44 : 26));
   for (const n of npcs) syncActor(n, dt, Math.abs(n.fi - hero.fi) + Math.abs(n.fj - hero.fj) < (TP ? 44 : 26));
   for (const [c, a] of actors) if (a.seen !== frameNo) { scene.remove(a.root); actors.delete(c); }
@@ -459,6 +470,14 @@ function frame(menu) {
   WIND.value = G.t; if (world) world.update(dt, cam);
   fx.update(dt, TP ? lastH * quality / (2 * Math.tan(cam.fov * Math.PI / 360)) : lastW * quality / (2 * hw), heroBlade(), /^(attack|spin|bash)/.test(hero.clip || ''));
   fx.render(quality);
+}
+// world mode: a weapon or shield is not stretched like the body; it is lifted as a whole by as much as the hand that holds it
+const heldBone = new Map();
+function warpHeld(a) {
+  if (!a || !a.models) return;
+  for (const m of a.models) { if (m.warp !== 'r') continue; let mesh = null; m.root.traverse(o => { if (o.isSkinnedMesh && !mesh) mesh = o; }); if (!mesh) continue;
+    let b = heldBone.get(mesh.geometry); if (b === undefined) { const si = mesh.geometry.attributes.skinIndex, n = new Map(); for (let i = 0; i < si.count; i++) n.set(si.getX(i), (n.get(si.getX(i)) || 0) + 1); b = [...n].sort((x, y) => y[1] - x[1])[0][0]; heldBone.set(mesh.geometry, b); }
+    a.root.updateMatrixWorld(true); const y = bv.setFromMatrixPosition(mesh.skeleton.bones[b].matrixWorld).y - a.root.position.y; m.uRef.value.set(0, warpY(y) - y, 0); }
 }
 // where the hero's weapon is right now (its grip end and its far end, in the world), for the swing trail
 const bladeInfo = new Map(), bv = new THREE.Vector3(), bm = new THREE.Matrix4();
