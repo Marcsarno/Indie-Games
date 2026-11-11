@@ -45,6 +45,7 @@ def build(data, outdir, review=False):
         if cls == "glow": nt.links.new(tx.outputs["Color"], b.inputs["Emission Color"]); b.inputs["Emission Strength"].default_value = 2.5
         return m
     mat_of = {}
+    static = bool(data.get("static"))
     # ---- the armature: bone p<k> at each part's origin, its axes the part's axes (y along the part)
     ad = bpy.data.armatures.new(name + "_arm"); arm = bpy.data.objects.new(name, ad); bpy.context.scene.collection.objects.link(arm)
     bpy.context.view_layer.objects.active = arm; bpy.ops.object.mode_set(mode="EDIT")
@@ -113,6 +114,11 @@ def build(data, outdir, review=False):
     bpy.ops.object.select_all(action="DESELECT")
     for ob in objs: ob.select_set(True)
     bpy.context.view_layer.objects.active = objs[0]; bpy.ops.object.join(); mesh = bpy.context.object; mesh.name = name + "_mesh"
+    if static:
+        mesh.vertex_groups.clear(); bpy.data.objects.remove(arm); mesh.name = name
+        tris = sum(len(p.vertices) - 2 for p in mesh.data.polygons); p = os.path.join(outdir, name + ".glb")
+        bpy.ops.export_scene.gltf(filepath=p, export_format="GLB", export_yup=True, export_apply=False, export_animations=False, export_image_format="AUTO")
+        return tris, 0, os.path.getsize(p)
     mod = mesh.modifiers.new("Armature", "ARMATURE"); mod.object = arm; mesh.parent = arm
     for pb in arm.pose.bones: pb.rotation_mode = "QUATERNION"
     # ---- the clips

@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { buildModel } from './rigbuild.js';
 
 const TPX = 16 * Math.SQRT2;            // world pixels (1x) per unit along the screen's x
 const UPX = TPX * Math.cos(Math.PI / 6); // world pixels per unit of height
@@ -33,9 +34,11 @@ function wantModel(file) {
   if (!LOADING[file]) LOADING[file] = loader.loadAsync('models/' + file + '.glb').then(g => { MODELS[file] = prep(g); }).catch(e => { console.error('3d: model ' + file, e); MODELS[file] = null; });
   return null;
 }
+function whenModel(file) { wantModel(file); return (LOADING[file] || Promise.resolve()).then(() => MODELS[file]); }
 function spawnModel(file) {
   const g = MODELS[file], root = SkeletonUtils.clone(g.scene), mixer = new THREE.AnimationMixer(root), actions = {}, mats = [];
-  root.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); mats.push(o.material); } });
+  const own = m => { const c = m.clone(); c.userData.e0 = c.emissive.getHex(); c.userData.i0 = c.emissiveIntensity; mats.push(c); return c; };
+  root.traverse(o => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(own) : own(o.material); });
   for (const a of g.animations) { const act = mixer.clipAction(a); act.play(); act.paused = true; act.setEffectiveWeight(0); actions[a.name] = act; }
   return { root, mixer, actions, mats, cur: null, prev: null, fade: 1, t: 0 };
 }
@@ -64,7 +67,48 @@ function buildLevel() {
   levelGroup.add(ground, fm, wm);
   hemi.intensity = LV.outdoor ? (LV.night ? 0.5 : 1.1) : 0.5; sun.intensity = LV.outdoor ? (LV.night ? 0.5 : 2.2) : 0.9; sun.color.setHex(LV.outdoor && !LV.night ? 0xfff2d8 : 0xc8d4ff);
   scene.background.setHex(LV.outdoor ? 0x1a2a18 : 0x050406);
+  levelToken++; buildProps(levelGroup, levelToken);
   builtLevel = R3D_LEVEL;
+}
+
+// ---------------------------------------------------------------- scenery
+// Static props: one InstancedMesh per model per 12 x 12 tile block (so blocks off screen are skipped).
+// Barrels, chests and cages can change, so each is its own object.
+const missingProps = new Set(); let levelToken = 0, unnamedProps = 0;
+const CH = 12;
+function addInstances(g, list, group) {
+  const meshes = []; g.scene.traverse(o => { if (o.isMesh) meshes.push(o); });
+  const chunks = new Map();
+  for (const it of list) { const k = Math.floor(it[0] / CH) + ',' + Math.floor(it[1] / CH); (chunks.get(k) || chunks.set(k, []).get(k)).push(it); }
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), p = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
+  for (const items of chunks.values()) for (const src of meshes) {
+    const im = new THREE.InstancedMesh(src.geometry, src.material, items.length); im.castShadow = true; im.receiveShadow = true;
+    items.forEach((it, n) => { m4.compose(p.set(it[0], 0, it[1]), q.setFromAxisAngle(up, -it[2]), one); im.setMatrixAt(n, m4); });
+    im.computeBoundingSphere(); group.add(im);
+  }
+}
+function buildProps(group, token) {
+  const by = new Map(); unnamedProps = 0;
+  for (const pr of props) { const sp = pr.sp; if (!sp || !sp.__name) { unnamedProps++; continue; } const [fi, fj] = groundToTile(pr.wx, pr.wy); (by.get(sp.__name) || by.set(sp.__name, []).get(sp.__name)).push([fi, fj, sp.__yaw || 0]); }
+  for (const [name, list] of by) {
+    const file = MANIFEST['prop|' + name]; if (!file) { missingProps.add(name); continue; }
+    whenModel(file).then(g => { if (g && token === levelToken) addInstances(g, list, group); });
+  }
+}
+const dyn = new Map();   // a barrel / chest / cage -> { obj, name }
+function dynSprites(pr) { return pr.kind === 'barrel' ? [PROPS.barrel()] : pr.kind === 'egg' ? [PROPS.egg()] : pr.kind === 'cage' ? [PROPS.cage(pr.open, 'b'), PROPS.cage(pr.open, 'f')] : [PROPS.chest(pr.open)]; }
+function syncDyn() {
+  for (const pr of dynProps) {
+    let d = dyn.get(pr); const sps = dynSprites(pr), name = sps.map(s => s.__name).join('+');
+    if (d && d.name !== name) { scene.remove(d.obj); dyn.delete(pr); d = null; }
+    if (!d) {
+      d = { obj: new THREE.Group(), name }; const [fi, fj] = groundToTile(pr.wx, pr.wy); d.obj.position.set(fi, 0, fj); scene.add(d.obj); dyn.set(pr, d);
+      for (const sp of sps) { const file = MANIFEST['prop|' + sp.__name]; if (!file) { missingProps.add(sp.__name); continue; }
+        whenModel(file).then(g => { if (!g || dyn.get(pr) !== d) return; const o = g.scene.clone(); o.rotation.y = -(sp.__yaw || 0); d.obj.add(o); }); }
+    }
+    d.seen = frameNo; d.obj.visible = !pr.broken;
+  }
+  for (const [pr, d] of dyn) if (d.seen !== frameNo) { scene.remove(d.obj); dyn.delete(pr); }
 }
 
 // ---------------------------------------------------------------- characters
@@ -77,8 +121,16 @@ function placeholder(c) {
   mesh.position.y = 0.7; mesh.castShadow = true; const root = new THREE.Group(); root.add(mesh);
   return { root, mixer: null, actions: {}, mats: [mesh.material], placeholder: true };
 }
+// a look with no Blender-built file is built here from the same rig data, one per frame at most
+const buildQueue = [], queued = new Set();
+function buildNext() {
+  const job = buildQueue.shift(); if (!job) return; const [key, fam, look] = job;
+  try { const data = RP.model(fam, look, 'built'); MODELS['built:' + key] = prep(buildModel(data)); } catch (e) { console.error('3d: could not build ' + key, e); MODELS['built:' + key] = null; }
+}
 function makeActor(c) {
-  const key = RP.keyOf(c.fam, c.look), file = MANIFEST[key], g = file ? wantModel(file) : null;
+  const key = RP.keyOf(c.fam, c.look); let file = MANIFEST[key];
+  if (!file || MODELS[file] === null) { file = 'built:' + key; if (MODELS[file] === undefined && !queued.has(key)) { queued.add(key); buildQueue.push([key, c.fam, c.look]); } }
+  const g = file.startsWith('built:') ? MODELS[file] : wantModel(file);
   const a = g ? spawnModel(file) : placeholder(c);
   a.key = key; a.file = file; a.yaw = null; scene.add(a.root); actors.set(c, a); return a;
 }
@@ -98,7 +150,7 @@ function syncActor(c, dt, visible) {
   if (a.yaw === null) a.yaw = yaw; else { let d = yaw - a.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); a.yaw += d * Math.min(1, dt * 16); }
   a.root.rotation.y = a.yaw; a.root.scale.setScalar((c.look && c.look.scale) || 1);
   const fl = c.flash > 0 ? 1 : 0;
-  if (fl !== a.fl) { a.fl = fl; for (const m of a.mats) { m.emissive.setHex(fl ? 0xffffff : 0x000000); m.emissiveIntensity = fl ? 0.8 : 1; if (m.emissiveMap === undefined) continue; } }
+  if (fl !== a.fl) { a.fl = fl; for (const m of a.mats) { if (m.userData.e0 === undefined) continue; m.emissive.setHex(fl ? 0xffffff : m.userData.e0); m.emissiveIntensity = fl ? 0.7 : m.userData.i0; } }
   if (!a.mixer) return;
   // the pose: the game says which clip and which frame; idle and walk run on the game's own continuous clocks
   const name = clipFor(a, c.clip); if (!name) return;
@@ -141,7 +193,8 @@ function frame(menu) {
   for (const e of enemies) syncActor(e, dt, visAt(e.fi, e.fj) > 0.25 && Math.abs(e.fi - cf) + Math.abs(e.fj - cj) < 26);
   for (const n of npcs) syncActor(n, dt, Math.abs(n.fi - cf) + Math.abs(n.fj - cj) < 26);
   for (const [c, a] of actors) if (a.seen !== frameNo) { scene.remove(a.root); actors.delete(c); }
+  syncDyn(); buildNext();
   renderer.render(scene, cam);
 }
 try { MANIFEST = await (await fetch('models/manifest.json')).json(); } catch (e) { console.error('3d: no model list', e); }
-window.R3D = { ready: true, frame, scene, cam, renderer, actors, THREE, MODELS, get manifest() { return MANIFEST; } };
+window.R3D = { ready: true, frame, scene, cam, renderer, actors, THREE, MODELS, missingProps, get unnamedProps() { return unnamedProps; }, get manifest() { return MANIFEST; } };

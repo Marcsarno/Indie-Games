@@ -1,0 +1,9 @@
+{
+  "buildCommand": "bash build.sh",
+  "outputDirectory": "dist",
+  "framework": null,
+  "installCommand": "",
+  "headers": [
+    { "source": "/models/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=300" }] }
+  ]
+}

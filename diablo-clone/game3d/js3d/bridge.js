@@ -5,6 +5,15 @@
 const render2d = render;
 let R3D_LEVEL = 0;   // bumped whenever a level is (re)built, so the 3D scene rebuilds
 { const _start = startLevel; startLevel = function (...a) { const r = _start.apply(this, a); R3D_LEVEL++; return r; }; }
+// Scenery: the 2D game draws each prop from a small rig, by name. Here nothing is drawn (the sprite is an empty stand-in);
+// the name and the direction it faces are kept so the 3D layer can place the matching model.
+const R3D_PROPS = {};   // name -> the function that builds its rig (for the exporter)
+{ const _prop = propSprite;
+  propSprite = function (name, build, size, yaw = 0) {
+    const k = name + '|' + yaw;
+    if (!propCache[k]) { const sp = propCache[k] = { w: 1, h: 1, ax: 0, ay: 0, data: new Uint8Array(1), z: new Uint8Array(1) }; sp.__name = name; sp.__yaw = yaw; R3D_PROPS[name] = build; }
+    return propCache[k];
+  }; }
 const R3D_SAFE = (name, fn) => { try { fn(); } catch (e) { if (!R3D_SAFE.seen[name]) { R3D_SAFE.seen[name] = 1; console.error('3d: ' + name, e); } } };
 R3D_SAFE.seen = {};
 render = function () {

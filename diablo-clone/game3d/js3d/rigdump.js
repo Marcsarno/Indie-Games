@@ -4,7 +4,7 @@
 // Loaded after the game's own scripts: by tools/dump.cjs (to export) and by the 3D game (to name what it needs).
 // Space: Blender's (z up, right-handed), in tiles: rig point (x, y, z) -> (x, -y, z) / TILE_U. A model faces +X.
 const RD = (() => {
-  const U = 1 / TILE_U;
+  let U = 1 / TILE_U;
   const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
   const mul = (a, k) => [a[0] * k, a[1] * k, a[2] * k], dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
   const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
@@ -79,12 +79,13 @@ const RD = (() => {
   }
   const kindOf = q => q.k === 0 ? 'sph' : q.k === 1 ? 'ell' : q.k === 2 ? 'cone' : q.k === 4 ? 'cyl' : 'box';
   // the rows of rings the mesh is built from: [distance along ey, ring radius on ex, on ez, v, which end (0 = a, 1 = b)]
+  let LOW = false;   // scenery: fewer faces
   function rows(kind, F, painted) {
     const out = [];
-    if (kind === 'sph' || kind === 'ell') { const n = F.s[0] > 0.2 || painted ? 10 : 7; for (let k = 0; k <= n; k++) { const ph = Math.PI * k / n; out.push([-F.s[1] * Math.cos(ph), F.s[0] * Math.sin(ph), F.s[2] * Math.sin(ph), k / n, 0]); } return out; }
+    if (kind === 'sph' || kind === 'ell') { const n = LOW ? (painted ? 8 : 5) : F.s[0] > 0.2 || painted ? 10 : 7; for (let k = 0; k <= n; k++) { const ph = Math.PI * k / n; out.push([-F.s[1] * Math.cos(ph), F.s[0] * Math.sin(ph), F.s[2] * Math.sin(ph), k / n, 0]); } return out; }
     const ra = F.ra, rb = F.rb, L = F.L;
     if (kind === 'cone') {
-      const ca = ra * Math.PI / 2, cb = rb * Math.PI / 2, T = ca + L + cb, nc = Math.max(ra, rb) > 0.14 ? 4 : 3;
+      const ca = ra * Math.PI / 2, cb = rb * Math.PI / 2, T = ca + L + cb, nc = LOW ? 2 : Math.max(ra, rb) > 0.14 ? 4 : 3;
       for (let k = 0; k < nc; k++) { const q = (1 - k / nc) * Math.PI / 2; out.push([-ra * Math.sin(q), ra * Math.cos(q), ra * Math.cos(q), (ca * k / nc) / T, 0]); }
       const nb = painted && L > 0.3 ? 4 : 1; for (let k = 0; k <= nb; k++) { const t = k / nb, r = ra + (rb - ra) * t; out.push([t * L, r, r, (ca + L * t) / T, t < 0.5 ? 0 : 1]); }
       for (let k = 1; k <= nc; k++) { const q = k / nc * Math.PI / 2; out.push([L + rb * Math.sin(q), rb * Math.cos(q), rb * Math.cos(q), (ca + L + cb * k / nc) / T, 1]); }
@@ -104,6 +105,7 @@ const RD = (() => {
 
   // poses = [{ clip, t, rig }] (the first is the rest pose). Returns the model as plain data.
   function build(name, poses, opt = {}) {
+    LOW = !!opt.low;
     // 1. one master list of parts across every pose
     let master = poses[0].rig.p.map(sig);
     for (const ps of poses.slice(1)) {
@@ -122,7 +124,7 @@ const RD = (() => {
       const q0 = seen.find(q => kindOf(q) === kind) || seen[0], F0 = frame(q0, kind, null), painted = !!q0.mf;
       const part = { kind, m: useMat(q0.m), o: F0.o.map(r4), q: quat(F0.ex, F0.ey, F0.ez).map(r4), F0, q0, two: kind === 'cone' || kind === 'cyl' };
       if (kind === 'box') part.half = F0.s.map(r4);
-      else { part.rows = rows(kind, F0, painted).map(r => r.map(r4)); part.seg = Math.max(F0.s[0], F0.s[2]) > 0.3 ? 20 : Math.max(F0.s[0], F0.s[2]) > 0.12 ? 14 : 10; part.hard = kind === 'cyl'; if (part.two) part.L = r4(F0.L); }
+      else { part.rows = rows(kind, F0, painted).map(r => r.map(r4)); part.seg = LOW ? (Math.max(F0.s[0], F0.s[2]) > 0.35 ? 12 : Math.max(F0.s[0], F0.s[2]) > 0.1 ? 8 : 6) : Math.max(F0.s[0], F0.s[2]) > 0.3 ? 20 : Math.max(F0.s[0], F0.s[2]) > 0.12 ? 14 : 10; part.hard = kind === 'cyl'; if (part.two) part.L = r4(F0.L); }
       if (painted && kind === 'box') {
         const n = Math.max(...F0.s) > 0.25 ? 24 : 12, ids = []; let varied = false;
         for (let j = 0; j < n; j++) for (let f = 0; f < 6; f++) for (let i = 0; i < n; i++) { const m = useMat(matAt(q0, kind, F0, (i + 0.5) / n, (j + 0.5) / n, f)); ids.push(m); if (m !== ids[0]) varied = true; }
@@ -155,7 +157,9 @@ const RD = (() => {
     });
     let top = 0; for (const P of parts) top = Math.max(top, P.F0.o[2] + Math.max(...P.F0.s));
     for (const P of parts) { delete P.F0; delete P.q0; delete P.fit; }
-    return { name, mats, parts, clips, height: r4(top), loops: opt.loops || {}, smears: opt.smears || null };
+    const out = { name, mats, parts, clips, height: r4(top), loops: opt.loops || {} };
+    if (poses.length === 1) { out.static = true; delete out.clips; }
+    return out;
   }
   // A painted sphere or cone has no orientation of its own: turn it until its paint lands where it was at rest.
   function fitPaint(q, P, F, last) {
@@ -182,5 +186,8 @@ const RD = (() => {
       if (q.mf) { const kind = kindOf(q), F = frame(q, kind, null); if (kind !== 'box') for (let j = 0; j < 4; j++) for (let i = 0; i < 6; i++) mix(matAt(q, kind, F, (i + 0.5) / 6, (j + 0.5) / 4)); } }
     return ('0000000' + h.toString(16)).slice(-8);
   }
-  return { build, hash, sig, frame, kindOf };
+  const propFile = name => { let h = 2166136261 >>> 0; for (let i = 0; i < name.length; i++) { h ^= name.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return 'prop_' + name.toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 28) + '_' + ('000' + (h % 65536).toString(16)).slice(-4); };
+  // a prop's model data from the function that builds its rig
+  function prop(name, buildFn) { const r = new Rig(); buildFn(r); if (!r.p.length) return null; const m = build(propFile(name), [{ clip: 'idle', t: 0, rig: r }], { low: true }); m.key = 'prop|' + name; return m; }
+  return { build, hash, sig, frame, kindOf, propFile, prop };
 })();
