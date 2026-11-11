@@ -52,7 +52,7 @@
       hero.dir = dirFrom(foe.fi - hero.fi, foe.fj - hero.fj);
       if (fd > range) go(pathDir([foe.fi, foe.fj])); else input.attack = true;
       if (near >= 2 || foe.def.unique || foe.champ) for (let k = 0; k < SKILLS.length; k++) { const s = SKILLS[k]; if (hero.lvl >= s.lvl && !(CD[s.id] > 0) && hero.mana >= (s.mana || 0) && Math.random() < 0.15) { useSkill(k); window.__casts = window.__casts || {}; window.__casts[s.id] = (window.__casts[s.id] || 0) + 1; break; } }
-      if (hero.ult >= 100 && hero.lvl >= ULT_LVL && (foe.def.unique || near >= (window.__ultEager ? 1 : 3))) { const f = hero.cls === 'mage' && typeof elemFull === 'function' ? elemFull() : [], was = hero.ultOn; useUlt(); if (!was && hero.ultOn && f.length) { window.__ults = window.__ults || {}; const key = f.length === 4 ? 'all' : f.join('+'); window.__ults[key] = (window.__ults[key] || 0) + 1; (window.__ultLog = window.__ultLog || []).push([+(t / 60).toFixed(1), key, hero.lvl]); } }
+      if (hero.ult >= 100 && hero.lvl >= ULT_LVL && (foe.def.unique || near >= (window.__ultEager ? 1 : 3))) { const f = hero.cls === 'mage' && typeof elemFull === 'function' ? elemFull() : [], was = hero.ultOn; useUlt(); if (!was && hero.ultOn && hero.ultOn.kind === 'elem') { window.__ults = window.__ults || {}; const key = [hero.ultOn.id, ...hero.ultOn.queue].join('>'); window.__ults[key] = (window.__ults[key] || 0) + 1; (window.__ultLog = window.__ultLog || []).push([+(t / 60).toFixed(1), key, hero.lvl, Object.keys(hero.orbs || {}).join(',')]); } }
     } else if (tg) {
       const d = Math.hypot(tg[0] - hero.fi, tg[1] - hero.fj);
       const n = tg.npc ? npcs.find(q => Math.abs(q.fi - tg[0]) < 0.01 && Math.abs(q.fj - tg[1]) < 0.01) : null;

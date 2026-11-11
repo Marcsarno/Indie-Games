@@ -55,9 +55,9 @@ function drawUltButton() {
   const fx = btnFx(9), dtu = 1 / 60; fx.press = Math.max(0, fx.press - dtu); fx.deny = Math.max(0, fx.deny - dtu);
   const c0 = UI.ult, shake = fx.deny > 0 ? Math.round(Math.sin(fx.deny * 70) * 2) : 0, c = [c0[0] + shake, c0[1], c0[2] + (fx.press > 0.08 ? 1 : 0)];
   const mage = hero.cls === 'mage', locked = hero.lvl < ULT_LVL, fullEl = mage && !locked ? elemFull() : [];
-  const f = locked ? 0 : mage ? (fullEl.length ? 1 : Math.max(0, ...ELEMS.map(k => (hero.el && hero.el[k]) || 0)) / 100) : (hero.ult || 0) / 100, full = f >= 1;
+  const cata = mage && !locked && orbsAll(), f = locked ? 0 : mage ? (fullEl.length || cata ? 1 : Math.max(0, ...ELEMS.map(k => (hero.el && hero.el[k]) || 0)) / 100) : (hero.ult || 0) / 100, full = f >= 1;
   // round 83: the mage's button takes the colours of what it would cast (all four: it runs through them)
-  const mramp = fullEl.length === 4 ? ELEM_INFO[ELEMS[Math.floor(G.t * 7) % 4]].ramp : fullEl.length ? ELEM_INFO[fullEl[Math.floor(G.t * 1.6) % fullEl.length]].ramp : [37, 38, 39, 40];
+  const mramp = cata ? (Math.floor(G.t * 6) % 2 ? [48, 49, 50, 51] : [49, 50, 51, 27]) : fullEl.length === 4 ? ELEM_INFO[ELEMS[Math.floor(G.t * 7) % 4]].ramp : fullEl.length ? ELEM_INFO[fullEl[Math.floor(G.t * 1.6) % fullEl.length]].ramp : [37, 38, 39, 40];
   drawButton(c, locked ? [3, 4, 5] : mage ? mramp : hero.cls === 'ranger' ? [52, 53, 54, 55] : [48, 49, 50, 51], full || !!hero.ultOn || G.rain.length > 0, hero.cls === 'mage' ? glyphStorm : hero.cls === 'ranger' ? (x, y) => glyphRain(x, y) : glyphWrath);
   // not yet charged: dark from the top down to the charge line
   if (!full) for (let y = c[1] - c[2]; y <= c[1] + c[2]; y++) for (let x = c[0] - c[2]; x <= c[0] + c[2]; x++) {
@@ -80,6 +80,10 @@ function drawUltButton() {
         put(gx + x, gy + y, !open ? 3 : lit ? (done ? ramp[y < -1 ? 3 : 2] : ramp[y < 0 ? 2 : 1]) : (x + y) & 1 ? 2 : 3);
       }
       if (done) put(gx - 1, gy - 2, 27);
+      // round 86: the element's orb, a small gem just outside its gauge: lit once its mini ultimate has been cast
+      const ox = Math.round(c[0] + Math.cos(t) * (c[2] + 20)), oy = Math.round(c[1] + Math.sin(t) * (c[2] + 20)), lit = open && hero.orbs && hero.orbs[k];
+      for (let y = -4; y <= 4; y++) for (let x = -4; x <= 4; x++) { const d = Math.abs(x) + Math.abs(y); if (d > 4) continue; put(ox + x, oy + y, d === 4 ? BLK : !lit ? (d < 2 ? 3 : 4) : d === 0 || (x === -1 && y === -1) || (x === -2 && y === 0) ? 27 : ramp[d < 2 ? 3 : d < 3 ? 2 : 1]); }
+      if (lit && cata && Math.floor(G.t * 6) % 2) for (const [x, y] of [[0, -5], [0, 5], [-5, 0], [5, 0]]) put(ox + x, oy + y, 27);
     });
   } else if (!locked) for (let a = 0; a < 80; a++) { const u = a / 80, t = -Math.PI / 2 + u * 6.283; if (u > f) continue; put(c[0] + Math.cos(t) * (c[2] + 2), c[1] + Math.sin(t) * (c[2] + 2), col); }
   if (full && Math.floor(G.t * 4) % 2 === 0) for (let a = 0; a < 80; a++) { const t = a / 80 * 6.283; put(c[0] + Math.cos(t) * (c[2] + 3), c[1] + Math.sin(t) * (c[2] + 3), 27); }

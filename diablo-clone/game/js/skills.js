@@ -59,6 +59,7 @@ function useSkill(i) {
   if (s.id === 'cone') coneOfCold();
   if (s.id === 'blink') blink();
   if (s.id === 'chain') { if (!chainLightning()) { hero.mana += skillCost(s); CD.chain = 0; } }
+  if (SKILL_ELEM[s.id] && CD[s.id] > 0) elemCast(s.id);   // round 86: book the cast for its gauge
   if (s.id === 'meteor') castMeteor();
   if (s.id === 'pierce') { if (!piercingShot()) { hero.mana += skillCost(s); CD.pierce = 0; } }
   if (s.id === 'cluster') { if (!clusterArrow()) { hero.mana += skillCost(s); CD.cluster = 0; } }
@@ -1910,7 +1911,7 @@ function useUlt() {
   if (hero.castKind === 'missile' && hero.cast >= 0) { hero.cast = -1; hero.castFn = null; }
   if (heroBusy()) return;
   btnFx(9).press = 0.2; G.ultAt = G.t;
-  if (hero.cls === 'mage') { const full = elemFull(); if (!full.length) { say('NOT CHARGED YET', 40, 1.2); return; } startElemUlt(full); return; }
+  if (hero.cls === 'mage') { const full = elemFull(); if (!full.length && !orbsAll()) { say('NOT CHARGED YET', 40, 1.2); return; } startElemUlt(full); return; }
   hero.ult = 0;
   if (hero.cls === 'mage') startStorm(); else if (hero.cls === 'ranger') startRain(); else startWrath();
 }
@@ -2054,6 +2055,7 @@ function drawStrikes() {   // round 65c: the storm's bolts are Chain Lightning's
 // button spends every full gauge at once:
 //   one element    INFERNO / BLIZZARD / THUNDERSTORM / EARTHQUAKE
 //   all four       CATACLYSM: the four in turn, darker, harder, and a last blast over everything
+//   (round 86: the gauges fill from casts, and each mini ultimate lights an orb: four orbs = CATACLYSM)
 //   two            their pair (round 84): PLASMA STORM, STEAM BURST, VOLCANO, SHATTERSTORM, GLACIER, MAGNETIC PULL
 //   three          the pair highest in PAIR_ORDER, then the third element's own
 // Arcane (the magic missile) charges nothing. Damage an ultimate deals charges nothing either.
@@ -2071,24 +2073,43 @@ const elemOpen = k => hero.lvl >= ELEM_INFO[k].lvl;
 const elemFull = () => ELEMS.filter(k => elemOpen(k) && hero.el && (hero.el[k] || 0) >= 100);
 // a foe killed outright by one element gives 5.7 points times the element's k (k evens out how often
 // each spell comes round: about eleven fire kills fill FIRE); elites and bosses give much more
+// Round 86 (the user: ultimates belong in the normal rotation, a mini ultimate every 20-30 s of a fight,
+// the Cataclysm about every two minutes, and casting a mini ultimate must not cost the Cataclysm its
+// piece). A gauge now fills from CASTS: each cast of the element's spell that hits something adds
+// ELEM_CHUNK (Fireball 4 casts, Cone of Cold 3, Chain Lightning 3, Meteor 2). A cast is booked when it
+// goes off (elemCast, from useSkill) and paid on its first hit (several foes, or several jumps, in one
+// cast count once). Killing an elite or a boss with an element adds a quarter gauge besides.
+// Casting a mini ultimate lights that element's ORB (hero.orbs) for good; with all four orbs lit the
+// button casts the CATACLYSM, which spends the orbs and leaves the gauges alone.
+const ELEM_CHUNK = { fire: 25, frost: 34, earth: 50, storm: 34 }, SKILL_ELEM = { fireball: 'fire', cone: 'frost', meteor: 'earth', chain: 'storm' };
+const orbsAll = () => !!hero.orbs && ELEMS.every(k => hero.orbs[k]);
+function elemSync() { hero.ult = hero.cls === 'mage' && orbsAll() ? 100 : Math.max(0, ...ELEMS.map(q => (hero.el && hero.el[q]) || 0)); }
+function elemCast(id) { const k = SKILL_ELEM[id]; if (!k || hero.cls !== 'mage' || hero.lvl < ULT_LVL || !elemOpen(k)) return; if (!G.elemDue) G.elemDue = {}; G.elemDue[k] = Math.min(3, (G.elemDue[k] || 0) + 1); }
 function elemGain(e, dmg, killed) {
   const k = G.gaugeAs || ELEM_FROM[G.elem]; if (!k || !elemOpen(k)) return;
-  if (!hero.el) hero.el = {};
-  let g = 6 * Math.max(0, dmg) / e.maxHp; if (killed) g += e.def.unique ? 26 : e.champ || e.def.elite ? 9 : 1.6;   // (round 85: a third faster, the user)
-  const was = hero.el[k] || 0; hero.el[k] = Math.min(100, was + g * ELEM_INFO[k].k);
-  if (was < 100 && hero.el[k] >= 100) {
-    const all = elemFull().length === 4;
-    say(all ? 'ALL FOUR ARE CHARGED: CATACLYSM' : `${ELEM_INFO[k].name} IS CHARGED: ${ELEM_INFO[k].ult}`, all ? 51 : ELEM_INFO[k].hi, 2.2); sfx('levelUp'); G.elemPop = { k, t: G.t };
-  }
-  hero.ult = Math.max(...ELEMS.map(q => hero.el[q] || 0));
+  if (!hero.el) hero.el = {}; if (!G.elemDue) G.elemDue = {}; if (!G.elemPaid) G.elemPaid = {};
+  let g = 0;
+  if (G.elemDue[k] > 0 && !(G.t - (G.elemPaid[k] ?? -9) < 0.3)) { G.elemDue[k]--; G.elemPaid[k] = G.t; g += ELEM_CHUNK[k]; }
+  if (killed && (e.def.unique || e.champ || e.def.elite)) g += 25;
+  if (!g) return;
+  const was = hero.el[k] || 0; hero.el[k] = Math.min(100, was + g);
+  if (was < 100 && hero.el[k] >= 100) { say(`${ELEM_INFO[k].name} IS CHARGED: ${ELEM_INFO[k].ult}`, ELEM_INFO[k].hi, 1.8); sfx('levelUp', 0.6); G.elemPop = { k, t: G.t }; }
+  elemSync();
 }
 function startElemUlt(full) {
   // round 84: two full gauges cast their pair; three, the pair highest in PAIR_ORDER and then the third's own
+  // round 86: four, two pairs; and with every orb lit, the Cataclysm instead (gauges untouched)
   let queue = full.slice();
-  if (full.length === 4) queue = ['all'];
-  else if (full.length >= 2) { const key = PAIR_ORDER.find(pr => pr.split('+').every(k => full.includes(k))); queue = [key, ...full.filter(k => !key.split('+').includes(k))]; }
-  for (const k of full) hero.el[k] = 0;
-  hero.ult = Math.max(...ELEMS.map(q => hero.el[q] || 0));
+  if (!hero.orbs) hero.orbs = {};
+  if (orbsAll()) { queue = ['all']; hero.orbs = {}; full = []; }
+  else if (full.length >= 2) {
+    const key = PAIR_ORDER.find(pr => pr.split('+').every(k => full.includes(k))), rest = full.filter(k => !key.split('+').includes(k));
+    const key2 = rest.length === 2 ? PAIR_ORDER.find(pr => pr.split('+').every(k => rest.includes(k))) : null;
+    queue = key2 ? [key, key2] : [key, ...rest];
+  }
+  for (const k of full) { hero.el[k] = 0; hero.orbs[k] = true; }
+  if (full.length && orbsAll()) G.cataReadyAt = G.t + 1;   // (told once the ultimate is over)
+  elemSync();
   hero.ultOn = { kind: 'elem', queue, id: null, t: 0, pillars: [], crystals: [], spears: [], arcs: [], orbs: 0, puffs: [], geysers: [], bombs: [], pools: [], bombN: 0 };
   hero.cast = -1; hero.castFn = null;
   elemStage(hero.ultOn);
@@ -2290,7 +2311,7 @@ function updateElemUlt(dt) {
   if (!FEEL_OLD) { const D = ELEM_DUR[U.id]; hero.leapZ = U.t < D - 0.3 ? Math.min(1, U.t / 0.3) * (5 + Math.sin(U.t * 5) * 1.2) : Math.max(0, (D - U.t) / 0.3) * 5; }
   if (U.t >= ELEM_DUR[U.id]) {
     if (U.queue.length) { fireOut(U); elemStage(U); }
-    else { hero.ultOn = null; hero.leapZ = 0; for (const e of enemies) e.stormN = 0; }
+    else { hero.ultOn = null; hero.leapZ = 0; for (const e of enemies) e.stormN = 0; if (G.cataReadyAt) { G.cataReadyAt = 0; say('ALL FOUR ORBS: CATACLYSM IS READY', 51, 2.6); sfx('levelUp'); } }
   }
 }
 // ---- drawing (detail layer, over the bodies)
