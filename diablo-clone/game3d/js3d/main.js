@@ -81,8 +81,8 @@ function buildLevel() {
   const ground = new THREE.Mesh(ggeo, gmat); ground.receiveShadow = true; ground.frustumCulled = false;
   levelGroup.userData.gnorm = gnorm;
   levelGroup.userData.gtex = gtex;
-  const wm = buildWalls(walls);
-  const ownGround = world && LV.outdoor;   // (world mode paints the open country its own way: world.js)
+  const wm = world && !LV.outdoor ? world.dungeon(levelGroup) && null : buildWalls(walls);
+  const ownGround = !!world;   // (world mode paints the ground and builds the dungeon walls its own way: world.js)
   if (ownGround) { gtex.dispose(); world.ground(levelGroup); } else { if (world) world.dropGround(); levelGroup.add(ground); }
   if (wm) levelGroup.add(wm);
   // light by place: a warm afternoon sun outdoors, cold moonlight at night, and in the dungeons only a faint cold fill so the torches and the hero's light do the work
@@ -94,6 +94,7 @@ function buildLevel() {
     const sky = day ? 0xa9dcf2 : LV.outdoor ? 0x16203c : 0x06050a; scene.background.setHex(sky);
     scene.fog = new THREE.Fog(day ? 0xd2ecf4 : LV.outdoor ? 0x1b2750 : sky, day ? 30 : LV.outdoor ? 14 : 7, day ? 130 : LV.outdoor ? 70 : 30);
     world.host(scene); world.setSky(!!LV.outdoor, !day);
+    if (!LV.outdoor) { hemi.intensity = 0.16; hemi.color.setHex(0x5a6aa8); sun.intensity = 0.12; } else world.dropFlames();   // (underground the torches and the hero's own light do the work)
     if (day) { hemi.intensity = 1.05; hemi.color.setHex(0xcfeaff); hemi.groundColor.setHex(0x7a9a4a); sun.intensity = 2.0; sun.color.setHex(0xfff0c8); }
     if (!ownGround) { const far = new THREE.Mesh(new THREE.PlaneGeometry(600, 600).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x070608, roughness: 1 })); far.position.set(MW / 2, -0.03, MH / 2); far.receiveShadow = true; levelGroup.add(far); }
     CAM.has = false;
@@ -254,7 +255,8 @@ function syncFlames() {
     if (Math.abs(fi - hero.fi) + Math.abs(fj - hero.fj) > 26) continue;
     let s = flames[n]; if (!s) { s = flames[n] = new THREE.Sprite(new THREE.SpriteMaterial({ map: flameTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, toneMapped: false })); s.renderOrder = 3; scene.add(s); }
     n++; const fl = 0.9 + 0.1 * Math.sin(G.t * 11 + f.seed) + 0.06 * Math.sin(G.t * 27 + f.seed * 3), hh = Math.max(0.28, f.h * 2.1 / UPX) * fl, ww = Math.max(0.2, f.w * 3.4 / TPX);
-    s.visible = true; s.material.opacity = 0.7; s.scale.set(ww, hh, 1); s.position.set(fi, z / UPX + hh * 0.38, fj); s.material.color.setHex(f.blue ? 0x66aaff : 0xffffff);
+    s.visible = true; s.material.opacity = 0.7; s.scale.set(ww, hh, 1); s.position.set(fi, z / UPX + hh * 0.38, fj);
+    const wf = world && world.flame(f); if (wf) { s.scale.set(0.34, 0.6 * fl, 1); s.position.set(wf[0], wf[1] + 0.2, wf[2]); } s.material.color.setHex(f.blue ? 0x66aaff : 0xffffff);
   }
   for (let k = n; k < flames.length; k++) flames[k].visible = false;
 }
@@ -392,6 +394,7 @@ function chaseCam(dt) {
   if (!CAM.has) { CAM.look.set(hx, ty, hz); CAM.has = true; } else CAM.look.lerp(V3.set(hx, ty, hz), Math.min(1, dt * 12));
   cam.position.set(CAM.look.x - fx_ * CAM.cur * cp, CAM.look.y + CAM.cur * sp + 0.25, CAM.look.z - fz_ * CAM.cur * cp);
   cam.lookAt(CAM.look.x + fx_ * 1.6, CAM.look.y + 0.15, CAM.look.z + fz_ * 1.6);   // (a point ahead of him: he stands below the middle of a tall phone screen, clear of the buttons)
+  if (!LV.outdoor && world) cam.position.y = Math.min(cam.position.y, world.WALLH - 0.4);   // (under the ceiling)
   const sh = G.trauma * G.trauma * 0.12; if (sh > 0) { cam.position.x += Math.sin(G.t * 61) * sh; cam.position.y += Math.sin(G.t * 73 + 2) * sh; }
   cam.updateMatrixWorld();
 }
@@ -443,10 +446,10 @@ function frame(menu) {
   if (TP) chaseCam(dt);
   else { cam.left = -hw; cam.right = hw; cam.top = hh; cam.bottom = -hh; cam.updateProjectionMatrix(); cam.position.set(cf, 0, cj).addScaledVector(CAMDIR, 80); cam.lookAt(cf, 0, cj); }
   sun.target.position.set(hero.fi, 0, hero.fj); sun.position.set(hero.fi - 7, 14, hero.fj + 5);
-  heroLight.position.set(hero.fi + 0.4, 2.6, hero.fj + 0.4); heroLight.intensity = LV.outdoor && !LV.night ? 0 : 5.5;
+  heroLight.position.set(hero.fi + 0.4, 2.6, hero.fj + 0.4); heroLight.intensity = LV.outdoor && !LV.night ? 0 : TP ? 2.6 : 5.5;
   // torches: the nearest few of the level's lights
   const near = lights.map(l => { const [fi, fj] = groundToTile(l.x, l.y); return { l, fi, fj, d: Math.hypot(fi - hero.fi, fj - hero.fj) }; }).sort((a, b) => a.d - b.d);
-  torchLights.forEach((tl, k) => { const n = near[k]; if (!n || n.d > 16) { tl.intensity = 0; return; } tl.position.set(n.fi, Math.max(0.8, n.l.z / UPX), n.fj); tl.distance = Math.max(5, n.l.r / TPX * 1.4); tl.intensity = 10 * (n.l.i || 1) * (0.88 + 0.12 * Math.sin(G.t * 9 + (n.l.seed || 0))); });
+  torchLights.forEach((tl, k) => { const n = near[k]; if (!n || n.d > 16) { tl.intensity = 0; return; } tl.position.set(n.fi, Math.max(0.8, n.l.z / UPX), n.fj); tl.distance = Math.max(5, n.l.r / TPX * 1.4); tl.intensity = (TP ? 16 : 10) * (n.l.i || 1) * (0.88 + 0.12 * Math.sin(G.t * 9 + (n.l.seed || 0))); });
   const visAt = (fi, fj) => LV.vis[Math.max(0, Math.min(MH - 1, Math.floor(fj))) * MW + Math.max(0, Math.min(MW - 1, Math.floor(fi)))];
   syncActor(hero, dt, true);
   for (const e of enemies) syncActor(e, dt, (TP || visAt(e.fi, e.fj) > 0.25) && Math.abs(e.fi - hero.fi) + Math.abs(e.fj - hero.fj) < (TP ? 44 : 26));

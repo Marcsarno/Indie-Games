@@ -88,7 +88,7 @@ export function makeWorld({ whenModel, hash2, WIND }) {
   // ---- structures (blender/scripts/buildings.py). Each part of a building is one of a few materials; the game lays that
   // material's brushwork over the part's painted colour: masonry on stone, planks on timber, shingles on roofs (which run
   // down the slope whichever way the roof faces), trowel marks on plaster, weave and seams on canvas.
-  const DET = { stone: ['d_stone', 0.5], wood: ['d_wood', 0.62], roof: ['d_shingle', 0.42], plaster: ['d_plaster', 0.4], cloth: ['d_cloth', 0.5] }, dTex = {}, sMats = {};
+  const DET = { wall: ['d_stone', 0.34], stone: ['d_stone', 0.5], wood: ['d_wood', 0.62], roof: ['d_shingle', 0.42], plaster: ['d_plaster', 0.4], cloth: ['d_cloth', 0.5] }, dTex = {}, sMats = {};
   function structMat(name) {
     if (sMats[name]) return sMats[name];
     if (name === 'glow') return sMats[name] = new THREE.MeshBasicMaterial({ vertexColors: true, color: new THREE.Color(1.7, 1.7, 1.7), side: THREE.DoubleSide });
@@ -145,6 +145,7 @@ export function makeWorld({ whenModel, hash2, WIND }) {
       if (fi > -0.5 && fj > -0.5 && fi < MW + 0.5 && fj < MH + 0.5) for (const [a, c] of off) { const [px, py] = iso(fi + a, fj + c), X = Math.round(px), Y = Math.round(py); if (X < 0 || Y < 0 || X >= WW || Y >= WH) continue; const v = floorBuf[Y * WW + X] & 127; if (!v) continue; const k = PAL32[v]; r += k & 255; g += (k >> 8) & 255; b += (k >> 16) & 255; n++; }
       if (n) { data[o] = r / n; data[o + 1] = g / n; data[o + 2] = b / n; data[o + 3] = 255; if (g > r * 1.06 * 1) { ar += r / n; ag += g / n; ab += b / n; an++; } } else data[o + 3] = 0;
     }
+    if (!LV.outdoor) { ar = ag = ab = 0; an = 1; }   // (indoors, what is not floor is the dark)
     if (!an) { ar = 90; ag = 122; ab = 58; an = 1; }
     for (let o = 0; o < data.length; o += 4) if (!data[o + 3]) { data[o] = ar / an; data[o + 1] = ag / an; data[o + 2] = ab / an; data[o + 3] = 255; }
     gnd.tex.needsUpdate = true;
@@ -153,7 +154,7 @@ export function makeWorld({ whenModel, hash2, WIND }) {
     const w = (MW + 2 * PAD) * RES, h = (MH + 2 * PAD) * RES, data = new Uint8Array(w * h * 4), tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat);
     tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearMipmapLinearFilter; tex.generateMipmaps = true;
     gnd = { w, h, data, tex }; repaint();
-    const E = 700, geo = new THREE.BufferGeometry(), P = [], UV = [];
+    const indoor = !LV.outdoor, E = indoor ? 0 : 700, geo = new THREE.BufferGeometry(), P = [], UV = [];
     for (const [x, z] of [[-E, -E], [MW + E, -E], [MW + E, MH + E], [-E, MH + E]]) { P.push(x, 0, z); UV.push((x + PAD) / (MW + 2 * PAD), (z + PAD) / (MH + 2 * PAD)); }
     geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2)); geo.setIndex([0, 2, 1, 0, 3, 2]); geo.computeVertexNormals();
     const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 1, metalness: 0, envMapIntensity: 0.2 });
@@ -162,16 +163,51 @@ export function makeWorld({ whenModel, hash2, WIND }) {
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D dGrass, dDirt, dStone; varying vec3 vWp;')
         .replace('#include <map_fragment>', `#include <map_fragment>
 { vec3 bc = diffuseColor.rgb; float mx = max(bc.r, max(bc.g, bc.b)), mn = min(bc.r, min(bc.g, bc.b));
-  float wG = smoothstep(-0.012, 0.03, bc.g - bc.r);
-  float wS = (1.0 - wG) * (1.0 - smoothstep(0.10, 0.22, (mx - mn) / max(mx, 0.03)));
+  float wG = ${indoor ? '0.0' : 'smoothstep(-0.012, 0.03, bc.g - bc.r)'};
+  float wS = ${indoor ? '1.0' : '(1.0 - wG) * (1.0 - smoothstep(0.10, 0.22, (mx - mn) / max(mx, 0.03)))'};
   vec2 uvd = vWp.xz * 0.25; float far = smoothstep(18.0, 60.0, distance(vWp, cameraPosition));
   vec3 dg = texture2D(dGrass, uvd).rgb, dd = texture2D(dDirt, uvd * 1.25).rgb, ds = texture2D(dStone, uvd * 1.5).rgb;
   vec3 dt = mix(mix(mix(dd, ds, wS), dg, wG), vec3(0.5), far * 0.7);
   float big = texture2D(dDirt, vWp.xz * 0.019).g;
-  bc *= mix(vec3(1.08), vec3(1.0, 1.3, 0.8), wG);
+  bc *= ${indoor ? 'vec3(1.25)' : 'mix(vec3(1.08), vec3(1.0, 1.3, 0.8), wG)'};
   diffuseColor.rgb = bc * dt * 2.0 * (0.8 + 0.4 * big); }`); };
+    mat.customProgramCacheKey = () => 'gnd' + indoor;
     const mesh = new THREE.Mesh(geo, mat); mesh.receiveShadow = true; mesh.frustumCulled = false; group.add(mesh); group.userData.gtex = tex; return mesh;
   }
+
+  // ---- underground: walls of big dressed blocks rising from a plinth to a cornice, and a stone ceiling over it all.
+  // One face for every side of a wall tile that looks onto floor; the masonry itself is the detail paint.
+  const WALLH = 4.6, THEMEC = { crypt: [0.52, 0.45, 0.37], caves: [0.36, 0.39, 0.46], hell: [0.50, 0.22, 0.18] };
+  function dungeon(group) {
+    const tc = THEMEC[LV.theme] || THEMEC.crypt, P = [], C = [], N = [], I = [];
+    const quad = (pts, n, cols) => { const b = P.length / 3; pts.forEach((pt, k) => { P.push(pt[0], pt[1], pt[2]); N.push(n[0], n[1], n[2]); const c = cols[k]; C.push(tc[0] * c, tc[1] * c, tc[2] * c); }); I.push(b, b + 1, b + 2, b, b + 2, b + 3); };
+    for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
+      if (tileAt(i, j) !== WALL) continue;
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        if (tileAt(i + di, j + dj) !== FLOOR) continue;
+        const e0 = di ? [i + (di > 0 ? 1 : 0), j] : [i, j + (dj > 0 ? 1 : 0)], e1 = di ? [e0[0], j + 1] : [i + 1, e0[1]], n = [di, 0, dj], v = 0.86 + 0.22 * hash2(i * 3 + di + 7, j * 5 + dj + 3);
+        const at = (e, y, o = 0) => [e[0] + di * o, y, e[1] + dj * o], band = (y0, y1, c0, c1, o = 0) => quad([at(e0, y0, o), at(e1, y0, o), at(e1, y1, o), at(e0, y1, o)], n, [c0 * v, c0 * v, c1 * v, c1 * v]);
+        band(0.42, 3.1, 0.95, 0.9); band(3.34, WALLH, 0.72, 0.4);
+        band(0, 0.42, 0.5, 0.92, 0.07); quad([at(e0, 0.42, 0.07), at(e1, 0.42, 0.07), at(e1, 0.42), at(e0, 0.42)], [0, 1, 0], [1.05 * v, 1.05 * v, 0.8 * v, 0.8 * v]);   // the plinth and its ledge
+        band(3.1, 3.34, 1.0, 1.08, 0.09); quad([at(e0, 3.1), at(e1, 3.1), at(e1, 3.1, 0.09), at(e0, 3.1, 0.09)], [0, -1, 0], [0.45 * v, 0.45 * v, 0.6 * v, 0.6 * v]); quad([at(e0, 3.34, 0.09), at(e1, 3.34, 0.09), at(e1, 3.34), at(e0, 3.34)], [0, 1, 0], [0.9 * v, 0.9 * v, 0.6 * v, 0.6 * v]);   // the cornice
+      }
+    }
+    quad([[0, WALLH, 0], [MW, WALLH, 0], [MW, WALLH, MH], [0, WALLH, MH]], [0, -1, 0], [0.34, 0.34, 0.34, 0.34]);   // the ceiling
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); geo.setIndex(I);
+    const m = new THREE.Mesh(geo, structMat('wall')); m.receiveShadow = true; m.castShadow = false; m.frustumCulled = false; group.add(m);
+    // a torch in an iron bracket wherever the level burns a flame on a wall; the flame itself is moved to the torch's head
+    flameAt = new Map(); const list = [];
+    for (const f of fires) { const ti = f.tile % MW, tj = Math.floor(f.tile / MW); if (tileAt(ti, tj) !== WALL) continue;
+      const z = Math.max(0, 8 * (ti + tj + 1.8) + WY0 - f.wy), [fi, fj] = groundToTile(f.wx, f.wy + z); let best = null;
+      for (const [di, dj] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) if (tileAt(ti + di, tj + dj) === FLOOR) { const d = Math.hypot(ti + 0.5 + di - fi, tj + 0.5 + dj - fj); if (!best || d < best[2]) best = [di, dj, d]; }
+      if (!best) continue; const [di, dj] = best, x = di ? ti + (di > 0 ? 1 : 0) + di * 0.32 : Math.max(ti + 0.2, Math.min(ti + 0.8, fi)), zz = dj ? tj + (dj > 0 ? 1 : 0) + dj * 0.32 : Math.max(tj + 0.2, Math.min(tj + 0.8, fj));
+      flameAt.set(f, [x, 2.15, zz]); list.push([x, zz, Math.atan2(dj, di), 1, 2.05]); }
+    if (list.length) whenModel('world/b_sconce').then(g => { if (!g || !m.parent) return; g.scene.updateMatrixWorld(true);
+      g.scene.traverse(src => { if (!src.isMesh) return; const im = new THREE.InstancedMesh(src.geometry, matOf(src), list.length);
+        list.forEach((it, n) => { m4.compose(p.set(it[0], it[4], it[1]), q.setFromAxisAngle(up, -it[2]), sc.set(1, 1, 1)); m4.multiply(src.matrixWorld); im.setMatrixAt(n, m4); }); im.frustumCulled = false; group.add(im); }); });
+    return m;
+  }
+  let flameAt = new Map();
 
   // ---- the sky: a painted dome, drifting clouds, far mountains and nearer hills (terrain.py -> w_sky.glb). It rides with the camera.
   let sky = null, skyWant = null;
@@ -190,5 +226,5 @@ export function makeWorld({ whenModel, hash2, WIND }) {
     if (sky && sky.visible) { sky.position.set(cam.position.x, -2, cam.position.z); const c = sky.getObjectByName('clouds'); if (c) c.rotation.y += dt * 0.004; }
     for (const s of spinners) s.rotation.z += dt * 0.45;
   }
-  return { flora, grass, grow, ground, repaint, setSky, host, update, get hasGround() { return !!gnd; }, dropGround() { gnd = null; } };
+  return { flora, grass, grow, ground, dungeon, WALLH, flame: f => flameAt.get(f), dropFlames() { flameAt = new Map(); }, repaint, setSky, host, update, get hasGround() { return !!gnd; }, dropGround() { gnd = null; } };
 }

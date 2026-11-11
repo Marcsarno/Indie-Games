@@ -338,7 +338,14 @@ def chapel():
     A.box("stone", (0, fy - 0.3, -0.05), (1.7, 0.7, 0.3), STONE_L); A.cyl("glow", (0, fy + 0.02, 3.9), 0.42, 0.42, 0.04, (0.55, 0.78, 1.0), seg=10, axis="y", shade=1.0); A.cyl("stone", (0, fy + 0.05, 3.9), 0.52, 0.52, 0.04, STONE_L, seg=10, axis="y")
     return A
 
-MODELS = {"palisade": palisade, "tent": tent, "well": well, "wagon": wagon, "stall": stall, "forge": forge, "lantern": lantern, "tower": tower,
+def sconce():
+    """A wall torch: an iron bracket out of the wall (the wall is at -X), a cup, a wooden brand. The flame sits at the origin + 0.1."""
+    A = Build()
+    A.box("plain", (-0.3, 0, -0.5), (0.05, 0.2, 0.36), IRON); A.beam("plain", (-0.3, 0, -0.32), (0, 0, -0.3), 0.045, IRON); A.beam("plain", (-0.29, 0, -0.46), (-0.04, 0, -0.3), 0.03, IRON)
+    A.cyl("plain", (0, 0, -0.32), 0.05, 0.085, 0.12, IRON, seg=7); A.cyl("wood", (0, 0, -0.26), 0.045, 0.055, 0.3, WOOD_D, seg=6, top=(0.16, 0.10, 0.07)); A.cyl("glow", (0, 0, 0.02), 0.05, 0.03, 0.05, (1.0, 0.6, 0.15), seg=6)
+    return A
+
+MODELS = {"sconce": sconce, "palisade": palisade, "tent": tent, "well": well, "wagon": wagon, "stall": stall, "forge": forge, "lantern": lantern, "tower": tower,
           "cottage": cottage, "cottage2": lambda: cottage(ROOF_RED), "windmill": windmill, "stonewall": stonewall, "chapel": chapel}
 
 def sheet(name):
