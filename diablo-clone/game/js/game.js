@@ -1448,6 +1448,7 @@ function updateParticles(dt) {
   // fireflies drift through the woods at night
   if (LV.night && LV.area === 'forest' && Math.random() < 0.12) { const [x, y] = screenOf(hero); pspawn(4, x + (Math.random() - 0.5) * 240, y + (Math.random() - 0.5) * 160, 6 + Math.random() * 20, (Math.random() - 0.5) * 10, 0, (Math.random() - 0.5) * 6, 1.5 + Math.random() * 1.5, Math.random() < 0.5 ? 124 : 91); }
   updateAtmos(dt);
+  if (LV.smokes) campSmoke(dt);   // round 95: the camp's chimney and fire smoke
   for (const f of fires) if (f.ember && LV.vis[f.tile] > 0.1 && Math.random() < f.ember) pspawn(3, f.wx + (Math.random() - 0.5) * f.w * 1.2, f.wy + 20, 20 + Math.random() * 4, (Math.random() - 0.5) * 6, 0, 16 + Math.random() * 12, 1 + Math.random(), 16);
 }
 
