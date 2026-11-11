@@ -13,7 +13,7 @@ const UPX = TPX * Math.cos(Math.PI / 6); // world pixels per unit of height
 const glc = document.getElementById('gl');
 const renderer = new THREE.WebGLRenderer({ canvas: glc, antialias: true, powerPreference: 'high-performance' });
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.95;
 const scene = new THREE.Scene(); scene.background = new THREE.Color(0x050406);
 const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
 const CAMDIR = new THREE.Vector3(Math.cos(Math.PI / 6) * Math.SQRT1_2, Math.sin(Math.PI / 6), Math.cos(Math.PI / 6) * Math.SQRT1_2);
@@ -40,7 +40,7 @@ function wantModel(file) {
 }
 function whenModel(file) { wantModel(file); return (LOADING[file] || Promise.resolve()).then(() => MODELS[file]); }
 // Characters get a soft rim of light on the edges turned away from the camera, so they stand out from a dark room
-const rimLight = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n{ float rim = pow(1.0 - clamp(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0)), 0.0, 1.0), 2.6); totalEmissiveRadiance += diffuseColor.rgb * vec3(0.75, 0.85, 1.1) * rim * 0.55; }'); };
+const rimLight = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n{ float rim = pow(1.0 - clamp(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0)), 0.0, 1.0), 2.6); totalEmissiveRadiance += diffuseColor.rgb * vec3(0.75, 0.85, 1.1) * rim * 0.28; }'); };
 function spawnModel(file) {
   const g = MODELS[file], root = SkeletonUtils.clone(g.scene), mats = [];
   const own = m => { const c = m.clone(); c.userData.e0 = c.emissive.getHex(); c.userData.i0 = c.emissiveIntensity; c.onBeforeCompile = rimLight; c.customProgramCacheKey = () => 'rim'; mats.push(c); return c; };
@@ -80,8 +80,8 @@ function buildLevel() {
   levelGroup.add(ground); if (wm) levelGroup.add(wm);
   // light by place: a warm afternoon sun outdoors, cold moonlight at night, and in the dungeons only a faint cold fill so the torches and the hero's light do the work
   const day = LV.outdoor && !LV.night;
-  hemi.intensity = day ? 1.0 : LV.outdoor ? 0.45 : 0.32; hemi.color.setHex(day ? 0xbfd4ff : 0x6f84c8); hemi.groundColor.setHex(day ? 0x54603a : 0x1c1410);
-  sun.intensity = day ? 2.6 : LV.outdoor ? 0.7 : 0.5; sun.color.setHex(day ? 0xffe9c4 : 0xa8c0ff);
+  hemi.intensity = day ? 0.8 : LV.outdoor ? 0.42 : 0.34; hemi.color.setHex(day ? 0xbfd4ff : 0x6f84c8); hemi.groundColor.setHex(day ? 0x54603a : 0x1c1410);
+  sun.intensity = day ? 1.75 : LV.outdoor ? 0.6 : 0.5; sun.color.setHex(day ? 0xffe9c4 : 0xa8c0ff);
   scene.background.setHex(LV.outdoor ? 0x1a2a18 : 0x050406);
   R3D_FLOOR.dirty = false; R3D_FLOOR.y0 = 1e9; R3D_FLOOR.y1 = -1;
   levelToken++; buildProps(levelGroup, levelToken); buildRigProps(levelGroup, levelToken); buildGrass(levelGroup, levelToken);
@@ -136,7 +136,7 @@ function buildGrass(group, token) {
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), p = new THREE.Vector3(), sc = new THREE.Vector3(), col = new THREE.Color();
     for (const items of chunks.values()) {
       const im = new THREE.InstancedMesh(src.geometry, mat, items.length); im.receiveShadow = true; im.castShadow = false;
-      items.forEach((it, n) => { const s = 0.7 + it[5] * 0.7; m4.compose(p.set(it[0], 0, it[1]), q.setFromAxisAngle(up, it[5] * 6.28), sc.set(s, s * (0.8 + it[5] * 0.5), s)); im.setMatrixAt(n, m4); im.setColorAt(n, col.setRGB(Math.min(1, it[2] / 255 * 1.75), Math.min(1, it[3] / 255 * 1.75), Math.min(1, it[4] / 255 * 1.5), THREE.SRGBColorSpace)); });
+      items.forEach((it, n) => { const s = 0.7 + it[5] * 0.7; m4.compose(p.set(it[0], 0, it[1]), q.setFromAxisAngle(up, it[5] * 6.28), sc.set(s, s * (0.8 + it[5] * 0.5), s)); im.setMatrixAt(n, m4); im.setColorAt(n, col.setRGB(Math.min(1, it[2] / 255 * 1.45), Math.min(1, it[3] / 255 * 1.45), Math.min(1, it[4] / 255 * 1.3), THREE.SRGBColorSpace)); });
       im.computeBoundingSphere(); group.add(im);
     }
   });
@@ -214,7 +214,7 @@ function syncOverlayFx() {
     const tex = new THREE.DataTexture(new Uint8Array(ov32.buffer), OW, OH, THREE.RGBAFormat); tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearFilter; tex.flipY = true;
     const mat = new THREE.ShaderMaterial({ uniforms: { map: { value: tex } }, transparent: true, depthTest: false, depthWrite: false,
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
-      fragmentShader: 'varying vec2 vUv; uniform sampler2D map; void main(){ vec4 c = texture2D(map, vUv); float l = max(c.r, max(c.g, c.b)); gl_FragColor = vec4(c.rgb * (1.0 + 1.6 * l * l), c.a); }' });
+      fragmentShader: 'varying vec2 vUv; uniform sampler2D map; void main(){ vec4 c = texture2D(map, vUv); float l = max(c.r, max(c.g, c.b)); gl_FragColor = vec4(c.rgb * (1.0 + 0.45 * l * l), c.a); }' });
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat); mesh.frustumCulled = false; mesh.renderOrder = 20; scene.add(mesh);
     ofx = { w: OW, h: OH, tex, mesh };
   }
@@ -233,7 +233,7 @@ function syncFlames() {
     if (Math.abs(fi - hero.fi) + Math.abs(fj - hero.fj) > 26) continue;
     let s = flames[n]; if (!s) { s = flames[n] = new THREE.Sprite(new THREE.SpriteMaterial({ map: flameTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, toneMapped: false })); s.renderOrder = 3; scene.add(s); }
     n++; const fl = 0.9 + 0.1 * Math.sin(G.t * 11 + f.seed) + 0.06 * Math.sin(G.t * 27 + f.seed * 3), hh = Math.max(0.28, f.h * 2.1 / UPX) * fl, ww = Math.max(0.2, f.w * 3.4 / TPX);
-    s.visible = true; s.scale.set(ww, hh, 1); s.position.set(fi, z / UPX + hh * 0.38, fj); s.material.color.setHex(f.blue ? 0x66aaff : 0xffffff);
+    s.visible = true; s.material.opacity = 0.7; s.scale.set(ww, hh, 1); s.position.set(fi, z / UPX + hh * 0.38, fj); s.material.color.setHex(f.blue ? 0x66aaff : 0xffffff);
   }
   for (let k = n; k < flames.length; k++) flames[k].visible = false;
 }
@@ -372,10 +372,10 @@ function frame(menu) {
   cam.left = -hw; cam.right = hw; cam.top = hh; cam.bottom = -hh; cam.updateProjectionMatrix();
   cam.position.set(cf, 0, cj).addScaledVector(CAMDIR, 80); cam.lookAt(cf, 0, cj);
   sun.target.position.set(hero.fi, 0, hero.fj); sun.position.set(hero.fi - 7, 14, hero.fj + 5);
-  heroLight.position.set(hero.fi + 0.4, 2.6, hero.fj + 0.4); heroLight.intensity = LV.outdoor && !LV.night ? 0 : 9;
+  heroLight.position.set(hero.fi + 0.4, 2.6, hero.fj + 0.4); heroLight.intensity = LV.outdoor && !LV.night ? 0 : 5.5;
   // torches: the nearest few of the level's lights
   const near = lights.map(l => { const [fi, fj] = groundToTile(l.x, l.y); return { l, fi, fj, d: Math.hypot(fi - hero.fi, fj - hero.fj) }; }).sort((a, b) => a.d - b.d);
-  torchLights.forEach((tl, k) => { const n = near[k]; if (!n || n.d > 16) { tl.intensity = 0; return; } tl.position.set(n.fi, Math.max(0.8, n.l.z / UPX), n.fj); tl.distance = Math.max(5, n.l.r / TPX * 1.4); tl.intensity = 20 * (n.l.i || 1) * (0.88 + 0.12 * Math.sin(G.t * 9 + (n.l.seed || 0))); });
+  torchLights.forEach((tl, k) => { const n = near[k]; if (!n || n.d > 16) { tl.intensity = 0; return; } tl.position.set(n.fi, Math.max(0.8, n.l.z / UPX), n.fj); tl.distance = Math.max(5, n.l.r / TPX * 1.4); tl.intensity = 10 * (n.l.i || 1) * (0.88 + 0.12 * Math.sin(G.t * 9 + (n.l.seed || 0))); });
   const visAt = (fi, fj) => LV.vis[Math.max(0, Math.min(MH - 1, Math.floor(fj))) * MW + Math.max(0, Math.min(MW - 1, Math.floor(fi)))];
   syncActor(hero, dt, true);
   for (const e of enemies) syncActor(e, dt, visAt(e.fi, e.fj) > 0.25 && Math.abs(e.fi - cf) + Math.abs(e.fj - cj) < 26);
