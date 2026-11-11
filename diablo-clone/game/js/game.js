@@ -802,7 +802,7 @@ function updateHero(dt) {
   }
   // round 40a: hauling on the chain while the hook drags its catch in; a potion drunk on the move
   if (!FEEL_OLD && !busy && hero.cast < 0 && G.hooks.some(h => h.state === 'pull' || h.state === 'reel') && !moving) hero.clip = 'hook';
-  if (!FEEL_OLD && hero.ultOn && hero.ultOn.kind === 'storm' && !busy && hero.cast < 0 && !moving) hero.clip = 'storm';
+  if (!FEEL_OLD && hero.ultOn && (hero.ultOn.kind === 'storm' || hero.ultOn.kind === 'elem') && !busy && hero.cast < 0 && !moving) hero.clip = 'storm';
   if (hero.arriveT > 0) { hero.arriveT -= dt; if (!FEEL_OLD && !busy && hero.cast < 0) hero.clip = 'arrive'; }   // round 43: Blink's landing   // round 43: Arcane Storm's floating pose while standing
   if (hero.drinkT > 0) { hero.drinkT -= dt; if (!busy && (hero.clip === 'walk' || hero.clip === 'idle' || hero.clip === 'go' || hero.clip === 'stop' || hero.clip === 'fidget')) { hero.clip = 'drink'; hero.fidget = null; } }
   if (hero.atk >= 0) {
@@ -2178,7 +2178,7 @@ function drawPortal() {
 }
 function saveGame() {
   if (G.mode !== 'play' || hero.dead || PREVIEW) return;   // (the skill preview's copy of the game never saves)
-  const data = { v: SAVE_V, level: LV.level, seed: LV.seed, hero: { cls: hero.cls, hp: Math.ceil(hero.hp), mana: Math.ceil(hero.mana), gold: hero.gold, xp: hero.xp, lvl: hero.lvl, potions: hero.potions, team: hero.team, equip: hero.equip, bag: hero.bag, mods: hero.mods || {}, ult: Math.floor(hero.ult || 0), modSeen: hero.modSeen || 0, tut: hero.tut || {}, stats: hero.stats || null }, serial: itemSerial,
+  const data = { v: SAVE_V, level: LV.level, seed: LV.seed, hero: { cls: hero.cls, hp: Math.ceil(hero.hp), mana: Math.ceil(hero.mana), gold: hero.gold, xp: hero.xp, lvl: hero.lvl, potions: hero.potions, team: hero.team, equip: hero.equip, bag: hero.bag, mods: hero.mods || {}, ult: Math.floor(hero.ult || 0), el: hero.el || {}, modSeen: hero.modSeen || 0, tut: hero.tut || {}, stats: hero.stats || null }, serial: itemSerial,
     story: G.story || null, gates: G.gates || null, town: G.town || null, portal: G.portal ? { level: G.portal.level, seed: G.portal.seed, fi: G.portal.fi, fj: G.portal.fj } : null };
   try { localStorage.setItem(saveKey(hero.cls), JSON.stringify(data)); } catch (e) { /* storage can be unavailable; the game still runs */ }
 }
@@ -2191,7 +2191,7 @@ function loadSave(cls = 'warrior') {
   } catch (e) { return null; }
 }
 function newHero(cls = 'warrior') {
-  Object.assign(hero, { cls, hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, bag: [], mods: {}, ult: 0, modSeen: 0, tut: {}, stats: { t: 0, deaths: 0, kills: 0 }, equip: { weapon: null, helm: null, chest: null, shield: null, ring: null, amulet: null } });
+  Object.assign(hero, { cls, hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, bag: [], mods: {}, ult: 0, el: {}, modSeen: 0, tut: {}, stats: { t: 0, deaths: 0, kills: 0 }, equip: { weapon: null, helm: null, chest: null, shield: null, ring: null, amulet: null } });
   const R = rng(5);
   const kit = cls === 'mage' ? ['oak_staff', 'apprentice_robe', 'wizard_hat'] : cls === 'ranger' ? ['hunting_bow', 'leather_jerkin', 'ranger_hood', 'quiver'] : ['short_sword', 'tunic'];
   for (const b of kit) { const it = rollItem(R, 1, b); it.rarity = 'normal'; it.mods = {}; hero.equip[ITEM_BASES[b].slot] = it; }

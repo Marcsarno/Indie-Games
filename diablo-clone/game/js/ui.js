@@ -54,8 +54,11 @@ function drawUltButton() {
   const U = ULTS[hero.cls]; if (!U) return;
   const fx = btnFx(9), dtu = 1 / 60; fx.press = Math.max(0, fx.press - dtu); fx.deny = Math.max(0, fx.deny - dtu);
   const c0 = UI.ult, shake = fx.deny > 0 ? Math.round(Math.sin(fx.deny * 70) * 2) : 0, c = [c0[0] + shake, c0[1], c0[2] + (fx.press > 0.08 ? 1 : 0)];
-  const locked = hero.lvl < ULT_LVL, f = locked ? 0 : (hero.ult || 0) / 100, full = f >= 1;
-  drawButton(c, locked ? [3, 4, 5] : hero.cls === 'mage' ? [37, 38, 39, 40] : hero.cls === 'ranger' ? [52, 53, 54, 55] : [48, 49, 50, 51], full || !!hero.ultOn || G.rain.length > 0, hero.cls === 'mage' ? glyphStorm : hero.cls === 'ranger' ? (x, y) => glyphRain(x, y) : glyphWrath);
+  const mage = hero.cls === 'mage', locked = hero.lvl < ULT_LVL, fullEl = mage && !locked ? elemFull() : [];
+  const f = locked ? 0 : mage ? (fullEl.length ? 1 : Math.max(0, ...ELEMS.map(k => (hero.el && hero.el[k]) || 0)) / 100) : (hero.ult || 0) / 100, full = f >= 1;
+  // round 83: the mage's button takes the colours of what it would cast (all four: it runs through them)
+  const mramp = fullEl.length === 4 ? ELEM_INFO[ELEMS[Math.floor(G.t * 7) % 4]].ramp : fullEl.length ? ELEM_INFO[fullEl[Math.floor(G.t * 1.6) % fullEl.length]].ramp : [37, 38, 39, 40];
+  drawButton(c, locked ? [3, 4, 5] : mage ? mramp : hero.cls === 'ranger' ? [52, 53, 54, 55] : [48, 49, 50, 51], full || !!hero.ultOn || G.rain.length > 0, hero.cls === 'mage' ? glyphStorm : hero.cls === 'ranger' ? (x, y) => glyphRain(x, y) : glyphWrath);
   // not yet charged: dark from the top down to the charge line
   if (!full) for (let y = c[1] - c[2]; y <= c[1] + c[2]; y++) for (let x = c[0] - c[2]; x <= c[0] + c[2]; x++) {
     if (Math.hypot(x - c[0], y - c[1]) > c[2] - 1) continue;
@@ -65,7 +68,20 @@ function drawUltButton() {
   if (locked) textC(`LV${ULT_LVL}`, c[0], c[1] - 2, 25);
   // a ring around it showing the charge, gold (arcane for the mage), and a pulsing rim when full
   const col = hero.cls === 'mage' ? 40 : hero.cls === 'ranger' ? 55 : 51;
-  if (!locked) for (let a = 0; a < 80; a++) { const u = a / 80, t = -Math.PI / 2 + u * 6.283; if (u > f) continue; put(c[0] + Math.cos(t) * (c[2] + 2), c[1] + Math.sin(t) * (c[2] + 2), col); }
+  if (mage && !locked) {   // four small gauges round the outside, one an element: they fill from the bottom
+    ELEMS.forEach((k, n) => {
+      const t = (160 + n * 43) * Math.PI / 180, gx = Math.round(c[0] + Math.cos(t) * (c[2] + 10)), gy = Math.round(c[1] + Math.sin(t) * (c[2] + 10)), r = 6;
+      const open = elemOpen(k), v = open ? Math.min(1, ((hero.el && hero.el[k]) || 0) / 100) : 0, ramp = k === 'storm' ? [48, 49, 50, 51] : ELEM_INFO[k].ramp, done = v >= 1;
+      const pop = G.elemPop && G.elemPop.k === k ? Math.max(0, 1 - (G.t - G.elemPop.t) / 0.5) : 0, rr = r + (pop > 0 ? Math.round(pop * 3) : 0);
+      for (let y = -rr - 1; y <= rr + 1; y++) for (let x = -rr - 1; x <= rr + 1; x++) {
+        const d = Math.hypot(x, y); if (d > rr + 0.6) continue;
+        if (d > rr - 0.7) { put(gx + x, gy + y, done ? (Math.floor(G.t * 4) % 2 === 0 ? 27 : ramp[3]) : open ? 6 : 4); continue; }
+        const lit = (rr - y) / (2 * rr) <= v;
+        put(gx + x, gy + y, !open ? 3 : lit ? (done ? ramp[y < -1 ? 3 : 2] : ramp[y < 0 ? 2 : 1]) : (x + y) & 1 ? 2 : 3);
+      }
+      if (done) put(gx - 1, gy - 2, 27);
+    });
+  } else if (!locked) for (let a = 0; a < 80; a++) { const u = a / 80, t = -Math.PI / 2 + u * 6.283; if (u > f) continue; put(c[0] + Math.cos(t) * (c[2] + 2), c[1] + Math.sin(t) * (c[2] + 2), col); }
   if (full && Math.floor(G.t * 4) % 2 === 0) for (let a = 0; a < 80; a++) { const t = a / 80 * 6.283; put(c[0] + Math.cos(t) * (c[2] + 3), c[1] + Math.sin(t) * (c[2] + 3), 27); }
   if (fx.deny > 0) for (let a = 0; a < 64; a++) { const t = a / 64 * 6.283; put(c[0] + Math.cos(t) * (c[2] + 1), c[1] + Math.sin(t) * (c[2] + 1), 22); }
 }

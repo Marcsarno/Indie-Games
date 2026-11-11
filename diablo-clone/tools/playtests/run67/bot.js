@@ -51,7 +51,7 @@
       hero.dir = dirFrom(foe.fi - hero.fi, foe.fj - hero.fj);
       if (fd > range) go(pathDir([foe.fi, foe.fj])); else input.attack = true;
       if (near >= 2 || foe.def.unique || foe.champ) for (let k = 0; k < SKILLS.length; k++) { const s = SKILLS[k]; if (hero.lvl >= s.lvl && !(CD[s.id] > 0) && hero.mana >= (s.mana || 0) && Math.random() < 0.15) { useSkill(k); break; } }
-      if (hero.ult >= 100 && hero.lvl >= ULT_LVL && (foe.def.unique || near >= 3)) useUlt();
+      if (hero.ult >= 100 && hero.lvl >= ULT_LVL && (foe.def.unique || near >= 3)) { const f = hero.cls === 'mage' && typeof elemFull === 'function' ? elemFull() : [], was = hero.ultOn; useUlt(); if (!was && hero.ultOn && f.length) { window.__ults = window.__ults || {}; const key = f.length === 4 ? 'all' : f.join('+'); window.__ults[key] = (window.__ults[key] || 0) + 1; } }
     } else if (tg) {
       const d = Math.hypot(tg[0] - hero.fi, tg[1] - hero.fj);
       const n = tg.npc ? npcs.find(q => Math.abs(q.fi - tg[0]) < 0.01 && Math.abs(q.fj - tg[1]) < 0.01) : null;
@@ -64,5 +64,5 @@
     // stuck: no progress for 6 s while walking somewhere
     if (Math.hypot(hero.fi - lastPos[0], hero.fj - lastPos[1]) > 0.8) { lastPos = [hero.fi, hero.fj]; stuckT = 0; } else if ((stuckT += dt) > 6) { stuckT = 0; jig = 1.2; if (tg && Math.hypot(tg[0] - hero.fi, tg[1] - hero.fj) < 0.9) { back = 1.0; backFrom = tg; } mark('stuck@' + areaName() + '#' + Math.round(t) + ' at ' + hero.fi.toFixed(1) + ',' + hero.fj.toFixed(1) + ' tg ' + (tg ? tg.map(v => v.toFixed(1)).join(',') : '-') + ' foe ' + (foe ? foe.id + ' ' + fd.toFixed(1) + ' hp' + Math.round(foe.hp) : '-') + ' mode ' + G.mode + ' fade ' + G.fade.toFixed(2) + ' up ' + G.upArmed + ' armedDen ' + G.armed_den + ' fadeTo ' + !!G.fadeTo + ' side ' + LV.side + ' sideBack ' + !!G.sideBack + ' hp ' + Math.round(hero.hp) + ' dead ' + hero.dead); cache.key = ''; }
   }
-  return { cls, minutes: +(t / 60).toFixed(1), lvl: hero.lvl, deaths: (hero.stats || {}).deaths, kills: (hero.stats || {}).kills, potionsDrunk: drinks, gold: hero.gold, minHp: +minHp.toFixed(2), end: G.mode === 'end' || !!seen.END, stage: storyStage(), area: areaName(), marks };
+  return { cls, minutes: +(t / 60).toFixed(1), lvl: hero.lvl, deaths: (hero.stats || {}).deaths, kills: (hero.stats || {}).kills, potionsDrunk: drinks, ults: window.__ults || null, el: hero.el || null, gold: hero.gold, minHp: +minHp.toFixed(2), end: G.mode === 'end' || !!seen.END, stage: storyStage(), area: areaName(), marks };
 })
