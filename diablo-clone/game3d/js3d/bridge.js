@@ -55,18 +55,9 @@ render = function () {
   else { ov32.fill(0xff06070a); }
   // effects still drawn as pixels over the 3D picture (same projection, so they land in the right place)
   R3D_SAFE('exitPads', drawExitPads);
-  for (const p of projectiles) R3D_SAFE('projectile', () => drawProjectile(p));
+  // (projectiles and particles are drawn in 3D: js3d/fx.js)
   if (G.tp) R3D_SAFE('portal', drawPortal);
   R3D_SAFE('eliteFx', drawEliteFx);
-  R3D_SAFE('particles', () => {
-    for (let k = 0; k < PN; k++) {
-      const kind = pkind[k]; if (!kind || kind === 8 || kind === 9) continue;
-      const X = Math.round(px_[k] * SPX) - cam2x, Y = Math.round((py_[k] - pz_[k]) * SPX) - cam2y;
-      if (X < 0 || Y < 0 || X >= OW - 3 || Y >= OH - 3) continue;
-      const s = kind === 6 ? 4 : kind === 7 ? 3 : 2, c32 = PAL32[CYCLE[pcol[k]] || pcol[k]];
-      for (let b = 0; b < s; b++) for (let a = 0; a < s; a++) ov32[(Y + b) * OW + X + a] = c32;
-    }
-  });
   R3D_SAFE('impactFlashes', drawImpactFlashes);
   drawHudLayer();
 };

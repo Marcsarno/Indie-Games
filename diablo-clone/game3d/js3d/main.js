@@ -6,7 +6,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { buildModel } from './rigbuild.js';
+import { makeFx } from './fx.js';
 
 const TPX = 16 * Math.SQRT2;            // world pixels (1x) per unit along the screen's x
 const UPX = TPX * Math.cos(Math.PI / 6); // world pixels per unit of height
@@ -24,11 +24,14 @@ const sun = new THREE.DirectionalLight(0xfff0dc, 1.2); sun.castShadow = true; sc
 const heroLight = new THREE.PointLight(0xffd9a8, 6, 9, 2); scene.add(heroLight);
 const torchLights = []; for (let i = 0; i < 6; i++) { const l = new THREE.PointLight(0xff9440, 0, 9, 2); scene.add(l); torchLights.push(l); }
 
+const fx = makeFx(renderer, scene, cam);
+
 // ---------------------------------------------------------------- models
-// Characters are converted from the 2D game's rigs by Blender (tools/dump.cjs + blender/scripts/convert.py).
-// models/manifest.json maps a character's key (family + look) to its file; a model loads the first time it is needed.
+// Every model is built by headless Blender from the 2D game's rigs (tools/dump.cjs -> blender/scripts/convert.py).
+// models/manifest.json: chars (family + look -> file), props (name -> file), rigs (stairs, by shape), heroes (the hero in
+// pieces: body by armour, head by helm, weapon, shield arm), tl (each file's clips on its one timeline: [start, length, loops]).
 const loader = new GLTFLoader(), MODELS = {}, LOADING = {}; loader.setMeshoptDecoder(MeshoptDecoder);
-let MANIFEST = {};
+let MANIFEST = { chars: {}, props: {}, rigs: {}, heroes: {}, tl: {} };
 function prep(g) { g.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; } }); return g; }
 function wantModel(file) {
   if (MODELS[file]) return MODELS[file];
@@ -37,11 +40,12 @@ function wantModel(file) {
 }
 function whenModel(file) { wantModel(file); return (LOADING[file] || Promise.resolve()).then(() => MODELS[file]); }
 function spawnModel(file) {
-  const g = MODELS[file], root = SkeletonUtils.clone(g.scene), mixer = new THREE.AnimationMixer(root), actions = {}, mats = [];
+  const g = MODELS[file], root = SkeletonUtils.clone(g.scene), mats = [];
   const own = m => { const c = m.clone(); c.userData.e0 = c.emissive.getHex(); c.userData.i0 = c.emissiveIntensity; mats.push(c); return c; };
   root.traverse(o => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(own) : own(o.material); });
-  for (const a of g.animations) { const act = mixer.clipAction(a); act.play(); act.paused = true; act.setEffectiveWeight(0); actions[a.name] = act; }
-  return { root, mixer, actions, mats, cur: null, prev: null, fade: 1, t: 0 };
+  let mixer = null, acts = null;
+  if (g.animations.length) { mixer = new THREE.AnimationMixer(root); const clip = g.animations[0]; acts = [mixer.clipAction(clip), mixer.clipAction(clip.clone())]; for (const a of acts) { a.play(); a.paused = true; a.setEffectiveWeight(0); } }
+  return { root, mixer, acts, cur: 0, tl: MANIFEST.tl[file] || {}, mats };
 }
 
 // ---------------------------------------------------------------- the level: floors and walls from LV.map
@@ -68,11 +72,10 @@ function buildLevel() {
   levelGroup.userData.gtex = gtex;
   const wm = buildWalls(walls);
   levelGroup.add(ground); if (wm) levelGroup.add(wm);
-  buildRigProps(levelGroup);
   hemi.intensity = LV.outdoor ? (LV.night ? 0.5 : 1.1) : 0.5; sun.intensity = LV.outdoor ? (LV.night ? 0.5 : 2.2) : 0.9; sun.color.setHex(LV.outdoor && !LV.night ? 0xfff2d8 : 0xc8d4ff);
   scene.background.setHex(LV.outdoor ? 0x1a2a18 : 0x050406);
   R3D_FLOOR.dirty = false; R3D_FLOOR.y0 = 1e9; R3D_FLOOR.y1 = -1;
-  levelToken++; buildProps(levelGroup, levelToken);
+  levelToken++; buildProps(levelGroup, levelToken); buildRigProps(levelGroup, levelToken);
   builtLevel = R3D_LEVEL;
 }
 
@@ -102,16 +105,14 @@ function buildWalls(walls) {
   const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, metalness: 0, side: THREE.DoubleSide })); m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
   levelGroup.userData.wtex = tex; return m;
 }
-// stairs and doorways: the game builds each from a rig of its own (no name), so the model is made here
-const rigModels = new WeakMap();
-function buildRigProps(group) {
+// stairs and doorways: the game builds each from a rig of its own (no name); Blender has built the same shape, found by its hash
+function buildRigProps(group, token) {
   const extra = [LV.stairs, LV.down].filter(x => x && x.sp && x.wx !== undefined);   // the stairs down are stamped on the floor in 2D
   for (const pr of [...props, ...extra]) {
     const sp = pr.sp; if (!sp || sp.__name || !sp.__rig) continue;
-    let g = rigModels.get(sp);
-    if (g === undefined) { try { g = buildModel(RD.build('rig', [{ clip: 'idle', t: 0, rig: sp.__rig }], { low: true })); prep(g); } catch (e) { console.error('3d: stairs', e); g = null; } rigModels.set(sp, g); }
-    if (!g) continue;
-    const o = SkeletonUtils.clone(g.scene), [fi, fj] = groundToTile(pr.wx, pr.wy); o.position.set(fi, 0, fj); o.rotation.y = -(sp.__ryaw || 0); group.add(o);
+    if (!sp.__hash) sp.__hash = RD.hash(sp.__rig);
+    const file = MANIFEST.rigs[sp.__hash]; if (!file) { missingProps.add('rig ' + sp.__hash); continue; }
+    whenModel(file).then(g => { if (!g || token !== levelToken) return; const o = g.scene.clone(), [fi, fj] = groundToTile(pr.wx, pr.wy); o.position.set(fi, 0, fj); o.rotation.y = -(sp.__ryaw || 0); group.add(o); });
   }
 }
 
@@ -179,7 +180,7 @@ function buildProps(group, token) {
   for (const pr of props) { const sp = pr.sp; if (!sp || !sp.__name) { unnamedProps++; continue; } const [fi, fj] = groundToTile(pr.wx, pr.wy); (by.get(sp.__name) || by.set(sp.__name, []).get(sp.__name)).push([fi, fj, sp.__yaw || 0]); }
   for (const d of LV.decor) if (d.kind === 'bones' && d.sp && d.sp.__name) { const [fi, fj] = groundToTile(d.wx, d.wy); (by.get(d.sp.__name) || by.set(d.sp.__name, []).get(d.sp.__name)).push([fi, fj, d.sp.__yaw || 0]); }   // (the game stamps these on the floor)
   for (const [name, list] of by) {
-    const file = MANIFEST['prop|' + name]; if (!file) { missingProps.add(name); continue; }
+    const file = MANIFEST.props[name]; if (!file) { missingProps.add(name); continue; }
     whenModel(file).then(g => { if (g && token === levelToken) addInstances(g, list, group); });
   }
 }
@@ -191,7 +192,7 @@ function syncDyn() {
     if (d && d.name !== name) { scene.remove(d.obj); dyn.delete(pr); d = null; }
     if (!d) {
       d = { obj: new THREE.Group(), name }; const [fi, fj] = groundToTile(pr.wx, pr.wy); d.obj.position.set(fi, 0, fj); scene.add(d.obj); dyn.set(pr, d);
-      for (const sp of sps) { const file = MANIFEST['prop|' + sp.__name]; if (!file) { missingProps.add(sp.__name); continue; }
+      for (const sp of sps) { const file = MANIFEST.props[sp.__name]; if (!file) { missingProps.add(sp.__name); continue; }
         whenModel(file).then(g => { if (!g || dyn.get(pr) !== d) return; const o = g.scene.clone(); o.rotation.y = -(sp.__yaw || 0); d.obj.add(o); }); }
     }
     d.seen = frameNo; d.obj.visible = !pr.broken;
@@ -200,37 +201,37 @@ function syncDyn() {
 }
 
 // ---------------------------------------------------------------- characters
-const actors = new Map();   // game object -> { root, mixer, actions, ... }
+const actors = new Map();   // game object -> { root, models: [...], key, ... }
 const FAMCOL = { skeleton: 0xd8ceb0, fallen: 0xa0301f, hound: 0x6f6670, spider: 0x45282b, slime: 0x3f6e35, wraith: 0x8fb0ff, treant: 0x56331f, ogre: 0x7a8a4a, shroom: 0xb07a58 };
 const phGeo = new THREE.CapsuleGeometry(0.3, 0.8, 4, 10);
-const LOOPS = { idle: 4, walk: 8, storm: 4 };
-function placeholder(c) {
-  const mesh = new THREE.Mesh(phGeo, new THREE.MeshStandardMaterial({ color: c.role ? 0x3b62d6 : FAMCOL[c.fam] || 0x888888, roughness: 0.8 }));
-  mesh.position.y = 0.7; mesh.castShadow = true; const root = new THREE.Group(); root.add(mesh);
-  return { root, mixer: null, actions: {}, mats: [mesh.material], placeholder: true };
+// the files that make up a character: one for a monster or villager, up to four pieces for the hero (by what he wears)
+function filesFor(c) {
+  if (c === hero) {
+    const H = MANIFEST.heroes[hero.cls], T = H && (H[c.look.team] || H.red);
+    if (T) { const L = c.look, ctx = T.ctx[L.weapon + '|' + L.shield] || T.ctx[L.weapon + '|none'] || T.ctx[T.base.weapon + '|' + T.base.shield], k = ctx[0];
+      return [(T.body[L.chest] || T.body[T.base.chest])[k], (T.helm[L.helm] || T.helm.none || [])[k], ctx[1], ctx[2]].filter(Boolean); }
+  }
+  const f = MANIFEST.chars[RP.keyOf(c.fam, c.look)]; return f ? [f] : [];
 }
-// a look with no Blender-built file is built here from the same rig data, one per frame at most
-const buildQueue = [], queued = new Set();
-function buildNext() {
-  const job = buildQueue.shift(); if (!job) return; const [key, fam, look] = job;
-  try { const data = RP.model(fam, look, 'built'); MODELS['built:' + key] = prep(buildModel(data)); } catch (e) { console.error('3d: could not build ' + key, e); MODELS['built:' + key] = null; }
+function makeActor(c, files) {
+  const root = new THREE.Group(), ready = files.length > 0 && files.every(f => MODELS[f]); let a;
+  if (ready) { const models = files.map(spawnModel); for (const m of models) root.add(m.root); a = { root, models }; }
+  else { const mesh = new THREE.Mesh(phGeo, new THREE.MeshStandardMaterial({ color: c.role ? 0x3b62d6 : FAMCOL[c.fam] || 0x888888, roughness: 0.8, transparent: true, opacity: 0.35 })); mesh.position.y = 0.7; root.add(mesh); a = { root, models: [], placeholder: true }; if (!files.length) missingChars.add(RP.keyOf(c.fam, c.look)); }
+  a.key = files.join('+'); a.yaw = null; a.clip = null; a.t = 0; a.fade = 1; scene.add(root); actors.set(c, a); return a;
 }
-function makeActor(c) {
-  const key = RP.keyOf(c.fam, c.look); let file = MANIFEST[key];
-  if (!file || MODELS[file] === null) { file = 'built:' + key; if (MODELS[file] === undefined && !queued.has(key)) { queued.add(key); buildQueue.push([key, c.fam, c.look]); } }
-  const g = file.startsWith('built:') ? MODELS[file] : wantModel(file);
-  const a = g ? spawnModel(file) : placeholder(c);
-  a.key = key; a.file = file; a.yaw = null; scene.add(a.root); actors.set(c, a); return a;
-}
-function clipFor(a, clip) {
-  if (a.actions[clip]) return clip;
-  for (const k of (fallbackOrder[clip] || [])) if (a.actions[k]) return k;
-  return a.actions.idle ? 'idle' : null;
+const missingChars = new Set();
+function clipFor(tl, clip) {
+  if (tl[clip]) return clip;
+  for (const k of (fallbackOrder[clip] || [])) if (tl[k]) return k;
+  return tl.idle ? 'idle' : null;
 }
 function syncActor(c, dt, visible) {
-  let a = actors.get(c);
-  if (a && (a.key !== RP.keyOf(c.fam, c.look) || (a.placeholder && a.file && MODELS[a.file]))) { scene.remove(a.root); actors.delete(c); a = null; }   // new gear, or its model has arrived
-  if (!a) a = makeActor(c);
+  let a = actors.get(c); const files = filesFor(c), key = files.join('+');
+  if (a && (a.key !== key || a.placeholder)) {   // new gear (or the model was still loading): swap once every piece has arrived, keep the old look until then
+    files.forEach(wantModel);
+    if (files.length && files.every(f => MODELS[f])) { scene.remove(a.root); actors.delete(c); a = null; }
+  }
+  if (!a) { files.forEach(wantModel); a = makeActor(c, files); }
   a.seen = frameNo; a.root.visible = visible; if (!visible) return;
   const jit = c.stop > 0 && c !== hero && !(c.dying >= 0) ? (Math.floor(G.t * 33) % 2 ? 0.03 : -0.03) : 0;
   a.root.position.set(c.fi + jit, (c.leapZ || 0) / UPX, c.fj - jit);
@@ -239,24 +240,28 @@ function syncActor(c, dt, visible) {
   a.root.rotation.y = a.yaw; a.root.scale.setScalar((c.look && c.look.scale) || 1);
   // how it is hurting: frozen = ice blue, chilled = pale blue, burning = flickering orange, the sting after a hit = red; ash and shatter deaths sink away
   const ash = c.deathKind === 'ash' && c.dying >= 0, shat = c.deathKind === 'shatter' && c.dying >= 0;
-  const st = ash || (c.burnT > 0 && Math.floor(G.t * 16 + (c.seed || 0)) % 3 === 0) ? 4 : c.frozen > 0 || shat ? 1 : c.tint > 0 ? 3 : c.slowT > 0 || c.chillT > 0 ? 2 : 0;
-  if (st !== a.st) { a.st = st; const col = [0xffffff, 0x66b8ff, 0xb8dcff, 0xff7060, 0xff9a3a][st]; for (const m of a.mats) m.color.setHex(col); }
-  if (ash || shat) { const k = Math.max(0.02, 1 - Math.min(1, c.dying / (ash ? 0.55 : 0.15))); a.root.scale.multiplyScalar(ash ? 1 : k); a.root.position.y -= ash ? (1 - k) * 1.2 : 0; }
-  const fl = c.flash > 0 ? 1 : 0;
-  if (fl !== a.fl) { a.fl = fl; for (const m of a.mats) { if (m.userData.e0 === undefined) continue; m.emissive.setHex(fl ? 0xffffff : m.userData.e0); m.emissiveIntensity = fl ? 0.7 : m.userData.i0; } }
-  if (!a.mixer) return;
+  const st = ash || (c.burnT > 0 && Math.floor(G.t * 16 + (c.seed || 0)) % 3 === 0) ? 4 : c.frozen > 0 || shat ? 1 : c.tint > 0 ? 3 : c.slowT > 0 || c.chillT > 0 ? 2 : 0, fl = c.flash > 0 ? 1 : 0;
+  if (st !== a.st || fl !== a.fl) { a.st = st; a.fl = fl; const col = [0xffffff, 0x66b8ff, 0xb8dcff, 0xff7060, 0xff9a3a][st];
+    for (const m of a.models) for (const mt of m.mats) { mt.color.setHex(col); mt.emissive.setHex(fl ? 0xffffff : mt.userData.e0); mt.emissiveIntensity = fl ? 0.7 : mt.userData.i0; } }
+  if (ash || shat) { const k = Math.max(0.02, 1 - Math.min(1, c.dying / (ash ? 0.55 : 0.15))); if (!ash) a.root.scale.multiplyScalar(k); else a.root.position.y -= (1 - k) * 1.2; }
+  if (!a.models.length) return;
   // the pose: the game says which clip and which frame; idle and walk run on the game's own continuous clocks
-  const name = clipFor(a, c.clip); if (!name) return;
+  const name = clipFor(a.models[0].tl, c.clip); if (!name) return;
   let f = frameOf(c);
   if (name === 'idle' && c.clip === 'idle') f = (c.clock / 0.2) % 4; else if (name === 'walk' && c.clip === 'walk') f = ((c.walk % 8) + 8) % 8;
-  const act = a.actions[name], L = LOOPS[name];
-  if (act !== a.cur) { a.prev = a.cur; a.cur = act; a.fade = a.prev ? 0 : 1; a.t = f; }
+  const L = a.models[0].tl[name][2] ? a.models[0].tl[name][1] : 0, changed = name !== a.clip;
+  if (changed) { a.fade = a.clip ? 0 : 1; a.clip = name; a.t = f; }
   else if (L && (name === 'idle' || name === 'walk')) a.t = f;
-  else { let d = f - a.t; if (L) { d = ((d % L) + L * 1.5) % L - L / 2; } a.t += d * Math.min(1, dt * 22); if (L) a.t = ((a.t % L) + L) % L; }
+  else { let d = f - a.t; if (L) d = ((d % L) + L * 1.5) % L - L / 2; a.t += d * Math.min(1, dt * 22); if (L) a.t = ((a.t % L) + L) % L; }
   a.fade = Math.min(1, a.fade + dt / 0.09);
-  act.time = Math.min(a.t, act.getClip().duration); act.setEffectiveWeight(a.fade);
-  if (a.prev) { a.prev.setEffectiveWeight(1 - a.fade); if (a.fade >= 1) a.prev = null; }
-  a.mixer.update(0);
+  for (const m of a.models) {
+    if (!m.acts) continue; const tc = m.tl[name] || m.tl.idle; if (!tc) continue;
+    if (changed) m.cur ^= 1;
+    const cur = m.acts[m.cur], prev = m.acts[m.cur ^ 1];
+    cur.time = tc[0] + Math.max(0, Math.min(a.t, tc[1])); cur.setEffectiveWeight(a.fade); prev.setEffectiveWeight(1 - a.fade);
+    m.mixer.update(0);
+  }
+  a.hand = null;
 }
 
 // ---------------------------------------------------------------- frame
@@ -274,7 +279,7 @@ function adapt(dt) {
 function fit() {
   const w = parseFloat(cvs.style.width) || cvs.clientWidth, h = parseFloat(cvs.style.height) || cvs.clientHeight;
   if (w === lastW && h === lastH) return; lastW = w; lastH = h;
-  renderer.setPixelRatio(quality); renderer.setSize(w, h, false); glc.style.width = w + 'px'; glc.style.height = h + 'px';
+  renderer.setPixelRatio(quality); renderer.setSize(w, h, false); fx.resize(w, h, quality); glc.style.width = w + 'px'; glc.style.height = h + 'px';
 }
 function frame(menu) {
   const now = performance.now(), dt = Math.min(0.05, (now - lastT) / 1000); lastT = now; frameNo++;
@@ -295,8 +300,31 @@ function frame(menu) {
   for (const e of enemies) syncActor(e, dt, visAt(e.fi, e.fj) > 0.25 && Math.abs(e.fi - cf) + Math.abs(e.fj - cj) < 26);
   for (const n of npcs) syncActor(n, dt, Math.abs(n.fi - cf) + Math.abs(n.fj - cj) < 26);
   for (const [c, a] of actors) if (a.seen !== frameNo) { scene.remove(a.root); actors.delete(c); }
-  syncDyn(); buildNext(); syncGroundFx(); syncFlames(); syncFloor(dt); adapt(dt);
-  renderer.render(scene, cam);
+  syncDyn(); syncGroundFx(); syncFlames(); syncFloor(dt); adapt(dt);
+  fx.update(dt, lastW * quality / (2 * hw), heroBlade(), /^(attack|spin|bash)/.test(hero.clip || ''));
+  fx.render(quality);
 }
-try { MANIFEST = await (await fetch('models/manifest.json')).json(); } catch (e) { console.error('3d: no model list', e); }
-window.R3D = { ready: true, get quality() { return quality; }, frame, scene, cam, renderer, actors, THREE, MODELS, missingProps, get unnamedProps() { return unnamedProps; }, get manifest() { return MANIFEST; } };
+// where the hero's weapon is right now (its grip end and its far end, in the world), for the swing trail
+const bladeInfo = new Map(), bv = new THREE.Vector3(), bm = new THREE.Matrix4();
+function heroBlade() {
+  const a = actors.get(hero); if (!a || !a.models.length) return null;
+  const k = a.key.split('+').findIndex(f => f.startsWith('hw_')); if (k < 0) return null;
+  const m = a.models[k]; let mesh = null; m.root.traverse(o => { if (o.isSkinnedMesh && !mesh) mesh = o; }); if (!mesh) return null;
+  const file = a.key.split('+')[k]; let info = bladeInfo.get(file);
+  if (info === undefined) {   // once per weapon: the rigid group with the longest reach is the weapon itself; its two ends
+    const pos = mesh.geometry.attributes.position, si = mesh.geometry.attributes.skinIndex, per = new Map();
+    for (let i = 0; i < pos.count; i++) { const b = si.getX(i); (per.get(b) || per.set(b, []).get(b)).push(i); }
+    let best = null;
+    for (const [b, list] of per) { if (!/^c\d/.test(mesh.skeleton.bones[b].name)) continue; const c = new THREE.Vector3(); for (const i of list) c.add(bv.fromBufferAttribute(pos, i)); c.multiplyScalar(1 / list.length);
+      let v1 = null, d1 = -1; for (const i of list) { const d = bv.fromBufferAttribute(pos, i).distanceTo(c); if (d > d1) { d1 = d; v1 = bv.clone(); } }
+      let v2 = null, d2 = -1; for (const i of list) { const d = bv.fromBufferAttribute(pos, i).distanceTo(v1); if (d > d2) { d2 = d; v2 = bv.clone(); } }
+      if (!best || d2 > best.len) best = { bone: b, len: d2, p: [v1, v2] }; }
+    if (best && best.len > 0.35) { const o = new THREE.Vector3(0, 0.75, 0), [p, q] = best.p; info = p.distanceTo(o) > q.distanceTo(o) ? { bone: best.bone, tip: p, base: q } : { bone: best.bone, tip: q, base: p }; } else info = null;
+    bladeInfo.set(file, info);
+  }
+  if (!info) return null;
+  a.root.updateMatrixWorld(true); const bone = mesh.skeleton.bones[info.bone]; bm.multiplyMatrices(bone.matrixWorld, mesh.skeleton.boneInverses[info.bone]);
+  return { base: info.base.clone().applyMatrix4(bm), tip: info.tip.clone().applyMatrix4(bm) };
+}
+try { MANIFEST = Object.assign(MANIFEST, await (await fetch('models/manifest.json')).json()); } catch (e) { console.error('3d: no model list', e); }
+window.R3D = { ready: true, get quality() { return quality; }, frame, scene, cam, renderer, actors, THREE, MODELS, missingProps, missingChars, get unnamedProps() { return unnamedProps; }, get manifest() { return MANIFEST; } };

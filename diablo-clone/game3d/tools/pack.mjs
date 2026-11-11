@@ -10,7 +10,7 @@ const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies(
 fs.mkdirSync(out, { recursive: true }); let a = 0, b = 0, n = 0;
 for (const f of fs.readdirSync(src).filter(f => f.endsWith('.glb') && f.startsWith(prefix))) {
   const doc = await io.read(path.join(src, f)); doc.setLogger({ debug() {}, info() {}, warn() {}, error: console.error });
-  await doc.transform(dedup(), resample(), meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
+  await doc.transform(dedup(), resample({ tolerance: 0.0005 }), meshopt({ encoder: MeshoptEncoder, level: 'high' }));
   await io.write(path.join(out, f), doc); a += fs.statSync(path.join(src, f)).size; b += fs.statSync(path.join(out, f)).size; n++;
 }
 console.log(`${n} models: ${(a / 1048576).toFixed(1)} MB -> ${(b / 1048576).toFixed(1)} MB`);

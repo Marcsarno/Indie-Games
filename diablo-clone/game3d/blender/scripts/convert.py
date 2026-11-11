@@ -52,17 +52,20 @@ def build(data, outdir, review=False):
     rest = []
     for k, p in enumerate(parts):
         q = Quaternion(p["q"]); R = q.to_matrix(); o = Vector(p["o"]); ey = R.col[1]; ez = R.col[2]
-        ends = [(f"p{k}", o)] + ([(f"p{k}b", o + ey * p["L"])] if p.get("L") is not None else [])
+        ends = [(f"p{k}", o)] + ([(f"p{k}b", o + ey * p["L"])] if p.get("L") is not None and not p.get("one") else [])
         for bn, head in ends:
+            if p.get("cb") is not None: break   # (it rides its group's bone)
             eb = ad.edit_bones.new(bn); eb.head = head; eb.tail = head + ey * 0.05; eb.align_roll(ez)
         rest.append((o, q, R))
+    for ci, c in enumerate(data.get("cb", [])):   # a rigid group's bone: at the group's middle, axes = the world's
+        eb = ad.edit_bones.new(f"c{ci}"); eb.head = Vector(c["o"]); eb.tail = Vector(c["o"]) + Vector((0, 0.05, 0)); eb.align_roll(Vector((0, 0, 1)))
     bpy.ops.object.mode_set(mode="OBJECT")
     # ---- the mesh
     objs = []
     for k, p in enumerate(parts):
         o, q, R = rest[k]; M = Matrix.Translation(o) @ R.to_4x4(); bm = bmesh.new(); uvl = bm.loops.layers.uv.new("UVMap"); dl = bm.verts.layers.deform.new()
         cls = mats[p["m"]]["cls"]; uv0 = swatch[p["m"]]; rc = rect.get(k)
-        two = p.get("L") is not None; endof = {}
+        two = p.get("L") is not None and not p.get("one"); endof = {}
         if p["kind"] == "box":
             hx, hy, hz = p["half"]; bmesh.ops.create_cube(bm, size=2.0); bmesh.ops.scale(bm, vec=(max(hx, 1e-4), max(hy, 1e-4), max(hz, 1e-4)), verts=bm.verts)
             bv = min(hx, hy, hz) * 0.3; hs = (hx, hy, hz)
@@ -102,8 +105,9 @@ def build(data, outdir, review=False):
             bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
         bm.verts.ensure_lookup_table()
         me = bpy.data.meshes.new("p"); ob = bpy.data.objects.new(f"part{k}", me); bpy.context.scene.collection.objects.link(ob)
-        ga = ob.vertex_groups.new(name=f"p{k}"); gb = ob.vertex_groups.new(name=f"p{k}b") if two else None
-        ends = [endof.get(v, 0) for v in bm.verts]
+        cbi = p.get("cb")
+        ga = ob.vertex_groups.new(name=f"c{cbi}" if cbi is not None else f"p{k}"); gb = ob.vertex_groups.new(name=f"p{k}b") if two and cbi is None else None
+        ends = [0 if cbi is not None or not two else endof.get(v, 0) for v in bm.verts]
         bmesh.ops.transform(bm, matrix=M, verts=bm.verts); bm.to_mesh(me); bm.free()
         for g, e in ((ga, 0), (gb, 1)):
             if g:
@@ -125,14 +129,18 @@ def build(data, outdir, review=False):
     bpy.context.scene.render.fps = 2   # frame = 2 x the game's frame number (walk has half frames); seconds in the file = the game's frame number
     ad_ = arm.animation_data_create(); pbs = arm.pose.bones; TINY = (1e-4, 1e-4, 1e-4)
     restinv = [(o, q.inverted(), R.transposed()) for o, q, R in rest]
+    # every clip sits end to end on ONE timeline (data["tl"][clip] = [start, length, loops]): one animation in the file, so
+    # the file carries one set of tracks instead of one per clip (most of a character file was that bookkeeping)
+    bpy.context.preferences.edit.keyframe_new_interpolation_type = "LINEAR"   # straight lines between the game's frames: the file keeps just those keys
+    act = bpy.data.actions.new("all"); ad_.action = act; lastq = {}
     for cname, clip in data["clips"].items():
-        act = bpy.data.actions.new(cname); ad_.action = act; ts = list(clip["t"]); frames = list(clip["f"]); loop = data.get("loops", {}).get(cname)
-        if loop and len(ts) > 1: ts.append(loop); frames.append(frames[0])
-        lastq = {}
+        ts = list(clip["t"]); frames = list(clip["f"]); start, length, loops = data["tl"][cname]
+        if loops and len(ts) > 1: ts.append(length); frames.append(frames[0])
         for t, fr in zip(ts, frames):
-            fnum = round(t * 2)
+            fnum = round((start + t) * 2)
             for k, rec in enumerate(fr):
-                o0, q0i, R0t = restinv[k]; two = parts[k].get("L") is not None
+                if parts[k].get("cb") is not None: continue
+                o0, q0i, R0t = restinv[k]; two = parts[k].get("L") is not None and not parts[k].get("one")
                 chans = []
                 if rec is None: chans = [(f"p{k}", None, None, TINY)] + ([(f"p{k}b", None, None, TINY)] if two else [])
                 else:
@@ -148,7 +156,19 @@ def build(data, outdir, review=False):
                         lastq[bn] = ql.copy(); pb.location = loc; pb.rotation_quaternion = ql
                         pb.keyframe_insert("location", frame=fnum); pb.keyframe_insert("rotation_quaternion", frame=fnum)
                     pb.scale = [max(1e-4, s) for s in sc]; pb.keyframe_insert("scale", frame=fnum)
-        tr = ad_.nla_tracks.new(); tr.name = cname; tr.strips.new(cname, 0, act); ad_.action = None
+    cbs = data.get("cb", [])
+    if cbs:
+        for cname, clip in data["clips"].items():
+            ts = list(clip["t"]); cfr = list(clip["cf"]); start, length, loops = data["tl"][cname]
+            if loops and len(ts) > 1: ts.append(length); cfr.append(cfr[0])
+            for t, fr in zip(ts, cfr):
+                fnum = round((start + t) * 2)
+                for ci, rec in enumerate(fr):
+                    pb = pbs[f"c{ci}"]; ql = Quaternion(rec[3:7]); bn = pb.name
+                    if bn in lastq and lastq[bn].dot(ql) < 0: ql = -ql
+                    lastq[bn] = ql.copy(); pb.location = Vector(rec[0:3]) - Vector(cbs[ci]["o"]); pb.rotation_quaternion = ql
+                    pb.keyframe_insert("location", frame=fnum); pb.keyframe_insert("rotation_quaternion", frame=fnum)
+    tr = ad_.nla_tracks.new(); tr.name = "all"; tr.strips.new("all", 0, act); ad_.action = None
     for pb in pbs: pb.location = (0, 0, 0); pb.rotation_quaternion = (1, 0, 0, 0); pb.scale = (1, 1, 1)
     tris = sum(len(p.vertices) - 2 for p in mesh.data.polygons)
     if review:
@@ -158,7 +178,7 @@ def build(data, outdir, review=False):
             kit.shot(os.path.join(outdir, f"{name}_{yaw}.png"), ( (h * 0.5 + 6 * math.cos(math.radians(30)) * math.cos(math.radians(yaw))), 6 * math.cos(math.radians(30)) * math.sin(math.radians(yaw)), h * 0.5 + 3), (0, 0, h * 0.5), ortho=h * 1.5, w=360, h=420)
     p = os.path.join(outdir, name + ".glb")
     bpy.ops.export_scene.gltf(filepath=p, export_format="GLB", export_yup=True, export_apply=False, export_animations=True, export_animation_mode="NLA_TRACKS",
-                              export_force_sampling=True, export_optimize_animation_size=True, export_optimize_animation_keep_anim_armature=False, export_image_format="AUTO")
+                              export_force_sampling=False, export_optimize_animation_size=True, export_optimize_animation_keep_anim_armature=False, export_image_format="AUTO")
     return tris, len(pbs), os.path.getsize(p)
 
 if __name__ == "__main__":
