@@ -370,7 +370,7 @@ function chaseCam(dt) {
   const a = actors.get(hero), hx = hero.fi, hz = hero.fj;
   if (a && a.vel && Math.hypot(a.vel[0], a.vel[1]) > 0.6 && !hero.dead) {
     const head = Math.atan2(a.vel[1], a.vel[0]); let d = head - CAM.yaw; d = Math.atan2(Math.sin(d), Math.cos(d));
-    CAM.yaw += Math.sin(d) * Math.min(1, dt * 1.9) * (Math.abs(d) > 2.6 ? 0 : 1);   // sideways running turns it; running at it does not
+    CAM.yaw += Math.sin(d) * Math.min(1, dt * 1.15) * (Math.abs(d) > 2.6 ? 0 : 1);   // sideways running turns it; running at it does not
   }
   if (CAM.drag) { CAM.yaw += CAM.drag; CAM.drag = 0; }
   const fx_ = Math.cos(CAM.yaw), fz_ = Math.sin(CAM.yaw), cp = Math.cos(CAM.pitch), sp = Math.sin(CAM.pitch);
