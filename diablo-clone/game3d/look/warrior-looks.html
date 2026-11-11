@@ -1,0 +1,173 @@
+<title>Warrior Look Test</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap">
+<style>
+  /* Layout: one screen. A thin title strip, two stacked stages of the same warrior (A smooth, B chunky), one control strip. */
+  :root {
+    color-scheme: dark;
+    --bg: #0d0a0c; --panel: #18131a; --line: #2e2530; --ink: #ecdfcb; --muted: #9c8e84; --gold: #e2aa3c; --ember: #c8512c;
+    --display: "Cinzel", "Trajan Pro", Georgia, serif; --ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  html, body { height: 100%; }
+  *, *::before, *::after { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--ui); display: flex; flex-direction: column; overflow: hidden;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 8px; gap: 8px;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  header { display: flex; align-items: center; gap: 12px; }
+  h1 { font-family: var(--display); font-size: 1.05rem; letter-spacing: .06em; margin: 0; color: var(--gold); text-wrap: balance; flex: 1; min-width: 0; }
+  h1 small { display: block; font-family: var(--ui); font-size: .72rem; letter-spacing: 0; color: var(--muted); font-weight: 400; margin-top: 2px; }
+  .ref { display: flex; align-items: center; gap: 8px; font-size: .68rem; color: var(--muted); text-align: right; line-height: 1.25; }
+  .ref img { height: 58px; image-rendering: pixelated; background: #2a2019; border: 1px solid var(--line); border-radius: 4px; }
+  #stages { flex: 1; min-height: 0; display: grid; grid-template-rows: 1fr 1fr; gap: 8px; }
+  .stage { position: relative; min-height: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #050405; touch-action: none; }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .stage.px canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
+  .tag { position: absolute; left: 8px; top: 8px; font-family: var(--display); font-size: .78rem; letter-spacing: .08em; padding: 3px 8px; border-radius: 3px;
+    background: rgba(13, 10, 12, .78); color: var(--ink); border: 1px solid var(--line); pointer-events: none; }
+  .tag b { color: var(--gold); margin-right: 6px; }
+  #load { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: .85rem; pointer-events: none; }
+  .bar { display: flex; gap: 8px; flex-wrap: wrap; }
+  .seg { display: flex; flex: 1 1 220px; min-width: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--panel); }
+  .seg button { flex: 1; min-width: 0; padding: 11px 4px; background: none; border: 0; border-right: 1px solid var(--line); color: var(--muted); font: 600 .8rem var(--ui); letter-spacing: .04em; }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed="true"] { background: var(--gold); color: #1a1208; }
+  .seg button:focus-visible { outline: 2px solid var(--ember); outline-offset: -2px; }
+  .hint { font-size: .7rem; color: var(--muted); text-align: center; }
+</style>
+
+<header>
+  <h1>Warrior Look Test<small>Same Blender model, drawn two ways</small></h1>
+  <div class="ref"><span>Today's<br>2D warrior</span><img id="ref" alt="The warrior as drawn in the current 2D game"></div>
+</header>
+<div id="stages">
+  <div class="stage" id="sA"><canvas id="cA"></canvas><div class="tag"><b>A</b>Smooth</div><div id="load">Loading the warrior</div></div>
+  <div class="stage px" id="sB"><canvas id="cB"></canvas><div class="tag"><b>B</b>Chunky pixels</div></div>
+</div>
+<div class="bar">
+  <div class="seg" id="clips" role="group" aria-label="Animation">
+    <button id="b-idle" data-clip="idle" aria-pressed="true">Idle</button><button id="b-walk" data-clip="walk" aria-pressed="false">Walk</button><button id="b-run" data-clip="run" aria-pressed="false">Run</button><button id="b-attack" data-clip="attack" aria-pressed="false">Attack</button>
+  </div>
+  <div class="seg" id="zooms" role="group" aria-label="Zoom">
+    <button id="z-close" data-w="3.3" aria-pressed="true">Close-up</button><button id="z-mid" data-w="6" aria-pressed="false">Mid</button><button id="z-game" data-w="10" aria-pressed="false">Game size</button>
+  </div>
+</div>
+<div class="hint">Drag across a picture to turn him.</div>
+
+<script src="models.js"></script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+document.getElementById('ref').src = MODELS.ref;
+const buf = b64 => { const s = atob(b64), a = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a.buffer; };
+const GLB = { warrior: buf(MODELS.warrior), room: buf(MODELS.room) };
+const loader = new GLTFLoader();
+const parse = name => new Promise((ok, no) => loader.parse(GLB[name].slice(0), '', ok, no));
+const PPU = 50;                       // chunky look: screen pixels per world unit (the hero comes out about 80 px tall, like today's detail layer)
+const state = { yaw: 0.6, auto: true, clip: 'idle', width: 3.3, t: 0 };
+const ramp = new THREE.DataTexture(new Uint8Array([60, 60, 60, 255, 120, 120, 120, 255, 185, 185, 185, 255, 255, 255, 255, 255]), 4, 1);
+ramp.minFilter = ramp.magFilter = THREE.NearestFilter; ramp.needsUpdate = true;
+
+class View {
+  constructor(canvas, look) {
+    this.look = look; this.canvas = canvas; const px = look === 'chunky';
+    const r = this.r = new THREE.WebGLRenderer({ canvas, antialias: !px, powerPreference: 'high-performance' });
+    r.shadowMap.enabled = true; r.shadowMap.type = px ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
+    r.toneMapping = px ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.15;
+    const sc = this.scene = new THREE.Scene(); sc.background = new THREE.Color(0x050405);
+    this.cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 80);
+    const e = 30 * Math.PI / 180, d = 30; this.cam.position.set(d * Math.cos(e) * Math.SQRT1_2, d * Math.sin(e) + 0.8, d * Math.cos(e) * Math.SQRT1_2); this.cam.lookAt(0, 0.8, 0);
+    sc.add(new THREE.HemisphereLight(0x8fa0d0, 0x2a1c14, px ? 0.5 : 0.55));
+    const key = this.key = new THREE.DirectionalLight(0xfff0dc, px ? 0.95 : 1.25); key.position.set(-6, 11, 7); key.castShadow = true;
+    const s = key.shadow; s.mapSize.set(px ? 1024 : 2048, px ? 1024 : 2048); s.camera.left = s.camera.bottom = -9; s.camera.right = s.camera.top = 9; s.camera.far = 40; s.bias = -0.0015; s.normalBias = 0.03;
+    sc.add(key);
+    this.hero = new THREE.PointLight(0xffd9a8, px ? 4 : 7, 9, 2); this.hero.position.set(0.6, 2.6, 0.9); sc.add(this.hero);
+    this.torches = [];
+    if (!px) { const pm = new THREE.PMREMGenerator(r); sc.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; sc.environmentIntensity = 0.28; }
+    if (px) {
+      this.rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, depthTexture: new THREE.DepthTexture(4, 4) });
+      this.post = new THREE.ShaderMaterial({ depthTest: false, depthWrite: false, toneMapped: false,
+        uniforms: { tC: { value: this.rt.texture }, tD: { value: this.rt.depthTexture }, px: { value: new THREE.Vector2() }, range: { value: 79.9 } },
+        vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
+        fragmentShader: `varying vec2 vUv; uniform sampler2D tC, tD; uniform vec2 px; uniform float range;
+          float dep(vec2 uv){ return texture2D(tD, uv).x * range; }
+          float bayer(vec2 p){ int x = int(mod(p.x, 4.)), y = int(mod(p.y, 4.)); int i = x + y * 4;
+            float m[16]; m[0]=0.;m[1]=8.;m[2]=2.;m[3]=10.;m[4]=12.;m[5]=4.;m[6]=14.;m[7]=6.;m[8]=3.;m[9]=11.;m[10]=1.;m[11]=9.;m[12]=15.;m[13]=7.;m[14]=13.;m[15]=5.;
+            for (int k = 0; k < 16; k++) if (k == i) return (m[k] + .5) / 16.; return .5; }
+          void main(){
+            vec3 c = texture2D(tC, vUv).rgb; float d = dep(vUv);
+            float n = min(min(dep(vUv + vec2(px.x, 0.)), dep(vUv - vec2(px.x, 0.))), min(dep(vUv + vec2(0., px.y)), dep(vUv - vec2(0., px.y))));
+            c = pow(clamp(c, 0., 1.), vec3(1. / 2.2));
+            float L = 16.; c = floor(c * L + .5 + (bayer(gl_FragCoord.xy) - .5) * .55) / L;          // a short ramp per channel, dithered like the 2D game's light levels
+            if (d - n > 0.2) c = vec3(.035, .025, .045);                             // the ink line: any pixel just behind a nearer edge
+            gl_FragColor = vec4(c, 1.); }` });
+      this.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.post); this.quad.frustumCulled = false;
+      this.qscene = new THREE.Scene(); this.qscene.add(this.quad); this.qcam = new THREE.Camera();
+    }
+  }
+  restyle(root) {
+    root.traverse(o => {
+      if (!o.isMesh) return; o.castShadow = o.receiveShadow = true; o.frustumCulled = false;
+      const conv = m => {
+        const flame = m.name === 'flame';
+        if (flame) { o.castShadow = false; return new THREE.MeshBasicMaterial({ color: this.look === 'chunky' ? 0xffc04a : 0xffb347, toneMapped: false }); }
+        if (this.look !== 'chunky') return m;
+        const c = m.color.clone();
+        return new THREE.MeshToonMaterial({ color: c, gradientMap: ramp });
+      };
+      o.material = Array.isArray(o.material) ? o.material.map(conv) : conv(o.material);
+    });
+  }
+  async load() {
+    const room = await parse('room'); this.restyle(room.scene); this.scene.add(room.scene);
+    room.scene.traverse(o => { if (o.name.startsWith('light_')) { const l = new THREE.PointLight(0xff9440, 26, 13, 2); l.position.copy(o.getWorldPosition(new THREE.Vector3())); this.scene.add(l); this.torches.push(l); } });
+    const w = await parse('warrior'); this.restyle(w.scene); this.man = w.scene; this.scene.add(w.scene);
+    this.mixer = new THREE.AnimationMixer(w.scene); this.actions = {};
+    for (const a of w.animations) this.actions[a.name] = this.mixer.clipAction(a);
+    this.cur = this.actions.idle; this.cur.play();
+  }
+  play(name) {
+    const a = this.actions && this.actions[name]; if (!a || a === this.cur) return;
+    a.reset().fadeIn(0.12).play(); this.cur.fadeOut(0.12); this.cur = a;
+  }
+  size() {
+    const box = this.canvas.parentElement.getBoundingClientRect(), w = Math.max(2, box.width), h = Math.max(2, box.height), asp = w / h;
+    const fw = state.width, fh = fw / asp; this.cam.left = -fw / 2; this.cam.right = fw / 2; this.cam.top = fh / 2; this.cam.bottom = -fh / 2; this.cam.updateProjectionMatrix();
+    if (this.look === 'chunky') {
+      const bw = Math.round(fw * PPU), bh = Math.round(bw / asp);
+      this.r.setPixelRatio(1); this.r.setSize(bw, bh, false); this.rt.setSize(bw, bh); this.post.uniforms.px.value.set(1 / bw, 1 / bh);
+    } else { this.r.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); this.r.setSize(w, h, false); }
+  }
+  frame(dt) {
+    if (this.mixer) this.mixer.update(dt);
+    if (this.man) this.man.rotation.y = state.yaw;
+    this.torches.forEach((l, i) => { l.intensity = 26 * (0.86 + 0.1 * Math.sin(state.t * 9 + i * 2) + 0.06 * Math.sin(state.t * 23 + i)); });
+    if (this.look === 'chunky') { this.r.setRenderTarget(this.rt); this.r.render(this.scene, this.cam); this.r.setRenderTarget(null); this.r.render(this.qscene, this.qcam); }
+    else this.r.render(this.scene, this.cam);
+  }
+}
+
+const views = [new View(document.getElementById('cA'), 'smooth'), new View(document.getElementById('cB'), 'chunky')];
+const resize = () => views.forEach(v => v.size());
+addEventListener('resize', resize); new ResizeObserver(resize).observe(document.getElementById('stages'));
+const press = (group, btn) => { for (const b of group.querySelectorAll('button')) b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); };
+document.getElementById('clips').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; press(e.currentTarget, b); state.clip = b.dataset.clip; views.forEach(v => v.play(state.clip)); });
+document.getElementById('zooms').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; press(e.currentTarget, b); state.width = +b.dataset.w; resize(); });
+let drag = null;
+for (const id of ['sA', 'sB']) {
+  const el = document.getElementById(id);
+  el.addEventListener('pointerdown', e => { drag = { x: e.clientX, yaw: state.yaw }; state.auto = false; el.setPointerCapture(e.pointerId); });
+  el.addEventListener('pointermove', e => { if (drag) state.yaw = drag.yaw + (e.clientX - drag.x) * 0.012; });
+  el.addEventListener('pointerup', () => { drag = null; }); el.addEventListener('pointercancel', () => { drag = null; });
+}
+window.__look = { state, views };
+Promise.all(views.map(v => v.load())).then(() => {
+  document.getElementById('load').hidden = true; resize();
+  let last = performance.now();
+  const tick = now => { const dt = Math.min(0.05, (now - last) / 1000); last = now; state.t += dt; if (state.auto) state.yaw += dt * 0.45; views.forEach(v => v.frame(dt)); requestAnimationFrame(tick); };
+  requestAnimationFrame(tick); window.__look.ready = true;
+}).catch(err => { document.getElementById('load').textContent = 'Could not load the model: ' + err.message; });
+</script>
