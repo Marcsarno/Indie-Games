@@ -25,6 +25,41 @@ const R3D_FLOOR = { dirty: false, y0: 1e9, y1: -1 };
   const _gs = getSprite, stub = { w: 1, h: 1, ax: 0, ay: 0, data: new Uint8Array(1), z: new Uint8Array(1), px: 1 };
   getSprite = function (fam, look, dir, clip, f, ent, px = SPX) { return clip === 'death' && px === 1 && f === 5 ? stub : _gs(fam, look, dir, clip, f, ent, px); };   // (the corpse stamp)
   warmStep = function () {}; }   // (no character sprites are needed ahead of time)
+// ---- world mode (window.R3D_MODE = 'world', the third-person game). Three things the 2D code assumes about the overhead view:
+const R3D_TP = window.R3D_MODE === 'world';
+if (R3D_TP) {
+  // 1. the stick. The 2D game reads it as screen directions of the overhead view; here "up" means away from the camera.
+  const _update = update, KEYS = [['a', -1, 0], ['arrowleft', -1, 0], ['d', 1, 0], ['arrowright', 1, 0], ['w', 0, -1], ['arrowup', 0, -1], ['s', 0, 1], ['arrowdown', 0, 1]];
+  update = function (dt) {
+    const R = window.R3D; if (!R || !R.ready || G.mode !== 'play') return _update(dt);
+    const rx = input.mx, ry = input.my, held = []; let sx = rx, sy = ry;
+    for (const [k, dx, dy] of KEYS) if (input.keys.has(k)) { sx += dx; sy += dy; held.push(k); input.keys.delete(k); }
+    if (input.keys.has('[')) R.CAM.drag = (R.CAM.drag || 0) - dt * 2.2; if (input.keys.has(']')) R.CAM.drag = (R.CAM.drag || 0) + dt * 2.2;
+    const l = Math.hypot(sx, sy), m = Math.min(1, l);
+    if (l > 0.01) { const yaw = R.CAM.yaw, fx = Math.cos(yaw), fz = Math.sin(yaw), ux = sx / l, uy = sy / l, dx = -uy * fx - ux * fz, dz = -uy * fz + ux * fx; input.mx = (dx - dz) / Math.SQRT2 * m; input.my = (dx + dz) / Math.SQRT2 * m; }
+    else { input.mx = 0; input.my = 0; }
+    try { _update(dt); } finally { input.mx = rx; input.my = ry; for (const k of held) input.keys.add(k); }
+  };
+  // 2. everything the HUD pins to a spot in the world (name tags, loot names, door signs) finds that spot with iso(). While
+  // the HUD is drawn, iso() answers with where the spot is on screen in THIS camera. (The build makes iso replaceable.)
+  const _drawHud = drawHud, isoFlat = iso, F3 = [];
+  drawHud = function () {
+    const R = window.R3D; if (!R || !R.ready || !R.project) return _drawHud();
+    const keep = [camX, camY, cam2x, cam2y, hx, hy]; camX = camY = cam2x = cam2y = hx = hy = 0;
+    const hp = R.project(hero.fi, hero.fj, 0) || [W / 2, H * 0.6];
+    iso = (fi, fj) => { const d = Math.hypot(fi - hero.fi, fj - hero.fj), p = d < 42 ? R.project(fi, fj, 0) : null;
+      if (!p) { const s = R.screenDir(fi, fj); return [hp[0] + s[0] * 900, hp[1] + s[1] * 900]; }
+      const top = R.project(fi, fj, 1.55); return [p[0], top ? top[1] + 30 : p[1]]; };   // (tags are drawn a little above this point: lift it to head height)
+    try { _drawHud();
+      for (const f of F3) { const p = R.project(f.fi, f.fj, f.y); if (!p) continue; if (f.t < 0.3 && BAYER[(Math.round(p[0]) & 3) + ((Math.round(p[1]) & 3) << 2)] > f.t / 0.3) continue; textC(f.text, Math.round(p[0]), Math.round(p[1]), f.col, f.size || 1); }
+    } finally { iso = isoFlat; [camX, camY, cam2x, cam2y, hx, hy] = keep; }
+  };
+  // damage numbers: kept as spots in the world that drift up, drawn by the HUD pass above
+  floater = function (text, fi, fj, z, col, size = 1) { F3.push({ text, fi, fj, y: 0.9 + z / 19.6, t: size > 1 ? 1.1 : 0.9, col, size }); };
+  { const _u2 = update; update = function (dt) { for (const f of F3) { f.t -= dt; f.y += dt * 0.9; } for (let k = F3.length - 1; k >= 0; k--) if (F3[k].t <= 0) F3.splice(k, 1); return _u2(dt); }; }
+  // 3. the quest arrow is drawn in the world (an arrow on the ground at the hero's feet), not as a ring on the screen
+  drawStoryMark = function () {};
+}
 const R3D_SAFE = (name, fn) => { try { fn(); } catch (e) { if (!R3D_SAFE.seen[name]) { R3D_SAFE.seen[name] = 1; console.error('3d: ' + name, e); } } };
 R3D_SAFE.seen = {};
 render = function () {
@@ -53,10 +88,12 @@ render = function () {
   }
   // the skill effects the game still paints itself (lightning, frost, slam waves, chains, rings, the portal, exit marks):
   // painted into the frame buffer as before, then handed to the 3D layer, which draws them soft and glowing in the scene
-  R3D_SAFE('exitPads', drawExitPads);
-  if (G.tp) R3D_SAFE('portal', drawPortal);
-  R3D_SAFE('eliteFx', drawEliteFx);
-  R3D_SAFE('impactFlashes', drawImpactFlashes);
+  if (!R3D_TP) {   // (these are painted for the overhead view; world mode draws its own marks in the scene)
+    R3D_SAFE('exitPads', drawExitPads);
+    if (G.tp) R3D_SAFE('portal', drawPortal);
+    R3D_SAFE('eliteFx', drawEliteFx);
+    R3D_SAFE('impactFlashes', drawImpactFlashes);
+  }
   if (R && R.ready) { R.frame(false); ov32.fill(0); }
   else { ov32.fill(0xff06070a); }
   drawHudLayer();

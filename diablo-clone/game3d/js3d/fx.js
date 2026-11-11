@@ -13,7 +13,7 @@ const glowTex = (() => { const c = document.createElement('canvas'); c.width = c
   g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.25, 'rgba(255,255,255,0.75)'); g.addColorStop(0.6, 'rgba(255,255,255,0.18)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
 
-export function makeFx(renderer, scene, cam) {
+export function makeFx(renderer, scene, cam, persp = false) {
   // ---- glow: bright things bleed light (flames, magic, sparks, lit windows)
   const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 2 }));
   const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.26, 0.45, 0.92);
@@ -38,7 +38,7 @@ export function makeFx(renderer, scene, cam) {
   const PMAX = 600, mkPoints = additive => {
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(PMAX * 3), 3)); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(PMAX * 3), 3)); g.setAttribute('size', new THREE.BufferAttribute(new Float32Array(PMAX), 1));
     const m = new THREE.ShaderMaterial({ uniforms: { px: { value: 40 }, map: { value: glowTex } }, transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
-      vertexShader: 'attribute float size; attribute vec3 color; varying vec3 vC; uniform float px; void main(){ vC = color; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); gl_PointSize = size * px; }',
+      vertexShader: 'attribute float size; attribute vec3 color; varying vec3 vC; uniform float px; void main(){ vC = color; vec4 mv = modelViewMatrix * vec4(position, 1.); gl_Position = projectionMatrix * mv; gl_PointSize = size * px' + (persp ? ' / max(0.2, -mv.z)' : '') + '; }',
       fragmentShader: additive ? 'varying vec3 vC; uniform sampler2D map; void main(){ float a = texture2D(map, gl_PointCoord).a; gl_FragColor = vec4(vC * a * 1.3, a); }'
         : 'varying vec3 vC; void main(){ vec2 d = gl_PointCoord - .5; float r = dot(d, d); if (r > .25) discard; gl_FragColor = vec4(vC * (1. - r * 1.6), 1.); }' });
     const p = new THREE.Points(g, m); p.frustumCulled = false; p.renderOrder = 4; scene.add(p); return p; };
@@ -51,7 +51,7 @@ export function makeFx(renderer, scene, cam) {
       col.setHex(hexOf(kind === 1 && pcol[k] === 22 ? RED[3] : pcol[k]));
       const A = glow ? gp : sp, n = glow ? ng++ : ns++; if (n >= PMAX) continue;
       A.position.setXYZ(n, fi, y, fj); A.color.setXYZ(n, col.r, col.g, col.b);
-      A.size.setX(n, kind === 6 ? 0.2 : kind === 7 ? 0.16 : kind === 8 || kind === 9 ? 0.1 * Math.min(1, plife[k] * 2) : glow ? 0.26 : 0.11);
+      A.size.setX(n, (kind === 6 ? 0.2 : kind === 7 ? 0.16 : kind === 8 || kind === 9 ? 0.1 * Math.min(1, plife[k] * 2) : glow ? 0.26 : 0.11) * (persp ? 0.42 : 1));
     }
     for (const [P, n] of [[glowPts, ng], [solidPts, ns]]) { P.geometry.setDrawRange(0, Math.min(n, PMAX)); for (const k of ['position', 'color', 'size']) P.geometry.attributes[k].needsUpdate = true; P.material.uniforms.px.value = pxPerUnit; }
   }

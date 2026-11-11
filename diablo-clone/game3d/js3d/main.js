@@ -15,16 +15,19 @@ const renderer = new THREE.WebGLRenderer({ canvas: glc, antialias: true, powerPr
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.95;
 const scene = new THREE.Scene(); scene.background = new THREE.Color(0x050406);
-const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
+// Two ways to look at the same world: the overhead view of the 2D game (an orthographic camera matching its projection), or
+// 'world' mode (window.R3D_MODE = 'world'): a third-person camera behind the hero, down in the world.
+const TP = window.R3D_MODE === 'world';
+const cam = TP ? new THREE.PerspectiveCamera(50, 1, 0.15, 120) : new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
 const CAMDIR = new THREE.Vector3(Math.cos(Math.PI / 6) * Math.SQRT1_2, Math.sin(Math.PI / 6), Math.cos(Math.PI / 6) * Math.SQRT1_2);
 { const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.25; }
 const hemi = new THREE.HemisphereLight(0x8fa0d0, 0x2a1c14, 0.55); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff0dc, 1.2); sun.castShadow = true; scene.add(sun, sun.target);
-{ const s = sun.shadow; const SM = ('ontouchstart' in window || navigator.maxTouchPoints > 0) ? 1024 : 2048; s.mapSize.set(SM, SM); s.camera.left = s.camera.bottom = -11; s.camera.right = s.camera.top = 11; s.camera.near = 1; s.camera.far = 60; s.bias = -0.0015; s.normalBias = 0.03; }
+{ const s = sun.shadow; const SM = ('ontouchstart' in window || navigator.maxTouchPoints > 0) ? 1024 : 2048; s.mapSize.set(SM, SM); s.camera.left = s.camera.bottom = TP ? -18 : -11; s.camera.right = s.camera.top = TP ? 18 : 11; s.camera.near = 1; s.camera.far = 60; s.bias = -0.0015; s.normalBias = 0.03; }
 const heroLight = new THREE.PointLight(0xffd9a8, 6, 9, 2); scene.add(heroLight);
 const torchLights = []; for (let i = 0; i < 6; i++) { const l = new THREE.PointLight(0xff9440, 0, 9, 2); scene.add(l); torchLights.push(l); }
 
-const fx = makeFx(renderer, scene, cam);
+const fx = makeFx(renderer, scene, cam, TP);
 
 // ---------------------------------------------------------------- models
 // Every model is built by headless Blender from the 2D game's rigs (tools/dump.cjs -> blender/scripts/convert.py).
@@ -83,6 +86,13 @@ function buildLevel() {
   hemi.intensity = day ? 0.8 : LV.outdoor ? 0.42 : 0.34; hemi.color.setHex(day ? 0xbfd4ff : 0x6f84c8); hemi.groundColor.setHex(day ? 0x54603a : 0x1c1410);
   sun.intensity = day ? 1.75 : LV.outdoor ? 0.6 : 0.5; sun.color.setHex(day ? 0xffe9c4 : 0xa8c0ff);
   scene.background.setHex(LV.outdoor ? 0x1a2a18 : 0x050406);
+  if (TP) {   // world mode: a sky and distance haze. The forest is a bright, storybook afternoon; night is deep blue; dungeons fall off into the dark.
+    const sky = day ? 0xa9dcf2 : LV.outdoor ? 0x16203c : 0x06050a; scene.background.setHex(sky);
+    scene.fog = new THREE.Fog(day ? 0xbfe6ee : sky, day ? 16 : LV.outdoor ? 10 : 7, day ? 58 : LV.outdoor ? 40 : 30);
+    if (day) { hemi.intensity = 1.05; hemi.color.setHex(0xcfeaff); hemi.groundColor.setHex(0x7a9a4a); sun.intensity = 2.0; sun.color.setHex(0xfff0c8); }
+    const far = new THREE.Mesh(new THREE.PlaneGeometry(600, 600).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: LV.outdoor ? (day ? 0x4f7a34 : 0x1c2c1c) : 0x070608, roughness: 1 })); far.position.set(MW / 2, -0.03, MH / 2); far.receiveShadow = true; levelGroup.add(far);
+    CAM.has = false;
+  }
   R3D_FLOOR.dirty = false; R3D_FLOOR.y0 = 1e9; R3D_FLOOR.y1 = -1;
   levelToken++; buildProps(levelGroup, levelToken); buildRigProps(levelGroup, levelToken); buildGrass(levelGroup, levelToken);
   builtLevel = R3D_LEVEL;
@@ -147,7 +157,7 @@ function buildGrass(group, token) {
 // Their look comes from the game's own wall painter (wallTex), sampled once per block into one texture for the level.
 function buildWalls(walls) {
   if (!walls.length) return null;
-  const hpx = (i, j) => tileAt(i, j) === WALL ? (LV.tall[j * MW + i] ? WALL_TALL : WALL_LOW) : 0;
+  const hpx = (i, j) => tileAt(i, j) === WALL ? (TP || LV.tall[j * MW + i] ? WALL_TALL : WALL_LOW) : 0;   // (world mode: every wall stands full height; the overhead view lowers the ones that would hide the hero)
   const AW = 2048, cells = walls.map(([i, j]) => ({ i, j, h: hpx(i, j) })).sort((a, b) => b.h - a.h);
   let x = 0, y = 0, rowh = 0; for (const c of cells) { const ch = 16 + 2 * c.h; if (x + 16 > AW) { x = 0; y += rowh; rowh = 0; } c.x = x; c.y = y; x += 16; rowh = Math.max(rowh, ch); }
   let AH = 64; while (AH < y + rowh) AH *= 2;
@@ -155,13 +165,17 @@ function buildWalls(walls) {
   const put = (X, Y, v) => { v &= 127; if (!v) v = 2; const c = PAL32[v], o = (Y * AW + X) * 4; px[o] = c & 255; px[o + 1] = (c >> 8) & 255; px[o + 2] = (c >> 16) & 255; px[o + 3] = 255; };
   const quad = (pts, n, u0, v0, uw, vh) => { const b = P.length / 3; for (const [X, Y, Z, a, bb] of pts) { P.push(X, Y, Z); N.push(n[0], n[1], n[2]); UV.push((u0 + 0.5 + a * (uw - 1)) / AW, (v0 + 0.5 + bb * (vh - 1)) / AH); } IDX.push(b, b + 1, b + 2, b, b + 2, b + 3); };
   for (const c of cells) {
-    const { i, j, h } = c, tex = wallTex(i, j, h === WALL_TALL), H = h / UPX, hL = hpx(i, j + 1), hR = hpx(i + 1, j);
+    const { i, j, h } = c, tex = wallTex(i, j, h === WALL_TALL && !!LV.tall[j * MW + i]), H = h / UPX, hL = hpx(i, j + 1), hR = hpx(i + 1, j);
     for (let b = 0; b < 16; b++) for (let a = 0; a < 16; a++) put(c.x + a, c.y + b, tex('top', a + 0.5, b + 0.5));
     quad([[i, H, j, 0, 0], [i, H, j + 1, 0, 1], [i + 1, H, j + 1, 1, 1], [i + 1, H, j, 1, 0]], [0, 1, 0], c.x, c.y, 16, 16);
-    if (hL < h) { for (let z = 0; z < h; z++) for (let a = 0; a < 16; a++) put(c.x + a, c.y + 16 + z, tex('L', a + 0.5, z + 0.5));
-      quad([[i, 0, j + 1, 0, 0], [i + 1, 0, j + 1, 1, 0], [i + 1, H, j + 1, 1, 1], [i, H, j + 1, 0, 1]], [0, 0, 1], c.x, c.y + 16, 16, h); }
-    if (hR < h) { for (let z = 0; z < h; z++) for (let a = 0; a < 16; a++) put(c.x + a, c.y + 16 + h + z, tex('R', a + 0.5, z + 0.5));
-      quad([[i + 1, 0, j + 1, 1, 0], [i + 1, 0, j, 0, 0], [i + 1, H, j, 0, 1], [i + 1, H, j + 1, 1, 1]], [1, 0, 0], c.x, c.y + 16 + h, 16, h); }
+    if (hL < h || TP) for (let z = 0; z < h; z++) for (let a = 0; a < 16; a++) put(c.x + a, c.y + 16 + z, tex('L', a + 0.5, z + 0.5));
+    if (hL < h) { quad([[i, 0, j + 1, 0, 0], [i + 1, 0, j + 1, 1, 0], [i + 1, H, j + 1, 1, 1], [i, H, j + 1, 0, 1]], [0, 0, 1], c.x, c.y + 16, 16, h); }
+    if (hR < h || TP) for (let z = 0; z < h; z++) for (let a = 0; a < 16; a++) put(c.x + a, c.y + 16 + h + z, tex('R', a + 0.5, z + 0.5));
+    if (hR < h) { quad([[i + 1, 0, j + 1, 1, 0], [i + 1, 0, j, 0, 0], [i + 1, H, j, 0, 1], [i + 1, H, j + 1, 1, 1]], [1, 0, 0], c.x, c.y + 16 + h, 16, h); }
+    if (TP) {   // the two faces the overhead view never shows: the same brickwork, mirrored
+      if (hpx(i, j - 1) < h) quad([[i + 1, 0, j, 0, 0], [i, 0, j, 1, 0], [i, H, j, 1, 1], [i + 1, H, j, 0, 1]], [0, 0, -1], c.x, c.y + 16, 16, h);
+      if (hpx(i - 1, j) < h) quad([[i, 0, j, 1, 0], [i, 0, j + 1, 0, 0], [i, H, j + 1, 0, 1], [i, H, j, 1, 1]], [-1, 0, 0], c.x, c.y + 16 + h, 16, h);
+    }
   }
   const tex = new THREE.DataTexture(px, AW, AH, THREE.RGBAFormat); tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearFilter; tex.needsUpdate = true;
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2)); geo.setIndex(IDX);
@@ -316,8 +330,12 @@ function syncActor(c, dt, visible) {
   a.seen = frameNo; a.root.visible = visible; if (!visible) return;
   const jit = c.stop > 0 && c !== hero && !(c.dying >= 0) ? (Math.floor(G.t * 33) % 2 ? 0.03 : -0.03) : 0;
   a.root.position.set(c.fi + jit, (c.leapZ || 0) / UPX, c.fj - jit);
-  const yaw = -c.dir * Math.PI / 4;
-  if (a.yaw === null) a.yaw = yaw; else { let d = yaw - a.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); a.yaw += d * Math.min(1, dt * 16); }
+  // which way it faces: the game's eight directions, or (world mode, while it is plainly moving) the way it really travels
+  if (a.lastP && dt > 0) { const vx = (c.fi - a.lastP[0]) / dt, vz = (c.fj - a.lastP[1]) / dt; a.vel = a.vel || [0, 0]; a.vel[0] += (vx - a.vel[0]) * Math.min(1, dt * 10); a.vel[1] += (vz - a.vel[1]) * Math.min(1, dt * 10); }
+  a.lastP = [c.fi, c.fj];
+  let yaw = -c.dir * Math.PI / 4;
+  if (TP && a.vel && (c.clip === 'walk' || c.clip === 'go') && Math.hypot(a.vel[0], a.vel[1]) > 0.8) yaw = -Math.atan2(a.vel[1], a.vel[0]);
+  if (a.yaw === null) a.yaw = yaw; else { let d = yaw - a.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); a.yaw += d * Math.min(1, dt * (TP ? 11 : 16)); }
   a.root.rotation.y = a.yaw; a.root.scale.setScalar((c.look && c.look.scale) || 1);
   // how it is hurting: frozen = ice blue, chilled = pale blue, burning = flickering orange, the sting after a hit = red; ash and shatter deaths sink away
   const ash = c.deathKind === 'ash' && c.dying >= 0, shat = c.deathKind === 'shatter' && c.dying >= 0;
@@ -345,6 +363,48 @@ function syncActor(c, dt, visible) {
   a.hand = null;
 }
 
+// ---------------------------------------------------------------- the third-person camera (world mode)
+// It rides behind the hero and swings round behind the way he runs (not when he runs straight at it); walls push it in.
+const CAM = { yaw: Math.PI * 0.25, dist: 6.4, pitch: 0.4, cur: 6.4, look: new THREE.Vector3(), has: false };
+function chaseCam(dt) {
+  const a = actors.get(hero), hx = hero.fi, hz = hero.fj;
+  if (a && a.vel && Math.hypot(a.vel[0], a.vel[1]) > 0.6 && !hero.dead) {
+    const head = Math.atan2(a.vel[1], a.vel[0]); let d = head - CAM.yaw; d = Math.atan2(Math.sin(d), Math.cos(d));
+    CAM.yaw += Math.sin(d) * Math.min(1, dt * 1.9) * (Math.abs(d) > 2.6 ? 0 : 1);   // sideways running turns it; running at it does not
+  }
+  if (CAM.drag) { CAM.yaw += CAM.drag; CAM.drag = 0; }
+  const fx_ = Math.cos(CAM.yaw), fz_ = Math.sin(CAM.yaw), cp = Math.cos(CAM.pitch), sp = Math.sin(CAM.pitch);
+  // how far back it can sit before a wall (or the edge of the floor) gets between it and the hero
+  let room = CAM.dist; for (let d = 0.4; d <= CAM.dist; d += 0.2) { const x = hx - fx_ * d * cp, z = hz - fz_ * d * cp; if (tileAt(Math.floor(x), Math.floor(z)) !== FLOOR) { room = Math.max(1.1, d - 0.45); break; } }
+  CAM.cur += (room - CAM.cur) * Math.min(1, dt * (room < CAM.cur ? 14 : 3));
+  const ty = 1.25 + (hero.leapZ || 0) / UPX;
+  if (!CAM.has) { CAM.look.set(hx, ty, hz); CAM.has = true; } else CAM.look.lerp(V3.set(hx, ty, hz), Math.min(1, dt * 12));
+  cam.position.set(CAM.look.x - fx_ * CAM.cur * cp, CAM.look.y + CAM.cur * sp + 0.25, CAM.look.z - fz_ * CAM.cur * cp);
+  cam.lookAt(CAM.look.x + fx_ * 1.6, CAM.look.y + 0.15, CAM.look.z + fz_ * 1.6);   // (a point ahead of him: he stands below the middle of a tall phone screen, clear of the buttons)
+  const sh = G.trauma * G.trauma * 0.12; if (sh > 0) { cam.position.x += Math.sin(G.t * 61) * sh; cam.position.y += Math.sin(G.t * 73 + 2) * sh; }
+  cam.updateMatrixWorld();
+}
+// where a spot in the world lands on the 2D HUD (its 270-wide pixel grid), for name tags and damage numbers; null if behind the camera
+function project(fi, fj, y = 0) {
+  V3.set(fi, y, fj).project(cam); if (V3.z > 1 || V3.z < -1) return null;
+  return [(V3.x * 0.5 + 0.5) * W, (-V3.y * 0.5 + 0.5) * H];
+}
+// which way a far-off spot lies on the screen (right, down), for arrows that point at things out of sight
+function screenDir(fi, fj) { const dx = fi - hero.fi, dz = fj - hero.fj, fx_ = Math.cos(CAM.yaw), fz_ = Math.sin(CAM.yaw), l = Math.hypot(dx, dz) || 1; return [(-dx * fz_ + dz * fx_) / l, -(dx * fx_ + dz * fz_) / l]; }
+// marks on the ground in world mode: a glowing ring at every way out, and an arrow at the hero's feet pointing to the quest's next step
+const ringGeo = new THREE.RingGeometry(0.82, 1, 40).rotateX(-Math.PI / 2), rings = [], RINGCOL = [0xffd86a, 0x6aa8ff, 0xff5a4a];
+const arrowMesh = (() => { const sh = new THREE.Shape(); sh.moveTo(0, 0.5); sh.lineTo(0.34, -0.1); sh.lineTo(0.12, -0.1); sh.lineTo(0.12, -0.5); sh.lineTo(-0.12, -0.5); sh.lineTo(-0.12, -0.1); sh.lineTo(-0.34, -0.1); sh.closePath();
+  const m = new THREE.Mesh(new THREE.ShapeGeometry(sh).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, depthWrite: false })); m.renderOrder = 3; m.visible = false; scene.add(m); return m; })();
+function syncWorldMarks() {
+  const Z = exitZones();
+  Z.forEach((z, n) => { let r = rings[n]; if (!r) { r = rings[n] = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide })); r.renderOrder = 2; scene.add(r); }
+    r.visible = true; r.position.set(z.fi, 0.05, z.fj); r.scale.setScalar(z.r * (0.94 + 0.06 * Math.sin(G.t * 3 + n))); r.material.color.setHex(RINGCOL[z.col] || RINGCOL[0]); r.material.opacity = 0.55 + 0.25 * Math.sin(G.t * 4 + n); });
+  for (let k = Z.length; k < rings.length; k++) rings[k].visible = false;
+  let t = null; try { t = G.mode === 'play' && !hero.dead ? storyTarget() : null; } catch (e) { t = null; }
+  if (t && Math.hypot(t[0] - hero.fi, t[1] - hero.fj) > 2.2) { const a = Math.atan2(t[1] - hero.fj, t[0] - hero.fi); arrowMesh.visible = true; arrowMesh.position.set(hero.fi + Math.cos(a) * 1.25, 0.06, hero.fj + Math.sin(a) * 1.25); arrowMesh.rotation.y = -a - Math.PI / 2; arrowMesh.material.opacity = 0.6 + 0.25 * Math.sin(G.t * 5); }
+  else arrowMesh.visible = false;
+}
+
 // ---------------------------------------------------------------- frame
 let frameNo = 0, lastT = performance.now(), lastW = 0, lastH = 0;
 const V3 = new THREE.Vector3();
@@ -360,7 +420,7 @@ function adapt(dt) {
 function fit() {
   const w = parseFloat(cvs.style.width) || cvs.clientWidth, h = parseFloat(cvs.style.height) || cvs.clientHeight;
   if (w === lastW && h === lastH) return; lastW = w; lastH = h;
-  renderer.setPixelRatio(quality); renderer.setSize(w, h, false); fx.resize(w, h, quality); glc.style.width = w + 'px'; glc.style.height = h + 'px';
+  renderer.setPixelRatio(quality); renderer.setSize(w, h, false); fx.resize(w, h, quality); if (TP) { cam.aspect = w / h; cam.fov = h > w ? 66 : 48; cam.updateProjectionMatrix(); } glc.style.width = w + 'px'; glc.style.height = h + 'px';
 }
 function frame(menu) {
   const now = performance.now(), dt = Math.min(0.05, (now - lastT) / 1000); lastT = now; frameNo++;
@@ -369,8 +429,8 @@ function frame(menu) {
   // the camera: the ground point under the middle of the frame
   const x1 = (cam2x + OW / 2) / SPX, y1 = (cam2y + OH / 2) / SPX, A = (x1 - WX0) / 16, B = (y1 - WY0) / 8, cf = (A + B) / 2, cj = (B - A) / 2;
   const hw = OW / (2 * TPX * SPX), hh = OH / (2 * TPX * SPX);
-  cam.left = -hw; cam.right = hw; cam.top = hh; cam.bottom = -hh; cam.updateProjectionMatrix();
-  cam.position.set(cf, 0, cj).addScaledVector(CAMDIR, 80); cam.lookAt(cf, 0, cj);
+  if (TP) chaseCam(dt);
+  else { cam.left = -hw; cam.right = hw; cam.top = hh; cam.bottom = -hh; cam.updateProjectionMatrix(); cam.position.set(cf, 0, cj).addScaledVector(CAMDIR, 80); cam.lookAt(cf, 0, cj); }
   sun.target.position.set(hero.fi, 0, hero.fj); sun.position.set(hero.fi - 7, 14, hero.fj + 5);
   heroLight.position.set(hero.fi + 0.4, 2.6, hero.fj + 0.4); heroLight.intensity = LV.outdoor && !LV.night ? 0 : 5.5;
   // torches: the nearest few of the level's lights
@@ -378,12 +438,12 @@ function frame(menu) {
   torchLights.forEach((tl, k) => { const n = near[k]; if (!n || n.d > 16) { tl.intensity = 0; return; } tl.position.set(n.fi, Math.max(0.8, n.l.z / UPX), n.fj); tl.distance = Math.max(5, n.l.r / TPX * 1.4); tl.intensity = 10 * (n.l.i || 1) * (0.88 + 0.12 * Math.sin(G.t * 9 + (n.l.seed || 0))); });
   const visAt = (fi, fj) => LV.vis[Math.max(0, Math.min(MH - 1, Math.floor(fj))) * MW + Math.max(0, Math.min(MW - 1, Math.floor(fi)))];
   syncActor(hero, dt, true);
-  for (const e of enemies) syncActor(e, dt, visAt(e.fi, e.fj) > 0.25 && Math.abs(e.fi - cf) + Math.abs(e.fj - cj) < 26);
-  for (const n of npcs) syncActor(n, dt, Math.abs(n.fi - cf) + Math.abs(n.fj - cj) < 26);
+  for (const e of enemies) syncActor(e, dt, (TP || visAt(e.fi, e.fj) > 0.25) && Math.abs(e.fi - hero.fi) + Math.abs(e.fj - hero.fj) < (TP ? 44 : 26));
+  for (const n of npcs) syncActor(n, dt, Math.abs(n.fi - hero.fi) + Math.abs(n.fj - hero.fj) < (TP ? 44 : 26));
   for (const [c, a] of actors) if (a.seen !== frameNo) { scene.remove(a.root); actors.delete(c); }
-  syncDyn(); syncGroundFx(); syncOverlayFx(); syncFlames(); syncFloor(dt); adapt(dt);
+  syncDyn(); syncGroundFx(); if (TP) syncWorldMarks(); else syncOverlayFx(); syncFlames(); syncFloor(dt); adapt(dt);
   WIND.value = G.t;
-  fx.update(dt, lastW * quality / (2 * hw), heroBlade(), /^(attack|spin|bash)/.test(hero.clip || ''));
+  fx.update(dt, TP ? lastH * quality / (2 * Math.tan(cam.fov * Math.PI / 360)) : lastW * quality / (2 * hw), heroBlade(), /^(attack|spin|bash)/.test(hero.clip || ''));
   fx.render(quality);
 }
 // where the hero's weapon is right now (its grip end and its far end, in the world), for the swing trail
@@ -409,4 +469,4 @@ function heroBlade() {
   return { base: info.base.clone().applyMatrix4(bm), tip: info.tip.clone().applyMatrix4(bm) };
 }
 try { MANIFEST = Object.assign(MANIFEST, await (await fetch('models/manifest.json')).json()); } catch (e) { console.error('3d: no model list', e); }
-window.R3D = { ready: true, get quality() { return quality; }, frame, scene, cam, renderer, actors, THREE, MODELS, missingProps, missingChars, get unnamedProps() { return unnamedProps; }, get manifest() { return MANIFEST; } };
+window.R3D = { ready: true, TP, CAM, project, screenDir, get quality() { return quality; }, frame, scene, cam, renderer, actors, THREE, MODELS, missingProps, missingChars, get unnamedProps() { return unnamedProps; }, get manifest() { return MANIFEST; } };
