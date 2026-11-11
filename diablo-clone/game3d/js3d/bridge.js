@@ -59,6 +59,37 @@ if (R3D_TP) {
   { const _u2 = update; update = function (dt) { for (const f of F3) { f.t -= dt; f.y += dt * 0.9; } for (let k = F3.length - 1; k >= 0; k--) if (F3[k].t <= 0) F3.splice(k, 1); return _u2(dt); }; }
   // 3. the quest arrow is drawn in the world (an arrow on the ground at the hero's feet), not as a ring on the screen
   drawStoryMark = function () {};
+  // 5. new buildings this version adds to the open country: a chapel and two cottages by the camp, a second farmhouse by the
+  // farm. Each looks for clear ground near where it belongs (no path, no person, no door, nothing of the level's own but
+  // trees), turns its door toward the place it serves, and makes its footprint solid so nothing walks through it.
+  { const _sl = startLevel, FLORA = /^(pine|oak|autumn|bush|fern|rock|shroom)\d/;
+    const SHAPE = { chapel: [-2.4, 2.4, -3.3, 4.6], cottage: [-1.6, 1.6, -1.6, 1.6], cottage2: [-1.6, 1.6, -1.6, 1.6] };   // footprint around the model's origin (x0, x1, z0, z1); the door looks to +z
+    const rectOf = (name, fi, fj, th) => { const [x0, x1, z0, z1] = SHAPE[name], c = Math.round(Math.cos(th)), sn = Math.round(Math.sin(th)), xs = [], zs = [];
+      for (const [x, z] of [[x0, z0], [x1, z0], [x1, z1], [x0, z1]]) { xs.push(fi + x * c + z * sn); zs.push(fj - x * sn + z * c); } return [Math.min(...xs), Math.max(...xs), Math.min(...zs), Math.max(...zs)]; };
+    const green = (fi, fj) => { const [x, y] = isoFlat(fi, fj), X = Math.round(x), Y = Math.round(y); if (X < 0 || Y < 0 || X >= WW || Y >= WH) return false; const v = floorBuf[Y * WW + X] & 127; if (!v) return false; const c = PAL32[v], r = c & 255, g = (c >> 8) & 255, b = (c >> 16) & 255; return g > r * 1.06 && g > b * 1.25; };
+    function site(name, wantI, wantJ, faceI, faceJ, taken) {
+      const busy = [];   // things a building must keep clear of: [fi, fj, how far]
+      busy.push([hero.fi, hero.fj, 5]); for (const n of npcs) busy.push([n.fi, n.fj, 3]); for (const e of enemies) busy.push([e.fi, e.fj, 2.5]);
+      try { for (const z of exitZones()) busy.push([z.fi, z.fj, z.r + 4]); } catch (e) { /* no exits yet */ }
+      for (const pr of [...props, ...dynProps]) { const nm = pr.sp && pr.sp.__name; if (nm && FLORA.test(nm)) continue; const [fi, fj] = pr.fi !== undefined ? [pr.fi, pr.fj] : groundToTile(pr.wx, pr.wy); if (isFinite(fi)) busy.push([fi, fj, 2.2]); }
+      for (const d of LV.decor || []) if (d.fi !== undefined && d.kind === 'lantern') busy.push([d.fi, d.fj, 1.5]);
+      const cand = []; for (let dj = -9; dj <= 9; dj++) for (let di = -9; di <= 9; di++) cand.push([wantI + di, wantJ + dj, Math.hypot(di, dj)]); cand.sort((a, b) => a[2] - b[2]);
+      for (const [ci, cj] of cand) {
+        const fi = Math.floor(ci) + 0.5, fj = Math.floor(cj) + 0.5, th = Math.round(Math.atan2(faceI - fi, faceJ - fj) / (Math.PI / 2)) * (Math.PI / 2), R = rectOf(name, fi, fj, th);
+        const i0 = Math.floor(R[0]), i1 = Math.floor(R[1]), j0 = Math.floor(R[2]), j1 = Math.floor(R[3]); let ok = i0 >= 4 && j0 >= 4 && i1 < MW - 4 && j1 < MH - 4;
+        for (let j = j0 - 1; ok && j <= j1 + 1; j++) for (let i = i0 - 1; i <= i1 + 1; i++) { const k = j * MW + i; if (LV.map[k] !== FLOOR || (LV.reserve && LV.reserve[k]) || !green(i + 0.5, j + 0.5)) { ok = false; break; } }
+        if (ok) for (const [bi, bj, r] of busy) if (bi > R[0] - r && bi < R[1] + r && bj > R[2] - r && bj < R[3] + r) { ok = false; break; }
+        if (ok) for (const t of taken) if (R[0] < t.rect[1] + 2 && R[1] > t.rect[0] - 2 && R[2] < t.rect[3] + 2 && R[3] > t.rect[2] - 2) { ok = false; break; }
+        if (!ok) continue;
+        for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) LV.solid[j * MW + i] = 1;
+        taken.push({ name, fi, fj, yaw: -th, rect: [i0, i1 + 1, j0, j1 + 1] }); return;
+      }
+    }
+    startLevel = function () { const r = _sl.apply(this, arguments); const out = window.R3D_EXTRA = [];
+      R3D_SAFE('extra buildings', () => { if (!LV.outdoor) return;
+        if (LV.plaza) { const c = LV.plaza; site('chapel', c.x - 13, c.y + 1, c.x, c.y, out); site('cottage2', c.x + 1, c.y - 14, c.x, c.y, out); site('cottage', c.x - 9, c.y - 12, c.x, c.y, out); }
+        const cab = props.find(pr => pr.sp && pr.sp.__name === 'cabin'); if (cab) { const [fi, fj] = groundToTile(cab.wx, cab.wy); site('cottage2', fi + 7, fj + 1, fi, fj + 6, out); }
+      }); return r; }; }
   // 4. touch. The stick is the bottom-left corner and the buttons are bottom-right, as before; a finger dragged anywhere
   // else turns the camera (left/right) and tilts it (up/down). A quick tap on a person walks over to talk to them.
   { const look = { id: null, x: 0, y: 0, x0: 0, y0: 0, t: 0 };

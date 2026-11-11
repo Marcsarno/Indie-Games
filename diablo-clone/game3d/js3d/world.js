@@ -37,11 +37,14 @@ export function makeWorld({ whenModel, hash2, WIND }) {
   // ---- the forest. by: prop name -> [[fi, fj, yaw], ...] from the level. Names this handles are taken out of the map.
   function flora(by, group, alive) {
     grassChunks = []; structures(by, group, alive);
+    const extra = window.R3D_EXTRA || [], inside = (fi, fj) => extra.some(e => fi > e.rect[0] - 0.6 && fi < e.rect[1] + 0.6 && fj > e.rect[2] - 0.6 && fj < e.rect[3] + 0.6);
+    for (const e of extra) build('b_' + e.name, [[e.fi, e.fj, e.yaw, 1]], group, alive);   // (the buildings this version adds: bridge.js)
     const trees = [], out = {}; const add = (file, it) => (out[file] || (out[file] = [])).push(it);
     for (const [name, list] of [...by]) {
       const m = /^(pine|oak|autumn|bush|fern|rock)(\d)$/.exec(name); if (!m) continue; by.delete(name);
       const fam = m[1], n = +m[2];
       for (const [fi, fj] of list) {
+        if (inside(fi, fj)) continue;
         const h = hash2(Math.round(fi * 7) + 13, Math.round(fj * 7) + n), h2 = hash2(Math.round(fj * 5) + 3, Math.round(fi * 9));
         if (fam === 'pine' || fam === 'oak' || fam === 'autumn') trees.push({ fi, fj, fam, n, h, h2 });
         else if (fam === 'bush') add('f_bush' + n, [fi, fj, h * 6.28, 0.85 + h2 * 0.5, h]);
@@ -68,9 +71,9 @@ export function makeWorld({ whenModel, hash2, WIND }) {
   // ---- grass and flowers: tufts wherever the painted ground is green, each tinted by the ground under it; flowers in patches
   function grass(group, alive) {
     if (!LV.outdoor) return;
-    const tufts = [[], [], []], blooms = [[], [], []];
+    const tufts = [[], [], []], blooms = [[], [], []], extra = window.R3D_EXTRA || [];
     for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
-      if (LV.map[j * MW + i] !== FLOOR) continue;
+      if (LV.map[j * MW + i] !== FLOOR || extra.some(e => i >= e.rect[0] && i < e.rect[1] && j >= e.rect[2] && j < e.rect[3])) continue;
       const patch = hash2(Math.floor(i / 5) * 3 + 1, Math.floor(j / 5) * 7 + 2), kind = Math.floor(hash2(Math.floor(i / 5) + 40, Math.floor(j / 5) + 9) * 3);
       for (let n = 0; n < 3; n++) {
         const fi = i + hash2(i * 3 + n, j), fj = j + hash2(j * 5 + n, i + 7), [x, y] = iso(fi, fj), v = floorBuf[Math.round(y) * WW + Math.round(x)] & 127; if (!v) continue;
