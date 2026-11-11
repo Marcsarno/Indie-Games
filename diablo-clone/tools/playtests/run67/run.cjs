@@ -6,7 +6,7 @@ const { chromium } = require('playwright'); const fs = require('fs'), path = req
   await p.addInitScript(() => { window.requestAnimationFrame = () => 0; });
   await p.goto('file://' + path.join(path.resolve(game), 'index.html'));
   const t0 = Date.now();
-  const r = await p.evaluate(`window.__cls='${cls}';window.__cap=${+cap};window.__seed=${+seed};window.__dbg=${process.env.DBG ? 1 : 0};(${fs.readFileSync(__dirname + '/bot.js', 'utf8')})()`).catch(e => ({ err: String(e) }));
+  const r = await p.evaluate(`window.__cls='${cls}';window.__cap=${+cap};window.__seed=${+seed};window.__dbg=${process.env.DBG ? 1 : 0};window.__ultEager=${process.env.EAGER ? 1 : 0};(${fs.readFileSync(__dirname + '/bot.js', 'utf8')})()`).catch(e => ({ err: String(e) }));
   console.log(JSON.stringify(r)); console.log('wall', ((Date.now() - t0) / 1000).toFixed(0) + 's'); if (errs.length) console.log('ERR', errs.slice(0, 3).join('\n'));
   await b.close();
 })();

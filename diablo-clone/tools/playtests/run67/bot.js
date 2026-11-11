@@ -35,11 +35,12 @@
     if (G.mode === 'inv' || G.mode === 'skills') G.mode = 'play';
     if (hero.dead && !hero.deadMarked) { hero.deadMarked = 1; mark('DIED@' + areaName() + '#' + Math.round(t) + ' by ' + [...new Set(enemies.filter(e => alive(e) && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 5).map(e => e.id + (e.champ ? '*' : '')))].join(',')); }
     if (!hero.dead) hero.deadMarked = 0;
-    if (hero.dead) { if (hero.dead > 2.2) respawn(); G.t += dt; update(dt); continue; }
+    if (hero.dead) { if (hero.dead > 2.2) respawn(); G.t += dt; update(dt); if (hero.el && Math.floor(G.t / 30) !== window.__gT) { window.__gT = Math.floor(G.t / 30); (window.__gLog = window.__gLog || []).push([+(G.t / 60).toFixed(1), hero.lvl, ...['fire', 'frost', 'earth', 'storm'].map(k => Math.round(hero.el[k] || 0))]); } continue; }
     const st = storyStage(); if (st !== last) { mark(st + (LV.side ? '@' + LV.side : '')); last = st; }
     mark(areaName());
     if (window.__dbg && Math.floor(t / 10) !== Math.floor((t - dt) / 10)) { const a = enemies.find(e => e.id === 'alpha'); const tg0 = storyTarget(); marks.push(['DBG ' + Math.round(t) + ' at ' + hero.fi.toFixed(1) + ',' + hero.fj.toFixed(1) + ' tg ' + (tg0 ? tg0.map(v => v.toFixed(1)) : '-') + ' alpha ' + (a ? a.fi.toFixed(1) + ',' + a.fj.toFixed(1) + ' hp' + Math.round(a.hp) + ' ' + a.state : 'none') + ' alive ' + enemies.filter(alive).length, 0, 0]); }
     input.attack = false; input.mx = input.my = 0; minHp = Math.min(minHp, hero.hp / STAT.maxHp);
+    if (hero.el && Math.floor(t / 30) !== Math.floor((t - dt) / 30)) (window.__gLog = window.__gLog || []).push([+(t / 60).toFixed(1), hero.lvl, ...['fire', 'frost', 'earth', 'storm'].map(k => Math.round(hero.el[k] || 0))]);
     if (hero.hp < STAT.maxHp * 0.4 && hero.potions > 0 && !(hero.potT > G.t)) { drinkPotion(); drinks++; hero.potT = G.t + 1.5; }
     if (Math.floor(t) % 20 === 0 && Math.floor(t - dt) % 20 !== 0) { try { wearBest(); } catch (e) {} G.mode = 'play'; }
     if (storyOn() && portalHome() && !G.tp && !G.fadeTo && !LV.hub) usePortal();
@@ -50,8 +51,8 @@
     if (foe && (!window.__rush || fd < 6 || (tg && Math.hypot(tg[0] - foe.fi, tg[1] - foe.fj) < 2))) {
       hero.dir = dirFrom(foe.fi - hero.fi, foe.fj - hero.fj);
       if (fd > range) go(pathDir([foe.fi, foe.fj])); else input.attack = true;
-      if (near >= 2 || foe.def.unique || foe.champ) for (let k = 0; k < SKILLS.length; k++) { const s = SKILLS[k]; if (hero.lvl >= s.lvl && !(CD[s.id] > 0) && hero.mana >= (s.mana || 0) && Math.random() < 0.15) { useSkill(k); break; } }
-      if (hero.ult >= 100 && hero.lvl >= ULT_LVL && (foe.def.unique || near >= 3)) { const f = hero.cls === 'mage' && typeof elemFull === 'function' ? elemFull() : [], was = hero.ultOn; useUlt(); if (!was && hero.ultOn && f.length) { window.__ults = window.__ults || {}; const key = f.length === 4 ? 'all' : f.join('+'); window.__ults[key] = (window.__ults[key] || 0) + 1; } }
+      if (near >= 2 || foe.def.unique || foe.champ) for (let k = 0; k < SKILLS.length; k++) { const s = SKILLS[k]; if (hero.lvl >= s.lvl && !(CD[s.id] > 0) && hero.mana >= (s.mana || 0) && Math.random() < 0.15) { useSkill(k); window.__casts = window.__casts || {}; window.__casts[s.id] = (window.__casts[s.id] || 0) + 1; break; } }
+      if (hero.ult >= 100 && hero.lvl >= ULT_LVL && (foe.def.unique || near >= (window.__ultEager ? 1 : 3))) { const f = hero.cls === 'mage' && typeof elemFull === 'function' ? elemFull() : [], was = hero.ultOn; useUlt(); if (!was && hero.ultOn && f.length) { window.__ults = window.__ults || {}; const key = f.length === 4 ? 'all' : f.join('+'); window.__ults[key] = (window.__ults[key] || 0) + 1; (window.__ultLog = window.__ultLog || []).push([+(t / 60).toFixed(1), key, hero.lvl]); } }
     } else if (tg) {
       const d = Math.hypot(tg[0] - hero.fi, tg[1] - hero.fj);
       const n = tg.npc ? npcs.find(q => Math.abs(q.fi - tg[0]) < 0.01 && Math.abs(q.fj - tg[1]) < 0.01) : null;
@@ -64,5 +65,5 @@
     // stuck: no progress for 6 s while walking somewhere
     if (Math.hypot(hero.fi - lastPos[0], hero.fj - lastPos[1]) > 0.8) { lastPos = [hero.fi, hero.fj]; stuckT = 0; } else if ((stuckT += dt) > 6) { stuckT = 0; jig = 1.2; if (tg && Math.hypot(tg[0] - hero.fi, tg[1] - hero.fj) < 0.9) { back = 1.0; backFrom = tg; } mark('stuck@' + areaName() + '#' + Math.round(t) + ' at ' + hero.fi.toFixed(1) + ',' + hero.fj.toFixed(1) + ' tg ' + (tg ? tg.map(v => v.toFixed(1)).join(',') : '-') + ' foe ' + (foe ? foe.id + ' ' + fd.toFixed(1) + ' hp' + Math.round(foe.hp) : '-') + ' mode ' + G.mode + ' fade ' + G.fade.toFixed(2) + ' up ' + G.upArmed + ' armedDen ' + G.armed_den + ' fadeTo ' + !!G.fadeTo + ' side ' + LV.side + ' sideBack ' + !!G.sideBack + ' hp ' + Math.round(hero.hp) + ' dead ' + hero.dead); cache.key = ''; }
   }
-  return { cls, minutes: +(t / 60).toFixed(1), lvl: hero.lvl, deaths: (hero.stats || {}).deaths, kills: (hero.stats || {}).kills, potionsDrunk: drinks, ults: window.__ults || null, el: hero.el || null, gold: hero.gold, minHp: +minHp.toFixed(2), end: G.mode === 'end' || !!seen.END, stage: storyStage(), area: areaName(), marks };
+  return { cls, minutes: +(t / 60).toFixed(1), lvl: hero.lvl, deaths: (hero.stats || {}).deaths, kills: (hero.stats || {}).kills, potionsDrunk: drinks, ults: window.__ults || null, ultLog: window.__ultLog || null, gaugeLog: window.__gLog || null, casts: window.__casts || null, el: hero.el || null, gold: hero.gold, minHp: +minHp.toFixed(2), end: G.mode === 'end' || !!seen.END, stage: storyStage(), area: areaName(), marks };
 })
