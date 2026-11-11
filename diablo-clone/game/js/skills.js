@@ -15,20 +15,20 @@ const SKILLSETS = {
     { id: 'fireball', name: 'FIREBALL', lvl: 1, mana: 9, cd: 0.7 },
     { id: 'cone', name: 'CONE OF COLD', lvl: 2, mana: 12, cd: 5 },
     { id: 'meteor', name: 'METEOR', lvl: 3, mana: 22, cd: 9 },
-    { id: 'chain', name: 'CHAIN LIGHTNING', lvl: 4, mana: 14, cd: 2.5 },   // round 65: replaces Blink
+    { id: 'chain', name: 'CHAIN LIGHTNING', lvl: 4, mana: 16, cd: 3 },   // round 65: replaces Blink
   ],
   // round 33: the ranger's attack button looses single arrows (no focus); these are its four
   ranger: [   // round 66: the kit rethought (the user: boring; every skill lost damage against just shooting)
     { id: 'pierce', name: 'PIERCING SHOT', lvl: 1, mana: 7, cd: 0.9 },
     { id: 'cluster', name: 'CLUSTER ARROW', lvl: 2, mana: 12, cd: 2.5 },
-    { id: 'sentry', name: 'SENTRY', lvl: 3, mana: 14, cd: 8 },
-    { id: 'vault', name: 'VAULT', lvl: 4, mana: 8, cd: 4 },   // round 66b: replaces the Hawk (the user didn't like it)
+    { id: 'sentry', name: 'SENTRY', lvl: 3, mana: 14, cd: 9 },
+    { id: 'strafe', name: 'STRAFE', lvl: 4, mana: 14, cd: 7 },   // round 82: replaces the Vault (the user: the trap and the vault felt weak). Swap back: { id: 'vault', name: 'VAULT', lvl: 4, mana: 8, cd: 4 }
   ],
 };
 let SKILLS = SKILLSETS.warrior;
 function setSkillsFor(cls) { SKILLS = SKILLSETS[cls] || SKILLSETS.warrior; }
-const CD = { charge: 0, bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, leap: 0, fireball: 0, cone: 0, meteor: 0, blink: 0, chain: 0, multi: 0, trap: 0, roll: 0, mark: 0, pierce: 0, cluster: 0, sentry: 0, hawk: 0, vault: 0 };
-function resetSkills() { for (const k in CD) CD[k] = 0; hero.whirl = 0; hero.dash = 0; hero.buff = 0; hero.charge = null; hero.chargeAgain = 0; hero.chargeSecond = false; }
+const CD = { charge: 0, bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, leap: 0, fireball: 0, cone: 0, meteor: 0, blink: 0, chain: 0, multi: 0, trap: 0, roll: 0, mark: 0, pierce: 0, cluster: 0, sentry: 0, hawk: 0, vault: 0, strafe: 0 };
+function resetSkills() { for (const k in CD) CD[k] = 0; hero.whirl = 0; hero.dash = 0; hero.buff = 0; hero.charge = null; hero.chargeAgain = 0; hero.chargeSecond = false; hero.strafe = null; }
 const heroBusy = () => hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0 || !!hero.leap || !!hero.ultOn || !!hero.roll;
 // one hit's damage, with the war cry bonus
 const heroDmg = (k = 1) => Math.max(1, Math.round((roll(STAT.dmg) + (STAT.fireDmg || 0)) * k * (hero.buff > 0 ? 1.4 : 1) * (HEAVY ? 1.25 : 1)));   // round 62: heavier blows   // fire damage from gear rides on every hit (round 42a)
@@ -65,6 +65,7 @@ function useSkill(i) {
   if (s.id === 'sentry') placeSentry();
   if (s.id === 'hawk') callHawk();
   if (s.id === 'vault') { if (!vault()) { hero.mana += skillCost(s); CD.vault = 0; } }
+  if (s.id === 'strafe') startStrafe();
   if (s.id === 'multi') multishot();
   if (s.id === 'trap') { if (!throwTrap()) { hero.mana += skillCost(s); CD.trap = 0; } }
   if (s.id === 'roll') { if (!startRoll()) { hero.mana += skillCost(s); CD.roll = 0; } }
@@ -231,9 +232,14 @@ const SKILL_MODS = {
     { id: 'big', name: 'BIG BANG', desc: 'NO BOMBLETS: ONE HUGE BLAST' },
   ],
   sentry: [
-    { id: 'ballista', name: 'BALLISTA', desc: 'SLOWER, HEAVY BOLTS THAT GO THROUGH' },
-    { id: 'fire', name: 'FIRE SENTRY', desc: 'BURNING BOLTS' },
+    { id: 'ballista', name: 'BALLISTA', desc: 'SLOWER, HEAVY BOLTS THAT GO THROUGH EVERYTHING' },
+    { id: 'fire', name: 'FIRE SENTRY', desc: 'BURNING BOLTS, AND IT BLOWS UP WHEN IT BREAKS' },
     { id: 'twin', name: 'TWO SENTRIES', desc: 'PLANTS A PAIR, EACH A LITTLE SLOWER' },
+  ],
+  strafe: [   // round 82
+    { id: 'fire', name: 'BURNING STRAFE', desc: 'EVERY ARROW BURNS' },
+    { id: 'long', name: 'LONG STRAFE', desc: 'LASTS HALF AGAIN AS LONG' },
+    { id: 'finale', name: 'FINALE', desc: 'ENDS WITH A RING OF ARROWS FLYING OUT ALL ROUND YOU' },
   ],
   vault: [   // round 66b
     { id: 'spike', name: 'SPIKE TRAP', desc: 'THE TRAP SPRINGS A HEAVY SPIKE INSTEAD OF A SNARE' },
@@ -266,8 +272,8 @@ const SKILL_MODS = {
     { id: 'blood', name: "PREY'S BLOOD", desc: 'HITS ON THE MARKED HEAL YOU' },
   ],
   chain: [   // round 65
-    { id: 'fork', name: 'FORK', desc: 'SPLITS IN TWO AT EVERY JUMP: UP TO EIGHT FOES' },
-    { id: 'overload', name: 'OVERLOAD', desc: 'ONE HUGE BOLT THAT STUNS, AND ONE JUMP' },
+    { id: 'fork', name: 'FORK', desc: 'SPLITS IN TWO AT EVERY JUMP: UP TO TEN FOES' },
+    { id: 'overload', name: 'OVERLOAD', desc: 'ONE HUGE STRIKE FROM THE SKY THAT STUNS EVERYTHING NEAR IT' },
     { id: 'conductor', name: 'CONDUCTOR', desc: 'JUMPS TWICE AS FAR THROUGH CHILLED AND FROZEN FOES' },
   ],
   blink: [
@@ -470,7 +476,7 @@ function drawHookChains() {
 const CAST_RELEASE = 0.06;
 // round 29: how long each spell is gathered before it leaves the staff (the wind-up you can see);
 // the missile stays snappy, the big ones are held a beat longer
-const CAST_REL = { missile: 0.07, fireball: 0.13, cone: 0.12, meteor: 0.24, chain: 0.16 };
+const CAST_REL = { missile: 0.07, fireball: 0.13, cone: 0.12, meteor: 0.24, chain: 0.2 };
 const castRel = k => CAST_REL[k] ?? CAST_RELEASE;
 const spellDmg = k => Math.max(1, Math.round((roll(STAT.dmg) + (STAT.fireDmg || 0)) * k * (hero.buff > 0 ? 1.4 : 1)));
 const spellCrit = () => Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100;
@@ -1719,13 +1725,18 @@ function drawFrostFx() {
 // jump, up to eight. Overload: one jump, a huge bolt (x2.2) that stuns. Conductor: jumps twice as far
 // to and through chilled or frozen foes.
 // G.bolts: { a: [fi, fj, z] start, e: foe, b: [fi, fj, z] end (kept if it dies), delay, t, t0, k, big, seed, done }
-const CHAIN_JUMP = 3.6;
+// Round 82 (the user: the least impressive and the weakest spell; it may look like an ultimate):
+// a longer charge, a thick bolt from the staff, and every foe it reaches is struck again by lightning
+// out of the sky (SKY: a splash round it, 0.6 x, once a cast per foe; a burst of light, a ring). Damage:
+// the first foe 3 x, each jump 1.8 x (was 1 x falling 6% a jump), six foes (Fork ten at 1.4 x; Overload one foe at 6 x with
+// a sky strike twice as wide that stuns everything in it). Costs 16, every 3 s (was 14, every 2.5 s).
+const CHAIN_JUMP = 4.2, SKY_R = 1.25;
 const chillish = e => e.frozen > 0 || e.slowT > 0 || e.chillT > 0;
 function chainLightning() {
   const mod = skillMod('chain'), first = nearestEnemy(7.5, true);
   if (!first) { say('NOTHING TO STRIKE', 25, 1); return false; }
-  startCast('chain', 0.3, [first.fi, first.fj], () => {
-    const [ox, oy] = staffTip(), n = mod === 'overload' ? 2 : mod === 'fork' ? 8 : 5, k = mod === 'overload' ? 2.2 : 1.0, big = mod === 'overload';
+  startCast('chain', 0.36, [first.fi, first.fj], () => {
+    const [ox, oy] = staffTip(), n = mod === 'overload' ? 1 : mod === 'fork' ? 10 : 6, k = mod === 'overload' ? 6 : mod === 'fork' ? 1.4 : 1.8, big = mod === 'overload', grp = { splashed: new Set() };
     const hit = new Set([first]), seq = [{ a: [ox, oy, ORB_Z], e: first, step: 0 }];
     let front = [first], step = 0;
     while (hit.size < n && front.length) {
@@ -1741,18 +1752,50 @@ function chainLightning() {
       }
       front = next;
     }
-    for (const s of seq) G.bolts.push({ a: s.a, src: s.src || null, e: s.e, delay: s.step * 0.07, t: big ? 0.26 : 0.18, t0: big ? 0.26 : 0.18, k: k * (1 - s.step * 0.06), big, seed: (Math.random() * 1e6) | 0, done: false });
-    orbFlare(40, 32, 14); sfx('zap'); if (SHAKE) G.trauma = Math.min(1, G.trauma + (big ? 0.35 : 0.15));
+    for (const s of seq) G.bolts.push({ a: s.a, src: s.src || null, e: s.e, delay: s.step * 0.085, t: big ? 0.42 : 0.32, t0: big ? 0.42 : 0.32, k: s.step === 0 && !big ? k * 1.65 : k, big, grp, first: s.step === 0, seed: (Math.random() * 1e6) | 0, done: false });
+    orbFlare(40, 27, 22); orbFlare(32, 40, 12, true); sfx('zap'); sfx('boom', 0.5); if (SHAKE) G.trauma = Math.min(1, G.trauma + (big ? 0.45 : 0.3));
   });
   return true;
 }
 const chestOf = e => [e.fi, e.fj, (e.def.chest || 20) * 0.65];
+// lightning out of the sky onto a struck foe: everything else within SKY_R takes 1 x (Overload: twice
+// as wide, 2.5 x, and all of it stunned; a normal strike's splash is 0.6 x); a ring of light runs out over the floor and scorches it
+function skyStrike(fi, fj, big, e0, grp = null) {
+  if (!G.sky) G.sky = [];
+  G.sky.push({ fi, fj, t: big ? 0.45 : 0.34, t0: big ? 0.45 : 0.34, big, seed: (Math.random() * 1e6) | 0 });
+  const r = big ? SKY_R * 2 : SKY_R;
+  G.elem = 'shock'; G.pierce = true;
+  for (const e of enemies) {
+    if (e === e0 || !alive(e) || (grp && grp.splashed.has(e))) continue; const d = Math.hypot(e.fi - fi, e.fj - fj); if (d > r + (e.def.unique ? 0.4 : 0)) continue;
+    if (grp) grp.splashed.add(e);   // (a foe takes one splash a cast, however many strikes land near it)
+    wake(e); const c = spellCrit(); damageEnemy(e, spellDmg((c ? 2 : 1) * (big ? 2.5 : 0.6)), fi, fj, c, big ? 1 : 0, true);
+    if (alive(e)) { e.shockT = 3; if (big && !e.def.unique) e.stun = Math.max(e.stun || 0, 1.2); }
+  }
+  G.elem = null; G.pierce = false;
+  shockwave(fi, fj, r + 0.3, big ? 0.38 : 0.28, [27, 40]);
+  stampScorch(fi, fj, big ? 0.9 : 0.55);
+  const [x, y] = iso(fi, fj); for (let q = 0; q < (big ? 26 : 14); q++) { const a = Math.random() * 6.283, s = 50 + Math.random() * 90; pspawn(2, x, y, 2, Math.cos(a) * s, Math.sin(a) * s * 0.5, 30 + Math.random() * 60, 0.22 + Math.random() * 0.2, q % 3 ? 40 : 27); }
+  if (big) sfx('boom'); sfx('zap', big ? 1 : 0.8);
+}
+// a burn mark on the floor: a dark star of cracks, lighter at the tips
+function stampScorch(fi, fj, r) {
+  const [cx, cy] = iso(fi, fj), R0 = rng((fi * 131 + fj * 17) | 0), arms = 7;
+  for (let k = 0; k < arms; k++) {
+    let a = k / arms * 6.283 + R0() * 0.6, x = cx, y = cy; const len = r * 22 * (0.6 + R0() * 0.6);
+    for (let s = 0; s < len; s++) {
+      a += (R0() - 0.5) * 0.5; x += Math.cos(a); y += Math.sin(a) * 0.5;
+      const X = Math.round(x), Y = Math.round(y); if (X < 0 || Y < 0 || X >= WW || Y >= WH) continue;
+      const q = Y * WW + X; if (!wFloor[q] || floorBuf[q] === BLK) continue; setFloor(q, s < len * 0.6 ? BLK : (LV.outdoor ? DIRT : TH().ramp)[0]);
+    }
+  }
+  for (let b = -3; b <= 3; b++) for (let a = -6; a <= 6; a++) if (a * a / 36 + b * b / 9 <= 1) { const X = Math.round(cx + a), Y = Math.round(cy + b); if (X < 0 || Y < 0 || X >= WW || Y >= WH) continue; const q = Y * WW + X; if (wFloor[q] && floorBuf[q] !== BLK) setFloor(q, BLK); }
+}
 function updateLightning(dt) {
   if (!G.bolts) G.bolts = [];
   // the charge: sparks crackling at the staff's orb before the bolt leaves
-  if (hero.cast > 0 && hero.castKind === 'chain' && (hero.castAge || 0) < castRel('chain') && Math.random() < 0.9) {
+  if (hero.cast > 0 && hero.castKind === 'chain' && (hero.castAge || 0) < castRel('chain') + 0.05) {
     const [fi, fj] = staffTip(), [x, y] = iso(fi, fj);
-    for (let q = 0; q < 2; q++) { const a = Math.random() * 6.283; pspawn(2, x + Math.cos(a) * 5, y, ORB_Z + Math.sin(a) * 5, -Math.cos(a) * 30, 0, -Math.sin(a) * 30, 0.12, q ? 40 : 32); }
+    for (let q = 0; q < 4; q++) { const a = Math.random() * 6.283; pspawn(2, x + Math.cos(a) * 5, y, ORB_Z + Math.sin(a) * 5, -Math.cos(a) * 30, 0, -Math.sin(a) * 30, 0.12, q ? 40 : 32); }
     G.staffArc = G.t;
   }
   for (const B of G.bolts) {
@@ -1766,15 +1809,17 @@ function updateLightning(dt) {
         damageEnemy(e, spellDmg(c ? B.k * 2 : B.k), B.a[0], B.a[1], c, B.big ? 1 : 0, true); G.elem = null; G.pierce = false;
         if (alive(e)) { e.shockT = 3; if (B.big && !e.def.unique) e.stun = Math.max(e.stun || 0, 1.0); }
       }
-      impactFlash(B.b[0], B.b[1], B.b[2], B.big ? 7 : 4);
+      skyStrike(B.b[0], B.b[1], B.big, e, B.grp);
+      impactFlash(B.b[0], B.b[1], B.b[2], B.big ? 9 : 6);
       const [x, y] = iso(B.b[0], B.b[1]);
       for (let q = 0; q < (B.big ? 18 : 10); q++) { const a = Math.random() * 6.283, s = 40 + Math.random() * 60; pspawn(2, x, y, B.b[2], Math.cos(a) * s, Math.sin(a) * s * 0.5, Math.random() * 40, 0.18 + Math.random() * 0.12, q % 3 ? 40 : 32); }
-      G.flashes.push({ fi: B.b[0], fj: B.b[1], t: 0.14, t0: 0.14, r: B.big ? 130 : 95, tint: 2 });
+      G.flashes.push({ fi: B.b[0], fj: B.b[1], t: 0.26, t0: 0.26, r: B.big ? 190 : 140, tint: 2 });
       sfx('zap', B.big ? 1 : 0.6);
     } else if (alive(B.e)) B.b = chestOf(B.e);
     B.t -= dt;
   }
   G.bolts = G.bolts.filter(B => B.delay > 0 || B.t > 0);
+  if (G.sky) { for (const k of G.sky) k.t -= dt; G.sky = G.sky.filter(k => k.t > 0); }
   for (const e of enemies) if (e.shockT > 0) e.shockT -= dt;
 }
 // a jagged bolt, re-rolled every other frame: a white core, a pale blue glow either side, a few short
@@ -1810,9 +1855,23 @@ function drawLightning() {
     if (B.delay > 0 || !B.a || !B.b) continue;
     const life = B.t / B.t0; if (life < 0.35 && Math.floor(G.t * 30) % 2) continue;   // flickers out
     const pa = P(B.a), pb = P(B.b);
-    boltLine(pa, pb, B.seed, B.big ? 3 : life > 0.4 ? 2 : 1, life);
+    boltLine(pa, pb, B.seed, B.big || (B.first && life > 0.4) ? 3 : life > 0.3 ? 2 : 1, life);
+    if (B.first && life > 0.45) boltLine(pa, pb, B.seed + 3, 1, life, false);   // a second strand twisting round the first
     if (life > 0.55) for (const [cx, cy, r] of [[pb[0], pb[1], B.big ? 7 : 5], [pa[0], pa[1], 3]]) for (let b = -r; b <= r; b++) for (let a = -r; a <= r; a++) { const d = Math.hypot(a, b); if (d <= r) ovSet(cx + a, cy + b, d < r * 0.45 ? 27 : d < r * 0.75 ? 32 : 40); }   // a hot spark where it bites (and leaves)
     if (B.big && life > 0.5) boltLine(P(B.a), P(B.b), B.seed + 7, 1, life, false);   // Overload: a second strand
+  }
+  // the sky strikes: a bolt straight down out of the dark, twice as wide as a jump, a hot white pool
+  // where it lands and arcs crawling out over the floor from it
+  if (G.sky) for (const k of G.sky) {
+    const life = k.t / k.t0, [gx, gy] = P([k.fi, k.fj, 0]); if (life < 0.3 && Math.floor(G.t * 30) % 2) continue;
+    if (life > 0.25) {
+      const top = [gx + ((k.seed % 40) - 20), Math.max(-20, gy - 330)];
+      boltLine(top, [gx, gy - 4], k.seed, life > 0.55 ? 3 : 2, life);
+      if (life > 0.5) boltLine([top[0] + 10, top[1]], [gx, gy - 4], k.seed + 11, 1, life, false);
+    }
+    const r = (k.big ? 30 : 20) * (1.15 - life * 0.4);
+    for (let b = -r / 2; b <= r / 2; b++) for (let a = -r; a <= r; a++) { const d = Math.hypot(a / r, b / (r / 2)); if (d > 1) continue; if (d < 0.4 * life + 0.1) ovSet(Math.round(gx + a), Math.round(gy + b), 27); else if (d < 0.75 * life + 0.15 && ((a + b) & 1)) ovSet(Math.round(gx + a), Math.round(gy + b), 40); }
+    if (life > 0.4) { const R2 = rng(k.seed + Math.floor(G.t * 30)); for (let q = 0; q < (k.big ? 6 : 4); q++) { const a = R2() * 6.283, l = (k.big ? 60 : 40) * (0.6 + R2() * 0.5); boltLine([gx, gy], [gx + Math.cos(a) * l, gy + Math.sin(a) * l * 0.5], k.seed + q * 5, 1, life, false); } }
   }
   // the shocked crackle: little arcs over the body, now and then
   for (const e of enemies) {
@@ -2096,37 +2155,58 @@ function updateClusters(dt) {
     G.bomblets = G.bomblets.filter(b => !b.done);
   }
 }
-// Sentry: a crossbow on a tripod, planted in front of you for 12 s; it shoots the nearest foe it can
-// see (8 tiles) every 0.5 s (0.65 x). Ballista: every 1.1 s, heavy bolts through (1.6 x). Two
-// Sentries: a pair, each every 0.65 s. Up to two out at once (the oldest goes).
+// Sentry (round 82; the user: it looks bad and doesn't feel great; maybe a machine gun for 5 s that
+// then falls over and breaks): a repeating crossbow on a tripod, planted in front of you. It spins
+// up and sprays bolts at the nearest foe it can see (8 tiles) for 5 s, faster as it warms (every 0.2 s
+// at first, then 0.085 s; 0.3 x each, a little spread), then shudders, tips over and breaks. One at a
+// time (Two Sentries: a pair, each every 0.12 s). Ballista: every 0.3 s, heavy bolts through (1 x).
+// Fire Sentry: burning bolts, and it bursts into flame when it breaks (2 x round it).
+const SENTRY_LIFE = 5, SENTRY_FALL = 0.75;
 function placeSentry() {
   const mod = skillMod('sentry'), [fx, fy] = dirVec(hero.dir);
   if (!G.sentries) G.sentries = [];
+  for (const o of G.sentries) if (!o.fall) { o.t = 0; o.fall = 0.001; }   // an old one still standing breaks now
   const spots = mod === 'twin' ? [[-fy * 1.2 + fx * 0.8, fx * 1.2 + fy * 0.8], [fy * 1.2 + fx * 0.8, -fx * 1.2 + fy * 0.8]] : [[fx * 1.1, fy * 1.1]];
   for (const [dx, dy] of spots) {
     let p = [hero.fi + dx, hero.fj + dy]; if (blocked(p[0], p[1])) p = [hero.fi, hero.fj];
-    G.sentries.push({ fi: p[0], fj: p[1], t: 12, t0: 12, next: 0.4, mod, ang: Math.atan2(fy, fx), rise: 0, kick: 0 });
-    const [x, y] = iso(p[0], p[1]); for (let q = 0; q < 10; q++) { const a = q / 10 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 35, Math.sin(a) * 18, 10, 1, LV.outdoor ? DIRT[3] : S[5]); }
+    G.sentries.push({ fi: p[0], fj: p[1], t: SENTRY_LIFE, t0: SENTRY_LIFE, age: 0, next: 0.35, mod, ang: Math.atan2(fy, fx), rise: 0, kick: 0, spin: 0, fall: 0, side: Math.random() < 0.5 ? -1 : 1, seed: (Math.random() * 1e4) | 0 });
+    const [x, y] = iso(p[0], p[1]); for (let q = 0; q < 12; q++) { const a = q / 12 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 45, Math.sin(a) * 22, 12, 1, LV.outdoor ? DIRT[3] : S[5]); }
   }
-  while (G.sentries.length > (mod === 'twin' ? 2 : 2)) G.sentries.shift();
   rangerRelease(); hero.tossT = 0.34; sfx('clank'); sfx('chest');
+}
+function sentryBreak(s) {
+  const [x, y] = iso(s.fi, s.fj);
+  for (let q = 0; q < 14; q++) { const a = Math.random() * 6.283, v = 40 + Math.random() * 70; pspawn(7, x + s.side * 8, y, 6 + Math.random() * 10, Math.cos(a) * v, Math.sin(a) * v * 0.5, 40 + Math.random() * 60, 3, q % 3 ? WOOD[2] : STEEL[2]); }
+  for (let q = 0; q < 6; q++) G.dust.push({ fi: s.fi + (Math.random() - 0.5) * 0.6, fj: s.fj + (Math.random() - 0.5) * 0.6, vi: (Math.random() - 0.5) * 1.5, vj: (Math.random() - 0.5) * 1.5, r: 4, vr: 18, t: 0.7, t0: 0.7, z: 2 });
+  if (s.mod === 'fire') { explodeAt(s.fi, s.fj, 1.5, 2, 1, false, false); G.fireGround.push({ fi: s.fi, fj: s.fj, r: 1.2, t: 2.5, tick: 0.3 }); }
+  sfx('clank'); sfx('thunk');
 }
 function updateSentries(dt) {
   if (!G.sentries) return;
   for (const s of G.sentries) {
-    s.t -= dt; s.rise = Math.min(1, s.rise + dt * 5); s.kick = Math.max(0, s.kick - dt * 6); s.next -= dt;
+    if (s.fall > 0) {   // shudders, tips over, breaks
+      s.fall += dt; s.kick = 0;
+      if (s.fall > 0.25 && Math.random() < 0.5) { const [x, y] = iso(s.fi, s.fj); pspawn(5, x, y, 20, (Math.random() - 0.5) * 20, 0, 20, 0.6, S[6]); }
+      if (s.fall >= SENTRY_FALL && !s.broke) { s.broke = true; sentryBreak(s); }
+      continue;
+    }
+    s.t -= dt; s.age += dt; s.rise = Math.min(1, s.rise + dt * 5); s.kick = Math.max(0, s.kick - dt * 14); s.next -= dt;
+    if (s.t <= 0) { s.fall = 0.001; sfx('clank', 0.6); continue; }
     let best = null, bd = 8;
     for (const e of enemies) { if (!alive(e) || LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] < 0.3) continue; const d = Math.hypot(e.fi - s.fi, e.fj - s.fj); if (d < bd && los(s.fi, s.fj, e.fi, e.fj)) { bd = d; best = e; } }
+    const warm = Math.min(1, s.age / 0.8);
+    s.spin += dt * (best ? 10 + warm * 30 : 4);
     if (!best) continue;
-    const want = Math.atan2(best.fj - s.fj, best.fi - s.fi); let da = Math.atan2(Math.sin(want - s.ang), Math.cos(want - s.ang)); s.ang += Math.sign(da) * Math.min(Math.abs(da), dt * 9);
-    if (s.next <= 0 && Math.abs(da) < 0.3) {
-      const heavy = s.mod === 'ballista', sp = heavy ? 17 : 14;
-      s.next = heavy ? 1.1 : s.mod === 'twin' ? 0.65 : 0.5; s.kick = 1;
-      projectiles.push({ kind: 'arrow', fi: s.fi + Math.cos(s.ang) * 0.35, fj: s.fj + Math.sin(s.ang) * 0.35, vx: Math.cos(s.ang) * sp, vy: Math.sin(s.ang) * sp, z: 16, life: 9 / sp, owner: 'hero', spell: true, dmgK: heavy ? 1.6 : 0.65, age: 0, elem: s.mod === 'fire' ? 'fire' : null, fire: s.mod === 'fire', pierce: heavy, hits: heavy ? new Set() : null, bolt: heavy ? 2 : 0 });
-      sfx('twang', 0.5);
+    const want = Math.atan2(best.fj - s.fj, best.fi - s.fi); let da = Math.atan2(Math.sin(want - s.ang), Math.cos(want - s.ang)); s.ang += Math.sign(da) * Math.min(Math.abs(da), dt * 14);
+    if (s.next <= 0 && Math.abs(da) < 0.35) {
+      const heavy = s.mod === 'ballista', sp = heavy ? 18 : 20, a = s.ang + (heavy ? 0 : (Math.random() - 0.5) * 0.14);
+      s.next = heavy ? 0.35 : s.mod === 'twin' ? 0.15 + (1 - warm) * 0.1 : 0.085 + (1 - warm) * 0.115; s.kick = 1; s.shots = (s.shots || 0) + 1;
+      projectiles.push({ kind: 'arrow', fi: s.fi + Math.cos(a) * 0.45, fj: s.fj + Math.sin(a) * 0.45, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, z: 14, life: 9 / sp, owner: 'hero', spell: true, dmgK: heavy ? 0.55 : 0.3, age: 0, elem: s.mod === 'fire' ? 'fire' : null, fire: s.mod === 'fire', pierce: heavy, hits: heavy ? new Set() : null, bolt: heavy ? 2 : 0 });
+      const [x, y] = iso(s.fi + Math.cos(a) * 0.5, s.fj + Math.sin(a) * 0.5); pspawn(2, x, y, 14, Math.cos(a) * 30, Math.sin(a) * 15, 10, 0.08, 27);
+      if (s.shots % 2 === 0 || heavy) sfx('twang', heavy ? 0.6 : 0.3);
     }
   }
-  G.sentries = G.sentries.filter(s => s.t > 0);
+  G.sentries = G.sentries.filter(s => !s.broke);
 }
 // Hawk: circles you for 30 s and dives at whatever you last shot (or the nearest foe in 7 tiles) every
 // 1.4 s: 1.0 x, and the foe is MARKED for 4 s (25% more damage from everything; the red reticle).
@@ -2190,8 +2270,43 @@ function vault() {
   sfx('swing'); sfx('clank');
   return true;
 }
+// Strafe (round 82, replaces the Vault; the user wanted something more impactful, and more active
+// skills for the ranger; from Diablo III's and Path of Exile's Strafe): for 2.2 s the ranger runs
+// free and a third faster while arrows fly on their own at the nearest foes, one every 0.09 s,
+// turning among the three nearest (0.6 x each, about 24 arrows). The basic attack
+// waits. Burning Strafe: fire arrows. Long Strafe: 3.3 s. Finale: a ring of 16 arrows at the end.
+const STRAFE_T = 2.2, STRAFE_EVERY = 0.09, STRAFE_K = 0.6, STRAFE_RANGE = 7.5;
+function startStrafe() {
+  const mod = skillMod('strafe');
+  hero.strafe = { t: mod === 'long' ? STRAFE_T * 1.5 : STRAFE_T, next: 0, n: 0, mod, aim: null };
+  hero.atk = -1; hero.approach = null;
+  const [x, y] = screenOf(hero); for (let q = 0; q < 16; q++) { const a = q / 16 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 60, Math.sin(a) * 30, 14, 1, LV.outdoor ? DIRT[3] : S[5]); }
+  shockwave(hero.fi, hero.fj, 1.2, 0.25, [51, 27]);
+  sfx('swing'); sfx('twang');
+}
+function updateStrafe(dt) {
+  const St = hero.strafe; if (!St) return;
+  if (hero.dead) { hero.strafe = null; return; }
+  St.t -= dt; St.next -= dt;
+  const foes = enemies.filter(e => alive(e) && LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] >= 0.3 && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < STRAFE_RANGE).sort((a, b) => Math.hypot(a.fi - hero.fi, a.fj - hero.fj) - Math.hypot(b.fi - hero.fi, b.fj - hero.fj));
+  St.aim = foes[0] || null;
+  if (St.aim) hero.dir = dirFrom(St.aim.fi - hero.fi, St.aim.fj - hero.fj);
+  while (St.next <= 0 && St.t > 0) {
+    St.next += STRAFE_EVERY;
+    const e = foes.length ? foes[St.n % Math.min(3, foes.length)] : null; St.n++;
+    const [fx, fy] = dirVec(hero.dir), a = e ? Math.atan2(e.fj - hero.fj, e.fi - hero.fi) + (Math.random() - 0.5) * 0.08 : Math.atan2(fy, fx) + (Math.random() - 0.5) * 0.9;
+    const fire = St.mod === 'fire';
+    projectiles.push({ kind: 'arrow', fi: hero.fi + Math.cos(a) * 0.4, fj: hero.fj + Math.sin(a) * 0.4, vx: Math.cos(a) * 16, vy: Math.sin(a) * 16, z: 20, life: 9 / 16, owner: 'hero', spell: true, dmgK: STRAFE_K, age: 0, elem: fire ? 'fire' : null, fire });
+    const [x, y] = iso(hero.fi + Math.cos(a) * 0.45, hero.fj + Math.sin(a) * 0.45); pspawn(2, x, y, 20, Math.cos(a) * 40, Math.sin(a) * 20, 6, 0.1, fire ? 17 : 27);
+    if (St.n % 2) sfx('twang', 0.35);
+  }
+  if (St.t <= 0) {
+    if (St.mod === 'finale') { for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283; projectiles.push({ kind: 'arrow', fi: hero.fi + Math.cos(a) * 0.4, fj: hero.fj + Math.sin(a) * 0.4, vx: Math.cos(a) * 15, vy: Math.sin(a) * 15, z: 20, life: 7 / 15, owner: 'hero', spell: true, dmgK: 0.8, age: 0, pierce: true, hits: new Set() }); } shockwave(hero.fi, hero.fj, 1.6, 0.3, [51, 27]); sfx('twang'); sfx('boom', 0.5); }
+    hero.strafe = null;
+  }
+}
 function updateRangerKit(dt) {
-  updateClusters(dt); updateSentries(dt); updateHawks(dt);
+  updateClusters(dt); updateSentries(dt); updateHawks(dt); updateStrafe(dt);
   for (const p of projectiles) if (p.bolt >= 4 && p.life > 0 && Math.random() < 0.8 && G.dust) {   // the ballista bolt tears up the floor as it goes
     G.dust.push({ fi: p.fi, fj: p.fj, vi: -p.vx * 0.05 + (Math.random() - 0.5), vj: -p.vy * 0.05 + (Math.random() - 0.5), r: 3, vr: 14, t: 0.6, t0: 0.6, z: 1 });
     if (Math.random() < 0.3) { const [x, y] = iso(p.fi, p.fj); rubble(x, y, 2, 40); }
@@ -2207,17 +2322,29 @@ function drawRangerKit() {
     const [X2, Y2] = P(fi - (C.b[0] - C.a[0]) * 0.05, fj - (C.b[1] - C.a[1]) * 0.05, z - Math.cos(u * Math.PI) * C.h * 0.1); for (let s = 0; s <= 10; s++) ovSet(Math.round(X + (X2 - X) * s / 10 * 2), Math.round(Y + (Y2 - Y) * s / 10 * 2), s > 7 ? 27 : WOOD[3]);
   }
   if (G.bomblets) for (const b of G.bomblets) { const [X, Y] = P(b.fi, b.fj, b.z + 3), blink = Math.floor(G.t * (b.fuse < 0.2 ? 30 : 12)) % 2; for (let q = -2; q <= 2; q++) for (let r = -2; r <= 2; r++) if (q * q + r * r <= 5) ovSet(X + q, Y + r, Math.abs(q) + Math.abs(r) > 2 ? BLK : blink ? (b.cold ? 118 : 17) : (b.cold ? 116 : 15)); }
-  if (G.sentries) for (const s of G.sentries) {   // a tripod, a crossbow on top that turns and kicks when it shoots
-    const [X, Y] = P(s.fi, s.fj, 0), h = Math.round(40 * s.rise), fade = s.t < 0.6 && Math.floor(G.t * 20) % 2;   // (sizes in detail pixels: twice a game pixel)
-    if (fade) continue;
-    for (const [lx, ly] of [[-16, 6], [16, 6], [0, 12]]) for (let k = 0; k <= h; k++) { const u = k / (h || 1), x = Math.round(X + lx * (1 - u)), y = Math.round(Y + ly * (1 - u) - k); lit(x - 1, y, BLK); lit(x, y, WOOD[k % 6 === 0 ? 1 : 3]); lit(x + 1, y, WOOD[2]); lit(x + 2, y, BLK); }
-    for (let a = -6; a <= 6; a++) for (let b = -3; b <= 3; b++) if (a * a / 36 + b * b / 9 <= 1) lit(X + a, Y - h + b, b < 0 ? STEEL[3] : STEEL[1]);   // the swivel
-    const cx = X, cy = Y - h - 2, ux = Math.cos(s.ang) - Math.sin(s.ang), uy = (Math.cos(s.ang) + Math.sin(s.ang)) * 0.5, ul = Math.hypot(ux, uy) || 1, dx = ux / ul, dy = uy / ul, kb = s.kick * 5;
-    for (let k = -18; k <= 22; k++) { const x = Math.round(cx + dx * (k - kb)), y = Math.round(cy + dy * (k - kb)); lit(x, y - 2, BLK); lit(x, y - 1, k > 17 ? STEEL[4] : WOOD[4]); lit(x, y, k > 17 ? STEEL[3] : WOOD[3]); lit(x, y + 1, WOOD[1]); lit(x, y + 2, BLK); }   // the stock
-    for (let k = -16; k <= 16; k++) { const x = Math.round(cx + dx * (14 - kb) - dy * k), y = Math.round(cy + dy * (14 - kb) + dx * k * 0.5 + Math.abs(k) * 0.35); lit(x, y - 1, BLK); lit(x, y, STEEL[4]); lit(x, y + 1, STEEL[2]); lit(x, y + 2, BLK); }   // the prod (the bow arms)
-    for (const sd of [-16, 16]) { const x0 = Math.round(cx + dx * (14 - kb) - dy * sd), y0 = Math.round(cy + dy * (14 - kb) + dx * sd * 0.5 + Math.abs(sd) * 0.35); const x1 = Math.round(cx + dx * (-4 - kb + s.kick * 8)), y1 = Math.round(cy + dy * (-4 - kb + s.kick * 8)); for (let q = 0; q <= 16; q++) lit(Math.round(x0 + (x1 - x0) * q / 16), Math.round(y0 + (y1 - y0) * q / 16), BONE[2]); }   // the string
-    if (s.mod === 'fire') for (let q = 0; q < 3; q++) ovSet(Math.round(cx + dx * 24 + (Math.random() - 0.5) * 4), Math.round(cy + dy * 24 - Math.random() * 6), Math.floor(G.t * 15 + q) % 2 ? 17 : 16);
-    { const life = s.t / s.t0; for (let k = 0; k < 20; k++) { if (k / 20 > life) break; ovSet(X - 10 + k, Y + 16, 54); } }   // how long it has left
+  if (G.sentries) for (const s of G.sentries) {   // round 82: a repeating crossbow on a squat tripod; the bolt drum turns as it fires
+    const [X, Y] = P(s.fi, s.fj, 0), h = Math.round(28 * s.rise);   // (sizes in detail pixels: twice a game pixel)
+    // falling over: shake, then turn about the foot toward one side
+    let th = 0, jx = 0;
+    if (s.fall > 0) { const u = s.fall / SENTRY_FALL; if (u < 0.35) jx = (Math.floor(G.t * 40) % 2 ? 1 : -1) * 2; else th = s.side * Math.min(1.45, ((u - 0.35) / 0.65) ** 2 * 1.45); }
+    const ct = Math.cos(th), st = Math.sin(th);
+    const L = (x, y, v) => { const rx = x - X, ry = y - Y; lit(Math.round(X + jx + rx * ct - ry * st), Math.round(Y + rx * st + ry * ct), v); };
+    for (const [lx, ly] of [[-14, 6], [14, 6], [0, 11]]) for (let k = 0; k <= h; k++) { const u = k / (h || 1), x = Math.round(X + lx * (1 - u)), y = Math.round(Y + ly * (1 - u) - k); L(x - 1, y, BLK); L(x, y, WOOD[k % 6 === 0 ? 1 : 3]); L(x + 1, y, WOOD[2]); L(x + 2, y, BLK); }
+    const cx = X, cy = Y - h - 6, ux = Math.cos(s.ang) - Math.sin(s.ang), uy = (Math.cos(s.ang) + Math.sin(s.ang)) * 0.5, ul = Math.hypot(ux, uy) || 1, dx = ux / ul, dy = uy / ul, kb = s.kick * 3;
+    // the body: a squat iron-bound box under the drum
+    for (let b = -8; b <= 8; b++) for (let a = -13; a <= 13; a++) { const q = a * a / 169 + b * b / 64; if (q > 1) continue; L(cx + a, cy + 4 + b, q > 0.8 ? BLK : Math.abs(a) === 7 || Math.abs(a) === 8 ? STEEL[2] : b < -3 ? WOOD[4] : b < 3 ? WOOD[3] : WOOD[1]); }
+    // three barrels side by side along the aim, the top one swapping as the drum turns
+    for (const o of [-5, 0, 5]) { const lift = Math.round(Math.sin(s.spin + o) * 1.5); for (let k = 2; k <= 30; k++) { const x = Math.round(cx + dx * (k - kb) - dy * o), y = Math.round(cy + dy * (k - kb) + dx * o * 0.5) + lift; L(x, y - 2, BLK); L(x, y - 1, k > 26 ? STEEL[4] : STEEL[3]); L(x, y, STEEL[1 + (o === 0 ? 1 : 0)]); L(x, y + 1, BLK); } }
+    // the drum: a wheel of bolts on top, turning
+    for (let q = 0; q < 10; q++) { const a = s.spin + q / 10 * 6.283, px = Math.round(cx - dx * 2 + Math.cos(a) * 10), py = Math.round(cy - 8 + Math.sin(a) * 4); L(px, py, BLK); L(px, py - 1, Math.sin(a) > 0 ? BONE[2] : WOOD[2]); L(px, py - 2, Math.sin(a) > 0 ? STEEL[4] : STEEL[2]); }
+    for (let a = -4; a <= 4; a++) L(cx - Math.round(dx * 2) + a, cy - 8, STEEL[3]);   // the axle
+    if (s.kick > 0.4) { const mx = Math.round(cx + dx * 33), my = Math.round(cy + dy * 33); for (let k = -6; k <= 6; k++) { ovSet(mx + k, my, Math.abs(k) < 3 ? 27 : 51); ovSet(mx, my + Math.round(k * 0.6), Math.abs(k) < 3 ? 27 : 51); if (Math.abs(k) < 3) { ovSet(mx + k, my + 1, 51); ovSet(mx + k, my - 1, 51); } } }   // the muzzle flash
+    if (s.mod === 'fire') for (let q = 0; q < 3; q++) ovSet(Math.round(cx + dx * 26 + (Math.random() - 0.5) * 4), Math.round(cy + dy * 26 - Math.random() * 6), Math.floor(G.t * 15 + q) % 2 ? 17 : 16);
+    if (!s.fall) { const life = s.t / s.t0; for (let k = 0; k < 20; k++) { if (k / 20 > life) break; ovSet(X - 10 + k, Y + 16, life < 0.3 ? 17 : 54); } }   // how long it has left
+  }
+  if (hero.strafe) {   // round 82: two gold streaks wheeling round the ranger while Strafe runs
+    const [X, Y] = P(hero.fi, hero.fj, 14), u = Math.min(1, hero.strafe.t / 0.25);
+    for (const ph of [0, Math.PI]) for (let q = 0; q < 26; q++) { const a = G.t * 11 + ph - q * 0.07, x = Math.round(X + Math.cos(a) * 30), y = Math.round(Y + Math.sin(a) * 13); if (q > 18 && (q + x) & 1) continue; if (Math.sin(a) < 0 && q > 6) continue; ovSet(x, y, q < 4 * u ? 27 : q < 12 ? 51 : 50); }
   }
   if (hero.hawks) for (const h of hero.hawks) {   // a hawk: brown body, pale belly, wings beating (tucked in a dive)
     const [X, Y] = P(h.fi, h.fj, h.z), w = h.dive && !h.dive.back ? 0.2 : Math.sin(h.flap), span = 22, dir = h.dive ? Math.sign(h.dive.e.fi - h.dive.e.fj - (h.fi - h.fj)) || 1 : (Math.cos(h.ang + 1.57) - Math.sin(h.ang + 1.57) > 0 ? 1 : -1);

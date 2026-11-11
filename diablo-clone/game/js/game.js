@@ -73,7 +73,7 @@ function say(text, col = 26, t = 2.5) { G.msg.push({ text, col, t }); if (G.msg.
 // everything a fight leaves in the air: missiles, effects, particles, floaters (the skill preview
 // clears it between loops too)
 function resetFx() {
-  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.bolts = []; G.spikes = []; G.dust = []; G.mist = []; G.fog = []; G.needles = []; G.clusters = []; G.bomblets = []; G.sentries = []; hero.hawks = []; hero.pips = 0; hero.quick = 0; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.arcHits = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; G.debris = []; G.eliteFire = []; G.frostOrbs = []; G.summons = []; G.eliteBursts = []; G.blinkFx = []; G.leech = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
+  groundItems = []; projectiles = []; floaters = []; pclear(); G.meteors = []; G.flashes = []; G.blasts = []; G.bolts = []; G.sky = []; G.spikes = []; G.dust = []; G.mist = []; G.fog = []; G.needles = []; G.clusters = []; G.bomblets = []; G.sentries = []; hero.hawks = []; hero.pips = 0; hero.quick = 0; G.cones = []; G.ghosts = []; G.sparks = []; G.rings = []; G.walls = []; G.quakes = []; G.hooks = []; G.waves = []; G.impacts = []; G.arcHits = []; G.frost = []; G.streaks = []; G.fissures = []; G.aftershocks = []; G.fireGround = []; G.zaps = []; G.iceBursts = []; G.devils = []; G.rocks = []; G.strikes = []; G.traps = []; G.rain = []; G.falling = []; G.stuck = []; G.smoke = []; G.debris = []; G.eliteFire = []; G.frostOrbs = []; G.summons = []; G.eliteBursts = []; G.blinkFx = []; G.leech = []; hero.ultOn = null; hero.roll = null; hero.blink2T = 0; hero.chillT = 0; hero.leap = null; hero.leapZ = 0;
 }
 function startLevel(level, seed, side = null) {
   genLevel(level, seed, side);
@@ -701,7 +701,7 @@ function updateHero(dt) {
   if (hero.leap) { if (hero.stop > 0) { hero.stop -= dt; return; } hero.clock += dt; updateLeap(dt); updateFov(hero.fi, hero.fj); return; }   // in the air
   if (hero.roll) { hero.clock += dt; updateRoll(dt); updateFov(hero.fi, hero.fj); return; }   // round 33: the ranger's leap
   if (hero.ultOn && hero.ultOn.kind === 'wrath') { if (hero.stop > 0) { hero.stop -= dt; return; } hero.clock += dt; updateWrath(dt); updateFov(hero.fi, hero.fj); return; }   // the ultimate's leap (the view must keep refreshing: it fades)
-  if (input.attack || (hero.buf > G.t && (!heroBusy() || canChain()))) heroAttack();
+  if (!hero.strafe && (input.attack || (hero.buf > G.t && (!heroBusy() || canChain())))) heroAttack();   // (round 82: Strafe shoots on its own)
   let vx = input.mx, vy = input.my;
   const K = input.keys;
   if (K.has('a') || K.has('arrowleft')) vx -= 1; if (K.has('d') || K.has('arrowright')) vx += 1;
@@ -732,7 +732,7 @@ function updateHero(dt) {
     if (l > 1) { vx /= l; vy /= l; }
     // a quick ramp up to full speed (0.1 s) gives the start some weight
     const ramp = Math.min(1, 0.45 + (hero.runT || 0) / 0.1);
-    const [gi, gj, m] = stickToGround(vx, vy), sp = STAT.speed * m * (hero.chillT > 0 ? 0.6 : 1) * (hero.whirl > 0 ? 0.6 : 1) * (hero.ultOn ? 0.6 : 1) * Math.min(1, l) * ramp * dt;
+    const [gi, gj, m] = stickToGround(vx, vy), sp = STAT.speed * m * (hero.chillT > 0 ? 0.6 : 1) * (hero.whirl > 0 ? 0.6 : 1) * (hero.ultOn ? 0.6 : 1) * (hero.strafe ? 1.3 : 1) * Math.min(1, l) * ramp * dt;
     const f0 = hero.fi, j0 = hero.fj;
     tryMove(hero, gi * sp, gj * sp);
     const moved = Math.hypot(hero.fi - f0, hero.fj - j0);
@@ -758,6 +758,7 @@ function updateHero(dt) {
       if (!FEEL_OLD && steps >= 3 && hero.runT > 0.3 && !(hero.pivotT > 0)) { hero.pivotT = 0.09; const [x, y] = screenOf(hero), dust = LV.outdoor ? DIRT[3] : S[5]; for (let k = 0; k < 8; k++) { const a = Math.random() * 6.283; pspawn(5, x, y + 1, 1, Math.cos(a) * 30, Math.sin(a) * 15, 10 + Math.random() * 12, 1, dust); } sfx('step', 1); }
       hero.dir = (hero.dir + (((want - hero.dir + 8) % 8) <= 4 ? 1 : 7)) % 8; hero.turnT = 0.028;
     }
+    if (hero.strafe && hero.strafe.aim) hero.dir = dirFrom(hero.strafe.aim.fi - hero.fi, hero.strafe.aim.fj - hero.fj);   // round 82: strafing faces what it shoots
     hero.clip = hero.goT > 0 ? 'go' : hero.pivotT > 0 ? 'pivot' : 'walk'; hero.goT -= dt; hero.pivotT = (hero.pivotT || 0) - dt;
     hero.skidT = 0; hero.landT = 0; hero.idleT = 0;
   } else {

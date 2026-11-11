@@ -28,6 +28,7 @@ const { chromium } = require('playwright'); const fs = require('fs'), path = req
         if (f === 2) cast();
         if (id === 'vault' && f > 4 && enemies[0] && !(enemies[0].rootT > 0) && f < 30) { const e = enemies[0], tp = G.traps[G.traps.length - 1]; if (tp) { const dx = tp.fi - e.fi, dy = tp.fj - e.fj, d = Math.hypot(dx, dy); if (d > 0.05) { e.fi += dx / d * 0.09; e.fj += dy / d * 0.09; e.clip = 'walk'; } } }
         if (id === 'vault' && f > 22 && f % 9 === 0 && hero.cls === 'ranger') rangerShoot();
+        if (id === 'strafe') { input.mx = f > 2 && f < 66 ? -0.7 * Math.cos(f / 14) : 0; input.my = f > 2 && f < 66 ? 0.5 * Math.sin(f / 14) : 0; }
         for (const e of enemies) { e.cool = 99; e.atk = -1; }
         G.t += dt; update(dt); render();
         out.push(cvs.toDataURL());

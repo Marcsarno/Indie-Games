@@ -193,6 +193,7 @@ const glyphCone = (cx, cy) => { for (let k = 0; k < 9; k++) { const a = -0.55 + 
 // round 66: the ranger's new kit
 const glyphPierce = (cx, cy) => { for (let k = -8; k <= 6; k++) { put(cx + k, cy - k * 0.5, 27); put(cx + k, cy - k * 0.5 + 1, k < 4 ? 35 : 31); } for (const [a, b] of [[6, -6], [4, -4], [7, -2]]) line(cx + 4, cy - 2, cx + a, cy + b, 27); for (const o of [-3, 0, 3]) line(cx - 8, cy + 4 + o, cx - 4, cy + 2 + o, 51); };
 const glyphCluster = (cx, cy) => { for (const [a, b] of [[0, 0], [-5, 3], [5, 3], [-3, -4], [4, -4]]) for (let q = -2; q <= 2; q++) for (let r = -2; r <= 2; r++) if (q * q + r * r <= 4) put(cx + a + q, cy + b + r, q * q + r * r <= 1 ? 18 : 16); put(cx, cy, 27); };
+const glyphStrafe = (cx, cy) => { for (const [dx, dy] of [[-7, -5], [0, -8], [7, -5], [-8, 2], [8, 2]]) { line(cx, cy + 3, cx + dx, cy + dy, 35); put(cx + dx, cy + dy, 27); } for (let a = -3; a <= 3; a++) put(cx + a, cy + 4, 31); };   // round 82: arrows fanning out all round
 const glyphSentry = (cx, cy) => { line(cx, cy - 1, cx - 6, cy + 7, 35); line(cx, cy - 1, cx + 6, cy + 7, 35); line(cx, cy - 1, cx, cy + 7, 35); line(cx - 7, cy - 3, cx + 7, cy - 3, 31); line(cx - 6, cy - 6, cx - 6, cy, 27); line(cx + 6, cy - 6, cx + 6, cy, 27); put(cx + 8, cy - 3, 27); };
 const glyphHawk = (cx, cy) => { for (let k = -8; k <= 8; k++) { const u = Math.abs(k) / 8; put(cx + k, cy - 4 + u * u * 6 - u * 4, 27); put(cx + k, cy - 3 + u * u * 6 - u * 4, 26); } for (let b = -1; b <= 2; b++) for (let a = -2; a <= 2; a++) put(cx + a, cy + b, 26); put(cx + 2, cy - 1, 51); };
 const glyphChain = (cx, cy) => {   // round 65: a forked bolt
@@ -222,7 +223,7 @@ const glyphLeap = (cx, cy) => {   // an arc up and down, landing in a burst
   for (let a = 0; a <= 16; a++) { const u = a / 16; put(cx - 7 + u * 12, cy + 4 - Math.sin(u * Math.PI) * 10, a > 12 ? 51 : 27); }
   for (const [a, b] of [[-3, 0], [3, 0], [0, -3], [2, -2], [-2, -2]]) line(cx + 5, cy + 5, cx + 5 + a, cy + 5 + b, 50);
 };
-const SPELL_LOOK = { multi: [[33, 34, 35, 36], (x, y) => glyphMulti(x, y)], trap: [[28, 29, 30, 31], (x, y) => glyphTrap(x, y)], roll: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)], mark: [[19, 20, 21, 22], (x, y) => glyphMark(x, y)], slam: [[13, 14, 15, 16], glyphSlam], charge: [[28, 29, 30, 31], glyphCharge], hook: [[28, 29, 30, 31], glyphHook], whirl: [[19, 20, 21, 22], glyphWhirl], leap: [[48, 49, 50, 51], glyphLeap], fireball: [[13, 14, 15, 16], glyphFire], cone: [[114, 115, 116, 117], glyphCone], meteor: [[19, 20, 21, 22], glyphMeteor], blink: [[56, 57, 58, 59], glyphBlink], chain: [[37, 38, 39, 40], glyphChain], pierce: [[48, 49, 50, 51], glyphPierce], cluster: [[13, 14, 15, 16], glyphCluster], sentry: [[33, 34, 35, 36], glyphSentry], hawk: [[28, 29, 30, 31], glyphHawk], vault: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)] };
+const SPELL_LOOK = { multi: [[33, 34, 35, 36], (x, y) => glyphMulti(x, y)], trap: [[28, 29, 30, 31], (x, y) => glyphTrap(x, y)], roll: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)], mark: [[19, 20, 21, 22], (x, y) => glyphMark(x, y)], slam: [[13, 14, 15, 16], glyphSlam], charge: [[28, 29, 30, 31], glyphCharge], hook: [[28, 29, 30, 31], glyphHook], whirl: [[19, 20, 21, 22], glyphWhirl], leap: [[48, 49, 50, 51], glyphLeap], fireball: [[13, 14, 15, 16], glyphFire], cone: [[114, 115, 116, 117], glyphCone], meteor: [[19, 20, 21, 22], glyphMeteor], blink: [[56, 57, 58, 59], glyphBlink], chain: [[37, 38, 39, 40], glyphChain], pierce: [[48, 49, 50, 51], glyphPierce], cluster: [[13, 14, 15, 16], glyphCluster], sentry: [[33, 34, 35, 36], glyphSentry], hawk: [[28, 29, 30, 31], glyphHawk], vault: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)], strafe: [[48, 49, 50, 51], (x, y) => glyphStrafe(x, y)] };
 const glyphBolt = (cx, cy) => { for (let a = 0; a < 8; a++) { const t = a * Math.PI / 4; line(cx, cy, cx + Math.cos(t) * 7, cy + Math.sin(t) * 7, a % 2 ? 50 : 51); } put(cx, cy, 27); };
 const glyphBag = (cx, cy) => { fillRect(cx - 5, cy - 3, 11, 9, 35); frame(cx - 5, cy - 3, 11, 9, 36, 33); line(cx - 3, cy - 3, cx - 1, cy - 6, 36); line(cx + 3, cy - 3, cx + 1, cy - 6, 36); fillRect(cx - 1, cy, 3, 2, 50); };
 const glyphSound = (cx, cy) => {
@@ -939,9 +940,9 @@ const SKILL_TEXT = {
   'meteor/shower': 'THREE SMALLER METEORS AROUND THE TARGET. A WIDER SPREAD FOR BIG PACKS.',
   'meteor/molten': 'THE CRATER BURNS FOR 4 SECONDS. HOLD A CHOKE POINT WITH IT.',
   'meteor/comet': 'A BALL OF ICE INSTEAD: IT FREEZES WHAT IT HITS RATHER THAN BURNING IT.',
-  chain: 'A BOLT THAT JUMPS FROM FOE TO FOE, UP TO FIVE. EACH IS SHOCKED: 25% MORE DAMAGE FROM EVERYTHING FOR 3 SECONDS.',
-  'chain/fork': 'SPLITS IN TWO AT EVERY JUMP: UP TO EIGHT FOES. FOR BIG PACKS.',
-  'chain/overload': 'ONE HUGE BOLT THAT STUNS, AND ONE JUMP. FOR THE BIG ONES.',
+  chain: 'A BOLT THAT JUMPS FROM FOE TO FOE, UP TO SIX, AND LIGHTNING FROM THE SKY STRIKES EACH ONE, HITTING WHAT STANDS NEAR. ALL ARE SHOCKED: 25% MORE DAMAGE FROM EVERYTHING FOR 3 SECONDS.',
+  'chain/fork': 'SPLITS IN TWO AT EVERY JUMP: UP TO TEN FOES, EACH HIT A LITTLE LESS. FOR BIG PACKS.',
+  'chain/overload': 'NO JUMPS: ONE HUGE STRIKE FROM THE SKY, TWICE AS WIDE, THAT STUNS EVERYTHING IN IT. FOR THE BIG ONES.',
   'chain/conductor': 'JUMPS TWICE AS FAR THROUGH CHILLED AND FROZEN FOES. CONE OF COLD FIRST.',
   blink: 'TELEPORT A SHORT WAY. GET OUT OF A CROWD OR AWAY FROM A BIG HIT.',
   'blink/burst': 'A BLAST WHERE YOU LAND THAT THROWS FOES BACK. BLINK IN AND KNOCK THEM AWAY.',
@@ -975,10 +976,14 @@ const SKILL_TEXT = {
   'cluster/fire': 'EVERY BLAST LEAVES THE GROUND BURNING.',
   'cluster/frost': 'THE BOMBLETS FREEZE WHAT THEY HIT.',
   'cluster/big': 'NO BOMBLETS: ONE HUGE BLAST INSTEAD.',
-  sentry: 'PLANTS A CROSSBOW THAT SHOOTS THE NEAREST FOE ON ITS OWN FOR 12 SECONDS. UP TO TWO AT ONCE.',
+  sentry: 'PLANTS A REPEATING CROSSBOW THAT SPRAYS BOLTS AT THE NEAREST FOE FOR 5 SECONDS, FASTER AS IT WARMS UP, THEN FALLS OVER AND BREAKS. ONE AT A TIME.',
   'sentry/ballista': 'SLOWER, HEAVY BOLTS THAT GO THROUGH EVERYTHING IN A LINE.',
-  'sentry/fire': 'BURNING BOLTS.',
+  'sentry/fire': 'BURNING BOLTS, AND IT BURSTS INTO FLAME WHEN IT BREAKS.',
   'sentry/twin': 'PLANTS TWO AT ONCE, EACH A LITTLE SLOWER.',
+  strafe: 'FOR TWO SECONDS YOU RUN FREE AND FASTER WHILE ARROWS FLY ON THEIR OWN AT THE NEAREST FOES, ABOUT TWENTY OF THEM. KEEP MOVING.',
+  'strafe/fire': 'EVERY ARROW BURNS.',
+  'strafe/long': 'LASTS HALF AGAIN AS LONG.',
+  'strafe/finale': 'ENDS WITH A RING OF SIXTEEN ARROWS FLYING OUT ALL ROUND YOU, THROUGH EVERYTHING.',
   vault: 'FLIP BACK OUT OF TROUBLE. A SNARE SNAPS OPEN WHERE YOU STOOD, SO WHATEVER CHASES YOU STEPS IN IT. YOUR NEXT 3 SHOTS FIRE TWO ARROWS EACH AND ALWAYS CRIT.',
   'vault/spike': 'THE TRAP SPRINGS A HEAVY SPIKE INSTEAD OF A SNARE.',
   'vault/smoke': 'SMOKE WHERE YOU STOOD DAZES EVERYTHING IN IT.',
