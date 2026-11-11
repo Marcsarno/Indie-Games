@@ -49,22 +49,28 @@ const THEME = { crypt: { floor: [0x5a4a3c, 0x66543f, 0x4e4238, 0x6e5b44], wall: 
   hell: { floor: [0x4d1c18, 0x6b2a1f, 0x3a1614], wall: [0x341414, 0x4d1c18, 0x2a1010] }, outdoor: { floor: [0x5f7a3a, 0x688442, 0x587236, 0x6f8a46], wall: [0x2e4a2a, 0x355230, 0x284224] } };
 function hash2(i, j) { let h = (i * 374761393 + j * 668265263) ^ 0x5bd1e995; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
 function buildLevel() {
-  if (levelGroup) { scene.remove(levelGroup); levelGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
+  if (levelGroup) { scene.remove(levelGroup); levelGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); }); if (levelGroup.userData.gtex) levelGroup.userData.gtex.dispose(); }
   levelGroup = new THREE.Group(); scene.add(levelGroup);
   const th = LV.outdoor ? THEME.outdoor : THEME[LV.theme || 'crypt'] || THEME.crypt;
   const floors = [], walls = [];
   for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) { const t = LV.map[j * MW + i]; if (t === FLOOR) floors.push([i, j]); else if (t === WALL) walls.push([i, j, LV.tall[j * MW + i] ? WALL_TALL / UPX : WALL_LOW / UPX]); }
   const m4 = new THREE.Matrix4(), col = new THREE.Color();
-  const fgeo = new THREE.BoxGeometry(0.97, 0.12, 0.97), fmat = new THREE.MeshStandardMaterial({ roughness: 0.95, metalness: 0 });
-  const fm = new THREE.InstancedMesh(fgeo, fmat, floors.length); fm.receiveShadow = true;
-  floors.forEach(([i, j], n) => { m4.makeTranslation(i + 0.5, -0.06 + (hash2(i, j) - 0.5) * 0.02, j + 0.5); fm.setMatrixAt(n, m4); fm.setColorAt(n, col.setHex(th.floor[Math.floor(hash2(j, i) * th.floor.length)])); });
-  const ggeo = new THREE.PlaneGeometry(MW, MH); ggeo.rotateX(-Math.PI / 2); const ground = new THREE.Mesh(ggeo, new THREE.MeshStandardMaterial({ color: LV.outdoor ? 0x23381f : 0x0b0909, roughness: 1 })); ground.position.set(MW / 2, -0.07, MH / 2); ground.receiveShadow = true;
+  // the ground: the 2D game's own painted floor (flagstones, cobbles, grass, paths, moss, cracks ...) laid flat as a texture.
+  // Its pixels are in the game's screen layout, which is a straight-line mapping of the tile grid, so one quad carries it.
+  const gpx = new Uint8Array(WW * WH * 4);
+  for (let k = 0; k < WW * WH; k++) { const v = floorBuf[k] & 127; if (!v) continue; const c = PAL32[v], o = k * 4; gpx[o] = c & 255; gpx[o + 1] = (c >> 8) & 255; gpx[o + 2] = (c >> 16) & 255; gpx[o + 3] = 255; }
+  const gtex = new THREE.DataTexture(gpx, WW, WH, THREE.RGBAFormat); gtex.colorSpace = THREE.SRGBColorSpace; gtex.magFilter = THREE.LinearFilter; gtex.minFilter = THREE.LinearMipmapLinearFilter; gtex.generateMipmaps = true; gtex.anisotropy = 4; gtex.needsUpdate = true;
+  const ggeo = new THREE.BufferGeometry(), gp = [], guv = [];
+  for (const [i, j] of [[0, 0], [MW, 0], [MW, MH], [0, MH]]) { gp.push(i, 0, j); const [x, y] = iso(i, j); guv.push(x / WW, y / WH); }
+  ggeo.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3)); ggeo.setAttribute('uv', new THREE.Float32BufferAttribute(guv, 2)); ggeo.setIndex([0, 2, 1, 0, 3, 2]); ggeo.computeVertexNormals();
+  const ground = new THREE.Mesh(ggeo, new THREE.MeshStandardMaterial({ map: gtex, roughness: 1, metalness: 0, alphaTest: 0.5 })); ground.receiveShadow = true; ground.frustumCulled = false;
+  levelGroup.userData.gtex = gtex;
   const wgeo = new THREE.BoxGeometry(1, 1, 1), wmat = new THREE.MeshStandardMaterial({ roughness: 0.95, metalness: 0 });
   const wm = new THREE.InstancedMesh(wgeo, wmat, walls.length); wm.castShadow = true; wm.receiveShadow = true;
   const sc = new THREE.Vector3(), q = new THREE.Quaternion(), p = new THREE.Vector3();
   walls.forEach(([i, j, h], n) => { m4.compose(p.set(i + 0.5, h / 2, j + 0.5), q, sc.set(1, h, 1)); wm.setMatrixAt(n, m4); wm.setColorAt(n, col.setHex(th.wall[Math.floor(hash2(i, j) * th.wall.length)])); });
-  fm.frustumCulled = wm.frustumCulled = false;
-  levelGroup.add(ground, fm, wm);
+  wm.frustumCulled = false;
+  levelGroup.add(ground, wm);
   hemi.intensity = LV.outdoor ? (LV.night ? 0.5 : 1.1) : 0.5; sun.intensity = LV.outdoor ? (LV.night ? 0.5 : 2.2) : 0.9; sun.color.setHex(LV.outdoor && !LV.night ? 0xfff2d8 : 0xc8d4ff);
   scene.background.setHex(LV.outdoor ? 0x1a2a18 : 0x050406);
   levelToken++; buildProps(levelGroup, levelToken);
