@@ -1824,7 +1824,8 @@ function updateLightning(dt) {
 }
 // a jagged bolt, re-rolled every other frame: a white core, a pale blue glow either side, a few short
 // forks off it, thinning out as it fades (detail layer)
-function boltLine(A, B, seed, w, life, forks = true) {
+const BOLT_PAL = [27, 32, 40, 39];
+function boltLine(A, B, seed, w, life, forks = true, pal = BOLT_PAL) {   // (round 84: pal = [core, under, glow, haze], for burning lightning)
   const R = rng(seed + Math.floor(G.t * 30)), n = Math.max(4, Math.round(Math.hypot(B[0] - A[0], B[1] - A[1]) / 9));
   const nx = -(B[1] - A[1]), ny = B[0] - A[0], nl = Math.hypot(nx, ny) || 1;
   let px = A[0], py = A[1];
@@ -1834,15 +1835,15 @@ function boltLine(A, B, seed, w, life, forks = true) {
     for (let k = 0; k <= m; k++) {
       const x = Math.round(px + (qx - px) * k / m), y = Math.round(py + (qy - py) * k / m);
       if (w >= 2) {   // a 2 px hot core in a pale blue glow, a dithered deep blue haze outside it
-        for (const [a, b] of [[-2, 0], [2, 0], [0, -2], [0, 3], [-2, 1], [2, 1]]) if ((x + y + a) & 1) ovSet(x + a, y + b, 39);
-        for (const [a, b] of [[-1, 0], [1, 0], [0, -1], [0, 2], [-1, 1], [1, 1]]) ovSet(x + a, y + b, 40);
-        if (w > 2) for (const [a, b] of [[-3, 0], [3, 0], [0, -3], [0, 4]]) if ((x + y) & 1) ovSet(x + a, y + b, 39);
-      } else if (life > 0.5 && ((x + y) & 1)) ovSet(x, y + 1, 40);
-      ovSet(x, y, 27); if (w >= 2) ovSet(x, y + 1, 32);
+        for (const [a, b] of [[-2, 0], [2, 0], [0, -2], [0, 3], [-2, 1], [2, 1]]) if ((x + y + a) & 1) ovSet(x + a, y + b, pal[3]);
+        for (const [a, b] of [[-1, 0], [1, 0], [0, -1], [0, 2], [-1, 1], [1, 1]]) ovSet(x + a, y + b, pal[2]);
+        if (w > 2) for (const [a, b] of [[-3, 0], [3, 0], [0, -3], [0, 4]]) if ((x + y) & 1) ovSet(x + a, y + b, pal[3]);
+      } else if (life > 0.5 && ((x + y) & 1)) ovSet(x, y + 1, pal[2]);
+      ovSet(x, y, pal[0]); if (w >= 2) ovSet(x, y + 1, pal[1]);
     }
     if (forks && s < n && R() < 0.45) {   // a short fork
       let fx = qx, fy = qy, a = Math.atan2(B[1] - A[1], B[0] - A[0]) + (R() < 0.5 ? 1 : -1) * (0.6 + R() * 0.6);
-      for (let f = 0; f < 6 + R() * 8; f++) { a += (R() - 0.5) * 0.8; fx += Math.cos(a) * 1.4; fy += Math.sin(a) * 1.4; ovSet(Math.round(fx), Math.round(fy), f < 4 ? 32 : 40); }
+      for (let f = 0; f < 6 + R() * 8; f++) { a += (R() - 0.5) * 0.8; fx += Math.cos(a) * 1.4; fy += Math.sin(a) * 1.4; ovSet(Math.round(fx), Math.round(fy), f < 4 ? pal[1] : pal[2]); }
     }
     px = qx; py = qy;
   }
@@ -2053,7 +2054,8 @@ function drawStrikes() {   // round 65c: the storm's bolts are Chain Lightning's
 // button spends every full gauge at once:
 //   one element    INFERNO / BLIZZARD / THUNDERSTORM / EARTHQUAKE
 //   all four       CATACLYSM: the four in turn, darker, harder, and a last blast over everything
-//   two or three   (until the pair ultimates are built) each charged element's own ultimate, back to back
+//   two            their pair (round 84): PLASMA STORM, STEAM BURST, VOLCANO, SHATTERSTORM, GLACIER, MAGNETIC PULL
+//   three          the pair highest in PAIR_ORDER, then the third element's own
 // Arcane (the magic missile) charges nothing. Damage an ultimate deals charges nothing either.
 const ELEMS = ['fire', 'frost', 'earth', 'storm'];
 const ELEM_INFO = {
@@ -2081,17 +2083,20 @@ function elemGain(e, dmg, killed) {
   hero.ult = Math.max(...ELEMS.map(q => hero.el[q] || 0));
 }
 function startElemUlt(full) {
-  const queue = full.length === 4 ? ['all'] : full.slice();
+  // round 84: two full gauges cast their pair; three, the pair highest in PAIR_ORDER and then the third's own
+  let queue = full.slice();
+  if (full.length === 4) queue = ['all'];
+  else if (full.length >= 2) { const key = PAIR_ORDER.find(pr => pr.split('+').every(k => full.includes(k))); queue = [key, ...full.filter(k => !key.split('+').includes(k))]; }
   for (const k of full) hero.el[k] = 0;
   hero.ult = Math.max(...ELEMS.map(q => hero.el[q] || 0));
-  hero.ultOn = { kind: 'elem', queue, id: null, t: 0, pillars: [], crystals: [], spears: [], arcs: [], orbs: 0 };
+  hero.ultOn = { kind: 'elem', queue, id: null, t: 0, pillars: [], crystals: [], spears: [], arcs: [], orbs: 0, puffs: [], geysers: [], bombs: [], pools: [], bombN: 0 };
   hero.cast = -1; hero.castFn = null;
   elemStage(hero.ultOn);
 }
 function elemStage(U) {
   const id = U.queue.shift(); U.id = id; U.t = 0; U.fi = hero.fi; U.fj = hero.fj;
   U.ev = ELEM_EV[id].map(e => e.slice()).sort((a, b) => a[0] - b[0]);
-  U.fireUntil = U.spearUntil = U.strikeUntil = U.orbUntil = U.shakeUntil = -1; U.fireT = U.spearT = U.strikeT = 0; U.dim = id === 'all';
+  U.fireUntil = U.spearUntil = U.strikeUntil = U.orbUntil = U.shakeUntil = U.geyserUntil = U.bombUntil = U.shatUntil = -1; U.plasma = U.walls = U.magnet = null; if (U.volc && !U.volc.die) U.volc.die = G.t; U.lastAt = null; U.fireT = U.spearT = U.strikeT = 0; U.dim = id === 'all';
   say(ELEM_INFO[id].ult + '!', ELEM_INFO[id].hi, 1.8);
   sfx('meteor'); sfx('whoomp'); if (id === 'frost') sfx('frost'); if (id === 'fire') sfx('fireball');
   G.flashes.push({ fi: hero.fi, fj: hero.fj, t: 0.4, t0: 0.4, r: 140, tint: id === 'fire' ? 1 : id === 'earth' ? 0 : 2 });
@@ -2248,7 +2253,7 @@ const ELEM_EV = {
     [1.35, U => { fireRing(U, 2.0, 7, 4); U.fireUntil = 4.9; }], [1.5, U => fireRing(U, 3.6, 11, 4)], [1.65, U => fireRing(U, 5.2, 15, 4)],
     [2.4, U => frostNova(U, 3)], [2.5, U => { U.spearUntil = 3.6; U.spearEvery = 0.05; }],
     [3.5, U => { U.strikeUntil = 4.85; U.strikeEvery = 0.06; U.strikeK = 2; U.orbUntil = 4.9; }], [3.6, U => rockFall(U, 10)],
-    [5.0, U => cataFinale(U, 12)]],
+    [5.0, U => cataFinale(U, 30)]],
 };
 function updateElemUlt(dt) {
   const U = hero.ultOn; U.t += dt;
@@ -2257,6 +2262,7 @@ function updateElemUlt(dt) {
   if (U.t < (U.id === 'all' ? 0.6 : 0.4)) for (let q = 0; q < 3; q++) { const a = Math.random() * 6.283, c = U.id === 'all' ? [17, 118, 40, 107][(Math.random() * 4) | 0] : Math.random() < 0.5 ? I.col : I.hi; pspawn(4, hx0 + Math.cos(a) * 52, hy0 + Math.sin(a) * 22, 26, -Math.cos(a) * 190, -Math.sin(a) * 80, 0, 0.26, c); }
   else if (Math.random() < 0.5) { const a = Math.random() * 6.283; pspawn(3, hx0 + Math.cos(a) * 14, hy0 + Math.sin(a) * 6, 10 + Math.random() * 30, 0, 0, 20, 0.4, Math.random() < 0.5 ? I.col : I.hi); }
   while (U.ev.length && U.ev[0][0] <= U.t) U.ev.shift()[1](U);
+  updatePairs(U, dt);
   // the pillars burn what stands in the fire
   if (U.t < U.fireUntil) {
     U.fireT -= dt; if (U.fireT <= 0) { U.fireT = 0.3; ultDmg(U, 0.7, 'fire', 0, 0, 6.3); G.flashes.push({ fi: U.fi, fj: U.fj, t: 0.4, t0: 0.4, r: 330, tint: 1 }); }
@@ -2323,7 +2329,7 @@ function drawElemUlt() {
   if (G.screenFlash) {   // a white (or ice-blue) frame, breaking up as it fades
     const F = G.screenFlash; if (F.at === undefined) F.at = G.t; const k = 1 - (G.t - F.at) / F.t0, c = PAL32[F.col];
     if (k <= 0) G.screenFlash = null;
-    else for (let Y = 0; Y < OH; Y++) { const row = ((Y >> 1) & 3) << 2; for (let X = 0; X < OW; X++) if (BAYER[row | ((X >> 1) & 3)] < k * k * 0.8) ov32[Y * OW + X] = c; }
+    else for (let Y = 0; Y < OH; Y++) { const row = ((Y >> 1) & 3) << 2; for (let X = 0; X < OW; X++) if (BAYER[row | ((X >> 1) & 3)] < k * k * 0.6) ov32[Y * OW + X] = c; }
   }
   const U = hero.ultOn; if (!U || U.kind !== 'elem') return;
   const P = (fi, fj, z) => { const [x, y] = iso(fi, fj); return [Math.round(x * SPX - cam2x), Math.round((y - z) * SPX - cam2y)]; };
@@ -2341,6 +2347,7 @@ function drawElemUlt() {
     if (kind === 0) drawIceCluster(X, Y, o.h, o.seed, Math.min(1, (G.t - o.born) / 0.09));
     else { const up = Math.min(1, (G.t - o.born) / 0.14), down = o.die ? Math.max(0, 1 - (G.t - o.die) / 0.35) : 1; drawFirePillar(X, Y, o.h * (0.9 + 0.1 * Math.sin(G.t * 9 + o.seed)), o.w, o.seed, G.t, up * down); }
   }
+  drawPairs(U, P);
   // spears of ice coming down from the upper left: a white core in pale blue, a broken trail behind
   for (const s of U.spears) {
     const k = Math.max(0, s.t / s.t0), [gx, gy] = P(s.fi, s.fj, 0), x0 = gx - k * 70, y0 = gy - k * 250;
@@ -2361,6 +2368,384 @@ function drawElemUlt() {
       const R = rng(q * 17 + Math.floor(G.t * 30)); for (let f = 0; f < 3; f++) { const fa = R() * 6.283, l = 16 + R() * 14; boltLine([X, Y], [X + Math.cos(fa) * l, Y + Math.sin(fa) * l], q * 31 + f, 1, 1, false); }
       if ((Math.floor(G.t * 12) + q) % 3 === 0) boltLine(tip, [X, Y], q * 53, 2, 1, false);
     }
+  }
+}
+// ---------------------------------------------------------------- the pair ultimates (round 84)
+// Two full gauges cast one combined ultimate instead of two in a row. Three: the pair highest in
+// PAIR_ORDER, then the third element's own. All of them: the same radius, their own timelines.
+const PAIR_ORDER = ['fire+earth', 'fire+storm', 'frost+storm', 'frost+earth', 'earth+storm', 'fire+frost'];
+Object.assign(ELEM_INFO, {
+  'fire+storm': { ult: 'PLASMA STORM', col: 17, hi: 40 }, 'fire+frost': { ult: 'STEAM BURST', col: 17, hi: 118 }, 'fire+earth': { ult: 'VOLCANO', col: 16, hi: 107 },
+  'frost+storm': { ult: 'SHATTERSTORM', col: 118, hi: 40 }, 'frost+earth': { ult: 'GLACIER', col: 118, hi: 107 }, 'earth+storm': { ult: 'MAGNETIC PULL', col: 107, hi: 40 },
+});
+Object.assign(ELEM_DUR, { 'fire+storm': 4.3, 'fire+frost': 4.2, 'fire+earth': 4.5, 'frost+storm': 4.0, 'frost+earth': 4.0, 'earth+storm': 4.0 });
+const FIRE_BOLT = [27, 18, 17, 16];
+// run a piece of an ultimate as if it were centred somewhere else (the volcano, the lodestone)
+function ultAt(U, c, fn) { const fi = U.fi, fj = U.fj; U.fi = c.fi; U.fj = c.fj; try { fn(); } finally { U.fi = fi; U.fj = fj; } }
+// where the thickest knot of foes stands (the Meteor's rule), at least `keep` tiles from the mage; else a little ahead
+function ultSpot(U, keep = 1.8) {
+  let best = null, bn = -1;
+  for (const e of enemies) { if (!ultSees(e) || Math.hypot(e.fi - U.fi, e.fj - U.fj) > 6) continue; let n = 0; for (const o of enemies) if (alive(o) && Math.hypot(o.fi - e.fi, o.fj - e.fj) < 2.4) n++; if (n > bn) { bn = n; best = e; } }
+  let [fx, fy] = dirVec(hero.dir), p = best ? [best.fi, best.fj] : [U.fi + fx * 2.8, U.fj + fy * 2.8];
+  const d = Math.hypot(p[0] - U.fi, p[1] - U.fj);
+  if (d < keep) { const l = d || 1, ux = d ? (p[0] - U.fi) / l : fx, uy = d ? (p[1] - U.fj) / l : fy; p = [U.fi + ux * keep, U.fj + uy * keep]; }
+  if (blocked(p[0], p[1])) p = [U.fi, U.fj];
+  return { fi: p[0], fj: p[1] };
+}
+// ---- fire + lightning: PLASMA STORM. Three balls of plasma wheel out from the mage and back in, joined
+// by burning lightning; what a ball or a strand touches is scorched and shocked; flames mark their path;
+// at the end they meet in the middle and burst.
+function plasmaPos(U) {
+  const p = U.t - U.plasma.t0, r = p < 2.0 ? 1.0 + 4.6 * (p / 2.0) : Math.max(0.3, 5.6 - 5.3 * Math.min(1, (p - 2.0) / 1.05)), a = p * 2.6 + p * p * 0.5;
+  return [0, 1, 2].map(i => [U.fi + Math.cos(a + i * 2.094) * r, U.fj + Math.sin(a + i * 2.094) * r]);
+}
+const segDist = (px, py, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((px - a[0]) * dx + (py - a[1]) * dy) / l2)); return Math.hypot(px - a[0] - dx * t, py - a[1] - dy * t); };
+function plasmaTick(U) {
+  const P3 = U.plasma.pos; U.plasma.n = (U.plasma.n || 0) + 1; const fire = U.plasma.n % 2 === 0;
+  G.pierce = true;
+  for (const e of enemies) {
+    if (!ultSees(e)) continue;
+    let hit = false; for (let i = 0; i < 3 && !hit; i++) hit = Math.hypot(e.fi - P3[i][0], e.fj - P3[i][1]) < 1.25 || segDist(e.fi, e.fj, P3[i], P3[(i + 1) % 3]) < 0.75;
+    if (!hit) continue;
+    wake(e); const c = spellCrit(); G.elem = fire ? 'fire' : 'shock'; damageEnemy(e, spellDmg(c ? 4 : 2), U.fi, U.fj, c, 0, true); G.elem = null; if (alive(e)) e.shockT = 3;
+    impactFlash(e.fi, e.fj, (e.def.chest || 20) * 0.6, 4);
+  }
+  G.pierce = false;
+  for (const p of P3) if (!blocked(p[0], p[1]) && U.pillars.length < 70) U.pillars.push({ fi: p[0], fj: p[1], born: G.t, die: G.t + 0.45, seed: Math.random() * 100, h: 30 + Math.random() * 16, w: 6 + Math.random() * 2 });
+  if (U.plasma.n % 2 === 0) { G.flashes.push({ fi: U.fi, fj: U.fj, t: 0.35, t0: 0.35, r: 300, tint: 1 }); sfx('zap', 0.7); }
+  if (U.plasma.n % 5 === 0) sfx('fireball', 0.6);
+}
+function plasmaBurst(U, k) {
+  U.plasma = null;
+  explodeAt(U.fi, U.fj, 3.2, k, 2, true);
+  ultDmg(U, k * 0.5, 'shock', 1, 3.2, ULT_R + 0.5, e => { if (alive(e)) e.shockT = 3; });
+  skyFx(U.fi + 0.4, U.fj + 0.4, true); for (let q = 0; q < 6; q++) { const a = q / 6 * 6.283; skyFx(U.fi + Math.cos(a) * 3.6, U.fj + Math.sin(a) * 3.6, false); }
+  shockwave(U.fi, U.fj, ULT_R, 0.45, [18, 16]); shockwave(U.fi, U.fj, ULT_R + 0.5, 0.55, [27, 40]);
+  G.screenFlash = { t0: 0.16, col: 18 };
+  if (SHAKE) G.trauma = 1;
+  sfx('boom'); sfx('zap'); sfx('meteor');
+}
+// ---- fire + frost: STEAM BURST. Fire meets ice: geysers of scalding steam burst up under the foes, one
+// after another, throwing them and blinding them, while a cloud builds; then one great burst of steam.
+function steamPuff(U, fi, fj, z, r, vr, vz, life, vi = 0, vj = 0) { if (U.puffs.length < 40) U.puffs.push({ fi, fj, z, r, vr, vz, vi, vj, t: life, t0: life, seed: (Math.random() * 1e4) | 0 }); }
+function steamGeyser(U) {
+  const foes = enemies.filter(e => ultSees(e) && Math.hypot(e.fi - U.fi, e.fj - U.fj) < ULT_R);
+  let p = null;
+  if (foes.length && Math.random() < 0.8) { foes.sort((a, b) => (a.stormN || 0) - (b.stormN || 0) || Math.random() - 0.5); const e = foes[0]; e.stormN = (e.stormN || 0) + 1; p = [e.fi, e.fj]; }
+  for (let tr = 0; tr < 6 && !p; tr++) { const a = Math.random() * 6.283, d = 1 + Math.sqrt(Math.random()) * (ULT_R - 1), c = [U.fi + Math.cos(a) * d, U.fj + Math.sin(a) * d]; if (!blocked(c[0], c[1])) p = c; }
+  if (!p) return;
+  U.geysers.push({ fi: p[0], fj: p[1], born: G.t, seed: (Math.random() * 1e4) | 0, h: 100 + Math.random() * 50 });
+  G.pierce = true;
+  for (const e of enemies) if (ultSees(e) && Math.hypot(e.fi - p[0], e.fj - p[1]) < 1.05 + (e.def.unique ? 0.4 : 0)) {
+    const c = spellCrit(); G.elem = 'fire'; damageEnemy(e, spellDmg(c ? 6 : 3), p[0], p[1], c, 1, true); G.elem = null;
+    if (alive(e) && !e.def.unique) { e.stun = Math.max(e.stun || 0, 1.4); if (smallFoe(e) && !(e.frozen > 0)) { e.downT = e.downT0 = Math.max(e.downT || 0, 0.9); e.atk = -1; } }
+  }
+  G.pierce = false;
+  steamPuff(U, p[0], p[1], 70 + Math.random() * 30, 12, 20, 14, 1.6 + Math.random(), (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8);
+  steamPuff(U, p[0], p[1], 8, 6, 26, 4, 0.7);
+  const [x, y] = iso(p[0], p[1]); burst(2, x, y, 4, 6, 90, 27); for (let q = 0; q < 8; q++) { const a = q / 8 * 6.283; pspawn(4, x, y, 2, Math.cos(a) * 60, Math.sin(a) * 30, 0, 0.22, q % 2 ? 27 : 118); }
+  G.flashes.push({ fi: p[0], fj: p[1], t: 0.2, t0: 0.2, r: 110 });
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.1);
+  sfx('sizzle'); if (Math.random() < 0.5) sfx('whoomp', 0.6);
+}
+function steamBlast(U, k) {
+  U.geyserUntil = -1;
+  ultDmg(U, k, 'fire', 2, 0, ULT_R + 0.3, e => { if (alive(e) && !e.def.unique) e.stun = Math.max(e.stun || 0, 2.4); });
+  for (let q = 0; q < 26; q++) { const a = q / 26 * 6.283, d = 0.6 + (q % 3) * 0.5; steamPuff(U, U.fi + Math.cos(a) * d, U.fj + Math.sin(a) * d, 10 + (q % 4) * 14, 13, 34, 10, 1.1 + (q % 3) * 0.3, Math.cos(a) * 4.6, Math.sin(a) * 4.6); }
+  U.geysers.push({ fi: U.fi + 0.5, fj: U.fj + 0.5, born: G.t, seed: 7, h: 190, big: true });
+  shockwave(U.fi, U.fj, ULT_R, 0.45, [27, 32]); shockwave(U.fi, U.fj, ULT_R * 0.7, 0.4, [18, 16]); shockwave(U.fi, U.fj, ULT_R * 0.85, 0.5, [27, 118]);
+  G.screenFlash = { t0: 0.14, col: 27 }; G.flashes.push({ fi: U.fi, fj: U.fj, t: 0.5, t0: 0.5, r: 330 });
+  if (SHAKE) G.trauma = 1;
+  sfx('whoomp'); sfx('boom'); sfx('sizzle');
+}
+// ---- fire + earth: VOLCANO. A cone of rock heaves up where the foes stand thickest and hurls
+// lava bombs at them; each leaves a burning pool; it ends in one last eruption.
+function volcRise(U) {
+  const c = ultSpot(U, 2.4); U.volc = { fi: c.fi, fj: c.fj, born: G.t, die: 0, seed: (Math.random() * 1e4) | 0 };
+  ultAt(U, c, () => quakeRing(U, 0, 2.3, 3));
+  const [x, y] = iso(c.fi, c.fj); rubble(x, y, 30, 110);
+  G.flashes.push({ fi: c.fi, fj: c.fj, t: 0.5, t0: 0.5, r: 200, tint: 1 });
+  sfx('boom'); sfx('crack'); sfx('meteor');
+}
+function volcBomb(U) {
+  const v = U.volc, foes = enemies.filter(e => ultSees(e) && Math.hypot(e.fi - v.fi, e.fj - v.fj) < 6.8 && Math.hypot(e.fi - v.fi, e.fj - v.fj) > 0.8);
+  let p = null;
+  if (foes.length && Math.random() < 0.78) { const e = foes[(Math.random() * foes.length) | 0]; p = [e.fi + (Math.random() - 0.5) * 0.7, e.fj + (Math.random() - 0.5) * 0.7]; }
+  for (let tr = 0; tr < 6 && !p; tr++) { const a = Math.random() * 6.283, d = 1.6 + Math.random() * 4, c = [v.fi + Math.cos(a) * d, v.fj + Math.sin(a) * d]; if (!blocked(c[0], c[1])) p = c; }
+  if (!p || blocked(p[0], p[1])) return;
+  const d = Math.hypot(p[0] - v.fi, p[1] - v.fj);
+  U.bombs.push({ a: [v.fi, v.fj], b: p, t: 0, dur: 0.5 + d * 0.05, h: 80 + d * 9, seed: (Math.random() * 1e4) | 0 });
+  const [x, y] = iso(v.fi, v.fj); burst(2, x, y, 46, 5, 120, 18); burst(3, x, y, 46, 3, 40, 16);
+  if (Math.random() < 0.5) sfx('fireball', 0.7);
+}
+function volcLand(U, b) {
+  const [fi, fj] = b.b;
+  G.pierce = true;
+  for (const e of enemies) if (ultSees(e) && Math.hypot(e.fi - fi, e.fj - fj) < 1.25 + (e.def.unique ? 0.4 : 0)) { const c = spellCrit(); G.elem = 'fire'; damageEnemy(e, spellDmg(c ? 7 : 3.5), fi, fj, c, 1, true); G.elem = null; }
+  G.pierce = false;
+  U.pools.push({ fi, fj, r: 0.95 + Math.random() * 0.3, born: G.t, die: G.t + 2.4, seed: b.seed });
+  const [x, y] = iso(fi, fj); burst(2, x, y, 4, 12, 110, 17); burst(3, x, y, 4, 5, 40, 16); burst(7, x, y, 3, 4, 70, LAVA[2]);
+  shockwave(fi, fj, 1.25, 0.24, [18, 16]); impactFlash(fi, fj, 6, 6);
+  stampBlood(Math.round(x), Math.round(y), 4, b.seed, [2, 3, 3, 4, 5]);
+  if (U.bombN++ % 2 === 0) G.blasts.push({ fi, fj, r: 1.1, t: 0.46, t0: 0.46, big: false, bloom: true, seed: Math.random() * 100 });
+  G.flashes.push({ fi, fj, t: 0.3, t0: 0.3, r: 120, tint: 1 });
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.14);
+  sfx('boom', 0.7);
+}
+function volcEnd(U, k) {
+  const v = U.volc; if (!v) return; U.bombUntil = -1;
+  ultAt(U, v, () => { explodeAt(v.fi, v.fj, 3.2, k, 2, true); ultDmg(U, k * 0.4, 'fire', 1, 3.2, ULT_R + 1); });
+  for (let q = 0; q < 10; q++) { const a = q / 10 * 6.283, d = 1.4 + (q % 3) * 0.9, p = [v.fi + Math.cos(a) * d, v.fj + Math.sin(a) * d]; if (!blocked(p[0], p[1])) U.pools.push({ fi: p[0], fj: p[1], r: 0.9, born: G.t, die: G.t + 1.2, seed: q * 31 }); }
+  const [x, y] = iso(v.fi, v.fj); burst(2, x, y, 46, 40, 220, 18); burst(7, x, y, 40, 16, 150, LAVA[3]); rubble(x, y, 30, 140);
+  v.die = G.t; G.screenFlash = { t0: 0.14, col: 18 };
+  if (SHAKE) G.trauma = 1;
+  sfx('boom'); sfx('meteor'); sfx('crack');
+}
+// ---- frost + lightning: SHATTERSTORM. Everything freezes solid, then lightning finds the frozen one
+// by one: each bursts in a spray of ice that cuts what stands near and spreads the ice further.
+function shatterFreeze(U) {
+  frostNova(U, 2);
+  for (const e of enemies) if (ultSees(e) && Math.hypot(e.fi - U.fi, e.fj - U.fj) < ULT_R && U.crystals.length < 44) U.crystals.push({ fi: e.fi + 0.25, fj: e.fj + 0.25, born: G.t, h: 30 + Math.random() * 22, seed: (Math.random() * 1e4) | 0 });
+}
+function shatterStrike(U) {
+  const foes = enemies.filter(e => ultSees(e) && Math.hypot(e.fi - U.fi, e.fj - U.fj) < ULT_R + 0.5);
+  if (!foes.length) { if (Math.random() < 0.4) { const a = Math.random() * 6.283, d = 1.5 + Math.random() * 4; skyFx(U.fi + Math.cos(a) * d, U.fj + Math.sin(a) * d, false); sfx('zap', 0.7); } return; }
+  foes.sort((a, b) => (a.stormN || 0) - (b.stormN || 0) || (b.frozen > 0) - (a.frozen > 0) || Math.random() - 0.5);
+  const e = foes[0]; e.stormN = (e.stormN || 0) + 1; const at = chestOf(e), [fi, fj] = [e.fi, e.fj];
+  G.pierce = true;
+  { const c = spellCrit(); G.elem = 'shock'; damageEnemy(e, spellDmg(c ? 6 : 3), fi - 0.1, fj - 0.1, c, 1, true); G.elem = null; if (alive(e)) e.shockT = 3; }
+  for (const o of enemies) if (o !== e && ultSees(o) && Math.hypot(o.fi - fi, o.fj - fj) < 1.5) { const c = spellCrit(); G.elem = 'cold'; damageEnemy(o, spellDmg(c ? 2 : 1), fi, fj, c, 0, true); G.elem = null; if (!(o.frozen > 0)) freezeFoe(o, 1.4); }
+  G.pierce = false;
+  skyFx(fi, fj, false);
+  const [x, y] = iso(fi, fj); burst(5, x, y, 12, 9, 120, 118); burst(4, x, y, 12, 8, 110, 27);
+  for (let q = 0; q < 12; q++) { const a = q / 12 * 6.283; pspawn(4, x, y, 10, Math.cos(a) * 130, Math.sin(a) * 65, 10, 0.2, q % 2 ? 118 : 27); }
+  U.crystals = U.crystals.filter(c => Math.hypot(c.fi - fi, c.fj - fj) > 0.9);
+  for (let q = 0; q < 2 && U.crystals.length < 44; q++) { const a = Math.random() * 6.283, d = 0.7 + Math.random() * 0.8, p = [fi + Math.cos(a) * d, fj + Math.sin(a) * d]; if (!blocked(p[0], p[1])) U.crystals.push({ fi: p[0], fj: p[1], born: G.t, h: 18 + Math.random() * 16, seed: (Math.random() * 1e4) | 0 }); }
+  if (U.lastAt && Math.hypot(U.lastAt[0] - at[0], U.lastAt[1] - at[1]) < 6) U.arcs.push({ a: U.lastAt, b: at, t: 0.24, t0: 0.24, seed: (Math.random() * 1e6) | 0 });
+  U.lastAt = at;
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.1);
+  sfx('zap'); sfx('crack', 0.5);
+}
+function shatterFinale(U, k) {
+  U.shatUntil = -1;
+  skyFx(U.fi + 0.5, U.fj + 0.5, true);
+  const [x, y] = iso(U.fi, U.fj); for (let q = 0; q < 56; q++) { const a = q / 56 * 6.283; pspawn(4, x, y, 8, Math.cos(a) * 230, Math.sin(a) * 115, 6, 0.42, q % 3 ? 118 : 27); }
+  shatterAll(U, k); shockwave(U.fi, U.fj, ULT_R + 0.5, 0.5, [27, 40]);
+  sfx('zap');
+}
+// ---- frost + earth: GLACIER. Two walls of ice grind in from the sides, shoving everything before
+// them, and slam together; what is caught is crushed and frozen; then the glacier bursts apart.
+const GL_AX = [1, 0], GL_PX = [0, 1];   // the walls run along one tile axis (a long diagonal on screen) and close along the other
+function glacierStart(U) {
+  U.walls = { t0: U.t, d: 6.2, slam: 0, seed: (Math.random() * 1e4) | 0 };
+  const qk = { fi: U.fi, fj: U.fj, a0: 0, ring: true, R: 5.5, t: 0.7, t0: 0.7, seed: (Math.random() * 1e6) | 0 }; G.quakes.push(qk); stampCracks(qk);
+  U.shakeUntil = U.t + 1.35;
+  sfx('crack'); sfx('frost'); sfx('boom', 0.6);
+}
+function glacierPush(U, dt) {
+  const Wl = U.walls, p = Math.min(1, (U.t - Wl.t0) / 1.3); Wl.d = 6.2 - 5.65 * p * p;
+  const lim = Math.max(0.3, Wl.d - 0.75);
+  for (const e of enemies) {
+    if (!ultSees(e)) continue; const dx = e.fi - U.fi, dy = e.fj - U.fj; if (Math.hypot(dx, dy) > ULT_R + 1.5) continue;
+    const s = dx * GL_AX[0] + dy * GL_AX[1]; if (Math.abs(s) <= lim) continue;
+    const mv = Math.sign(s) * lim - s; tryMove(e, GL_AX[0] * mv, GL_AX[1] * mv); wake(e);
+    if (!e.def.unique) { e.stun = Math.max(e.stun || 0, 0.3); e.atk = -1; e.windT = 0; }
+  }
+  if (Math.random() < 0.7) for (const sd of [1, -1]) { const j = (Math.random() - 0.5) * 9, fi = U.fi + GL_AX[0] * sd * Wl.d + GL_PX[0] * j, fj = U.fj + GL_AX[1] * sd * Wl.d + GL_PX[1] * j; if (blocked(fi, fj)) continue; const [x, y] = iso(fi, fj); pspawn(5, x, y, 2, -sd * 30, 0, 30 + Math.random() * 30, 1, Math.random() < 0.5 ? 118 : (LV.outdoor ? DIRT[3] : S[5])); if (Math.random() < 0.3) rubble(x, y, 2, 50); }
+}
+function glacierSlam(U, k) {
+  const Wl = U.walls; if (!Wl) return; Wl.slam = G.t; Wl.d = 0.55;
+  ultDmg(U, k, 'cold', 2, 0, ULT_R + 1, e => freezeFoe(e, 2.6));
+  const [x, y] = iso(U.fi, U.fj);
+  for (let j = -5; j <= 5; j++) { const [px, py] = iso(U.fi + GL_PX[0] * j, U.fj + GL_PX[1] * j); burst(5, px, py, 20, 5, 130, 118); burst(4, px, py, 30, 4, 120, 27); if (j % 2 === 0) rubble(px, py, 4, 90); }
+  shockwave(U.fi, U.fj, ULT_R, 0.45, [27, 118]);
+  const lite = LV.outdoor ? [DIRT[4], DIRT[3]] : [TH().ramp[TH().ramp.length - 1], TH().ramp[5]]; shockwave(U.fi, U.fj, ULT_R * 0.8, 0.4, lite, null, false);
+  G.frost.push({ fi: U.fi, fj: U.fj, a0: 0, t: 4, seed: (Math.random() * 1e6) | 0, R: 3.6, half: Math.PI, ring0: 0 });
+  G.screenFlash = { t0: 0.14, col: 118 }; G.flashes.push({ fi: U.fi, fj: U.fj, t: 0.6, t0: 0.6, r: 330, tint: 2 });
+  if (SHAKE) G.trauma = 1; hero.stop = Math.max(hero.stop || 0, 0.1);
+  void x; void y; sfx('boom'); sfx('crack'); sfx('frost'); sfx('crit');
+}
+function glacierShatter(U, k) {
+  if (!U.walls) return;
+  ultDmg(U, k, 'heavy', 2, 0, ULT_R + 1, (e, d) => { if (alive(e) && smallFoe(e) && !(e.frozen > 0)) { const l = d || 1; e.kb = [(e.fi - U.fi) / l * 7, (e.fj - U.fj) / l * 7]; } });
+  for (let j = -5; j <= 5; j++) for (const sd of [1, -1]) { const [px, py] = iso(U.fi + GL_AX[0] * sd * 0.55 + GL_PX[0] * j, U.fj + GL_AX[1] * sd * 0.55 + GL_PX[1] * j); burst(5, px, py, 26, 5, 150, 118); burst(2, px, py, 26, 3, 120, 27); }
+  U.walls = null;
+  shockwave(U.fi, U.fj, ULT_R, 0.4, [27, 118]);
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.7);
+  sfx('crack'); sfx('boom'); sfx('frost');
+}
+// ---- lightning + earth: MAGNETIC PULL. A lodestone tears itself out of the ground and hangs crackling;
+// lightning leashes every foe and hauls it in, with half the floor's rubble; then the stone bursts.
+function magnetRise(U) {
+  const c = ultSpot(U, 1.9); U.magnet = { fi: c.fi, fj: c.fj, born: G.t, tick: 0, seed: (Math.random() * 1e4) | 0 };
+  skyFx(c.fi, c.fj, false);
+  const [x, y] = iso(c.fi, c.fj); rubble(x, y, 20, 90);
+  const qk = { fi: c.fi, fj: c.fj, a0: 0, ring: true, R: 2.2, t: 0.7, t0: 0.7, seed: (Math.random() * 1e6) | 0 }; G.quakes.push(qk); stampCracks(qk);
+  U.shakeUntil = U.t + 2.2;
+  sfx('crack'); sfx('zap'); sfx('whoomp');
+}
+function magnetPull(U, dt) {
+  const M = U.magnet; M.tick -= dt; const tick = M.tick <= 0; if (tick) M.tick = 0.25;
+  M.held = [];
+  G.pierce = true;
+  for (const e of enemies) {
+    if (!ultSees(e)) continue; const dx = M.fi - e.fi, dy = M.fj - e.fj, d = Math.hypot(dx, dy); if (d > 7.6) continue;
+    wake(e); M.held.push(e);
+    if (d > 0.75) { const sp = (e.def.unique ? 1.2 : smallFoe(e) ? 4.2 : 2.8) * dt * Math.min(1, (G.t - M.born) / 0.3), st = Math.min(sp, d - 0.7); tryMove(e, dx / d * st, dy / d * st); }
+    if (!e.def.unique) { e.stun = Math.max(e.stun || 0, 0.3); e.atk = -1; e.windT = 0; }
+    if (tick) { G.elem = 'shock'; damageEnemy(e, spellDmg(0.8), M.fi, M.fj, false, 0, true); G.elem = null; if (alive(e)) e.shockT = 3; }
+  }
+  G.pierce = false;
+  if (tick) { sfx('zap', 0.5); G.flashes.push({ fi: M.fi, fj: M.fj, t: 0.3, t0: 0.3, r: 170, tint: 2 }); }
+  // the floor's rubble flies to it
+  if (Math.random() < 0.8) { const a = Math.random() * 6.283, d = 2.5 + Math.random() * 3.5, [x, y] = iso(M.fi + Math.cos(a) * d, M.fj + Math.sin(a) * d), [mx, my] = iso(M.fi, M.fj); pspawn(4, x, y, 2, (mx - x) / 0.45, (my - y) / 0.45, 70, 0.45, Math.random() < 0.5 ? (LV.outdoor ? DIRT[3] : S[6]) : 40); }
+}
+function magnetBlast(U, k) {
+  const M = U.magnet; if (!M) return;
+  ultAt(U, M, () => {
+    ultDmg(U, k, 'shock', 2, 0, 2.7, (e, d) => { if (alive(e)) { e.shockT = 3; if (!e.def.unique) e.stun = Math.max(e.stun || 0, 1.5); if (smallFoe(e)) { const l = d || 1; e.kb = [(e.fi - M.fi) / l * 9, (e.fj - M.fj) / l * 9]; } } });
+    ultDmg(U, k * 0.4, 'heavy', 1, 2.7, ULT_R + 1);
+    quakeRing(U, 0.3, 3.2, 0, 1.2);
+    shockwave(M.fi, M.fj, ULT_R, 0.5, [27, 40]);
+  });
+  skyFx(M.fi, M.fj, true); for (let q = 0; q < 5; q++) { const a = q / 5 * 6.283; skyFx(M.fi + Math.cos(a) * 2.6, M.fj + Math.sin(a) * 2.6, false); }
+  const [x, y] = iso(M.fi, M.fj); rubble(x, y, 50, 170); burst(7, x, y, 34, 14, 160, LV.outdoor ? DIRT[2] : S[5]);
+  U.magnet = null; G.screenFlash = { t0: 0.16, col: 27 };
+  if (SHAKE) G.trauma = 1; hero.stop = Math.max(hero.stop || 0, 0.1);
+  sfx('boom'); sfx('zap'); sfx('crack'); sfx('crit');
+}
+Object.assign(ELEM_EV, {
+  'fire+storm': [[0.4, U => { U.plasma = { t0: U.t, tick: 0, pos: null }; sfx('zap'); sfx('fireball'); }], [3.5, U => plasmaBurst(U, 6)]],
+  'fire+frost': [[0.4, U => { shockwave(U.fi, U.fj, 3, 0.3, [18, 16]); shockwave(U.fi, U.fj, 3.4, 0.36, [27, 118]); U.geyserUntil = 2.95; U.geyserT = 0; sfx('sizzle'); sfx('frost'); }], [3.15, U => steamBlast(U, 7)]],
+  'fire+earth': [[0.4, U => volcRise(U)], [0.85, U => { U.bombUntil = 3.5; U.bombT = 0; }], [3.7, U => volcEnd(U, 8)]],
+  'frost+storm': [[0.4, U => shatterFreeze(U)], [0.85, U => { U.shatUntil = 2.95; U.shatT = 0; }], [3.1, U => shatterFinale(U, 5)]],
+  'frost+earth': [[0.45, U => glacierStart(U)], [1.75, U => glacierSlam(U, 14)], [3.0, U => glacierShatter(U, 6)]],
+  'earth+storm': [[0.4, U => magnetRise(U)], [2.75, U => magnetBlast(U, 14)]],
+});
+// the continuous parts of the pair ultimates (called from updateElemUlt)
+function updatePairs(U, dt) {
+  if (U.plasma) { U.plasma.pos = plasmaPos(U); U.plasma.tick -= dt; if (U.plasma.tick <= 0) { U.plasma.tick = 0.15; plasmaTick(U); } }
+  if (U.t < U.geyserUntil) {
+    U.geyserT -= dt; while (U.geyserT <= 0) { U.geyserT += 0.085; steamGeyser(U); }
+    U.blindT = (U.blindT || 0) - dt; if (U.blindT <= 0) { U.blindT = 0.4; ultDmg(U, 0.4, null, 0, 0, ULT_R * 0.85, e => { if (alive(e) && !e.def.unique) e.stun = Math.max(e.stun || 0, 0.6); }); }
+    if (Math.random() < 0.5) { const a = Math.random() * 6.283, d = Math.sqrt(Math.random()) * ULT_R * 0.8; steamPuff(U, U.fi + Math.cos(a) * d, U.fj + Math.sin(a) * d, 30 + Math.random() * 50, 11, 12, 5, 1.6 + Math.random(), (Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 0.6); }
+  }
+  for (const g of U.geysers) if (G.t - g.born > (g.big ? 0.9 : 0.6)) g.done = true; U.geysers = U.geysers.filter(g => !g.done);
+  for (const p of U.puffs) { p.t -= dt; p.fi += p.vi * dt; p.fj += p.vj * dt; p.z += p.vz * dt; p.r += p.vr * dt; p.vr *= Math.exp(-dt * 2.2); p.vi *= Math.exp(-dt * 2.5); p.vj *= Math.exp(-dt * 2.5); } U.puffs = U.puffs.filter(p => p.t > 0);
+  if (U.volc && U.t < U.bombUntil) {
+    U.bombT -= dt; while (U.bombT <= 0) { U.bombT += 0.115; volcBomb(U); }
+    if (Math.random() < 0.9) { const [x, y] = iso(U.volc.fi, U.volc.fj); pspawn(2, x + (Math.random() - 0.5) * 8, y, 46, (Math.random() - 0.5) * 70, (Math.random() - 0.5) * 30, 80 + Math.random() * 130, 0.5, Math.random() < 0.5 ? 18 : 17); if (Math.random() < 0.4) pspawn(8, x + (Math.random() - 0.5) * 10, y, 60, (Math.random() - 0.5) * 6, 3, 26 + Math.random() * 16, 1.8, Math.random() < 0.5 ? 4 : 5); }
+    if (Math.random() < 0.15) G.flashes.push({ fi: U.volc.fi, fj: U.volc.fj, t: 0.4, t0: 0.4, r: 230, tint: 1 });
+  }
+  for (const b of U.bombs) { b.t += dt; if (b.t >= b.dur && !b.done) { b.done = true; volcLand(U, b); } else if (!b.done && Math.random() < 0.7) { const u = b.t / b.dur, [x, y] = iso(b.a[0] + (b.b[0] - b.a[0]) * u, b.a[1] + (b.b[1] - b.a[1]) * u); pspawn(3, x, y, 40 * (1 - u) + Math.sin(u * Math.PI) * b.h, 0, 0, 4, 0.3, Math.random() < 0.5 ? 17 : 4); } }
+  U.bombs = U.bombs.filter(b => !b.done);
+  if (U.pools.length) {
+    U.poolT = (U.poolT || 0) - dt;
+    if (U.poolT <= 0) { U.poolT = 0.35; G.pierce = true; G.elem = 'fire'; for (const e of enemies) { if (!ultSees(e)) continue; if (U.pools.some(p => G.t < p.die && Math.hypot(e.fi - p.fi, e.fj - p.fj) < p.r)) damageEnemy(e, spellDmg(0.6), e.fi, e.fj, false, 0, true); } G.elem = null; G.pierce = false; }
+    U.pools = U.pools.filter(p => G.t < p.die + 0.3);
+  }
+  if (U.volc && U.volc.die && G.t - U.volc.die > 0.6) U.volc = null;
+  if (U.t < U.shatUntil) { U.shatT -= dt; while (U.shatT <= 0) { U.shatT += 0.105; shatterStrike(U); } }
+  if (U.walls && !U.walls.slam) glacierPush(U, dt);
+  if (U.magnet) magnetPull(U, dt);
+}
+// ---- drawing the pair ultimates
+// world layer (under the bodies): the volcano's burning pools
+function drawElemGround() {
+  const U = hero.ultOn; if (!U || U.kind !== 'elem' || !U.pools.length) return;
+  const ft = Math.floor(G.t * 8);
+  for (const p of U.pools) {
+    const [x0, y0] = iso(p.fi, p.fj), cx = Math.round(x0 - camX), cy = Math.round(y0 - camY), k = Math.min(1, (G.t - p.born) / 0.15) * Math.max(0, Math.min(1, (p.die + 0.3 - G.t) / 0.3)), rx = Math.round(p.r * 21 * k), ry = Math.round(rx / 2);
+    if (rx < 2 || cx + rx < 0 || cx - rx >= W || cy + ry < 0 || cy - ry >= H) continue;
+    for (let b = -ry; b <= ry; b++) for (let a = -rx; a <= rx; a++) {
+      const X = cx + a, Y = cy + b; if (X < 0 || Y < 0 || X >= W || Y >= H) continue;
+      const o = Y * W + X; if (cid[o] || scr[o] === BLK) continue;
+      const d = Math.hypot(a / rx, b / ry) + (hash(X + camX, Y + camY, p.seed) - 0.5) * 0.3; if (d > 1) continue;
+      scr[o] = d > 0.82 ? (hash(X + camX, Y + camY, 5) < 0.5 ? BLK : LAVA[0] | EMIS) : (LAVA[(((Math.floor(d * 5 + (X + camX + Y + camY) * 0.2) - ft) % 6) + 6) % 6] | EMIS);
+    }
+  }
+}
+// a soft ball of steam: a dithered disc, white in the middle, thinning as it ages
+function drawPuff(X, Y, r, life, seed) {
+  const R = Math.min(34, Math.round(r)) & ~1; if (R < 4) return;
+  const q = rng(seed), lobes = [[0, 0, 0.72], [(q() - 0.5) * 0.9, (q() - 0.5) * 0.5, 0.55], [(q() - 0.5) * 0.9, (q() - 0.5) * 0.5, 0.5], [(q() - 0.5) * 0.7, -0.25 - q() * 0.2, 0.45]];
+  X &= ~1; Y &= ~1;
+  for (let b = -R; b <= R; b += 2) {   // (in 2 x 2 blocks, on the world's pixel grid: a quarter of the work, and the dither lines up)
+    const y = Y + b; if (y < 0 || y >= OH - 1) continue; const row = ((y >> 1) & 3) << 2, v = b / R;
+    for (let a = -R; a <= R; a += 2) {
+      const x = X + a; if (x < 0 || x >= OW - 1) continue; const u = a / R;
+      let d2 = 9; for (const [lx, ly, lr] of lobes) { const dx = u - lx, dy = (v - ly) * 1.25, t = (dx * dx + dy * dy) / (lr * lr); if (t < d2) d2 = t; } if (d2 >= 1) continue;
+      const den = (1 - Math.sqrt(d2)) * life * 1.25; if (den < BAYER[row | ((x >> 1) & 3)] * 0.85 + 0.06) continue;
+      const c = PAL32[den > 0.62 && a + b * 2 < 0 ? 27 : den > 0.3 ? 32 : 31], o = y * OW + x; ov32[o] = ov32[o + 1] = ov32[o + OW] = ov32[o + OW + 1] = c;
+    }
+  }
+}
+function drawPairs(U, P) {
+  // the glacier's two walls: a rank of tall ice on a footing of broken rock
+  if (U.walls) {
+    const Wl = U.walls, rise = Math.min(1, (U.t - Wl.t0) / 0.25), tall = Wl.slam ? 1.25 : 1, ramp = LV.outdoor ? DIRT : TH().ramp;
+    const row = [];
+    for (const sd of [1, -1]) for (let j = -5; j <= 5; j++) { const fi = U.fi + GL_AX[0] * sd * Wl.d + GL_PX[0] * j * 0.95, fj = U.fj + GL_AX[1] * sd * Wl.d + GL_PX[1] * j * 0.95; if (blocked(fi, fj)) continue; const [X, Y] = P(fi, fj, 0); row.push([Y, X, sd, j]); }
+    row.sort((a, b) => a[0] - b[0]);
+    for (const [Y, X, sd, j] of row) {
+      const seed = Wl.seed + (sd > 0 ? 100 : 0) + j * 7, jit = Wl.slam ? 0 : (Math.floor(G.t * 30 + j) % 2) * sd;
+      for (let b = -4; b <= 3; b++) for (let a = -14; a <= 14; a++) if (a * a / 196 + b * b / 14 <= 1) ovSet(X + a + jit, Y + b + 2, b < -1 ? ramp[Math.min(ramp.length - 1, 4)] : (a + b) & 1 ? ramp[2] : ramp[1]);
+      drawIceCluster(X + jit, Y, (62 + ((seed * 13) % 26)) * tall, seed, rise);
+    }
+  }
+  // steam: the geysers' columns, then the cloud
+  for (const g of U.geysers) {
+    const age = G.t - g.born, life = g.big ? 0.9 : 0.6, k = age / life, [X, Y] = P(g.fi, g.fj, 0), h = Math.round(g.h * Math.min(1, age / 0.09)), w0 = g.big ? 16 : 8;
+    for (let yy = 0; yy < h; yy++) {
+      const u = yy / h, half = w0 * (0.7 + u * 0.9) + Math.sin(yy * 0.22 - G.t * 26 + g.seed) * 1.5, cx = X + Math.sin(yy * 0.08 + g.seed) * 3 * u;
+      for (let a = -Math.ceil(half); a <= half; a++) { const d = Math.abs(a) / half, x = Math.round(cx + a), y = Y - yy; if (x < 0 || y < 0 || x >= OW || y >= OH) continue; if (k > 0.45 && BAYER[(((y >> 1) & 3) << 2) | ((x >> 1) & 3)] < (k - 0.45) * 1.9) continue; if (d > 0.7 && ((x + y + Math.floor(G.t * 30)) & 1)) continue; ov32[y * OW + x] = PAL32[d < 0.35 ? 27 : d < 0.7 ? 32 : 31]; }
+    }
+    drawPuff(X, Y - h, (g.big ? 46 : 22) * Math.min(1, age / 0.2), 1 - k * 0.7, g.seed);
+    for (let a = -w0 * 2; a <= w0 * 2; a++) if ((a + X) & 1) { ovSet(X + a, Y, 27); ovSet(X + a, Y + 1, 32); }
+  }
+  for (const p of U.puffs) { const [X, Y] = P(p.fi, p.fj, p.z); drawPuff(X, Y, p.r * SPX, Math.min(1, p.t / p.t0 * 1.6), p.seed); }
+  // the volcano: a cone of dark rock with lava running down it and a white-hot mouth; its bombs in the air
+  if (U.volc) {
+    const v = U.volc, [X, Y] = P(v.fi, v.fj, 0), up = Math.min(1, (G.t - v.born) / 0.35) * (v.die ? Math.max(0, 1 - (G.t - v.die) / 0.6) : 1), Hh = Math.round(92 * up), ft = Math.floor(G.t * 10);
+    for (let yy = 0; yy < Hh; yy++) {
+      const u = yy / 92, half = 64 * Math.pow(1 - u, 1.25) + 15 + (hash(yy >> 2, v.seed, 3) - 0.5) * 6 * (1 - u);   // a concave cone with a ragged edge
+      for (let a = -Math.ceil(half); a <= half; a++) {
+        const x = X + a, y = Y + 6 - yy, q = a / half;
+        // three rivers of lava winding down from the mouth, wider toward the foot, flowing
+        let lava = 0; for (const [off, ph] of [[-0.55, 0], [0.1, 2.1], [0.62, 4.2]]) { const c = off * half * (1 - u * 0.75) + Math.sin(yy * 0.13 + ph + v.seed) * 3.2, w = 1.4 + (1 - u) * 2.6, dd = Math.abs(a - c); if (dd < w) lava = Math.max(lava, dd < w * 0.45 ? 2 : 1); }
+        const rock = q < -0.4 ? STEEL[2] : q < 0.15 ? STEEL[1] : STEEL[0], crag = hash(a >> 2, yy >> 2, v.seed) < 0.09;
+        ovSet(x, y, Math.abs(q) > 0.95 ? BLK : lava === 2 ? (hash(a >> 1, (yy + ft * 2) >> 1, 1) < 0.5 ? 18 : 17) : lava === 1 ? (hash(a, yy + ft, 2) < 0.5 ? 17 : 16) : crag ? (q < 0.15 ? STEEL[0] : BLK) : rock);
+      }
+    }
+    if (up > 0.6) { for (let b = -5; b <= 5; b++) for (let a = -15; a <= 15; a++) { const d = Math.hypot(a / 15, b / 5); if (d <= 1) ovSet(X + a, Y + 6 - Hh + b, d < 0.5 ? 27 : d < 0.8 ? 18 : 17); } }
+    if (up > 0.6 && !v.die) drawFirePillar(X, Y + 4 - Hh, 46 + Math.sin(G.t * 13) * 10, 9, v.seed, G.t, 1);
+  }
+  for (const b of U.bombs) {
+    const u = Math.min(1, b.t / b.dur), [X, Y] = P(b.a[0] + (b.b[0] - b.a[0]) * u, b.a[1] + (b.b[1] - b.a[1]) * u, 44 * (1 - u) + Math.sin(u * Math.PI) * b.h);
+    for (let q = -6; q <= 6; q++) for (let r = -6; r <= 6; r++) { const d = Math.hypot(q, r) / 6; if (d > 1) continue; ovSet(X + q, Y + r, d < 0.4 ? 27 : d < 0.7 ? 18 : d < 0.9 ? 16 : S[1]); }
+    const [gx, gy] = P(b.b[0], b.b[1], 0), sr = Math.round(4 + u * 12); for (let a = -sr; a <= sr; a++) if ((a + gx) & 1) { ovSet(gx + a, gy, 16); if (Math.abs(a) < sr / 2) ovSet(gx + a, gy - 1, 17); }   // where it will land
+  }
+  // the plasma wheel: three white-hot balls in a halo of fire, strands of burning lightning between them
+  if (U.plasma && U.plasma.pos) {
+    const pts = U.plasma.pos.map(p => P(p[0], p[1], 24));
+    for (let i = 0; i < 3; i++) { boltLine(pts[i], pts[(i + 1) % 3], i * 97 + 5, 2, 1, true, FIRE_BOLT); boltLine(pts[i], pts[(i + 1) % 3], i * 41 + 9, 1, 1, false); }
+    const tip = P(...staffTip(), ORB_Z + 14 + (hero.leapZ || 0)); if (Math.floor(G.t * 15) % 2) boltLine(tip, pts[Math.floor(G.t * 8) % 3], 77, 1, 1, false, FIRE_BOLT);
+    for (const [X, Y] of pts) { const r = 12; for (let b = -r; b <= r; b++) for (let a = -r; a <= r; a++) { const d = Math.hypot(a, b) / r; if (d > 1) continue; if (d < 0.4) ovSet(X + a, Y + b, 27); else if (d < 0.62) ovSet(X + a, Y + b, 18); else if (d < 0.82 || ((a + b) & 1)) ovSet(X + a, Y + b, d < 0.82 ? 17 : 16); } const R = rng(X * 7 + Math.floor(G.t * 30)); for (let f = 0; f < 3; f++) { const fa = R() * 6.283, l = 16 + R() * 12; boltLine([X, Y], [X + Math.cos(fa) * l, Y + Math.sin(fa) * l], f * 31 + X, 1, 1, false); } }
+  }
+  // the lodestone: a dark boulder hanging in a blue glow, lightning leashing every foe to it, rubble circling in
+  if (U.magnet) {
+    const M = U.magnet, up = Math.min(1, (G.t - M.born) / 0.35), z = 60 * up + Math.sin(G.t * 5) * 3, [X, Y] = P(M.fi, M.fj, z), [gx, gy] = P(M.fi, M.fj, 0), r = 21;
+    for (let a = -24; a <= 24; a++) for (let b = -8; b <= 8; b++) if (a * a / 576 + b * b / 64 <= 1 && ((a + b) & 1)) ovSet(gx + a, gy + b, BLK);   // its shadow
+    for (let q = 0; q < 3; q++) { const rr = ((G.t * 1.6 + q / 3) % 1), R2 = (1 - rr) * 190, n = 40 + Math.round(R2); for (let s = 0; s < n; s++) { const a = s / n * 6.283 + G.t * 2; if ((s >> 2) % 2) continue; const x = Math.round(gx + Math.cos(a) * R2), y = Math.round(gy + Math.sin(a) * R2 * 0.5); ovSet(x, y, rr > 0.6 ? 27 : 40); ovSet(x, y + 1, rr > 0.6 ? 40 : 39); ovSet(x + 1, y, rr > 0.6 ? 27 : 40); } }   // rings drawing in over the floor
+    if (M.held) M.held.slice(0, 14).forEach((e, n) => { if (!alive(e)) return; const c = chestOf(e); boltLine([X, Y], P(c[0], c[1], c[2]), M.seed + n * 13, n < 6 ? 2 : 1, 1, n < 3); });
+    for (let q = 0; q < 12; q++) { const a = G.t * 6 + q * 0.55, rr = 28 + ((q * 37 + Math.floor(G.t * 20)) % 60), x = Math.round(X + Math.cos(a) * rr), y = Math.round(Y + Math.sin(a) * rr * 0.5 + 6); for (let b = -2; b <= 2; b++) for (let c = -2; c <= 2; c++) if (Math.abs(b) + Math.abs(c) < 4) ovSet(x + c, y + b, b + c < 0 ? S[6] : S[3]); }
+    for (let b = -r - 4; b <= r + 4; b++) for (let a = -r - 4; a <= r + 4; a++) {
+      const d = Math.hypot(a, b) / r + (hash(a >> 1, b >> 1, M.seed) - 0.5) * 0.22;
+      if (d > 1) { if (d < 1.14) ovSet(X + a, Y + b, 40); else if (d < 1.42 && ((a + b + Math.floor(G.t * 20)) & 1)) ovSet(X + a, Y + b, d < 1.28 ? 40 : 39); continue; }
+      const vein = Math.abs(Math.sin(a * 0.33 + Math.sin(b * 0.4 + M.seed) * 2) * Math.cos(b * 0.29 + M.seed)) < 0.09;   // cracks of blue light running through it
+      ovSet(X + a, Y + b, d > 0.9 ? BLK : vein ? (Math.floor(G.t * 14) % 2 ? 27 : 40) : (-a - b) / r > 0.5 ? STEEL[2] : (-a - b) / r > -0.2 ? STEEL[1] : STEEL[0]);
+    }
+    const R = rng(M.seed + Math.floor(G.t * 30)); for (let f = 0; f < 5; f++) { const fa = R() * 6.283, l = 30 + R() * 22; boltLine([X, Y], [X + Math.cos(fa) * l, Y + Math.sin(fa) * l * 0.8], f * 19, f < 2 ? 2 : 1, 1, false); }
   }
 }
 // the button's glyphs: a mountain peak with a crack of light, a swirl of arcane bolts

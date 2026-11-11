@@ -1685,7 +1685,7 @@ function render() {
   heroRing(kx, ky + 1);
   base.sort((a, b) => a.depth - b.depth);
   for (const d of base) d.draw();
-  drawTelegraph(); drawImpactFx(); drawRocks(); drawRangerGround(); drawEliteGround(); drawMeteors(); drawLichFx(); drawWarriorFx();
+  drawTelegraph(); drawImpactFx(); drawElemGround(); drawRocks(); drawRangerGround(); drawEliteGround(); drawMeteors(); drawLichFx(); drawWarriorFx();
   const charLevel = lightPass(chars, kx, ky);
   // the frame: the lit world doubled (shifted by the camera's half pixel), then the detail layer over it
   for (let y = 0; y < H; y++) {

@@ -7,7 +7,7 @@ const { chromium } = require('playwright'); const path = require('path');
   const errs = []; p.on('pageerror', e => errs.push(String(e.stack || e)));
   await p.goto('file://' + path.resolve(gameDir, 'index.html'));
   const cdp = await p.context().newCDPSession(p); await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
-  for (const kind of ['fire', 'frost', 'storm', 'earth', 'fire+frost', 'all']) {
+  for (const kind of (process.argv[3] ? process.argv[3].split(',') : ['fire', 'frost', 'storm', 'earth', 'fire+storm', 'fire+frost', 'fire+earth', 'frost+storm', 'frost+earth', 'earth+storm', 'fire+frost+earth', 'all'])) {
     const r = await p.evaluate((kind) => {
       buildBudget.ms = Infinity; newHero('mage'); hero.lvl = 12; recalcHero(); hero.hp = STAT.maxHp = 99999; G.mode = 'play'; startLevel(3, 777); G.actCard = 0;
       const r0 = LV.rooms.slice(1).sort((a, b) => b.w * b.h - a.w * a.h)[0]; hero.fi = r0.cx + 0.5; hero.fj = r0.cy + 0.5;
