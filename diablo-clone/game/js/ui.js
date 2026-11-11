@@ -55,11 +55,11 @@ function drawUltButton() {
   const fx = btnFx(9), dtu = 1 / 60; fx.press = Math.max(0, fx.press - dtu); fx.deny = Math.max(0, fx.deny - dtu);
   const c0 = UI.ult, shake = fx.deny > 0 ? Math.round(Math.sin(fx.deny * 70) * 2) : 0, c = [c0[0] + shake, c0[1], c0[2] + (fx.press > 0.08 ? 1 : 0)];
   const mage = hero.cls === 'mage', locked = hero.lvl < ULT_LVL, fullEl = mage && !locked ? elemFull() : [];
-  const war = hero.cls === 'warrior' && !locked, rg = (hero.rage || 0) / 100, bzOn = war && hero.stance === 1, bzReady = war && !bzOn && rg >= RAGE_STANCE / 100, titan = bzOn && rg >= 1;   // round 87: the warrior's button is his stance
+  const war = hero.cls === 'warrior' && !locked, rg = (hero.rage || 0) / 100, tzOn = war && hero.stance === 2, bzOn = war && hero.stance >= 1, bzReady = war && !bzOn && rg >= RAGE_STANCE / 100, titan = bzOn && !tzOn && rg >= 1;   // round 87: the warrior's button is his stance
   const cata = mage && !locked && orbsAll(), f = locked ? 0 : war ? (bzReady || titan ? 1 : rg) : mage ? (fullEl.length || cata ? 1 : Math.max(0, ...ELEMS.map(k => (hero.el && hero.el[k]) || 0)) / 100) : (hero.ult || 0) / 100, full = f >= 1;
   // round 83: the mage's button takes the colours of what it would cast (all four: it runs through them)
   const mramp = cata ? (Math.floor(G.t * 6) % 2 ? [48, 49, 50, 51] : [49, 50, 51, 27]) : fullEl.length === 4 ? ELEM_INFO[ELEMS[Math.floor(G.t * 7) % 4]].ramp : fullEl.length ? ELEM_INFO[fullEl[Math.floor(G.t * 1.6) % fullEl.length]].ramp : [37, 38, 39, 40];
-  drawButton(c, locked ? [3, 4, 5] : war ? (titan ? (Math.floor(G.t * 6) % 2 ? [48, 49, 50, 51] : [20, 21, 22, 23]) : bzOn || bzReady ? [19, 20, 21, 22] : [3, 4, 5, 6]) : mage ? mramp : hero.cls === 'ranger' ? [52, 53, 54, 55] : [48, 49, 50, 51], full || !!hero.ultOn || G.rain.length > 0, hero.cls === 'mage' ? glyphStorm : hero.cls === 'ranger' ? (x, y) => glyphRain(x, y) : bzOn && !titan ? (x, y) => glyphRoar(x, y) : glyphWrath);
+  drawButton(c, locked ? [3, 4, 5] : war ? (tzOn ? [48, 49, 50, 51] : titan ? (Math.floor(G.t * 6) % 2 ? [48, 49, 50, 51] : [20, 21, 22, 23]) : bzOn || bzReady ? [19, 20, 21, 22] : [3, 4, 5, 6]) : mage ? mramp : hero.cls === 'ranger' ? [52, 53, 54, 55] : [48, 49, 50, 51], full || !!hero.ultOn || G.rain.length > 0, hero.cls === 'mage' ? glyphStorm : hero.cls === 'ranger' ? (x, y) => glyphRain(x, y) : bzOn && !titan ? (x, y) => glyphRoar(x, y) : glyphWrath);
   // not yet charged: dark from the top down to the charge line
   if (!full) for (let y = c[1] - c[2]; y <= c[1] + c[2]; y++) for (let x = c[0] - c[2]; x <= c[0] + c[2]; x++) {
     if (Math.hypot(x - c[0], y - c[1]) > c[2] - 1) continue;
@@ -87,9 +87,9 @@ function drawUltButton() {
       if (lit && cata && Math.floor(G.t * 6) % 2) for (const [x, y] of [[0, -5], [0, 5], [-5, 0], [5, 0]]) put(ox + x, oy + y, 27);
     });
   } else if (war) {   // the rage ring: red round the button, a white tick at the half; in the Berserker it ebbs
-    for (let a = 0; a < 80; a++) { const u = a / 80, t = -Math.PI / 2 + u * 6.283; if (u > rg) continue; put(c[0] + Math.cos(t) * (c[2] + 2), c[1] + Math.sin(t) * (c[2] + 2), bzOn ? (a & 1 ? 23 : 22) : 22); put(c[0] + Math.cos(t) * (c[2] + 3), c[1] + Math.sin(t) * (c[2] + 3), bzOn ? 21 : 20); }
+    for (let a = 0; a < 80; a++) { const u = a / 80, t = -Math.PI / 2 + u * 6.283; if (u > rg) continue; put(c[0] + Math.cos(t) * (c[2] + 2), c[1] + Math.sin(t) * (c[2] + 2), tzOn ? (a & 1 ? 51 : 27) : bzOn ? (a & 1 ? 23 : 22) : 22); put(c[0] + Math.cos(t) * (c[2] + 3), c[1] + Math.sin(t) * (c[2] + 3), tzOn ? 50 : bzOn ? 21 : 20); }
     { const t = Math.PI / 2; for (let r = c[2] + 1; r <= c[2] + 5; r++) put(c[0] + Math.cos(t) * r, c[1] + Math.sin(t) * r, 27); }
-    textC(bzOn ? (titan ? 'TITAN' : 'BERSERK') : 'RAGE', c[0], c[1] + c[2] + 8, bzOn ? 22 : 25);
+    textC(tzOn ? `TITAN ${Math.ceil(hero.titanT || 0)}` : bzOn ? (titan ? 'UNLEASH' : 'BERSERK') : 'RAGE', c[0], c[1] + c[2] + 8, tzOn || titan ? 51 : bzOn ? 22 : 25);
     if ((bzReady || titan) && Math.floor(G.t * 4) % 2 === 0) for (let a = 0; a < 80; a++) { const t = a / 80 * 6.283; put(c[0] + Math.cos(t) * (c[2] + 5), c[1] + Math.sin(t) * (c[2] + 5), titan ? 51 : 23); }
   } else if (!locked) for (let a = 0; a < 80; a++) { const u = a / 80, t = -Math.PI / 2 + u * 6.283; if (u > f) continue; put(c[0] + Math.cos(t) * (c[2] + 2), c[1] + Math.sin(t) * (c[2] + 2), col); }
   if (full && Math.floor(G.t * 4) % 2 === 0) for (let a = 0; a < 80; a++) { const t = a / 80 * 6.283; put(c[0] + Math.cos(t) * (c[2] + 3), c[1] + Math.sin(t) * (c[2] + 3), 27); }
@@ -249,7 +249,7 @@ const glyphLeap = (cx, cy) => {   // an arc up and down, landing in a burst
   for (let a = 0; a <= 16; a++) { const u = a / 16; put(cx - 7 + u * 12, cy + 4 - Math.sin(u * Math.PI) * 10, a > 12 ? 51 : 27); }
   for (const [a, b] of [[-3, 0], [3, 0], [0, -3], [2, -2], [-2, -2]]) line(cx + 5, cy + 5, cx + 5 + a, cy + 5 + b, 50);
 };
-const SPELL_LOOK = { multi: [[33, 34, 35, 36], (x, y) => glyphMulti(x, y)], trap: [[28, 29, 30, 31], (x, y) => glyphTrap(x, y)], roll: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)], mark: [[19, 20, 21, 22], (x, y) => glyphMark(x, y)], slam: [[13, 14, 15, 16], glyphSlam], charge: [[28, 29, 30, 31], glyphCharge], hook: [[28, 29, 30, 31], glyphHook], whirl: [[19, 20, 21, 22], glyphWhirl], leap: [[48, 49, 50, 51], glyphLeap], fireball: [[13, 14, 15, 16], glyphFire], cone: [[114, 115, 116, 117], glyphCone], meteor: [[19, 20, 21, 22], glyphMeteor], blink: [[56, 57, 58, 59], glyphBlink], chain: [[37, 38, 39, 40], glyphChain], pierce: [[48, 49, 50, 51], glyphPierce], cluster: [[13, 14, 15, 16], glyphCluster], sentry: [[33, 34, 35, 36], glyphSentry], hawk: [[28, 29, 30, 31], glyphHawk], vault: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)], rush: [[19, 20, 21, 22], (x, y) => glyphRush(x, y)], hurl: [[19, 20, 21, 22], (x, y) => glyphHurl(x, y)], roar: [[19, 20, 21, 22], (x, y) => glyphRoar(x, y)], flurry: [[19, 20, 21, 22], (x, y) => glyphFlurry(x, y)], strafe: [[48, 49, 50, 51], (x, y) => glyphStrafe(x, y)] };
+const SPELL_LOOK = { multi: [[33, 34, 35, 36], (x, y) => glyphMulti(x, y)], trap: [[28, 29, 30, 31], (x, y) => glyphTrap(x, y)], roll: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)], mark: [[19, 20, 21, 22], (x, y) => glyphMark(x, y)], slam: [[13, 14, 15, 16], glyphSlam], charge: [[28, 29, 30, 31], glyphCharge], hook: [[28, 29, 30, 31], glyphHook], whirl: [[19, 20, 21, 22], glyphWhirl], leap: [[48, 49, 50, 51], glyphLeap], fireball: [[13, 14, 15, 16], glyphFire], cone: [[114, 115, 116, 117], glyphCone], meteor: [[19, 20, 21, 22], glyphMeteor], blink: [[56, 57, 58, 59], glyphBlink], chain: [[37, 38, 39, 40], glyphChain], pierce: [[48, 49, 50, 51], glyphPierce], cluster: [[13, 14, 15, 16], glyphCluster], sentry: [[33, 34, 35, 36], glyphSentry], hawk: [[28, 29, 30, 31], glyphHawk], vault: [[52, 53, 54, 55], (x, y) => glyphRoll(x, y)], rush: [[19, 20, 21, 22], (x, y) => glyphRush(x, y)], hurl: [[19, 20, 21, 22], (x, y) => glyphHurl(x, y)], roar: [[19, 20, 21, 22], (x, y) => glyphRoar(x, y)], flurry: [[19, 20, 21, 22], (x, y) => glyphFlurry(x, y)], split: [[20, 21, 49, 50], (x, y) => glyphSplit(x, y)], uproot: [[20, 21, 49, 50], (x, y) => glyphUproot(x, y)], crescent: [[20, 21, 49, 50], (x, y) => glyphCrescent(x, y)], skyfall: [[20, 21, 49, 50], (x, y) => glyphSkyfall(x, y)], strafe: [[48, 49, 50, 51], (x, y) => glyphStrafe(x, y)] };
 const glyphBolt = (cx, cy) => { for (let a = 0; a < 8; a++) { const t = a * Math.PI / 4; line(cx, cy, cx + Math.cos(t) * 7, cy + Math.sin(t) * 7, a % 2 ? 50 : 51); } put(cx, cy, 27); };
 const glyphBag = (cx, cy) => { fillRect(cx - 5, cy - 3, 11, 9, 35); frame(cx - 5, cy - 3, 11, 9, 36, 33); line(cx - 3, cy - 3, cx - 1, cy - 6, 36); line(cx + 3, cy - 3, cx + 1, cy - 6, 36); fillRect(cx - 1, cy, 3, 2, 50); };
 const glyphSound = (cx, cy) => {
@@ -1006,6 +1006,10 @@ const SKILL_TEXT = {
   'sentry/ballista': 'SLOWER, HEAVY BOLTS THAT GO THROUGH EVERYTHING IN A LINE.',
   'sentry/fire': 'BURNING BOLTS, AND IT BURSTS INTO FLAME WHEN IT BREAKS.',
   'sentry/twin': 'PLANTS TWO AT ONCE, EACH A LITTLE SLOWER.',
+  split: 'DRIVE THE WEAPON INTO THE FLOOR: A CRACK RACES TO THE EDGE OF THE SCREEN, SLABS HEAVE UP ALONG IT AND WHAT STANDS ON IT IS THROWN INTO THE AIR.',
+  uproot: 'TEAR A SLAB OUT OF THE FLOOR AND HURL IT. IT BOUNDS THROUGH EVERYTHING IN ITS WAY AND BURSTS AT THE END OF ITS RUN.',
+  crescent: 'ONE ENORMOUS SWING: A CRESCENT OF FORCE FLIES ACROSS THE SCREEN AND CUTS EVERYTHING IT PASSES.',
+  skyfall: 'LEAP OUT OF SIGHT AND COME DOWN LIKE A METEOR ON THE THICKEST OF THEM. NOTHING CAN TOUCH YOU ON THE WAY.',
   rush: 'BLUR FROM FOE TO FOE, UP TO SIX, WITH A SLASH AT EACH. NOTHING CAN TOUCH YOU WHILE YOU GO.',
   hurl: 'GRAB THE NEAREST FOE, SWING IT ROUND AND THROW IT INTO THE PACK. IT KNOCKS DOWN WHAT IT HITS AND BURSTS WHERE IT LANDS. TOO BIG TO LIFT: A CRUSHING BLOW INSTEAD.',
   roar: 'A ROAR THAT SENDS A RED SHOCKWAVE THROUGH A WIDE CONE. FOES REEL, THE ORDINARY ONES PANIC AND RUN. GIVES BACK A FIFTH OF YOUR RAGE.',

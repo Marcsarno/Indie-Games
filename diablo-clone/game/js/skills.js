@@ -31,7 +31,7 @@ const CD = { charge: 0, bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, le
 function resetSkills() { for (const k in CD) CD[k] = 0; hero.whirl = 0; hero.dash = 0; hero.buff = 0; hero.charge = null; hero.chargeAgain = 0; hero.chargeSecond = false; hero.strafe = null; hero.bz = null; }
 const heroBusy = () => hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0 || !!hero.leap || !!hero.ultOn || !!hero.roll || !!hero.bz;
 // one hit's damage, with the war cry bonus
-const heroDmg = (k = 1) => Math.max(1, Math.round((roll(STAT.dmg) + (STAT.fireDmg || 0)) * k * (hero.buff > 0 ? 1.4 : 1) * (HEAVY ? 1.25 : 1) * (hero.stance === 1 && hero.cls === 'warrior' ? 1.15 : 1)));   // (round 87: the Berserker hits a seventh harder)   // round 62: heavier blows   // fire damage from gear rides on every hit (round 42a)
+const heroDmg = (k = 1) => Math.max(1, Math.round((roll(STAT.dmg) + (STAT.fireDmg || 0)) * k * (hero.buff > 0 ? 1.4 : 1) * (HEAVY ? 1.25 : 1) * (hero.cls === 'warrior' ? (hero.stance === 2 ? 1.3 : hero.stance === 1 ? 1.15 : 1) : 1)));   // (round 87: the Berserker hits a seventh harder)   // round 62: heavier blows   // fire damage from gear rides on every hit (round 42a)
 
 // button feedback (round 25): a pulse when a skill fires, a flash when it is ready again, a shake
 // with no mana
@@ -67,7 +67,7 @@ function useSkill(i) {
   if (s.id === 'hawk') callHawk();
   if (s.id === 'vault') { if (!vault()) { hero.mana += skillCost(s); CD.vault = 0; } }
   if (s.id === 'strafe') startStrafe();
-  for (const [id, fn] of [['rush', startRush], ['hurl', startHurl], ['roar', startRoar], ['flurry', startFlurry]]) if (s.id === id && !fn()) { hero.mana += skillCost(s); CD[id] = 0; }   // round 87: the Berserker
+  for (const [id, fn] of [['rush', startRush], ['hurl', startHurl], ['roar', startRoar], ['flurry', startFlurry], ['split', startSplit], ['uproot', startUproot], ['crescent', startCrescent], ['skyfall', startSkyfall]]) if (s.id === id && !fn()) { hero.mana += skillCost(s); CD[id] = 0; }   // round 87: the Berserker
   if (s.id === 'multi') multishot();
   if (s.id === 'trap') { if (!throwTrap()) { hero.mana += skillCost(s); CD.trap = 0; } }
   if (s.id === 'roll') { if (!startRoll()) { hero.mana += skillCost(s); CD.roll = 0; } }
@@ -851,7 +851,7 @@ function warCry() {
 }
 function updateSkills(dt) {
   for (const k in CD) CD[k] = Math.max(0, CD[k] - dt);
-  updateRage(dt); updateBzFx(dt);
+  updateRage(dt); updateBzFx(dt); updateTitanFx(dt);
   if (hero.buff > 0) {
     hero.buff -= dt;
     if (Math.random() < dt * 12) { const [x, y] = screenOf(hero); pspawn(4, x + (Math.random() - 0.5) * 14, y, 6 + Math.random() * 30, 0, 0, 14, 0.4, 50); }
@@ -1421,7 +1421,7 @@ function drawMeteorRocks() {
 }
 function drawImpactFlashes() {
   drawMeteorRocks(); drawBlooms();
-  drawShafts(); drawSlamFx(); drawFrostFx(); drawLightning(); drawRangerKit(); drawArcHits(); drawElemUlt(); drawBz();   // round 65, 66, 67, 68d
+  drawShafts(); drawSlamFx(); drawFrostFx(); drawLightning(); drawRangerKit(); drawArcHits(); drawElemUlt(); drawBz(); drawTitanFx(); drawCuts();   // round 65, 66, 67, 68d
   drawStreaks(); drawHookChains(); drawMods30(); drawStrikes(); drawRangerFx(); drawDebris();
   for (const f of G.impacts) {
     const [x, y] = iso(f.fi, f.fj), X0 = Math.round(x * SPX - cam2x), Y0 = Math.round((y - f.z) * SPX - cam2y), p = 1 - f.t / f.t0, R = f.size * (0.6 + p * 0.6);
@@ -2321,7 +2321,8 @@ function updateElemUlt(dt) {
 // ---- drawing (detail layer, over the bodies)
 // a pillar of fire: a tall tapering column that sways and breaks into tongues at the top, white-hot
 // down the middle, with a pool of light at its foot
-function drawFirePillar(X, Y, H, W, seed, t, grow) {
+function drawFirePillar(X, Y, H, W, seed, t, grow, cm = null) {   // (cm: a colour map, for the Titan's red-gold flame)
+  const ovSet = cm ? (x, y, v) => { if (x >= 0 && y >= 0 && x < OW && y < OH) ov32[y * OW + x] = PAL32[cm[v] ?? v]; } : (x, y, v) => { if (x >= 0 && y >= 0 && x < OW && y < OH) ov32[y * OW + x] = PAL32[v]; };
   const h = Math.round(H * grow); if (h < 3) return;
   for (let b = -W * 0.7; b <= W * 0.7; b++) for (let a = -W * 1.7; a <= W * 1.7; a++) { const d = Math.hypot(a / (W * 1.7), b / (W * 0.7)); if (d > 1) continue; if (d < 0.5) ovSet(Math.round(X + a), Math.round(Y + b), 18); else if (d < 0.78 || ((a + b) & 1)) ovSet(Math.round(X + a), Math.round(Y + b), d < 0.78 ? 17 : 16); }
   const ft = Math.floor(t * 45);
@@ -3365,11 +3366,12 @@ const RAGE_STANCE = 50, RAGE_DRAIN = 2.6, RAGE_IDLE = 6;
 const berserk = () => hero.cls === 'warrior' && hero.stance === 1;
 function rageGain(e, dmg, killed) {
   if (!(e.maxHp > 0)) return;
+  if (hero.stance === 2) { if (killed && (hero.titanAdd || 0) < TITAN_MAX - TITAN_T) { const g = Math.min(TITAN_MAX - TITAN_T - (hero.titanAdd || 0), e.def.unique ? 5 : 1); hero.titanAdd = (hero.titanAdd || 0) + g; hero.titanT += g; } return; }   // the Titan: each kill is another second, fifteen at most
   let g = 2.6 * Math.max(0, dmg) / e.maxHp; if (killed) g += e.def.unique ? 25 : e.champ || e.def.elite ? 9 : 1.6;
   rageAdd(g * (berserk() ? 0.55 : 1));   // (the climb from half to full, in the Berserker, is slower)
 }
 function rageAdd(g) {
-  if (hero.cls !== 'warrior' || hero.lvl < ULT_LVL || hero.ultOn) return;
+  if (hero.cls !== 'warrior' || hero.lvl < ULT_LVL || hero.ultOn || hero.stance === 2) return;
   const was = hero.rage || 0; hero.rage = Math.min(100, was + g); hero.rageAt = G.t;
   if (!berserk() && was < RAGE_STANCE && hero.rage >= RAGE_STANCE) { say('RAGE: THE BERSERKER IS READY', 22, 2); sfx('cry', 0.6); G.ragePop = G.t; }
   if (berserk() && was < 100 && hero.rage >= 100) { say('FULL RAGE: UNLEASH THE TITAN', 51, 2); sfx('levelUp'); G.ragePop = G.t; }
@@ -3378,6 +3380,8 @@ function rageAdd(g) {
 function updateRage(dt) {
   if (hero.cls !== 'warrior') return;
   if (hero.rage === undefined) hero.rage = 0;
+  if (hero.dead && hero.stance) { hero.stance = 0; SKILLS = SKILLSETS.warrior; hero.bz = null; hero.rage = 0; hero.titanT = 0; }
+  if (hero.stance === 2) return;   // the Titan keeps its own clock (updateTitan)
   const fighting = enemies.some(e => alive(e) && e.state !== 'sleep' && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 8);
   if (berserk()) {
     if (!hero.bz && !hero.ultOn) hero.rage = Math.max(0, hero.rage - dt * RAGE_DRAIN * (fighting ? 1 : 2.5));
@@ -3409,12 +3413,13 @@ function leaveBerserk(spent) {
 function warriorStance() {
   if (hero.lvl < ULT_LVL) { say(`RAGE UNLOCKS AT LEVEL ${ULT_LVL}`, 25, 1.4); return; }
   if (hero.ultOn || hero.leap || hero.bz) return;
+  if (titan()) { say(`THE TITAN: ${Math.ceil(hero.titanT)} SECONDS LEFT`, 51, 1.2); return; }
   if (!berserk()) {
     if ((hero.rage || 0) < RAGE_STANCE) { say('NOT ANGRY ENOUGH YET', 22, 1.2); btnFx(9).deny = 0.3; sfx('tap'); return; }
     if (heroBusy()) return;
     enterBerserk(); return;
   }
-  if (hero.rage >= 100) { if (heroBusy()) return; leaveBerserk(false); hero.rage = 0; hero.ult = 0; G.ultAt = G.t; startWrath(); return; }
+  if (hero.rage >= 100) { if (heroBusy()) return; enterTitan(); return; }   // round 88: the Titan (Wrath of the Mountain stood in for it in round 87)
   leaveBerserk(false);
 }
 // ---- swing poses: run one of the hero's own swings, stopped at any point
@@ -3620,17 +3625,49 @@ function updateBz(dt) {
   else if (B.kind === 'heave') updateHeave(B, dt);
   else if (B.kind === 'roar') updateRoar(B, dt);
   else if (B.kind === 'flurry') updateFlurry(B, dt);
+  else if (B.kind === 'split') updateSplit(B, dt);
+  else if (B.kind === 'uproot') updateUproot(B, dt);
+  else if (B.kind === 'crescent') updateCrescent(B, dt);
+  else if (B.kind === 'skyfall') updateSkyfall(B, dt);
+  else if (B.kind === 'kneel') updateKneel(B, dt);
+}
+// round 88: where a blade lands. A bright cut across the target for a tenth of a second (a slanted
+// line for a slash, the other slant for the backhand, a lance and a star for the thrust), sparks
+// thrown along it, and on the third blow dust from under his leading foot.
+function meleeImpact(e, crit, pow, combo) {
+  if (!G.cuts) G.cuts = [];
+  const dx = e.fi - hero.fi, dy = e.fj - hero.fj, sx = dx - dy, sy = (dx + dy) * 0.5, l = Math.hypot(sx, sy) || 1, ux = sx / l, uy = sy / l;
+  const big = pow >= 2 || crit, slant = combo === 2 ? 0 : combo === 1 ? -0.95 : 0.95, ca = Math.cos(slant), sa = Math.sin(slant);
+  const vx = combo === 2 ? ux : -uy * ca + ux * sa * 0.4, vy = combo === 2 ? uy : ux * ca * 0.8 + sa;   // the cut's direction on screen
+  const vl = Math.hypot(vx, vy) || 1;
+  G.cuts.push({ fi: e.fi, fj: e.fj, z: (e.def.chest || 20) * 0.62, vx: vx / vl, vy: vy / vl, len: big ? 30 : 21, star: combo === 2 || crit, t: big ? 0.14 : 0.1, t0: big ? 0.14 : 0.1 });
+  const [x, y] = screenOf(e); for (let q = 0; q < (big ? 12 : 6); q++) { const s = (Math.random() < 0.5 ? -1 : 1) * (60 + Math.random() * 90); pspawn(2, x, y, (e.def.chest || 20) * 0.62, vx / vl * s + ux * 30, vy / vl * s * 0.6, 20 + Math.random() * 50, 0.14 + Math.random() * 0.1, q % 3 ? 27 : 32); }
+  if (pow >= 2) { const [hx0, hy0] = screenOf(hero), dust = LV.outdoor ? DIRT[3] : S[5]; for (let q = 0; q < 12; q++) { const a = Math.atan2(uy, ux) + (Math.random() - 0.5) * 2.2; pspawn(5, hx0 + ux * 8, hy0 + uy * 8 + 1, 1, -Math.cos(a) * (30 + Math.random() * 40), -Math.sin(a) * (15 + Math.random() * 20), 14 + Math.random() * 16, 1, dust); } if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.16); }
+  else if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.05);
+}
+function drawCuts() {
+  if (!G.cuts) return;
+  for (const c of G.cuts) {
+    const k = c.t / c.t0, [x0, y0] = iso(c.fi, c.fj), X = Math.round(x0 * SPX - cam2x), Y = Math.round((y0 - c.z) * SPX - cam2y), L = Math.round(c.len * (0.55 + 0.45 * k) * (k > 0.6 ? 1 : 0.8));
+    for (let q = -L; q <= L; q++) {
+      const u = Math.abs(q) / L, w = k > 0.5 ? (u < 0.5 ? 2 : u < 0.85 ? 1 : 0) : (u < 0.6 ? 1 : 0), x = Math.round(X + c.vx * q), y = Math.round(Y + c.vy * q);
+      for (let t = -w; t <= w; t++) ovSet(Math.round(x - c.vy * t), Math.round(y + c.vx * t), Math.abs(t) === w && w > 0 ? (k > 0.5 ? 51 : 32) : 27);
+    }
+    if (c.star && k > 0.35) for (const [a, b] of [[-c.vy, c.vx], [0.7, 0.7], [0.7, -0.7]]) for (let q = -Math.round(L * 0.45); q <= L * 0.45; q++) ovSet(Math.round(X + a * q), Math.round(Y + b * q), Math.abs(q) < 3 ? 27 : 51);
+  }
 }
 function updateBzFx(dt) {
+  if (G.cuts) { for (const c of G.cuts) c.t -= dt; G.cuts = G.cuts.filter(c => c.t > 0); }
   if (G.bzSlashes) { for (const s of G.bzSlashes) s.t -= dt; G.bzSlashes = G.bzSlashes.filter(s => s.t > 0); }
   if (G.bzStreaks) { for (const s of G.bzStreaks) s.t -= dt; G.bzStreaks = G.bzStreaks.filter(s => s.t > 0); }
   if (G.bzRoars) { for (const s of G.bzRoars) s.t -= dt; G.bzRoars = G.bzRoars.filter(s => s.t > 0); }
 }
 // a crimson slash in front of him: a fat crescent, white along its edge (side: which way it sweeps)
-function bzSlash(side, size) {
+const SLASH_PAL = { red: [27, RED[4], RED[3], RED[2]], gold: [27, 51, RED[4], RED[2]], steel: [27, 32, 31, 29] };
+function bzSlash(side, size, gold = false) {   // gold: true = the Titan's, 'steel' = a plain swing's trail
   if (!G.bzSlashes) G.bzSlashes = [];
   const [fx, fy] = dirVec(hero.dir);
-  G.bzSlashes.push({ fi: hero.fi + fx * 0.75, fj: hero.fj + fy * 0.75, a: Math.atan2(fy, fx), side, size, t: 0.2, t0: 0.2 });
+  G.bzSlashes.push({ fi: hero.fi + fx * 0.75, fj: hero.fj + fy * 0.75, a: Math.atan2(fy, fx), side, size, pal: SLASH_PAL[gold === true ? 'gold' : gold === 'steel' ? 'steel' : 'red'], thin: gold === 'steel', t: gold === true ? 0.26 : gold === 'steel' ? 0.13 : 0.2, t0: gold === true ? 0.26 : gold === 'steel' ? 0.13 : 0.2 });
 }
 function drawBz() {
   const P = (fi, fj, z) => { const [x, y] = iso(fi, fj); return [Math.round(x * SPX - cam2x), Math.round((y - z) * SPX - cam2y)]; };
@@ -3642,8 +3679,8 @@ function drawBz() {
     const k = s.t / s.t0, [X, Y] = P(s.fi, s.fj, 18), sx = Math.cos(s.a) - Math.sin(s.a), sy = (Math.cos(s.a) + Math.sin(s.a)) * 0.5, l = Math.hypot(sx, sy) || 1, ux = sx / l, uy = sy / l, R = 30 * s.size, sweep = (1 - k) * 3.2;
     for (let q = 0; q <= 120; q++) {
       const v = q / 120, ang = (v - 0.5) * 2.4 * s.side, done = v * 2.4 <= sweep + 0.4; if (!done) continue;
-      const ca = Math.cos(ang), sa = Math.sin(ang), dx = ux * ca - uy * sa * 2, dy = (ux * sa * 0.5 + uy * ca), th = Math.round((1 - Math.abs(v - 0.5) * 2) * 10 * s.size * Math.min(1, k * 1.6)) + 2;
-      for (let w = 0; w < th; w++) { const r = R - w, x = Math.round(X + dx * r - ux * R * 0.35), y = Math.round(Y + dy * r - uy * R * 0.35); ovSet(x, y, w < 2 ? 27 : w < 4 ? RED[4] : w < th - 1 || ((x + y) & 1) ? RED[3] : RED[2]); }
+      const ca = Math.cos(ang), sa = Math.sin(ang), dx = ux * ca - uy * sa * 2, dy = (ux * sa * 0.5 + uy * ca), th = Math.round((1 - Math.abs(v - 0.5) * 2) * (s.thin ? 5 : 10) * s.size * Math.min(1, k * 1.6)) + (s.thin ? 1 : 2);
+      for (let w = 0; w < th; w++) { const r = R - w, x = Math.round(X + dx * r - ux * R * 0.35), y = Math.round(Y + dy * r - uy * R * 0.35); ovSet(x, y, w < (s.thin ? 1 : 2) ? s.pal[0] : w < (s.thin ? 2 : 4) ? s.pal[1] : w < th - 1 || ((x + y) & 1) ? s.pal[2] : s.pal[3]); }
     }
   }
   if (G.bzRoars) for (const s of G.bzRoars) {   // the roar's mouth: rings of red breath rolling out in the cone
@@ -3661,3 +3698,304 @@ const glyphRush = (cx, cy) => { for (let k = 0; k < 4; k++) line(cx - 8 + k * 3,
 const glyphHurl = (cx, cy) => { for (let a = 0; a < 30; a++) { const t = a / 30 * Math.PI * 1.6 + 0.6, r = 7; put(cx + Math.cos(t) * r, cy + Math.sin(t) * r * 0.8, a > 22 ? 27 : RED[3]); } for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) if (x * x + y * y <= 5) put(cx + 5 + x, cy - 5 + y, x + y < 0 ? 27 : 31); };
 const glyphRoar = (cx, cy) => { for (let r = 3; r <= 9; r += 3) for (let a = -10; a <= 10; a++) { const t = a / 10 * 0.9; put(cx - 5 + Math.cos(t) * r, cy + Math.sin(t) * r, r === 9 ? 27 : RED[4]); } for (let y = -3; y <= 3; y++) put(cx - 7, cy + y, RED[2]); };
 const glyphFlurry = (cx, cy) => { for (const [a, b, c, d] of [[-8, -6, 6, 7], [8, -6, -6, 7], [-8, 0, 8, 0]]) { line(cx + a, cy + b, cx + c, cy + d, RED[3]); line(cx + a, cy + b - 1, cx + c, cy + d - 1, 27); } };
+
+// ---------------------------------------------------------------- the TITAN (round 88)
+// Full rage, in the Berserker: the stance button makes him the Titan for 30 s (a second more a kill, up to
+// 45). Wreathed in red-gold flame, his steps shake the floor, he takes 40% less and hits 30% harder, his
+// plain swings throw a wave of force, each blow heals him a little, and his four buttons are
+// EARTHSPLITTER, UPROOT, TITAN'S CRESCENT and SKYFALL (no fury cost). When it ends he drops to a knee
+// and is himself again, the rage spent.
+const TITAN_SKILLS = [
+  { id: 'split', name: 'EARTHSPLITTER', lvl: 1, mana: 0, cd: 3.5 },
+  { id: 'uproot', name: 'UPROOT', lvl: 1, mana: 0, cd: 3.5 },
+  { id: 'crescent', name: "TITAN'S CRESCENT", lvl: 1, mana: 0, cd: 2.5 },
+  { id: 'skyfall', name: 'SKYFALL', lvl: 1, mana: 0, cd: 6 },
+];
+for (const s of TITAN_SKILLS) CD[s.id] = 0;
+const TITAN_T = 30, TITAN_MAX = 45, GOLD_RED = [51, RED[4]];
+const titan = () => hero.cls === 'warrior' && hero.stance === 2;
+const TITAN_FLAME = { 27: 27, 18: 51, 17: 23, 16: 22, 15: 21, 14: 20 };
+function enterTitan() {
+  hero.stance = 2; hero.titanT = TITAN_T; hero.titanAdd = 0; hero.rage = 100; SKILLS = TITAN_SKILLS; for (const s of TITAN_SKILLS) CD[s.id] = 0; hero.bz = null;
+  say('TITAN!', 51, 2); sfx('cry'); sfx('boom'); sfx('meteor');
+  G.pierce = true; for (const e of enemies) { if (!alive(e)) continue; const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy); if (d > 3.4) continue; wake(e); G.elem = 'heavy'; damageEnemy(e, heroDmg(2), hero.fi, hero.fj, false, 2); G.elem = null; if (alive(e) && smallFoe(e)) e.kb = [dx / (d || 1) * 9, dy / (d || 1) * 9]; } G.pierce = false;
+  for (const [r, dur, c] of [[3.4, 0.4, GOLD_RED], [2.4, 0.32, [27, 51]], [4.4, 0.55, [RED[4], RED[2]]]]) shockwave(hero.fi, hero.fj, r, dur, c);
+  const [x, y] = screenOf(hero); rubble(x, y, 30, 130); for (let k = 0; k < 44; k++) { const a = k / 44 * 6.283; pspawn(4, x, y, 14, Math.cos(a) * 150, Math.sin(a) * 75, 30, 0.5, k % 2 ? 51 : RED[4]); }
+  const q = { fi: hero.fi, fj: hero.fj, a0: 0, ring: true, R: 2.6, t: 0.7, t0: 0.7, seed: (Math.random() * 1e6) | 0 }; G.quakes.push(q); stampCracks(q);
+  G.screenFlash = { t0: 0.18, col: 51 }; G.flashes.push({ fi: hero.fi, fj: hero.fj, t: 0.6, t0: 0.6, r: 300, tint: 1 });
+  hero.hp = Math.min(STAT.maxHp, hero.hp + STAT.maxHp * 0.15);
+  if (SHAKE) G.trauma = 1; hero.stop = 0.12; btnFx(9).press = 0.25; G.ultAt = G.t;
+}
+function leaveTitan() {
+  hero.stance = 0; SKILLS = SKILLSETS.warrior; hero.rage = 0; hero.ult = 0; hero.titanT = 0;
+  hero.bz = { kind: 'kneel', t: 0 };
+  say('THE TITAN SLEEPS', 25, 1.6); sfx('thunk');
+  shockwave(hero.fi, hero.fj, 1.6, 0.3, [RED[3], RED[1]]);
+}
+function updateTitan(dt) {
+  if (!titan()) return;
+  if (!hero.dead) hero.titanT -= dt;
+  hero.rage = Math.max(0, Math.min(100, hero.titanT / TITAN_T * 100)); hero.ult = hero.rage;
+  const [x, y] = screenOf(hero);
+  if (Math.random() < dt * 40) pspawn(3, x + (Math.random() - 0.5) * 20, y, 4 + Math.random() * 40, (Math.random() - 0.5) * 10, 0, 26 + Math.random() * 30, 0.5 + Math.random() * 0.4, Math.random() < 0.4 ? 51 : Math.random() < 0.5 ? RED[4] : 27);
+  if (Math.random() < dt * 3) G.flashes.push({ fi: hero.fi, fj: hero.fj, t: 0.4, t0: 0.4, r: 120, tint: 1 });
+  if (hero.titanT <= 0 && !hero.bz && !hero.dead) leaveTitan();
+}
+// his plain swings throw a wave of force past the blade's reach
+function titanWave() {
+  const [fx, fy] = dirVec(hero.dir), a0 = Math.atan2(fy, fx), reach = heroReach() + 0.3;
+  for (const e of enemies) {
+    if (!alive(e)) continue; const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy); if (d <= reach || d > 4) continue;
+    const da = Math.abs(((Math.atan2(dy, dx) - a0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI); if (da > 0.7) continue;
+    bzHit(e, 0.8, [hero.fi, hero.fj], 0, 'stagger');
+  }
+  shockwave(hero.fi + fx * 0.6, hero.fj + fy * 0.6, 3.6, 0.22, GOLD_RED, [a0, 0.7]); bzSlash(hero.combo % 2 ? 1 : -1, 1.6, true);
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.12);
+}
+function titanStep() {   // every footfall
+  const [x, y] = screenOf(hero); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.14);
+  for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283; pspawn(5, x, y + 1, 1, Math.cos(a) * 40, Math.sin(a) * 20, 12, 1, LV.outdoor ? DIRT[3] : S[5]); }
+  shockwave(hero.fi, hero.fj, 0.8, 0.16, [RED[3], RED[1]]); sfx('thunk', 0.4);
+}
+// the foe with the most others round it, within r tiles of him
+function thickest(r) { let best = null, bn = -1; for (const o of nearFoes(hero.fi, hero.fj, r)) { let n = 0; for (const q of enemies) if (alive(q) && Math.hypot(q.fi - o.fi, q.fj - o.fj) < 2.2) n++; if (n > bn) { bn = n; best = o; } } return best; }
+// ---- EARTHSPLITTER: the weapon into the floor; a crack races to the edge of the screen, slabs heave
+// up along it, and what stands on it is thrown into the air
+function startSplit() {
+  const t = thickest(9); if (t) hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
+  hero.bz = { kind: 'split', t: 0, done: false, aim: t ? Math.atan2(t.fj - hero.fj, t.fi - hero.fi) : null }; hero.approach = null; sfx('heavySwing'); return true;
+}
+function updateSplit(B, dt) {
+  B.t += dt; const T = swingT(3), ms = B.t * 1000 * 1.25;
+  bzPose(3, Math.min(T.total - 1, ms));
+  { const sw = weaponSwing(hero.look, 3), ki = swingKey(sw, hero.atk); hero.leapZ = ki >= 0 && !sw[ki].hit ? (sw[ki].hop || 0) * 2.2 : 0; }
+  if (!B.done && ms >= T.hit) {
+    B.done = true; hero.leapZ = 0;
+    const [fx, fy] = dirVec(hero.dir), a0 = B.aim ?? Math.atan2(fy, fx);
+    if (!G.tzCracks) G.tzCracks = [];
+    G.tzCracks.push({ fi: hero.fi + Math.cos(a0) * 0.6, fj: hero.fj + Math.sin(a0) * 0.6, a0, d: 0, R: 11, hit: new Set(), t: 0, pts: [], seed: (Math.random() * 1e4) | 0, live: true });
+    const [x, y] = screenOf(hero); rubble(x, y, 26, 130);
+    shockwave(hero.fi, hero.fj, 2, 0.3, GOLD_RED); impactFlash(hero.fi + Math.cos(a0) * 0.8, hero.fj + Math.sin(a0) * 0.8, 4, 10);
+    G.flashes.push({ fi: hero.fi, fj: hero.fj, t: 0.5, t0: 0.5, r: 220, tint: 1 });
+    if (SHAKE) G.trauma = 1; hero.stop = 0.11; sfx('boom'); sfx('crack'); sfx('crit');
+  }
+  if (ms >= T.total) { hero.bz = null; hero.atk = -1; hero.clip = 'idle'; hero.swingEnd = G.t; }
+}
+function updateCracks(dt) {
+  if (!G.tzCracks) return;
+  for (const C of G.tzCracks) {
+    C.t += dt;
+    if (C.live) {
+      const d1 = Math.min(C.R, C.d + dt * 34);
+      for (let d = Math.ceil(C.d / 0.55) * 0.55; d <= d1; d += 0.55) {
+        const wob = Math.sin(d * 1.7 + C.seed) * 0.28, fi = C.fi + Math.cos(C.a0) * d - Math.sin(C.a0) * wob, fj = C.fj + Math.sin(C.a0) * d + Math.cos(C.a0) * wob;
+        if (blocked(fi, fj)) { C.live = false; break; }
+        C.pts.push([fi, fj, C.t]);
+        for (const e of enemies) {
+          if (C.hit.has(e) || !alive(e) || e.flight || Math.hypot(e.fi - fi, e.fj - fj) > 1.3 + (e.def.unique ? 0.4 : 0)) continue;
+          C.hit.add(e); bzHit(e, 3, [fi, fj], 2, 'heavy');
+          if (alive(e) && smallFoe(e) && !(e.frozen > 0)) launchFoe(e, C.a0 + (Math.random() < 0.5 ? 1.57 : -1.57), 2.2, 0.6, 50, 0.8, 0.5, false);
+        }
+        for (const sd of [-1, 1]) { const pi = fi - Math.sin(C.a0) * 0.5 * sd, pj = fj + Math.cos(C.a0) * 0.5 * sd; if (!blocked(pi, pj)) G.spikes.push({ fi: pi, fj: pj, h: 44 + Math.random() * 34, w: 8 + Math.random() * 6, delay: 0, t: 0.95, t0: 0.95, seed: (Math.random() * 1e6) | 0, lean: sd * (Math.cos(C.a0) + Math.sin(C.a0) > 0 ? 1 : -1) * (0.2 + Math.random() * 0.3) }); }
+        const [x, y] = iso(fi, fj); rubble(x, y, 3, 70); if (Math.random() < 0.5) G.dust.push({ fi, fj, vi: (Math.random() - 0.5) * 2, vj: (Math.random() - 0.5) * 2, r: 4, vr: 20, t: 0.7, t0: 0.7, z: 2 });
+        // the crack itself, cut into the floor for good
+        for (let q = -2; q <= 2; q++) { const X = Math.round(x + q), Y = Math.round(y + (hash(X, C.seed, 3) - 0.5) * 2); if (X >= 0 && Y >= 0 && X < WW && Y < WH) { const k = Y * WW + X; if (wFloor[k] && floorBuf[k] !== BLK) setFloor(k, BLK); } }
+        if (SHAKE) G.trauma = Math.max(G.trauma, 0.6);
+      }
+      C.d = d1; if (C.d >= C.R) C.live = false;
+      if (Math.random() < 0.3) sfx('crack', 0.6);
+    }
+  }
+  G.tzCracks = G.tzCracks.filter(C => C.live || C.t < 2.2);
+}
+// ---- UPROOT: he tears a slab out of the floor and hurls it; it bounds through everything in its way
+// and bursts at the end of its run
+function startUproot() {
+  const t = thickest(9); if (t) hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
+  hero.bz = { kind: 'uproot', t: 0, done: false, aim: t ? Math.atan2(t.fj - hero.fj, t.fi - hero.fi) : null, seed: (Math.random() * 1e4) | 0 }; hero.approach = null;
+  const [fx, fy] = dirVec(hero.dir); stampCrater(hero.fi + fx * 0.9, hero.fj + fy * 0.9, 0.8);
+  const [x, y] = iso(hero.fi + fx * 0.9, hero.fj + fy * 0.9); rubble(x, y, 16, 90); sfx('crack'); sfx('heavySwing'); return true;
+}
+function updateUproot(B, dt) {
+  B.t += dt; const T = swingT(2 + 0), T3 = swingT(3);
+  if (B.t < 0.3) bzPose(3, T3.hit + 60);                      // deep in the squat, hands in the floor
+  else if (B.t < 0.5) bzPose(3, Math.max(20, 200 - (B.t - 0.3) * 600));   // up, the slab overhead
+  else if (!B.done) {
+    B.done = true; const [fx, fy] = dirVec(hero.dir), a0 = B.aim ?? Math.atan2(fy, fx);
+    if (!G.tzSlabs) G.tzSlabs = [];
+    G.tzSlabs.push({ fi: hero.fi + Math.cos(a0) * 0.6, fj: hero.fj + Math.sin(a0) * 0.6, a0, d: 0, max: 9.5, hits: new Set(), spin: 0, seed: B.seed, bounce: -1 });
+    bzPose(3, T3.hit + 5); bzSlash(1, 1.8, true);
+    if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.4); hero.stop = 0.06; sfx('heavySwing'); sfx('whoomp');
+  } else bzPose(3, T3.hit + 40);
+  if (B.t >= 0.78) { hero.bz = null; hero.atk = -1; hero.clip = 'idle'; hero.swingEnd = G.t; }
+  void T;
+}
+function slabBurst(Sl) {
+  for (const e of enemies) if (alive(e) && Math.hypot(e.fi - Sl.fi, e.fj - Sl.fj) < 1.9 + (e.def.unique ? 0.4 : 0)) { bzHit(e, 2, [Sl.fi, Sl.fj], 2, 'heavy'); if (alive(e) && smallFoe(e)) { e.downT = e.downT0 = 1.1; e.atk = -1; } }
+  const [x, y] = iso(Sl.fi, Sl.fj); rubble(x, y, 40, 150); burst(7, x, y, 10, 14, 130, LV.outdoor ? DIRT[2] : S[5]); burst(5, x, y, 4, 20, 100, LV.outdoor ? DIRT[3] : S[6]);
+  const lite = LV.outdoor ? [DIRT[4], DIRT[3]] : [TH().ramp[TH().ramp.length - 1], TH().ramp[5]];
+  shockwave(Sl.fi, Sl.fj, 2, 0.3, lite, null, false); shockwave(Sl.fi, Sl.fj, 1.6, 0.24, GOLD_RED); impactFlash(Sl.fi, Sl.fj, 6, 10); stampCrater(Sl.fi, Sl.fj, 0.9);
+  if (SHAKE) G.trauma = 1; sfx('boom'); sfx('crack');
+}
+function updateSlabs(dt) {
+  if (!G.tzSlabs) return;
+  for (const Sl of G.tzSlabs) {
+    const st = dt * 12.5, ni = Sl.fi + Math.cos(Sl.a0) * st, nj = Sl.fj + Math.sin(Sl.a0) * st;
+    Sl.spin += dt * 9; Sl.d += st;
+    const ph = Sl.d * 1.25, b = Math.floor(ph / Math.PI);
+    Sl.z = Math.abs(Math.sin(ph)) * 16 * (1 - Sl.d / Sl.max * 0.5) + 7;
+    if (blocked(ni, nj) || Sl.d >= Sl.max) { Sl.done = true; slabBurst(Sl); continue; }
+    Sl.fi = ni; Sl.fj = nj;
+    if (b !== Sl.bounce) {   // it touches down: a thud, dust, a cracked ring
+      Sl.bounce = b; const [x, y] = iso(Sl.fi, Sl.fj); rubble(x, y, 8, 80);
+      const lite = LV.outdoor ? [DIRT[4], DIRT[3]] : [TH().ramp[TH().ramp.length - 1], TH().ramp[5]]; shockwave(Sl.fi, Sl.fj, 1.1, 0.2, lite, null, false);
+      const q = { fi: Sl.fi, fj: Sl.fj, a0: 0, ring: true, R: 0.8, n: 5, t: 0.5, t0: 0.5, seed: (Math.random() * 1e6) | 0 }; stampCracks(q);
+      if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.3); sfx('thunk'); sfx('crack', 0.5);
+    }
+    for (const e of enemies) {
+      if (Sl.hits.has(e) || !alive(e) || Math.hypot(e.fi - Sl.fi, e.fj - Sl.fj) > 1.1 + (e.def.unique ? 0.4 : 0)) continue;
+      Sl.hits.add(e); bzHit(e, 3, [Sl.fi, Sl.fj], 2, 'heavy');
+      if (alive(e) && smallFoe(e) && !(e.frozen > 0)) { const sd = Math.sign(-(e.fi - Sl.fi) * Math.sin(Sl.a0) + (e.fj - Sl.fj) * Math.cos(Sl.a0)) || 1; e.downT = e.downT0 = 1.1; e.atk = -1; e.kb = [-Math.sin(Sl.a0) * sd * 7, Math.cos(Sl.a0) * sd * 7]; }
+      const [x, y] = screenOf(e); burst(2, x, y, e.def.chest * 0.6, 8, 100, 27);
+    }
+  }
+  G.tzSlabs = G.tzSlabs.filter(Sl => !Sl.done);
+}
+// ---- TITAN'S CRESCENT: one enormous swing; a crescent of red-gold force flies across the screen and
+// cuts everything it passes
+function startCrescent() {
+  const t = thickest(9); if (t) hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
+  hero.bz = { kind: 'crescent', t: 0, done: false, aim: t ? Math.atan2(t.fj - hero.fj, t.fi - hero.fi) : null }; hero.approach = null; sfx('heavySwing'); return true;
+}
+function updateCrescent(B, dt) {
+  B.t += dt; const T = swingT(0);
+  if (B.t < 0.2) { bzPose(0, 30); if (Math.random() < 0.9) { const [x, y] = screenOf(hero), a = Math.random() * 6.283; pspawn(4, x + Math.cos(a) * 30, y + Math.sin(a) * 14, 26, -Math.cos(a) * 130, -Math.sin(a) * 60, 0, 0.2, Math.random() < 0.5 ? 51 : RED[4]); } }
+  else if (!B.done) {
+    B.done = true; const [fx, fy] = dirVec(hero.dir), a0 = B.aim ?? Math.atan2(fy, fx);
+    if (!G.tzArcs) G.tzArcs = [];
+    G.tzArcs.push({ fi: hero.fi, fj: hero.fj, a0, d: 0.6, max: 10, hit: new Set(), seed: (Math.random() * 1e4) | 0 });
+    bzPose(0, T.hit + 5); bzSlash(-1, 2.4, true); bzSlash(1, 1.8, true);
+    G.flashes.push({ fi: hero.fi, fj: hero.fj, t: 0.4, t0: 0.4, r: 200, tint: 1 });
+    if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.6); hero.stop = 0.09; sfx('crit'); sfx('boom', 0.7); sfx('whoomp');
+  } else bzPose(0, Math.min(T.total - 1, T.hit + 5 + (B.t - 0.2) * 500));
+  if (B.t >= 0.62) { hero.bz = null; hero.atk = -1; hero.clip = 'idle'; hero.swingEnd = G.t; }
+}
+const arcHalf = d => Math.min(2.9, 1.1 + d * 0.3);   // how wide the crescent is (tiles to either side) as it flies
+function updateArcs(dt) {
+  if (!G.tzArcs) return;
+  for (const A of G.tzArcs) {
+    A.d += dt * 15; const cx = A.fi + Math.cos(A.a0) * A.d, cy = A.fj + Math.sin(A.a0) * A.d, hw = arcHalf(A.d);
+    for (const e of enemies) {
+      if (A.hit.has(e) || !alive(e)) continue; const dx = e.fi - A.fi, dy = e.fj - A.fj, along = dx * Math.cos(A.a0) + dy * Math.sin(A.a0), side = -dx * Math.sin(A.a0) + dy * Math.cos(A.a0);
+      if (Math.abs(side) > hw + (e.def.unique ? 0.4 : 0) || Math.abs(along - (A.d - (side / hw) ** 2 * 0.9)) > 0.9) continue;
+      A.hit.add(e); bzHit(e, 3.5, [e.fi - Math.cos(A.a0), e.fj - Math.sin(A.a0)], 1, 'heavy');
+      const [x, y] = screenOf(e); burst(2, x, y, e.def.chest * 0.6, 12, 130, 51); burst(2, x, y, e.def.chest * 0.6, 6, 100, RED[4]); impactFlash(e.fi, e.fj, e.def.chest * 0.6, 7);
+      if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.1);
+    }
+    if (Math.random() < 0.9) for (const sd of [-1, 1]) { const [x, y] = iso(cx - Math.sin(A.a0) * hw * sd * Math.random(), cy + Math.cos(A.a0) * hw * sd * Math.random()); pspawn(3, x, y, 14 + Math.random() * 10, 0, 0, 6, 0.3, Math.random() < 0.5 ? 51 : RED[4]); }
+    if (Math.floor(A.d * 2) !== Math.floor((A.d - dt * 15) * 2)) G.flashes.push({ fi: cx, fj: cy, t: 0.2, t0: 0.2, r: 130, tint: 1 });
+    if (A.d >= A.max) A.done = true;
+  }
+  G.tzArcs = G.tzArcs.filter(A => !A.done);
+}
+// ---- SKYFALL: he leaps out of sight; a shadow grows over the thickest of them; he comes down like a meteor
+function startSkyfall() {
+  let best = null, bn = -1; for (const o of nearFoes(hero.fi, hero.fj, 8)) { let n = 0; for (const q of enemies) if (alive(q) && Math.hypot(q.fi - o.fi, q.fj - o.fj) < 2.2) n++; if (n > bn) { bn = n; best = o; } }
+  const [fx, fy] = dirVec(hero.dir); let to = best ? [best.fi, best.fj] : [hero.fi + fx * 3, hero.fj + fy * 3];
+  if (!standable(to[0], to[1], 0.3)) { let ok = null; for (let r = 0.3; r <= 1.6 && !ok; r += 0.3) for (let a = 0; a < 8 && !ok; a++) { const c = [to[0] + Math.cos(a * 0.785) * r, to[1] + Math.sin(a * 0.785) * r]; if (standable(c[0], c[1], 0.3)) ok = c; } to = ok || [hero.fi, hero.fj]; }
+  hero.bz = { kind: 'skyfall', t: 0, from: [hero.fi, hero.fj], to, landed: false }; hero.approach = null;
+  const [x, y] = screenOf(hero); for (let k = 0; k < 20; k++) { const a = k / 20 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 70, Math.sin(a) * 35, 20, 1, LV.outdoor ? DIRT[3] : S[5]); }
+  shockwave(hero.fi, hero.fj, 1.6, 0.25, GOLD_RED); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.3); sfx('heavySwing'); sfx('cry', 0.6); return true;
+}
+const SKY_UP = 0.3, SKY_HANG = 0.85, SKY_DOWN = 0.97, SKY_H = 330, SKYFALL_R = 3.8;
+function updateSkyfall(B, dt) {
+  B.t += dt; const t = B.t, T3 = swingT(3);
+  if (t < SKY_UP) { const u = t / SKY_UP; hero.leapZ = SKY_H * u * u; bzPose(3, 130); }
+  else if (t < SKY_HANG) { const u = (t - SKY_UP) / (SKY_HANG - SKY_UP), k = u * u * (3 - 2 * u); hero.leapZ = SKY_H; hero.fi = B.from[0] + (B.to[0] - B.from[0]) * k; hero.fj = B.from[1] + (B.to[1] - B.from[1]) * k; bzPose(3, 150); }   // (out of sight; the view glides to where he will land)
+  else if (t < SKY_DOWN) { const u = (t - SKY_HANG) / (SKY_DOWN - SKY_HANG); hero.leapZ = SKY_H * (1 - u * u); bzPose(3, T3.hit - 20); if (Math.random() < 0.9) { const [x, y] = screenOf(hero); pspawn(3, x, y, hero.leapZ + 20, 0, 0, 40, 0.3, Math.random() < 0.5 ? 51 : RED[4]); } }
+  else if (!B.landed) {
+    B.landed = true; hero.leapZ = 0; bzPose(3, T3.hit + 20);
+    G.pierce = true;
+    for (const e of enemies) {
+      if (!alive(e)) continue; const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy); if (d > SKYFALL_R + (e.def.unique ? 0.5 : 0)) continue;
+      wake(e); const c = bzCrit(), k = d < 1.5 ? 6 : 6 - (d - 1.5) / (SKYFALL_R - 1.5) * 3; G.elem = 'heavy'; damageEnemy(e, heroDmg((c ? 2 : 1) * k), hero.fi, hero.fj, c, 2); G.elem = null;
+      if (alive(e) && !e.def.unique) { e.downT = e.downT0 = 1.5; e.atk = -1; e.kb = [dx / (d || 1) * 8, dy / (d || 1) * 8]; }
+    }
+    G.pierce = false;
+    for (const [r, dur, c] of [[SKYFALL_R, 0.4, GOLD_RED], [SKYFALL_R * 0.6, 0.3, [27, 51]], [SKYFALL_R + 1.2, 0.6, [RED[4], RED[2]]]]) shockwave(hero.fi, hero.fj, r, dur, c);
+    const lite = LV.outdoor ? [DIRT[4], DIRT[3]] : [TH().ramp[TH().ramp.length - 1], TH().ramp[5]]; shockwave(hero.fi, hero.fj, SKYFALL_R + 0.5, 0.5, lite, null, false);
+    for (let q = 0; q < 34; q++) { const a = q / 34 * 6.283, d = 1.2 + Math.random() * (SKYFALL_R - 1), fi = hero.fi + Math.cos(a) * d, fj = hero.fj + Math.sin(a) * d; if (!blocked(fi, fj)) G.spikes.push({ fi, fj, h: 40 + Math.random() * 40, w: 9 + Math.random() * 6, delay: d * 0.035, t: 0.9, t0: 0.9, seed: (Math.random() * 1e6) | 0, lean: Math.sign(Math.cos(a) - Math.sin(a) || 1) * (0.2 + Math.random() * 0.3) }); }
+    stampCrater(hero.fi, hero.fj, 1.5); const qk = { fi: hero.fi, fj: hero.fj, a0: 0, ring: true, R: SKYFALL_R, t: 0.7, t0: 0.7, seed: (Math.random() * 1e6) | 0 }; G.quakes.push(qk); stampCracks(qk);
+    const [x, y] = screenOf(hero); rubble(x, y, 60, 170); for (let k = 0; k < 50; k++) { const a = k / 50 * 6.283; pspawn(4, x, y, 6, Math.cos(a) * 190, Math.sin(a) * 95, 20, 0.5, k % 2 ? 51 : RED[4]); }
+    G.screenFlash = { t0: 0.2, col: 51 }; G.flashes.push({ fi: hero.fi, fj: hero.fj, t: 0.8, t0: 0.8, r: 360, tint: 1 });
+    if (SHAKE) G.trauma = 1; hero.stop = 0.14; sfx('boom'); sfx('crack'); sfx('meteor'); sfx('crit');
+  } else bzPose(3, Math.min(T3.total - 1, T3.hit + 20 + (t - SKY_DOWN) * 500));
+  if (t >= SKY_DOWN + 0.45) { hero.bz = null; hero.atk = -1; hero.clip = 'idle'; hero.swingEnd = G.t; unstickHero(); }
+}
+function updateKneel(B, dt) {   // the Titan leaves him: down on a knee, a breath, up
+  B.t += dt; const T3 = swingT(3);
+  bzPose(3, B.t < 0.55 ? T3.hit + 80 : Math.min(T3.total - 1, T3.hit + 80 + (B.t - 0.55) * 600));
+  if (B.t >= 0.85) { hero.bz = null; hero.atk = -1; hero.clip = 'idle'; hero.swingEnd = G.t; }
+}
+function updateTitanFx(dt) { updateTitan(dt); updateCracks(dt); updateSlabs(dt); updateArcs(dt); }
+// ---- drawing
+// behind him (called just before his sprite): a mantle of red-gold flame twice his width
+function drawTitanAura(X, Y) {
+  for (const [dx, h, w, sd] of [[-9, 52, 8, 3], [9, 56, 8, 7], [0, 78, 13, 1]]) drawFirePillar(X + dx, Y + 2, h + Math.sin(G.t * 8 + sd) * 6, w, sd, G.t, 1, TITAN_FLAME);
+}
+// a tumbling slab of floor: lumpy, lit from the upper left, veins of light in it
+function drawSlab(X, Y, r, spin, seed) {
+  for (let b = -r - 1; b <= r + 1; b++) for (let a = -r - 1; a <= r + 1; a++) {
+    const ang = Math.atan2(b, a) + spin, d = Math.hypot(a, b) / (r * (0.78 + 0.22 * Math.cos(ang * 3 + seed) + 0.08 * Math.cos(ang * 7)));
+    if (d > 1) continue; const lit = (-a - b) / r;
+    ovSet(X + a, Y + b, d > 0.9 ? BLK : Math.abs(Math.sin((a * Math.cos(spin) + b * Math.sin(spin)) * 0.3 + seed)) < 0.09 ? (Math.floor(G.t * 12) % 2 ? 51 : 27) : lit > 0.45 ? S[8] : lit > -0.1 ? S[6] : lit > -0.6 ? S[4] : S[2]);
+  }
+}
+function drawTitanFx() {
+  const P = (fi, fj, z) => { const [x, y] = iso(fi, fj); return [Math.round(x * SPX - cam2x), Math.round((y - z) * SPX - cam2y)]; };
+  // the Earthsplitter's crack: white-hot at first, cooling through gold to red
+  if (G.tzCracks) for (const C of G.tzCracks) {
+    let prev = null;
+    for (const [fi, fj, born] of C.pts) {
+      const age = C.t - born, p = P(fi, fj, 0); if (age > 1.8) { prev = p; continue; }
+      const c0 = age < 0.15 ? 27 : age < 0.6 ? 51 : age < 1.2 ? RED[4] : RED[2], w = age < 0.3 ? 3 : age < 1 ? 2 : 1;
+      if (prev) { const n = Math.max(Math.abs(p[0] - prev[0]), Math.abs(p[1] - prev[1])) || 1; for (let s = 0; s <= n; s++) { const x = Math.round(prev[0] + (p[0] - prev[0]) * s / n), y = Math.round(prev[1] + (p[1] - prev[1]) * s / n + Math.sin(s * 0.5 + fi * 3) * 1.5); for (let q = -w; q <= w; q++) { if (age > 1.2 && ((x + q) & 1)) continue; ovSet(x, y + q, Math.abs(q) === w && w > 1 ? RED[3] : c0); } } }
+      prev = p;
+    }
+  }
+  if (G.tzSlabs) for (const Sl of G.tzSlabs) {
+    const [gx, gy] = P(Sl.fi, Sl.fj, 0), [X, Y] = P(Sl.fi, Sl.fj, Sl.z + 10);
+    for (let a = -20; a <= 20; a++) for (let b = -6; b <= 6; b++) if (a * a / 400 + b * b / 36 <= 1 && ((a + b) & 1)) ovSet(gx + a, gy + b, BLK);
+    drawSlab(X, Y, 26, Sl.spin, Sl.seed);
+  }
+  // a slab being torn up and held overhead
+  if (hero.bz && hero.bz.kind === 'uproot' && !hero.bz.done) { const B = hero.bz, [fx, fy] = dirVec(hero.dir), u = Math.min(1, B.t / 0.45), [X, Y] = P(hero.fi + fx * 0.9 * (1 - u), hero.fj + fy * 0.9 * (1 - u), 4 + u * 52); drawSlab(X, Y, Math.round(9 + u * 17), u * 1.5, B.seed); }
+  // the crescent: a great bow of light, white along its leading edge, gold, then red behind it
+  if (G.tzArcs) for (const A of G.tzArcs) {
+    const hw = arcHalf(A.d), ca = Math.cos(A.a0), sa = Math.sin(A.a0);
+    for (let layer = 0; layer < 7; layer++) {
+      const back = layer * 0.16, col = layer === 0 ? 27 : layer < 2 ? 51 : layer < 4 ? RED[4] : layer < 6 ? RED[3] : RED[2];
+      for (let q = -60; q <= 60; q++) {
+        const u = q / 60, side = u * hw, along = A.d - back - u * u * (0.9 + back * 0.6);
+        if (layer > 3 && ((q + layer) & 1)) continue;
+        const [X, Y] = P(A.fi + ca * along - sa * side, A.fj + sa * along + ca * side, 16);
+        for (let w = 0; w < (layer < 2 ? 3 : 2); w++) { ovSet(X, Y - w, col); ovSet(X + 1, Y - w, col); }
+      }
+    }
+  }
+  // Skyfall: the shadow that grows where he will land, a ring closing on it
+  if (hero.bz && hero.bz.kind === 'skyfall' && !hero.bz.landed && hero.bz.t >= SKY_UP * 0.6) {
+    const B = hero.bz, u = Math.min(1, (B.t - SKY_UP * 0.6) / (SKY_DOWN - SKY_UP * 0.6)), [X, Y] = P(B.to[0], B.to[1], 0), rx = Math.round(10 + u * 44), ry = Math.round(rx / 2);
+    for (let b = -ry; b <= ry; b++) for (let a = -rx; a <= rx; a++) { const d = Math.hypot(a / rx, b / ry); if (d > 1) continue; if (d < 0.75 * u + 0.1 || ((a + b) & 1)) ovSet(X + a, Y + b, BLK); }
+    const R2 = Math.round(SKYFALL_R * 45 * (1.15 - u * 0.5)); for (let s = 0; s < 120; s++) { const a = s / 120 * 6.283 + G.t * 3; if ((s >> 2) % 2) continue; const x = Math.round(X + Math.cos(a) * R2), y = Math.round(Y + Math.sin(a) * R2 / 2); ovSet(x, y, u > 0.7 ? 27 : 51); ovSet(x + 1, y, RED[4]); }
+  }
+  // the Titan's ground: a wide ring of gold fire under him, and how long is left as a second ring
+  if (titan()) {
+    const [X, Y] = P(hero.fi, hero.fj, 0), pulse = 0.9 + 0.1 * Math.sin(G.t * 7), rx = Math.round(36 * pulse), ry = Math.round(rx / 2);
+    for (let a = 0; a < 140; a++) { const t = a / 140 * 6.283, x = Math.round(X + Math.cos(t) * rx), y = Math.round(Y + Math.sin(t) * ry), on = (a + Math.floor(G.t * 24)) % 4; if (on) { ovSet(x, y, on === 1 ? 27 : a % 2 ? 51 : RED[4]); ovSet(x, y + 1, RED[3]); } }
+  }
+}
+const glyphSplit = (cx, cy) => { let x = cx - 8; for (let k = 0; k < 9; k++) { const y = cy + ((k * 5) % 7) - 3; line(x, y, x + 2, cy + (((k + 1) * 5) % 7) - 3, k % 2 ? 51 : 27); x += 2; } for (const [a, b] of [[-4, -6], [1, -7], [5, -5]]) line(cx + a, cy - 1, cx + a + 1, cy + b, S[6]); };
+const glyphUproot = (cx, cy) => { for (let y = -5; y <= 4; y++) for (let x = -6; x <= 6; x++) if (Math.abs(x) + Math.abs(y) * 1.2 < 8 + ((x * 7 + y * 3) % 3)) put(cx + x, cy + y - 1, x + y < -2 ? S[7] : x + y < 3 ? S[5] : S[3]); line(cx - 7, cy + 7, cx + 7, cy + 7, 51); };
+const glyphCrescent = (cx, cy) => { for (let a = -12; a <= 12; a++) { const t = a / 12 * 1.2, x = cx - 4 + Math.cos(t) * 9, y = cy + Math.sin(t) * 9; put(x, y, 27); put(x - 1, y, 51); put(x - 2, y, RED[4]); if (Math.abs(a) < 8) put(x - 3, y, RED[3]); } };
+const glyphSkyfall = (cx, cy) => { line(cx, cy - 8, cx, cy + 3, 51); line(cx - 1, cy - 8, cx - 1, cy + 3, 27); line(cx - 4, cy - 1, cx, cy + 4, 51); line(cx + 4, cy - 1, cx, cy + 4, 51); for (let a = -7; a <= 7; a++) put(cx + a, cy + 7 - Math.abs(a) * 0.25, a % 2 ? RED[4] : 51); };

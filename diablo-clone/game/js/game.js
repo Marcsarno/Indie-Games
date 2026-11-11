@@ -576,6 +576,7 @@ function heroHitResolve(all = false, pow = 0) {
     if (d > rr || (!all && d > 0.3 && (dx * fx + dy * fy) / d < 0.35)) continue;
     const crit = Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100;
     damageEnemy(e, heroDmg(crit ? 2 : 1), hero.fi, hero.fj, crit, pow); any = true; nHit++;
+    if (hero.cls === 'warrior' && !FEEL_OLD) meleeImpact(e, crit, pow, hero.combo);   // round 88: the cut where the blade lands
   }
   for (const p of dynProps) {
     if (p.broken || (p.kind !== 'barrel' && p.kind !== 'egg')) continue;
@@ -584,6 +585,7 @@ function heroHitResolve(all = false, pow = 0) {
   }
   // fury: the warrior's blows feed his skills (1.5 mana per enemy hit, up to 3 a swing)
   if (nHit && hero.cls === 'warrior') hero.mana = Math.min(STAT.maxMana, hero.mana + Math.min(3, nHit) * 1.5);
+  if (nHit && hero.cls === 'warrior' && hero.stance === 2) hero.hp = Math.min(STAT.maxHp, hero.hp + Math.min(3, nHit) * STAT.maxHp * 0.012);   // round 88: the Titan's blows heal him
   return any;
 }
 function breakBarrel(p) {
@@ -733,7 +735,7 @@ function updateHero(dt) {
     if (l > 1) { vx /= l; vy /= l; }
     // a quick ramp up to full speed (0.1 s) gives the start some weight
     const ramp = Math.min(1, 0.45 + (hero.runT || 0) / 0.1);
-    const [gi, gj, m] = stickToGround(vx, vy), sp = STAT.speed * m * (hero.chillT > 0 ? 0.6 : 1) * (hero.whirl > 0 ? 0.6 : 1) * (hero.ultOn ? 0.6 : 1) * (hero.strafe ? 1.3 : 1) * (hero.stance === 1 && hero.cls === 'warrior' ? 1.15 : 1) * Math.min(1, l) * ramp * dt;
+    const [gi, gj, m] = stickToGround(vx, vy), sp = STAT.speed * m * (hero.chillT > 0 ? 0.6 : 1) * (hero.whirl > 0 ? 0.6 : 1) * (hero.ultOn ? 0.6 : 1) * (hero.strafe ? 1.3 : 1) * (hero.cls === 'warrior' && hero.stance ? (hero.stance === 2 ? 1.1 : 1.15) : 1) * Math.min(1, l) * ramp * dt;
     const f0 = hero.fi, j0 = hero.fj;
     tryMove(hero, gi * sp, gj * sp);
     const moved = Math.hypot(hero.fi - f0, hero.fj - j0);
@@ -747,7 +749,7 @@ function updateHero(dt) {
     if (!FEEL_OLD && Math.floor(w0 / 4) !== Math.floor(hero.walk / 4) && hero.runT > 0.1) {
       const [x, y] = screenOf(hero), dust = LV.outdoor ? DIRT[3] : S[5];
       for (let k = 0; k < 3; k++) pspawn(5, x + (Math.random() - 0.5) * 6 - gi * 4, y + 1, 1, -(gi - gj) * 12 + (Math.random() - 0.5) * 14, -(gi + gj) * 6 + (Math.random() - 0.5) * 6, 8 + Math.random() * 10, 1, dust);
-      sfx('step', 0.6);
+      sfx('step', 0.6); if (hero.cls === 'warrior' && hero.stance === 2) titanStep();
     }
     // turn through the in-between facings instead of snapping (a reversal takes ~0.1 s)
     // from a standstill he faces the new way at once
@@ -825,7 +827,7 @@ function updateHero(dt) {
     }   // round 40a: the slam's hop
     if (!hero.hitDone && hero.mag > 0) { const st = Math.min(hero.mag, dt * 4.5); lungeHero(st); hero.mag -= st; }
     if (ki >= 0 && sw[ki].hit && !hero.hitDone) {
-      hero.hitDone = true; if (hero.cls === 'ranger') looseArrow(); else if (hero.combo === 3) groundSlamHit(); else heroHitResolve(!!sw[ki].slam, hero.combo === 2 ? 2 : STAT.slow ? 1 : 0);
+      hero.hitDone = true; if (hero.cls === 'ranger') looseArrow(); else if (hero.combo === 3) groundSlamHit(); else { heroHitResolve(!!sw[ki].slam, hero.combo === 2 ? 2 : STAT.slow ? 1 : 0); if (hero.cls === 'warrior' && hero.stance === 2) titanWave(); else if (hero.cls === 'warrior' && !FEEL_OLD && hero.combo < 2) bzSlash(hero.combo ? 1 : -1, hero.stance === 1 ? 1.25 : 1.05, hero.stance === 1 ? false : 'steel'); }   // round 88: every swing leaves its arc in the air a moment (red in the Berserker)
       if (sw[ki].slam) {   // the ground slam: extra shake and a ring of dust
         if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.35);
         const [x, y] = screenOf(hero), [fx, fy] = dirVec(hero.dir), cx = x + (fx - fy) * 12, cy = y + (fx + fy) * 6;
@@ -1089,10 +1091,10 @@ function updateEnemy(e, dt) {
   e.clip = 'walk';
 }
 function hurtHero(dmg, src) {
-  if (hero.dead || hero.leap || hero.roll || hero.charge || (hero.ultOn && hero.ultOn.kind === 'wrath') || (hero.bz && hero.bz.kind === 'rush')) return;   // nothing touches him in the air (round 87: nor mid-Rush)
+  if (hero.dead || hero.leap || hero.roll || hero.charge || (hero.ultOn && hero.ultOn.kind === 'wrath') || (hero.bz && (hero.bz.kind === 'rush' || hero.bz.kind === 'skyfall'))) return;   // nothing touches him in the air (round 87: nor mid-Rush; round 88: nor in Skyfall)
   if (Math.random() * 100 < STAT.block) { floater('BLOCK', hero.fi, hero.fj, 44, 31); sfx('block'); return; }
   dmg = Math.max(1, Math.round(dmg * 40 / (40 + STAT.armor * (hero.buff > 0 ? 1.5 : 1) * 2.5) * (hero.stoneskin > 0 ? 0.5 : 1)));
-  if (hero.cls === 'warrior') dmg = Math.max(1, Math.round(dmg * 0.75));   // round 67: he fights where the blows land (Diablo III's melee classes take 30% less); bots died 2-4 times a run as him, never as the others
+  if (hero.cls === 'warrior') dmg = Math.max(1, Math.round(dmg * 0.75 * (hero.stance === 2 ? 0.6 : 1)));   // (round 88: the Titan shrugs off 40% more)   // round 67: he fights where the blows land (Diablo III's melee classes take 30% less); bots died 2-4 times a run as him, never as the others
   if (STAT.dr) dmg = Math.max(1, dmg - STAT.dr);   // round 42a: OF THE WALL
   hero.hp -= dmg; hero.flash = 0.06; hero.hurtT = 0.15; sfx('hurt');
   if (hero.cls === 'warrior') rageAdd(3 + dmg / STAT.maxHp * 60);   // round 87: being hit angers him most
@@ -1677,7 +1679,9 @@ function render() {
       const jit = c.stop > 0 && c !== hero && c.dying < 0 ? (Math.floor(t * 33) % 2 ? 1 : -1) : 0;
       // white flash, then a brief dithered red; ice blue while frozen, half ice while slowed
       const ash = c.deathKind === 'ash' && c.dying >= 0, shat = c.deathKind === 'shatter' && c.dying >= 0;
-      const fl = c.flash > 0 ? 1 : shat ? 4 : ash || (c.burnT > 0 && Math.floor(G.t * 16 + c.seed) % 3 === 0) ? 7 : c.frozen > 0 ? 4 : c.tint > 0 ? 3 : c.slowT > 0 || c.chillT > 0 ? 5 : 0;
+      const tz = c === hero && hero.cls === 'warrior' && hero.stance === 2 && !hero.dead;
+      if (tz) drawTitanAura(Math.round(x * SPX) - cam2x, Math.round((y - (c.leapZ || 0)) * SPX) - cam2y);   // round 88: the Titan's mantle of flame, behind him
+      const fl = c.flash > 0 ? 1 : tz && Math.floor(G.t * 9) % 3 === 0 ? 7 : shat ? 4 : ash || (c.burnT > 0 && Math.floor(G.t * 16 + c.seed) % 3 === 0) ? 7 : c.frozen > 0 ? 4 : c.tint > 0 ? 3 : c.slowT > 0 || c.chillT > 0 ? 5 : 0;
       const dis = ash ? Math.min(1, c.dying / 0.55) : shat ? Math.min(1, c.dying / 0.15) : 0;
       ovBlit(sp, x + jit, y - (c.leapZ || 0), charLevel[n], fl, dis, tIdx(Math.floor(c.fi), Math.floor(c.fj)), null, c._kl);
     } });
@@ -2196,7 +2200,7 @@ function loadSave(cls = 'warrior') {
   } catch (e) { return null; }
 }
 function newHero(cls = 'warrior') {
-  Object.assign(hero, { cls, hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, bag: [], mods: {}, ult: 0, el: {}, orbs: {}, rage: 0, stance: 0, bz: null, modSeen: 0, tut: {}, stats: { t: 0, deaths: 0, kills: 0 }, equip: { weapon: null, helm: null, chest: null, shield: null, ring: null, amulet: null } });
+  Object.assign(hero, { cls, hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, bag: [], mods: {}, ult: 0, el: {}, orbs: {}, rage: 0, stance: 0, bz: null, titanT: 0, modSeen: 0, tut: {}, stats: { t: 0, deaths: 0, kills: 0 }, equip: { weapon: null, helm: null, chest: null, shield: null, ring: null, amulet: null } });
   const R = rng(5);
   const kit = cls === 'mage' ? ['oak_staff', 'apprentice_robe', 'wizard_hat'] : cls === 'ranger' ? ['hunting_bow', 'leather_jerkin', 'ranger_hood', 'quiver'] : ['short_sword', 'tunic'];
   for (const b of kit) { const it = rollItem(R, 1, b); it.rarity = 'normal'; it.mods = {}; hero.equip[ITEM_BASES[b].slot] = it; }

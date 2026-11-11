@@ -40,7 +40,7 @@
     mark(areaName());
     if (window.__dbg && Math.floor(t / 10) !== Math.floor((t - dt) / 10)) { const a = enemies.find(e => e.id === 'alpha'); const tg0 = storyTarget(); marks.push(['DBG ' + Math.round(t) + ' at ' + hero.fi.toFixed(1) + ',' + hero.fj.toFixed(1) + ' tg ' + (tg0 ? tg0.map(v => v.toFixed(1)) : '-') + ' alpha ' + (a ? a.fi.toFixed(1) + ',' + a.fj.toFixed(1) + ' hp' + Math.round(a.hp) + ' ' + a.state : 'none') + ' alive ' + enemies.filter(alive).length, 0, 0]); }
     input.attack = false; input.mx = input.my = 0; minHp = Math.min(minHp, hero.hp / STAT.maxHp);
-    if (hero.cls === 'warrior' && hero.stance !== window.__st) { if (window.__st === 1 && hero.stance === 0 && !hero.ultOn) (window.__ultLog = window.__ultLog || []).push([+(t / 60).toFixed(1), 'calm', hero.lvl]); window.__st = hero.stance; }
+    if (hero.cls === 'warrior' && hero.stance !== window.__st) { if (window.__st >= 1 && hero.stance === 0 && !hero.ultOn) (window.__ultLog = window.__ultLog || []).push([+(t / 60).toFixed(1), 'calm', hero.lvl]); window.__st = hero.stance; }
     if (hero.el && Math.floor(t / 30) !== Math.floor((t - dt) / 30)) (window.__gLog = window.__gLog || []).push([+(t / 60).toFixed(1), hero.lvl, ...['fire', 'frost', 'earth', 'storm'].map(k => Math.round(hero.el[k] || 0))]);
     if (hero.hp < STAT.maxHp * 0.4 && hero.potions > 0 && !(hero.potT > G.t)) { drinkPotion(); drinks++; hero.potT = G.t + 1.5; }
     if (Math.floor(t) % 20 === 0 && Math.floor(t - dt) % 20 !== 0) { try { wearBest(); } catch (e) {} G.mode = 'play'; }

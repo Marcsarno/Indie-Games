@@ -474,9 +474,20 @@ let HEAVY = true;
 try { const q = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('weight') : null; HEAVY = q ? q !== 'light' : localStorage.getItem('dcg-weight') !== 'light'; } catch (e) { /* storage blocked */ }
 function setHeavy(v) { HEAVY = v; try { localStorage.setItem('dcg-weight', v ? 'heavy' : 'light'); } catch (e) { /* ignore */ } }
 const HERO_PRE = { light: [45, 35, 35], light2: [45, 35, 35], thrust: [70, 40], heavy: [110, 45, 45], heavy2: [100, 45, 45], slam: [140, 45, 45], gslam: [100, 150, 55] };   // (round 65: the slam's jump: a crouch, 150 ms rising, 55 ms crashing down)
+// round 88 (the user: a warrior feels good when his blows have weight): the hero's own swings pose the
+// body harder than the shared ones the monsters use. He rises and coils back in the wind-up, then
+// drops and leans right through the blow with a longer step and a real lunge, and stays down in the
+// follow-through. Per swing, per key: only the fields that differ.
+const HERO_KEYS = {
+  light: [{ tw: 0.58, ln: -0.16, bob: 0.5, fl: 0.8, fr: -3.2 }, { ln: 0.12, bob: -0.9, fl: 4, mv: 0.07 }, { ln: 0.24, bob: -1.8, fl: 6, mv: 0.07 }, { tw: -0.52, ln: 0.32, bob: -2.7, fl: 6.8, fr: -4.2, mv: 0.06 }, { tw: -0.6, ln: 0.28, bob: -2.5, fl: 6.8, fr: -4.2 }, { bob: -1.0 }],
+  light2: [{ tw: -0.62, ln: 0.2, bob: -2.0, fl: 5.5 }, { bob: -1.6, mv: 0.06 }, { ln: 0.2, bob: -1.6, fl: 6.2, mv: 0.06 }, { tw: 0.48, ln: 0.2, bob: -1.0, fl: 6.6, fr: -4.2, mv: 0.05 }, { tw: 0.58, ln: 0.02, bob: -0.2, fl: 6, fr: -4 }, {}],
+  thrust: [{ r: 3.2, tw: 0.68, ln: -0.18, bob: -1.5, fl: 1.5, fr: -4.5 }, { ln: 0.2, bob: -1.8, fl: 5.5, mv: 0.09 }, { r: 9, tw: -0.45, ln: 0.42, bob: -2.9, fl: 8.2, fr: -5.6, mv: 0.12 }, { r: 8.8, tw: -0.5, ln: 0.42, bob: -2.9, fl: 8.2, fr: -5.6 }, {}],
+  heavy: [{ ln: -0.22, bob: 1.0, fl: 1.2 }, { mv: 0.07 }, { ln: 0.28, bob: -1.6, mv: 0.08 }, { ln: 0.42, bob: -3.2, fl: 6.8, fr: -4.6, mv: 0.05 }, { ln: 0.4, bob: -3.2, fl: 6.8, fr: -4.6 }, {}],
+  heavy2: [{ ln: 0.24, bob: -2.2 }, { mv: 0.06 }, { mv: 0.07 }, { ln: 0.2, bob: -1.2, fl: 6.6, mv: 0.05 }, { ln: 0.02, bob: -0.4 }, {}],
+};
 const HERO_SWINGS = {}, HERO_SWINGS_H = {};
 for (const name in HERO_PRE) {
-  const sw = SWINGS[name], hi = sw.findIndex(k => k.hit), pre = HERO_PRE[name];
+  const sw0 = SWINGS[name], sw = withTilt(sw0.map((k, i) => Object.assign({}, k, (HERO_KEYS[name] || [])[i] || {})), sw0.tilt, { twoHand: sw0.twoHand }), hi = sw.findIndex(k => k.hit), pre = HERO_PRE[name];
   const keys = sw.map((k, i) => Object.assign({}, k, i < hi ? { ms: pre[i] } : {}));
   let t = 0; for (let i = 0; i <= hi; i++) t += keys[i].ms;
   HERO_SWINGS[name] = withTilt(keys, sw.tilt, { twoHand: sw.twoHand, free: t, chain: t + keys[hi + 1].ms });
