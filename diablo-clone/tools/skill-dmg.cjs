@@ -17,11 +17,12 @@ const { chromium } = require('playwright'); const path = require('path');
         enemies.length = 0; for (let k = 0; k < 6; k++) { const e = makeEnemy('skeleton', hero.fi + 3 + (k % 3) * 0.8, hero.fj - 1 + Math.floor(k / 3) * 1.2, k); e.hp = e.maxHp = 1e6; e.state = 'idle'; enemies.push(e); }
         hero.dir = dirFrom(1, 0); hero.mana = 999; for (const k in CD) CD[k] = 0; hero.pips = 0; updateFov(hero.fi, hero.fj);
         let i = 0; for (let k = 0; k < 400; k++) i += roll(STAT.dmg); base += i / 400;
+        if (['rush', 'hurl', 'roar', 'flurry'].includes(id)) { hero.rage = 60; enterBerserk(); hero.rage = 1e9; }
         const k = SKILLS.findIndex(s => s.id === id); useSkill(k);
         for (let f = 0; f < 7 * 30; f++) { for (const e of enemies) { e.cool = 99; e.atk = -1; e.fi = Math.max(e.fi, hero.fi + 2); } update(1 / 30); }
         tot += enemies.reduce((s, e) => s + e.maxHp - e.hp, 0);
       }
-      const sk = SKILLS.find(s => s.id === id);
+      const sk = SKILLS.find(s => s.id === id) || {}; if (hero.stance === 1) leaveBerserk(false);
       return { dmg: Math.round(tot / 12), xHit: +(tot / base).toFixed(1), mana: sk.mana, cd: sk.cd };
     }, { cls, id, mod });
     console.log(spec.padEnd(26), JSON.stringify(r));

@@ -699,7 +699,8 @@ function updateHero(dt) {
   hero.hp = Math.min(STAT.maxHp, hero.hp + dt * 0.25); hero.mana = Math.min(STAT.maxMana, hero.mana + dt * STAT.manaRegen);
   updateSkills(dt);
   if (hero.leap) { if (hero.stop > 0) { hero.stop -= dt; return; } hero.clock += dt; updateLeap(dt); updateFov(hero.fi, hero.fj); return; }   // in the air
-  if (hero.roll) { hero.clock += dt; updateRoll(dt); updateFov(hero.fi, hero.fj); return; }   // round 33: the ranger's leap
+  if (hero.roll) { hero.clock += dt; updateRoll(dt); updateFov(hero.fi, hero.fj); return; }
+  if (hero.bz) { if (hero.stop > 0) { hero.stop -= dt; return; } hero.clock += dt; updateBz(dt); updateFov(hero.fi, hero.fj); return; }   // round 87: a Berserker move owns him   // round 33: the ranger's leap
   if (hero.ultOn && hero.ultOn.kind === 'wrath') { if (hero.stop > 0) { hero.stop -= dt; return; } hero.clock += dt; updateWrath(dt); updateFov(hero.fi, hero.fj); return; }   // the ultimate's leap (the view must keep refreshing: it fades)
   if (!hero.strafe && (input.attack || (hero.buf > G.t && (!heroBusy() || canChain())))) heroAttack();   // (round 82: Strafe shoots on its own)
   let vx = input.mx, vy = input.my;
@@ -732,7 +733,7 @@ function updateHero(dt) {
     if (l > 1) { vx /= l; vy /= l; }
     // a quick ramp up to full speed (0.1 s) gives the start some weight
     const ramp = Math.min(1, 0.45 + (hero.runT || 0) / 0.1);
-    const [gi, gj, m] = stickToGround(vx, vy), sp = STAT.speed * m * (hero.chillT > 0 ? 0.6 : 1) * (hero.whirl > 0 ? 0.6 : 1) * (hero.ultOn ? 0.6 : 1) * (hero.strafe ? 1.3 : 1) * Math.min(1, l) * ramp * dt;
+    const [gi, gj, m] = stickToGround(vx, vy), sp = STAT.speed * m * (hero.chillT > 0 ? 0.6 : 1) * (hero.whirl > 0 ? 0.6 : 1) * (hero.ultOn ? 0.6 : 1) * (hero.strafe ? 1.3 : 1) * (hero.stance === 1 && hero.cls === 'warrior' ? 1.15 : 1) * Math.min(1, l) * ramp * dt;
     const f0 = hero.fi, j0 = hero.fj;
     tryMove(hero, gi * sp, gj * sp);
     const moved = Math.hypot(hero.fi - f0, hero.fj - j0);
@@ -912,6 +913,8 @@ function updateEnemy(e, dt) {
     if (Math.random() < dt * 14) { const [x, y] = screenOf(e); pspawn(3, x + (Math.random() - 0.5) * 10, y, 3 + Math.random() * e.def.chest, (Math.random() - 0.5) * 6, 0, 18 + Math.random() * 14, 0.4, Math.random() < 0.5 ? 16 : 17); }
     if (e.burnTick <= 0) { e.burnTick = 0.5; G.elem = null; damageEnemy(e, e.burnDmg, e.fi, e.fj, false, 0, true); if (e.hp <= 0 && !e.deathKind) e.deathKind = 'ash'; if (e.dying >= 0) return; }
   }
+  if (e.held) { e.clip = 'hit'; e.atk = -1; return; }   // round 87: in the Berserker's grip
+  if (e.flight) { updateFlight(e, dt); return; }   // round 87: thrown, or launched
   if (e.downT > 0) { e.downT -= dt; e.clip = 'death'; e.atk = -1; if (e.downT <= 0) e.clip = 'idle'; return; }   // knocked down: on the ground, then up
   if (e.rootT > 0) { e.rootT -= dt; if (Math.random() < dt * 6) { const [x, y] = screenOf(e); pspawn(3, x + (Math.random() - 0.5) * 12, y, 2 + Math.random() * 6, 0, 0, 6, 0.4, Math.random() < 0.5 ? 55 : 54); } }
   if (e.slowT > 0) { e.slowT -= dt; if (Math.random() < dt * 5) { const [x, y] = screenOf(e); pspawn(3, x + (Math.random() - 0.5) * 14, y, 4 + Math.random() * e.def.chest, 0, 0, 8, 0.5, 118); } }
@@ -931,6 +934,7 @@ function updateEnemy(e, dt) {
     if (Math.random() < dt * 10) { const [x, y] = screenOf(e), a = G.t * 9; pspawn(4, x + Math.cos(a) * 5, y + Math.sin(a) * 2, e.def.chest + 14, 0, 0, 0, 0.25, 51); }
     return;
   }
+  if (e.fearT > 0) { updateFear(e, dt); return; }   // round 87: Blood Roar's panic
   if (e.dummy) { e.clip = 'idle'; return; }   // a skill preview's target: it reacts to blows but never acts
   const m = e.def, dx = hero.fi - e.fi, dy = hero.fj - e.fj, d = Math.hypot(dx, dy);
   if (e === boss && e.state !== 'sleep' && !hero.dead && updateBoss(e, dt * (e.slowT > 0 ? 0.6 : 1), d, dx, dy)) return;   // slowed bosses wind up their specials slower too
@@ -1085,12 +1089,13 @@ function updateEnemy(e, dt) {
   e.clip = 'walk';
 }
 function hurtHero(dmg, src) {
-  if (hero.dead || hero.leap || hero.roll || hero.charge || (hero.ultOn && hero.ultOn.kind === 'wrath')) return;   // nothing touches him in the air
+  if (hero.dead || hero.leap || hero.roll || hero.charge || (hero.ultOn && hero.ultOn.kind === 'wrath') || (hero.bz && hero.bz.kind === 'rush')) return;   // nothing touches him in the air (round 87: nor mid-Rush)
   if (Math.random() * 100 < STAT.block) { floater('BLOCK', hero.fi, hero.fj, 44, 31); sfx('block'); return; }
   dmg = Math.max(1, Math.round(dmg * 40 / (40 + STAT.armor * (hero.buff > 0 ? 1.5 : 1) * 2.5) * (hero.stoneskin > 0 ? 0.5 : 1)));
   if (hero.cls === 'warrior') dmg = Math.max(1, Math.round(dmg * 0.75));   // round 67: he fights where the blows land (Diablo III's melee classes take 30% less); bots died 2-4 times a run as him, never as the others
   if (STAT.dr) dmg = Math.max(1, dmg - STAT.dr);   // round 42a: OF THE WALL
   hero.hp -= dmg; hero.flash = 0.06; hero.hurtT = 0.15; sfx('hurt');
+  if (hero.cls === 'warrior') rageAdd(3 + dmg / STAT.maxHp * 60);   // round 87: being hit angers him most
   hero.hitF = 0;   // round 40a: which way the blow knocks him (0 front, 1 from his left, 2 from his right, 3 from behind)
   if (src && src.fi !== undefined && !FEEL_OLD) { const [fx, fy] = dirVec(hero.dir), dx = src.fi - hero.fi, dy = src.fj - hero.fj, l = Math.hypot(dx, dy) || 1, dt = (dx * fx + dy * fy) / l, cr = (fx * dy - fy * dx) / l; hero.hitF = dt > 0.5 ? 0 : dt < -0.5 ? 3 : cr > 0 ? 2 : 1; }
   if (src && src.pw) eliteOnHit(src, dmg);
@@ -1268,7 +1273,7 @@ function idleLife(e, dt) {
   if (!blocked(t[0], t[1])) { e.wander = t; e.wanderT = 2; }
 }
 function separate() {
-  const list = enemies.filter(alive);
+  const list = enemies.filter(e => alive(e) && !e.held && !e.flight);
   for (let a = 0; a < list.length; a++) for (let b = a + 1; b < list.length; b++) {
     const A = list[a], B = list[b], dx = B.fi - A.fi, dy = B.fj - A.fj, d = Math.hypot(dx, dy), m = 0.55 + (A.def.unique || B.def.unique ? 0.4 : 0);
     if (d < m && d > 1e-4) { const p = (m - d) * 0.5; tryMove(A, -dx / d * p, -dy / d * p, 0.25); tryMove(B, dx / d * p, dy / d * p, 0.25); }
@@ -2178,7 +2183,7 @@ function drawPortal() {
 }
 function saveGame() {
   if (G.mode !== 'play' || hero.dead || PREVIEW) return;   // (the skill preview's copy of the game never saves)
-  const data = { v: SAVE_V, level: LV.level, seed: LV.seed, hero: { cls: hero.cls, hp: Math.ceil(hero.hp), mana: Math.ceil(hero.mana), gold: hero.gold, xp: hero.xp, lvl: hero.lvl, potions: hero.potions, team: hero.team, equip: hero.equip, bag: hero.bag, mods: hero.mods || {}, ult: Math.floor(hero.ult || 0), el: hero.el || {}, orbs: hero.orbs || {}, modSeen: hero.modSeen || 0, tut: hero.tut || {}, stats: hero.stats || null }, serial: itemSerial,
+  const data = { v: SAVE_V, level: LV.level, seed: LV.seed, hero: { cls: hero.cls, hp: Math.ceil(hero.hp), mana: Math.ceil(hero.mana), gold: hero.gold, xp: hero.xp, lvl: hero.lvl, potions: hero.potions, team: hero.team, equip: hero.equip, bag: hero.bag, mods: hero.mods || {}, ult: Math.floor(hero.ult || 0), el: hero.el || {}, rage: Math.floor(hero.rage || 0), orbs: hero.orbs || {}, modSeen: hero.modSeen || 0, tut: hero.tut || {}, stats: hero.stats || null }, serial: itemSerial,
     story: G.story || null, gates: G.gates || null, town: G.town || null, portal: G.portal ? { level: G.portal.level, seed: G.portal.seed, fi: G.portal.fi, fj: G.portal.fj } : null };
   try { localStorage.setItem(saveKey(hero.cls), JSON.stringify(data)); } catch (e) { /* storage can be unavailable; the game still runs */ }
 }
@@ -2191,7 +2196,7 @@ function loadSave(cls = 'warrior') {
   } catch (e) { return null; }
 }
 function newHero(cls = 'warrior') {
-  Object.assign(hero, { cls, hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, bag: [], mods: {}, ult: 0, el: {}, orbs: {}, modSeen: 0, tut: {}, stats: { t: 0, deaths: 0, kills: 0 }, equip: { weapon: null, helm: null, chest: null, shield: null, ring: null, amulet: null } });
+  Object.assign(hero, { cls, hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, bag: [], mods: {}, ult: 0, el: {}, orbs: {}, rage: 0, stance: 0, bz: null, modSeen: 0, tut: {}, stats: { t: 0, deaths: 0, kills: 0 }, equip: { weapon: null, helm: null, chest: null, shield: null, ring: null, amulet: null } });
   const R = rng(5);
   const kit = cls === 'mage' ? ['oak_staff', 'apprentice_robe', 'wizard_hat'] : cls === 'ranger' ? ['hunting_bow', 'leather_jerkin', 'ranger_hood', 'quiver'] : ['short_sword', 'tunic'];
   for (const b of kit) { const it = rollItem(R, 1, b); it.rarity = 'normal'; it.mods = {}; hero.equip[ITEM_BASES[b].slot] = it; }

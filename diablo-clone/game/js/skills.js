@@ -28,10 +28,10 @@ const SKILLSETS = {
 let SKILLS = SKILLSETS.warrior;
 function setSkillsFor(cls) { SKILLS = SKILLSETS[cls] || SKILLSETS.warrior; }
 const CD = { charge: 0, bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, leap: 0, fireball: 0, cone: 0, meteor: 0, blink: 0, chain: 0, multi: 0, trap: 0, roll: 0, mark: 0, pierce: 0, cluster: 0, sentry: 0, hawk: 0, vault: 0, strafe: 0 };
-function resetSkills() { for (const k in CD) CD[k] = 0; hero.whirl = 0; hero.dash = 0; hero.buff = 0; hero.charge = null; hero.chargeAgain = 0; hero.chargeSecond = false; hero.strafe = null; }
-const heroBusy = () => hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0 || !!hero.leap || !!hero.ultOn || !!hero.roll;
+function resetSkills() { for (const k in CD) CD[k] = 0; hero.whirl = 0; hero.dash = 0; hero.buff = 0; hero.charge = null; hero.chargeAgain = 0; hero.chargeSecond = false; hero.strafe = null; hero.bz = null; }
+const heroBusy = () => hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0 || !!hero.leap || !!hero.ultOn || !!hero.roll || !!hero.bz;
 // one hit's damage, with the war cry bonus
-const heroDmg = (k = 1) => Math.max(1, Math.round((roll(STAT.dmg) + (STAT.fireDmg || 0)) * k * (hero.buff > 0 ? 1.4 : 1) * (HEAVY ? 1.25 : 1)));   // round 62: heavier blows   // fire damage from gear rides on every hit (round 42a)
+const heroDmg = (k = 1) => Math.max(1, Math.round((roll(STAT.dmg) + (STAT.fireDmg || 0)) * k * (hero.buff > 0 ? 1.4 : 1) * (HEAVY ? 1.25 : 1) * (hero.stance === 1 && hero.cls === 'warrior' ? 1.15 : 1)));   // (round 87: the Berserker hits a seventh harder)   // round 62: heavier blows   // fire damage from gear rides on every hit (round 42a)
 
 // button feedback (round 25): a pulse when a skill fires, a flash when it is ready again, a shake
 // with no mana
@@ -67,6 +67,7 @@ function useSkill(i) {
   if (s.id === 'hawk') callHawk();
   if (s.id === 'vault') { if (!vault()) { hero.mana += skillCost(s); CD.vault = 0; } }
   if (s.id === 'strafe') startStrafe();
+  for (const [id, fn] of [['rush', startRush], ['hurl', startHurl], ['roar', startRoar], ['flurry', startFlurry]]) if (s.id === id && !fn()) { hero.mana += skillCost(s); CD[id] = 0; }   // round 87: the Berserker
   if (s.id === 'multi') multishot();
   if (s.id === 'trap') { if (!throwTrap()) { hero.mana += skillCost(s); CD.trap = 0; } }
   if (s.id === 'roll') { if (!startRoll()) { hero.mana += skillCost(s); CD.roll = 0; } }
@@ -850,6 +851,7 @@ function warCry() {
 }
 function updateSkills(dt) {
   for (const k in CD) CD[k] = Math.max(0, CD[k] - dt);
+  updateRage(dt); updateBzFx(dt);
   if (hero.buff > 0) {
     hero.buff -= dt;
     if (Math.random() < dt * 12) { const [x, y] = screenOf(hero); pspawn(4, x + (Math.random() - 0.5) * 14, y, 6 + Math.random() * 30, 0, 0, 14, 0.4, 50); }
@@ -1419,7 +1421,7 @@ function drawMeteorRocks() {
 }
 function drawImpactFlashes() {
   drawMeteorRocks(); drawBlooms();
-  drawShafts(); drawSlamFx(); drawFrostFx(); drawLightning(); drawRangerKit(); drawArcHits(); drawElemUlt();   // round 65, 66, 67, 68d
+  drawShafts(); drawSlamFx(); drawFrostFx(); drawLightning(); drawRangerKit(); drawArcHits(); drawElemUlt(); drawBz();   // round 65, 66, 67, 68d
   drawStreaks(); drawHookChains(); drawMods30(); drawStrikes(); drawRangerFx(); drawDebris();
   for (const f of G.impacts) {
     const [x, y] = iso(f.fi, f.fj), X0 = Math.round(x * SPX - cam2x), Y0 = Math.round((y - f.z) * SPX - cam2y), p = 1 - f.t / f.t0, R = f.size * (0.6 + p * 0.6);
@@ -1897,7 +1899,8 @@ const ULTS = {
 const ultReady = () => hero.lvl >= ULT_LVL && (hero.ult || 0) >= 100;
 function ultGain(e, dmg, killed) {
   if (hero.lvl < ULT_LVL || hero.ultOn || G.rocks.length || G.rain.length || !(e.maxHp > 0)) return;
-  if (hero.cls === 'mage') return elemGain(e, dmg, killed);   // round 83: the mage charges four elements instead of one bar
+  if (hero.cls === 'mage') return elemGain(e, dmg, killed);
+  if (hero.cls === 'warrior') return rageGain(e, dmg, killed);   // round 87: the warrior's bar is RAGE   // round 83: the mage charges four elements instead of one bar
   let g = 5 * Math.max(0, dmg) / e.maxHp;   // (round 85: a quarter faster for the warrior and the ranger too)
   if (killed) g += e.def.unique ? 25 : e.champ || e.def.elite ? 7.5 : 1.25;
   const was = hero.ult || 0; hero.ult = Math.min(100, was + g);
@@ -1905,6 +1908,7 @@ function ultGain(e, dmg, killed) {
 }
 function useUlt() {
   if (G.mode !== 'play' || hero.dead) return;
+  if (hero.cls === 'warrior') return warriorStance();   // round 87: the warrior's button is his stance
   if (hero.lvl < ULT_LVL) { say(`ULTIMATE UNLOCKS AT LEVEL ${ULT_LVL}`, 25, 1.4); return; }
   if (!ultReady()) { say('NOT CHARGED YET', 40, 1.2); btnFx(9).deny = 0.3; sfx('tap'); return; }
   if (hero.ultOn || hero.leap) return;
@@ -3341,3 +3345,319 @@ const glyphTrap = (cx, cy) => { for (let k = 0; k < 20; k++) { const a = k / 20 
 const glyphRoll = (cx, cy) => { for (let a = 0; a <= 14; a++) { const u = a / 14; put(cx + 6 - u * 13, cy + 4 - Math.sin(u * Math.PI) * 9, a < 3 ? 27 : 55); } for (const [a, b] of [[-7, 5], [-5, 6], [-8, 7]]) put(cx + a, cy + b, 25); };
 const glyphMark = (cx, cy) => { for (let a = 0; a < 32; a++) { const t = a / 32 * 6.283; if (a % 8 > 5) continue; put(cx + Math.cos(t) * 7, cy + Math.sin(t) * 7, 23); } line(cx - 9, cy, cx - 4, cy, 22); line(cx + 4, cy, cx + 9, cy, 22); line(cx, cy - 9, cx, cy - 4, 22); line(cx, cy + 4, cx, cy + 9, 22); fillRect(cx - 1, cy - 1, 2, 2, 27); };
 const glyphRain = (cx, cy) => { for (const [ox, oy] of [[-6, -6], [-1, -8], [4, -5], [-3, -1], [3, 0]]) { line(cx + ox, cy + oy, cx + ox - 1, cy + oy + 6, 35); put(cx + ox - 1, cy + oy + 7, 27); } line(cx - 8, cy + 8, cx + 8, cy + 8, 25); };
+
+// ---------------------------------------------------------------- the warrior's RAGE and the BERSERKER (round 87)
+// The user: the warrior climbs in stances as he gets angrier, each with its own four moves; the gear he
+// has on stays what he fights with. RAGE (hero.rage, 0-100) fills from blows he lands, blows he takes
+// (those count most) and kills, and drains when nothing is near. At half, the stance button (the
+// ultimate's) takes him into the BERSERKER: his four buttons become Reaver's Rush, Hurl, Blood Roar and
+// Flurry, he moves a seventh faster and hits a seventh harder, red streaks follow him; rage drains
+// all the while, and when it runs dry he is back to himself. At full, in the Berserker, the button
+// casts the TITAN (step 2; until then Wrath of the Mountain stands in for it).
+const BERSERK_SKILLS = [
+  { id: 'rush', name: "REAVER'S RUSH", lvl: 1, mana: 10, cd: 6 },
+  { id: 'hurl', name: 'HURL', lvl: 1, mana: 8, cd: 5 },
+  { id: 'roar', name: 'BLOOD ROAR', lvl: 1, mana: 6, cd: 9 },
+  { id: 'flurry', name: 'FLURRY', lvl: 1, mana: 10, cd: 4 },
+];
+for (const s of BERSERK_SKILLS) CD[s.id] = 0;
+const RAGE_STANCE = 50, RAGE_DRAIN = 2.6, RAGE_IDLE = 6;
+const berserk = () => hero.cls === 'warrior' && hero.stance === 1;
+function rageGain(e, dmg, killed) {
+  if (!(e.maxHp > 0)) return;
+  let g = 2.6 * Math.max(0, dmg) / e.maxHp; if (killed) g += e.def.unique ? 25 : e.champ || e.def.elite ? 9 : 1.6;
+  rageAdd(g * (berserk() ? 0.55 : 1));   // (the climb from half to full, in the Berserker, is slower)
+}
+function rageAdd(g) {
+  if (hero.cls !== 'warrior' || hero.lvl < ULT_LVL || hero.ultOn) return;
+  const was = hero.rage || 0; hero.rage = Math.min(100, was + g); hero.rageAt = G.t;
+  if (!berserk() && was < RAGE_STANCE && hero.rage >= RAGE_STANCE) { say('RAGE: THE BERSERKER IS READY', 22, 2); sfx('cry', 0.6); G.ragePop = G.t; }
+  if (berserk() && was < 100 && hero.rage >= 100) { say('FULL RAGE: UNLEASH THE TITAN', 51, 2); sfx('levelUp'); G.ragePop = G.t; }
+  hero.ult = hero.rage;
+}
+function updateRage(dt) {
+  if (hero.cls !== 'warrior') return;
+  if (hero.rage === undefined) hero.rage = 0;
+  const fighting = enemies.some(e => alive(e) && e.state !== 'sleep' && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 8);
+  if (berserk()) {
+    if (!hero.bz && !hero.ultOn) hero.rage = Math.max(0, hero.rage - dt * RAGE_DRAIN * (fighting ? 1 : 2.5));
+    if (hero.rage <= 0) leaveBerserk(true);
+    // the Berserker's look: crimson embers rising off him, and red afterimages while he runs
+    const [x, y] = screenOf(hero);
+    if (Math.random() < dt * 22) pspawn(3, x + (Math.random() - 0.5) * 14, y, 6 + Math.random() * 30, (Math.random() - 0.5) * 8, 0, 18 + Math.random() * 20, 0.5 + Math.random() * 0.3, Math.random() < 0.5 ? RED[4] : RED[3]);
+    if (hero.runT > 0.05 && (G.bzGhostT = (G.bzGhostT || 0) - dt) <= 0) { G.bzGhostT = 0.07; G.ghosts.push({ sp: getSprite('hero', hero.look, hero.dir, hero.clip, frameOf(hero), hero), x, y: y - (hero.leapZ || 0), t: 0.22, t0: 0.22, fl: 2 }); }
+  } else if (!fighting && G.t - (hero.rageAt || 0) > 4) hero.rage = Math.max(0, hero.rage - dt * RAGE_IDLE);
+  hero.ult = hero.rage;
+}
+function enterBerserk() {
+  hero.stance = 1; SKILLS = BERSERK_SKILLS; for (const s of BERSERK_SKILLS) CD[s.id] = 0;
+  say('BERSERKER!', 22, 1.6); sfx('cry'); sfx('boom', 0.6);
+  shockwave(hero.fi, hero.fj, 2.2, 0.3, [RED[4], RED[2]]); shockwave(hero.fi, hero.fj, 1.4, 0.24, [27, RED[4]]);
+  const [x, y] = screenOf(hero); for (let k = 0; k < 30; k++) { const a = k / 30 * 6.283; pspawn(4, x, y, 16, Math.cos(a) * 90, Math.sin(a) * 45, 20, 0.4, k % 2 ? RED[4] : 27); }
+  G.flashes.push({ fi: hero.fi, fj: hero.fj, t: 0.3, t0: 0.3, r: 150 });
+  for (const e of enemies) if (alive(e) && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 2.6 && smallFoe(e)) { wake(e); e.hurt = Math.max(e.hurt || 0, 0.35); e.atk = -1; }
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.4);
+  btnFx(9).press = 0.2;
+}
+function leaveBerserk(spent) {
+  if (hero.stance !== 1) return;
+  hero.stance = 0; SKILLS = SKILLSETS.warrior; hero.bz = null;
+  say(spent ? 'THE RAGE IS SPENT' : 'CALM', 25, 1.4);
+}
+// the stance button: half rage -> Berserker; in the Berserker at full -> the Titan (for now Wrath of the
+// Mountain); in the Berserker below full -> back to calm (the rage kept)
+function warriorStance() {
+  if (hero.lvl < ULT_LVL) { say(`RAGE UNLOCKS AT LEVEL ${ULT_LVL}`, 25, 1.4); return; }
+  if (hero.ultOn || hero.leap || hero.bz) return;
+  if (!berserk()) {
+    if ((hero.rage || 0) < RAGE_STANCE) { say('NOT ANGRY ENOUGH YET', 22, 1.2); btnFx(9).deny = 0.3; sfx('tap'); return; }
+    if (heroBusy()) return;
+    enterBerserk(); return;
+  }
+  if (hero.rage >= 100) { if (heroBusy()) return; leaveBerserk(false); hero.rage = 0; hero.ult = 0; G.ultAt = G.t; startWrath(); return; }
+  leaveBerserk(false);
+}
+// ---- swing poses: run one of the hero's own swings, stopped at any point
+function swingT(c) { const sw = weaponSwing(hero.look, c); let t = 0, hit = 0; for (const k of sw) { if (k.hit && !hit) hit = t + k.ms; t += k.ms; } return { hit: hit || t * 0.6, total: t }; }
+function bzPose(c, ms) { hero.combo = c; hero.clip = ATTACK_CLIPS[c]; hero.atk = ms; }
+const bzCrit = () => Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100;
+function bzHit(e, k, from, pow = 0, elem = null) {
+  if (!alive(e)) return; wake(e); const c = bzCrit(); G.elem = elem; G.pierce = true; damageEnemy(e, heroDmg((c ? 2 : 1) * k), from[0], from[1], c, pow); G.elem = null; G.pierce = false;
+}
+function nearFoes(fi, fj, r) { return enemies.filter(e => alive(e) && LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] >= 0.3 && Math.hypot(e.fi - fi, e.fj - fj) < r).sort((a, b) => Math.hypot(a.fi - fi, a.fj - fj) - Math.hypot(b.fi - fi, b.fj - fj)); }
+// ---- REAVER'S RUSH: he blurs from foe to foe, up to six, a slash at each; untouchable while he goes
+function startRush() {
+  const list = []; let at = [hero.fi, hero.fj], range = 6.5;
+  while (list.length < 6) {
+    const c = nearFoes(at[0], at[1], range).find(e => !list.includes(e) && los(at[0], at[1], e.fi, e.fj)); if (!c) break;
+    const l = Math.hypot(c.fi - at[0], c.fj - at[1]) || 1, stop = [c.fi - (c.fi - at[0]) / l * 0.65, c.fj - (c.fj - at[1]) / l * 0.65];
+    if (!standable(stop[0], stop[1], 0.26)) { if (list.length) break; else return false; }
+    list.push(c); c.rushAt = stop; at = stop; range = 4.2;
+  }
+  if (!list.length) { say('NOTHING TO RUSH', 25, 1); return false; }
+  hero.bz = { kind: 'rush', list, i: 0, t: 0, phase: 0, from: [hero.fi, hero.fj] }; hero.approach = null;
+  sfx('heavySwing'); return true;
+}
+function updateRush(B, dt) {
+  B.t += dt; const e = B.list[B.i], to = e.rushAt, hop = 0.085, hold = 0.06;
+  if (B.phase === 0) {   // travelling
+    const u = Math.min(1, B.t / hop);
+    if (B.t <= dt * 1.01) { const [x, y] = screenOf(hero); G.ghosts.push({ sp: getSprite('hero', hero.look, hero.dir, hero.clip, frameOf(hero), hero), x, y, t: 0.35, t0: 0.35, fl: 2 }); }
+    hero.fi = B.from[0] + (to[0] - B.from[0]) * u; hero.fj = B.from[1] + (to[1] - B.from[1]) * u; hero.dir = dirFrom(e.fi - hero.fi, e.fj - hero.fj);
+    bzPose(B.i % 2, swingT(B.i % 2).hit * 0.7);
+    if (u >= 1) {
+      B.phase = 1; B.t = 0; if (!G.bzStreaks) G.bzStreaks = []; G.bzStreaks.push({ a: B.from, b: to, t: 0.3, t0: 0.3 });
+      bzHit(e, 1.8, [hero.fi, hero.fj], 1); if (alive(e) && smallFoe(e)) { e.stun = Math.max(e.stun || 0, 0.5); }
+      bzPose(B.i % 2, swingT(B.i % 2).hit + 10); bzSlash(B.i % 2 ? 1 : -1, 1);
+      const [x, y] = screenOf(e); burst(2, x, y, e.def.chest * 0.6, 10, 110, B.i % 2 ? 27 : RED[4]); impactFlash(e.fi, e.fj, e.def.chest * 0.6, 6);
+      hero.stop = 0.03; if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.12); sfx('crit', 0.7); sfx('swing');
+    }
+  } else if (B.t >= hold) {
+    B.i++; B.from = [hero.fi, hero.fj]; B.phase = 0; B.t = 0;
+    while (B.i < B.list.length && !alive(B.list[B.i]) && B.i < B.list.length) B.i++;
+    if (B.i >= B.list.length) { hero.bz = null; hero.atk = -1; hero.clip = 'idle'; hero.swingEnd = G.t; unstickHero(); shockwave(hero.fi, hero.fj, 1.3, 0.22, [RED[4], RED[2]]); }
+  }
+}
+// ---- HURL: he grabs the nearest foe, swings round once and throws it into the thickest knot of the rest
+function startHurl() {
+  const e = nearFoes(hero.fi, hero.fj, 3.4)[0]; if (!e) { say('NOTHING TO GRAB', 25, 1); return false; }
+  hero.dir = dirFrom(e.fi - hero.fi, e.fj - hero.fj); hero.approach = null;
+  if (e.def.unique) {   // too big to lift: a crushing two-handed blow instead
+    hero.bz = { kind: 'heave', e, t: 0 }; sfx('heavySwing'); return true;
+  }
+  e.held = true; e.atk = -1; wake(e);
+  hero.bz = { kind: 'hurl', e, t: 0, a0: Math.atan2(e.fj - hero.fj, e.fi - hero.fi), done: false };
+  sfx('swing'); sfx('growl', 0.4); return true;
+}
+function updateHurl(B, dt) {
+  B.t += dt; const e = B.e, grab = 0.16, spin = 0.42;
+  if (!alive(e)) { hero.bz = null; hero.atk = -1; hero.clip = 'idle'; return; }
+  if (B.t < grab) {   // pulled in and lifted
+    const u = B.t / grab, a = B.a0, tf = hero.fi + Math.cos(a) * 0.7, tj = hero.fj + Math.sin(a) * 0.7;
+    e.fi += (tf - e.fi) * Math.min(1, dt * 18); e.fj += (tj - e.fj) * Math.min(1, dt * 18); e.leapZ = 26 * u; e.clip = 'hit';
+    bzPose(0, swingT(0).hit * 0.4);
+  } else if (B.t < spin) {   // one turn round him, the foe swung at arm's length
+    const u = (B.t - grab) / (spin - grab), a = B.a0 + u * 6.283 * 1.15;
+    e.fi = hero.fi + Math.cos(a) * 0.8; e.fj = hero.fj + Math.sin(a) * 0.8; e.leapZ = 28 + Math.sin(u * Math.PI) * 6; e.dir = (e.dir + 1) % 8;
+    hero.dir = dirFrom(Math.cos(a), Math.sin(a)); bzPose(2, swingT(2).hit * 0.5);
+    if (Math.random() < 0.8) { const [x, y] = screenOf(e); pspawn(4, x, y, e.leapZ + 8, 0, 0, 0, 0.18, RED[3]); }
+  } else if (!B.done) {   // let go: at the thickest knot within seven tiles, else the way he faces
+    B.done = true; e.held = false;
+    let best = null, bn = 0; for (const o of nearFoes(hero.fi, hero.fj, 7)) { if (o === e) continue; let n = 0; for (const q of enemies) if (q !== e && alive(q) && Math.hypot(q.fi - o.fi, q.fj - o.fj) < 1.8) n++; if (n > bn) { bn = n; best = o; } }
+    const [fx, fy] = dirVec(hero.dir), ang = best ? Math.atan2(best.fj - hero.fj, best.fi - hero.fi) : Math.atan2(fy, fx);
+    hero.dir = dirFrom(Math.cos(ang), Math.sin(ang));
+    const d = best ? Math.min(7, Math.hypot(best.fi - hero.fi, best.fj - hero.fj)) : 5;
+    e.fi = hero.fi + Math.cos(ang) * 0.8; e.fj = hero.fj + Math.sin(ang) * 0.8;
+    launchFoe(e, ang, 12, d / 12, 30, 3, 2, true);
+    bzPose(2, swingT(2).hit + 10); bzSlash(1, 1.4);
+    if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.2); sfx('heavySwing'); sfx('whoomp', 0.6);
+  } else if (B.t > spin + 0.22) { hero.bz = null; hero.atk = -1; hero.clip = 'idle'; hero.swingEnd = G.t; }
+}
+function updateHeave(B, dt) {
+  B.t += dt; const T = swingT(3);
+  bzPose(3, Math.min(T.total - 1, B.t * 1000 * 1.3));
+  if (!B.hit && B.t * 1000 * 1.3 >= T.hit) { B.hit = true; bzHit(B.e, 4, [hero.fi, hero.fj], 2, 'heavy'); impactFlash(B.e.fi, B.e.fj, 10, 8); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.45); sfx('crit'); sfx('boom'); }
+  if (B.t * 1000 * 1.3 >= T.total) { hero.bz = null; hero.atk = -1; hero.clip = 'idle'; hero.swingEnd = G.t; }
+}
+// a foe flying through the air (thrown, or launched by Flurry's last blow): it knocks down what it
+// passes over, and bursts where it lands
+function launchFoe(e, ang, sp, dur, h, kLand, kPass, big) {
+  e.flight = { vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, t: 0, dur: Math.max(0.22, dur), h, hits: new Set([e]), kLand, kPass, big };
+  e.atk = -1; e.stun = 0; e.hurt = 0; e.kb = [0, 0]; e.clip = 'hit';
+}
+function updateFlight(e, dt) {
+  const F = e.flight; F.t += dt;
+  const u = Math.min(1, F.t / F.dur), ni = e.fi + F.vx * dt, nj = e.fj + F.vy * dt, wall = blocked(ni, nj);
+  if (!wall) { e.fi = ni; e.fj = nj; }
+  e.leapZ = Math.sin(u * Math.PI) * F.h + (1 - u) * 4; e.dir = (e.dir + (F.t * 40 | 0) % 2) % 8; e.clip = 'hit';
+  if (Math.random() < 0.9) { const [x, y] = screenOf(e); pspawn(3, x, y, e.leapZ + 10, 0, 0, 4, 0.25, Math.random() < 0.5 ? RED[4] : 27); }
+  for (const o of enemies) {
+    if (F.hits.has(o) || !alive(o) || o.held || o.flight) continue;
+    if (Math.hypot(o.fi - e.fi, o.fj - e.fj) < 0.8 + (o.def.unique ? 0.4 : 0)) {
+      F.hits.add(o); bzHit(o, F.kPass, [e.fi, e.fj], 1);
+      if (alive(o) && smallFoe(o) && !(o.frozen > 0)) { o.downT = o.downT0 = 1.0; o.atk = -1; const l = Math.hypot(F.vx, F.vy) || 1; o.kb = [F.vx / l * 5, F.vy / l * 5]; }
+      const [x, y] = screenOf(o); burst(2, x, y, o.def.chest * 0.6, 8, 90, 27); sfx('thunk');
+    }
+  }
+  if (u >= 1 || wall) {
+    e.flight = null; e.leapZ = 0;
+    const [x, y] = screenOf(e);
+    for (const o of enemies) if (o !== e && alive(o) && !o.held && Math.hypot(o.fi - e.fi, o.fj - e.fj) < (F.big ? 1.7 : 1.2)) { bzHit(o, F.kPass * 0.9, [e.fi, e.fj], 1); if (alive(o) && smallFoe(o)) { o.downT = o.downT0 = 0.9; o.atk = -1; } }
+    bzHit(e, F.kLand, [e.fi - F.vx * 0.05, e.fj - F.vy * 0.05], 2, 'heavy');
+    if (alive(e) && smallFoe(e) && !(e.frozen > 0)) { e.downT = e.downT0 = 1.2; e.atk = -1; }
+    rubble(x, y, F.big ? 16 : 8, 80); burst(5, x, y, 2, 14, 90, LV.outdoor ? DIRT[3] : S[5]);
+    shockwave(e.fi, e.fj, F.big ? 1.7 : 1.2, 0.28, [RED[4], RED[2]]); impactFlash(e.fi, e.fj, 4, F.big ? 9 : 6);
+    const q = { fi: e.fi, fj: e.fj, a0: 0, ring: true, R: F.big ? 1.2 : 0.8, n: 6, t: 0.5, t0: 0.5, seed: (Math.random() * 1e6) | 0 }; stampCracks(q);
+    G.flashes.push({ fi: e.fi, fj: e.fj, t: 0.2, t0: 0.2, r: 110 });
+    if (SHAKE) G.trauma = Math.min(1, G.trauma + (F.big ? 0.45 : 0.3)); hero.stop = Math.max(hero.stop || 0, 0.04);
+    sfx('boom', F.big ? 1 : 0.7); sfx('crack', 0.6);
+  }
+}
+// ---- BLOOD ROAR: weapon thrown up, a roar: a red shockwave rolls out in a wide cone; everything in it
+// reels, and the ordinary ones panic and run for a couple of seconds; a fifth of the bar comes back
+function startRoar() {
+  const t = nearFoes(hero.fi, hero.fj, 6)[0]; if (t) hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
+  hero.bz = { kind: 'roar', t: 0, done: false }; hero.approach = null; return true;
+}
+const ROAR_R = 5.2, ROAR_HALF = 1.0;
+function updateRoar(B, dt) {
+  B.t += dt; const T = swingT(3);
+  bzPose(3, Math.min(T.hit * 0.55, B.t * 1000 * 1.6)); hero.leapZ = B.t < 0.2 ? Math.sin(B.t / 0.2 * Math.PI / 2) * 6 : Math.max(0, 6 - (B.t - 0.2) * 30);
+  if (!B.done && B.t >= 0.16) {
+    B.done = true;
+    const [fx, fy] = dirVec(hero.dir), a0 = Math.atan2(fy, fx);
+    for (const e of enemies) {
+      if (!alive(e)) continue; const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy); if (d > ROAR_R + (e.def.unique ? 0.5 : 0)) continue;
+      const da = Math.abs(((Math.atan2(dy, dx) - a0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI); if (d > 0.9 && da > ROAR_HALF) continue;
+      bzHit(e, 1.2, [hero.fi, hero.fj], 0, 'stagger');
+      if (!alive(e)) continue;
+      if (smallFoe(e)) { e.fearT = 2.4; e.atk = -1; e.windT = 0; e.hurt = Math.max(e.hurt || 0, 0.2); } else e.stun = Math.max(e.stun || 0, 0.9);
+    }
+    for (const [r, dur, c] of [[ROAR_R, 0.42, [RED[4], RED[2]]], [ROAR_R * 0.75, 0.34, [27, RED[4]]], [ROAR_R * 0.5, 0.26, [RED[3], RED[1]]]]) shockwave(hero.fi, hero.fj, r, dur, c, [a0, ROAR_HALF]);
+    if (!G.bzRoars) G.bzRoars = []; G.bzRoars.push({ fi: hero.fi, fj: hero.fj, a0, t: 0.5, t0: 0.5 });
+    const [x, y] = screenOf(hero); for (let q = 0; q < 40; q++) { const a = a0 + (Math.random() * 2 - 1) * ROAR_HALF, s = 80 + Math.random() * 120, gx = Math.cos(a) * s, gy = Math.sin(a) * s; pspawn(4, x, y, 22, (gx - gy) * 0.7, (gx + gy) * 0.35, 10, 0.35, q % 3 ? RED[4] : 27); }
+    rageAdd(20);
+    G.flashes.push({ fi: hero.fi, fj: hero.fj, t: 0.3, t0: 0.3, r: 160 });
+    if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.5);
+    sfx('cry'); sfx('boom', 0.7); sfx('whoomp');
+  }
+  if (B.t >= 0.5) { hero.bz = null; hero.atk = -1; hero.clip = 'idle'; hero.leapZ = 0; hero.swingEnd = G.t; }
+}
+// a panicked foe runs straight away from him, a red mark over its head
+function updateFear(e, dt) {
+  e.fearT -= dt; e.atk = -1;
+  const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy) || 1, sp = 2.8 * (e.slowT > 0 ? 0.5 : 1) * dt;
+  const f0 = e.fi, j0 = e.fj; tryMove(e, dx / d * sp, dy / d * sp, 0.25);
+  const moved = Math.hypot(e.fi - f0, e.fj - j0); e.walk += moved * 3; e.dir = dirFrom(dx, dy); e.clip = moved > 1e-4 ? 'walk' : 'idle';
+  if (Math.random() < dt * 6) { const [x, y] = screenOf(e); pspawn(4, x, y, e.def.chest + 16, 0, 0, 12, 0.3, RED[4]); }
+}
+// ---- FLURRY: a dozen blows in a second and a half at what is in front, each a spark and a red slash;
+// the last one launches its target across the room
+function startFlurry() {
+  const t = nearFoes(hero.fi, hero.fj, 4)[0]; if (t) hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
+  hero.bz = { kind: 'flurry', t: 0, n: 0, next: 0, dash: t || null }; hero.approach = null; sfx('heavySwing'); return true;
+}
+function updateFlurry(B, dt) {
+  const reach = heroReach() + 0.35;
+  if (B.dash) {   // first a lunge into reach, a red blur behind him
+    const e = B.dash, dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy);
+    if (!alive(e) || d < reach - 0.45 || (B.dt = (B.dt || 0) + dt) > 0.25) B.dash = null;
+    else { const st = Math.min(d - (reach - 0.5), dt * 16); tryMove(hero, dx / d * st, dy / d * st); hero.dir = dirFrom(dx, dy); bzPose(0, swingT(0).hit * 0.5); if (Math.random() < 0.7) { const [x, y] = screenOf(hero); G.ghosts.push({ sp: getSprite('hero', hero.look, hero.dir, hero.clip, frameOf(hero), hero), x, y, t: 0.18, t0: 0.18, fl: 2 }); } return; }
+  }
+  B.t += dt; B.next -= dt;
+  if (B.n < 12 && B.next <= 0) {
+    B.next = 0.095; B.n++;
+    const t = nearFoes(hero.fi, hero.fj, reach + 0.6)[0]; if (t) hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
+    const [fx, fy] = dirVec(hero.dir), a0 = Math.atan2(fy, fx), c = B.n % 3;
+    bzPose(c === 2 ? 0 : c, swingT(c === 2 ? 0 : c).hit + 5); lungeHero(0.04);
+    for (const e of enemies) {
+      if (!alive(e)) continue; const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy); if (d > reach + (e.def.unique ? 0.5 : 0)) continue;
+      const da = Math.abs(((Math.atan2(dy, dx) - a0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI); if (d > 0.7 && da > 0.75) continue;
+      bzHit(e, 0.45, [hero.fi, hero.fj]); if (alive(e) && smallFoe(e)) e.hurt = Math.max(e.hurt || 0, 0.12);
+      const [x, y] = screenOf(e); burst(2, x, y, e.def.chest * 0.6, 6, 100, B.n % 2 ? 27 : RED[4]); impactFlash(e.fi, e.fj, e.def.chest * 0.6, 3);
+    }
+    bzSlash(B.n % 2 ? 1 : -1, 1.1 + Math.random() * 0.4);
+    if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.05); sfx('swing', 0.6); if (B.n % 3 === 0) sfx('hit', 0.6);
+  }
+  if (B.n >= 12 && !B.fin && B.t >= 1.28) {
+    B.fin = true;
+    const [fx, fy] = dirVec(hero.dir), a0 = Math.atan2(fy, fx), t = nearFoes(hero.fi, hero.fj, reach + 0.4).find(e => { const dx = e.fi - hero.fi, dy = e.fj - hero.fj; return Math.hypot(dx, dy) < 0.7 || Math.abs(((Math.atan2(dy, dx) - a0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < 0.8; });
+    bzPose(3, swingT(3).hit + 10); bzSlash(1, 2.1); bzSlash(-1, 1.6);
+    if (t) {
+      bzHit(t, 2.5, [hero.fi, hero.fj], 2, 'heavy');
+      if (alive(t) && !t.def.unique) { const ang = Math.atan2(t.fj - hero.fj, t.fi - hero.fi); launchFoe(t, ang, 11, 0.45, 22, 1.2, 1.8, false); }
+      impactFlash(t.fi, t.fj, t.def.chest * 0.6, 9);
+    }
+    shockwave(hero.fi + fx * 0.8, hero.fj + fy * 0.8, 1.4, 0.24, [27, RED[4]]);
+    hero.stop = 0.07; if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.4); sfx('crit'); sfx('heavySwing');
+  }
+  if (B.fin && B.t >= 1.5) { hero.bz = null; hero.atk = -1; hero.clip = 'idle'; hero.swingEnd = G.t; }
+}
+function updateBz(dt) {
+  const B = hero.bz; if (!B) return;
+  if (B.kind === 'rush') updateRush(B, dt);
+  else if (B.kind === 'hurl') updateHurl(B, dt);
+  else if (B.kind === 'heave') updateHeave(B, dt);
+  else if (B.kind === 'roar') updateRoar(B, dt);
+  else if (B.kind === 'flurry') updateFlurry(B, dt);
+}
+function updateBzFx(dt) {
+  if (G.bzSlashes) { for (const s of G.bzSlashes) s.t -= dt; G.bzSlashes = G.bzSlashes.filter(s => s.t > 0); }
+  if (G.bzStreaks) { for (const s of G.bzStreaks) s.t -= dt; G.bzStreaks = G.bzStreaks.filter(s => s.t > 0); }
+  if (G.bzRoars) { for (const s of G.bzRoars) s.t -= dt; G.bzRoars = G.bzRoars.filter(s => s.t > 0); }
+}
+// a crimson slash in front of him: a fat crescent, white along its edge (side: which way it sweeps)
+function bzSlash(side, size) {
+  if (!G.bzSlashes) G.bzSlashes = [];
+  const [fx, fy] = dirVec(hero.dir);
+  G.bzSlashes.push({ fi: hero.fi + fx * 0.75, fj: hero.fj + fy * 0.75, a: Math.atan2(fy, fx), side, size, t: 0.2, t0: 0.2 });
+}
+function drawBz() {
+  const P = (fi, fj, z) => { const [x, y] = iso(fi, fj); return [Math.round(x * SPX - cam2x), Math.round((y - z) * SPX - cam2y)]; };
+  if (G.bzStreaks) for (const s of G.bzStreaks) {   // the rush's path: a red streak with a white core, breaking up as it fades
+    const k = s.t / s.t0, A = P(s.a[0], s.a[1], 18), B = P(s.b[0], s.b[1], 18), n = Math.ceil(Math.hypot(B[0] - A[0], B[1] - A[1]));
+    for (let q = 0; q <= n; q++) { const u = q / n; if (u < 1 - k) continue; const x = Math.round(A[0] + (B[0] - A[0]) * u), y = Math.round(A[1] + (B[1] - A[1]) * u); for (let w = -3; w <= 3; w++) { if (Math.abs(w) > 1 && ((x + y + w) & 1)) continue; ovSet(x, y + w, Math.abs(w) === 0 && k > 0.4 ? 27 : Math.abs(w) < 2 ? RED[4] : RED[2]); } }
+  }
+  if (G.bzSlashes) for (const s of G.bzSlashes) {
+    const k = s.t / s.t0, [X, Y] = P(s.fi, s.fj, 18), sx = Math.cos(s.a) - Math.sin(s.a), sy = (Math.cos(s.a) + Math.sin(s.a)) * 0.5, l = Math.hypot(sx, sy) || 1, ux = sx / l, uy = sy / l, R = 30 * s.size, sweep = (1 - k) * 3.2;
+    for (let q = 0; q <= 120; q++) {
+      const v = q / 120, ang = (v - 0.5) * 2.4 * s.side, done = v * 2.4 <= sweep + 0.4; if (!done) continue;
+      const ca = Math.cos(ang), sa = Math.sin(ang), dx = ux * ca - uy * sa * 2, dy = (ux * sa * 0.5 + uy * ca), th = Math.round((1 - Math.abs(v - 0.5) * 2) * 10 * s.size * Math.min(1, k * 1.6)) + 2;
+      for (let w = 0; w < th; w++) { const r = R - w, x = Math.round(X + dx * r - ux * R * 0.35), y = Math.round(Y + dy * r - uy * R * 0.35); ovSet(x, y, w < 2 ? 27 : w < 4 ? RED[4] : w < th - 1 || ((x + y) & 1) ? RED[3] : RED[2]); }
+    }
+  }
+  if (G.bzRoars) for (const s of G.bzRoars) {   // the roar's mouth: rings of red breath rolling out in the cone
+    const k = 1 - s.t / s.t0, [X, Y] = P(s.fi, s.fj, 24);
+    for (let ring = 0; ring < 3; ring++) { const r = (k * 1.2 - ring * 0.18) * ROAR_R * 22; if (r <= 4) continue; for (let q = 0; q < 50; q++) { const a = s.a0 + (q / 49 - 0.5) * 2 * ROAR_HALF, gx = Math.cos(a), gy = Math.sin(a), x = Math.round(X + (gx - gy) * r * 0.72), y = Math.round(Y + (gx + gy) * r * 0.36); if ((q + ring) & 1) ovSet(x, y, ring === 0 ? 27 : RED[4]); } }
+  }
+  // the Berserker's ground: a dark red ring breathing under him
+  if (berserk()) {
+    const [X, Y] = P(hero.fi, hero.fj, 0), pulse = 0.85 + 0.15 * Math.sin(G.t * 8), rx = Math.round(26 * pulse), ry = Math.round(rx / 2);
+    for (let a = 0; a < 90; a++) { const t = a / 90 * 6.283, x = Math.round(X + Math.cos(t) * rx), y = Math.round(Y + Math.sin(t) * ry); if ((a + Math.floor(G.t * 20)) % 3) ovSet(x, y, a % 2 ? RED[3] : RED[4]); }
+  }
+}
+// the button glyphs: a blurred blade, a grabbing hand, a roaring mouth, crossed slashes
+const glyphRush = (cx, cy) => { for (let k = 0; k < 4; k++) line(cx - 8 + k * 3, cy + 6 - k * 3, cx - 2 + k * 3, cy + 6 - k * 3, k === 3 ? 27 : RED[2 + (k > 1 ? 1 : 0)]); line(cx - 1, cy - 5, cx + 8, cy - 7, 31); line(cx, cy - 4, cx + 7, cy - 6, 27); };
+const glyphHurl = (cx, cy) => { for (let a = 0; a < 30; a++) { const t = a / 30 * Math.PI * 1.6 + 0.6, r = 7; put(cx + Math.cos(t) * r, cy + Math.sin(t) * r * 0.8, a > 22 ? 27 : RED[3]); } for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) if (x * x + y * y <= 5) put(cx + 5 + x, cy - 5 + y, x + y < 0 ? 27 : 31); };
+const glyphRoar = (cx, cy) => { for (let r = 3; r <= 9; r += 3) for (let a = -10; a <= 10; a++) { const t = a / 10 * 0.9; put(cx - 5 + Math.cos(t) * r, cy + Math.sin(t) * r, r === 9 ? 27 : RED[4]); } for (let y = -3; y <= 3; y++) put(cx - 7, cy + y, RED[2]); };
+const glyphFlurry = (cx, cy) => { for (const [a, b, c, d] of [[-8, -6, 6, 7], [8, -6, -6, 7], [-8, 0, 8, 0]]) { line(cx + a, cy + b, cx + c, cy + d, RED[3]); line(cx + a, cy + b - 1, cx + c, cy + d - 1, 27); } };

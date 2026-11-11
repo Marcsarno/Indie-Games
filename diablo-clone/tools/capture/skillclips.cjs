@@ -12,6 +12,7 @@ const { chromium } = require('playwright'); const fs = require('fs'), path = req
     const fr = await p.evaluate(({ cls, id, mod }) => {
       buildBudget.ms = Infinity; newHero(cls); hero.lvl = 12; recalcHero(); hero.hp = STAT.maxHp = 99999; G.mode = 'play'; startLevel(3, 777); G.actCard = 0; G.bossIntro = 0;
       if (mod) { hero.mods = hero.mods || {}; hero.mods[id] = mod; }
+      if (['rush', 'hurl', 'roar', 'flurry'].includes(id)) { hero.rage = 60; enterBerserk(); }
       // an open spot: a room centre with floor round it
       const open = (i, j) => { for (let a = -4; a <= 5; a++) for (let c = -4; c <= 4; c++) if (blocked(i + a, j + c)) return false; return true; };
       for (const r of LV.rooms) { if (open(r.cx + 0.5, r.cy + 0.5)) { hero.fi = r.cx + 0.5; hero.fj = r.cy + 0.5; break; } }

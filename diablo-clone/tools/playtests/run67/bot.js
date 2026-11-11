@@ -40,6 +40,7 @@
     mark(areaName());
     if (window.__dbg && Math.floor(t / 10) !== Math.floor((t - dt) / 10)) { const a = enemies.find(e => e.id === 'alpha'); const tg0 = storyTarget(); marks.push(['DBG ' + Math.round(t) + ' at ' + hero.fi.toFixed(1) + ',' + hero.fj.toFixed(1) + ' tg ' + (tg0 ? tg0.map(v => v.toFixed(1)) : '-') + ' alpha ' + (a ? a.fi.toFixed(1) + ',' + a.fj.toFixed(1) + ' hp' + Math.round(a.hp) + ' ' + a.state : 'none') + ' alive ' + enemies.filter(alive).length, 0, 0]); }
     input.attack = false; input.mx = input.my = 0; minHp = Math.min(minHp, hero.hp / STAT.maxHp);
+    if (hero.cls === 'warrior' && hero.stance !== window.__st) { if (window.__st === 1 && hero.stance === 0 && !hero.ultOn) (window.__ultLog = window.__ultLog || []).push([+(t / 60).toFixed(1), 'calm', hero.lvl]); window.__st = hero.stance; }
     if (hero.el && Math.floor(t / 30) !== Math.floor((t - dt) / 30)) (window.__gLog = window.__gLog || []).push([+(t / 60).toFixed(1), hero.lvl, ...['fire', 'frost', 'earth', 'storm'].map(k => Math.round(hero.el[k] || 0))]);
     if (hero.hp < STAT.maxHp * 0.4 && hero.potions > 0 && !(hero.potT > G.t)) { drinkPotion(); drinks++; hero.potT = G.t + 1.5; }
     if (Math.floor(t) % 20 === 0 && Math.floor(t - dt) % 20 !== 0) { try { wearBest(); } catch (e) {} G.mode = 'play'; }
@@ -52,7 +53,8 @@
       hero.dir = dirFrom(foe.fi - hero.fi, foe.fj - hero.fj);
       if (fd > range) go(pathDir([foe.fi, foe.fj])); else input.attack = true;
       if (near >= 2 || foe.def.unique || foe.champ) for (let k = 0; k < SKILLS.length; k++) { const s = SKILLS[k]; if (hero.lvl >= s.lvl && !(CD[s.id] > 0) && hero.mana >= (s.mana || 0) && Math.random() < 0.15) { useSkill(k); window.__casts = window.__casts || {}; window.__casts[s.id] = (window.__casts[s.id] || 0) + 1; break; } }
-      if (hero.ult >= 100 && hero.lvl >= ULT_LVL && (foe.def.unique || near >= (window.__ultEager ? 1 : 3))) { const f = hero.cls === 'mage' && typeof elemFull === 'function' ? elemFull() : [], was = hero.ultOn; useUlt(); if (!was && hero.ultOn && hero.ultOn.kind === 'elem') { window.__ults = window.__ults || {}; const key = [hero.ultOn.id, ...hero.ultOn.queue].join('>'); window.__ults[key] = (window.__ults[key] || 0) + 1; (window.__ultLog = window.__ultLog || []).push([+(t / 60).toFixed(1), key, hero.lvl, Object.keys(hero.orbs || {}).join(',')]); } }
+      if (hero.cls === 'warrior' && hero.lvl >= ULT_LVL && ((hero.stance !== 1 && hero.rage >= 50 && near >= 2) || (hero.stance === 1 && hero.rage >= 100 && near >= 2))) { const st0 = hero.stance, u0 = hero.ultOn; useUlt(); if (hero.stance !== st0 || (!u0 && hero.ultOn)) (window.__ultLog = window.__ultLog || []).push([+(t / 60).toFixed(1), st0 === 1 ? 'titan' : 'berserk', hero.lvl]); }
+      else if (hero.cls !== 'warrior' && hero.ult >= 100 && hero.lvl >= ULT_LVL && (foe.def.unique || near >= (window.__ultEager ? 1 : 3))) { const f = hero.cls === 'mage' && typeof elemFull === 'function' ? elemFull() : [], was = hero.ultOn; useUlt(); if (!was && hero.ultOn && hero.ultOn.kind === 'elem') { window.__ults = window.__ults || {}; const key = [hero.ultOn.id, ...hero.ultOn.queue].join('>'); window.__ults[key] = (window.__ults[key] || 0) + 1; (window.__ultLog = window.__ultLog || []).push([+(t / 60).toFixed(1), key, hero.lvl, Object.keys(hero.orbs || {}).join(',')]); } }
     } else if (tg) {
       const d = Math.hypot(tg[0] - hero.fi, tg[1] - hero.fj);
       const n = tg.npc ? npcs.find(q => Math.abs(q.fi - tg[0]) < 0.01 && Math.abs(q.fj - tg[1]) < 0.01) : null;
