@@ -263,6 +263,7 @@ const glyphMap = (cx, cy) => { fillRect(cx - 6, cy - 5, 13, 11, 26); frame(cx - 
 
 function drawHud() {
   if (PREVIEW) { pvHud(); return; }
+  if (G.mode === 'cine') return drawCineHud();   // round 89: the table: only its own text box
   drawNpcLabels(); drawQuestTracker();
   // a boss's title card when it first wakes: a dark band slides open with its name and epithet
   if (G.actCard > 0 && G.mode === 'play') {   // entering an act: ACT II / THE BURNING DEEP / the town's name
@@ -481,6 +482,7 @@ function drawTitle() {
     fillRect(x, y0, cw, ch, sel ? 4 : 2); frame(x, y0, cw, ch, sel ? 51 : 6, sel ? 49 : 3);
     if (sel) frame(x - 1, y0 - 1, cw + 2, ch + 2, 50, 48);
     textC(info.name, x + cw / 2, y0 + 7, sel ? info.col : 25, 2);
+    textC('PLAYED BY ' + CINE_PEOPLE[PLAYER_OF[cls]].name, x + cw / 2, y0 + 21, sel ? 26 : 24);   // round 89: the player at Dave's table
     // the hero: turning slowly; once picked it faces you and swings
     const ent = { look, cls, combo: 0 };
     let sp;
@@ -501,8 +503,8 @@ function drawTitle() {
   budgetOn(saved);
   // start: continue the picked class's save, or begin it new
   const cls = TITLE.sel, save = loadSave(cls), info = CLASS_INFO[cls], by = y0 + ch + 14;
-  btn(save ? `CONTINUE AS ${info.name}` : `NEW GAME AS ${info.name}`, W / 2 - 100, by, 200, 30, () => beginGame(!!save, cls), 51, 6, 51);
-  if (save) btn(TITLE.eraseT > G.t ? 'TAP AGAIN: ERASE LEVEL ' + (save.hero ? save.hero.lvl : 1) : 'START OVER', W / 2 - 100, by + 36, 200, 18, () => { if (TITLE.eraseT > G.t) beginGame(false, cls); else TITLE.eraseT = G.t + 3; }, TITLE.eraseT > G.t ? 22 : 25);
+  btn(save ? `CONTINUE AS ${info.name}` : `NEW GAME AS ${info.name}`, W / 2 - 100, by, 200, 30, () => startGame(!!save, cls), 51, 6, 51);
+  if (save) btn(TITLE.eraseT > G.t ? 'TAP AGAIN: ERASE LEVEL ' + (save.hero ? save.hero.lvl : 1) : 'START OVER', W / 2 - 100, by + 36, 200, 18, () => { if (TITLE.eraseT > G.t) startGame(false, cls); else TITLE.eraseT = G.t + 3; }, TITLE.eraseT > G.t ? 22 : 25);
   // the developer settings, folded away
   const oy = H - 56;
   btn(TITLE.opts ? 'OPTIONS  -' : 'OPTIONS  +', W / 2 - 40, oy, 80, 16, () => { TITLE.opts = !TITLE.opts; }, 25, 3, 6);
@@ -1164,6 +1166,7 @@ cvs.addEventListener('pointerdown', e => {
   const p = toNative(e);
   if (G.paused) { G.paused = false; last = performance.now(); return; }
   if (G.mode === 'title') { for (const b of UI.titleBtns || []) if (inRect(p, b)) { sfx('tap'); b.on(); } return; }
+  if (G.mode === 'cine') { cineTap(p); return; }   // round 89
   if (G.mode === 'inv') { sfx('tap'); invTap(p); return; }
   if (G.mode === 'talk') { talkTap(p); return; }
   if (G.mode === 'end') { endTap(p); return; }
@@ -1218,8 +1221,9 @@ addEventListener('keydown', e => {
   audioInit();
   if (k === 'n') setMuted(!SFX.muted);
   if (G.mode === 'talk') { if (k === 'enter' || k === ' ' || k === 'j') { const L = talkLayout(); talkTap(L.btn ? [L.btn.x + 2, L.btn.y + 2] : [W / 2, 10]); } else if (G.talk && G.talk.reward && (k === '1' || k === '2' || k === '3')) talkTap([talkLayout().cards[+k - 1].x + 2, talkLayout().cards[+k - 1].y + 2]); e.preventDefault(); return; }
+  if (G.mode === 'cine') { if (k === 'enter' || k === ' ' || k === 'j') cineTap(null); else if (k === 'escape') cineTap([W - 20, 10]); e.preventDefault(); return; }   // round 89
   if (G.mode === 'title' && TITLE.splash) { TITLE.splash = false; e.preventDefault(); return; }
-  if (G.mode === 'title' && (k === 'enter' || k === ' ')) { const c = TITLE.sel || 'warrior'; beginGame(!!loadSave(c), c); return; }
+  if (G.mode === 'title' && (k === 'enter' || k === ' ')) { const c = TITLE.sel || 'warrior'; startGame(!!loadSave(c), c); return; }
   if (G.mode === 'title' && (k === 'arrowleft' || k === 'arrowright')) { const L = ['warrior', 'mage', 'ranger'], n = L.indexOf(TITLE.sel || 'warrior'); titlePick(L[(n + (k === 'arrowleft' ? 2 : 1)) % 3]); return; }
   if (guideFrozen() && k !== 'i' && k !== 'b') { e.preventDefault(); return; }   // round 45: stopped for the guide
   input.keys.add(k);

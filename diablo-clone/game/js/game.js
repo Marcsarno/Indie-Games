@@ -671,6 +671,7 @@ function update(dt) {
   if (G.fadeTo) { G.fade = Math.min(1, G.fade + dt * 2.5); if (G.fade >= 1) { const f = G.fadeTo; G.fadeTo = null; f(); } }
   else G.fade = Math.max(0, G.fade - dt * 2);
   updateGuide(dt);
+  if (G.cine) updateCine(dt);   // round 89
   if (G.mode === 'skills' && !PREVIEW) pvTick(dt);   // round 45: the skill preview runs while its screen is open
   if (G.mode !== 'play' || G.paused) return;
   if (hero.stats && !hero.dead) hero.stats.t += dt;   // round 67: for the end-of-act screen
@@ -1601,7 +1602,8 @@ function flame(wx, wy, hgt, wid, t, seed, blue = false) {
   }
 }
 function render() {
-  if ((G.mode === 'inv' || G.mode === 'skills') && G.fade <= 0) { drawHudLayer(); return; }   // round 45: the bag and skills screens cover the world: don't draw it
+  if ((G.mode === 'inv' || G.mode === 'skills') && G.fade <= 0) { drawHudLayer(); return; }
+  if (G.cine && cineHolds()) { cineCompose(false); drawHudLayer(); return; }   // round 89: at the table, while people talk, the game's picture on the map is redrawn every fourth frame   // round 45: the bag and skills screens cover the world: don't draw it
   const t = G.t;
   buildBudget.used = 0; buildBudget.ms = 2;
   const [kx, ky] = screenOf(hero), [vx0, vy0] = G.camAt ? screenOf(G.camAt) : [kx, ky];   // (the skill preview frames the hero and the dummies)
@@ -1756,6 +1758,7 @@ function render() {
   }
   drawImpactFlashes();
   if (GLOW) drawGlows();
+  if (G.cine) cineCompose(true);   // round 89: a cinematic: the table, with this picture as the map on it (cine.js)
   drawHudLayer();
 }
 // the HUD, drawn at the world's scale into its own buffer, merged on top as blocks
@@ -2217,6 +2220,8 @@ function beginGame(fromSave, cls = 'warrior') {
     newHero(cls); G.mode = 'play'; startLevel(1, (Math.random() * 1e9) >>> 0);
   }
 }
+// round 89: from the title, a game starts at Dave's table: the opening for a new hero, a short push into the map for a saved one
+function startGame(fromSave, cls) { beginGame(fromSave, cls); if (cineOK()) startCine(fromSave && loadSave(cls) ? 'resume' : 'open'); }
 function respawn() {
   if (hero.stats) hero.stats.deaths++;
   hero.dead = 0; hero.clip = 'idle'; recalcHero(); hero.hp = STAT.maxHp; hero.mana = STAT.maxMana;

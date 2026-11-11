@@ -619,7 +619,11 @@ function updateFinale(dt) {
   if (m && Math.random() < 0.5) { const [x, y] = iso(m.fi, m.fj); pspawn(3, x + 7 + (Math.random() - 0.5) * 3, y, 13 + Math.random() * 3, (Math.random() - 0.5) * 4, 0, 6 + Math.random() * 8, 0.6, Math.random() < 0.6 ? 55 : 54); }   // the green lantern's glow
 }
 // the end of Act I: shown once, after Osric's thanks
-function showEnd() { const f = storyF(); f.endDue = false; f.endShown = true; G.mode = 'end'; G.endT = 0; G.endStats = Object.assign({ t: 0, deaths: 0, kills: 0 }, hero.stats || {}, { lvl: hero.lvl }); sfx('levelUp'); saveGame(); }
+function showEnd() {
+  const f = storyF(); f.endDue = false; f.endShown = true; G.endStats = Object.assign({ t: 0, deaths: 0, kills: 0 }, hero.stats || {}, { lvl: hero.lvl }); saveGame();
+  const go = () => { G.mode = 'end'; G.endT = 0; sfx('levelUp'); };
+  if (cineOK()) startCine('actEnd', go); else go();   // round 89: first back out to Dave's table, where the night ends
+}
 function endLayout() { return { btn: { x: W / 2 - 52, y: H - 46, w: 104, h: 20 } }; }
 function drawEnd() {
   G.endT = (G.endT || 0) + 1 / 60;
