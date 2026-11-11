@@ -1897,8 +1897,8 @@ const ultReady = () => hero.lvl >= ULT_LVL && (hero.ult || 0) >= 100;
 function ultGain(e, dmg, killed) {
   if (hero.lvl < ULT_LVL || hero.ultOn || G.rocks.length || G.rain.length || !(e.maxHp > 0)) return;
   if (hero.cls === 'mage') return elemGain(e, dmg, killed);   // round 83: the mage charges four elements instead of one bar
-  let g = 4 * Math.max(0, dmg) / e.maxHp;
-  if (killed) g += e.def.unique ? 20 : e.champ || e.def.elite ? 6 : 1;
+  let g = 5 * Math.max(0, dmg) / e.maxHp;   // (round 85: a quarter faster for the warrior and the ranger too)
+  if (killed) g += e.def.unique ? 25 : e.champ || e.def.elite ? 7.5 : 1.25;
   const was = hero.ult || 0; hero.ult = Math.min(100, was + g);
   if (was < 100 && hero.ult >= 100) { say(`${ULTS[hero.cls].name} IS READY`, 51, 2); sfx('levelUp'); }
 }
@@ -2074,7 +2074,7 @@ const elemFull = () => ELEMS.filter(k => elemOpen(k) && hero.el && (hero.el[k] |
 function elemGain(e, dmg, killed) {
   const k = G.gaugeAs || ELEM_FROM[G.elem]; if (!k || !elemOpen(k)) return;
   if (!hero.el) hero.el = {};
-  let g = 4.5 * Math.max(0, dmg) / e.maxHp; if (killed) g += e.def.unique ? 20 : e.champ || e.def.elite ? 7 : 1.2;
+  let g = 6 * Math.max(0, dmg) / e.maxHp; if (killed) g += e.def.unique ? 26 : e.champ || e.def.elite ? 9 : 1.6;   // (round 85: a third faster, the user)
   const was = hero.el[k] || 0; hero.el[k] = Math.min(100, was + g * ELEM_INFO[k].k);
   if (was < 100 && hero.el[k] >= 100) {
     const all = elemFull().length === 4;

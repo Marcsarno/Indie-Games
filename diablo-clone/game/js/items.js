@@ -311,7 +311,7 @@ const itemLvl = it => it.lvl || ITEM_BASES[it.base].lvl || 1;
 function itemStats(it) {
   const b = ITEM_BASES[it.base], L = Math.max(b.lvl || 1, it.lvl || 0), k = (L + 2) / ((b.lvl || 1) + 2);
   if (k <= 1 || b.slot === 'potion') return b;
-  const kd = Math.pow(k, 0.8), o = { dmg: b.dmg, armor: b.armor, block: b.block, slow: b.slow };
+  const kd = Math.pow(k, 0.8), o = Object.assign({}, b);   // (round 85: a copy of the whole base: the look, slot and the rest came through missing, so gear found above its base level was invisible on the hero)
   if (b.dmg) o.dmg = [Math.round(b.dmg[0] * kd), Math.round(b.dmg[1] * kd)];
   if (b.armor) o.armor = Math.round(b.armor * Math.sqrt(k));
   return o;
