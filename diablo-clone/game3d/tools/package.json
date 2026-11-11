@@ -1,0 +1,1 @@
+{ "name": "game3d-tools", "private": true, "type": "commonjs", "dependencies": { "@gltf-transform/core": "4.1.0", "@gltf-transform/extensions": "4.1.0", "@gltf-transform/functions": "4.1.0", "meshoptimizer": "0.21.0" } }

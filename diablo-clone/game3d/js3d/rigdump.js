@@ -150,8 +150,8 @@ const RD = (() => {
         if (P.fit && (P.kind === 'sph' || P.kind === 'cone' || P.kind === 'cyl')) F = fitPaint(q, P, F, lastQ[k]);
         lastQ[k] = F;
         const qt = quat(F.ex, F.ey, F.ez).map(r4), F0 = P.F0, sc = (a, b) => b > 1e-5 ? r4(a / b) : 1;
-        if (P.two) fr.push([...F.o.map(r4), ...qt, sc(F.ra, F0.ra), ...F.b.map(r4), sc(F.rb, F0.rb)]);
-        else fr.push([...F.o.map(r4), ...qt, sc(F.s[0], F0.s[0]), sc(F.s[1], F0.s[1]), sc(F.s[2], F0.s[2])]);
+        const rec = P.two ? [...F.o.map(r4), ...qt, sc(F.ra, F0.ra), ...F.b.map(r4), sc(F.rb, F0.rb)] : [...F.o.map(r4), ...qt, sc(F.s[0], F0.s[0]), sc(F.s[1], F0.s[1]), sc(F.s[2], F0.s[2])];
+        fr.push(rec.every(Number.isFinite) ? rec : HID);   // (a part the rig placed nowhere this frame is hidden)
       }
       (clips[ps.clip] = clips[ps.clip] || { t: [], f: [] }).t.push(ps.t); clips[ps.clip].f.push(fr);
     });

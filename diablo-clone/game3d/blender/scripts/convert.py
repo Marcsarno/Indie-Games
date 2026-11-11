@@ -158,7 +158,7 @@ def build(data, outdir, review=False):
             kit.shot(os.path.join(outdir, f"{name}_{yaw}.png"), ( (h * 0.5 + 6 * math.cos(math.radians(30)) * math.cos(math.radians(yaw))), 6 * math.cos(math.radians(30)) * math.sin(math.radians(yaw)), h * 0.5 + 3), (0, 0, h * 0.5), ortho=h * 1.5, w=360, h=420)
     p = os.path.join(outdir, name + ".glb")
     bpy.ops.export_scene.gltf(filepath=p, export_format="GLB", export_yup=True, export_apply=False, export_animations=True, export_animation_mode="NLA_TRACKS",
-                              export_force_sampling=True, export_optimize_animation_size=False, export_image_format="AUTO")
+                              export_force_sampling=True, export_optimize_animation_size=True, export_optimize_animation_keep_anim_armature=False, export_image_format="AUTO")
     return tris, len(pbs), os.path.getsize(p)
 
 if __name__ == "__main__":

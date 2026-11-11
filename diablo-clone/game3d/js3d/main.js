@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { buildModel } from './rigbuild.js';
 
 const TPX = 16 * Math.SQRT2;            // world pixels (1x) per unit along the screen's x
@@ -26,7 +27,7 @@ const torchLights = []; for (let i = 0; i < 6; i++) { const l = new THREE.PointL
 // ---------------------------------------------------------------- models
 // Characters are converted from the 2D game's rigs by Blender (tools/dump.cjs + blender/scripts/convert.py).
 // models/manifest.json maps a character's key (family + look) to its file; a model loads the first time it is needed.
-const loader = new GLTFLoader(), MODELS = {}, LOADING = {};
+const loader = new GLTFLoader(), MODELS = {}, LOADING = {}; loader.setMeshoptDecoder(MeshoptDecoder);
 let MANIFEST = {};
 function prep(g) { g.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; } }); return g; }
 function wantModel(file) {

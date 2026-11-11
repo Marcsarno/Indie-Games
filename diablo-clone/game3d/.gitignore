@@ -3,3 +3,4 @@ blender/scripts/__pycache__/
 look/models.js
 dist/
 blender/rigs/
+tools/node_modules/
