@@ -345,6 +345,7 @@ function camKick(dx, dy, px) {
   G.kick = [(G.kick ? G.kick[0] : 0) * 0.4 + sx / l * k, (G.kick ? G.kick[1] : 0) * 0.4 + sy / l * k];
 }
 function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = false) {
+  if (!(dmg >= 0)) dmg = 1;   // round 107: a broken number (NaN) must never reach health: NaN health is neither alive nor dead
   if (e.pw && !G.pierce) { dmg = eliteDamage(e, dmg, pow, fromFi, fromFj, ranged); if (dmg < 0) { if (e.state === 'sleep') wake(e); return; } }   // round 39: shields, blink openings
   if (e.def.guard && ranged && !G.pierce && e.dying < 0 && e.state !== 'sleep' && !(e.frozen > 0) && !(e.stun > 0)) {   // round 67: a shield wall: shots from in front glance off (60% less); from the side or behind, or in melee, it's open
     const [fx, fy] = dirVec(e.dir), dx = fromFi - e.fi, dy = fromFj - e.fj, l = Math.hypot(dx, dy) || 1;
@@ -366,7 +367,7 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
     if (al > 0.05 && (ax * fx + ay * fy) / al > 0.4) {
       const [ex, ey] = screenOf(e);
       if (pow === 1) { e.guardT = G.t + 2.5; dmg = Math.round(dmg * 0.6); floater('GUARD BROKEN', e.fi, e.fj, e.def.chest + 22, 51); burst(2, ex, ey, e.def.chest * 0.8, 14, 110, 31); sfx('block'); }
-      else if (dmg * 0.25 < e.hp) {
+      else if (Math.max(1, Math.round(dmg * 0.25)) < e.hp) {   // (round 107: the chip itself must leave it alive: it used to round a 1-2 health shield-bearer down to exactly 0 without its death, an invulnerable skeleton that kept fighting)
         e.hp -= Math.max(1, Math.round(dmg * 0.25)); sfx('block');
         e.blocks = (e.blocks || 0) + 1;   // two blocks in a row and the arm drops: the next blows land
         if (e.blocks >= 2) { e.blocks = 0; e.guardT = G.t + 2.2; floater('GUARD BROKEN', e.fi, e.fj, e.def.chest + 22, 51); } else floater('BLOCK', e.fi, e.fj, e.def.chest + 14, 31);
@@ -888,6 +889,7 @@ function updateHero(dt) {
   updateFov(hero.fi, hero.fj);
 }
 function updateEnemy(e, dt) {
+  if (e.dying < 0 && !(e.hp > 0)) { e.hp = 1; const p0 = G.pierce; G.pierce = true; damageEnemy(e, 1, e.fi - 0.01, e.fj); G.pierce = p0; }   // round 107: the safety net: health at 0 (or NaN) without a death never lingers as an untouchable foe; it dies properly now
   if (e.dying >= 0) {
     e.flash = Math.max(0, e.flash - dt);   // the kill flash is brief; the death animation shows after it
     if (e.stop > 0) { e.stop -= dt; return; }
