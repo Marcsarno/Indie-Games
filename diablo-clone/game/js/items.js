@@ -256,7 +256,7 @@ const outfitsOf = base => Object.keys(OUTFITS).filter(k => OUTFITS[k].pieces.inc
 function outfitCount(k, equip) { const e = equip || (typeof hero !== 'undefined' ? hero.equip : {}); return Object.values(e).filter(it => it && OUTFITS[k].pieces.includes(rootOf(it.base))).length; }
 // the hero's class decides which gear drops (game.js sets hero.cls; warrior when unset)
 const heroCls = () => (typeof hero !== 'undefined' && hero.cls) || 'warrior';
-const forCls = o => o.cls === 'any' || (o.cls || 'warrior') === heroCls();
+const forCls = o => o.cls === 'any' || (o.cls || 'warrior') === heroCls() || (heroCls() === 'paladin' && typeof palShares === 'function' && palShares(o));   // round 97: the paladin also finds the warrior's maces, hammers, swords, helms, shields and plain plate (paladin.js)
 const JEWELRY = { ring: 1, amulet: 1 };
 // magic find from worn gear (game.js keeps STAT; items.js is also loaded by the art kit without it)
 const findK = () => 1 + ((typeof STAT !== 'undefined' && STAT.find) || 0) / 100;

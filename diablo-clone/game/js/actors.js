@@ -451,7 +451,7 @@ const GEAR_LOOKS = {
   weapon: ['sword', 'axe', 'mace', 'flail', 'greatsword'],
   shield: ['none', 'buckler', 'round', 'kite', 'tower', 'targe', 'heater'],
 };
-const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}.${eq.cape || ''}.${eq.lgd || ''}.${eq.set || ''}.${eq.ench || ''}`;
+const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}.${eq.cape || ''}.${eq.lgd || ''}.${eq.set || ''}.${eq.ench || ''}.${eq.wings || ''}`;
 const hasFx = (eq, k) => !!eq.lgd && eq.lgd.split('|').includes(k);
 // combo 1 = the second swing of a quick pair (a backhand)
 // a quick string of swings: forehand, backhand, then a finisher (sword thrust or heavy slam)
@@ -511,6 +511,7 @@ const isBow = w => typeof w === 'string' && w.startsWith('bow');
 // Warden a white tabard with a gold cross, a white cloak and a plume; the Scout a green cloak and
 // a red feather; the Stalker a black cloak and a red scarf over the face; the Magus a glowing
 // arcane gem at the collar and a star at the hat's tip
+const CHEST_CAPE = {}, CHEST_RETOUCH = {}, ACROSS_GRIP = {};   // round 97: a chest look's own cloak and retouch, two-handers carried across the body (paladin.js fills them)
 const SET_CAPE = { warden: { m: M.CLOTH_WHITE, hem: M.GOLD, len: 11 }, ranger: { m: M.CLOTH_GREEN, hem: M.LEATHER, len: 10 }, stalker: { m: M.CLOTH_DARK, hem: M.CLOTH_RED, len: 11.5 } };
 function setChest(r, eq, J, fwd, up, sideR) {
   if (eq.set === 'warden') {
@@ -1006,6 +1007,7 @@ function warriorSetA8(r, id, J, S) {
     mat(L('boot'), M.LEATHER);
     belt(M.LEATHER); skirt(M.CLOTH_WHITE, { front: 4.2, fw: 3.0, fm: M.CLOTH_NAVY, side: 4.0, back: 4.2, bw: 3.4 });
   }
+  if (CHEST_RETOUCH[id]) CHEST_RETOUCH[id](r, J, S);   // round 97: the paladin's plate (paladin.js)
 }
 function weaponSwing(eq, combo = 0) {
   if (isBow(eq.weapon)) return HEAVY && !FEEL_OLD ? RANGER_BOW_H : RANGER_BOW;
@@ -1192,7 +1194,7 @@ function heroRig(eq, st) {
     const s = J.swingArm * 1.8;
     handR = V.add(V.add(J.shR, V.mul(fwd, 4 + s)), V.add(V.mul(up, -8.5 + Math.max(0, J.swingArm) * 1.2), V.mul(sideR, 2.6)));
     bd = V.norm(V.add(V.add(V.mul(fwd, 0.55), V.mul(up, 0.7)), V.mul(sideR, 0.45)));
-    if (eq.weapon === 'fhammer') { handR = V.add(V.add(J.shR, V.mul(fwd, 4.5 + s * 0.3)), V.add(V.mul(up, -8.5), V.mul(sideR, -3.2))); bd = V.norm(V.add(V.add(V.mul(sideR, -1), V.mul(up, 0.22)), V.mul(fwd, 0.15))); acrossG = true; }   // art A6b: the forge hammer held across the body
+    if (eq.weapon === 'fhammer' || ACROSS_GRIP[eq.weapon]) { handR = V.add(V.add(J.shR, V.mul(fwd, 4.5 + s * 0.3)), V.add(V.mul(up, -8.5), V.mul(sideR, -3.2))); bd = V.norm(V.add(V.add(V.mul(sideR, -1), V.mul(up, 0.22)), V.mul(fwd, 0.15))); acrossG = true; }   // art A6b: the forge hammer held across the body
     if (eq.weapon === 'spear') { handR = V.add(V.add(J.shR, V.mul(fwd, 1.2 + s * 0.3)), V.add(V.mul(up, -6.5), V.mul(sideR, 4.0))); bd = V.norm(V.add(V.add(up, V.mul(fwd, 0.1)), V.mul(sideR, 0.06))); }   // art A8: the spear stood upright at his side
     if (eq.weapon === 'kgsword') { handR = V.add(V.add(J.shR, V.mul(fwd, 5 + s * 0.2)), V.add(V.mul(up, -8.5), V.mul(sideR, -2.4))); bd = V.norm(V.add(V.add(V.mul(fwd, 0.75), V.mul(sideR, -0.5)), V.mul(up, -0.12))); bothG = true; }   // art A8: the greatsword low across the front
   }
@@ -1297,7 +1299,7 @@ function heroRig(eq, st) {
   for (const q of r.p) { if (q.a) { q.ra *= HERO_BK; q.rb *= HERO_BK; } if (q.r) q.r *= HERO_BK; if (q.rad) q.rad = V.mul(q.rad, HERO_BK); if (q.half) q.half = V.mul(q.half, HERO_BK); }
   // a short cloak hanging from the shoulders: it streams back and flutters when he runs, swings
   // forward when he stops, and follows the shoulders through a swing (secondary motion)
-  if (!robe && !(jerk && !SET_CAPE[eq.set]) && !(wset && !SET_CAPE[eq.set])) {   // a6: a plain jerkin wears no cloak (the quiver shows); art A8: nor does a warrior set (its back shows)
+  if (!robe && !(jerk && !SET_CAPE[eq.set]) && !(wset && !SET_CAPE[eq.set] && !CHEST_CAPE[wset])) {   // a6: a plain jerkin wears no cloak (the quiver shows); art A8: nor does a warrior set (its back shows)
     const c = st.clip, ph = st.f / 8 * Math.PI * 2;
     let th = 0.14, side = 0;
     if (c === 'walk') { th = 0.62 + 0.12 * Math.sin(ph * 2); side = J.swingArm * 0.18; }
@@ -1309,7 +1311,7 @@ function heroRig(eq, st) {
     const dn = V.norm(V.add(V.add(V.mul(up, -Math.cos(th)), V.mul(fwd, -Math.sin(th))), V.mul(sideR, side)));
     const a1 = V.norm(V.sub(sideR, V.mul(dn, V.dot(sideR, dn)))), a0 = V.cross(a1, dn);
     const top = V.add(V.mad(J.chest, up, B.shZ + 0.6), V.mul(fwd, -2.6)), L = 8.2;
-    const SC = SET_CAPE[eq.set], LL = SC ? SC.len : L;   // round 43: a set's cloak, longer and in its colors
+    const SC = SET_CAPE[eq.set] || CHEST_CAPE[wset], LL = SC ? SC.len : L;   // round 43: a set's cloak, longer and in its colors
     r.box(V.mad(top, dn, LL / 2), [0.5, B.shW * (SC ? 0.86 : 0.78), LL / 2], SC ? SC.m : TEAM[eq.cape] || CAPE_M, [a0, a1, dn], { mf: p => V.dot(V.sub(p, top), dn) > LL - 1.2 ? (SC ? SC.hem : M.LEATHER) : 0 });
   }
   if (bow && !XBOW[eq.weapon]) {   // a quiver on the back, from behind the right shoulder down to the left hip, fletchings showing

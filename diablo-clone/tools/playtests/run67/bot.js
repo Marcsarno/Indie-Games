@@ -27,7 +27,7 @@
     return best || [tg[0] - hero.fi, tg[1] - hero.fj];
   };
   const go = (v) => { const l = Math.hypot(v[0], v[1]); if (l < 0.01) { input.mx = input.my = 0; return; } input.mx = (v[0] - v[1]) / l * 0.75; input.my = (v[0] + v[1]) / l * 0.75; };
-  const ranged = cls !== 'warrior', range = ranged ? 5.5 : heroReach() + 0.15;
+  const ranged = cls === 'mage' || cls === 'ranger', range = ranged ? 5.5 : heroReach() + 0.15;
   while (t < CAP) {
     t += dt; G.guide = null; G.actCard = 0;
     if (G.mode === 'talk') { if (G.talk.reward) G.talk.pick = 0; closeTalk(); }
@@ -45,6 +45,7 @@
     if (hero.hp < STAT.maxHp * 0.4 && hero.potions > 0 && !(hero.potT > G.t)) { drinkPotion(); drinks++; hero.potT = G.t + 1.5; }
     if (Math.floor(t) % 20 === 0 && Math.floor(t - dt) % 20 !== 0) { try { wearBest(); } catch (e) {} G.mode = 'play'; }
     if (storyOn() && portalHome() && !G.tp && !G.fadeTo && !LV.hub) usePortal();
+    if (hero.wing && !window.__wingOn) (window.__wingLog = window.__wingLog || []).push([+(t / 60).toFixed(1), hero.wing.kind, hero.lvl]); window.__wingOn = !!hero.wing;   // round 97: the paladin's wings
     // foes: the nearest awake or in sight
     let foe = null, fd = 1e9, near = 0;
     for (const e of enemies) { if (!alive(e)) continue; const d = Math.hypot(e.fi - hero.fi, e.fj - hero.fj); if (d < 3.2) near++; if (d < fd && d < (window.__rush ? 7 : 9.5) && LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] > 0.3 && los(hero.fi, hero.fj, e.fi, e.fj)) { fd = d; foe = e; } }
@@ -67,5 +68,5 @@
     // stuck: no progress for 6 s while walking somewhere
     if (Math.hypot(hero.fi - lastPos[0], hero.fj - lastPos[1]) > 0.8) { lastPos = [hero.fi, hero.fj]; stuckT = 0; } else if ((stuckT += dt) > 6) { stuckT = 0; jig = 1.2; if (tg && Math.hypot(tg[0] - hero.fi, tg[1] - hero.fj) < 0.9) { back = 1.0; backFrom = tg; } mark('stuck@' + areaName() + '#' + Math.round(t) + ' at ' + hero.fi.toFixed(1) + ',' + hero.fj.toFixed(1) + ' tg ' + (tg ? tg.map(v => v.toFixed(1)).join(',') : '-') + ' foe ' + (foe ? foe.id + ' ' + fd.toFixed(1) + ' hp' + Math.round(foe.hp) : '-') + ' mode ' + G.mode + ' fade ' + G.fade.toFixed(2) + ' up ' + G.upArmed + ' armedDen ' + G.armed_den + ' fadeTo ' + !!G.fadeTo + ' side ' + LV.side + ' sideBack ' + !!G.sideBack + ' hp ' + Math.round(hero.hp) + ' dead ' + hero.dead); cache.key = ''; }
   }
-  return { cls, minutes: +(t / 60).toFixed(1), lvl: hero.lvl, deaths: (hero.stats || {}).deaths, kills: (hero.stats || {}).kills, potionsDrunk: drinks, ults: window.__ults || null, ultLog: window.__ultLog || null, gaugeLog: window.__gLog || null, casts: window.__casts || null, el: hero.el || null, gold: hero.gold, minHp: +minHp.toFixed(2), end: G.mode === 'end' || !!seen.END, stage: storyStage(), area: areaName(), marks };
+  return { cls, minutes: +(t / 60).toFixed(1), lvl: hero.lvl, deaths: (hero.stats || {}).deaths, kills: (hero.stats || {}).kills, potionsDrunk: drinks, ults: window.__ults || null, wings: window.__wingLog || null, ultLog: window.__ultLog || null, gaugeLog: window.__gLog || null, casts: window.__casts || null, el: hero.el || null, gold: hero.gold, minHp: +minHp.toFixed(2), end: G.mode === 'end' || !!seen.END, stage: storyStage(), area: areaName(), marks };
 })

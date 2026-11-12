@@ -548,7 +548,7 @@ function cineBuild() {
   for (const id of ['marc', 'aaron', 'chris']) { seat[id].clipY = seat[id].y + D[id].h - 4; seat[id].fadeY = seat[id].clipY - 18; }   // their portraits' lower edges sink into the chair's shadow
   const face = {}; for (const id in seat) face[id] = [seat[id].x + D[id].face[0], seat[id].y + D[id].face[1]];
   const candles = [[mX - 20, mY - 8], [mX + mw + 20, mY - 8], [mX - 20, mY + mhI + 6], [mX + mw + 20, mY + mhI + 6]];
-  const minis = [['warrior', cx - 76], ['mage', cx], ['ranger', cx + 76]].map(([cls, x]) => ({ cls, x, y: miniY }));
+  const minis = [['warrior', cx - 93], ['paladin', cx - 31], ['mage', cx + 31], ['ranger', cx + 93]].map(([cls, x]) => ({ cls, x, y: miniY }));   // (round 97: four)
   const lampP = [tX + 34, tY + 40];
   cMini = new Uint32Array(mw * mhI);
   const g = cGeo = { cx, yC, Hw, tX, tY, tW, tH, nearY, mX, mY, mw, mh, mhI, sT, seat, face, candles, minis, miniY, lampP, bulbs: [] };

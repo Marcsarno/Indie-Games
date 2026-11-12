@@ -578,7 +578,7 @@ function heroHitResolve(all = false, pow = 0) {
     if (d > rr || (!all && d > 0.3 && (dx * fx + dy * fy) / d < 0.35)) continue;
     const crit = Math.random() < CRIT_CHANCE + (STAT.crit || 0) / 100;
     damageEnemy(e, heroDmg(crit ? 2 : 1), hero.fi, hero.fj, crit, pow); any = true; nHit++;
-    if (hero.cls === 'warrior' && !FEEL_OLD) meleeImpact(e, crit, pow, hero.combo);   // round 88: the cut where the blade lands
+    if ((hero.cls === 'warrior' || hero.cls === 'paladin') && !FEEL_OLD) meleeImpact(e, crit, pow, hero.combo);   // round 88: the cut where the blade lands
   }
   for (const p of dynProps) {
     if (p.broken || (p.kind !== 'barrel' && p.kind !== 'egg')) continue;
@@ -586,7 +586,7 @@ function heroHitResolve(all = false, pow = 0) {
     if (d < 1.6 && (dx * fx + dy * fy) / (d || 1) > 0.3) hitProp(p);
   }
   // fury: the warrior's blows feed his skills (1.5 mana per enemy hit, up to 3 a swing)
-  if (nHit && hero.cls === 'warrior') hero.mana = Math.min(STAT.maxMana, hero.mana + Math.min(3, nHit) * 1.5);
+  if (nHit && (hero.cls === 'warrior' || hero.cls === 'paladin')) hero.mana = Math.min(STAT.maxMana, hero.mana + Math.min(3, nHit) * 1.5);
   if (nHit && hero.cls === 'warrior' && hero.stance === 2) hero.hp = Math.min(STAT.maxHp, hero.hp + Math.min(3, nHit) * STAT.maxHp * 0.012);   // round 88: the Titan's blows heal him
   return any;
 }
@@ -644,6 +644,13 @@ function pickup(g) {
 const BAG_SIZE = 18;
 function equipItem(it) {
   const b = ITEM_BASES[it.base];
+  // round 97: a two-handed hammer leaves no hand for a shield, and a shield sends it back to the bag for the best one-hander there
+  if (b.twoHand && hero.equip.shield) { if (hero.bag.length >= BAG_SIZE && !hero.bag.includes(it)) return false; hero.bag.push(hero.equip.shield); hero.equip.shield = null; }
+  if (b.slot === 'shield' && hero.equip.weapon && ITEM_BASES[hero.equip.weapon.base].twoHand) {
+    const one = hero.bag.filter(q => ITEM_BASES[q.base].slot === 'weapon' && !ITEM_BASES[q.base].twoHand && canWear(q)).sort((p, q) => itemScore(q) - itemScore(p))[0];
+    if (!one) { say('A TWO-HANDED HAMMER: NO HAND FOR A SHIELD', 26, 2); return false; }
+    hero.bag.splice(hero.bag.indexOf(one), 1); hero.bag.push(hero.equip.weapon); hero.equip.weapon = one;
+  }
   const i = hero.bag.indexOf(it); if (i >= 0) hero.bag.splice(i, 1);
   if (hero.equip[b.slot]) hero.bag.push(hero.equip[b.slot]);
   hero.equip[b.slot] = it; recalcHero(); prewarmHero();
@@ -682,6 +689,7 @@ function update(dt) {
   G.trauma = Math.max(0, G.trauma - dt * 1.4);
   if (G.kick) { const f = Math.exp(-dt * 22); G.kick[0] *= f; G.kick[1] *= f; if (Math.abs(G.kick[0]) + Math.abs(G.kick[1]) < 0.3) G.kick = null; }   // round 62
   updateHero(dt);
+  if (typeof updatePaladin === 'function') updatePaladin(dt);   // round 97
   flowT -= dt; if (flowT <= 0) { flowT = 0.4; computeFlow(); }
   assignEngage();
   for (const e of enemies) updateEnemy(e, dt);
@@ -830,7 +838,7 @@ function updateHero(dt) {
     }   // round 40a: the slam's hop
     if (!hero.hitDone && hero.mag > 0) { const st = Math.min(hero.mag, dt * 4.5); lungeHero(st); hero.mag -= st; }
     if (ki >= 0 && sw[ki].hit && !hero.hitDone) {
-      hero.hitDone = true; if (hero.cls === 'ranger') looseArrow(); else if (hero.combo === 3) groundSlamHit(); else { heroHitResolve(!!sw[ki].slam, hero.combo === 2 ? 2 : STAT.slow ? 1 : 0); if (hero.cls === 'warrior' && hero.stance === 2) titanWave(); else if (hero.cls === 'warrior' && !FEEL_OLD && hero.combo < 2) bzSlash(hero.combo ? 1 : -1, hero.stance === 1 ? 1.25 : 1.05, hero.stance === 1 ? false : 'steel'); }   // round 88: every swing leaves its arc in the air a moment (red in the Berserker)
+      hero.hitDone = true; if (hero.cls === 'paladin' && hero.combo < 3) palSwing(hero.combo); if (hero.cls === 'ranger') looseArrow(); else if (hero.combo === 3) groundSlamHit(); else { heroHitResolve(!!sw[ki].slam, hero.combo === 2 ? 2 : STAT.slow ? 1 : 0); if (hero.cls === 'warrior' && hero.stance === 2) titanWave(); else if (hero.cls === 'warrior' && !FEEL_OLD && hero.combo < 2) bzSlash(hero.combo ? 1 : -1, hero.stance === 1 ? 1.25 : 1.05, hero.stance === 1 ? false : 'steel'); }   // round 88: every swing leaves its arc in the air a moment (red in the Berserker)
       if (sw[ki].slam) {   // the ground slam: extra shake and a ring of dust
         if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.35);
         const [x, y] = screenOf(hero), [fx, fy] = dirVec(hero.dir), cx = x + (fx - fy) * 12, cy = y + (fx + fy) * 6;
@@ -1737,10 +1745,11 @@ function render() {
     }
   }
   if (WORLD2X) frame2.set(ov32);   // the finished world frame, for 2x props redrawn over bodies
-  drawWays(); drawExitPads(); drawFog();   // round 96: the waystones' slabs.   // round 80: ground mist lies under the bodies
+  drawWays(); if (typeof drawPalGround === 'function') drawPalGround(); drawExitPads(); drawFog();   // round 96: the waystones' slabs.   // round 80: ground mist lies under the bodies
   ov.sort((a, b) => a.depth - b.depth);
   for (const d of ov) d.draw();
   drawEliteFx();
+  if (typeof drawPalAir === 'function') drawPalAir();   // round 97: the paladin's light
   for (const g of G.ghosts) ovBlit(g.sp, g.x, g.y, L_ID, g.fl ?? 6, 1 - g.t / g.t0, -1);   // blink afterimage, dissolving
   for (let k = 0; k < PN; k++) {
     const kind = pkind[k]; if (!kind) continue;
@@ -2122,7 +2131,7 @@ function lightPass(chars, kx, ky) {
 // ---------------------------------------------------------------- save / load (versioned)
 const SAVE_KEY = 'dcg-save', SAVE_V = 1;
 // one save per class: the warrior keeps the original key, so older saves still load
-const saveKey = cls => cls === 'mage' || cls === 'ranger' ? SAVE_KEY + '-' + cls : SAVE_KEY;
+const saveKey = cls => cls === 'mage' || cls === 'ranger' || cls === 'paladin' ? SAVE_KEY + '-' + cls : SAVE_KEY;
 // ---------------------------------------------------------------- town portal (round 25)
 // The portal button opens a blue gate beside the hero. Walking into it from a dungeon or forest
 // goes to the act's town and leaves a gate there; that one leads back to the same spot, with the
@@ -2211,7 +2220,7 @@ function loadSave(cls = 'warrior') {
 function newHero(cls = 'warrior') {
   Object.assign(hero, { cls, hp: 40, mana: 20, gold: 0, xp: 0, lvl: 1, potions: 3, team: 'red', dead: 0, bag: [], mods: {}, ult: 0, el: {}, orbs: {}, rage: 0, stance: 0, bz: null, titanT: 0, modSeen: 0, tut: {}, stats: { t: 0, deaths: 0, kills: 0 }, equip: { weapon: null, helm: null, chest: null, shield: null, ring: null, amulet: null } });
   const R = rng(5);
-  const kit = cls === 'mage' ? ['oak_staff', 'apprentice_robe', 'wizard_hat'] : cls === 'ranger' ? ['hunting_bow', 'leather_jerkin', 'ranger_hood', 'quiver'] : ['short_sword', 'tunic'];
+  const kit = cls === 'mage' ? ['oak_staff', 'apprentice_robe', 'wizard_hat'] : cls === 'paladin' ? ['pal_hammer', 'pal_plate1', 'pal_shield1'] : cls === 'ranger' ? ['hunting_bow', 'leather_jerkin', 'ranger_hood', 'quiver'] : ['short_sword', 'tunic'];
   for (const b of kit) { const it = rollItem(R, 1, b); it.rarity = 'normal'; it.mods = {}; hero.equip[ITEM_BASES[b].slot] = it; }
   setSkillsFor(cls);
   recalcHero(); hero.hp = STAT.maxHp; hero.mana = STAT.maxMana;

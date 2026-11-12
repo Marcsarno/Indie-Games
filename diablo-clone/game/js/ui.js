@@ -111,7 +111,7 @@ function drawVitals(t) {
   const B = UI.bars, hf = hero.hp / STAT.maxHp, low = hf < 0.3, beat = low && Math.sin(t * 9) > 0;
   text(`LV ${hero.lvl}`, B.x, B.yH - 9, 25);
   vitalBar(B.x, B.yH, B.w, hf, [20, 21, 22, 23], `${Math.ceil(hero.hp)}`, beat);
-  vitalBar(B.x, B.yM, B.w, hero.mana / STAT.maxMana, hero.cls === 'mage' ? [37, 38, 39, 40] : hero.cls === 'ranger' ? [52, 53, 54, 55] : [14, 15, 16, 17], `${Math.floor(hero.mana)}`, false);
+  vitalBar(B.x, B.yM, B.w, hero.mana / STAT.maxMana, hero.cls === 'mage' ? [37, 38, 39, 40] : hero.cls === 'ranger' ? [52, 53, 54, 55] : hero.cls === 'paladin' ? [24, 25, 26, 27] : [14, 15, 16, 17], `${Math.floor(hero.mana)}`, false);
   const f = hero.xp / xpFor(hero.lvl), yb = H - 3;
   for (let x = 0; x < W; x++) { put(x, yb, x < W * f ? 50 : BLK); put(x, yb + 1, BLK); }
   if (low && !hero.dead) {   // the edge of the screen glows red with the heartbeat
@@ -296,6 +296,7 @@ function drawHud() {
     if (hero.quick > 0) { textC(`QUICKDRAW ${hero.quick}`, ax, ay - ar - 22, Math.floor(G.t * 4) % 2 ? 51 : 50); }   // round 66b
     for (let k = 0; k < 3; k++) { const cx = ax - 12 + k * 12, cy = ay - ar - 9, on = k < n; for (let b = -4; b <= 4; b++) for (let a = -4; a <= 4; a++) { const d = Math.abs(a) + Math.abs(b); if (d > 4) continue; put(cx + a, cy + b, d === 4 ? BLK : !on ? 3 : fresh && k === n - 1 ? 27 : d < 2 ? 51 : n >= 3 ? 50 : 49); } }
   }
+  else if (hero.cls === 'paladin' && typeof glyphHammer === 'function') drawButton(UI.attack, [28, 29, 30, 31], !!press.attack, (x, y) => glyphHammer(x, y));   // round 97
   else drawButton(UI.attack, [28, 29, 30, 31], !!press.attack, glyphSword);
   drawActionButton();   // round 43b: talk, trade, free, unlock
   drawStoryMark();
@@ -440,6 +441,7 @@ const CLASS_INFO = {
   warrior: { name: 'WARRIOR', col: 22, lines: ['BLADE AND ARMOR', 'FIGHTS UP CLOSE'] },
   mage: { name: 'MAGE', col: 40, lines: ['SPELLS FROM AFAR', 'FRAGILE, DEADLY'] },
   ranger: { name: 'RANGER', col: 55, lines: ['BOW AND TRAPS', 'QUICK AND NIMBLE'] },
+  paladin: { name: 'PALADIN', col: 51, lines: ['HAMMER AND LIGHT', 'SLOW TO DIE'] },   // round 97
 };
 function titlePick(cls) { if (TITLE.sel !== cls) { TITLE.sel = cls; TITLE.pickT = G.t; TITLE.eraseT = 0; try { localStorage.setItem('dcg-cls', cls); } catch (e) { /* ignore */ } } }
 // the splash: the title over the camp at night, the three heroes, TAP TO BEGIN. Phones play no
@@ -460,9 +462,9 @@ function drawSplash() {
   textC('DUNGEONS', W / 2, cy - 30, 22, 4);
   textC('OF BONES', W / 2, cy - 4, 26, 3);
   const saved = budgetOff();
-  ['ranger', 'warrior', 'mage'].forEach((cls, k) => {
+  ['ranger', 'warrior', 'paladin', 'mage'].forEach((cls, k) => {
     const look = TITLE.looks[cls], ent = { look, cls, combo: 0 };
-    bigHero(look, 1, 'idle', Math.floor(G.t / 0.2 + k) % 4, ent, W / 2 + (k - 1) * 74, cy + 140 + (k === 1 ? 8 : 0), L_ID);
+    bigHero(look, 1, 'idle', Math.floor(G.t / 0.2 + k) % 4, ent, W / 2 + (k - 1.5) * 62, cy + 140 + (k === 1 || k === 2 ? 8 : 0), L_ID);
   });
   budgetOn(saved);
   if (Math.floor(G.t * 1.6) % 2 === 0) textC('TAP TO BEGIN', W / 2, Math.round(H * 0.74), 51, 2);
@@ -492,7 +494,7 @@ function drawTitleCredits(y) {
 function drawTitle() {
   if (!TITLE.looks) {   // each class's starting look (the title's hero is a throwaway)
     TITLE.looks = {};
-    for (const c of ['ranger', 'mage', 'warrior']) { newHero(c); const sv = loadSave(c);   // (round 91: a saved hero's miniature wears its gear)
+    for (const c of ['ranger', 'mage', 'paladin', 'warrior']) { newHero(c); const sv = loadSave(c);   // (round 91: a saved hero's miniature wears its gear)
       if (sv && sv.hero && sv.hero.equip) try { Object.assign(hero, { lvl: sv.hero.lvl || 1, equip: sv.hero.equip, team: sv.hero.team || hero.team }); recalcHero(); } catch (e) { newHero(c); }
       TITLE.looks[c] = { ...hero.look }; }
     let last = null; try { last = localStorage.getItem('dcg-cls'); } catch (e) { /* ignore */ }
@@ -509,9 +511,9 @@ function drawTitle() {
   textC('CHOOSE YOUR HERO', W / 2, 86, 25);
   UI.titleBtns = [];
   const btn = (label, x, y, w, h, on, col = 27, bg = 5, edge = 8) => { fillRect(x, y, w, h, bg); frame(x, y, w, h, edge, 2); textC(label, x + w / 2, y + Math.floor(h / 2) - 2, col); UI.titleBtns.push({ x, y, w, h, on }); };
-  const cw = 84, gap = 5, x0 = Math.round((W - cw * 3 - gap * 2) / 2), y0 = 98, ch = 196;
+  const cw = 64, gap = 2, x0 = Math.round((W - cw * 4 - gap * 3) / 2), y0 = 98, ch = 196;   // (round 97: four heroes)
   const saved = budgetOff();
-  ['warrior', 'mage', 'ranger'].forEach((cls, k) => {
+  ['warrior', 'paladin', 'mage', 'ranger'].forEach((cls, k) => {
     const info = CLASS_INFO[cls], x = x0 + k * (cw + gap), sel = TITLE.sel === cls, save = loadSave(cls), look = TITLE.looks[cls];
     fillRect(x, y0, cw, ch, sel ? 4 : 2); frame(x, y0, cw, ch, sel ? 51 : 6, sel ? 49 : 3);
     if (sel) frame(x - 1, y0 - 1, cw + 2, ch + 2, 50, 48);
@@ -529,7 +531,7 @@ function drawTitle() {
     bigHero(...sp, x + cw / 2, y0 + 112, L_ID);   // (round 50: the sharp sprite; round 60: as drawn, picked or not: brighter washed it out)
     info.lines.forEach((l, n) => textC(l, x + cw / 2, y0 + 124 + n * 8, sel ? 26 : 24));
     // its four skills
-    SKILLSETS[cls].forEach((sk, n) => { const sl = SPELL_LOOK[sk.id] || [[48, 49, 50, 51], glyphBolt]; drawButton([x + 12 + n * 20, y0 + 154, 8], sel ? sl[0] : [3, 4, 5, 6], false, sl[1]); });
+    SKILLSETS[cls].forEach((sk, n) => { const sl = SPELL_LOOK[sk.id] || [[48, 49, 50, 51], glyphBolt]; drawButton([x + 9 + n * 15, y0 + 154, 6], sel ? sl[0] : [3, 4, 5, 6], false, sl[1]); });
     textC(save ? `SAVED: LEVEL ${save.hero ? save.hero.lvl : 1}` : 'NO SAVE YET', x + cw / 2, y0 + 172, save ? (sel ? 51 : 49) : 24);
     UI.titleBtns.push({ x, y: y0, w: cw, h: ch, on: () => titlePick(cls) });
   });
@@ -689,7 +691,8 @@ function bestUpgrades() {
   for (const s of SLOTS) {
     const cur = hero.equip[s];
     let best = null;
-    for (const it of hero.bag) if (ITEM_BASES[it.base].slot === s && canWear(it) && (!best || itemScore(it) > itemScore(best))) best = it;
+    const twoOn = hero.equip.weapon && ITEM_BASES[hero.equip.weapon.base].twoHand, shOn = !!hero.equip.shield;   // round 97: a paladin's two-hander and shield never swap each other out here
+    for (const it of hero.bag) if (ITEM_BASES[it.base].slot === s && canWear(it) && !(s === 'shield' && twoOn) && !(ITEM_BASES[it.base].twoHand && shOn) && (!best || itemScore(it) > itemScore(best))) best = it;
     if (best && (!cur || itemScore(best) > itemScore(cur) + 0.5)) out.push(best);
   }
   return out;
@@ -1249,7 +1252,7 @@ addEventListener('keydown', e => {
   if (G.mode === 'cine') { if (k === 'enter' || k === ' ' || k === 'j') cineTap(null); else if (k === 'escape') cineTap([W - 20, 10]); e.preventDefault(); return; }   // round 89
   if (G.mode === 'title' && TITLE.splash) { leaveSplash(); e.preventDefault(); return; }
   if (G.mode === 'title' && (k === 'enter' || k === ' ')) { const c = TITLE.sel || 'warrior'; startGame(!!loadSave(c), c); return; }
-  if (G.mode === 'title' && (k === 'arrowleft' || k === 'arrowright')) { const L = ['warrior', 'mage', 'ranger'], n = L.indexOf(TITLE.sel || 'warrior'); titlePick(L[(n + (k === 'arrowleft' ? 2 : 1)) % 3]); return; }
+  if (G.mode === 'title' && (k === 'arrowleft' || k === 'arrowright')) { const L = ['warrior', 'paladin', 'mage', 'ranger'], n = L.indexOf(TITLE.sel || 'warrior'); titlePick(L[(n + (k === 'arrowleft' ? 3 : 1)) % 4]); return; }
   if (guideFrozen() && k !== 'i' && k !== 'b') { e.preventDefault(); return; }   // round 45: stopped for the guide
   input.keys.add(k);
   if (k === ' ' || k === 'j') input.attack = true;

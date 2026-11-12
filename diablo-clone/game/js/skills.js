@@ -26,6 +26,7 @@ const SKILLSETS = {
   ],
 };
 let SKILLS = SKILLSETS.warrior;
+const SKILL_FN = {};   // round 97: skills a class file adds (paladin.js): id -> start function, false to refund
 function setSkillsFor(cls) { SKILLS = SKILLSETS[cls] || SKILLSETS.warrior; }
 const CD = { charge: 0, bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, leap: 0, fireball: 0, cone: 0, meteor: 0, blink: 0, chain: 0, multi: 0, trap: 0, roll: 0, mark: 0, pierce: 0, cluster: 0, sentry: 0, hawk: 0, vault: 0, strafe: 0 };
 function resetSkills() { for (const k in CD) CD[k] = 0; hero.whirl = 0; hero.dash = 0; hero.buff = 0; hero.charge = null; hero.chargeAgain = 0; hero.chargeSecond = false; hero.strafe = null; hero.bz = null; }
@@ -72,6 +73,7 @@ function useSkill(i) {
   if (s.id === 'trap') { if (!throwTrap()) { hero.mana += skillCost(s); CD.trap = 0; } }
   if (s.id === 'roll') { if (!startRoll()) { hero.mana += skillCost(s); CD.roll = 0; } }
   if (s.id === 'mark') { if (!huntersMark()) { hero.mana += skillCost(s); CD.mark = 0; } }
+  if (SKILL_FN[s.id] && SKILL_FN[s.id]() === false) { hero.mana += skillCost(s); CD[s.id] = 0; }
 }
 
 // ---------------------------------------------------------------- the warrior's skills (round 24)
