@@ -61,6 +61,15 @@ function los(a, b, c, d) {
   return true;
 }
 
+// round 103: a jump may not land across a wall or a shut vault gate (the handoff: players leap the wall to skip the key)
+function gateBetween(a, b, c, d) {
+  const V = LV.vault; if (!V || V.open) return false;
+  const n = Math.ceil(Math.hypot(c - a, d - b) * 3) + 1;
+  for (let s = 1; s < n; s++) { const t = s / n, i = Math.floor(a + (c - a) * t), j = Math.floor(b + (d - b) * t); if (V.gate.some(([gi, gj]) => gi === i && gj === j)) return true; }
+  return false;
+}
+const leapOk = (a, b, c, d) => standable(c, d) && los(a, b, c, d) && !gateBetween(a, b, c, d);
+
 // ---------------------------------------------------------------- generation
 function resizeWorld(mw, mh) {
   if (mw === MW && mh === MH) return;
@@ -75,7 +84,7 @@ function genLevel(level, seed, side = null) {
   // A side area (quests.js SIDES) is a short dungeon floor hanging off the hub at the hub's level
   const A0 = areaOf(level), sd = side && sideDiff(side) ? sideDiff(side) + A0.cyc * 3 : A0.diff, A = side ? { kind: 'dungeon', cyc: A0.cyc, act: A0.act, loop: A0.loop, floor: 1, depth: A0.cyc * 3 + 1, diff: sd } : A0;   // (round 48c: a side area may be harder than its hub: the barrow)
   LV.side = side; LV.sideCfg = side ? SIDES[side] : null;
-  { const big = A.kind === 'forest' || A.hub, floorBig = A.kind === 'dungeon' && !side && !A.arena; const hs = (A.hub || A.reg) && !side ? 100 : big ? 64 : floorBig ? 62 : 46; resizeWorld(hs, hs); }   // (round 68a: wider halls and rooms further apart: 62 / 46, were 56 / 40)   // round 41: the hub 84x84   // round 38: dungeon floors 56x56 (were 40)
+  { const big = A.kind === 'forest' || A.hub, floorBig = A.kind === 'dungeon' && !side && !A.arena; const hs = (A.hub || A.reg) && !side ? 100 : big ? 64 : floorBig ? 72 : side && SIDES[side].rooms >= 8 ? 60 : 46; resizeWorld(hs, hs); }   // (round 103: floors 72, big side areas 60: more to explore)   // (round 68a: wider halls and rooms further apart: 62 / 46, were 56 / 40)   // round 41: the hub 84x84   // round 38: dungeon floors 56x56 (were 40)
   LV.area = A.kind; LV.cyc = A.cyc; LV.act = A.act; LV.loop = A.loop; LV.floor = A.floor || 0; LV.arena = A.arena || null;
   if (A0.act === 0 && !A0.loop && !A0.hub && typeof storyF === 'function' && storyF().h3all) A.diff += 2;   // round 78: after the Hollow's three dangers the hero is about two levels up: the Riverlands, the cellar, the crypt and the King follow
   LV.depth = A.depth || 0; LV.diff = A.diff; LV.outdoor = A.kind !== 'dungeon'; LV.hub = !!A.hub; LV.dusk = false; LV.riv = !!A.riv && !side; LV.gateSign = null; LV.gateOpen = false; LV.autumn = A.act === 1 && !A.reg; LV.reg = (!side && A.reg) || null; LV.night = A.kind !== 'dungeon' && A.act === 2; LV.plaza = null; LV.npcs = []; LV.critters = []; LV.champsPlanned = false; LV.genFail = null;
@@ -91,10 +100,10 @@ function genLevel(level, seed, side = null) {
   throw new Error('level generation failed');
 }
 function tryGen(level, seed, relaxed = false) {
-  const R = rng(seed), map = LV.map;
+  const R = rng(seed), map = LV.map; LV.vault = null; LV.shrine = null; LV.arenaRoom = -1;
   map.fill(VOID); LV.solid.fill(0); LV.roomOf.fill(-1); LV.seen.fill(0); LV.vis.fill(0); LV.reserve.fill(0);
   const rooms = [];
-  const cfg = LV.sideCfg, maxRooms = cfg ? cfg.rooms : 10;
+  const cfg = LV.sideCfg, maxRooms = cfg ? cfg.rooms : 14;   // (round 103: 14 rooms a floor, were 10)
   // round 38: rooms come from templates (the user: rooms too small, no wide open spaces, no variety).
   // Every full floor gets one great hall; the rest is a mix of ordinary rooms, round caverns,
   // crossroads, long galleries, L-shaped rooms and small side rooms. Each room keeps its bounding
@@ -111,14 +120,14 @@ function tryGen(level, seed, relaxed = false) {
   const pickTpl = () => { const p = R(); return p < 0.3 ? 'room' : p < 0.45 ? 'cavern' : p < 0.57 ? 'cross' : p < 0.69 ? 'gallery' : p < 0.81 ? 'ell' : 'small'; };
   const want = cfg ? null : ['room', 'hall'];   // the start is an ordinary room; one great hall per floor
   for (let t = 0; t < 600 && rooms.length < maxRooms; t++) {
-    const kind = cfg ? (rooms.length ? R.pick(['room', 'room', 'cavern', 'small']) : 'room') : rooms.length < want.length ? want[rooms.length] : pickTpl();
+    const kind = cfg ? (rooms.length ? R.pick(cfg.rooms >= 8 ? ['room', 'room', 'cavern', 'small', 'ell', 'cross'] : ['room', 'room', 'cavern', 'small']) : 'room') : rooms.length < want.length ? want[rooms.length] : pickTpl();
     const T = TPL[kind](), w = T.w, h = T.h;
     if (w > MW - 6 || h > MH - 6) continue;
     const x = R.int(2, MW - w - 2), y = R.int(2, MH - h - 2);
     if (rooms.some(r => x < r.x + r.w + 5 && x + w + 5 > r.x && y < r.y + r.h + 5 && y + h + 5 > r.y)) continue;   // (round 68a: 5 apart, so the wider halls don't run into rooms)
     rooms.push(Object.assign(T, { kind, x, y, cx: x + (w >> 1), cy: y + (h >> 1) }));
   }
-  if (rooms.length < (cfg ? 4 : 7) || (!cfg && !rooms.some(r => r.great))) return false;
+  if (rooms.length < (cfg ? Math.max(4, cfg.rooms - 2) : 11) || (!cfg && !rooms.some(r => r.great))) { LV.genFail = ['shape: too few rooms fit']; return false; }
   // a room's shape: which tiles of its box are floor
   const inShape = (r, i, j) => {
     const u = (i - r.x + 0.5) / r.w * 2 - 1, v = (j - r.y + 0.5) / r.h * 2 - 1;
@@ -162,41 +171,98 @@ function tryGen(level, seed, relaxed = false) {
   // loops (round 26, Brogue's rule): join two nearby rooms only if the walk between them is long
   // (more than two rooms apart), so a loop is a real shortcut and not a doubled corridor
   const hops = a => { const h = rooms.map(() => -1), q = [a]; h[a] = 0; for (let x = 0; x < q.length; x++) for (const [u, v] of edges) { const o = u === q[x] ? v : v === q[x] ? u : -1; if (o >= 0 && h[o] < 0) { h[o] = h[q[x]] + 1; q.push(o); } } return h; };
-  let loops = 0;
-  for (let t = 0; t < 80 && loops < 2; t++) {
+  // round 103 (the dungeon handoff, R7 "not a line"): a loop only joins rooms that already have two ways in, so
+  // dead ends stay dead ends (they hold the vault, the shrine, the treasure, the exit); a floor of 8+ rooms gets 2-3
+  const deg = n => edges.reduce((c, [u, v]) => c + (u === n || v === n ? 1 : 0), 0);
+  let loops = 0; const wantLoops = rooms.length >= 8 ? 2 + (R() < 0.5 ? 1 : 0) : 1;
+  for (let t = 0; t < 200 && loops < wantLoops; t++) {
     const a = R.int(0, rooms.length - 1), b = R.int(0, rooms.length - 1);
-    if (a === b || Math.sqrt(d2(rooms[a], rooms[b])) > 22 || hops(a)[b] <= 2) continue;
+    if (a === b || Math.sqrt(d2(rooms[a], rooms[b])) > (rooms.length >= 12 ? 26 : 32) || hops(a)[b] < (rooms.length >= 12 ? 3 : 2) || deg(a) < 2 || deg(b) < 2) continue;
     corridor(rooms[a], rooms[b]); loops++;
   }
+  if (rooms.length >= 8 && !loops && !relaxed) { LV.genFail = ['R7 no loop could be made']; return false; }
   buildWalls();
   LV.rooms = rooms; LV.edges = edges; LV.loops = loops;
   LV.start = rooms[0];
   // reachability from the start room; stairs go in the room farthest by walking distance
   const dist = bfs(LV.start.cx, LV.start.cy);
   for (let k = 0; k < MW * MH; k++) if (map[k] === FLOOR && dist[k] < 0) return false;
-  let far = 1, fd = -1;
-  rooms.forEach((r, n) => { const d = dist[tIdx(r.cx, r.cy)]; if (n && d > fd) { fd = d; far = n; } });
-  if (!relaxed && fd < (cfg ? 16 : 24)) return false;   // the way down must be a real walk from the start
+  // round 103 (R2, R5, R6): the way on (or the leader) waits in the farthest DEAD END, at least 30 steps and
+  // three rooms from the start; the stairs stand against a back wall of that room, facing into it (the user:
+  // stairs floated mid-room facing odd ways)
+  const degN = rooms.map((r, n) => edges.reduce((c, [u, v]) => c + (u === n || v === n ? 1 : 0), 0)), h0 = hops(0);
+  let far = -1, fd = -1;
+  rooms.forEach((r, n) => { const d = dist[tIdx(r.cx, r.cy)]; if (n && degN[n] <= 1 && d > fd) { fd = d; far = n; } });
+  const minSteps = rooms.length >= 8 ? 30 : 20, minHops = rooms.length >= 8 ? 3 : 2;   // (a small floor, the cellar: a shorter walk)
+  if (far < 0 || fd < minSteps || h0[far] < minHops) { if (!relaxed) { LV.genFail = [far < 0 ? 'R5 no dead end for the goal' : fd < minSteps ? 'R2 goal too few steps' : 'R2 goal too few rooms']; return false; } far = 1; fd = -1; rooms.forEach((r, n) => { const d = dist[tIdx(r.cx, r.cy)]; if (n && d > fd) { fd = d; far = n; } }); }
   if (!relaxed && cfg && cfg.bigLeader && rooms[far].kind === 'small') return false;   // round 67: a boss gets a real room to fight in
-  LV.stairs = { i: rooms[far].cx, j: rooms[far].cy, room: far };
-  if (cfg) {   // side areas: the way out is by the entrance, in the start room's corner farthest from its openings (round 68a: at the
-    LV.leaderRoom = far; const r0 = rooms[0];   // fixed back corner, the walk out of the room often ran over it and threw you out)
-    const opens = []; for (let j = r0.y - 1; j <= r0.y + r0.h; j++) for (let i = r0.x - 1; i <= r0.x + r0.w; i++) if ((i < r0.x || j < r0.y || i >= r0.x + r0.w || j >= r0.y + r0.h) && map[tIdx(i, j)] === FLOOR) opens.push([i, j]);
-    let best = null, bd = -1;
-    for (const [i, j] of [[r0.x + 1, r0.y + 1], [r0.x + r0.w - 2, r0.y + 1], [r0.x + 1, r0.y + r0.h - 2], [r0.x + r0.w - 2, r0.y + r0.h - 2]]) {
-      if (map[tIdx(i, j)] !== FLOOR || LV.roomOf[tIdx(i, j)] !== 0) continue;
-      const dmin = opens.reduce((m, [a, b]) => Math.min(m, Math.hypot(a - i, b - j)), 99); if (dmin > bd) { bd = dmin; best = [i, j]; }
-    }
-    best = best || [r0.x + 1, r0.y + 1]; LV.stairs = { i: best[0], j: best[1], room: 0, up: true };
+  const opensOf = r => { const o = []; for (let j = r.y - 1; j <= r.y + r.h; j++) for (let i = r.x - 1; i <= r.x + r.w; i++) if ((i < r.x || j < r.y || i >= r.x + r.w || j >= r.y + r.h) && map[tIdx(i, j)] === FLOOR) o.push([i, j]); return o; };
+  const onWall = (n, up) => {   // the best back-wall spot in room n: as far from its doorways as can be
+    const sp = wallSpots(rooms[n], n), op = opensOf(rooms[n]); if (!sp.length) return null;
+    let best = null, bd = -1; for (const c of sp) { const d = op.reduce((m, [a, b]) => Math.min(m, Math.hypot(a - c.i, b - c.j)), 99) + R() * (up ? 0.1 : 1.5); if (d > bd) { bd = d; best = c; } }
+    return best;
+  };
+  const ws = onWall(far, false); if (!ws && !relaxed) { LV.genFail = ['stairs: no back wall in the goal room']; return false; }
+  LV.stairs = ws ? { i: ws.i, j: ws.j, face: ws.face, room: far } : { i: rooms[far].cx, j: rooms[far].cy, room: far };
+  LV.goalRoom = far; LV.edgesDeg = degN;
+  if (cfg) {   // side areas: the way out is the stairs up, on a back wall of the start room, far from its doorways
+    LV.leaderRoom = far;
+    const up = onWall(0, true); if (!up && !relaxed) { LV.genFail = ['stairs: no back wall in the start room']; return false; }
+    LV.stairs = up ? { i: up.i, j: up.j, face: up.face, room: 0, up: true } : { i: rooms[0].x + 1, j: rooms[0].y + 1, room: 0, up: true };
   }
-  LV.down = cfg && cfg.down ? { i: rooms[far].cx, j: rooms[far].cy, room: far } : null;   // round 67: the barrow's way down to its second floor, in the far room
+  LV.down = cfg && cfg.down ? (ws ? { i: ws.i, j: ws.j, face: ws.face, room: far } : { i: rooms[far].cx, j: rooms[far].cy, room: far }) : null;   // round 67: the barrow's way down, in the far room
   analyzeLayout(dist);
   if (LV.down) for (let b = -1; b <= 4; b++) for (let a = -1; a <= 4; a++) if (Math.abs(a - b) <= 1 || (a <= 1 && b <= 1)) { const i = LV.down.i + a, j = LV.down.j + b; if (i > 0 && j > 0 && i < MW && j < MH) LV.reserve[tIdx(i, j)] = 1; }   // kept clear, and its approach
+  assignRoles(subRng(seed, 'roles'), relaxed);
   placeDecor(subRng(seed, 'decor'), level, dist);
   placeSpawns(subRng(seed, 'spawns'), level);
+  if (LV.vault) { for (const [i, j] of LV.vault.gate) LV.solid[tIdx(i, j)] = 1; LV.spawns = LV.spawns.filter(sp => sp.key || !LV.vault.gate.some(([i, j]) => Math.abs(sp.fi - i - 0.5) < 1.2 && Math.abs(sp.fj - j - 0.5) < 1.2)); }   // round 103: the gate shuts
   const bad = validateLevel(relaxed);
   if (bad.length) { LV.genFail = bad; return false; }
   return true;
+}
+// round 103: where stairs can stand against a back wall of room n. On screen the back walls are the
+// room's top-left (face 'i': solid at i - 1) and top-right (face 'j': solid at j - 1); a flat stretch of
+// three wall tiles behind, the stairs' 3x3 on the room's own floor in front
+function wallSpots(r, n) {
+  const out = [], room = (i, j) => i >= 0 && j >= 0 && i < MW && j < MH && LV.roomOf[tIdx(i, j)] === n && LV.map[tIdx(i, j)] === FLOOR, wall = (i, j) => tileAt(i, j) !== FLOOR;
+  for (let j = r.y; j < r.y + r.h; j++) for (let i = r.x; i < r.x + r.w; i++) {
+    if (!room(i, j)) continue;
+    if (wall(i - 1, j - 1) && wall(i - 1, j) && wall(i - 1, j + 1)) { let ok = true; for (let b = -1; b <= 1 && ok; b++) for (let a = 0; a <= 2 && ok; a++) ok = room(i + a, j + b); if (ok) out.push({ i, j, face: 'i' }); }
+    if (wall(i - 1, j - 1) && wall(i, j - 1) && wall(i + 1, j - 1)) { let ok = true; for (let b = 0; b <= 2 && ok; b++) for (let a = -1; a <= 1 && ok; a++) ok = room(i + a, j + b); if (ok) out.push({ i, j, face: 'j' }); }
+  }
+  return out;
+}
+// round 103 (the dungeon handoff): every room gets a role. Dead ends (one way in) hold the specials:
+// a VAULT behind a locked gate (its key carried by a champion elsewhere on the floor), a SHRINE, and
+// treasure; one middle room may be an AMBUSH (empty until you walk in, then waves); the great hall is a
+// hall (more monsters). The roles have their own random stream, so retuning them never moves a wall.
+function assignRoles(R, relaxed) {
+  const rooms = LV.rooms, cfg = LV.sideCfg, goal = cfg ? LV.leaderRoom : LV.stairs.room;
+  LV.vault = null; LV.shrine = null; LV.arenaRoom = -1;
+  rooms.forEach(r => { r.role = r.great ? 'hall' : 'combat'; }); rooms[0].role = 'start'; rooms[goal].role = cfg ? 'boss' : 'exit';
+  const dead = rooms.map((r, n) => n).filter(n => n > 0 && n !== goal && (LV.edgesDeg[n] || 0) <= 1 && !(LV.down && LV.down.room === n));
+  for (let k = dead.length - 1; k > 0; k--) { const q = R.int(0, k); [dead[k], dead[q]] = [dead[q], dead[k]]; }
+  if (rooms.length >= 8 && dead.length >= 2 && R() < 0.7) {   // the vault: a dead end, sealed where its corridor meets it
+    const n = dead.find(n => rooms[n].area <= 170 && !rooms[n].crit);
+    if (n !== undefined) {
+      const r = rooms[n], gate = [];
+      for (let j = r.y - 1; j <= r.y + r.h; j++) for (let i = r.x - 1; i <= r.x + r.w; i++) {
+        if (i >= r.x && j >= r.y && i < r.x + r.w && j < r.y + r.h) continue;
+        const k = tIdx(i, j); if (LV.map[k] === FLOOR && LV.roomOf[k] < 0) gate.push([i, j]);
+      }
+      LV.gateTry = gate.length;
+      if (gate.length && gate.length <= 6) {
+        const alongJ = gate.every(([i]) => i === gate[0][0]);   // the bars run along the line of the gate
+        for (const [i, j] of gate) LV.reserve[tIdx(i, j)] = 1;   // (shut after the props and monsters are in: trySolid keeps every tile reachable)
+        LV.vault = { room: n, gate, open: false, yaw: alongJ ? 0 : Math.PI / 2 }; r.role = 'vault'; dead.splice(dead.indexOf(n), 1);   // (its bars go in with the decor)
+      }
+    }
+  }
+  if (dead.length && R() < 0.75) { const n = dead.shift(); rooms[n].role = 'shrine'; LV.shrine = { room: n, used: false }; }
+  for (const n of dead) rooms[n].role = 'treasure';
+  const mid = rooms.map((r, n) => n).filter(n => n > 0 && n !== goal && rooms[n].role === 'combat' && (rooms[n].area || 0) >= 80 && rooms[n].depth > 0.25 && rooms[n].depth < 0.9);
+  if (mid.length && R() < 0.65) { LV.arenaRoom = R.pick(mid); rooms[LV.arenaRoom].role = 'arena'; }
 }
 // Room roles and the reservation mask (round 26). Walking distance from the start gives each room
 // a depth (0 near the start, 1 at the farthest); rooms the start-to-stairs walk passes through are
@@ -220,7 +286,7 @@ function analyzeLayout(dist) {
   const mark = (ci, cj, r) => { for (let j = cj - r; j <= cj + r; j++) for (let i = ci - r; i <= ci + r; i++) if (i >= 0 && j >= 0 && i < MW && j < MH) res[tIdx(i, j)] = 1; };
   mark(LV.stairs.i, LV.stairs.j, 1); mark(LV.start.cx, LV.start.cy, 1);
   // the stairs' approach: the tiles in front of them on screen stay open too
-  for (let s = 1; s <= 3; s++) mark(LV.stairs.i + s, LV.stairs.j + s, 0);
+  for (let s = 1; s <= 3; s++) mark(LV.stairs.i + (LV.stairs.face === 'j' ? 0 : s), LV.stairs.j + (LV.stairs.face === 'i' ? 0 : s), 1);   // (round 103: in front of them, into the room)
   // doorways: room-edge floor tiles that open onto corridor floor outside the room
   R0.forEach((r, n) => {
     for (let j = r.y - 1; j <= r.y + r.h; j++) for (let i = r.x - 1; i <= r.x + r.w; i++) {
@@ -233,26 +299,54 @@ function analyzeLayout(dist) {
 // The proof (round 26): checked on the finished level, after props and monsters, with the
 // hero's real footprint. Any failure throws the level away and the next derived seed is tried.
 function validateLevel(relaxed) {
-  const bad = [], dist = bfs(LV.start.cx, LV.start.cy), S = LV.stairs;
-  if (dist[tIdx(S.i, S.j)] < 0) bad.push('stairs unreachable');
-  let floor = 0, open = 0;
-  for (let k = 0; k < MW * MH; k++) if (LV.map[k] === FLOOR) { floor++; if (!LV.solid[k]) { open++; if (dist[k] < 0) { bad.push('floor cut off'); break; } } }
-  if (!relaxed && floor < MW * MH * 0.16) bad.push('too little floor');
-  // every chest and barrel has a reachable tile beside it
+  // round 103: the dungeon handoff's rules, each failure named by its rule (R2 the goal a real walk away, R3 every
+  // tile reachable once the key is held, R4 the vault sealed without its key, R7 not a line, R9 monsters, R10
+  // elites, R11 chests, R14 enough floor). `relaxed` (the last ten attempts) keeps only the ones a level can't do without.
+  const bad = [], S = LV.stairs, V = LV.vault, rooms = LV.rooms || [];
+  const dist = bfs(LV.start.cx, LV.start.cy);   // with the vault's gate shut
+  let distK = dist;
+  if (V) { for (const [i, j] of V.gate) LV.solid[tIdx(i, j)] = 0; distK = bfs(LV.start.cx, LV.start.cy); for (const [i, j] of V.gate) LV.solid[tIdx(i, j)] = 1; }   // and with the key
+  if (dist[tIdx(S.i, S.j)] < 0) bad.push('R2 stairs unreachable');
+  let floor = 0;
+  for (let k = 0; k < MW * MH; k++) if (LV.map[k] === FLOOR) { floor++; if (!LV.solid[k] && distK[k] < 0) { bad.push('R3 floor cut off'); break; } }
+  if (!relaxed && floor < MW * MH * 0.12) bad.push('R14 too little floor');
+  if (!LV.arena && rooms.length) {
+    const lead = LV.sideCfg && LV.spawns.find(sp => sp.id === LV.sideCfg.boss), gk = lead ? tIdx(Math.floor(lead.fi), Math.floor(lead.fj)) : tIdx(S.i, S.j);   // (measured where the leader or the stairs stand: a room's middle may hold a statue)
+    if (!relaxed && (dist[gk] < (rooms.length >= 8 ? 30 : 20))) bad.push('R2 goal too near');
+    if (!relaxed && rooms.length >= 8) {
+      if (!LV.loops) bad.push('R7 no loop');
+      if (rooms.filter(r => r.crit).length / rooms.length > 0.65) bad.push('R7 a line');
+      if (new Set(rooms.map(r => r.kind)).size < 3) bad.push('R7 one kind of room');
+    }
+    const chests = LV.decor.filter(d => d.kind === 'chest').length;
+    if (!relaxed && (chests < 1 || chests > 9)) bad.push('R11 chests ' + chests);
+  }
+  if (V) {
+    const r = rooms[V.room];
+    V.inside = new Set(); for (let k = 0; k < MW * MH; k++) if (dist[k] < 0 && distK[k] >= 0) V.inside.add(k);
+    if (dist[tIdx(r.cx, r.cy)] >= 0) bad.push('R4 vault open without the key');
+    for (let k = 0; k < MW * MH; k++) if (dist[k] < 0 && distK[k] >= 0) { const i = k % MW, j = (k / MW) | 0; if (i < r.x - 1 || j < r.y - 1 || i > r.x + r.w || j > r.y + r.h) { bad.push('R4 the gate shuts more than the vault'); break; } }
+    const key = LV.spawns.find(sp => sp.key);
+    if (!key) bad.push('R4 no key');
+    else if (dist[tIdx(Math.floor(key.fi), Math.floor(key.fj))] < 0) bad.push('R4 key unreachable');
+  }
+  // every chest has a reachable tile beside it (with the key)
   for (const d of LV.decor) if (d.kind === 'chest') {
-    let ok = false; for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = tIdx(d.i + a, d.j + b); if (dist[k] >= 0) ok = true; }
-    if (!ok) bad.push('chest unreachable');
+    let ok = false; for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = tIdx(d.i + a, d.j + b); if (distK[k] >= 0) ok = true; }
+    if (!ok) bad.push('R11 chest unreachable');
   }
   // every monster stands on open, reachable ground with room for its body, outside the safe zone
   for (const sp of LV.spawns) {
     const k = tIdx(Math.floor(sp.fi), Math.floor(sp.fj));
-    if (dist[k] < 0 || clearance(sp.fi, sp.fj, 0.28)) { bad.push('spawn blocked'); break; }
-    if (dist[k] < SAFE_STEPS) { bad.push('spawn near start'); break; }
+    if (dist[k] < 0 || clearance(sp.fi, sp.fj, 0.28)) { bad.push('R9 spawn blocked'); break; }
+    if (dist[k] < SAFE_STEPS) { bad.push('R9 spawn near start'); break; }
   }
-  if (!LV.spawns.length) bad.push('no monsters');
+  if (LV.spawns.filter(sp => sp.champ).length > 2) bad.push('R10 too many elites');
+  if (!LV.spawns.length) bad.push('R9 no monsters');
+  if (!relaxed && S.face === undefined && !LV.arena) bad.push('stairs not on a wall');
   return bad;
 }
-const SAFE_STEPS = 7;   // no monster within this many steps of where the hero arrives
+const SAFE_STEPS = 10;   // (round 103, R9: 10, was 7)   // no monster within this many steps of where the hero arrives
 // true when a body of radius r at (fi, fj) would overlap a wall or a solid prop
 const clearance = (fi, fj, r) => blocked(fi - r, fj - r) || blocked(fi + r, fj - r) || blocked(fi - r, fj + r) || blocked(fi + r, fj + r);
 function buildWalls() {
@@ -469,6 +563,7 @@ function trySolid(i, j) {
 }
 function placeDecor(R, level) {
   const D = LV.decor = [];
+  if (LV.vault) for (const [i, j] of LV.vault.gate) D.push({ kind: 'bars', i, j, yaw: LV.vault.yaw, vault: true });   // round 103: the vault's gate
   const wallSide = (i, j) => tileAt(i - 1, j) === WALL || tileAt(i, j - 1) === WALL || tileAt(i + 1, j) === WALL || tileAt(i, j + 1) === WALL;
   // round 68d (the face-lift, concept art B and C): in the crypt, up to one room of each job a floor: a chapel
   // (the largest), an ossuary and a burial hall, never the start, the stairs' room or a leader's room
@@ -539,6 +634,12 @@ function placeDecor(R, level) {
     const n = side.length && R() < 0.8 ? R.pick(side) : R.int(1, LV.rooms.length - 1), r = LV.rooms[n];
     for (let t = 0; t < 60; t++) { const i = R.int(r.x, r.x + r.w - 1), j = t < 20 ? r.y : R.int(r.y, r.y + r.h - 1); if (LV.roomOf[tIdx(i, j)] !== n || !wallSide(i, j)) continue; if (trySolid(i, j)) { D.push({ kind: 'chest', i, j, seed: R.int(1, 1e6) }); break; } }   // against a wall of its own floor (shaped rooms)
   }
+  // round 103: the vault's hoard (three chests, richer), a chest in each treasure room, the shrine on its altar
+  const wallChest = (n, extra = {}) => { const r = LV.rooms[n]; for (let t = 0; t < 80; t++) { const i = R.int(r.x, r.x + r.w - 1), j = t < 25 ? r.y : R.int(r.y, r.y + r.h - 1); if (LV.roomOf[tIdx(i, j)] !== n || !wallSide(i, j) || D.some(d => d.kind === 'chest' && Math.abs(d.i - i) + Math.abs(d.j - j) < 2)) continue; if (trySolid(i, j)) { D.push(Object.assign({ kind: 'chest', i, j, seed: R.int(1, 1e6) }, extra)); return true; } } return false; };
+  if (LV.vault) for (let c = 0; c < 3; c++) wallChest(LV.vault.room, { rich: true });
+  if (!D.some(d => d.kind === 'chest')) for (let t = 0; t < 6 && !D.some(d => d.kind === 'chest'); t++) wallChest(R.int(1, LV.rooms.length - 1));   // (R11: at least one)
+  LV.rooms.forEach((r, n) => { if (r.role === 'treasure' && !D.some(d => d.kind === 'chest' && LV.roomOf[tIdx(d.i, d.j)] === n)) wallChest(n); });
+  if (LV.shrine) { const r = LV.rooms[LV.shrine.room]; for (let t = 0; t < 60; t++) { const i = t < 20 ? r.cx : R.int(r.x + 1, r.x + r.w - 2), j = t < 20 ? r.cy : R.int(r.y + 1, r.y + r.h - 2); if (LV.roomOf[tIdx(i, j)] !== LV.shrine.room) continue; if (trySolid(i, j)) { D.push({ kind: 'altar', i, j, shrine: true }); LV.shrine.i = i; LV.shrine.j = j; break; } } if (LV.shrine.i === undefined) LV.shrine = null; }
   placeTorches(D);
 }
 // round 68d: lay out a room with a job. Along its long axis: u runs the length (0 = the back, toward the
@@ -615,9 +716,9 @@ function placeSpawns(R, level) {
   const spot = r => { for (let t = 0; t < 40; t++) { const fi = r.x + 0.5 + R() * (r.w - 1), fj = r.y + 0.5 + R() * (r.h - 1); if (ok(fi, fj)) return [fi, fj]; } return null; };
   const groups = [];
   LV.rooms.forEach((r, n) => {
-    if (n === 0) return;
+    if (n === 0 || r.role === 'vault' || r.role === 'arena') return;   // (round 103: the vault is sealed; the ambush room waits empty)
     const base = (2 + Math.floor(level * 0.8)) * clamp(Math.pow((r.area || r.w * r.h) / 64, 0.6), 0.75, 1.8);   // round 38: more in bigger rooms (capped so a great hall isn't a crowd)
-    let budget = Math.round(base * (0.6 + 0.8 * r.depth) * (cfg ? 0.6 : 1)) + (r.dead ? 1 : 0);   // side areas are lighter
+    let budget = Math.round(base * (0.6 + 0.8 * r.depth) * (cfg ? 0.6 : 1) * (r.role === 'hall' ? 1.4 : 1)) + (r.dead ? 1 : 0);   // side areas are lighter (round 103: the great hall a crowd)
     while (budget > 0) {
       const id = R.pick(pool), m = MONSTERS[id], count = m.pack ? (SWARM ? R.int(3, 6) : R.int(2, HEAVY ? 5 : 4)) : 1;   // (round 62: HEAVY packs run a little bigger)
       budget -= m.pack ? 2 : 1;
@@ -632,7 +733,7 @@ function placeSpawns(R, level) {
     }
   });
   // champions
-  const want = Math.min(3, Math.max(1, Math.round(S.length * champChance(level))));
+  const want = Math.min(2, Math.max(1, Math.round(S.length * champChance(level))));   // (round 103, R10: at most two elite packs)
   const order = groups.map((g, n) => ({ g, key: (LV.rooms[g.room].crit ? 1 : 0) + R() * 0.9 })).sort((a, b) => a.key - b.key).map(o => o.g);
   const champs = [];
   for (const g of order) {
@@ -642,6 +743,10 @@ function placeSpawns(R, level) {
     champs.push(g); S[g.members[0]].champ = true;
   }
   LV.champsPlanned = true;
+  if (LV.vault) {   // round 103: a champion carries the vault key (made one if none is out there)
+    const g = champs.find(g => LV.rooms[g.room].role !== 'vault') || groups.find(g => g.members.length && g.room !== LV.vault.room && g.room !== LV.leaderRoom);
+    if (g) { S[g.members[0]].champ = true; S[g.members[0]].key = true; if (!champs.includes(g)) champs.push(g); } else LV.vault.noKey = true;
+  }
   if (cfg) { const r = LV.rooms[LV.leaderRoom], p = spot(r) || [r.cx + 0.5, r.cy + 0.5]; S.push({ id: cfg.boss, fi: p[0], fj: p[1] }); return; }   // the leader waits in the far room
   if (R() < 0.25) { const r = LV.rooms[R.int(1, LV.rooms.length - 1)], p = spot(r); if (p) S.push({ id: 'treasure', fi: p[0], fj: p[1] }); }   // now and then a treasure goblin
 }
@@ -812,18 +917,21 @@ function propSprite(name, build, size, yaw = 0) {
 // toward -x (up the screen) so their treads face the camera, and the far wall opens into darkness
 const STW = { x: 18, y: 12, steps: 8, drop: 2.2 };
 const stairCache = {};
-function stairwellSprite(theme) {
-  if (stairCache[theme]) return stairCache[theme];
+function stairwellSprite(theme, face = 'i') {
+  const key0 = theme + ':' + face; if (stairCache[key0]) return stairCache[key0];
+  // round 103: two facings. 'i': the top step against the back-left wall, the steps going down toward the
+  // camera along i (as before); 'j': the same with the two floor axes swapped (the back-right wall)
+  const sw = face === 'j', P = (x, y, z) => sw ? [y, x, z] : [x, y, z], A = sw ? 1 : 0, Bx = sw ? 0 : 1;
   const T = theme === 'caves' ? 'ROCK' : theme === 'hell' ? 'HELL' : 'STONE', mat = M[T === 'HELL' ? 'HELLSTONE' : T], lipM = M[T + 'LIP'], riseM = M[T + 'RISE'];
   const r = new Rig(), X = STW.x, Y = STW.y, n = STW.steps, len = 2 * X / n;
   for (let k = 0; k < n; k++) {
     // the steps go down toward the camera (+x), so each step's front faces it: a lit edge on
     // every tread, a shaded front below it, and a step darker every other one on the way down
     const top = -STW.drop * (k + 1), x0 = -X + len * k, x1 = x0 + len;
-    r.box([(x0 + x1) / 2, 0, (top - 40) / 2], [len / 2, Y, (top + 40) / 2], mat, null, { noShadow: true, bias: -k,
-      mf: (q, nn) => k >= 3 ? M.VOID : nn[0] > 0.5 ? riseM : nn[2] > 0.5 && q[0] > x1 - 1.3 ? lipM : 0 });   // the last visible ones vanish into the dark
+    r.box(P((x0 + x1) / 2, 0, (top - 40) / 2), P(len / 2, Y, (top + 40) / 2), mat, null, { noShadow: true, bias: -k,
+      mf: (q, nn) => k >= 3 ? M.VOID : nn[A] > 0.5 ? riseM : nn[2] > 0.5 && q[A] > x1 - 1.3 ? lipM : 0 });   // the last visible ones vanish into the dark
   }
-  const wall = (c, h, o) => r.box(c, h, mat, null, { noShadow: true, ...o });
+  const wall = (c, h, o) => r.box(P(...c), P(...h), mat, null, { noShadow: true, ...o });
   // the side walls darken with depth into the same lightless black the last steps fall into
   const sideMf = q => q[2] < -STW.drop * 2.5 ? M.VOID : q[2] < -STW.drop * 1.2 ? riseM : 0;
   wall([0, -Y - 6, -20], [X + 12, 6, 20], { bias: -2, mf: sideMf });
@@ -834,31 +942,35 @@ function stairwellSprite(theme) {
   // keep only what shows through the opening; a one-pixel lip of floor stone frames it
   const C = Math.SQRT1_2, lip = theme === 'caves' ? CAVE : theme === 'hell' ? HELL : S;
   for (let py = 0; py < sp.h; py++) for (let px = 0; px < sp.w; px++) {
-    const sx = px - sp.ax + 0.5, sy = py - sp.ay + 0.5, gx = (sx / C + sy / (C / 2)) / 2, gy = (sy / (C / 2) - sx / C) / 2, k = py * sp.w + px;
+    const sx = px - sp.ax + 0.5, sy = py - sp.ay + 0.5, g0 = (sx / C + sy / (C / 2)) / 2, g1 = (sy / (C / 2) - sx / C) / 2, k = py * sp.w + px;
+    const gx = sw ? g1 : g0, gy = sw ? g0 : g1;   // (along the steps, across them)
     const inX = Math.abs(gx) < X, inY = Math.abs(gy) < Y;
     if (inX && inY) continue;
-    if (Math.abs(gx) < X + 1.6 && Math.abs(gy) < Y + 1.6) sp.data[k] = (gx < -X || gy < -Y) ? lip[lip.length - 2] : lip[1];
+    if (Math.abs(gx) < X + 1.6 && Math.abs(gy) < Y + 1.6) sp.data[k] = (g0 < -(sw ? Y : X) || g1 < -(sw ? X : Y)) ? lip[lip.length - 2] : lip[1];
     else sp.data[k] = 0;
   }
-  return (stairCache[theme] = sp);
+  void Bx;
+  return (stairCache[key0] = sp);
 }
 // round 81: the way UP and out. A flight of stone steps climbing away from the camera to an arched
 // doorway full of daylight, so leaving a dungeon no longer means walking down a hole. Standing art
-// (a prop, depth-sorted with the hero), not baked into the floor like the stairwell.
-function stairsUpSprite(theme) {
-  const key = theme + ':up'; if (stairCache[key]) return stairCache[key];
+// (a prop, depth-sorted with the hero), not baked into the floor like the stairwell. Round 103: two
+// facings, against the back-left wall ('i') or the back-right ('j')
+function stairsUpSprite(theme, face = 'i') {
+  const key = theme + ':up:' + face; if (stairCache[key]) return stairCache[key];
+  const sw = face === 'j', P = (x, y, z) => sw ? [y, x, z] : [x, y, z], A = sw ? 1 : 0;
   const T = theme === 'caves' ? 'ROCK' : theme === 'hell' ? 'HELL' : 'STONE', mat = M[T === 'HELL' ? 'HELLSTONE' : T], lipM = M[T + 'LIP'], riseM = M[T + 'RISE'];
   const r = new Rig(), X = 17, Y = 11, n = 7, len = 2 * X / n, rise = 3.2, top = n * rise;
   for (let k = 0; k < n; k++) {   // step k = 0 is nearest the camera and lowest
     const x1 = X - len * k, x0 = x1 - len, h = rise * (k + 1);
-    r.box([(x0 + x1) / 2, 0, h / 2], [len / 2, Y, h / 2], mat, null, { noShadow: true, bias: k, mf: (q, nn) => nn[0] > 0.5 ? riseM : nn[2] > 0.5 && q[0] > x1 - 1.4 ? lipM : 0 });
+    r.box(P((x0 + x1) / 2, 0, h / 2), P(len / 2, Y, h / 2), mat, null, { noShadow: true, bias: k, mf: (q, nn) => nn[A] > 0.5 ? riseM : nn[2] > 0.5 && q[A] > x1 - 1.4 ? lipM : 0 });
   }
   // the doorway at the top: two posts, a lintel with a keystone, and the daylight between them
   const dx = -X - 3, ph = 30;
-  r.box([dx, 0, top + ph / 2], [0.6, Y - 2.5, ph / 2], M.DAYLIGHT, null, { noShadow: true });
-  for (const sy of [-1, 1]) r.box([dx, sy * (Y + 0.5), (top + ph) / 2], [3.5, 3, (top + ph) / 2], mat, null, { noShadow: true, bias: 2 });
-  r.box([dx, 0, top + ph + 3], [3.5, Y + 3.5, 3.5], mat, null, { noShadow: true, bias: 3, mf: q => Math.abs(q[1]) < 2.2 ? lipM : 0 });
-  r.box([dx - 5, 0, (top + ph) / 2], [2, Y + 3.5, (top + ph) / 2 + 3], mat, null, { noShadow: true, bias: -3, mf: () => riseM });   // the wall behind, in shade
+  r.box(P(dx, 0, top + ph / 2), P(0.6, Y - 2.5, ph / 2), M.DAYLIGHT, null, { noShadow: true });
+  for (const sy of [-1, 1]) r.box(P(dx, sy * (Y + 0.5), (top + ph) / 2), P(3.5, 3, (top + ph) / 2), mat, null, { noShadow: true, bias: 2 });
+  r.box(P(dx, 0, top + ph + 3), P(3.5, Y + 3.5, 3.5), mat, null, { noShadow: true, bias: 3, mf: q => Math.abs(q[1 - A]) < 2.2 ? lipM : 0 });
+  r.box(P(dx - 5, 0, (top + ph) / 2), P(2, Y + 3.5, (top + ph) / 2 + 3), mat, null, { noShadow: true, bias: -3, mf: () => riseM });   // the wall behind, in shade
   return (stairCache[key] = renderRig(r, 0, 96, 112, 48, 84));
 }
 const PROPS = {
@@ -1336,18 +1448,20 @@ function buildWorld() {
       dynProps.push({ kind: 'cage', i: d.i, j: d.j, depth: d.i + d.j + 1, wx: x, wy: y + 2, hp: 1, open: !!d.open, seed: 0, tile: tIdx(d.i, d.j) });
     } else if (d.kind === 'barrel' || d.kind === 'chest' || d.kind === 'egg') {
       const [x, y] = iso(d.i + 0.5, d.j + 0.5);
-      dynProps.push({ kind: d.kind, i: d.i, j: d.j, depth: d.i + d.j + 1, wx: x, wy: y + (d.kind === 'barrel' ? 3 : 2), hp: d.kind === 'egg' ? EGG_HP : 1, hatch: 3 + (d.seed % 5), open: false, seed: d.seed, tile: tIdx(d.i, d.j) });
+      dynProps.push({ kind: d.kind, i: d.i, j: d.j, depth: d.i + d.j + 1, wx: x, wy: y + (d.kind === 'barrel' ? 3 : 2), hp: d.kind === 'egg' ? EGG_HP : 1, hatch: 3 + (d.seed % 5), open: false, seed: d.seed, tile: tIdx(d.i, d.j), rich: !!d.rich });
     }
   }
   // stairs down (round 25): a stairwell sunk into the floor, steps falling away into a dark arch,
   // with a lit lip around the opening and a fire bowl at each side so it reads from across a room
   if (!LV.outdoor) for (const s of [LV.stairs, LV.down]) {
     if (!s) continue;
-    const [x, y] = iso(s.i + 0.5, s.j + 0.5);
-    if (s.up) { props.push({ depth: s.i + s.j + 0.2, sp: stairsUpSprite(LV.theme || 'crypt'), wx: x, wy: y, tile: tIdx(s.i, s.j) }); lights.push({ x: x - 14, y: y - 7, z: 34, r: 90, i: 0.8, seed: s.i * 7 + s.j }); s.wx = x; s.wy = y; continue; }   // round 81: the way out climbs to a lit doorway
-    s.sp = stairwellSprite(LV.theme || 'crypt'); s.wx = x; s.wy = y;
-    for (const [ox, oy] of [[-STW.x - 4.5, STW.y + 4.5], [STW.x + 4.5, -STW.y - 4.5]]) {
-      const fi = s.i + 0.5 + ox / TILE_U, fj = s.j + 0.5 + oy / TILE_U, [bx, by] = iso(fi, fj);
+    const fj0 = s.face === 'j', nud = s.face ? (s.up ? 0.05 : STW.x / TILE_U - 0.42) : 0;   // (round 103: its top step at the wall)
+    const [x, y] = iso(s.i + 0.5 + (fj0 ? 0 : nud), s.j + 0.5 + (fj0 ? nud : 0));
+    if (s.up) { props.push({ depth: s.i + s.j + 0.2, sp: stairsUpSprite(LV.theme || 'crypt', s.face || 'i'), wx: x, wy: y, tile: tIdx(s.i, s.j) }); lights.push({ x: x + (fj0 ? 14 : -14), y: y - 7, z: 34, r: 90, i: 0.8, seed: s.i * 7 + s.j }); s.wx = x; s.wy = y; continue; }   // round 81: the way out climbs to a lit doorway
+    s.sp = stairwellSprite(LV.theme || 'crypt', s.face || 'i'); s.wx = x; s.wy = y;
+    const bz = s.face ? [[-STW.x + 6, STW.y + 5], [-STW.x + 6, -STW.y - 5]] : [[-STW.x - 4.5, STW.y + 4.5], [STW.x + 4.5, -STW.y - 4.5]];   // (on a wall: either side of the top step)
+    for (const [ox0, oy0] of bz) {
+      const ox = fj0 ? oy0 : ox0, oy = fj0 ? ox0 : oy0, fi = s.i + 0.5 + (fj0 ? 0 : nud) + ox / TILE_U, fj = s.j + 0.5 + (fj0 ? nud : 0) + oy / TILE_U, [bx, by] = iso(fi, fj);
       props.push({ depth: fi + fj, sp: PROPS.brazier(), wx: bx, wy: by, tile: tIdx(Math.floor(fi), Math.floor(fj)) });
       fires.push({ wx: bx, wy: by - 20, h: 13, w: 5, seed: s.i * 31 + fi * 7, ember: 0.1, tile: tIdx(Math.floor(fi), Math.floor(fj)) });
       lights.push({ x: bx, y: by, z: 30, r: 120, i: 0.9, seed: s.i + fi * 7 });   // lit from the sides, so the well itself stays dark

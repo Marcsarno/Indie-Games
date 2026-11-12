@@ -317,9 +317,9 @@ function startLeap() {
   else { const [fx, fy] = dirVec(hero.dir); to = [hero.fi + fx * 5, hero.fj + fy * 5]; }
   // land on open ground: walk the target back toward the hero until it's clear
   const f0 = [hero.fi, hero.fj];
-  for (let k = 0; k < 20 && !standable(to[0], to[1]); k++) { to[0] += (f0[0] - to[0]) * 0.15; to[1] += (f0[1] - to[1]) * 0.15; }
+  for (let k = 0; k < 20 && !leapOk(f0[0], f0[1], to[0], to[1]); k++) { to[0] += (f0[0] - to[0]) * 0.15; to[1] += (f0[1] - to[1]) * 0.15; }   // (round 103: not over a wall or a shut gate)
   const dist = Math.hypot(to[0] - f0[0], to[1] - f0[1]);
-  if (dist < 0.8 || !standable(to[0], to[1])) return false;
+  if (dist < 0.8 || !leapOk(f0[0], f0[1], to[0], to[1])) return false;
   hero.dir = dirFrom(to[0] - f0[0], to[1] - f0[1]);
   hero.leap = { from: f0, to, t: 0, dur: 0.32 + dist * 0.035, target: t, mod }; hero.atk = -1; hero.cast = -1; hero.approach = null;
   sfx('heavySwing');

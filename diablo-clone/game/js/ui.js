@@ -609,7 +609,7 @@ const QA = { aim: null, tgt: null, ang: null, at: 0, ring: false, on: false, t0:
 function drawStoryMark() {
   if (G.mode !== 'play' || hero.dead || G.fadeTo) { QA.ang = null; return; }
   if (LV.hub && storyOn() && storyStage() === 'hollow3') { const f = storyF(), pk = h3Pick(); for (const o of H3) { if (f[o.flag] || o === pk) continue; const [x, y] = iso(...h3Pos(o)), sx = x - camX, sy = y - camY - 16; if (!edgePip(sx, sy, o.col)) arrowHead(sx, sy - 14, 0, 1, o.col, o.col - 1); } }   // round 78: the other open objectives: a small mark at the edge, or over the place
-  const t = storyTarget(); if (!t) { QA.aim = null; QA.ang = null; return; }
+  const t = (typeof storyTargetShown === 'function' ? storyTargetShown : storyTarget)(); if (!t) { QA.aim = null; QA.ang = null; return; }   // (round 103: below ground, only what has been seen)
   const dt = Math.min(0.1, Math.max(0, G.t - QA.t0)); QA.t0 = G.t;
   const d = Math.hypot(t[0] - hero.fi, t[1] - hero.fj); if (d < 1.6) { QA.ang = null; return; }
   if (!QA.tgt || Math.hypot(QA.tgt[0] - t[0], QA.tgt[1] - t[1]) > 2) QA.aim = null;   // a new goal
