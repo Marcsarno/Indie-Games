@@ -11,7 +11,9 @@ T = {  # big blows and moments
  'growl':-23,'squeal':-21,'yelp':-21,'hiss':-22,'clatter':-21,'splat':-21,
  # rewards and the interface
  'portal':-20,'chest':-20,'stairs':-21,'streak':-22,'clink':-22,'gold':-23,'potion':-22,'pickup':-23,'tap':-25,
- 'step':-32,'crackle':-38}
+ 'step':-32,'crackle':-38,
+ # round 108: the Paladin's own (the user: Consecrate very light; its pulse barely there)
+ 'palHit':-19,'palEmber':-31,'palConsec':-23,'palToll':-16,'palJudgeCall':-18,'palJudgeLand':-16,'palThrow':-21,'palPillar':-22,'palFaith':-18,'palFlap':-22}
 d=json.load(open(sys.argv[1])); rec={}; syn={}
 for n,t in T.items():
   r=d.get(n)

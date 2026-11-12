@@ -446,7 +446,7 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
     if (e === boss) { say(`THE ${e.def.name} IS SLAIN`, 51, 4); if (!(e.id === 'skelking' && finaleDue())) say('THE WAY DOWN IS OPEN', 26, 4); sfx('levelUp'); G.slowmo = 0.9; G.bossIntro = 0; if (e.id === 'skelking' && finaleDue()) startFinale(); }   // (round 67: then Maelis)
     G.kills++; if (hero.stats) hero.stats.kills++;
   } else {
-    sfx('hit'); if (HEAVY) RECIPES_THUD((ranged ? 0.45 : 0.7) + pow * 0.25 + (crit ? 0.3 : 0));
+    sfx(hero.cls === 'paladin' && !ranged ? 'palHit' : 'hit'); if (HEAVY) RECIPES_THUD((ranged ? 0.45 : 0.7) + pow * 0.25 + (crit ? 0.3 : 0));
     if (FEEL_OLD) {
       e.stop = crit ? 0.11 : 0.07; hero.stop = Math.max(hero.stop, e.stop);
       e.kb = [(e.fi - fromFi) / d * 3, (e.fj - fromFj) / d * 3];

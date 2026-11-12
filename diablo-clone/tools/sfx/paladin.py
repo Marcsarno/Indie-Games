@@ -7,7 +7,7 @@ import os, sys, subprocess, re, json, html
 HERE = os.path.dirname(os.path.abspath(__file__))
 GAME = os.path.join(HERE, '..', '..', 'game', 'sfx')
 sys.path.insert(0, HERE)
-from paladin_cands import PACKS, G   # the candidate lists (paladin_cands.py)
+import importlib; _C = importlib.import_module(os.environ.get('CANDS', 'paladin_cands')); PACKS, G = _C.PACKS, _C.G   # the candidate lists (paladin_cands.py; CANDS=paladin_cands2 for round 2)
 
 # what the game plays today for each event: (sound, volume); synth-only sounds come from the synth renders
 SAMPLE_GAIN = {}
@@ -20,7 +20,7 @@ def peak(f):
     m = re.search(r'max_volume: (-?[0-9.]+) dB', o); return float(m.group(1)) if m else 0.0
 def dur(f):
     return float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f], capture_output=True, text=True).stdout or 0)
-def conv(srcs, dst, maxlen, start=0.0):
+def conv(srcs, dst, maxlen, start=0.0, fadein=0.0):
     """one file, or several layered ([(path, gain dB, delay s[, start s])]), trimmed, peak -1 dB, mono MP3"""
     tmp = dst + '.tmp.wav'
     if isinstance(srcs, str): srcs = [(srcs, 0, 0, start)]
@@ -29,7 +29,7 @@ def conv(srcs, dst, maxlen, start=0.0):
     for p, _, _, st in srcs: args += (['-ss', str(st)] if st else []) + ['-i', p]
     trim = 'silenceremove=start_periods=1:start_threshold=-48dB,areverse,silenceremove=start_periods=1:start_threshold=-55dB,areverse'
     fl = ';'.join(f'[{i}:a]aformat=channel_layouts=mono,aresample=44100,volume={g}dB,adelay={int(d * 1000)}[s{i}]' for i, (_, g, d, _) in enumerate(srcs))
-    fl += ';' + ''.join(f'[s{i}]' for i in range(len(srcs))) + f'amix=inputs={len(srcs)}:normalize=0:duration=longest,atrim=0:{maxlen},' + trim + '[o]'
+    fl += ';' + ''.join(f'[s{i}]' for i in range(len(srcs))) + f'amix=inputs={len(srcs)}:normalize=0:duration=longest,atrim=0:{maxlen},' + trim + (f',afade=t=in:d={fadein}' if fadein else '') + '[o]'
     args += ['-filter_complex', fl, '-map', '[o]', '-ac', '1', tmp]
     subprocess.run(args, check=True)
     g = -1.0 - peak(tmp)
@@ -49,12 +49,13 @@ def now_mix(layers, synth, dst, maxlen):
     conv(srcs, dst, maxlen)
 
 def resolve(D, p):
-    if p.startswith('game:'): return os.path.join(GAME, p[5:] + '.mp3')
+    if p.startswith('game:'): f = os.path.join(GAME, p[5:] + '.mp3'); return f if os.path.exists(f) else os.path.join(SYN, p[5:] + '.wav')
     if os.path.exists(os.path.join(D, p)): return os.path.join(D, p)
     raise SystemExit('missing ' + p)
 
 if __name__ == '__main__':
     D, SYN, OUT = sys.argv[1:4]
+    globals()['SYN'] = SYN
     os.makedirs(os.path.join(OUT, 'a'), exist_ok=True)
     manifest = []
     for gname, evs in G:
@@ -66,7 +67,7 @@ if __name__ == '__main__':
             for n, c in enumerate(cands):
                 p = c['src']; fn = f'{key}-{"abcdefgh"[n]}.mp3'
                 srcs = [(resolve(D, q[0]),) + tuple(q[1:]) for q in p] if isinstance(p, list) else resolve(D, p)
-                conv(srcs, os.path.join(OUT, 'a', fn), c.get('len', maxlen), c.get('start', 0.0))
+                conv(srcs, os.path.join(OUT, 'a', fn), c.get('len', maxlen), c.get('start', 0.0), c.get('fadein', 0.0))
                 if isinstance(p, str) and p.startswith('game:'): pk = ('Already in the game: ' + c.get('note', p[5:]), '', '', '')
                 else: pk = PACKS[c['pack']]
                 e['cands'].append({'file': fn, 'src': p, 'pack': pk[0], 'author': pk[1], 'license': pk[2], 'url': pk[3], 'note': c.get('note', '')})
@@ -75,13 +76,15 @@ if __name__ == '__main__':
     json.dump(manifest, open(os.path.join(OUT, 'manifest.json'), 'w'), indent=1)
     # the page: round 2's frame (tools/pages/soundpicks2.html), its own storage key
     old = open(os.path.join(HERE, '..', 'pages', 'soundpicks2.html')).read()
-    head = old[:old.index('<main>')].replace('<title>Sound Picks II</title>', '<title>Paladin Sound Picks</title>')
-    script = old[old.index('<script>'):].replace("'sound-picks-2'", "'sound-picks-pal'")
+    TITLE = getattr(_C, 'TITLE', 'Paladin Sound Picks')
+    head = old[:old.index('<main>')].replace('<title>Sound Picks II</title>', f'<title>{TITLE}</title>')
+    script = old[old.index('<script>'):].replace("'sound-picks-2'", "'" + getattr(_C, 'STORE', 'sound-picks-pal') + "'")
     E = html.escape; L = "ABCDEFGH"
-    body = ['<main>', '  <header>', '    <h1>Paladin Sound Picks</h1>',
+    LEDE = getattr(_C, 'LEDE', None)
+    body = ['<main>', '  <header>', f'    <h1>{TITLE}</h1>'] + ([f'    <p class="lede">{l}</p>' for l in LEDE] + ['  </header>', '  <p class="status" id="status">Loading your picks&hellip;</p>'] if LEDE else [
       '    <p class="lede">The Paladin borrowed everyone else\'s sounds: mage zaps, the portal hum, the level-up chime, a tiny clink for a giant bell. Here is a sound of his own for each of his 16 moments. NOW is what he plays today; the letters are new recordings from free packs, plus a few sounds the game already has where they fit (marked). Tap to listen, then pick. Pick NOW to keep one as it is. Your picks save as you go, and I read them from here.</p>',
       '    <p class="lede">Headphones or the phone held close help. Everything is level-matched, so judge the character of each sound, not its loudness: I set in-game volumes after you pick.</p>',
-      '  </header>', '  <p class="status" id="status">Loading your picks&hellip;</p>']
+      '  </header>', '  <p class="status" id="status">Loading your picks&hellip;</p>'])
     for gname, evs in manifest:
         body += ['  <section>', f'    <h2 class="g">{E(gname)}</h2>']
         for ev in evs:
