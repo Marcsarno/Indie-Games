@@ -26,6 +26,24 @@
     }
     return best || [tg[0] - hero.fi, tg[1] - hero.fj];
   };
+  // round 105 (the user: how long does the act take now?): EXPLORE=1 plays a first visit below ground. It knows
+  // only what it has seen: the shrine (pray), chests (open them), the vault once it holds the key; the way on
+  // only once the arrow shows it; else the nearest unexplored floor
+  let fr = { t: -9, at: null, key: '' };
+  const seenTile = (i, j) => LV.seen[tIdx(Math.floor(i), Math.floor(j))] > 0;
+  const exploreTarget = () => {
+    const S = LV.shrine; if (S && !S.used && S.i !== undefined && seenTile(S.i, S.j)) { if (Math.hypot(S.i + 0.5 - hero.fi, S.j + 0.5 - hero.fj) < 1.9) { const a = shrineAction(); if (a) { a.go(); mark('prayed@' + areaName()); } } else return [S.i + 1.5, S.j + 1.5]; }
+    const V = LV.vault; if (V && !V.open && LV.hasKey) { const g = V.gate[V.gate.length >> 1]; if (nearGate(1.7)) { unlockVault(); mark('vault@' + areaName()); } else { const d0 = bfs(LV.start.cx, LV.start.cy); for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [0, 2], [0, -2]]) if (d0[tIdx(g[0] + a, g[1] + b)] >= 0) return [g[0] + a + 0.5, g[1] + b + 0.5]; } }
+    let ch = null, cd = 1e9; for (const p of dynProps) if (p.kind === 'chest' && !p.open && seenTile(p.i, p.j)) { const d = Math.hypot(p.i - hero.fi, p.j - hero.fj); if (d < cd && d < 14) { cd = d; ch = p; } }
+    if (ch) { const d0 = bfs(Math.floor(hero.fi), Math.floor(hero.fj)); for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (d0[tIdx(ch.i + a, ch.j + b)] >= 0) return [ch.i + a + 0.5, ch.j + b + 0.5]; ch.open = ch.open || false; }
+    const shown = typeof storyTargetShown === 'function' ? storyTargetShown() : storyTarget(); if (shown) return shown;
+    const key = LV.level + ':' + LV.seed + ':' + (LV.side || '');
+    if (fr.key !== key || G.t - fr.t > 1 || (fr.at && seenTile(fr.at[0], fr.at[1]) && Math.hypot(fr.at[0] - hero.fi, fr.at[1] - hero.fj) < 3)) {
+      fr = { t: G.t, at: null, key }; const d = bfs(Math.floor(hero.fi), Math.floor(hero.fj)); let bd = 1e9;
+      for (let k = 0; k < MW * MH; k++) if (d[k] > 0 && !(LV.seen[k] > 0) && d[k] < bd) { bd = d[k]; fr.at = [k % MW + 0.5, ((k / MW) | 0) + 0.5]; }
+    }
+    return fr.at;
+  };
   const go = (v) => { const l = Math.hypot(v[0], v[1]); if (l < 0.01) { input.mx = input.my = 0; return; } input.mx = (v[0] - v[1]) / l * 0.75; input.my = (v[0] + v[1]) / l * 0.75; };
   const ranged = cls === 'mage' || cls === 'ranger', range = ranged ? 5.5 : heroReach() + 0.15;
   while (t < CAP) {
@@ -49,7 +67,8 @@
     // foes: the nearest awake or in sight
     let foe = null, fd = 1e9, near = 0;
     for (const e of enemies) { if (!alive(e)) continue; const d = Math.hypot(e.fi - hero.fi, e.fj - hero.fj); if (d < 3.2) near++; if (d < fd && d < (window.__rush ? 7 : 9.5) && LV.vis[tIdx(Math.floor(e.fi), Math.floor(e.fj))] > 0.3 && los(hero.fi, hero.fj, e.fi, e.fj)) { fd = d; foe = e; } }
-    const tg = storyTarget();
+    let tg = storyTarget();
+    if (window.__explore && !LV.outdoor && !LV.hub) tg = exploreTarget() || tg;   // round 105: a first-time player below ground
     if (foe && (!window.__rush || fd < 6 || (tg && Math.hypot(tg[0] - foe.fi, tg[1] - foe.fj) < 2))) {
       hero.dir = dirFrom(foe.fi - hero.fi, foe.fj - hero.fj);
       if (fd > range) go(pathDir([foe.fi, foe.fj])); else input.attack = true;
