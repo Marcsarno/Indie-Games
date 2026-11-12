@@ -256,16 +256,17 @@ const outfitsOf = base => Object.keys(OUTFITS).filter(k => OUTFITS[k].pieces.inc
 function outfitCount(k, equip) { const e = equip || (typeof hero !== 'undefined' ? hero.equip : {}); return Object.values(e).filter(it => it && OUTFITS[k].pieces.includes(rootOf(it.base))).length; }
 // the hero's class decides which gear drops (game.js sets hero.cls; warrior when unset)
 const heroCls = () => (typeof hero !== 'undefined' && hero.cls) || 'warrior';
-const forCls = o => o.cls === 'any' || (o.cls || 'warrior') === heroCls() || (heroCls() === 'paladin' && typeof palShares === 'function' && palShares(o));   // round 97: the paladin also finds the warrior's maces, hammers, swords, helms, shields and plain plate (paladin.js)
+const forCls = o => (o.cls === 'any' || (o.cls || 'warrior') === heroCls() || (heroCls() === 'paladin' && typeof palShares === 'function' && palShares(o))) && !(heroCls() === 'warrior' && typeof barbDeny === 'function' && barbDeny(o));   // (round 106: the barbarian leaves shields and knightly plate to the paladin)   // round 97: the paladin also finds the warrior's maces, hammers, swords, helms, shields and plain plate (paladin.js)
 const JEWELRY = { ring: 1, amulet: 1 };
 // magic find from worn gear (game.js keeps STAT; items.js is also loaded by the art kit without it)
 const findK = () => 1 + ((typeof STAT !== 'undefined' && STAT.find) || 0) / 100;
 function rollSetItem(R) {
-  const k = R.pick(Object.keys(SETS).filter(k => forCls(SETS[k]))), [base, name] = R.pick(SETS[k].pieces);
+  const ok = pc => forCls(ITEM_BASES[pc[0]]);   // round 106: only pieces this hero can wear (the barbarian's set has no shield)
+  const k = R.pick(Object.keys(SETS).filter(k => forCls(SETS[k]) && SETS[k].pieces.some(ok))), [base, name] = R.pick(SETS[k].pieces.filter(ok));
   return { id: itemSerial++, base, rarity: 'set', set: k, name, mods: { [ITEM_BASES[base].slot === 'weapon' ? 'dmgPct' : 'armorFlat']: R.int(3, 6), hp: R.int(8, 16) } };
 }
 function rollLegendary(R) {
-  const L = R.pick(LEGENDARIES.filter(forCls));
+  const L = R.pick(LEGENDARIES.filter(L => forCls(L) && forCls(ITEM_BASES[L.base])));
   return { id: itemSerial++, base: L.base, rarity: 'legend', name: L.name, lore: L.lore, fx: L.fx, mods: { ...L.mods } };
 }
 const RARITY_COL = { normal: 26, magic: 40, rare: 51, legend: 112, set: 55 };

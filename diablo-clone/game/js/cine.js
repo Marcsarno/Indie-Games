@@ -703,7 +703,7 @@ function cineShots(kind, cls, opts = {}) {
     { dur: 1, wait: true, cam: [['near', 1.75, 0.55], ['near', 1.75, 0.55]], ease: 1.5, who: 'dave', text: 'WHO ARE YOU PLAYING TONIGHT?', keep: true },
   ];
   if (kind === 'open') return [
-    { dur: 2.8, cam: [['dave', 1.9], ['dave', 2.1]], light: 'N', ease: 1.1, who: 'dave', text: { warrior: 'A WARRIOR', mage: 'A MAGE', ranger: 'A RANGER' }[cls] + '. GOOD. TONIGHT: DUNGEONS OF BONES.' },
+    { dur: 2.8, cam: [['dave', 1.9], ['dave', 2.1]], light: 'N', ease: 1.1, who: 'dave', text: ({ warrior: 'A BARBARIAN', mage: 'A MAGE', ranger: 'A RANGER', paladin: 'A PALADIN' }[cls] || 'A HERO') + '. GOOD. TONIGHT: DUNGEONS OF BONES.' },   // (round 106: the paladin read UNDEFINED)
     { dur: 4, cam: [['table', 1.2, 0.46], ['mapc', 1.9, 0.44]], light: 'D', ease: 1, who: 'dave', text: 'OAKHOLLOW WAS A VILLAGE. NOW IT IS ONE FIRE IN THE WOODS.' },
     { dur: 3.8, cam: [['corner', 1.45, 0.42], ['corner', 1.3, 0.4]], light: 'G', cut: true, fx: 'dead', who: 'dave', text: 'THEN THE DEAD GOT UP.' },
     { dur: 4.2, cam: [['dave', 1.7, 0.66], ['dave', 1.15, 0.6]], light: 'G', cut: true, fx: 'king', who: 'dave', text: 'SOMEONE IS PAYING FOR BONES. THEIR OLD KING IS ALMOST WHOLE.' },

@@ -838,7 +838,7 @@ function updateHero(dt) {
     }   // round 40a: the slam's hop
     if (!hero.hitDone && hero.mag > 0) { const st = Math.min(hero.mag, dt * 4.5); lungeHero(st); hero.mag -= st; }
     if (ki >= 0 && sw[ki].hit && !hero.hitDone) {
-      hero.hitDone = true; if (hero.cls === 'paladin' && hero.combo < 3) palSwing(hero.combo); if (hero.cls === 'ranger') looseArrow(); else if (hero.combo === 3) groundSlamHit(); else { heroHitResolve(!!sw[ki].slam, hero.combo === 2 ? 2 : STAT.slow ? 1 : 0); if (hero.cls === 'warrior' && hero.stance === 2) titanWave(); else if (hero.cls === 'warrior' && !FEEL_OLD && hero.combo < 2) bzSlash(hero.combo ? 1 : -1, hero.stance === 1 ? 1.25 : 1.05, hero.stance === 1 ? false : 'steel'); }   // round 88: every swing leaves its arc in the air a moment (red in the Berserker)
+      hero.hitDone = true; if (hero.cls === 'paladin' && hero.combo < 3) palSwing(hero.combo); if (hero.cls === 'ranger') looseArrow(); else if (hero.combo === 3) groundSlamHit(); else { heroHitResolve(!!sw[ki].slam, hero.combo === 2 ? 2 : STAT.slow ? 1 : 0); if (hero.cls === 'warrior' && hero.stance === 2) titanWave(); else if (hero.cls === 'warrior' && !FEEL_OLD && hero.combo < 2) bzSlash(hero.combo && !(hero.look.offhand && hero.look.offhand !== 'none') ? 1 : -1, hero.stance === 1 ? 1.25 : 1.05, hero.stance === 1 ? false : 'steel'); }   // round 88: every swing leaves its arc in the air a moment (red in the Berserker)
       if (sw[ki].slam) {   // the ground slam: extra shake and a ring of dust
         if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.35);
         const [x, y] = screenOf(hero), [fx, fy] = dirVec(hero.dir), cx = x + (fx - fy) * 12, cy = y + (fx + fy) * 6;

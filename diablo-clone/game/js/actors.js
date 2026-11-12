@@ -451,11 +451,12 @@ const GEAR_LOOKS = {
   weapon: ['sword', 'axe', 'mace', 'flail', 'greatsword'],
   shield: ['none', 'buckler', 'round', 'kite', 'tower', 'targe', 'heater'],
 };
-const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}.${eq.cape || ''}.${eq.lgd || ''}.${eq.set || ''}.${eq.ench || ''}.${eq.wings || ''}${eq.holy ? '.h' : ''}`;
+const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}.${eq.cape || ''}.${eq.lgd || ''}.${eq.set || ''}.${eq.ench || ''}.${eq.wings || ''}${eq.holy ? '.h' : ''}${eq.offhand ? '.o' + eq.offhand : ''}`;
 const hasFx = (eq, k) => !!eq.lgd && eq.lgd.split('|').includes(k);
 // combo 1 = the second swing of a quick pair (a backhand)
 // a quick string of swings: forehand, backhand, then a finisher (sword thrust or heavy slam)
-const ATTACK_CLIPS = ['attack', 'attack2', 'attack3', 'attack4'];   // attack4: the ground slam skill's overhead chop
+const ATTACK_CLIPS = ['attack', 'attack2', 'attack3', 'attack4'];
+const BARB_SMEAR = null;   // round 106: the off hand's trail (the default colours)   // attack4: the ground slam skill's overhead chop
 const atkIndex = clip => ATTACK_CLIPS.indexOf(clip);
 // Hero swing timing (combat feel pass): the same poses, but the wind-up before the contact key is
 // cut so a tap lands its hit at ~0.11 s (sword) / ~0.2 s (two-handers) instead of 0.19 / 0.34 s.
@@ -1018,6 +1019,51 @@ function weaponSwing(eq, combo = 0) {
 // how far the weapon's tip is from the swing pivot (smears and reach)
 const WEAPON_LEN = { sword: 21, axe: 16, mace: 16, flail: 17, greatsword: 27, bsword: 24, mstar: 17, baxe: 19 };
 
+// round 106: a one- or two-handed melee weapon in a hand at g, its blade along bd (heroRig's main hand, the barbarian's off hand)
+function meleeWeapon(r, eq, g, bd, wide, wf, fwd, up, sideR, st) {
+  r.cone(V.mad(g, bd, -2.6), V.mad(g, bd, 1.2), 0.9, 0.9, M.LEATHER);
+  r.sph(V.mad(g, bd, -3.2), 1.2, M.GOLD);
+  const xWeapon = GEAR_EXTRA.weapon[eq.weapon];
+  if (xWeapon) xWeapon(r, { g, bd, wide, wf, fwd, up, sideR, eq, st });
+  else if (eq.weapon === 'sword') {
+    r.box(V.mad(g, bd, 1.8), [0.7, 3.4, 0.8], M.GOLD, wf);
+    r.box(V.mad(g, bd, 11.4), [9.2, 1.15, 0.4], hasFx(eq, 'ember') ? M.FIREM : M.BLADE, wf);   // Emberbrand glows
+    r.cone(V.mad(g, bd, 20.4), V.mad(g, bd, 21.8), 0.9, 0.3, M.BLADE);
+  } else if (eq.weapon === 'bsword') {   // round 43: the bastard sword: a hand-and-a-half grip, a swept gold guard, a longer blade with a fuller
+    r.cone(V.mad(g, bd, -4.4), V.mad(g, bd, -2.6), 0.9, 0.9, M.LEATHER);
+    for (const s of [-1, 1]) r.cone(V.mad(g, bd, 1.6), V.add(V.mad(g, bd, 3), V.mul(wide, s * 4.2)), 0.8, 0.5, M.GOLD);
+    r.box(V.mad(g, bd, 13), [10.8, 1.25, 0.4], M.BLADE, wf, { mf: p => Math.abs(V.dot(V.sub(p, g), wide)) < 0.35 && V.dot(V.sub(p, g), bd) < 20 ? M.STEEL : 0 });
+    r.cone(V.mad(g, bd, 23.6), V.mad(g, bd, 25), 1.0, 0.3, M.BLADE);
+  } else if (eq.weapon === 'greatsword') {   // two-handed: long grip, wide guard, long broad blade
+    r.box(V.mad(g, bd, 2), [0.8, 4.6, 0.9], M.IRON, wf);
+    r.box(V.mad(g, bd, 14.2), [11.6, 1.5, 0.45], hasFx(eq, 'blood') ? M.BLOODY : M.BLADE, wf);   // Blooddrinker is red
+    r.cone(V.mad(g, bd, 25.6), V.mad(g, bd, 27.4), 1.2, 0.3, M.BLADE);
+  } else if (eq.weapon === 'flail') {   // short haft, three chain links, spiked ball
+    r.cone(V.mad(g, bd, 1.2), V.mad(g, bd, 7), 0.9, 0.9, M.WOOD);
+    const sag = V.norm(V.add(bd, V.mul(up, -0.5)));
+    for (let k = 1; k <= 3; k++) r.sph(V.mad(V.mad(g, bd, 7), sag, k * 1.6), 0.6, M.IRON, { noShadow: true });
+    const ball = V.mad(V.mad(g, bd, 7), sag, 7.6);
+    r.sph(ball, 2.5, M.IRON);
+    for (const d of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) r.cone(V.mad(ball, d, 2), V.mad(ball, d, 3.8), 0.7, 0.15, M.IRON, { noShadow: true });
+  } else {
+    r.cone(V.mad(g, bd, 1.2), V.mad(g, bd, 13), 0.9, 0.9, M.WOOD);
+    if (eq.weapon === 'axe') {
+      r.box(V.add(V.mad(g, bd, 11.5), V.mul(wide, 3.2)), [2.8, 3.0, 0.5], hasFx(eq, 'maul') ? M.GOLD : M.BLADE, wf);
+    } else if (eq.weapon === 'baxe') {   // round 43: the battle axe: a longer haft, two crescent blades, a spike on top
+      r.cone(V.mad(g, bd, 12), V.mad(g, bd, 15.5), 0.9, 0.9, M.WOOD);
+      for (const s of [-1, 1]) r.group(() => { r.box(V.add(V.mad(g, bd, 13), V.mul(wide, s * 3.4)), [3.6, 2.6, 0.5], M.BLADE, wf); r.cone(V.add(V.mad(g, bd, 13), V.mul(wide, s * 5.6)), V.add(V.mad(g, bd, 17), V.mul(wide, s * 5.2)), 1.1, 0.3, M.BLADE); r.cone(V.add(V.mad(g, bd, 13), V.mul(wide, s * 5.6)), V.add(V.mad(g, bd, 9), V.mul(wide, s * 5.2)), 1.1, 0.3, M.BLADE); });
+      r.cone(V.mad(g, bd, 15.5), V.mad(g, bd, 19), 0.8, 0.2, M.STEEL);
+    } else if (eq.weapon === 'mstar') {   // round 43: the morning star: an iron ball bristling with spikes on a banded haft
+      const hb = V.mad(g, bd, 14.2);
+      r.sph(hb, 3.2, M.IRON);
+      for (const d of [bd, V.mul(bd, -1), wide, V.mul(wide, -1), wf[2], V.mul(wf[2], -1), V.norm(V.add(bd, wide)), V.norm(V.sub(bd, wide))]) r.cone(V.mad(hb, d, 2.6), V.mad(hb, d, 5), 0.8, 0.15, M.STEEL, { noShadow: true });
+      r.cyl(V.mad(g, bd, 9.5), V.mad(g, bd, 10.5), 1.2, M.IRON);
+    } else {
+      r.sph(V.mad(g, bd, 13.5), 3.0, M.IRON);
+      for (const s of [-1, 1]) r.cone(V.mad(g, bd, 13.5), V.add(V.mad(g, bd, 13.5), V.mul(wide, s * 4.2)), 1.2, 0.4, M.IRON);
+    }
+  }
+}
 function heroRig(eq, st) {
   const volley = st.clip === 'volley', skyShot = st.clip === 'skyshot'; if (volley || skyShot) st = Object.assign({}, st, { clip: 'shoot', sky: skyShot });   // round 43: the volley and Rain of Arrows' shot into the sky   // round 43: Multishot draws like a shot, the bow canted over and three arrows on the string
   if (HAT_STYLE[eq.helm]) eq = Object.assign({}, eq, { helm: 'hat_conj', hatV: HAT_STYLE[eq.helm] });   // round a6b: a colored wizard hat
@@ -1210,6 +1256,19 @@ function heroRig(eq, st) {
     handR = V.add(V.mad(ctr, bd, -2.5), V.mul(sideR, 1.2));
     xbL = V.add(V.add(V.mad(ctr, bd, 2.5), V.mul(sideR, -1.0)), V.mul(up, -0.6));
   }
+  // round 106: the barbarian's second weapon (eq.offhand) in the left hand. The combo's second swing is the left
+  // hand's (the right's swing mirrored across the body, the right back on guard); the third and the slam both
+  // together; the whirlwind both blades out; otherwise carried like the right, swinging against it
+  let offH = null, offD = null; const dualL = !!(eq.offhand && eq.offhand !== 'none');
+  const mirP = p => V.sub(p, V.mul(sideR, 2 * V.dot(V.sub(p, J.chest), sideR))), mirD = d => V.sub(d, V.mul(sideR, 2 * V.dot(d, sideR)));
+  if (dualL) {
+    const s2 = J.swingArm * 1.8;
+    if (sw && st.clip === 'attack2') { offH = mirP(handR); offD = mirD(bd); handR = V.add(V.add(J.shR, V.mul(fwd, 4 + s2)), V.add(V.mul(up, -8.5 + Math.max(0, J.swingArm) * 1.2), V.mul(sideR, 2.6))); bd = V.norm(V.add(V.add(V.mul(fwd, 0.55), V.mul(up, 0.7)), V.mul(sideR, 0.45))); }
+    else if ((sw && (st.clip === 'attack3' || st.clip === 'attack4')) || st.clip === 'spin') { offH = mirP(handR); offD = mirD(bd); }
+    else if (st.clip === 'death') { offH = V.add(J.shL, [2, -3, -9]); offD = V.norm([1, -0.4, -0.6]); }
+    else if (st.clip === 'bash' || st.clip === 'channel') { offH = mirP(handR); offD = mirD(bd); }   // the rush: both blades trailing back and low
+    else { offH = V.add(V.add(J.shL, V.mul(fwd, 4 - s2)), V.add(V.mul(up, -8.5 + Math.max(0, -J.swingArm) * 1.2), V.mul(sideR, -2.6))); offD = V.norm(V.add(V.add(V.mul(fwd, 0.55), V.mul(up, 0.7)), V.mul(sideR, -0.45))); }
+  }
   const aR = armTo(J, J.shR, handR, B, 1);
   const armM = plate ? PL : chain ? (scale ? M.GOLD : M.CHAIN) : M.LEATHER;
   const ar = [1.9 + bulk * 0.8, 1.7 + bulk * 0.8, 1.5 + bulk * 0.7, 1.8 + bulk * 0.8];
@@ -1260,6 +1319,7 @@ function heroRig(eq, st) {
   }
   if (acrossG) handL = V.mad(handR, bd, 7.5);   // the other hand further along the haft
   if (bothG) handL = V.mad(handR, bd, -3.2);   // art A8: the other hand below it on the grip
+  if (dualL && offH) handL = offH;   // round 106: the second weapon's hand
   const aL = armTo(J, J.shL, handL, B, -1);
   if (st.clip === 'drink') flask(drinkR ? aR.hand : aL.hand);
   r.cone(J.shL, aL.el, ar[0], ar[1], sleeve); r.cone(aL.el, aL.hand, ar[1], ar[2], foreM);
@@ -1549,47 +1609,11 @@ function heroRig(eq, st) {
     if (st.clip === 'death') deathTip(r, B, st.f, -1);
     return r;
   }
-  r.cone(V.mad(g, bd, -2.6), V.mad(g, bd, 1.2), 0.9, 0.9, M.LEATHER);
-  r.sph(V.mad(g, bd, -3.2), 1.2, M.GOLD);
-  const xWeapon = GEAR_EXTRA.weapon[eq.weapon];
-  if (xWeapon) xWeapon(r, { g, bd, wide, wf, fwd, up, sideR, eq, st });
-  else if (eq.weapon === 'sword') {
-    r.box(V.mad(g, bd, 1.8), [0.7, 3.4, 0.8], M.GOLD, wf);
-    r.box(V.mad(g, bd, 11.4), [9.2, 1.15, 0.4], hasFx(eq, 'ember') ? M.FIREM : M.BLADE, wf);   // Emberbrand glows
-    r.cone(V.mad(g, bd, 20.4), V.mad(g, bd, 21.8), 0.9, 0.3, M.BLADE);
-  } else if (eq.weapon === 'bsword') {   // round 43: the bastard sword: a hand-and-a-half grip, a swept gold guard, a longer blade with a fuller
-    r.cone(V.mad(g, bd, -4.4), V.mad(g, bd, -2.6), 0.9, 0.9, M.LEATHER);
-    for (const s of [-1, 1]) r.cone(V.mad(g, bd, 1.6), V.add(V.mad(g, bd, 3), V.mul(wide, s * 4.2)), 0.8, 0.5, M.GOLD);
-    r.box(V.mad(g, bd, 13), [10.8, 1.25, 0.4], M.BLADE, wf, { mf: p => Math.abs(V.dot(V.sub(p, g), wide)) < 0.35 && V.dot(V.sub(p, g), bd) < 20 ? M.STEEL : 0 });
-    r.cone(V.mad(g, bd, 23.6), V.mad(g, bd, 25), 1.0, 0.3, M.BLADE);
-  } else if (eq.weapon === 'greatsword') {   // two-handed: long grip, wide guard, long broad blade
-    r.box(V.mad(g, bd, 2), [0.8, 4.6, 0.9], M.IRON, wf);
-    r.box(V.mad(g, bd, 14.2), [11.6, 1.5, 0.45], hasFx(eq, 'blood') ? M.BLOODY : M.BLADE, wf);   // Blooddrinker is red
-    r.cone(V.mad(g, bd, 25.6), V.mad(g, bd, 27.4), 1.2, 0.3, M.BLADE);
-  } else if (eq.weapon === 'flail') {   // short haft, three chain links, spiked ball
-    r.cone(V.mad(g, bd, 1.2), V.mad(g, bd, 7), 0.9, 0.9, M.WOOD);
-    const sag = V.norm(V.add(bd, V.mul(up, -0.5)));
-    for (let k = 1; k <= 3; k++) r.sph(V.mad(V.mad(g, bd, 7), sag, k * 1.6), 0.6, M.IRON, { noShadow: true });
-    const ball = V.mad(V.mad(g, bd, 7), sag, 7.6);
-    r.sph(ball, 2.5, M.IRON);
-    for (const d of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) r.cone(V.mad(ball, d, 2), V.mad(ball, d, 3.8), 0.7, 0.15, M.IRON, { noShadow: true });
-  } else {
-    r.cone(V.mad(g, bd, 1.2), V.mad(g, bd, 13), 0.9, 0.9, M.WOOD);
-    if (eq.weapon === 'axe') {
-      r.box(V.add(V.mad(g, bd, 11.5), V.mul(wide, 3.2)), [2.8, 3.0, 0.5], hasFx(eq, 'maul') ? M.GOLD : M.BLADE, wf);
-    } else if (eq.weapon === 'baxe') {   // round 43: the battle axe: a longer haft, two crescent blades, a spike on top
-      r.cone(V.mad(g, bd, 12), V.mad(g, bd, 15.5), 0.9, 0.9, M.WOOD);
-      for (const s of [-1, 1]) r.group(() => { r.box(V.add(V.mad(g, bd, 13), V.mul(wide, s * 3.4)), [3.6, 2.6, 0.5], M.BLADE, wf); r.cone(V.add(V.mad(g, bd, 13), V.mul(wide, s * 5.6)), V.add(V.mad(g, bd, 17), V.mul(wide, s * 5.2)), 1.1, 0.3, M.BLADE); r.cone(V.add(V.mad(g, bd, 13), V.mul(wide, s * 5.6)), V.add(V.mad(g, bd, 9), V.mul(wide, s * 5.2)), 1.1, 0.3, M.BLADE); });
-      r.cone(V.mad(g, bd, 15.5), V.mad(g, bd, 19), 0.8, 0.2, M.STEEL);
-    } else if (eq.weapon === 'mstar') {   // round 43: the morning star: an iron ball bristling with spikes on a banded haft
-      const hb = V.mad(g, bd, 14.2);
-      r.sph(hb, 3.2, M.IRON);
-      for (const d of [bd, V.mul(bd, -1), wide, V.mul(wide, -1), wf[2], V.mul(wf[2], -1), V.norm(V.add(bd, wide)), V.norm(V.sub(bd, wide))]) r.cone(V.mad(hb, d, 2.6), V.mad(hb, d, 5), 0.8, 0.15, M.STEEL, { noShadow: true });
-      r.cyl(V.mad(g, bd, 9.5), V.mad(g, bd, 10.5), 1.2, M.IRON);
-    } else {
-      r.sph(V.mad(g, bd, 13.5), 3.0, M.IRON);
-      for (const s of [-1, 1]) r.cone(V.mad(g, bd, 13.5), V.add(V.mad(g, bd, 13.5), V.mul(wide, s * 4.2)), 1.2, 0.4, M.IRON);
-    }
+  meleeWeapon(r, eq, g, bd, wide, wf, fwd, up, sideR, st);   // (round 106: a function, so the barbarian's off hand can hold one too)
+  if (dualL && offD) {   // round 106: the off hand's weapon
+    const gL = aL.hand, wL = V.norm(V.cross(offD, V.len(V.cross(offD, up)) > 0.3 ? up : fwd)), eqL = Object.assign({}, eq, { weapon: eq.offhand, ench: eq.offEnch || '' });
+    meleeWeapon(r, eqL, gL, offD, wL, [offD, wL, V.cross(offD, wL)], fwd, up, sideR, st);
+    if (eqL.ench) enchantGlow(r, eqL, gL, offD, wL, st);
   }
   if (eq.ench) enchantGlow(r, eq, g, bd, wide, st);   // round 43
   if (st.clip === 'spin') {   // round 72b: the whirlwind drags a wide sweep behind the blade (the turn carries it round)
@@ -1598,7 +1622,9 @@ function heroRig(eq, st) {
   }
   if (sw && sw.smear && st.prev) {
     const reach = (sw.r || 6.5) + (WEAPON_LEN[eq.weapon] || GEAR_LEN[eq.weapon] || 16);
-    smearArc(r, pivot, F, U, bladeA(st.prev), bladeA(sw), reach - 9, reach, eq.holy ? HOLY_SMEAR : null, eq.holy ? 8.5 : undefined);   // round 98: the paladin's swings trail gold light
+    const mL = dualL && st.clip === 'attack2', both = dualL && (st.clip === 'attack3' || st.clip === 'attack4');   // round 106: the left hand's swing trails on its own side; a both-hands blow trails on both
+    if (!mL) smearArc(r, pivot, F, U, bladeA(st.prev), bladeA(sw), reach - 9, reach, eq.holy ? HOLY_SMEAR : null, eq.holy ? 8.5 : undefined);   // round 98: the paladin's swings trail gold light
+    if (mL || both) smearArc(r, mirP(pivot), mirD(F), mirD(U), bladeA(st.prev), bladeA(sw), reach - 9, reach, BARB_SMEAR, undefined);
   }
   if (st.clip === 'death') deathTip(r, B, st.f, -1);
   return r;
