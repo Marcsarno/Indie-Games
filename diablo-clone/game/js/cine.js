@@ -812,10 +812,10 @@ function cineSkip() {   // SKIP: what the skipped lines would have done still ha
   }
   if (C.kind === 'actEnd') cineEnd(); else cineDrop(1.5);
 }
-function cineRoll() { const C = G.cine; if (C.rollT !== null) return; C.rollT = C.st; sfx('clatter'); }
+function cineRoll() { const C = G.cine; if (C.rollT !== null) return; C.rollT = C.st; C.dieHits = 0; sfx('swing', 0.5); }   // (round 109: the throw whooshes; the clatter is on the landing)
 function updateCine(dt) {
   const C = G.cine; if (!C) return;
-  C.pt += dt; if (C.fi > 0) C.fi -= dt; if (C.shake > 0) C.shake -= dt; if (C.flash > 0) C.flash -= dt; if (C.cheer > 0) C.cheer -= dt;
+  C.pt += dt; if (C.fi > 0) C.fi -= dt; if (C.shake > 0) C.shake -= dt; if (C.wobble > 0) C.wobble -= dt; if (C.flash > 0) C.flash -= dt; if (C.cheer > 0) C.cheer -= dt;
   C.lt = Math.min(1, C.lt + dt / 0.7); if (C.fxPrev) { C.fxPrev.t += dt; C.fxPrev.st += dt; if (C.fxPrev.t > 0.5) C.fxPrev = null; }
   const barsTo = C.kind === 'resume' || C.ph === 'drop' || (C.ph === 'lift' && C.pt < C.hold) ? 0 : 1; C.bars = clamp(C.bars + clamp(barsTo - C.bars, -dt * 1.4, dt * 1.8), 0, 1);
   if (C.ph === 'shots') {
@@ -827,7 +827,8 @@ function updateCine(dt) {
     if (s.roll) {
       if (C.rollT === null && C.st > 4.5) cineRoll();
       if (C.rollT !== null) { const T = C.st - C.rollT;
-        if (!C.landed && T > 1.15) { C.landed = true; C.shake = 0.3; C.cheer = 0.7; sfx('crit'); sfx('thunk'); s.text = 'A NATURAL TWENTY. OF COURSE.'; C.chars = 0; C.total = s.text.length; }
+        for (let n = (C.dieHits || 0); n < 3 && T >= DIE_HIT[n]; n++) { C.dieHits = n + 1; sfx('thunk', [1, 0.6, 0.35][n]); if (n === 0) sfx('clatter', 0.7); C.shake = Math.max(C.shake || 0, [0.16, 0.08, 0.04][n]); C.wobble = Math.max(C.wobble || 0, [0.4, 0.22, 0.1][n]); }   // (round 109: each landing hits the table)
+        if (!C.landed && T > DIE_END) { C.landed = true; C.shake = 0.12; C.cheer = 0.7; sfx('crit'); s.text = 'A NATURAL TWENTY. OF COURSE.'; C.chars = 0; C.total = s.text.length; }
         if (T > 3) cineNext(); }
     } else if (!s.wait && C.st >= s.dur) cineNext();
   } else if (C.ph === 'lift' || C.ph === 'drop') {
@@ -885,19 +886,47 @@ function cineMinis() {   // the three miniatures at your end of the table; yours
       if (k >= 0) { clip = bow ? 'shoot' : 'attack'; f = k; } hop = Math.round(Math.max(0, Math.sin((G.t - TITLE.pickT) * 9)) * 6 * Math.max(0, 1 - (G.t - TITLE.pickT) / 0.7));
     }
     if (on) { cFl = 0; const pulse = Math.floor(G.t * 3) % 2; for (let q = 0; q < 64; q++) { const a = q / 64 * 6.283, x = Math.round(m.x + Math.cos(a) * 18), y = Math.round(m.y + Math.sin(a) * 8); cP(x, y, (pulse ? 51 : 50) | EMIS); cP(x + 1, y, (pulse ? 50 : 49) | EMIS); } }
-    const sp = getSprite('hero', look, 1, clip, f, ent, 1), X0 = m.x - sp.ax, Y0 = m.y - 3 - hop - sp.ay; cFl = on ? 6 : 5;
+    const wob = G.cine && G.cine.wobble > 0 ? G.cine.wobble : 0, wx = wob ? Math.round(Math.sin(G.t * 70 + m.x) * wob * 4) : 0; hop += wob ? Math.round(Math.abs(Math.sin(G.t * 45 + m.x)) * wob * 5) : 0;   // (round 109: the die's landing rattles the miniatures)
+    const sp = getSprite('hero', look, 1, clip, f, ent, 1), X0 = m.x - sp.ax + wx, Y0 = m.y - 3 - hop - sp.ay; cFl = on ? 6 : 5;
     for (let j = 0; j < sp.h; j++) for (let i = 0; i < sp.w; i++) { const v = sp.data[j * sp.w + i]; if (v) cP(X0 + i, Y0 + j, v); }
   }
   budgetOn(s);
 }
-function cineDie(T) {   // your die: thrown from your seat up the table, big as it leaves your hand, two bounces, a twenty
-  const g = cGeo, k = clamp(T / 1.15, 0, 1), p = 1 - (1 - k) * (1 - k);
-  const x0 = g.cx - 30, y0 = cH + 70, x1 = g.cx + 40, y1 = g.miniY - 44;
-  const hop = k < 0.6 ? Math.sin(k / 0.6 * Math.PI) * 130 : k < 0.86 ? Math.sin((k - 0.6) / 0.26 * Math.PI) * 26 : k < 1 ? Math.sin((k - 0.86) / 0.14 * Math.PI) * 7 : 0;
-  const r = Math.round(11 + 44 * Math.pow(1 - p, 1.5)), x = Math.round(x0 + (x1 - x0) * p), y = Math.round(y0 + (y1 - y0) * p - hop);
-  cFl = 0; cEll(x, Math.round(y0 + (y1 - y0) * p) + r - 2, Math.round(r * 0.9), Math.max(2, Math.round(r * 0.25)), 2);   // its shadow on the table
-  cFl = 6; cDie(x, y, r, k >= 1 ? '20' : String(1 + (Math.floor(T * 24) * 7) % 19), Math.max(1, Math.round(r / 10)));
-  if (k >= 1 && T < 1.6) { cFl = 0; for (let a = 0; a < 12; a++) { const q = 14 + (T - 1.15) * 120; cR(Math.round(x + Math.cos(a * 0.524) * q), Math.round(y + Math.sin(a * 0.524) * q * 0.55), 3, 3, (a % 2 ? 18 : 51) | EMIS); } }
+// round 109 (the user: it clipped through the miniatures and never felt like it hit the table): thrown from
+// your seat into the open table IN FRONT of the miniatures (between two bases), so it never crosses them; it
+// falls into a hard first impact (squash, thud, the table shakes, the miniatures wobble), two smaller
+// bounces, a short tumble that slows (the faces turn slower and slower), a rock, and a twenty
+const DIE_HIT = [0.42, 0.74, 0.95], DIE_END = 1.15;
+function dieTrack(T) {   // ground position (x, y on the table), height z, squash (0..1) at time T
+  const g = cGeo, L = (a, b, u) => a + (b - a) * u, ez = u => 1 - (1 - u) * (1 - u);
+  const P = [[g.cx + 26, cH + 46], [g.cx + 50, g.miniY + 34], [g.cx + 58, g.miniY + 27], [g.cx + 63, g.miniY + 23], [g.cx + 65, g.miniY + 22]];
+  let x, y, z = 0, sq = 0;
+  if (T < DIE_HIT[0]) { const u = T / DIE_HIT[0]; x = L(P[0][0], P[1][0], u); y = L(P[0][1], P[1][1], u); z = (1 - u) * 46 + 64 * Math.sin(Math.PI * u); }
+  else if (T < DIE_HIT[1]) { const u = (T - DIE_HIT[0]) / (DIE_HIT[1] - DIE_HIT[0]); x = L(P[1][0], P[2][0], u); y = L(P[1][1], P[2][1], u); z = 20 * Math.sin(Math.PI * u); }
+  else if (T < DIE_HIT[2]) { const u = (T - DIE_HIT[1]) / (DIE_HIT[2] - DIE_HIT[1]); x = L(P[2][0], P[3][0], u); y = L(P[2][1], P[3][1], u); z = 7 * Math.sin(Math.PI * u); }
+  else { const u = Math.min(1, (T - DIE_HIT[2]) / (DIE_END - DIE_HIT[2])); x = L(P[3][0], P[4][0], ez(u)); y = L(P[3][1], P[4][1], ez(u)); }
+  for (let n = 0; n < 3; n++) { const d = T - DIE_HIT[n]; if (d >= 0 && d < 0.07) sq = Math.max(sq, (1 - d / 0.07) * (n === 0 ? 1 : n === 1 ? 0.6 : 0.35)); }
+  return { x, y, z, sq, rock: T > DIE_HIT[2] && T < DIE_END + 0.25 ? Math.sin((T - DIE_HIT[2]) * 30) * Math.max(0, 1 - (T - DIE_HIT[2]) / 0.45) : 0 };
+}
+function cDieSq(cx, cy, r, label, z, ramp, sq, rock) {   // the die squashed on impact (wider, lower) and rocking as it settles
+  const ry = Math.max(3, Math.round(r * (1 - 0.28 * sq))), rx = r * (1 + 0.22 * sq), lean = rock * 0.18;
+  for (let pass = 0; pass < 2; pass++) { const R = pass ? ry : ry + 2, RX = pass ? rx : rx + 2;
+    for (let y = -R; y <= R; y++) { const hw = Math.round(RX * 0.88 * (Math.abs(y) < R / 2 ? 1 : 1 - (Math.abs(y) - R / 2) / (R / 2) * 0.98)), sh = Math.round(y * lean);
+      for (let x = -hw; x <= hw; x++) cP(cx + x + sh, cy + y, !pass ? BLK : x + y * 0.8 < -r * 0.45 ? ramp[4] : x + y * 0.8 > r * 0.55 ? ramp[2] : ramp[3]); } }
+  if (label) cText(label, cx - Math.floor((label.length * 4 - 1) * z / 2), cy - Math.floor(5 * z / 2), 27, z);
+}
+function cineDie(T) {
+  const g = cGeo, D = dieTrack(T), yf = g.miniY + 22, near = clamp((D.y - yf) / (cH + 46 - yf), 0, 1);
+  const r = Math.round(11 + 26 * near + D.z * 0.05);
+  // its shadow on the table: tight and dark when it is close to the table, wide and faint high up
+  cFl = 0; const lift = Math.min(1, D.z / 70); cEll(Math.round(D.x + D.z * 0.18), Math.round(D.y + r * 0.55), Math.max(3, Math.round(r * (0.95 - 0.35 * lift))), Math.max(2, Math.round(r * (0.32 - 0.12 * lift))), 2);
+  const phase = T >= DIE_END ? 0 : 26 * T - 11 * T * T, face = T >= DIE_END ? '20' : String(1 + (Math.floor(phase) * 7) % 19);
+  cFl = 6; cDieSq(Math.round(D.x), Math.round(D.y - D.z), r, face, Math.max(1, Math.round(r / 10)), RED, D.sq, D.rock);
+  if (T >= DIE_END && T < 1.75) {   // the twenty: a ring of gold and red sparks, a glow round the die
+    cFl = 0; const q = 12 + (T - DIE_END) * 110;
+    for (let a = 0; a < 16; a++) cR(Math.round(D.x + Math.cos(a * 0.3927) * q), Math.round(D.y + Math.sin(a * 0.3927) * q * 0.5), 3, 3, (a % 2 ? 18 : 51) | EMIS);
+    if (T < 1.45) for (let a = 0; a < 40; a++) { const t2 = a / 40 * 6.283; cP(Math.round(D.x + Math.cos(t2) * (r + 4)), Math.round(D.y + Math.sin(t2) * (r + 4)), 51 | EMIS); }
+  }
 }
 function cineDynamic(C) {
   const g = cGeo, t = G.t, mix = C.lA === C.lB ? 0 : C.lt, wN = C.lB === 'N' ? (C.lA === 'N' ? 1 : C.lt) : C.lA === 'N' ? 1 - C.lt : 0, green = C.lB === 'G' ? mix || 1 : C.lA === 'G' ? 1 - mix : 0;
