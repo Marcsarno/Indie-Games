@@ -1,0 +1,346 @@
+<title>Paladin Sound Picks</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  /* the game's crypt colors, one dark look (same frame as the other comparison pages) */
+  /* layout: one narrow column, one section per part with its picture first */
+  :root {
+    --crypt: #0d0908; --panel: #18110e; --ember: #c9a77c; --bone: #e8dcc4; --dim: #8a7660; --rule: #2e221b;
+    --display: 'Cinzel', 'Trajan Pro', Georgia, serif; --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { background: var(--crypt); color: var(--bone); }
+  body { font: 16px/1.5 var(--body); margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+  section { display: grid; gap: 12px; min-width: 0; }
+  h1 { font: 600 1.6rem/1.2 var(--display); color: var(--ember); margin: 0 0 6px; letter-spacing: 0.04em; text-wrap: balance; }
+  h2 { font: 600 1.05rem/1.3 var(--display); color: var(--ember); margin: 0; letter-spacing: 0.05em; text-wrap: balance; }
+  p, ul, ol { margin: 0; max-width: 64ch; }
+  ul, ol { padding-left: 1.2em; display: grid; gap: 4px; }
+  .lede { color: var(--dim); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  .frame { background: var(--panel); border: 1px solid var(--rule); padding: 8px; }
+  .frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .frame img.smooth { image-rendering: auto; }
+  figcaption { color: var(--dim); font-size: 0.92rem; }
+  .tw { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--dim); font-weight: 600; }
+</style>
+
+<style>
+  .ev { display: grid; gap: 8px; padding: 12px; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; }
+  .ev h3 { font: 600 1rem/1.3 var(--body); margin: 0; color: var(--bone); }
+  .ev .d { color: var(--dim); font-size: 0.92rem; }
+  .opts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .opt { display: grid; gap: 4px; justify-items: stretch; }
+  .opt button.play { font: 600 0.95rem var(--body); color: var(--bone); background: #241812; border: 1px solid var(--rule); border-radius: 4px; padding: 10px 4px; min-height: 44px; }
+  .opt button.play.on { border-color: var(--ember); color: #f4dfae; }
+  .opt label { display: flex; gap: 6px; align-items: center; justify-content: center; font-size: 0.85rem; color: var(--dim); padding: 6px 0; min-height: 32px; }
+  .opt input { width: 18px; height: 18px; accent-color: #c9a77c; }
+  .credit { color: var(--dim); font-size: 0.78rem; line-height: 1.3; }
+  .status { position: sticky; top: 0; z-index: 2; background: var(--crypt); padding: 8px 0; border-bottom: 1px solid var(--rule); color: var(--dim); font-size: 0.92rem; }
+  .status b { color: var(--ember); font-weight: 600; }
+  h2.g { margin-top: 8px; }
+  #summary { font: 13px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; color: var(--bone); background: var(--panel); border: 1px solid var(--rule); padding: 10px; border-radius: 4px; }
+</style>
+<main>
+  <header>
+    <h1>Paladin Sound Picks</h1>
+    <p class="lede">The Paladin borrowed everyone else's sounds: mage zaps, the portal hum, the level-up chime, a tiny clink for a giant bell. Here is a sound of his own for each of his 16 moments. NOW is what he plays today; the letters are new recordings from free packs, plus a few sounds the game already has where they fit (marked). Tap to listen, then pick. Pick NOW to keep one as it is. Your picks save as you go, and I read them from here.</p>
+    <p class="lede">Headphones or the phone held close help. Everything is level-matched, so judge the character of each sound, not its loudness: I set in-game volumes after you pick.</p>
+  </header>
+  <p class="status" id="status">Loading your picks&hellip;</p>
+  <section>
+    <h2 class="g">His hammer</h2>
+    <div class="ev" data-key="palSwing">
+      <h3>Hammer swing</h3>
+      <p class="d">Every swing of the war hammer (the first two of the combo)</p>
+      <div class="opts">
+        <div class="opt"><button class="play" data-src="a/palSwing-now.mp3" aria-label="Play NOW for Hammer swing">&#9654; NOW</button><label><input type="radio" name="palSwing" value="now"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palSwing-a.mp3" aria-label="Play A for Hammer swing">&#9654; A</button><label><input type="radio" name="palSwing" value="a"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palSwing-b.mp3" aria-label="Play B for Hammer swing">&#9654; B</button><label><input type="radio" name="palSwing" value="b"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palSwing-c.mp3" aria-label="Play C for Hammer swing">&#9654; C</button><label><input type="radio" name="palSwing" value="c"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palSwing-d.mp3" aria-label="Play D for Hammer swing">&#9654; D</button><label><input type="radio" name="palSwing" value="d"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palSwing-e.mp3" aria-label="Play E for Hammer swing">&#9654; E</button><label><input type="radio" name="palSwing" value="e"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palSwing-f.mp3" aria-label="Play F for Hammer swing">&#9654; F</button><label><input type="radio" name="palSwing" value="f"> pick</label></div>
+      </div>
+      <p class="credit">NOW: today's swing; A: a real heavy axe swing &middot; Medieval Weapon Impacts / Textures by StillNorthMedia (CC0); B: a long polearm sweep &middot; Medieval Weapon Impacts / Textures by StillNorthMedia (CC0); C: a heavy metal swing &middot; Metal Interactions by qubodup (CC0); D: designed heavy swing &middot; Fantasy SFX Pack Vol 1 by JC Sounds (CC-BY 4.0); E: the axe swing with his cloak snapping under it (StillNorthMedia + vinrax) &middot; layered here from the packs named; F: Already in the game: the Barbarian&#x27;s heavy swing</p>
+    </div>
+    <div class="ev" data-key="palHit">
+      <h3>Hammer lands</h3>
+      <p class="d">The hammer striking a foe, with its burst of light</p>
+      <div class="opts">
+        <div class="opt"><button class="play" data-src="a/palHit-now.mp3" aria-label="Play NOW for Hammer lands">&#9654; NOW</button><label><input type="radio" name="palHit" value="now"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palHit-a.mp3" aria-label="Play A for Hammer lands">&#9654; A</button><label><input type="radio" name="palHit" value="a"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palHit-b.mp3" aria-label="Play B for Hammer lands">&#9654; B</button><label><input type="radio" name="palHit" value="b"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palHit-c.mp3" aria-label="Play C for Hammer lands">&#9654; C</button><label><input type="radio" name="palHit" value="c"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palHit-d.mp3" aria-label="Play D for Hammer lands">&#9654; D</button><label><input type="radio" name="palHit" value="d"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palHit-e.mp3" aria-label="Play E for Hammer lands">&#9654; E</button><label><input type="radio" name="palHit" value="e"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palHit-f.mp3" aria-label="Play F for Hammer lands">&#9654; F</button><label><input type="radio" name="palHit" value="f"> pick</label></div>
+      </div>
+      <p class="credit">NOW: today's hit + thud; A: a real mace on steel, with ring &middot; Medieval Weapon Impacts / Textures by StillNorthMedia (CC0); B: a real hammer on metal &middot; Fantasy Sound Effects (Tinysized) by vehicle (CC0); C: designed heavy metal hit &middot; Fantasy SFX Pack Vol 1 by JC Sounds (CC-BY 4.0); D: mace on steel + a body blow underneath (StillNorthMedia + qubodup) &middot; layered here from the packs named; E: mace on steel + a holy shimmer (StillNorthMedia + qubodup) &middot; layered here from the packs named; F: Already in the game: the game&#x27;s critical-hit thump</p>
+    </div>
+    <div class="ev" data-key="palShot">
+      <h3>Third swing: hammer of light</h3>
+      <p class="d">The combo finisher: a small hammer of light flies out</p>
+      <div class="opts">
+        <div class="opt"><button class="play" data-src="a/palShot-now.mp3" aria-label="Play NOW for Third swing: hammer of light">&#9654; NOW</button><label><input type="radio" name="palShot" value="now"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palShot-a.mp3" aria-label="Play A for Third swing: hammer of light">&#9654; A</button><label><input type="radio" name="palShot" value="a"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palShot-b.mp3" aria-label="Play B for Third swing: hammer of light">&#9654; B</button><label><input type="radio" name="palShot" value="b"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palShot-c.mp3" aria-label="Play C for Third swing: hammer of light">&#9654; C</button><label><input type="radio" name="palShot" value="c"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palShot-d.mp3" aria-label="Play D for Third swing: hammer of light">&#9654; D</button><label><input type="radio" name="palShot" value="d"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palShot-e.mp3" aria-label="Play E for Third swing: hammer of light">&#9654; E</button><label><input type="radio" name="palShot" value="e"> pick</label></div>
+      </div>
+      <p class="credit">NOW: today's whoomp; A: a bolt of holy energy &middot; Magic Smite by spookymodem (CC-BY 3.0); B: a spell launching &middot; Fantasy SFX Pack Vol 1 by JC Sounds (CC-BY 4.0); C: a bursting swoosh &middot; Free Cinematic Sound Effects by Gregor Quendel (CC-BY 4.0); D: heavy swing + holy shimmer (StillNorthMedia + qubodup) &middot; layered here from the packs named; E: Already in the game: the mage&#x27;s missile whoosh</p>
+    </div>
+    <div class="ev" data-key="palPillar">
+      <h3>Light falls on a foe</h3>
+      <p class="d">Archangel: pillars of light fall on what his waves touch</p>
+      <div class="opts">
+        <div class="opt"><button class="play" data-src="a/palPillar-now.mp3" aria-label="Play NOW for Light falls on a foe">&#9654; NOW</button><label><input type="radio" name="palPillar" value="now"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palPillar-a.mp3" aria-label="Play A for Light falls on a foe">&#9654; A</button><label><input type="radio" name="palPillar" value="a"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palPillar-b.mp3" aria-label="Play B for Light falls on a foe">&#9654; B</button><label><input type="radio" name="palPillar" value="b"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palPillar-c.mp3" aria-label="Play C for Light falls on a foe">&#9654; C</button><label><input type="radio" name="palPillar" value="c"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palPillar-d.mp3" aria-label="Play D for Light falls on a foe">&#9654; D</button><label><input type="radio" name="palPillar" value="d"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palPillar-e.mp3" aria-label="Play E for Light falls on a foe">&#9654; E</button><label><input type="radio" name="palPillar" value="e"> pick</label></div>
+      </div>
+      <p class="credit">NOW: today's zap; A: holy bolt, cut short &middot; Magic Smite by spookymodem (CC-BY 3.0); B: a bright chime &middot; Fantasy SFX Pack Vol 1 by JC Sounds (CC-BY 4.0); C: Elemental Spell by qubodup (CC-BY-SA 3.0); D: glitter &middot; Shimmer glitter magic by qubodup (CC-BY 3.0); E: a chime struck over a soft thump (JC Sounds + qubodup) &middot; layered here from the packs named</p>
+    </div>
+  </section>
+  <section>
+    <h2 class="g">His skills</h2>
+    <div class="ev" data-key="palThrow">
+      <h3>Hammer of Light</h3>
+      <p class="d">He hurls a spinning hammer of light that comes back to him</p>
+      <div class="opts">
+        <div class="opt"><button class="play" data-src="a/palThrow-now.mp3" aria-label="Play NOW for Hammer of Light">&#9654; NOW</button><label><input type="radio" name="palThrow" value="now"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palThrow-a.mp3" aria-label="Play A for Hammer of Light">&#9654; A</button><label><input type="radio" name="palThrow" value="a"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palThrow-b.mp3" aria-label="Play B for Hammer of Light">&#9654; B</button><label><input type="radio" name="palThrow" value="b"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palThrow-c.mp3" aria-label="Play C for Hammer of Light">&#9654; C</button><label><input type="radio" name="palThrow" value="c"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palThrow-d.mp3" aria-label="Play D for Hammer of Light">&#9654; D</button><label><input type="radio" name="palThrow" value="d"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palThrow-e.mp3" aria-label="Play E for Hammer of Light">&#9654; E</button><label><input type="radio" name="palThrow" value="e"> pick</label></div>
+      </div>
+      <p class="credit">NOW: today's heavySwing + whoomp; A: a bursting swoosh &middot; Free Cinematic Sound Effects by Gregor Quendel (CC-BY 4.0); B: an attack blessing &middot; 8 Heals and Buffs SFX by leohpaz (CC-BY 4.0); C: a spell launching &middot; Fantasy SFX Pack Vol 1 by JC Sounds (CC-BY 4.0); D: a spear sweep + holy shimmer (StillNorthMedia + qubodup) &middot; layered here from the packs named; E: heavy swing + magic smite (StillNorthMedia + spookymodem) &middot; layered here from the packs named</p>
+    </div>
+    <div class="ev" data-key="consecrate">
+      <h3>Consecrate</h3>
+      <p class="d">He blesses the ground around him (the gold circle)</p>
+      <div class="opts">
+        <div class="opt"><button class="play" data-src="a/consecrate-now.mp3" aria-label="Play NOW for Consecrate">&#9654; NOW</button><label><input type="radio" name="consecrate" value="now"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/consecrate-a.mp3" aria-label="Play A for Consecrate">&#9654; A</button><label><input type="radio" name="consecrate" value="a"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/consecrate-b.mp3" aria-label="Play B for Consecrate">&#9654; B</button><label><input type="radio" name="consecrate" value="b"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/consecrate-c.mp3" aria-label="Play C for Consecrate">&#9654; C</button><label><input type="radio" name="consecrate" value="c"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/consecrate-d.mp3" aria-label="Play D for Consecrate">&#9654; D</button><label><input type="radio" name="consecrate" value="d"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/consecrate-e.mp3" aria-label="Play E for Consecrate">&#9654; E</button><label><input type="radio" name="consecrate" value="e"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/consecrate-f.mp3" aria-label="Play F for Consecrate">&#9654; F</button><label><input type="radio" name="consecrate" value="f"> pick</label></div>
+      </div>
+      <p class="credit">NOW: today's crit + levelUp; A: a defense blessing &middot; 8 Heals and Buffs SFX by leohpaz (CC-BY 4.0); B: a blessing &middot; Spell Sounds Starter Pack by p0ss (CC-BY-SA 3.0); C: a ward rising &middot; Fantasy SFX Pack Vol 1 by JC Sounds (CC-BY 4.0); D: a full heal &middot; Magic SFX Sample by virix (CC-BY 3.0); E: the hammer struck down + voices swell (StillNorthMedia + qubodup) &middot; layered here from the packs named; F: a blessing over a choir swell (p0ss + cesisco) &middot; layered here from the packs named</p>
+    </div>
+    <div class="ev" data-key="consecTick">
+      <h3>Consecrated ground pulse</h3>
+      <p class="d">The blessed ground pulsing as it burns foes (repeats, so it should be soft)</p>
+      <div class="opts">
+        <div class="opt"><button class="play" data-src="a/consecTick-now.mp3" aria-label="Play NOW for Consecrated ground pulse">&#9654; NOW</button><label><input type="radio" name="consecTick" value="now"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/consecTick-a.mp3" aria-label="Play A for Consecrated ground pulse">&#9654; A</button><label><input type="radio" name="consecTick" value="a"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/consecTick-b.mp3" aria-label="Play B for Consecrated ground pulse">&#9654; B</button><label><input type="radio" name="consecTick" value="b"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/consecTick-c.mp3" aria-label="Play C for Consecrated ground pulse">&#9654; C</button><label><input type="radio" name="consecTick" value="c"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/consecTick-d.mp3" aria-label="Play D for Consecrated ground pulse">&#9654; D</button><label><input type="radio" name="consecTick" value="d"> pick</label></div>
+      </div>
+      <p class="credit">NOW: today's clink; A: a soft heal sparkle &middot; Cure Magic by someoneman (CC0); B: glitter &middot; Shimmer glitter magic by qubodup (CC-BY 3.0); C: a glass bell &middot; Glass Bell Sounds by varkalandar (CC-BY 3.0); D: Replenish Life Force by qubodup (CC-BY 3.0)</p>
+    </div>
+    <div class="ev" data-key="judgeCall">
+      <h3>Judgment: the sky opens</h3>
+      <p class="d">The tear in the sky as his hammer begins to fall (Judgment and Wrath of Heaven)</p>
+      <div class="opts">
+        <div class="opt"><button class="play" data-src="a/judgeCall-now.mp3" aria-label="Play NOW for Judgment: the sky opens">&#9654; NOW</button><label><input type="radio" name="judgeCall" value="now"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/judgeCall-a.mp3" aria-label="Play A for Judgment: the sky opens">&#9654; A</button><label><input type="radio" name="judgeCall" value="a"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/judgeCall-b.mp3" aria-label="Play B for Judgment: the sky opens">&#9654; B</button><label><input type="radio" name="judgeCall" value="b"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/judgeCall-c.mp3" aria-label="Play C for Judgment: the sky opens">&#9654; C</button><label><input type="radio" name="judgeCall" value="c"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/judgeCall-d.mp3" aria-label="Play D for Judgment: the sky opens">&#9654; D</button><label><input type="radio" name="judgeCall" value="d"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/judgeCall-e.mp3" aria-label="Play E for Judgment: the sky opens">&#9654; E</button><label><input type="radio" name="judgeCall" value="e"> pick</label></div>
+      </div>
+      <p class="credit">NOW: today's cry + portal; A: a charge-up &middot; 8 Magic Attacks by leohpaz (CC-BY 4.0); B: a summoning &middot; Free Cinematic Sound Effects by Gregor Quendel (CC-BY 4.0); C: a thunderclap &middot; Thunder by jerimee (CC-BY 3.0); D: voices + a charge-up (qubodup + leohpaz) &middot; layered here from the packs named; E: a cannon charging &middot; Doomsday Laser Cannon by tad (CC0)</p>
+    </div>
+    <div class="ev" data-key="judgeLand">
+      <h3>Judgment: the hammer lands</h3>
+      <p class="d">The giant hammer from the sky smashing down (Wrath of Heaven: three of them)</p>
+      <div class="opts">
+        <div class="opt"><button class="play" data-src="a/judgeLand-now.mp3" aria-label="Play NOW for Judgment: the hammer lands">&#9654; NOW</button><label><input type="radio" name="judgeLand" value="now"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/judgeLand-a.mp3" aria-label="Play A for Judgment: the hammer lands">&#9654; A</button><label><input type="radio" name="judgeLand" value="a"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/judgeLand-b.mp3" aria-label="Play B for Judgment: the hammer lands">&#9654; B</button><label><input type="radio" name="judgeLand" value="b"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/judgeLand-c.mp3" aria-label="Play C for Judgment: the hammer lands">&#9654; C</button><label><input type="radio" name="judgeLand" value="c"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/judgeLand-d.mp3" aria-label="Play D for Judgment: the hammer lands">&#9654; D</button><label><input type="radio" name="judgeLand" value="d"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/judgeLand-e.mp3" aria-label="Play E for Judgment: the hammer lands">&#9654; E</button><label><input type="radio" name="judgeLand" value="e"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/judgeLand-f.mp3" aria-label="Play F for Judgment: the hammer lands">&#9654; F</button><label><input type="radio" name="judgeLand" value="f"> pick</label></div>
+      </div>
+      <p class="credit">NOW: today's crit + meteor; A: a real thunder strike, very close &middot; Thunder, Very Close, Rain, 01 by InspectorJ (CC-BY 3.0); B: a big explosion &middot; 2 High Quality Explosions by Michel Baradari (CC-BY 3.0); C: a metallic explosion &middot; Metal Clang Explosions Zing by qubodup (CC0); D: a heavy designed impact &middot; Free Cinematic Sound Effects by Gregor Quendel (CC-BY 4.0); E: thunder + mace on steel + a low boom (InspectorJ + StillNorthMedia + varkalandar) &middot; layered here from the packs named; F: Already in the game: the mage&#x27;s meteor</p>
+    </div>
+    <div class="ev" data-key="seraphRise">
+      <h3>Seraph&#x27;s Fall: rising</h3>
+      <p class="d">Up in a column of light, the wings snapping open at the top</p>
+      <div class="opts">
+        <div class="opt"><button class="play" data-src="a/seraphRise-now.mp3" aria-label="Play NOW for Seraph&#x27;s Fall: rising">&#9654; NOW</button><label><input type="radio" name="seraphRise" value="now"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/seraphRise-a.mp3" aria-label="Play A for Seraph&#x27;s Fall: rising">&#9654; A</button><label><input type="radio" name="seraphRise" value="a"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/seraphRise-b.mp3" aria-label="Play B for Seraph&#x27;s Fall: rising">&#9654; B</button><label><input type="radio" name="seraphRise" value="b"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/seraphRise-c.mp3" aria-label="Play C for Seraph&#x27;s Fall: rising">&#9654; C</button><label><input type="radio" name="seraphRise" value="c"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/seraphRise-d.mp3" aria-label="Play D for Seraph&#x27;s Fall: rising">&#9654; D</button><label><input type="radio" name="seraphRise" value="d"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/seraphRise-e.mp3" aria-label="Play E for Seraph&#x27;s Fall: rising">&#9654; E</button><label><input type="radio" name="seraphRise" value="e"> pick</label></div>
+      </div>
+      <p class="credit">NOW: today's whoomp + heavySwing + portal; A: one powerful wing beat &middot; Dragon Flap by vishwajai (CC0); B: a wing beat + voices (vishwajai + qubodup) &middot; layered here from the packs named; C: a resurrection swell &middot; 8 Heals and Buffs SFX by leohpaz (CC-BY 4.0); D: a radiant rise &middot; Fantasy SFX Pack Vol 1 by JC Sounds (CC-BY 4.0); E: a rising swoosh into a wing snap (Gregor Quendel + vishwajai) &middot; layered here from the packs named</p>
+    </div>
+    <div class="ev" data-key="seraphDive">
+      <h3>Seraph&#x27;s Fall: crashing down</h3>
+      <p class="d">He dives and hits the ground in a burst of light</p>
+      <div class="opts">
+        <div class="opt"><button class="play" data-src="a/seraphDive-now.mp3" aria-label="Play NOW for Seraph&#x27;s Fall: crashing down">&#9654; NOW</button><label><input type="radio" name="seraphDive" value="now"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/seraphDive-a.mp3" aria-label="Play A for Seraph&#x27;s Fall: crashing down">&#9654; A</button><label><input type="radio" name="seraphDive" value="a"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/seraphDive-b.mp3" aria-label="Play B for Seraph&#x27;s Fall: crashing down">&#9654; B</button><label><input type="radio" name="seraphDive" value="b"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/seraphDive-c.mp3" aria-label="Play C for Seraph&#x27;s Fall: crashing down">&#9654; C</button><label><input type="radio" name="seraphDive" value="c"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/seraphDive-d.mp3" aria-label="Play D for Seraph&#x27;s Fall: crashing down">&#9654; D</button><label><input type="radio" name="seraphDive" value="d"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/seraphDive-e.mp3" aria-label="Play E for Seraph&#x27;s Fall: crashing down">&#9654; E</button><label><input type="radio" name="seraphDive" value="e"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/seraphDive-f.mp3" aria-label="Play F for Seraph&#x27;s Fall: crashing down">&#9654; F</button><label><input type="radio" name="seraphDive" value="f"> pick</label></div>
+      </div>
+      <p class="credit">NOW: today's boom + crit + meteor; A: thunder + a low boom (InspectorJ + varkalandar) &middot; layered here from the packs named; B: a big explosion &middot; 2 High Quality Explosions by Michel Baradari (CC-BY 3.0); C: a designed impact &middot; Free Cinematic Sound Effects by Gregor Quendel (CC-BY 4.0); D: an earth blast &middot; 8 Magic Attacks by leohpaz (CC-BY 4.0); E: a metallic blast &middot; Metal Clang Explosions Zing by qubodup (CC0); F: Already in the game: the mage&#x27;s explosion</p>
+    </div>
+    <div class="ev" data-key="lance">
+      <h3>Lance of Dawn</h3>
+      <p class="d">He becomes a lance of light shooting along a line</p>
+      <div class="opts">
+        <div class="opt"><button class="play" data-src="a/lance-now.mp3" aria-label="Play NOW for Lance of Dawn">&#9654; NOW</button><label><input type="radio" name="lance" value="now"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/lance-a.mp3" aria-label="Play A for Lance of Dawn">&#9654; A</button><label><input type="radio" name="lance" value="a"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/lance-b.mp3" aria-label="Play B for Lance of Dawn">&#9654; B</button><label><input type="radio" name="lance" value="b"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/lance-c.mp3" aria-label="Play C for Lance of Dawn">&#9654; C</button><label><input type="radio" name="lance" value="c"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/lance-d.mp3" aria-label="Play D for Lance of Dawn">&#9654; D</button><label><input type="radio" name="lance" value="d"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/lance-e.mp3" aria-label="Play E for Lance of Dawn">&#9654; E</button><label><input type="radio" name="lance" value="e"> pick</label></div>
+      </div>
+      <p class="credit">NOW: today's whoomp + heavySwing; A: a beam firing &middot; Doomsday Laser Cannon by tad (CC0); B: solar wind &middot; Free Cinematic Sound Effects by Gregor Quendel (CC-BY 4.0); C: an energy rush &middot; Spell Sounds Starter Pack by p0ss (CC-BY-SA 3.0); D: a gust of wind + glitter (leohpaz + qubodup) &middot; layered here from the packs named; E: a charge + magic smite (JC Sounds + spookymodem) &middot; layered here from the packs named</p>
+    </div>
+    <div class="ev" data-key="toll">
+      <h3>Divine Toll (the bell)</h3>
+      <p class="d">He rings his hammer like a great bell: three rings of sound and light</p>
+      <div class="opts">
+        <div class="opt"><button class="play" data-src="a/toll-now.mp3" aria-label="Play NOW for Divine Toll (the bell)">&#9654; NOW</button><label><input type="radio" name="toll" value="now"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/toll-a.mp3" aria-label="Play A for Divine Toll (the bell)">&#9654; A</button><label><input type="radio" name="toll" value="a"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/toll-b.mp3" aria-label="Play B for Divine Toll (the bell)">&#9654; B</button><label><input type="radio" name="toll" value="b"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/toll-c.mp3" aria-label="Play C for Divine Toll (the bell)">&#9654; C</button><label><input type="radio" name="toll" value="c"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/toll-d.mp3" aria-label="Play D for Divine Toll (the bell)">&#9654; D</button><label><input type="radio" name="toll" value="d"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/toll-e.mp3" aria-label="Play E for Divine Toll (the bell)">&#9654; E</button><label><input type="radio" name="toll" value="e"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/toll-f.mp3" aria-label="Play F for Divine Toll (the bell)">&#9654; F</button><label><input type="radio" name="toll" value="f"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/toll-g.mp3" aria-label="Play G for Divine Toll (the bell)">&#9654; G</button><label><input type="radio" name="toll" value="g"> pick</label></div>
+      </div>
+      <p class="credit">NOW: today's levelUp + clink; A: a real church bell &middot; Church Bell (real recording) by qubodup (CC-BY-SA 3.0); B: a real bell pitched down, deep &middot; Death Bell by specter5053 (CC-BY-SA 3.0); C: a bright tolling bell &middot; Tolling Bell SFX by Fun-Gi Development (CC-BY 3.0); D: a big bell &middot; Bell Sounds by marcelofg55 (CC-BY 3.0); E: the church bell with voices swelling under it (qubodup) &middot; layered here from the packs named; F: mace on steel into the deep bell (StillNorthMedia + specter5053) &middot; layered here from the packs named; G: a gong (short) &middot; Gonk Gong by dklon (CC-BY 3.0)</p>
+    </div>
+  </section>
+  <section>
+    <h2 class="g">Faith and wings</h2>
+    <div class="ev" data-key="faithReady">
+      <h3>Wings ready</h3>
+      <p class="d">Faith reaches half (Wings of Dawn) or full (Archangel)</p>
+      <div class="opts">
+        <div class="opt"><button class="play" data-src="a/faithReady-now.mp3" aria-label="Play NOW for Wings ready">&#9654; NOW</button><label><input type="radio" name="faithReady" value="now"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/faithReady-a.mp3" aria-label="Play A for Wings ready">&#9654; A</button><label><input type="radio" name="faithReady" value="a"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/faithReady-b.mp3" aria-label="Play B for Wings ready">&#9654; B</button><label><input type="radio" name="faithReady" value="b"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/faithReady-c.mp3" aria-label="Play C for Wings ready">&#9654; C</button><label><input type="radio" name="faithReady" value="c"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/faithReady-d.mp3" aria-label="Play D for Wings ready">&#9654; D</button><label><input type="radio" name="faithReady" value="d"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/faithReady-e.mp3" aria-label="Play E for Wings ready">&#9654; E</button><label><input type="radio" name="faithReady" value="e"> pick</label></div>
+      </div>
+      <p class="credit">NOW: today's levelUp; A: a healing chime &middot; Fantasy SFX Pack Vol 1 by JC Sounds (CC-BY 4.0); B: a glass bell &middot; Glass Bell Sounds by varkalandar (CC-BY 3.0); C: a heal &middot; 8 Heals and Buffs SFX by leohpaz (CC-BY 4.0); D: voices &middot; Wisdom Magic (voices) by qubodup (CC-BY 3.0); E: Replenish Life Force by qubodup (CC-BY 3.0)</p>
+    </div>
+    <div class="ev" data-key="wings">
+      <h3>Wings open</h3>
+      <p class="d">Wings of Dawn and the Archangel bursting open (the big moment)</p>
+      <div class="opts">
+        <div class="opt"><button class="play" data-src="a/wings-now.mp3" aria-label="Play NOW for Wings open">&#9654; NOW</button><label><input type="radio" name="wings" value="now"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/wings-a.mp3" aria-label="Play A for Wings open">&#9654; A</button><label><input type="radio" name="wings" value="a"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/wings-b.mp3" aria-label="Play B for Wings open">&#9654; B</button><label><input type="radio" name="wings" value="b"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/wings-c.mp3" aria-label="Play C for Wings open">&#9654; C</button><label><input type="radio" name="wings" value="c"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/wings-d.mp3" aria-label="Play D for Wings open">&#9654; D</button><label><input type="radio" name="wings" value="d"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/wings-e.mp3" aria-label="Play E for Wings open">&#9654; E</button><label><input type="radio" name="wings" value="e"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/wings-f.mp3" aria-label="Play F for Wings open">&#9654; F</button><label><input type="radio" name="wings" value="f"> pick</label></div>
+      </div>
+      <p class="credit">NOW: today's levelUp + portal; A: voices + a burst of wing beats (qubodup + antumdeluge) &middot; layered here from the packs named; B: a choir swell &middot; Fantasy Choir by cesisco (CC0); C: a cathedral swell &middot; Cathedral by umplix (CC0); D: a resurrection swell &middot; 8 Heals and Buffs SFX by leohpaz (CC-BY 4.0); E: choir swell + one great wing beat (cesisco + vishwajai) &middot; layered here from the packs named; F: a heavenly pad &middot; Heavenly Loop by isaiah658 (CC0)</p>
+    </div>
+    <div class="ev" data-key="flap">
+      <h3>Wing beat</h3>
+      <p class="d">A beat of the wings when he hops forward in flight</p>
+      <div class="opts">
+        <div class="opt"><button class="play" data-src="a/flap-now.mp3" aria-label="Play NOW for Wing beat">&#9654; NOW</button><label><input type="radio" name="flap" value="now"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/flap-a.mp3" aria-label="Play A for Wing beat">&#9654; A</button><label><input type="radio" name="flap" value="a"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/flap-b.mp3" aria-label="Play B for Wing beat">&#9654; B</button><label><input type="radio" name="flap" value="b"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/flap-c.mp3" aria-label="Play C for Wing beat">&#9654; C</button><label><input type="radio" name="flap" value="c"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/flap-d.mp3" aria-label="Play D for Wing beat">&#9654; D</button><label><input type="radio" name="flap" value="d"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/flap-e.mp3" aria-label="Play E for Wing beat">&#9654; E</button><label><input type="radio" name="flap" value="e"> pick</label></div>
+      </div>
+      <p class="credit">NOW: today's whoomp; A: one powerful wing beat &middot; Dragon Flap by vishwajai (CC0); B: large wings, one beat &middot; Large Wings Flap by antumdeluge (CC0); C: Various Sound Effects by spring-spring (CC0); D: a bird flap &middot; Flap, Splat, Poo (Yo Frankie!) by lamoot (CC-BY 3.0); E: a heavy cloth snap &middot; Cloth swing sounds by vinrax (CC-BY 3.0)</p>
+    </div>
+  </section>
+  <section>
+    <h2 class="g">His armor</h2>
+    <div class="ev" data-key="palStep">
+      <h3>Footsteps in plate</h3>
+      <p class="d">His steps (today he walks like everyone else)</p>
+      <div class="opts">
+        <div class="opt"><button class="play" data-src="a/palStep-now.mp3" aria-label="Play NOW for Footsteps in plate">&#9654; NOW</button><label><input type="radio" name="palStep" value="now"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palStep-a.mp3" aria-label="Play A for Footsteps in plate">&#9654; A</button><label><input type="radio" name="palStep" value="a"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palStep-b.mp3" aria-label="Play B for Footsteps in plate">&#9654; B</button><label><input type="radio" name="palStep" value="b"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palStep-c.mp3" aria-label="Play C for Footsteps in plate">&#9654; C</button><label><input type="radio" name="palStep" value="c"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palStep-d.mp3" aria-label="Play D for Footsteps in plate">&#9654; D</button><label><input type="radio" name="palStep" value="d"> pick</label></div>
+      </div>
+      <p class="credit">NOW: today's step; A: armored step &middot; Footsteps Leather, Cloth, Armor by HaelDB (CC0); B: armored step &middot; Footsteps Leather, Cloth, Armor by HaelDB (CC0); C: a metal step &middot; Metal footsteps on concrete by thimras (CC0); D: chainmail jingle &middot; RPG Sound Pack by artisticdude (CC0)</p>
+    </div>
+    <div class="ev" data-key="palHurt">
+      <h3>Struck in his armor</h3>
+      <p class="d">A clank of plate under the grunt when something hits him</p>
+      <div class="opts">
+        <div class="opt"><button class="play" data-src="a/palHurt-now.mp3" aria-label="Play NOW for Struck in his armor">&#9654; NOW</button><label><input type="radio" name="palHurt" value="now"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palHurt-a.mp3" aria-label="Play A for Struck in his armor">&#9654; A</button><label><input type="radio" name="palHurt" value="a"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palHurt-b.mp3" aria-label="Play B for Struck in his armor">&#9654; B</button><label><input type="radio" name="palHurt" value="b"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palHurt-c.mp3" aria-label="Play C for Struck in his armor">&#9654; C</button><label><input type="radio" name="palHurt" value="c"> pick</label></div>
+        <div class="opt"><button class="play" data-src="a/palHurt-d.mp3" aria-label="Play D for Struck in his armor">&#9654; D</button><label><input type="radio" name="palHurt" value="d"> pick</label></div>
+      </div>
+      <p class="credit">NOW: today's hurt; A: the grunt + a plate clank (the game + StillNorthMedia) &middot; layered here from the packs named; B: the grunt + chainmail (the game + artisticdude) &middot; layered here from the packs named; C: the grunt + metal ringing (the game + artisticdude) &middot; layered here from the packs named; D: the grunt + the armor clank the game has (the game) &middot; layered here from the packs named</p>
+    </div>
+  </section>
+  <section>
+    <h2>Your picks so far</h2>
+    <div id="summary">None yet.</div>
+  </section>
+</main>
+<script>
+  const KEYS = [...document.querySelectorAll('.ev')].map(e => e.dataset.key);
+  let picks = {}; try { picks = JSON.parse(localStorage.getItem('sound-picks-pal') || '{}'); } catch (e) { /* storage blocked */ }
+  const status = document.getElementById('status'), summary = document.getElementById('summary');
+  let audio = null, playing = null;
+  document.querySelectorAll('button.play').forEach(b => b.addEventListener('click', () => {
+    if (audio) { audio.pause(); if (playing) playing.classList.remove('on'); }
+    audio = new Audio(b.dataset.src); playing = b; b.classList.add('on');
+    audio.addEventListener('ended', () => b.classList.remove('on'));
+    audio.play().catch(() => b.classList.remove('on'));
+  }));
+  function show() {
+    for (const k of KEYS) { const v = picks[k]; document.querySelectorAll(`input[name="${k}"]`).forEach(i => { i.checked = i.value === v; }); }
+    const n = KEYS.filter(k => picks[k]).length;
+    status.innerHTML = `<b>${n} of ${KEYS.length}</b> picked` + (dbOk ? ' · saved' : dbTried ? ' · saved on this device only' : '');
+    summary.textContent = n ? KEYS.filter(k => picks[k]).map(k => `${k}: ${picks[k].toUpperCase()}`).join('\n') : 'None yet.';
+  }
+  let db = null, dbOk = false, dbTried = false, ref = null;
+  show();
+  document.querySelectorAll('input[type=radio]').forEach(i => i.addEventListener('change', async () => {
+    picks[i.name] = i.value;
+    try { localStorage.setItem('sound-picks-pal', JSON.stringify(picks)); } catch (e) { /* storage blocked */ }
+    show();
+    if (ref) { try { await ref.set(picks); dbOk = true; } catch (e) { dbOk = false; } show(); }
+  }));
+  (async () => {
+    try { db = window.claude && claude.use ? await claude.use('db') : null; } catch (e) { db = null; }
+    dbTried = true;
+    if (!db) { show(); return; }
+    ref = db.doc('picks/main');
+    const t = setTimeout(() => show(), 10000);
+    try { const s = await ref.get(); clearTimeout(t); const d = s.exists ? s.data() : null; if (d) picks = Object.assign({}, d, picks); dbOk = true; if (Object.keys(picks).length) await ref.set(picks); }
+    catch (e) { clearTimeout(t); dbOk = false; }
+    show();
+  })();
+</script>

@@ -21,18 +21,16 @@ def peak(f):
 def dur(f):
     return float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f], capture_output=True, text=True).stdout or 0)
 def conv(srcs, dst, maxlen, start=0.0):
-    """one file, or several layered ([(path, gain dB, delay s)]), trimmed, peak -1 dB, mono MP3"""
+    """one file, or several layered ([(path, gain dB, delay s[, start s])]), trimmed, peak -1 dB, mono MP3"""
     tmp = dst + '.tmp.wav'
-    if isinstance(srcs, str): srcs = [(srcs, 0, 0)]
+    if isinstance(srcs, str): srcs = [(srcs, 0, 0, start)]
+    srcs = [tuple(x) + (0,) * (4 - len(x)) for x in srcs]
     args = ['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y']
-    for p, _, _ in srcs: args += (['-ss', str(start)] if start and len(srcs) == 1 else []) + ['-i', p]
-    if len(srcs) == 1:
-        trim = 'silenceremove=start_periods=1:start_threshold=-48dB,areverse,silenceremove=start_periods=1:start_threshold=-55dB,areverse'
-        args += ['-ac', '1', '-ar', '44100', '-t', str(maxlen), '-af', f'volume={srcs[0][1]}dB,' + trim, tmp]
-    else:
-        fl = ';'.join(f'[{i}:a]aformat=channel_layouts=mono,aresample=44100,volume={g}dB,adelay={int(d * 1000)}[s{i}]' for i, (_, g, d) in enumerate(srcs))
-        fl += ';' + ''.join(f'[s{i}]' for i in range(len(srcs))) + f'amix=inputs={len(srcs)}:normalize=0:duration=longest,atrim=0:{maxlen}[o]'
-        args += ['-filter_complex', fl, '-map', '[o]', '-ac', '1', tmp]
+    for p, _, _, st in srcs: args += (['-ss', str(st)] if st else []) + ['-i', p]
+    trim = 'silenceremove=start_periods=1:start_threshold=-48dB,areverse,silenceremove=start_periods=1:start_threshold=-55dB,areverse'
+    fl = ';'.join(f'[{i}:a]aformat=channel_layouts=mono,aresample=44100,volume={g}dB,adelay={int(d * 1000)}[s{i}]' for i, (_, g, d, _) in enumerate(srcs))
+    fl += ';' + ''.join(f'[s{i}]' for i in range(len(srcs))) + f'amix=inputs={len(srcs)}:normalize=0:duration=longest,atrim=0:{maxlen},' + trim + '[o]'
+    args += ['-filter_complex', fl, '-map', '[o]', '-ac', '1', tmp]
     subprocess.run(args, check=True)
     g = -1.0 - peak(tmp)
     d = min(maxlen, dur(tmp))
@@ -67,7 +65,7 @@ if __name__ == '__main__':
             e = {'key': key, 'title': title, 'desc': desc, 'now': nowf, 'nowWhat': ' + '.join(n for n, *_ in now), 'cands': []}
             for n, c in enumerate(cands):
                 p = c['src']; fn = f'{key}-{"abcdefgh"[n]}.mp3'
-                srcs = [(resolve(D, q), gdb, dl) for q, gdb, dl in p] if isinstance(p, list) else resolve(D, p)
+                srcs = [(resolve(D, q[0]),) + tuple(q[1:]) for q in p] if isinstance(p, list) else resolve(D, p)
                 conv(srcs, os.path.join(OUT, 'a', fn), c.get('len', maxlen), c.get('start', 0.0))
                 if isinstance(p, str) and p.startswith('game:'): pk = ('Already in the game: ' + c.get('note', p[5:]), '', '', '')
                 else: pk = PACKS[c['pack']]
