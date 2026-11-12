@@ -51,7 +51,7 @@ The game's sound effects (game/sfx/) come from these free packs on OpenGameArt; 
 Trimmed, faded and level-matched (mono MP3). A share-alike source makes that file share-alike too (palToll.mp3: CC-BY-SA 3.0).
 
 - palHit.mp3 (hits/hit33): **37 hits/punches** by qubodup, CC0: https://opengameart.org/content/37-hitspunches
-- palConsec.mp3 (Designed Fire - Impacts - Complex 04), palEmber.mp3 (its tail), palThrow.mp3 (Designed Fire - Short - Swoosh Burst Sizzling 01), palJudgeLand.mp3 (Designed Mecha - Elements - Impact 01): **Free Cinematic Sound Effects** by Gregor Quendel, CC-BY 4.0: https://opengameart.org/content/free-cinematic-sound-effects
+- palConsec.mp3 (Designed Fire - Impacts - Complex 04), palEmber.mp3 (Designed Fire - Textures - Glitch Ripples), palThrow.mp3 (Designed Fire - Short - Swoosh Burst Sizzling 01), palJudgeLand.mp3 (Designed Mecha - Elements - Impact 01): **Free Cinematic Sound Effects** by Gregor Quendel, CC-BY 4.0: https://opengameart.org/content/free-cinematic-sound-effects
 - palFaith.mp3, palPillar.mp3 (Healing Chime_01): **Fantasy SFX Pack Vol 1** by JC Sounds, CC-BY 4.0: https://opengameart.org/content/jc-sounds-fantasy-sfx-pack-vol-1
 - palJudgeCall.mp3 (thunderclap_0.ogg): **Thunder** by jerimee, CC-BY 3.0: https://opengameart.org/content/thunder
 - palToll.mp3 (churchbell.flac): **Church Bell** by qubodup, CC-BY-SA 3.0: https://opengameart.org/content/church-bell
