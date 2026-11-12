@@ -241,3 +241,35 @@ if (typeof SPELL_LOOK !== 'undefined' && SPELL_LOOK.charge) SPELL_LOOK.charge[1]
   }
   return (iconCache[k] = renderRig(r, Math.PI / 4, 26, 26, 13, 17));
 }; }
+
+// ---------------------------------------------------------------- melee balance (round 109; the barbarian and the paladin)
+// The user: two-handers hit harder than one-handers and do slightly more damage per second; dual wield
+// matches a two-hander's damage per second with faster, lighter blows. Light weapons (swords) swing
+// faster than heavy ones (axes, maces, hammers): their blows are scaled so every one-hander does the
+// same damage per second. STAT.swingK stretches the swing's timing, STAT.hitK scales the basic
+// attack's blows only (heroDmg, while G.basicHit); skills are untouched. hitK is solved from
+// tools/playtests/r109/dps.cjs against: one-hander = 1, two-hander = 1.1 x a one-hander of its
+// tier (two-handers roll about 1.35x a one-hander's damage), dual wield = 1.1 x the two weapons' mean.
+const MELEE_K = {   // kind: [hitK, swingK]
+  warrior: { '1hL': [1, 1], '1hH': [1.69, 1], '2hL': [1.09, 1.4], '2hH': [1.51, 1.12], 'dualL': [0.66, 0.8], 'dualH': [1.02, 0.8] },
+  paladin: { '1hH': [1, 1], '2hH': [1, 1] },   // (his own swing set already slows the maul; it measures 1.1x the hammer and shield)
+};
+function meleeKind() {
+  const w = hero.equip.weapon; if (!w || !MELEE_K[hero.cls]) return null;
+  const B = ITEM_BASES[w.base], o = hero.equip.shield, dual = hero.cls === 'warrior' && o && ITEM_BASES[o.base].slot === 'weapon' && !B.twoHand;
+  const light = B.look === 'sword' || B.look === 'bsword' || GEAR_SWING[B.look] === 'light';
+  return (B.twoHand ? '2h' : dual ? 'dual' : '1h') + (light ? 'L' : 'H');
+}
+{ const rc1 = recalcHero; recalcHero = function (...a) {
+  const r = rc1(...a); const K = MELEE_K[hero.cls], kind = meleeKind(), v = K && kind && (K[kind] || K[kind.replace(/[LH]$/, 'H')]);
+  STAT.hitK = v ? v[0] : 1; STAT.swingK = v ? v[1] : 1; STAT.meleeKind = kind || '';
+  return r;
+}; }
+{ const wsK = weaponSwing; const cache = {}; weaponSwing = function (eq, combo = 0) {
+  const sw = wsK(eq, combo), k = (typeof hero !== 'undefined' && eq === hero.look && STAT.swingK) || 1;
+  if (k === 1 || !Array.isArray(sw)) return sw;
+  const key = k + '|' + combo + '|' + sw.map(q => q.ms).join(','); if (cache[key]) return cache[key];
+  const out = sw.map(q => Object.assign({}, q, { ms: Math.round(q.ms * k) }));
+  for (const f of Object.keys(sw)) if (isNaN(+f)) out[f] = typeof sw[f] === 'number' ? Math.round(sw[f] * k) : sw[f];   // (the array's own timings ride along: chain, free)
+  return (cache[key] = out);
+}; }

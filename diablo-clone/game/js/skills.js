@@ -32,7 +32,7 @@ const CD = { charge: 0, bolt: 0, bash: 0, whirl: 0, cry: 0, slam: 0, hook: 0, le
 function resetSkills() { for (const k in CD) CD[k] = 0; hero.whirl = 0; hero.dash = 0; hero.buff = 0; hero.charge = null; hero.chargeAgain = 0; hero.chargeSecond = false; hero.strafe = null; hero.bz = null; }
 const heroBusy = () => hero.atk >= 0 || hero.cast >= 0 || hero.dash > 0 || hero.whirl > 0 || !!hero.leap || !!hero.ultOn || !!hero.roll || !!hero.bz;
 // one hit's damage, with the war cry bonus
-const heroDmg = (k = 1) => Math.max(1, Math.round((roll(STAT.dmg) + (STAT.fireDmg || 0)) * k * (hero.buff > 0 ? 1.4 : 1) * (HEAVY ? 1.25 : 1) * (hero.cls === 'warrior' ? (hero.stance === 2 ? 1.3 : hero.stance === 1 ? 1.15 : 1) : 1)));   // (round 87: the Berserker hits a seventh harder)   // round 62: heavier blows   // fire damage from gear rides on every hit (round 42a)
+const heroDmg = (k = 1) => Math.max(1, Math.round((roll(STAT.dmg) + (STAT.fireDmg || 0)) * k * (G.basicHit ? STAT.hitK || 1 : 1) * (hero.buff > 0 ? 1.4 : 1) * (HEAVY ? 1.25 : 1) * (hero.cls === 'warrior' ? (hero.stance === 2 ? 1.3 : hero.stance === 1 ? 1.15 : 1) : 1)));   // (round 87: the Berserker hits a seventh harder)   // round 62: heavier blows   // fire damage from gear rides on every hit (round 42a)
 
 // button feedback (round 25): a pulse when a skill fires, a flash when it is ready again, a shake
 // with no mana
