@@ -21,16 +21,16 @@ const { chromium } = require('playwright'); const path = require('path'), fs = r
     talkTo(aldo); log.push('aldo says: ' + (G.talk ? G.talk.pages.map(x => x[1]).join(' | ') : 'nothing')); closeAll();
     // the tower, done in its side area (simulated): the clue follows
     hero.fi = aldo.fi - 3; hero.fj = aldo.fj + 3; h3Complete(H3[0]); step(120);
-    log.push('after tower: talk ' + (G.talk ? G.talk.pages.map(x => x[0] + ': ' + x[1]).join(' | ') : 'none')); closeAll();
+    log.push('after tower: peek ' + (G.peek ? G.peek.lines.map(x => x[0] + ': ' + x[2]).join(' | ') : 'none') + ' mode ' + G.mode); G.peek = null;
     // the tracker, mid-way
     hero.fi = HUB.camp[0]; hero.fj = HUB.camp[1] - 3; step(5); snap('a-tracker-hollow3');
-    h3Complete(H3[2]); step(120); log.push('after barrow: talk ' + (G.talk ? G.talk.pages.length + ' pages' : 'none')); closeAll();
+    h3Complete(H3[2]); step(120); log.push('after barrow: peek ' + (G.peek ? G.peek.lines.length + ' lines' : 'none')); G.peek = null;
     // walk up to the tree before the last: Aldo names what is left
     hero.fi = T[0] - 2.4; hero.fj = T[1] + 0.8; G.sealT = 0; G.msg = []; step(2); log.push('at the tree: ' + JSON.stringify((G.msg || []).map(m => m.text || m.t || m)));
     hero.fi = aldo.fi + 1.6; hero.fj = aldo.fj + 2.2; hero.dir = 0; step(2); snap('b-aldo-waits');
     // the stones last, out in the Hollow
     hero.fi = HUB.camp[0]; hero.fj = HUB.camp[1] - 3; h3Complete(H3[1]); step(120);
-    log.push('after stones: talk ' + (G.talk ? G.talk.pages.map(x => x[1]).slice(-1)[0] : 'none')); closeAll();
+    log.push('after stones: peek ' + (G.peek ? G.peek.lines.map(x => x[2]).slice(-1)[0] : 'none')); { let k = 0; while (G.peek && k++ < 2000) step(1); }
     log.push('stage ' + storyStage() + ' target ' + JSON.stringify(storyTarget()) + ' aldo at ' + [aldo.fi.toFixed(1), aldo.fj.toFixed(1)] + ' mark ' + storyMark('aldo'));
     step(5); snap('c-tracker-chop');
     // walk up to him: the chop

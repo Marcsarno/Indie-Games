@@ -152,3 +152,39 @@ var storyTargetShown;
     const kk = tIdx(i, j); if (d[kk] < 0 || !standable(i + 0.5, j + 0.5)) continue; const dd = Math.hypot(i + 0.5 - hero.fi, j + 0.5 - hero.fj); if (dd < bd) { bd = dd; best = [i + 0.5, j + 0.5]; } }
   if (best) { hero.fi = best[0]; hero.fj = best[1]; if (behind) say('THE VAULT IS LOCKED', 22, 2); }
 }; }
+
+// ---------------------------------------------------------------- round 104: Dave peeks in
+// The user: Dave popped up at the wrong time, mid-fight: kill the right one and the table scene took over.
+// Now the small beats (what was found at the three dangers) come as a strip folding down from the top of the
+// screen: Dave (or whoever speaks) peeking over the edge with his book, the line typed out beside him, and the
+// game going on underneath. The big beats stay at the table, and only when no foe is near (`foesNear`).
+const foesNear = (r = 9) => enemies.some(e => alive(e) && !e.ally && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < r);
+const PEEK_H = 52;
+function peek(lines) { G.peek = { lines, k: 0, lt: 0, open: 0, closing: false }; sfx('tap', 0.6); }
+function updatePeek(dt) {
+  const P = G.peek; if (!P) return;
+  if (P.closing) { P.open -= dt / 0.28; if (P.open <= 0) G.peek = null; return; }
+  P.open = Math.min(1, P.open + dt / 0.28); if (P.open < 1) return;
+  P.lt += dt; const L = P.lines[P.k], dur = 1.5 + L[2].length * 0.05;
+  if (P.lt >= dur) { P.k++; P.lt = 0; if (P.k >= P.lines.length) { P.k = P.lines.length - 1; P.closing = true; } else sfx('tap', 0.4); }
+}
+function drawPeek() {
+  const P = G.peek; if (!P || !(P.open > 0)) return;
+  const k01 = P.open, e = k01 * k01 * (3 - 2 * k01), oy = Math.round(PEEK_H * e) - PEEK_H;   // it folds down from the top
+  for (let y = 0; y < PEEK_H + oy; y++) { const row = y * W; for (let x = 0; x < W; x++) if (BAYER[((y & 3) << 2) | (x & 3)] < 0.9) out32[row + x] = PAL32[BLK]; }
+  const yb = PEEK_H + oy; for (let x = 0; x < W; x++) { put(x, yb - 1, 50); put(x, yb, 3); }
+  const [who, as, line] = P.lines[P.k], Pp = CINE_PEOPLE[who] || CINE_PEOPLE.dave;
+  // his head, half size, peeking in over the strip's lower edge
+  const cw = 72, ch = 60, x0 = Math.max(0, Pp.face[0] - 36), y0 = Math.max(0, Pp.face[1] - 38), talking = P.lt < line.length / 40, blink = (G.t % 3.1) < 0.12;
+  for (let v = 0; v < ch / 2; v++) { const Y = yb - 2 - ch / 2 + v + 6; if (Y < 0 || Y >= yb - 1) continue;
+    for (let u = 0; u < cw / 2; u++) { const sx = x0 + u * 2, sy = y0 + v * 2; if (sx >= Pp.w || sy >= Pp.h) continue; const si = sy * Pp.w + sx; let c = Pp.g[si]; if (!c) continue;
+      if (blink && Pp.blinkM.has(si)) c = Pp.blinkM.get(si); if (talking && (G.t * 8 | 0) % 2 && Pp.talkM.has(si)) c = Pp.talkM.get(si);
+      out32[Y * W + 6 + u] = Pp.lit.N[c]; } }
+  if (who === 'dave') { fillRect(12, yb - 9, 24, 7, 34); fillRect(13, yb - 8, 10, 5, 26); fillRect(25, yb - 8, 10, 5, 26); put(23, yb - 8, 33); put(24, yb - 8, 33); }   // his book, held up to the chin
+  const name = who === 'dave' ? 'DAVE' + (as ? ', AS ' + as : '') : (CINE_PEOPLE[who] ? CINE_PEOPLE[who].name : who.toUpperCase());
+  text(name, 48, oy + 7, (CINE_PEOPLE[who] && CINE_PEOPLE[who].col) || 51);
+  const n = Math.min(line.length, Math.floor(P.lt * 40)), shown = line.slice(0, n);
+  wrapText(shown, 54).slice(0, 4).forEach((l, q) => text(l, 48, oy + 17 + q * 8, 26));
+}
+{ const up2 = updatePortal; updatePortal = function (dt) { up2(dt); updatePeek(dt); }; }
+{ const dh2 = drawHud; drawHud = function (...a) { const r = dh2(...a); if (G.mode === 'play') drawPeek(); return r; }; }

@@ -76,14 +76,20 @@ function updateStones(dt) {
     G.stones = null; if (LV.hub && !hero.dead) say('THE STONES FALL SILENT', 24, 3); return;
   }
   if (Math.random() < dt * 26) { const a = Math.random() * 6.283, [x, y] = iso(c[0] + Math.cos(a) * 2.6, c[1] + Math.sin(a) * 2.6); pspawn(4, x, y, 4 + Math.random() * 22, 0, 0, 26, 0.7, Math.random() < 0.5 ? 40 : 118); }   // light climbing the stones
+  for (const e of S.list) {   // a straggler that can't find its way in is brought out of the trees beside the ring
+    if (!alive(e)) continue;
+    const d = Math.hypot(e.fi - c[0], e.fj - c[1]); e.stoneFar = d > 10 ? (e.stoneFar || 0) + dt : 0;
+    if (e.stoneFar > 6) { e.stoneFar = 0; for (let t = 0; t < 30; t++) { const a = Math.random() * 6.283, r = 4 + Math.random() * 2.5, fi = c[0] + Math.cos(a) * r, fj = c[1] + Math.sin(a) * r; if (blocked(fi, fj) || clearance(fi, fj, 0.32)) continue; const [x0, y0] = iso(e.fi, e.fj); for (let q = 0; q < 6; q++) pspawn(5, x0 + (Math.random() - 0.5) * 10, y0, 2, (Math.random() - 0.5) * 30, 0, 30, 0.6, 96); e.fi = fi; e.fj = fj; e.home = [fi, fj]; wake(e, true); break; } }
+  }
   if (S.list.some(alive)) return;
   S.t -= dt; if (S.t > 0) return;
   if (S.wave >= STONE_WAVES.length) { G.stones = null; shockwave(c[0], c[1], 4, 0.4, [118, 40]); h3Complete(H3[1]); return; }
   const lvl = h3Level(); S.list = []; let n = 0;
+  const D = bfs(Math.floor(c[0]), Math.floor(c[1]));   // round 101+ (the user: one spawned stuck in the trees, unseen, and the wave never ended): only where a walk leads to the ring
   for (const [id, cnt] of STONE_WAVES[S.wave]) for (let k = 0; k < cnt; k++) {
-    for (let t = 0; t < 40; t++) {   // out of the woods, all round
-      const a = Math.random() * 6.283, d = 8 + Math.random() * 2.5, fi = c[0] + Math.cos(a) * d, fj = c[1] + Math.sin(a) * d;
-      if (blocked(fi, fj) || blocked(fi + 0.3, fj + 0.3) || blocked(fi - 0.3, fj - 0.3)) continue;
+    for (let t = 0; t < 80; t++) {   // out of the woods, all round
+      const a = Math.random() * 6.283, d = (t < 60 ? 8 : 6) + Math.random() * 2.5, fi = c[0] + Math.cos(a) * d, fj = c[1] + Math.sin(a) * d, kk = tIdx(Math.floor(fi), Math.floor(fj));
+      if (blocked(fi, fj) || clearance(fi, fj, 0.32) || !(D[kk] >= 0) || D[kk] > 16) continue;
       const e = makeEnemy(id, fi, fj, enemies.length + n++, lvl); e.wave = true; enemies.push(e); S.list.push(e); wake(e, true);
       const [x, y] = iso(fi, fj); for (let q = 0; q < 6; q++) pspawn(5, x + (Math.random() - 0.5) * 10, y, 2, (Math.random() - 0.5) * 30, 0, 30 + Math.random() * 30, 0.6, 96);
       break;
@@ -383,8 +389,7 @@ function showClue(k) {
   const lines = (CLUES[k] || []).slice(); if (!lines.length || !storyOn()) return;
   if (h3Done()) lines.push(['dave', null, 'THE HOLLOW IS QUIET. ALDO WAITS AT THE FALLEN TREE WITH HIS AXE.']);
   else lines.push(['dave', null, h3Count() === 2 ? 'ONE DANGER LEFT IN THE HOLLOW.' : 'TWO DANGERS LEFT IN THE HOLLOW.']);
-  if (cineOK()) { QUEST_TABLE.clue = { lines }; startCine('quest', { stage: 'clue' }); return; }
-  openTalk(lines.map(([who, as, text]) => [as || (who === 'dave' ? 'DAVE' : who.toUpperCase()), text]));
+  peek(lines);   // (round 104: Dave peeks in from the top of the screen; the game goes on)
 }
 // round 42b: Aldo runs home from the den; the cage door hangs open
 function freeAldo(n) {
@@ -418,7 +423,7 @@ function storyFlow(dt) {
   }
   // in camp: the one with your next step speaks to you, a moment after you arrive (and after each talk)
   if (G.autoKey !== key) { G.autoKey = key; G.autoTalkT = G.t + 1.0; }
-  if (LV.hub && campStep(st) && G.mode === 'play' && !G.talk && !G.chop && !G.fadeTo && !(G.actCard > 0) && !hero.dead && G.t > (G.autoTalkT || 0)) {
+  if (LV.hub && campStep(st) && G.mode === 'play' && !G.talk && !G.chop && !G.peek && !foesNear() && !G.fadeTo && !(G.actCard > 0) && !hero.dead && G.t > (G.autoTalkT || 0)) {   // (round 104: never with foes about)
     const n = npcs.find(n => n.role === CAMP_ROLE[st]);
     if (n) { G.autoTalkT = G.t + 0.8; talkTo(n); }
   }
