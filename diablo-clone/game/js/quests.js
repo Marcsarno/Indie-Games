@@ -56,7 +56,8 @@ function h3Complete(o) {
   let it = null; for (let t = 0; t < 300 && !it; t++) { const x = rollItem(R, lvl + 1); if (x.rarity !== 'normal' && o.lean.includes(ITEM_BASES[x.base].slot)) it = x; }
   if (it) groundItems.push({ item: it, fi: hero.fi + 0.7, fj: hero.fj + 0.3, t: 0 });
   hero.gold += gold; gainXp(xp); sfx('levelUp');
-  questBanner(o.name + ': DONE', h3Done() ? 'THE HOLLOW IS SAFE. THE ROAD NORTH WILL OPEN' : `${h3Count()}/3. +${gold} GOLD, +${xp} XP`, o.col);
+  questBanner(o.name + ': DONE', h3Done() ? 'THE HOLLOW IS SAFE. MEET ALDO AT THE FALLEN TREE' : `${h3Count()}/3. +${gold} GOLD, +${xp} XP`, o.col);
+  G.clueDue = { k: o.k, at: G.t + 1.6 };   // (round 101: what was found there, told at the table)
   if (G.h3sel === o.k) G.h3sel = null;
   saveGame();
 }
@@ -98,6 +99,7 @@ function storyStage() {
   if (!f.aldoFree) return f.alphaDead ? 'cage' : 'den';
   if (!f.woodPaid) return 'aldoBack';
   if (!h3Done() && !h3Legacy(f)) return 'hollow3';   // round 78: the Hollow's three dangers, in any order
+  if (!f.treeCleared && !h3Legacy(f)) return 'chop';   // round 101: then Aldo cuts the fallen tree, with you there
   if (!f.sawChain && !f.farmTold && !f.chiefDead) return 'mine';
   if (!f.farmTold && !f.chiefDead) return 'hollis';
   if (!f.chiefDead) return (G.story.n || 0) >= 4 ? 'cellar' : 'farm';
@@ -108,9 +110,10 @@ function storyStage() {
   if (!f.kingPaid) return 'kingBack';
   return 'done';
 }
-const STAGE_QUEST = { hollow3: 'hollow', wren: 'woodcutter', den: 'woodcutter', cage: 'woodcutter', aldoBack: 'woodcutter', mine: 'woodcutter', hollis: 'farm', farm: 'farm', cellar: 'farm', farmBack: 'farm', letter: 'king', unlock: 'king', king: 'king', kingBack: 'king' };
+const STAGE_QUEST = { hollow3: 'hollow', chop: 'hollow', wren: 'woodcutter', den: 'woodcutter', cage: 'woodcutter', aldoBack: 'woodcutter', mine: 'woodcutter', hollis: 'farm', farm: 'farm', cellar: 'farm', farmBack: 'farm', letter: 'king', unlock: 'king', king: 'king', kingBack: 'king' };
 function stageText(st) {
   if (st === 'hollow3') return `THREE DANGERS BAR THE ROAD NORTH ${h3Count()}/3`;
+  if (st === 'chop') return 'MEET ALDO AT THE FALLEN TREE';
   return { meet: 'SPEAK TO BROTHER OSRIC', wren: 'TALK TO WREN BY THE TENTS', den: 'FIND ALDO IN THE WOLF DEN (NORTHEAST)', cage: 'FREE ALDO', aldoBack: 'RETURN TO WREN',
     mine: 'LOOK AT THE OLD MINE (NORTH, THE RIVERLANDS)', hollis: 'ASK HOLLIS ABOUT THE CHAINS', farm: `DRIVE THE BANDITS FROM THE FARM ${Math.min(4, G.story.n || 0)}/4`, cellar: 'FIND THEIR CHIEF IN THE CELLAR',
     farmBack: 'RETURN TO HOLLIS', letter: 'SHOW THE LETTER TO BROTHER OSRIC', unlock: 'UNLOCK THE OLD MINE (THE RIVERLANDS)', king: 'PUT THE KING TO REST, BELOW THE MINE', kingBack: 'RETURN TO BROTHER OSRIC', done: 'THE ROAD ON IS OPEN (PAST THE RIVERLANDS)' }[st] || '';
@@ -122,6 +125,7 @@ function storyMark(role) {
   if (role === 'priest') return st === 'meet' || st === 'letter' ? '!' : st === 'kingBack' ? '?' : null;
   if (role === 'wren') return st === 'wren' ? '!' : st === 'aldoBack' ? '?' : null;
   if (role === 'hollis') return st === 'hollis' ? '!' : st === 'farmBack' ? '?' : null;
+  if (role === 'aldo') return st === 'chop' ? '!' : null;
   return null;
 }
 function questKill(id) {
@@ -230,13 +234,14 @@ const QUEST_TABLE = {
     ['dave', 'WREN', 'FATHER! YOU BROUGHT HIM HOME!'],
     ['dave', 'ALDO', 'I SAW A HOODED MAN AT THE OLD MINE. HIS LANTERN BURNED GREEN.', 'maelis'],
     ['aaron', null, 'HOODED MAN. GREEN LANTERN. THAT IS OUR VILLAIN.'],
-    ['dave', 'ALDO', 'THREE DANGERS BAR THE ROAD NORTH. CLEAR THEM AND I OPEN IT.']],
+    ['dave', 'ALDO', 'THREE DANGERS BAR THE ROAD NORTH. CLEAR THEM AND I CUT THE FALLEN TREE.'],
+    ['dave', 'ALDO', 'I WILL WAIT AT THE TREE WITH MY AXE.']],
     reward: ['WREN', 'TAKE SOMETHING. AND REST BY THE FIRE: IT WILL MEND YOU.'],
-    after: () => { storyF().woodPaid = true; payQuest('woodcutter'); say('REST BY THE CAMPFIRE TO HEAL', 26, 3); } },
+    after: () => { storyF().woodPaid = true; payQuest('woodcutter'); say('REST BY THE CAMPFIRE TO HEAL', 26, 3); aldoToTree(); } },
   hollis: { lines: [
     ['dave', 'HOLLIS', 'BANDITS TOOK MY FARM AND PUT ME OUT IN MY NIGHTSHIRT.', 'bandits'],
     ['dave', 'HOLLIS', 'THEIR CHIEF HAS THE MINE KEY. AND HEAVY SACKS IN MY CELLAR.'],
-    ['marc', null, 'HEAVY SACKS. THAT IS NEVER GOOD.']],
+    ['marc', null, "HEAVY SACKS. AND THAT SPADE IN THE BARROW HAD A FARM'S MARK."]],
     after: () => { storyF().farmTold = true; G.story.n = 0; } },
   farmBack: { lines: [
     ['dave', 'HOLLIS', 'BONES. MY CELLAR WAS FULL OF BONES FROM THE GRAVEYARD.', 'dead'],
@@ -246,7 +251,7 @@ const QUEST_TABLE = {
   letter: { lines: [
     ['dave', 'THE LETTER', 'EVERY BONE IS PAID IN SILVER. THE KING MUST BE WHOLE. M.'],
     ['dave', 'BROTHER OSRIC', 'MAELIS, ONCE OF MY ORDER. HE IS RAISING THE OLD KING.', 'king'],
-    ['aaron', null, 'CALLED IT.'],
+    ['aaron', null, "THE M ON THE GOBLINS' SILVER. CALLED IT."],
     ['dave', 'BROTHER OSRIC', 'TAKE THE KEY. PUT THE KING BACK IN HIS GRAVE.']],
     after: () => { storyF().letterRead = true; } },
 };
@@ -286,7 +291,7 @@ function talkTo(n) {
       [Al, 'AND THEY WERE NOT HUNTING. THEY WERE RUNNING. SOMETHING IN THE NORTH HILLS DROVE THEM OUT.'],
       [Al, 'BEFORE THEY TOOK ME I SAW A HOODED MAN AT THE OLD MINE, WITH A LANTERN THAT BURNED GREEN. LOOK THERE.'],
       [Wn, 'TAKE SOMETHING. AND FATHER WILL KEEP THE CAMPFIRE HIGH: REST BY IT AND IT WILL MEND YOU.'],
-      ['ALDO', 'THE ROAD NORTH? NOT WHILE GOBLINS HOLD THE TOWER, THE STONES ARE STIRRING AND THE BARROW IS OPEN. DEAL WITH THOSE THREE, ANY ORDER YOU LIKE, AND I WILL CUT THE TREE.']], 'COLLECT', () => { f.woodPaid = true; payQuest('woodcutter'); say('REST BY THE CAMPFIRE TO HEAL', 26, 3); }, rewardChoice());
+      ['ALDO', 'THE ROAD NORTH? NOT WHILE GOBLINS HOLD THE TOWER, THE STONES ARE STIRRING AND THE BARROW IS OPEN. DEAL WITH THOSE THREE, ANY ORDER YOU LIKE, AND I WILL CUT THE TREE. I WILL WAIT THERE WITH MY AXE.']], 'COLLECT', () => { f.woodPaid = true; payQuest('woodcutter'); say('REST BY THE CAMPFIRE TO HEAL', 26, 3); aldoToTree(); }, rewardChoice());
     return openTalk([[Wn, f.aldoFree ? 'FATHER IS HOME. I CAN SLEEP AGAIN.' : 'PLEASE FIND HIM.']]);
   }
   if (n.role === 'aldo') {   // in the den's cage, or at home by his woodpile
@@ -294,6 +299,9 @@ function talkTo(n) {
       if (!f.alphaDead) return openTalk([[Al, 'BEHIND YOU! THE BIG ONE! KILL IT FIRST, THEN GET ME OUT OF HERE!']]);
       return openTalk([[Al, 'YOU KILLED IT? BLESS YOU. BREAK THE LOCK, QUICK.'], [Al, 'I KNOW THE WAY HOME. TELL WREN I AM COMING.']], 'OK', () => freeAldo(n));
     }
+    if (n.atTree && on && st === 'chop') return startChop();
+    if (n.atTree && on && st === 'hollow3') return openTalk([[Al, 'THE AXE IS SHARP. THE MOMENT THE HOLLOW IS SAFE, THIS TREE COMES DOWN.'],
+      ...H3.map(o => [Al, o.name + ': ' + (f[o.flag] ? 'DONE' : 'NOT YET')]), [Al, h3Count() === 2 ? 'ONE MORE.' : 'TAP ONE IN THE LIST AT THE TOP AND THE ARROW TAKES YOU THERE.']]);   // (round 101)
     return openTalk([[Al, st === 'mine' ? 'THE OLD MINE, NORTH IN THE RIVERLANDS. THAT IS WHERE I SAW HIM. GREEN FIRE. I CLEARED THE TREE OFF THE ROAD FOR YOU.' : 'THE FIRE IS HIGH. SIT A WHILE.']]);
   }
   if (n.role === 'hollis') {
@@ -307,6 +315,76 @@ function talkTo(n) {
       [Ho, 'THAT LETTER THE CHIEF HAD. SHOW IT TO BROTHER OSRIC. HE READS BETTER THAN ME.']], 'COLLECT', () => { f.farmPaid = true; payQuest('farm'); }, rewardChoice());
     return openTalk([[Ho, f.farmPaid ? 'THE FIELDS WILL TAKE A YEAR TO COME BACK. BUT THEY WILL COME BACK.' : 'I HAD A FARM, ONCE. NORTH, IN THE RIVERLANDS.']]);
   }
+}
+// ---------------------------------------------------------------- round 101: Aldo and the fallen tree
+// The user: "I feel like I've done all the objectives", the tree said the Hollow was unsafe and nobody
+// said what to clear. Now Aldo waits at the fallen tree with his axe from Wren's hand-in on (tap him:
+// each danger, done or not yet); once all three are dealt with the step is MEET ALDO AT THE FALLEN
+// TREE ('!' over him, the arrow on him), and walking up to him plays the cut: three blows of the axe,
+// chips flying, the trunk splitting, the road north open. Each danger also ends with something found
+// there, told at Dave's table, that points at the man with the green lantern.
+const aldoAtTree = () => npcs.find(n => n.role === 'aldo' && n.atTree && n.leaving === undefined);
+const h3Left = () => { const f = storyF(); return H3.filter(o => !f[o.flag]); };
+function aldoToTree() {   // after Wren's hand-in: he walks off, and is next seen at the tree
+  if (!LV.hub || !LV.aldoTree || !LV.treeBlock || aldoAtTree()) return;
+  for (const n of npcs) if (n.role === 'aldo' && !n.atTree) n.leaving = 1.2;
+  npcs.push({ role: 'aldo', name: 'ALDO', atTree: true, fam: 'hero', look: NPC_LOOKS.aldo, fi: LV.aldoTree[0], fj: LV.aldoTree[1], home: LV.aldoTree.slice(), dir: 1, clip: 'idle', clock: 0, walk: 0, wait: 99, target: null, npc: true });
+}
+function startChop() {
+  const n = aldoAtTree(); if (!n || G.chop || !LV.treeBlock) return;
+  const sw = weaponSwing(n.look); let hit = 0, total = 0; for (const k of sw) { if (k.hit && !hit) hit = total + k.ms; total += k.ms; }
+  hit = (hit || total * 0.6) / 1000; total /= 1000;
+  const gap = Math.max(0.62, total + 0.06), go = 0.6, blows = [go + 0.25 + hit, go + 0.25 + hit + gap, go + 0.25 + hit + gap * 2];   // (he walks up to the trunk first)
+  G.chop = { t: 0, n, k: 0, hit, total, blows, go, from: [n.fi, n.fj], to: (LV.aldoChop || [n.fi, n.fj]).slice(), crack: blows[2] + 0.55, end: blows[2] + 1.6, cracked: false };
+  n.busy = true;
+  hero.atk = -1; hero.approach = null; hero.goTalk = null; hero.dir = dirFrom(LV.treeBlock[0] - hero.fi, LV.treeBlock[1] - hero.fj); clearInput();
+  say('ALDO: STAND BACK', 51, 2.2); sfx('tap');
+}
+function updateChop(dt) {
+  const C = G.chop; if (!C) return;
+  C.t += dt; clearInput(); hero.atk = -1; hero.approach = null;
+  const n = C.n, T = C.cracked ? null : LV.treeBlock;
+  if (C.t < C.go) { const u = C.t / C.go, x = C.from[0] + (C.to[0] - C.from[0]) * u, y = C.from[1] + (C.to[1] - C.from[1]) * u; n.walk += Math.hypot(x - n.fi, y - n.fj) / HERO_GAIT; n.fi = x; n.fj = y; n.clip = 'walk'; n.dir = dirFrom(C.to[0] - C.from[0], C.to[1] - C.from[1]); return; }   // up to the trunk
+  if (T) n.dir = dirFrom(T[0] - n.fi, T[1] - n.fj);
+  // the swings: each one timed so the axe lands on its blow
+  let on = false;
+  for (const b of C.blows) { const ms = (C.t - (b - C.hit)) * 1000; if (ms >= 0 && ms < C.total * 1000) { n.clip = 'attack'; n.atk = ms; on = true; break; } }
+  if (!on) { n.clip = 'idle'; n.atk = -1; }
+  if (C.k < 3 && C.t >= C.blows[C.k] && T) {   // a blow: the axe bites, chips fly
+    C.k++; const [x, y] = iso(T[0] * 0.35 + n.fi * 0.65, T[1] * 0.35 + n.fj * 0.65);
+    for (let q = 0; q < 12; q++) pspawn(5, x + (Math.random() - 0.5) * 6, y - 6, 6 + Math.random() * 6, (Math.random() - 0.5) * 70, -30 - Math.random() * 30, 40 + Math.random() * 30, 0.7, q % 3 ? 35 : 36);
+    sfx('hit'); sfx('thud', 0.6); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.15);
+    if (C.k === 2) say('ALDO: ONE MORE', 51, 1.6);
+  }
+  if (!C.cracked && C.t >= C.crack) {   // the trunk splits and rolls off the road
+    C.cracked = true; const [x, y] = LV.treeBlock ? iso(LV.treeBlock[0], LV.treeBlock[1]) : iso(n.fi, n.fj);
+    clearFallenTree(); storyF().treeCleared = true;
+    for (let q = 0; q < 26; q++) { const a = q / 26 * 6.283; pspawn(5, x + Math.cos(a) * 14, y + Math.sin(a) * 6, 2 + Math.random() * 8, Math.cos(a) * 40, Math.sin(a) * 20, 14 + Math.random() * 16, 1.0, q % 2 ? 30 : 31); }   // dust
+    sfx('crack'); sfx('boom', 0.6); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.45);
+    questBanner('THE ROAD NORTH IS OPEN', 'ALDO HAS CUT THE FALLEN TREE', 51); sfx('levelUp');
+    G.lastSt = storyStage();   // (the banner above is the step's news: no NEW QUEST banner over it)
+    saveGame();
+  }
+  if (C.t >= C.end) { n.busy = false; n.clip = 'idle'; n.atk = -1; G.chop = null; G.autoTalkT = G.t + 1.6; say('ALDO: GO ON. THE ROAD IS YOURS', 51, 2.5); }
+}
+// what was found at each of the three: a line of the story, told at Dave's table (the talk box without it)
+const CLUES = {   // (Dave tells these as himself: "DAVE, AS THE BARROW" read oddly)
+  tower: [['dave', null, "UP IN THE WATCHTOWER, THE CHIEFTAIN'S PURSE IS FULL OF NEW SILVER."],
+    ['dave', null, 'EVERY COIN IS STAMPED WITH AN M. SOMEONE PAID THEM TO HOLD THE ROAD.'],
+    ['chris', null, 'GOBLINS ON A PAYROLL. GREAT.']],
+  stones: [['dave', null, 'IN THE MIDDLE OF THE STANDING STONES, THE GRASS IS BURNED IN A CIRCLE.'],
+    ['dave', null, 'THE ASH IS STILL WARM. AND IT GLOWS GREEN.', 'maelis'],
+    ['aaron', null, "GREEN. LIKE THE HOODED MAN'S LANTERN."]],
+  barrow: [['dave', null, 'DOWN IN THE BARROW THE OLD TOMBS ARE EMPTY. NOT BROKEN INTO. DUG OUT, NEATLY.', 'dead'],
+    ['dave', null, "A SPADE LEANS ON THE WALL. BURNED INTO THE HANDLE: A FARM'S MARK."],
+    ['marc', null, 'SOMEBODY IS COLLECTING BONES.']],
+};
+function showClue(k) {
+  const lines = (CLUES[k] || []).slice(); if (!lines.length || !storyOn()) return;
+  if (h3Done()) lines.push(['dave', null, 'THE HOLLOW IS QUIET. ALDO WAITS AT THE FALLEN TREE WITH HIS AXE.']);
+  else lines.push(['dave', null, h3Count() === 2 ? 'ONE DANGER LEFT IN THE HOLLOW.' : 'TWO DANGERS LEFT IN THE HOLLOW.']);
+  if (cineOK()) { QUEST_TABLE.clue = { lines }; startCine('quest', { stage: 'clue' }); return; }
+  openTalk(lines.map(([who, as, text]) => [as || (who === 'dave' ? 'DAVE' : who.toUpperCase()), text]));
 }
 // round 42b: Aldo runs home from the den; the cage door hangs open
 function freeAldo(n) {
@@ -340,7 +418,7 @@ function storyFlow(dt) {
   }
   // in camp: the one with your next step speaks to you, a moment after you arrive (and after each talk)
   if (G.autoKey !== key) { G.autoKey = key; G.autoTalkT = G.t + 1.0; }
-  if (LV.hub && campStep(st) && G.mode === 'play' && !G.talk && !G.fadeTo && !(G.actCard > 0) && !hero.dead && G.t > (G.autoTalkT || 0)) {
+  if (LV.hub && campStep(st) && G.mode === 'play' && !G.talk && !G.chop && !G.fadeTo && !(G.actCard > 0) && !hero.dead && G.t > (G.autoTalkT || 0)) {
     const n = npcs.find(n => n.role === CAMP_ROLE[st]);
     if (n) { G.autoTalkT = G.t + 0.8; talkTo(n); }
   }
@@ -374,13 +452,23 @@ function updateStory(dt) {
   updateStones(dt);
   if (LV.side === 'cellar' && !f.cellarSeen) { f.cellarSeen = true; say('SACKS OF BONES, STACKED TO THE ROOF.', 26, 4); say('THE GRAVES WERE DUG FOR THIS.', 26, 4); }
   // round 48c: the fallen tree on the road north: a word when one walks up to it; once Aldo is home, it's cleared
-  if (LV.hub && LV.treeBlock && hollowOpen()) clearFallenTree();   // (round 100: at once, wherever he stands)
-  if (LV.treeBlock && Math.hypot(hero.fi - LV.treeBlock[0], hero.fj - LV.treeBlock[1]) < 3.2 && !(G.sealT > 0)) {
+  if (LV.hub && LV.treeBlock && hollowOpen() && !G.chop) clearFallenTree();   // (round 100: a save already past it)
+  if (LV.hub && hollowOpen() && !f.treeCleared) f.treeCleared = true;
+  updateChop(dt);
+  const st0 = storyStage();
+  if (st0 === 'chop' && LV.hub && !G.chop && G.mode === 'play' && !G.talk && !G.fadeTo && !hero.dead) {   // round 101: walk up to Aldo and he cuts it
+    const n = aldoAtTree();
+    if (n && Math.hypot(hero.fi - n.fi, hero.fj - n.fj) < 4.2) {
+      if (!enemies.some(e => alive(e) && !e.ally && Math.hypot(e.fi - n.fi, e.fj - n.fj) < 8)) startChop();
+      else if (!(G.sealT > 0)) { say('ALDO: DEAL WITH THOSE FIRST', 51, 2.5); G.sealT = 3; }
+    }
+  }
+  if (LV.treeBlock && !G.chop && Math.hypot(hero.fi - LV.treeBlock[0], hero.fj - LV.treeBlock[1]) < 3.2 && !(G.sealT > 0) && st0 !== 'chop') {
     say('A FALLEN TREE BLOCKS THE ROAD NORTH', 22, 2.5);
     if (!f.aldoFree) say('ONLY A WOODCUTTER COULD MOVE IT. FIND ALDO', 26, 3);
-    else { const left = H3.filter(o => !f[o.flag]).map(o => o.name.replace('THE ', '')); say('ALDO CUTS IT WHEN THE HOLLOW IS SAFE', 26, 3); if (left.length) say('STILL TO DO: ' + left.join(', '), 51, 3.5); }   // (round 100: name what is left; "unsafe" told him nothing)
+    else { const left = h3Left().map(o => o.name.replace('THE ', '')); say('ALDO: I CUT IT WHEN THE HOLLOW IS SAFE', 26, 3); if (left.length) say('STILL TO DO: ' + left.join(', '), 51, 3.5); }   // (round 100: name what is left; "unsafe" told him nothing)
     G.sealT = 3.5; }
-  if (LV.hub && hollowOpen() && storyOn() && !f.treeCleared) { f.treeCleared = true; say('ALDO HAS CLEARED THE FALLEN TREE', 51, 3.5); say('THE ROAD NORTH IS OPEN', 51, 3.5); }
+  if (G.clueDue && G.t > G.clueDue.at && G.mode === 'play' && !G.talk && !G.fadeTo && !hero.dead && !G.stones && !G.chop) { const k = G.clueDue.k; G.clueDue = null; showClue(k); }
   if (!LV.hub) return;
   // Aldo's wood feeds the fire: resting by it mends life and mana
   if (f.woodPaid && Math.hypot(hero.fi - HUB.camp[0], hero.fj - HUB.camp[1]) < 3.4 && !hero.dead) {
@@ -449,6 +537,7 @@ function storyTarget() {
   // the Hollow: the camp's people and the den here; the rest is north, past the fallen tree, on the road to the Riverlands
   const north = stairs();
   if (st === 'hollow3') { const o3 = h3Pick(); if (!o3) return null; const p = h3Pos(o3).slice(); p.col = o3.col; return p; }
+  if (st === 'chop') { const n = aldoAtTree(); if (n) { const p = [n.fi, n.fj]; p.npc = true; return p; } return LV.treeBlock ? LV.treeBlock.slice() : north; }
   return { meet: npc('priest'), wren: npc('wren'), aldoBack: npc('wren') || npc('aldo'), den: SIDES.den.door(), cage: SIDES.den.door(), mine: north, hollis: npc('hollis'), farm: north,
     cellar: north, farmBack: npc('hollis'), letter: npc('priest'), unlock: north, king: north, kingBack: npc('priest'), done: north }[st] || null;
 }
@@ -462,18 +551,23 @@ function drawQuestTracker() {
   if (G.mode !== 'play' || !storyOn()) return;
   const st = storyStage(); if (st === 'done' && !(G.gates && G.gates[0] && (LV.hub || LV.riv))) return;
   UI.h3 = null;
-  if (st === 'hollow3') {   // round 78: three lines in their colours, ticked off; tap one to be led there
-    text(STORY_NAMES.hollow + `  ${h3Count()}/3`, 4, 68, 26);
-    const f = storyF(), pick = LV.hub ? h3Pick() : H3.find(o => o.side === LV.side); UI.h3 = [];
-    H3.forEach((o, n) => { const y = 78 + n * 11, done = !!f[o.flag], on = pick === o && !done;
-      fillRect(4, y, 6, 6, done ? 5 : o.col); frame(4, y, 6, 6, BLK, BLK); if (done) { line(5, y + 3, 6, y + 4, 55); line(6, y + 4, 9, y + 1, 55); }
-      text((on ? '> ' : '') + o.text + (done ? ': DONE' : ''), 13, y, done ? 24 : on ? 51 : 26);
-      if (!done) UI.h3.push({ x: 0, y: y - 2, w: 150, h: 11, k: o.k }); });
+  if (st === 'hollow3') {   // round 101 (the user: one clear goal at a time): the one the arrow leads to, big; the rest on a small line, tap one to switch
+    const f = storyF(), here = H3.find(o => o.side === LV.side && !f[o.flag]), pick = here || (LV.hub ? h3Pick() : H3.find(o => o.k === G.h3sel && !f[o.flag]) || h3Left()[0]); UI.h3 = [];
+    text(STORY_NAMES.hollow + `  ${h3Count()}/3`, 4, 68, 24);
+    if (pick) { fillRect(4, 79, 6, 6, pick.col); frame(4, 79, 6, 6, BLK, BLK); trackerGoal(pick.text, 13, 77, 51); }
+    const rest = h3Left().filter(o => o !== pick);
+    if (rest.length) { let x = 4; text('ALSO:', x, 94, 24); x += textWidth('ALSO:') + 5;
+      for (const o of rest) { const s = o.name.replace('THE ', ''); fillRect(x, 94, 4, 4, o.col); text(s, x + 6, 94, 26); UI.h3.push({ x: x - 3, y: 89, w: textWidth(s) + 12, h: 14, k: o.k }); x += textWidth(s) + 14; } }
     return;
   }
   const q = STAGE_QUEST[st];
   if (q) text(STORY_NAMES[q], 4, 68, 24);
-  text(portalHome() && TURN_IN[st] ? 'QUEST COMPLETE: CLAIM YOUR REWARD IN CAMP' : stageText(st), 4, q ? 76 : 68, 51);
+  trackerGoal(portalHome() && TURN_IN[st] ? 'QUEST COMPLETE: CLAIM YOUR REWARD IN CAMP' : stageText(st), 4, q ? 77 : 68, 51);
+}
+// the goal in big letters when it fits the screen, else in two lines of small ones
+function trackerGoal(s, x, y, col) {
+  if (textWidth(s, 2) <= W - x - 4) { text(s, x, y, col, 2); return; }
+  wrapText(s, Math.floor((W - x - 4) / 4)).slice(0, 2).forEach((l, n) => text(l, x, y + n * 8, col));
 }
 // "!" over someone with news or a task, "?" when a reward waits
 function priestMark(n, sx, by) {

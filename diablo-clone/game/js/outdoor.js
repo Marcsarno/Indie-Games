@@ -89,7 +89,7 @@ function genOutdoor(level, seed, A) {
   LV.ponds = []; LV.river = []; LV.bridges = [];
   LV.map.fill(FLOOR); LV.solid.fill(0); LV.tall.fill(0); LV.roomOf.fill(-1); LV.seen.fill(1); LV.vis.fill(1);
   LV.decor = []; LV.spawns = []; LV.paths = []; LV.rooms = []; LV.npcs = [];
-  LV.thick = null; LV.backExit = null; LV.treeBlock = null; LV.treeCut = null; LV.gatePos = null; LV.safe = null; LV.cobble = null; LV.doorsAt = null; LV.pads = null; LV.smokes = null; LV.campGlows = null;
+  LV.thick = null; LV.backExit = null; LV.treeBlock = null; LV.treeCut = null; LV.aldoTree = null; LV.aldoChop = null; LV.gatePos = null; LV.safe = null; LV.cobble = null; LV.doorsAt = null; LV.pads = null; LV.smokes = null; LV.campGlows = null;
   bakeCanopy(A.act === 1 && !A.reg);   // before the floor bake, which samples it past the map edge
   if (A.hub) genHollow(R, A); else if (A.riv) genRiver(R, A); else if (A.reg && REGIONS[A.reg]) genRegion(R, A, REGIONS[A.reg]); else if (A.kind === 'town') genTown(R, A); else genForest(R, A);
   bakePathField();
@@ -407,7 +407,7 @@ const CAMP_AT = (du, ds) => { const [a, b] = US(du, ds); return [HUB.camp[0] + a
 const CAMP_UV = (fi, fj) => { const a = fi - HUB.camp[0], b = fj - HUB.camp[1]; return [(a - b) * 0.7071, (a + b) * 0.7071]; };   // and back
 const inCamp = (fi, fj, m = 0) => { const [u, v] = CAMP_UV(fi, fj), F = HUB.fence; return Math.hypot(u - F.c[0], v - F.c[1]) < F.r + m; };
 HUB.start = CAMP_AT(0.4, -8.4);   // round 92: you arrive just inside the gate, looking down into the camp
-const hollowOpen = () => { const f = (G.story && G.story.f) || {}; return !!((f.aldoFree && (typeof h3Done !== 'function' || h3Done() || h3Legacy(f))) || LV.loop > 0 || (G.gates && G.gates[0])); };   // the fallen tree cleared (round 78: once the Hollow's three dangers are dealt with)
+const hollowOpen = () => { const f = (G.story && G.story.f) || {}; return !!((typeof h3Legacy === 'function' ? h3Legacy(f) : f.treeCleared) || LV.loop > 0 || (G.gates && G.gates[0])); };   // the fallen tree is gone: round 101, once Aldo has cut it (`treeCleared`, the chop at the tree) or a save is past it
 function genHollow(R, A) {
   const H = HUB, [cx, cy] = H.camp, autumn = false;
   // ---- roads (the layout's widths are full widths in tiles)
@@ -558,6 +558,7 @@ function genHollow(R, A) {
       for (let q = -3; q <= 3; q++) { const i = Math.floor(tree[0] + nx * q * 0.8), j = Math.floor(tree[1] + ny * q * 0.8), k = tIdx(i, j); was.push([k, LV.solid[k]]); LV.solid[k] = 1; }
       LV.decor.push({ kind: 'fallentree', fi: tree[0], fj: tree[1], yaw: Math.atan2(ny, nx) });
       LV.treeBlock = [tree[0], tree[1]]; LV.treeCut = { was, cut };
+      LV.aldoTree = [tree[0] - rd[0] * 2.3 - nx * 0.9, tree[1] - rd[1] * 2.3 - ny * 0.9]; LV.aldoChop = [tree[0] - rd[0] * 0.95 - nx * 0.5, tree[1] - rd[1] * 0.95 - ny * 0.5];   // (and where he stands to cut it)   // (round 101: where Aldo waits with his axe)
     } else LV.decor.push(...cut);
   }
   // ---- the dungeon doors and the landmarks
@@ -598,7 +599,7 @@ function genHollow(R, A) {
   { const f = (G.story && G.story.f) || {};
     LV.npcs.push({ role: 'wren', name: 'WREN', fi: SPOTS.tents[0], fj: SPOTS.tents[1] });
     LV.npcs.push({ role: 'hollis', name: 'HOLLIS', fi: SPOTS.hollis[0], fj: SPOTS.hollis[1] });
-    if (f.aldoFree || A.loop > 0 || (G.gates && G.gates[0])) LV.npcs.push({ role: 'aldo', name: 'ALDO', fi: SPOTS.woodcutter[0], fj: SPOTS.woodcutter[1] }); }
+    if (f.aldoFree || A.loop > 0 || (G.gates && G.gates[0])) LV.npcs.push(f.woodPaid && LV.treeBlock && LV.aldoTree ? { role: 'aldo', name: 'ALDO', fi: LV.aldoTree[0], fj: LV.aldoTree[1], atTree: true } : { role: 'aldo', name: 'ALDO', fi: SPOTS.woodcutter[0], fj: SPOTS.woodcutter[1] }); }   // (round 101: at the fallen tree with his axe until he has cut it)
   // ---- monster packs from the layout, at each clearing's level (a band climbs from level to lvlTo)
   for (const p of HOLLOW.packs) {
     const c = HCL[p.at], [a, b] = US(c.u, c.s);
@@ -1688,7 +1689,7 @@ function updateNpcs(dt) {
   for (const n of npcs) {
     n.clock += dt;
     const dh = Math.hypot(hero.fi - n.fi, hero.fj - n.fj);
-    if (n.leaving !== undefined || n.maelis) continue;   // Aldo running home from the den, Maelis (quests.js)
+    if (n.leaving !== undefined || n.maelis || n.busy) continue;   // Aldo running home from the den, Maelis (quests.js)
     if (n.role === 'merchant' || n.role === 'smith' || n.role === 'priest' || TALKERS[n.role]) {   // face the hero when close
       if (dh < 3) n.dir = dirFrom(hero.fi - n.fi, hero.fj - n.fj);
       continue;
