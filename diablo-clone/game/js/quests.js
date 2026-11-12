@@ -45,7 +45,9 @@ function sideDiff(side) { const o = H3.find(o => o.side === side), f = storyF();
 function h3Pick() {
   const f = storyF(), open = H3.filter(o => !f[o.flag]); if (!open.length) return null;
   const sel = open.find(o => o.k === G.h3sel); if (sel) return sel;
-  return open.reduce((b, o) => { const p = h3Pos(o), q = h3Pos(b); return Math.hypot(p[0] - hero.fi, p[1] - hero.fj) < Math.hypot(q[0] - hero.fi, q[1] - hero.fj) ? o : b; });
+  const best = open.reduce((b, o) => { const p = h3Pos(o), q = h3Pos(b); return Math.hypot(p[0] - hero.fi, p[1] - hero.fj) < Math.hypot(q[0] - hero.fi, q[1] - hero.fj) ? o : b; });
+  if (LV.hub) G.h3sel = best.k;   // (round 100: kept until it is done or another is tapped; the nearest flipped as he walked)
+  return best;
 }
 function h3Complete(o) {
   const f = storyF(); if (f[o.flag]) return;
@@ -372,7 +374,12 @@ function updateStory(dt) {
   updateStones(dt);
   if (LV.side === 'cellar' && !f.cellarSeen) { f.cellarSeen = true; say('SACKS OF BONES, STACKED TO THE ROOF.', 26, 4); say('THE GRAVES WERE DUG FOR THIS.', 26, 4); }
   // round 48c: the fallen tree on the road north: a word when one walks up to it; once Aldo is home, it's cleared
-  if (LV.treeBlock && Math.hypot(hero.fi - LV.treeBlock[0], hero.fj - LV.treeBlock[1]) < 3.2 && !(G.sealT > 0)) { say('A FALLEN TREE BLOCKS THE ROAD NORTH', 22, 2.5); if (!f.aldoFree) say('ONLY A WOODCUTTER COULD MOVE IT', 26, 2.5); else say('ALDO WILL NOT CUT IT WHILE THE HOLLOW IS UNSAFE', 26, 2.5); G.sealT = 3; }
+  if (LV.hub && LV.treeBlock && hollowOpen()) clearFallenTree();   // (round 100: at once, wherever he stands)
+  if (LV.treeBlock && Math.hypot(hero.fi - LV.treeBlock[0], hero.fj - LV.treeBlock[1]) < 3.2 && !(G.sealT > 0)) {
+    say('A FALLEN TREE BLOCKS THE ROAD NORTH', 22, 2.5);
+    if (!f.aldoFree) say('ONLY A WOODCUTTER COULD MOVE IT. FIND ALDO', 26, 3);
+    else { const left = H3.filter(o => !f[o.flag]).map(o => o.name.replace('THE ', '')); say('ALDO CUTS IT WHEN THE HOLLOW IS SAFE', 26, 3); if (left.length) say('STILL TO DO: ' + left.join(', '), 51, 3.5); }   // (round 100: name what is left; "unsafe" told him nothing)
+    G.sealT = 3.5; }
   if (LV.hub && hollowOpen() && storyOn() && !f.treeCleared) { f.treeCleared = true; say('ALDO HAS CLEARED THE FALLEN TREE', 51, 3.5); say('THE ROAD NORTH IS OPEN', 51, 3.5); }
   if (!LV.hub) return;
   // Aldo's wood feeds the fire: resting by it mends life and mana

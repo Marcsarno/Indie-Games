@@ -89,7 +89,7 @@ function genOutdoor(level, seed, A) {
   LV.ponds = []; LV.river = []; LV.bridges = [];
   LV.map.fill(FLOOR); LV.solid.fill(0); LV.tall.fill(0); LV.roomOf.fill(-1); LV.seen.fill(1); LV.vis.fill(1);
   LV.decor = []; LV.spawns = []; LV.paths = []; LV.rooms = []; LV.npcs = [];
-  LV.thick = null; LV.backExit = null; LV.treeBlock = null; LV.gatePos = null; LV.safe = null; LV.cobble = null; LV.doorsAt = null; LV.pads = null; LV.smokes = null; LV.campGlows = null;
+  LV.thick = null; LV.backExit = null; LV.treeBlock = null; LV.treeCut = null; LV.gatePos = null; LV.safe = null; LV.cobble = null; LV.doorsAt = null; LV.pads = null; LV.smokes = null; LV.campGlows = null;
   bakeCanopy(A.act === 1 && !A.reg);   // before the floor bake, which samples it past the map edge
   if (A.hub) genHollow(R, A); else if (A.riv) genRiver(R, A); else if (A.reg && REGIONS[A.reg]) genRegion(R, A, REGIONS[A.reg]); else if (A.kind === 'town') genTown(R, A); else genForest(R, A);
   bakePathField();
@@ -371,6 +371,17 @@ function genTown(R, A) {
 
 // ---------------------------------------------------------------- the Act I hub: THE HOLLOW (round 48c)
 // Hand-built from the approved layout (tools/world/hollow.json, drawn by tools/world/render-layout.py):
+// round 100: the Hollow made safe while one stands in it (the user: the Standing Stones done last, out in
+// the Hollow, said the tree was cleared but it stayed, and told him the Hollow was unsafe): Aldo cuts it now
+function clearFallenTree() {
+  const C = LV.treeCut; if (!C || !LV.treeBlock) return;
+  for (let n = C.was.length - 1; n >= 0; n--) LV.solid[C.was[n][0]] = C.was[n][1];
+  LV.decor = LV.decor.filter(d => d.kind !== 'fallentree'); LV.decor.push(...C.cut);
+  const [x, y] = iso(LV.treeBlock[0], LV.treeBlock[1]); LV.treeBlock = null; LV.treeCut = null;
+  const keep = dynProps.map(p => ({ open: p.open, broken: p.broken, hp: p.hp, hatch: p.hatch }));
+  buildWorld(); keep.forEach((q, n) => { if (dynProps[n]) Object.assign(dynProps[n], q); });
+  for (let k = 0; k < 18; k++) pspawn(5, x + (Math.random() - 0.5) * 40, y - 6, 4 + Math.random() * 16, (Math.random() - 0.5) * 50, -24, 30, 0.8, k % 3 ? 30 : 31);   // sawdust and bark
+}
 // a 100x100 region with the camp at the bottom, roads out to clearings, open woods of tree clumps
 // round them, thick forest only as the walls between areas and at the edge, the brook, cliffs, and
 // three dungeon doors (the wolf den, the barrow, the old watchtower). A fallen tree lies across the
@@ -541,11 +552,13 @@ function genHollow(R, A) {
   LV.campGlows = [[-4.2, -4.0, 0.42], [-4.0, 2.6, 0.5], [8.6, 0.2, 0.34], [6.0, -5.0, 0.3], [-7.0, -1.0, 0.3], [0.4, 5.4, 0.36]].map(([u, v, i]) => ({ p: C(u, v), i }));   // warm light from Wren's tent door, the big tent's door, the market, the well, the shrine, the supper table
   // ---- the fallen tree across the road north (cleared once Aldo is free: its trunk lies cut at the roadside)
   { const nx = -rd[1], ny = rd[0];   // along the trunk
+    const cut = [{ kind: 'log', fi: tree[0] - rd[0] * 1.2 + nx * 2.2, fj: tree[1] - rd[1] * 1.2 + ny * 2.2, yaw: Math.atan2(ny, nx) }, { kind: 'stump', i: Math.floor(tree[0] + nx * 3.2), j: Math.floor(tree[1] + ny * 3.2) }];
     if (!hollowOpen()) {
-      for (let q = -3; q <= 3; q++) { const i = Math.floor(tree[0] + nx * q * 0.8), j = Math.floor(tree[1] + ny * q * 0.8); LV.solid[tIdx(i, j)] = 1; }
+      const was = [];   // (round 100: what each tile was, so the tree can be cut while one stands in the Hollow)
+      for (let q = -3; q <= 3; q++) { const i = Math.floor(tree[0] + nx * q * 0.8), j = Math.floor(tree[1] + ny * q * 0.8), k = tIdx(i, j); was.push([k, LV.solid[k]]); LV.solid[k] = 1; }
       LV.decor.push({ kind: 'fallentree', fi: tree[0], fj: tree[1], yaw: Math.atan2(ny, nx) });
-      LV.treeBlock = [tree[0], tree[1]];
-    } else LV.decor.push({ kind: 'log', fi: tree[0] - rd[0] * 1.2 + nx * 2.2, fj: tree[1] - rd[1] * 1.2 + ny * 2.2, yaw: Math.atan2(ny, nx) }, { kind: 'stump', i: Math.floor(tree[0] + nx * 3.2), j: Math.floor(tree[1] + ny * 3.2) });
+      LV.treeBlock = [tree[0], tree[1]]; LV.treeCut = { was, cut };
+    } else LV.decor.push(...cut);
   }
   // ---- the dungeon doors and the landmarks
   put('den', H.den, 2, 2);
