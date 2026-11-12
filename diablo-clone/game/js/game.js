@@ -1490,12 +1490,13 @@ function frameOf(e) {
   return 0;
 }
 // hurt tint: each palette color mapped onto the red ramp by its brightness, so the shape still reads
-const HURT_TINT = new Uint8Array(128), ICE_TINT = new Uint8Array(128), ARC_TINT = new Uint8Array(128), FIRE_TINT = new Uint8Array(128);
+const HURT_TINT = new Uint8Array(128), ICE_TINT = new Uint8Array(128), ARC_TINT = new Uint8Array(128), FIRE_TINT = new Uint8Array(128), HOLY_TINT = new Uint8Array(128);
 for (let v = 0; v < 128; v++) {
   const n = parseInt(PAL_HEX[v] || '000000', 16), L = (0.3 * (n >> 16) + 0.59 * ((n >> 8) & 255) + 0.11 * (n & 255)) / 255;
   HURT_TINT[v] = v <= 1 ? v : RED[Math.min(4, Math.floor(L * 6 + 0.5))];
   ICE_TINT[v] = v <= 1 ? v : WATER[Math.min(4, Math.floor(L * 4.6 + 0.9))];
   ARC_TINT[v] = v <= 1 ? v : BLUE[Math.min(3, Math.floor(L * 4 + 1))] | EMIS;
+  HOLY_TINT[v] = v <= 1 ? v : [48, 49, 50, 51, 27][Math.min(4, Math.floor(L * 5 + 0.3))] | EMIS;   // round 99: the paladin's afterimages, glowing gold
   FIRE_TINT[v] = v <= 1 ? v : FIRE[Math.min(FIRE.length - 1, Math.floor(L * FIRE.length * 0.9 + 0.5))] | EMIS;   // burning: the body glows through the fire ramp   // blink afterimage: glowing arcane blue   // frozen: ice blue that keeps the body's shading
 }
 function blit(sp, wx, wy, flash, cidx, tile, dissolve = 0) {
@@ -1878,7 +1879,7 @@ function ovBlit(sp, wx, wy, level, flash, dissolve, tile, clip = null, rim = nul
       let v = sp.data[y * sp.w + x];
       if (!v) continue;
       if (dissolve > 0 && BAYER[((yy & 3) << 2) | (xx & 3)] < dissolve) continue;
-      if (flash && v !== BLK) v = flash === 7 ? FIRE_TINT[v & 127] : flash === 4 ? ICE_TINT[v & 127] : flash === 6 ? ARC_TINT[v & 127] : flash === 5 ? ((xx + yy) & 2 ? ICE_TINT[v & 127] : v) : flash === 2 ? HURT_TINT[v & 127] : flash === 3 ? ((xx + yy) & 2 ? HURT_TINT[v & 127] : v) : (27 | EMIS);
+      if (flash && v !== BLK) v = flash === 7 ? FIRE_TINT[v & 127] : flash === 8 ? HOLY_TINT[v & 127] : flash === 4 ? ICE_TINT[v & 127] : flash === 6 ? ARC_TINT[v & 127] : flash === 5 ? ((xx + yy) & 2 ? ICE_TINT[v & 127] : v) : flash === 2 ? HURT_TINT[v & 127] : flash === 3 ? ((xx + yy) & 2 ? HURT_TINT[v & 127] : v) : (27 | EMIS);
       // a world sprite redrawn over a character is already drawn and lit in the world layer at this
       // very pixel: copy it (cheaper than lighting it again, and identical)
       const c = !flash && LV0 < 0 && (!fine || sp.world2) ? (fine ? frame2[yy * OW + xx] : base32[(Y0 + hy) / SPX * W + y * W + (X0 + hx) / SPX + x]) : (v & EMIS) ? PAL32[CYCLE[v & 127]] : v === BLK ? PAL32[BLK] : LV0 >= 0 ? LCOL[LV0 + v] : envCol((xx + hx) >> 1, (yy + hy) >> 1, v, tile);

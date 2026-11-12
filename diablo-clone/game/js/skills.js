@@ -2357,7 +2357,7 @@ function drawElemUlt() {
   if (G.screenFlash) {   // a white (or ice-blue) frame, breaking up as it fades
     const F = G.screenFlash; if (F.at === undefined) F.at = G.t; const k = 1 - (G.t - F.at) / F.t0, c = PAL32[F.col];
     if (k <= 0) G.screenFlash = null;
-    else for (let Y = 0; Y < OH; Y++) { const row = ((Y >> 1) & 3) << 2; for (let X = 0; X < OW; X++) if (BAYER[row | ((X >> 1) & 3)] < k * k * 0.6) ov32[Y * OW + X] = c; }
+    else for (let Y = 0; Y < OH; Y++) { const row = ((Y >> 1) & 3) << 2; for (let X = 0; X < OW; X++) if (BAYER[row | ((X >> 1) & 3)] < k * k * (F.a || 0.6)) ov32[Y * OW + X] = c; }
   }
   const U = hero.ultOn; if (!U || U.kind !== 'elem') return;
   const P = (fi, fj, z) => { const [x, y] = iso(fi, fj); return [Math.round(x * SPX - cam2x), Math.round((y - z) * SPX - cam2y)]; };

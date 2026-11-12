@@ -275,14 +275,14 @@ function palShares(o) {
 SKILLSETS.paladin = [
   { id: 'phammer', name: 'HAMMER OF LIGHT', lvl: 1, mana: 7, cd: 1.2 },
   { id: 'consec', name: 'CONSECRATE', lvl: 2, mana: 10, cd: 7 },
-  { id: 'pwall', name: 'SHIELD WALL', lvl: 3, mana: 8, cd: 6 },
+  { id: 'seraph', name: "SERAPH'S FALL", lvl: 3, mana: 10, cd: 6 },   // round 99: replaces Shield Wall (the user: boring)
   { id: 'judge', name: 'JUDGMENT', lvl: 4, mana: 12, cd: 5 },
 ];
 ULTS.paladin = { id: 'wings', name: 'ARCHANGEL' };
 const WINGS = { dawn: { T: 15, speed: 1.25, dmg: 1.2, reach: 1.5, name: 'WINGS OF DAWN' }, arch: { T: 18, speed: 1.4, dmg: 1.6, reach: 1.8, name: 'ARCHANGEL' } };
 const isPal = () => hero.cls === 'paladin';
 const palWings = () => hero.wing && hero.wing.t > 0 ? hero.wing : null;
-const palFresh = () => ({ waves: [], hammers: [], consec: null, judges: [], pillars: [], wall: null, flashes: [], smites: [], scorch: [] });
+const palFresh = () => ({ waves: [], hammers: [], consec: null, judges: [], pillars: [], flashes: [], smites: [], scorch: [], lanes: [], spears: [], tolls: [], domes: [], streaks: [], bell: null });
 { const r0 = resetFx; resetFx = function () { r0(); G.pal = palFresh(); }; }
 // ---- the swings' waves of light
 function palSwing(combo) {
@@ -290,7 +290,7 @@ function palSwing(combo) {
   const W = palWings(), big = combo === 2, [fx, fy] = dirVec(hero.dir), a0 = Math.atan2(fy, fx);
   const range = (big ? 4.6 : 2.7) * (W ? WINGS[W.kind].reach : 1);
   G.pal.waves.push({ fi: hero.fi, fj: hero.fj, a0, half: big ? 0.8 : 0.62, range, speed: big ? 12 : 10, t: 0, front: heroReach() * 0.6, k: big ? 0.75 : 0.4, big, hit: new Set(), arch: !!(W && W.kind === 'arch') });
-  if (big) { sfx('whoomp'); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.1); } else sfx('swing', 0.5);
+  if (big) { sfx('whoomp'); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.1); palFinisher(); } else sfx('swing', 0.5);   // (round 99: the third swing also calls a hammer down)
 }
 function updatePalWaves(dt) {
   for (const w of G.pal.waves) {
@@ -358,49 +358,57 @@ function updatePalConsec(dt) {
   if (Math.random() < dt * 30) { const a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * C.R, [x, y] = iso(C.fi + Math.cos(a) * r, C.fj + Math.sin(a) * r); pspawn(4, x, y, 1, 0, 0, 16 + Math.random() * 16, 0.8, Math.random() < 0.6 ? 51 : 27); }
   if (C.t >= C.T) G.pal.consec = null;
 }
-// ---- SHIELD WALL
-function palWall() {
-  G.pal.wall = { t: 0, T: 2.6, blocked: 0 }; sfx('block'); sfx('clank'); hero.atk = -1;
-  return true;
-}
-const palFront = (fi, fj, half = 1.35) => { const [fx, fy] = dirVec(hero.dir), dx = fi - hero.fi, dy = fj - hero.fj, l = Math.hypot(dx, dy) || 1; return (dx * fx + dy * fy) / l > Math.cos(half); };
-function updatePalWall(dt) {
-  const Wl = G.pal.wall; if (!Wl) return;
-  Wl.t += dt;
-  if (hero.atk < 0 && !hero.leap) hero.clip = 'bash';
-  for (const p of projectiles) if (p.owner === 'enemy' && Math.hypot(p.fi - hero.fi, p.fj - hero.fj) < 1.7 && palFront(p.fi, p.fj)) {   // arrows and bolts thrown back the way they came
-    p.owner = 'hero'; p.spell = true; p.dmgK = 1.4; p.vx *= -1.3; p.vy *= -1.3; p.life = 1.2; p.hits = new Set(); Wl.blocked++; palSpark(p.fi, p.fj, 6); sfx('block'); faithAdd(3);
-  }
-  if (Wl.t >= Wl.T) {   // then the bash: everything close in front knocked back and stunned
-    G.pal.wall = null; const [fx, fy] = dirVec(hero.dir);
-    for (const e of nearFoes(hero.fi, hero.fj, 2.6)) if (palFront(e.fi, e.fj, 1.0)) { bzHit(e, 1.3, [hero.fi, hero.fj], 2, 'holy'); e.stun = Math.max(e.stun || 0, 1.0); }
-    shockwave(hero.fi + fx * 0.8, hero.fj + fy * 0.8, 2.4, 0.25, [27, 51], [Math.atan2(fy, fx), 1.0]); sfx('crit'); hero.dash = 0.16; hero.clip = 'bash';
-    if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.25);
-  }
-}
-// ---- JUDGMENT
+// ---- JUDGMENT (round 99: a real hammer, his own, falling through a tear in the sky; WRATH OF HEAVEN: three of them;
+// the combo's finisher: a small one on whatever the third swing struck)
 function palJudge() {
   const t = thickest(8) || nearestEnemy(8); if (!t) return false;
   hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
-  G.pal.judges.push({ fi: t.fi, fj: t.fj, t: 0, T: 0.55, done: false, R: 2.3 });
-  hero.palRaise = 0.6; hero.atk = -1; hero.clip = 'raise';   // he raises the hammer to the sky (round 98)
+  G.pal.judges.push({ fi: t.fi, fj: t.fj, t: 0, T: 0.62, done: false, R: 2.4 });
+  hero.palRaise = 0.65; hero.atk = -1; hero.clip = 'raise';   // he raises the hammer to the sky
   sfx('cry', 0.5); sfx('portal', 0.6);
   return true;
 }
+function palWrath() {
+  const picks = [];
+  for (let k = 0; k < 3; k++) {
+    let best = null, bn = -1;
+    for (const o of nearFoes(hero.fi, hero.fj, 9.5)) { if (picks.some(p => Math.hypot(p[0] - o.fi, p[1] - o.fj) < 2.6)) continue; let n = 0; for (const q of enemies) if (alive(q) && Math.hypot(q.fi - o.fi, q.fj - o.fj) < 2.2) n++; if (n > bn) { bn = n; best = o; } }
+    if (!best) { if (!picks.length) return false; const a = Math.random() * 6.283, p0 = picks[0]; picks.push([p0[0] + Math.cos(a) * 2.8, p0[1] + Math.sin(a) * 2.8]); continue; }
+    picks.push([best.fi, best.fj]);
+  }
+  picks.forEach((p, k) => G.pal.judges.push({ fi: p[0], fj: p[1], t: -k * 0.24, T: 0.55, done: false, R: 2.6, big: true }));
+  hero.palRaise = 1.1; hero.atk = -1; hero.clip = 'raise'; sfx('cry'); sfx('portal');
+  return true;
+}
+function palFinisher() {   // the third swing: a small hammer of light falls on what it struck, or just ahead
+  const [fx, fy] = dirVec(hero.dir); let t = null, bd = 1e9;
+  for (const e of nearFoes(hero.fi, hero.fj, 4.5)) { const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy); if ((dx * fx + dy * fy) / (d || 1) > 0.3 && d < bd) { bd = d; t = e; } }
+  const at = t ? [t.fi, t.fj] : [hero.fi + fx * 2.2, hero.fj + fy * 2.2];
+  G.pal.judges.push({ fi: at[0], fj: at[1], t: 0, T: 0.22, done: false, R: 1.3, mini: true });
+}
 function updatePalJudges(dt) {
   for (const J of G.pal.judges) {
-    J.t += dt;
+    J.t += dt; if (J.t < 0) continue;
     if (!J.done && J.t >= J.T) {
       J.done = true;
-      for (const e of nearFoes(J.fi, J.fj, J.R)) { bzHit(e, 2.2, [J.fi, J.fj], 3, 'holy'); if (alive(e)) { e.palMark = G.t + 8; e.stun = Math.max(e.stun || 0, 1.0); } }
+      if (J.mini) {
+        for (const e of nearFoes(J.fi, J.fj, J.R)) { bzHit(e, 0.9, [J.fi, J.fj], 2, 'holy'); if (alive(e) && !e.def.unique) e.stun = Math.max(e.stun || 0, 0.3); }
+        shockwave(J.fi, J.fj, J.R + 0.3, 0.25, [27, 51]); G.pal.domes.push({ fi: J.fi, fj: J.fj, t: 0, T: 0.22, R: 1.1 }); palSpark(J.fi, J.fj, 12);
+        sfx('crit', 0.7); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.12);
+        continue;
+      }
+      for (const e of nearFoes(J.fi, J.fj, J.R)) { bzHit(e, J.big ? 2.4 : 2.2, [J.fi, J.fj], 3, 'holy'); if (alive(e)) { e.palMark = G.t + 8; if (!e.def.unique) e.stun = Math.max(e.stun || 0, 1.0); } }
       shockwave(J.fi, J.fj, J.R + 0.6, 0.4, [27, 51]); shockwave(J.fi, J.fj, J.R * 0.6, 0.3, [51, GOLD[2]], null, false);
-      palSpark(J.fi, J.fj, 30); G.flashes.push({ fi: J.fi, fj: J.fj, r: 120, t: 0.3, t0: 0.3 });
-      { const R0 = rng((Math.random() * 1e9) | 0), cracks = []; for (let k = 0; k < 9; k++) { let a = k / 9 * 6.283 + R0() * 0.5, x = 0, y = 0; const pts = [[0, 0]], n = 3 + R0.int(0, 2); for (let q = 0; q < n; q++) { a += (R0() - 0.5) * 0.9; const l = 0.35 + R0() * 0.45; x += Math.cos(a) * l; y += Math.sin(a) * l; pts.push([x, y]); } cracks.push(pts); } G.pal.scorch.push({ fi: J.fi, fj: J.fj, t: 0, T: 2.2, cracks }); }
-      sfx('meteor'); sfx('crit'); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.55); if (typeof camKick === 'function') camKick(0, 1, 5);
+      G.pal.domes.push({ fi: J.fi, fj: J.fj, t: 0, T: 0.42, R: J.R + 0.4 });
+      palSpark(J.fi, J.fj, 30); G.flashes.push({ fi: J.fi, fj: J.fj, r: 140, t: 0.35, t0: 0.35 });
+      palCracks(J.fi, J.fj, 2.2); if (typeof stampCrater === 'function') stampCrater(J.fi, J.fj, 1.1);
+      G.screenFlash = { t0: 0.1, col: 27, at: G.t, a: J.big ? 0.12 : 0.18 };
+      sfx('meteor'); sfx('crit'); sfx('boom', 0.6); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.6); if (typeof camKick === 'function') camKick(0, 1, 6); hero.stop = Math.max(hero.stop || 0, 0.05);
     }
   }
-  G.pal.judges = G.pal.judges.filter(J => J.t < J.T + 0.5);
+  G.pal.judges = G.pal.judges.filter(J => J.t < J.T + (J.mini ? 0.15 : 0.6));
 }
+function palCracks(fi, fj, T) { const R0 = rng((Math.random() * 1e9) | 0), cracks = []; for (let k = 0; k < 9; k++) { let a = k / 9 * 6.283 + R0() * 0.5, x = 0, y = 0; const pts = [[0, 0]], n = 3 + R0.int(0, 2); for (let q = 0; q < n; q++) { a += (R0() - 0.5) * 0.9; const l = 0.35 + R0() * 0.45; x += Math.cos(a) * l; y += Math.sin(a) * l; pts.push([x, y]); } cracks.push(pts); } G.pal.scorch.push({ fi, fj, t: 0, T, cracks }); }
 // a marked foe takes a quarter more, and dies in a burst of healing light
 { const d0 = damageEnemy; damageEnemy = function (e, dmg, ...rest) {
   if (isPal()) { const W = palWings(); if (W) dmg = Math.round(dmg * WINGS[W.kind].dmg); if (e.palMark > G.t) dmg = Math.round(dmg * 1.25); }
@@ -425,7 +433,7 @@ const FAITH_K = 0.3;   // faith fills at this share of the shared ultimate's rat
   if (f < 50) { say('NOT ENOUGH FAITH', 27, 1.2); btnFx(9).deny = 0.3; sfx('tap'); return; }
   const kind = f >= 100 ? 'arch' : 'dawn'; hero.ult = kind === 'arch' ? 0 : f - 50;
   hero.wing = { kind, t: WINGS[kind].T, T: WINGS[kind].T }; btnFx(9).press = 0.2; G.ultAt = G.t; hero.palRaise = 0.7; hero.atk = -1;
-  recalcHero(); prewarmHero();
+  recalcHero(); prewarmHero(); palKit(); palBurst(kind);
   say(WINGS[kind].name, kind === 'arch' ? 51 : 27, 2.5); sfx('levelUp'); sfx('portal');
   const [x, y] = screenOf(hero); for (let k = 0; k < (kind === 'arch' ? 60 : 30); k++) { const a = Math.random() * 6.283, s = 30 + Math.random() * 60; pspawn(4, x, y - 16, 4, Math.cos(a) * s, Math.sin(a) * s * 0.6, 30 + Math.random() * 40, 0.9, kind === 'arch' ? (Math.random() < 0.6 ? 51 : 27) : 27); }
   shockwave(hero.fi, hero.fj, kind === 'arch' ? 4 : 2.6, 0.4, kind === 'arch' ? [27, 51] : [27, 26]);
@@ -434,11 +442,11 @@ const FAITH_K = 0.3;   // faith fills at this share of the shared ultimate's rat
   if (SHAKE) G.trauma = Math.min(1, G.trauma + (kind === 'arch' ? 0.5 : 0.25));
 }; }
 // the wings' look and speed ride on recalcHero
-{ const rc0 = recalcHero; recalcHero = function () { rc0(); if (!isPal()) { hero.look.wings = ''; hero.look.holy = 0; return; } const W = palWings(); hero.look.wings = W ? W.kind : ''; hero.look.holy = 1; hero.look.size = W ? [120, 104, 60, 80] : undefined; if (W) STAT.speed *= WINGS[W.kind].speed; }; }
+{ const rc0 = recalcHero; recalcHero = function () { rc0(); if (!isPal()) { hero.look.wings = ''; hero.look.holy = 0; return; } const W = palWings(), wk = W ? W.kind : hero.palSerWing ? 'dawn' : ''; hero.look.wings = wk; hero.look.holy = 1; hero.look.size = wk ? [120, 104, 60, 80] : undefined; if (W) STAT.speed *= WINGS[W.kind].speed; }; }
 // the paladin takes blows like the warrior (a quarter less), and every block feeds his faith
 { const h0 = hurtHero; hurtHero = function (dmg, src) {
   if (!isPal()) return h0(dmg, src);
-  if (G.pal && G.pal.wall && (!src || palFront(src.fi, src.fj))) { floater('BLOCK', hero.fi, hero.fj, 44, 51); sfx('block'); palSpark(hero.fi + dirVec(hero.dir)[0] * 0.8, hero.fj + dirVec(hero.dir)[1] * 0.8, 6); faithAdd(1); G.pal.wall.blocked++; return; }
+  const B = hero.bz; if (B && ((B.kind === 'seraph' && !B.landed) || B.kind === 'lance')) return;   // in the air, or a lance of light: untouchable
   const hp0 = hero.hp; h0(Math.max(1, dmg * 0.75), src);
   if (hero.hp === hp0 && !hero.dead) faithAdd(1);   // a shield block
 }; }
@@ -456,25 +464,25 @@ function updatePaladin(dt) {
   const W = palWings();
   if (W) {
     W.t -= dt;
-    if (W.t <= 0) { hero.wing = null; recalcHero(); prewarmHero(); say('THE WINGS FADE', 26, 1.5); }
+    if (W.t <= 0 || hero.dead) { hero.wing = null; recalcHero(); prewarmHero(); palKit(); if (!hero.dead) say('THE WINGS FADE', 26, 1.5); }
     else {
       const [x, y] = screenOf(hero), arch = W.kind === 'arch';
       if (Math.random() < dt * (arch ? 40 : 18)) { const s = Math.random() < 0.5 ? -1 : 1; pspawn(4, x + s * (8 + Math.random() * 14), y - 22 - Math.random() * 14, 2, s * 6, 10, -6, 1.2, arch ? (Math.random() < 0.6 ? 51 : 27) : 27); }   // feathers of light drifting down
-      if (arch && !hero.leap && hero.atk < 0) hero.leapZ = 3 + Math.sin(G.t * 3.2) * 1.5;   // he hovers
-      else if (arch && !hero.leap && hero.combo !== 3) hero.leapZ = 2;
+      if (arch && !hero.leap && !hero.bz && hero.atk < 0) hero.leapZ = 3 + Math.sin(G.t * 3.2) * 1.5;   // he hovers
+      else if (arch && !hero.leap && !hero.bz && hero.combo !== 3) hero.leapZ = 2;
     }
-  } else if (hero.leapZ && !hero.leap && hero.combo !== 3 && hero.atk < 0) hero.leapZ = 0;
+  } else if (hero.leapZ && !hero.leap && !hero.bz && hero.combo !== 3 && hero.atk < 0) hero.leapZ = 0;
   if (hero.palFly && !hero.leap) {   // landed from a flight: a burst of light where he comes down
     hero.palFly = false; for (const e of nearFoes(hero.fi, hero.fj, 2.0)) bzHit(e, 1.2, [hero.fi, hero.fj], 2, 'holy');
     shockwave(hero.fi, hero.fj, 2.2, 0.3, [27, 51]); palSpark(hero.fi, hero.fj, 18); palPillar(hero.fi, hero.fj, 0.6);
   }
   if (hero.palRaise > 0) { hero.palRaise -= dt; if (hero.atk < 0 && !hero.leap && !hero.dead) hero.clip = 'raise'; }
-  updatePalWaves(dt); updatePalHammers(dt); updatePalConsec(dt); updatePalWall(dt); updatePalJudges(dt);
+  updatePalWaves(dt); updatePalHammers(dt); updatePalConsec(dt); updatePalJudges(dt); updatePal99(dt);
   for (const p of G.pal.pillars) p.t += dt; G.pal.pillars = G.pal.pillars.filter(p => p.t < p.T);
   for (const m of G.pal.smites) m.t -= dt; G.pal.smites = G.pal.smites.filter(m => m.t > 0);
   for (const c of G.pal.scorch) c.t += dt; G.pal.scorch = G.pal.scorch.filter(c => c.t < c.T);
 }
-Object.assign(SKILL_FN, { phammer: palThrow, consec: palConsecrate, pwall: palWall, judge: palJudge });
+Object.assign(SKILL_FN, { phammer: palThrow, consec: palConsecrate, judge: palJudge });
 
 // ================================================================ the wings (on the hero's rig)
 // Two wings from the shoulder blades: a bone of light (an arm and a forearm), then a fan of feathers
@@ -504,11 +512,11 @@ function palWingRig(r, eq, st) {
   }
 }
 function palRaiseGlow(r, eq, st) {
-  const J = bipedJoints(HERO_B, st), { fwd, up, sideR } = J, hand = V.add(V.add(J.shR, V.mul(fwd, 1.6)), V.add(V.mul(up, 7.2), V.mul(sideR, 0.4))), bd = V.norm(V.add(up, V.mul(fwd, 0.12)));
-  const head = V.mad(hand, bd, (GEAR_LEN[eq.weapon] || 16) - 1), big = st.f % 2;
-  r.sph(head, big ? 4.2 : 3.4, M.HOLY, { noShadow: true });
-  for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2 + (big ? 0.5 : 0), d = V.norm(V.add(V.mul(fwd, Math.cos(a)), V.mul(sideR, Math.sin(a)))); r.cone(V.mad(head, d, 3), V.mad(V.mad(head, d, big ? 8 : 6.5), up, 1), 0.9, 0.2, M.HOLY, { noShadow: true }); }
-  r.cone(V.mad(head, up, 3), V.mad(head, up, big ? 10 : 8), 1.0, 0.2, M.HOLY, { noShadow: true });
+  const J = bipedJoints(HERO_B, st), { fwd, up, sideR } = J, hand = V.add(V.add(J.shR, V.mul(fwd, 1.4)), V.add(V.mul(up, 7.0), V.mul(sideR, 2.0))), bd = V.norm(V.add(V.add(up, V.mul(fwd, 0.12)), V.mul(sideR, 0.38)));
+  const head = V.mad(V.mad(hand, bd, (GEAR_LEN[eq.weapon] || 16) - 1), up, 2), big = st.f % 2;   // (round 99: a four-pointed glint, long up and short across; six rays read as spiky hair)
+  r.sph(head, big ? 3.0 : 2.4, M.HOLY, { noShadow: true });
+  r.cone(V.mad(head, up, 2), V.mad(head, up, big ? 13 : 10), 1.1, 0.15, M.HOLY, { noShadow: true });
+  for (const s of [-1, 1]) { r.cone(V.mad(head, sideR, s * 2), V.mad(head, sideR, s * (big ? 7 : 5.5)), 0.9, 0.15, M.HOLY, { noShadow: true }); r.cone(V.mad(head, fwd, s * 2), V.mad(head, fwd, s * (big ? 5 : 4)), 0.8, 0.15, M.HOLY, { noShadow: true }); }
 }
 { const hr0 = FAMILIES.hero.rig; FAMILIES.hero.rig = function (eq, st) { const r = hr0(eq, st); if (eq.wings) palWingRig(r, eq, st); if (eq.holy && st.clip === 'raise') palRaiseGlow(r, eq, st); return r; }; }
 
@@ -596,34 +604,31 @@ function drawPalAir() {
     for (let u = -8; u <= 8; u++) for (let v = 0; v <= 6; v++) palPut(cx + ca * (9 + v) - sa * u, cy + sa * (9 + v) + ca * u, Math.abs(u) > 6 || v === 0 || v === 6 ? 51 : 27);
     glowAt(h.fi !== undefined ? iso(h.fi, h.fj)[0] : 0, iso(h.fi, h.fj)[1] - 14, 22, 0.5, GLOW_GOLD);
   }
-  const Wl = G.pal.wall;
-  if (Wl) {   // a curved wall of light in front of him (pass 2: a clear barrier: a bright crest, ribs of light, a dense glow, sparks rising)
-    const [fx, fy] = dirVec(hero.dir), a0 = Math.atan2(fy, fx), fade = Math.min(1, Wl.t / 0.12, (Wl.T - Wl.t) / 0.25 + 0.25), N = 60;
-    let prev = null;
-    for (let s = -N; s <= N; s++) {
-      const u = s / N, a = a0 + u * 1.3, [bx, by] = toDet(hero.fi + Math.cos(a) * 1.45, hero.fj + Math.sin(a) * 1.45, 0), H = Math.round(38 * Math.sqrt(1 - u * u * 0.85));
-      const rib = s % 12 === 0, crest = by - H;
-      for (let k = 0; k <= H; k++) {
-        const Y = by - k; if (Y < 0) break;
-        const t = k / H, bay = BAYER[((Y & 3) << 2) | (bx & 3)], shimmer = 0.5 + 0.5 * Math.sin(G.t * 9 + s * 0.35 - k * 0.25);
-        if (rib && bay < fade * 0.9) { palPut(bx, Y, t > 0.85 ? 27 : 51); continue; }
-        if (bay < fade * (0.18 + 0.32 * t + 0.18 * shimmer)) palPut(bx, Y, t > 0.7 ? 51 : GOLD[2]);
+  for (const J of G.pal.judges) {   // the hammer falling through a tear in the sky; after the blow, a column of light fading
+    if (J.t < 0) continue;
+    const [gx, gy] = toDet(J.fi, J.fj), look = palJudgeLook(), sp = palHammerSprite(look, J.mini ? 3.2 : J.big ? 6.0 : 5.4);
+    if (!J.done) {
+      const u = Math.min(1, J.t / J.T), e = Math.pow(u, 2.2), drop = (1 - e) * (J.mini ? 150 : 400), hy = gy - drop;
+      if (!J.mini) {   // the tear: a ring of light opening high above, its light pouring down onto the hammer
+        const ty = Math.max(14, gy - 420), rx = 26 + 46 * Math.min(1, J.t / 0.22), ry = rx * 0.3;
+        for (let Y = ty; Y < hy - sp.bot + 10; Y++) { const w = rx * 0.55 * (1 - (Y - ty) / Math.max(1, hy - ty) * 0.4); for (let X = Math.round(gx - w); X <= gx + w; X++) if (X >= 0 && X < OW && Y >= 0 && Y < OH && BAYER[((Y & 3) << 2) | (X & 3)] < 0.22 * (1 - Math.abs(X - gx) / w)) ov32[Y * OW + X] = PAL32[Math.abs(X - gx) < w * 0.3 ? 27 : 51]; }
+        for (let Y = Math.round(ty - ry); Y <= ty + ry; Y++) for (let X = Math.round(gx - rx); X <= gx + rx; X++) { const d = Math.hypot((X - gx) / rx, (Y - ty) / ry); if (d > 1) continue; if (d > 0.8) palPut(X, Y, d > 0.92 ? 51 : 27); else if (BAYER[((Y & 3) << 2) | (X & 3)] < 0.75 - d * 0.5) palPut(X, Y, d < 0.4 ? 27 : 26); }
       }
-      if (prev) { line2(prev[0], prev[1], bx, crest, 27); line2(prev[0], prev[1] + 1, bx, crest + 1, 51); }   // the crest
-      prev = [bx, crest];
-      if (Math.random() < 0.04) pspawn(4, (bx + cam2x) / SPX, (by + cam2y) / SPX, 2 + Math.random() * 16, 0, 0, 20, 0.5, 27);
+      for (let k = 1; k <= 7; k++) { const sx2 = gx + (k - 4) * (J.mini ? 4 : 9), len = (J.mini ? 30 : 90) * (1 - u * 0.5); for (let Y = Math.round(hy - sp.bot - len); Y < hy - sp.bot + 6; Y++) if (Y >= 0 && Y < OH && sx2 >= 0 && sx2 < OW && ((Y + k * 3) & 3) === 0) ov32[Y * OW + sx2] = PAL32[k % 2 ? 27 : 51]; }   // speed lines
+      for (let g2 = 2; g2 >= 1; g2--) palBlitHammer(sp, gx, hy - g2 * 22 * (1 - u), 0.3 / g2 * (1 - u));   // afterimages up its path
+      palBlitHammer(sp, gx, hy, 1);
+      glowAt(iso(J.fi, J.fj)[0], iso(J.fi, J.fj)[1] - drop / SPX - sp.bot / SPX * 0.5, J.mini ? 20 : 44, J.mini ? 0.4 : 0.65, GLOW_GOLD);
+    } else if (!J.mini) {
+      const k = 1 - (J.t - J.T) / 0.6, wd = J.big ? 14 : 12;
+      palBlitHammer(sp, gx, gy + 8, k * 0.9);   // the hammer stands buried a moment, fading
+      for (let Y = Math.max(0, gy - 300); Y <= gy; Y++) for (let w = -wd; w <= wd; w++) { const X = gx + w, edge = Math.abs(w) / wd; if (X < 0 || X >= OW || BAYER[((Y & 3) << 2) | (X & 3)] > k * 0.8 * (1.1 - edge)) continue; ov32[Y * OW + X] = PAL32[edge < 0.3 ? 27 : 51]; }
     }
   }
-  for (const J of G.pal.judges) {   // the giant hammer of light falling (and, after the blow, a column of light fading)
-    const [gx, gy] = toDet(J.fi, J.fj);
-    if (!J.done) {
-      const u = Math.min(1, J.t / J.T), e = u * u, z = (1 - e) * 170 + 14, cx = gx, cy = gy - z * SPX * 0.5 - 24;
-      for (let g2 = 3; g2 >= 1; g2--) palBigHammer(cx, cy - g2 * 16 * (1 - u), 1, 0.25 * (4 - g2) * (1 - u));   // afterimages up its path
-      palBigHammer(cx, cy, 1, 1);
-      glowAt(J.fi !== undefined ? iso(J.fi, J.fj)[0] : 0, iso(J.fi, J.fj)[1] - z * 0.5, 40, 0.6, GLOW_GOLD);
-    } else {
-      const k = 1 - (J.t - J.T) / 0.5;
-      for (let Y = Math.max(0, gy - 260); Y <= gy; Y++) for (let w = -10; w <= 10; w++) { const X = gx + w, edge = Math.abs(w) / 10; if (X < 0 || X >= OW || BAYER[((Y & 3) << 2) | (X & 3)] > k * (1.1 - edge)) continue; ov32[Y * OW + X] = PAL32[edge < 0.3 ? 27 : 51]; }
+  for (const D of G.pal.domes) {   // a dome of white light over the blow, swelling and thinning out
+    const k = D.t / D.T, [cx, cy] = toDet(D.fi, D.fj), rx = D.R * 22.63 * SPX * (0.45 + 0.55 * Math.sqrt(k)), ry = rx * 0.5, rh = rx * 0.7;
+    for (let Y = Math.max(0, Math.round(cy - rh)); Y <= Math.min(OH - 1, cy + ry); Y++) for (let X = Math.max(0, Math.round(cx - rx)); X <= Math.min(OW - 1, cx + rx); X++) {
+      const dx = (X - cx) / rx, dy = Y < cy ? (Y - cy) / rh : (Y - cy) / ry, d = Math.hypot(dx, dy); if (d > 1) continue;
+      if (BAYER[((Y & 3) << 2) | (X & 3)] < (1 - k) * (0.25 + 0.7 * d * d)) ov32[Y * OW + X] = PAL32[d > 0.85 ? 51 : 27];
     }
   }
   for (const m of G.pal.smites) {   // a four-pointed star of light where the hammer lands, a ring running out from it
@@ -665,25 +670,256 @@ function drawPalAir() {
   textC(W ? `${W.kind === 'arch' ? 'ARCHANGEL' : 'WINGS'} ${Math.ceil(W.t)}` : arch ? 'ARCHANGEL' : dawn ? 'WINGS' : 'FAITH', c[0], c[1] + c[2] + 8, W || arch ? 51 : dawn ? 27 : 25);
   if (fx.deny > 0) for (let a = 0; a < 64; a++) { const t = a / 64 * 6.283; put(c[0] + Math.cos(t) * (c[2] + 1), c[1] + Math.sin(t) * (c[2] + 1), 22); }
 }; }
-// round 98: the judgment's hammer, head down: a haft wrapped in gold, a bevelled head lit from above, gold bands, a burning sun on its face
-function palBigHammer(cx, cy, sc, a) {
-  const P = (X, Y, c) => { X = Math.round(X); Y = Math.round(Y); if (a < 1 && BAYER[((Y & 3) << 2) | (X & 3)] >= a) return; palPut(X, Y, c); };
-  const HW = 36 * sc, HH = 28 * sc, hl = 90 * sc;
-  for (let k = 0; k < hl; k++) for (let w = -4; w <= 4; w++) { const aw = Math.abs(w); P(cx + w, cy - 8 - k, aw === 4 ? 49 : k % 16 < 4 ? (aw < 2 ? 27 : 51) : aw < 2 ? 32 : 31); }   // the haft: white steel, gold wraps
-  for (let w = -6; w <= 6; w++) for (let v = 0; v < 5; v++) P(cx + w, cy - 8 - hl - v, Math.abs(w) === 6 || v === 4 ? 49 : 51);   // the pommel
-  for (let u2 = -HW; u2 <= HW; u2++) for (let v = -4; v < HH; v++) {
-    const au = Math.abs(u2), edge = au > HW - 2 || v < -2 || v > HH - 3, bev = v < 3 || au > HW - 6;
-    const sun = Math.hypot(u2 * 0.9, v - HH * 0.45), band = Math.abs(au - HW * 0.62) < 2.5;
-    P(cx + u2, cy + v, edge ? 49 : sun < 5 ? 27 : sun < 9 && Math.abs(Math.sin(Math.atan2(v - HH * 0.45, u2) * 4)) > 0.6 ? 51 : sun < 9 ? 50 : band ? 51 : bev ? 27 : v > HH * 0.7 ? 31 : 32);
-  }
+// round 99: the judgment's hammer is a real one: a weapon's own rig, rendered big, head down
+const PAL_HAMMER_SP = {};
+const palJudgeLook = () => { const w = hero.equip && hero.equip.weapon && ITEM_BASES[hero.equip.weapon.base].look; return w === 'pal_dawn' ? 'pal_dawn' : 'pal_maul2'; };
+function palHammerSprite(look, sc) {
+  const key = look + '|' + sc; if (PAL_HAMMER_SP[key]) return PAL_HAMMER_SP[key];
+  const r = new Rig(), bd = V.norm([0.1, 0.1, -1]), g = [0, 0, 0], wide = V.norm(V.cross(bd, [1, 1, 0])), wf = [bd, wide, V.cross(bd, wide)];   // (round 99 pass 2: broadside, so it reads as a hammer, not a spade)
+  r.cone(V.mad(g, bd, -9.5), V.mad(g, bd, -7), 1.0, 1.0, M.LEATHER); r.sph(V.mad(g, bd, -10.2), 1.5, M.GOLD);
+  GEAR_EXTRA.weapon[look](r, { g, bd, wide, wf });
+  scaleRig(r, sc);
+  const W2 = Math.ceil(16 * sc), H2 = Math.ceil(34 * sc), sp = renderRig(r, yawOf(1), W2, H2, Math.round(W2 / 2), Math.round(12 * sc), 1);
+  let bot = 0; for (let y = sp.h - 1; y >= 0 && !bot; y--) for (let x = 0; x < sp.w; x++) if (sp.data[y * sp.w + x]) { bot = y; break; }
+  sp.bot = bot - sp.ay;   // how far below the anchor its lowest pixel is
+  return (PAL_HAMMER_SP[key] = sp);
+}
+function palBlitHammer(sp, gx, gy, a) {   // its lowest point on (gx, gy); a < 1: dithered out
+  const X0 = Math.round(gx - sp.ax), Y0 = Math.round(gy - sp.bot - sp.ay), D = sp.data, w = sp.w, h = sp.h, L = LTAB[L_ID];
+  for (let y = 0; y < h; y++) { const Y = Y0 + y; if (Y < 0 || Y >= OH) continue;
+    for (let x = 0; x < w; x++) { const v = D[y * w + x], X = X0 + x; if (X < 0 || X >= OW) continue;
+      if (!v) { if (a > 0.5) { const nb = (dx, dy) => { const xx = x + dx, yy = y + dy; return xx >= 0 && yy >= 0 && xx < w && yy < h && D[yy * w + xx]; };   // a rim of gold light, two pixels: solid, then dithered
+          if (nb(-1, 0) || nb(1, 0) || nb(0, -1) || nb(0, 1)) ov32[Y * OW + X] = PAL32[51];
+          else if ((nb(-2, 0) || nb(2, 0) || nb(0, -2) || nb(0, 2) || nb(-1, -1) || nb(1, 1) || nb(-1, 1) || nb(1, -1)) && BAYER[((Y & 3) << 2) | (X & 3)] < 0.5) ov32[Y * OW + X] = PAL32[GOLD[2]]; }
+        continue; }
+      if (a < 1 && BAYER[((Y & 3) << 2) | (X & 3)] >= a) continue;
+      ov32[Y * OW + X] = PAL32[(v & EMIS) ? v & 127 : L[v & 127]]; } }
 }
 // glyphs: a pair of wings; a hammer; a ring with rays; a shield; a hammer falling on a line
 const glyphWings = (cx, cy) => { for (const s of [-1, 1]) { for (let k = 0; k < 6; k++) { line(cx + s * 1, cy - 1, cx + s * (3 + k), cy - 5 + k * 0.6, 27); } line(cx + s * 2, cy + 2, cx + s * 7, cy + 4, 26); } put(cx, cy - 1, 51); put(cx, cy, 51); };
 const glyphHammer = (cx, cy) => { line(cx - 4, cy + 5, cx + 1, cy, 33); line(cx - 3, cy + 5, cx + 2, cy, 34); for (let u = -3; u <= 3; u++) for (let v = -1; v <= 1; v++) put(cx + 2 + u * 0.7 + v * 0.7, cy - 1 - u * 0.7 + v * 0.7, Math.abs(u) === 3 ? 51 : 27); };
 const glyphConsec = (cx, cy) => { for (let a = 0; a < 32; a++) { const t = a / 32 * 6.283; put(cx + Math.cos(t) * 6, cy + Math.sin(t) * 3.5, 51); } for (let a = 0; a < 8; a++) { const t = a / 8 * 6.283; line(cx, cy, cx + Math.cos(t) * 3, cy + Math.sin(t) * 2, 27); } line(cx, cy - 1, cx, cy - 7, 27); };
-const glyphWall = (cx, cy) => { for (let y = -6; y <= 6; y++) { const w = y < 2 ? 5 : 5 - (y - 2) * 1.2; for (let x = -w; x <= w; x++) put(cx + x, cy + y, Math.abs(x) > w - 1 || y === -6 ? 51 : 39); } line(cx, cy - 4, cx, cy + 3, 27); line(cx - 3, cy - 1, cx + 3, cy - 1, 27); };
+const glyphShield = (cx, cy) => { for (let y = -6; y <= 6; y++) { const w = y < 2 ? 5 : 5 - (y - 2) * 1.2; for (let x = -w; x <= w; x++) put(cx + x, cy + y, Math.abs(x) > w - 1 || y === -6 ? 51 : 39); } line(cx, cy - 4, cx, cy + 3, 27); line(cx - 3, cy - 1, cx + 3, cy - 1, 27); };
 const glyphJudge = (cx, cy) => { for (let u = -4; u <= 4; u++) for (let v = 0; v <= 2; v++) put(cx + u, cy + 1 + v, Math.abs(u) === 4 ? 51 : 27); line(cx, cy, cx, cy - 7, 51); line(cx - 6, cy + 5, cx + 6, cy + 5, 26); put(cx - 5, cy + 4, 27); put(cx + 5, cy + 4, 27); };
-Object.assign(SPELL_LOOK, { phammer: [[48, 49, 50, 51], glyphHammer], consec: [[48, 49, 50, 51], glyphConsec], pwall: [[37, 38, 39, 40], glyphWall], judge: [[24, 25, 26, 27], glyphJudge] });
+Object.assign(SPELL_LOOK, { phammer: [[48, 49, 50, 51], glyphHammer], consec: [[48, 49, 50, 51], glyphConsec], judge: [[24, 25, 26, 27], glyphJudge] });
 { const nh0 = newHero; newHero = function (cls) { hero.wing = null; hero.palFly = false; hero.flyCd = 0; return nh0(cls); }; }
 // the skills screen's live previews (preview.js): how long each loop runs
-if (typeof PV_PLAN !== 'undefined') Object.assign(PV_PLAN, { phammer: { len: 2.4 }, consec: { len: 3.4 }, pwall: { len: 3.6 }, judge: { len: 2.8 } });
+if (typeof PV_PLAN !== 'undefined') Object.assign(PV_PLAN, { phammer: { len: 2.4 }, consec: { len: 3.4 }, seraph: { len: 2.6, far: 1.5 }, judge: { len: 2.8 } });
+
+// ================================================================ round 99: the kit changes with the wings
+// The user: popping the wings should not just make the same skills stronger; some should swap out for
+// something more powerful. WINGS OF DAWN: Hammer of Light becomes LANCE OF DAWN, Consecrate becomes
+// DIVINE TOLL. ARCHANGEL: all four ascend: three lances in a fan, a bigger toll that leaves pillars,
+// SERAPH'S FALL chaining three dives, and Judgment becomes WRATH OF HEAVEN (three giant hammers).
+// Popping either releases a burst of light. The third swing of the combo always calls a small hammer down.
+const PAL_DAWN_SKILLS = [
+  { id: 'lance', name: 'LANCE OF DAWN', lvl: 1, mana: 7, cd: 2.4 },
+  { id: 'toll', name: 'DIVINE TOLL', lvl: 1, mana: 9, cd: 4 },
+  { id: 'seraph', name: "SERAPH'S FALL", lvl: 1, mana: 10, cd: 5 },
+  { id: 'judge', name: 'JUDGMENT', lvl: 1, mana: 12, cd: 5 },
+];
+const PAL_ARCH_SKILLS = [
+  { id: 'lance3', name: 'LANCES OF DAWN', lvl: 1, mana: 7, cd: 2 },
+  { id: 'toll3', name: 'DIVINE TOLL', lvl: 1, mana: 9, cd: 3.5 },
+  { id: 'seraph3', name: "SERAPH'S FALL", lvl: 1, mana: 10, cd: 5 },
+  { id: 'wrath', name: 'WRATH OF HEAVEN', lvl: 1, mana: 12, cd: 6 },
+];
+for (const sk of [...PAL_DAWN_SKILLS, ...PAL_ARCH_SKILLS, ...SKILLSETS.paladin]) CD[sk.id] = CD[sk.id] || 0;
+function palKit() {
+  if (!isPal()) return; const W = palWings();
+  SKILLS = !W ? SKILLSETS.paladin : W.kind === 'arch' ? PAL_ARCH_SKILLS : PAL_DAWN_SKILLS;
+  if (W) for (const sk of SKILLS) CD[sk.id] = 0;
+}
+// ---- the wings' burst: a nova of light round him as they open
+function palBurst(kind) {
+  const arch = kind === 'arch', R = arch ? 4.5 : 3.0;
+  for (const e of nearFoes(hero.fi, hero.fj, R)) bzHit(e, arch ? 2.2 : 1.2, [hero.fi, hero.fj], 2, 'holy');
+  G.pal.domes.push({ fi: hero.fi, fj: hero.fj, t: 0, T: arch ? 0.5 : 0.35, R });
+  shockwave(hero.fi, hero.fj, R + 0.5, 0.45, [27, 51]);
+  const [x, y] = screenOf(hero); for (let k = 0; k < (arch ? 40 : 20); k++) { const a = k / (arch ? 40 : 20) * 6.283, sp = 70 + Math.random() * 80; pspawn(4, x, y - 18, 4, Math.cos(a) * sp, Math.sin(a) * sp * 0.6, 10 + Math.random() * 30, 0.8, k % 3 ? 27 : 51); }   // feathers of light flung out
+}
+// ---- SERAPH'S FALL: up in a column of light, the wings snap open at the top (a beat of stillness),
+// then a dive onto the thickest knot of foes like a falling star, and a crater of light
+const SER = { up: 0.2, hang: 0.13, dive: 0.14, rec: 0.26, H: 84 };
+function palLandAt(p) {
+  if (standable(p[0], p[1], 0.3)) return p;
+  for (let r = 0.3; r <= 1.8; r += 0.3) for (let a = 0; a < 8; a++) { const c = [p[0] + Math.cos(a * 0.785) * r, p[1] + Math.sin(a * 0.785) * r]; if (standable(c[0], c[1], 0.3)) return c; }
+  return null;
+}
+function palSerTarget(avoid) {
+  let best = null, bn = -1;
+  for (const o of nearFoes(hero.fi, hero.fj, 8.5)) { if (avoid && Math.hypot(o.fi - avoid[0], o.fj - avoid[1]) < 1.8) continue; let n = 0; for (const q of enemies) if (alive(q) && Math.hypot(q.fi - o.fi, q.fj - o.fj) < 2.2) n++; if (n > bn) { bn = n; best = o; } }
+  return best;
+}
+function palSeraph(chains) {
+  const t = palSerTarget(null), [fx, fy] = dirVec(hero.dir), to = palLandAt(t ? [t.fi, t.fj] : [hero.fi + fx * 3.5, hero.fj + fy * 3.5]); if (!to) return false;
+  hero.bz = { kind: 'seraph', t: 0, from: [hero.fi, hero.fj], to, chains, landed: false }; hero.approach = null; hero.atk = -1;
+  if (!palWings()) { hero.palSerWing = true; recalcHero(); }
+  G.pal.pillars.push({ fi: hero.fi, fj: hero.fj, t: 0, T: 0.28, white: true });
+  const [x, y] = screenOf(hero); for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 60, Math.sin(a) * 30, 18, 0.8, LV.outdoor ? DIRT[3] : S[5]); }
+  sfx('whoomp'); sfx('heavySwing');
+  return true;
+}
+function updSeraph(B, dt) {
+  B.t += dt; const t = B.t, T3 = swingT(3), t1 = SER.up, t2 = t1 + SER.hang, t3 = t2 + SER.dive;
+  if (t < t1) { const u = t / t1; hero.leapZ = SER.H * (1 - (1 - u) * (1 - u)); hero.clip = 'raise'; hero.atk = -1; if (Math.random() < 0.8) { const [x, y] = screenOf(hero); pspawn(4, x + (Math.random() - 0.5) * 10, y, hero.leapZ * 0.5, 0, 0, 60, 0.4, 27); } }
+  else if (t < t2) {
+    hero.leapZ = SER.H + 3; hero.dir = dirFrom(B.to[0] - hero.fi, B.to[1] - hero.fj); bzPose(3, 150);
+    if (!B.apex) { B.apex = true; G.slowmo = Math.max(G.slowmo || 0, 0.12); sfx('portal', 0.6);   // the wings snap open: feathers burst
+      const [x, y] = screenOf(hero); for (let k = 0; k < 26; k++) { const a = Math.random() * 6.283, sp = 40 + Math.random() * 90; pspawn(4, x, y, hero.leapZ + 18, Math.cos(a) * sp, Math.sin(a) * sp * 0.6, 20 - Math.random() * 30, 0.9, k % 3 ? 27 : 51); }
+      G.pal.flashes2 = { fi: hero.fi, fj: hero.fj, z: hero.leapZ + 18, t: 0.16 }; }
+  } else if (t < t3) {
+    const u = (t - t2) / SER.dive, k = u * u;
+    hero.fi = B.from[0] + (B.to[0] - B.from[0]) * k; hero.fj = B.from[1] + (B.to[1] - B.from[1]) * k; hero.leapZ = (SER.H + 3) * (1 - k); bzPose(3, T3.hit - 20);
+    if (!B.streak) { B.streak = true; G.pal.streaks.push({ a: [B.from[0], B.from[1], SER.H + 3], b: [B.to[0], B.to[1], 0], t: 0.35, t0: 0.35 }); }
+    const [x, y] = screenOf(hero); G.ghosts.push({ sp: getSprite('hero', hero.look, hero.dir, hero.clip, frameOf(hero), hero), x, y: y - hero.leapZ, t: 0.18, t0: 0.18, fl: 8 });
+  } else if (!B.landed) {
+    B.landed = true; hero.fi = B.to[0]; hero.fj = B.to[1]; hero.leapZ = 0; bzPose(3, T3.hit + 20);
+    const R = 2.6;
+    for (const e of nearFoes(hero.fi, hero.fj, R + 0.4)) { const d = Math.hypot(e.fi - hero.fi, e.fj - hero.fj); bzHit(e, d < 1.2 ? 2.8 : 2.8 - (d - 1.2) / (R - 1.2) * 1.2, [hero.fi, hero.fj], 3, 'holy'); if (alive(e) && !e.def.unique) { e.downT = e.downT0 = 1.0; e.atk = -1; const dx = e.fi - hero.fi, dy = e.fj - hero.fj, l = Math.hypot(dx, dy) || 1; e.kb = [dx / l * 7, dy / l * 7]; } }
+    shockwave(hero.fi, hero.fj, R + 0.6, 0.4, [27, 51]); shockwave(hero.fi, hero.fj, R * 0.55, 0.3, [51, GOLD[2]]); shockwave(hero.fi, hero.fj, R + 1, 0.5, LV.outdoor ? [DIRT[4], DIRT[3]] : [27, 26], null, false);
+    G.pal.domes.push({ fi: hero.fi, fj: hero.fj, t: 0, T: 0.32, R: 1.9 }); palCracks(hero.fi, hero.fj, 1.8); if (typeof stampCrater === 'function') stampCrater(hero.fi, hero.fj, 1.0);
+    G.pal.pillars.push({ fi: hero.fi, fj: hero.fj, t: 0, T: 0.4 });
+    const [x, y] = screenOf(hero); for (let k = 0; k < 30; k++) { const a = k / 30 * 6.283, sp = 90 + Math.random() * 90; pspawn(4, x, y, 4, Math.cos(a) * sp, Math.sin(a) * sp * 0.5, 30 + Math.random() * 30, 0.7, k % 2 ? 27 : 51); }
+    for (let k = 0; k < 14; k++) pspawn(4, x + (Math.random() - 0.5) * 50, y - 10, 40 + Math.random() * 30, (Math.random() - 0.5) * 20, 6, -14, 1.6, 27);   // feathers drifting down
+    G.screenFlash = { t0: 0.08, col: 27, at: G.t, a: 0.15 }; if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.7); hero.stop = 0.08; sfx('boom'); sfx('crit'); sfx('meteor', 0.7);
+    B.tl = t;
+  } else {
+    bzPose(3, Math.min(T3.total - 1, T3.hit + 20 + (t - B.tl) * 520));
+    if (t >= B.tl + (B.chains > 0 ? 0.12 : SER.rec)) {
+      if (B.chains > 0) { const n = palSerTarget([hero.fi, hero.fj]) || palSerTarget(null), to = n && palLandAt([n.fi, n.fj]); if (to) { hero.bz = { kind: 'seraph', t: SER.up * 0.4, from: [hero.fi, hero.fj], to, chains: B.chains - 1, landed: false }; hero.leapZ = SER.H * 0.3; sfx('whoomp'); return; } }
+      hero.bz = null; hero.atk = -1; hero.clip = 'idle'; hero.swingEnd = G.t; unstickHero(); if (hero.palSerWing) { hero.palSerWing = false; recalcHero(); }
+    }
+  }
+}
+// ---- LANCE OF DAWN: he becomes a lance of light along a line, through all of it, and leaves a burning lane
+function palLance(tri) {
+  const t = thickest(7) || nearestEnemy(7), [fx, fy] = dirVec(hero.dir), a = t ? Math.atan2(t.fj - hero.fj, t.fi - hero.fi) : Math.atan2(fy, fx), ca = Math.cos(a), sa = Math.sin(a);
+  let L = 0; while (L < 6.5 && standable(hero.fi + ca * (L + 0.25), hero.fj + sa * (L + 0.25), 0.26)) L += 0.25;
+  if (L < 1) return false;
+  const from = [hero.fi, hero.fj], to = [hero.fi + ca * L, hero.fj + sa * L];
+  hero.dir = dirFrom(ca, sa); hero.bz = { kind: 'lance', t: 0, T: 0.2, from, to, hit: new Set() }; hero.approach = null; hero.atk = -1;
+  G.pal.lanes.push({ a: from, b: to, t: 0, T: 3, tick: 0.25 });
+  if (tri) for (const da of [-0.4, 0.4]) G.pal.spears.push({ fi: from[0], fj: from[1], a: a + da, go: 0, max: 7, hit: new Set(), from: from.slice() });
+  sfx('whoomp'); sfx('heavySwing'); sfx('zap', 0.5);
+  return true;
+}
+function updLance(B, dt) {
+  B.t += dt; const u = Math.min(1, B.t / B.T), x = B.from[0] + (B.to[0] - B.from[0]) * u, y = B.from[1] + (B.to[1] - B.from[1]) * u;
+  hero.fi = x; hero.fj = y; bzPose(1, swingT(1).hit + 8);
+  if (!(B.gt > B.t - 0.035)) { B.gt = B.t; const [sx, sy] = screenOf(hero); G.ghosts.push({ sp: getSprite('hero', hero.look, hero.dir, hero.clip, frameOf(hero), hero), x: sx, y: sy, t: 0.16, t0: 0.16, fl: 8 }); }   // (round 99 pass 2: one every 35 ms, not every frame)
+  for (const e of enemies) { if (!alive(e) || B.hit.has(e)) continue; if (segD(e.fi, e.fj, B.from[0], B.from[1], x, y) < 0.95 + (e.def.unique ? 0.4 : 0)) { B.hit.add(e); bzHit(e, 1.7, [x, y], 2, 'holy'); palSpark(e.fi, e.fj, 8); if (alive(e) && !e.def.unique) e.stun = Math.max(e.stun || 0, 0.5); } }
+  if (u >= 1) { hero.bz = null; hero.atk = -1; hero.clip = 'idle'; hero.swingEnd = G.t; unstickHero(); shockwave(hero.fi, hero.fj, 1.4, 0.22, [27, 51]); G.pal.streaks.push({ a: [B.from[0], B.from[1], 10], b: [B.to[0], B.to[1], 10], t: 0.3, t0: 0.3 }); sfx('crit', 0.6); }
+}
+// ---- DIVINE TOLL: he rings the hammer like a bell: a great bell of light above him, three rings of sound and light
+function palToll(big) { hero.bz = { kind: 'toll', t: 0, big, rung: 0 }; hero.approach = null; hero.atk = -1; G.pal.bell = { t: 0, big, flash: 0 }; sfx('clink'); return true; }
+function updToll(B, dt) {
+  B.t += dt; hero.clip = 'raise'; hero.atk = -1;
+  const due = 0.22 + B.rung * 0.24;
+  if (B.rung < 3 && B.t >= due) {
+    B.rung++; const last = B.rung === 3;
+    G.pal.tolls.push({ fi: hero.fi, fj: hero.fj, t: 0, T: 0.5, R: B.big ? 6 : 4.2, hit: new Set(), last, big: B.big, k: B.big ? 0.95 : 0.65 });
+    if (G.pal.bell) G.pal.bell.flash = 0.14;
+    sfx('levelUp', 0.45); sfx('clink'); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.12);
+  }
+  if (B.rung >= 3 && B.t >= due + 0.18) { hero.bz = null; hero.clip = 'idle'; hero.swingEnd = G.t; }
+}
+function updatePal99(dt) {
+  for (const T of G.pal.tolls) {
+    const r0 = T.R * Math.pow(T.t / T.T, 0.7); T.t += dt; const r1 = T.R * Math.pow(Math.min(1, T.t / T.T), 0.7);
+    for (const e of enemies) { if (!alive(e) || T.hit.has(e)) continue; const d = Math.hypot(e.fi - T.fi, e.fj - T.fj); if (d >= r0 - 0.3 && d <= r1 + 0.3) { T.hit.add(e); bzHit(e, T.k, [T.fi, T.fj], 1, 'holy'); if (alive(e) && !e.def.unique) e.stun = Math.max(e.stun || 0, 0.8); } }
+    if (T.t >= T.T && T.last && T.big && !T.pillars) { T.pillars = true; for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283, fi = T.fi + Math.cos(a) * T.R * 0.75, fj = T.fj + Math.sin(a) * T.R * 0.75; if (!blocked(fi, fj)) palPillar(fi, fj, 0.7); } }
+  }
+  G.pal.tolls = G.pal.tolls.filter(T => T.t < T.T);
+  if (G.pal.bell) { G.pal.bell.t += dt; G.pal.bell.flash = Math.max(0, G.pal.bell.flash - dt); if (!(hero.bz && hero.bz.kind === 'toll') && G.pal.bell.t > 0.3) G.pal.bell = null; }
+  for (const L of G.pal.lanes) {
+    L.t += dt; L.tick -= dt;
+    if (L.tick <= 0) { L.tick = 0.5; for (const e of enemies) if (alive(e) && segD(e.fi, e.fj, L.a[0], L.a[1], L.b[0], L.b[1]) < 0.6) bzHit(e, 0.3, [e.fi, e.fj], 0, 'holy'); }
+    if (Math.random() < dt * 14) { const u = Math.random(), [x, y] = iso(L.a[0] + (L.b[0] - L.a[0]) * u, L.a[1] + (L.b[1] - L.a[1]) * u); pspawn(4, x, y, 1, 0, 0, 14 + Math.random() * 12, 0.6, Math.random() < 0.5 ? 51 : 27); }
+  }
+  G.pal.lanes = G.pal.lanes.filter(L => L.t < L.T);
+  for (const S2 of G.pal.spears) {
+    const st = 17 * dt; S2.fi += Math.cos(S2.a) * st; S2.fj += Math.sin(S2.a) * st; S2.go += st;
+    for (const e of enemies) if (alive(e) && !S2.hit.has(e) && Math.hypot(e.fi - S2.fi, e.fj - S2.fj) < 0.85) { S2.hit.add(e); bzHit(e, 1.4, [S2.fi, S2.fj], 1, 'holy'); palSpark(e.fi, e.fj, 6); }
+    if (S2.go >= S2.max || blocked(S2.fi, S2.fj)) { S2.done = true; G.pal.lanes.push({ a: S2.from, b: [S2.fi, S2.fj], t: 0, T: 3, tick: 0.25 }); shockwave(S2.fi, S2.fj, 1.0, 0.2, [27, 51]); }
+  }
+  G.pal.spears = G.pal.spears.filter(S2 => !S2.done);
+  for (const k of G.pal.streaks) k.t -= dt; G.pal.streaks = G.pal.streaks.filter(k => k.t > 0);
+  for (const D of G.pal.domes) D.t += dt; G.pal.domes = G.pal.domes.filter(D => D.t < D.T);
+  if (G.pal.flashes2) { G.pal.flashes2.t -= dt; if (G.pal.flashes2.t <= 0) G.pal.flashes2 = null; }
+  if (isPal() && !hero.palWarm && hero.lvl >= 3) {   // the winged poses Seraph's Fall uses, built ahead (a winged sprite set the first time cost a hitch)
+    hero.palWarm = 1; const lk = { ...hero.look, wings: 'dawn', size: [120, 104, 60, 80] };
+    for (let d = 0; d < 8; d++) { for (const f of [0, 1]) warmQueue.push(['hero', lk, d, 'raise', f]); for (let f = 0; f < 6; f++) warmQueue.push(['hero', lk, d, 'attack4', f]); }
+  }
+}
+{ const ub0 = updateBz; updateBz = function (dt) { const B = hero.bz; if (B && B.kind === 'seraph') return updSeraph(B, dt); if (B && B.kind === 'lance') return updLance(B, dt); if (B && B.kind === 'toll') return updToll(B, dt); return ub0(dt); }; }
+Object.assign(SKILL_FN, { seraph: () => palSeraph(0), seraph3: () => palSeraph(2), lance: () => palLance(false), lance3: () => palLance(true), toll: () => palToll(false), toll3: () => palToll(true), wrath: palWrath });
+// ---- drawing the new light
+{ const g0 = drawPalGround; drawPalGround = function () { g0(); if (!G.pal) return;
+  for (const L of G.pal.lanes) {   // a lane of light burned into the ground: a white core, gold edges, fading in its last half second
+    // (round 99 pass 2: walked in tile space, so it is as wide on the ground whichever way it runs; it was a hairline across the screen)
+    const fade = Math.min(1, L.t / 0.1, (L.T - L.t) / 0.5), dx = L.b[0] - L.a[0], dy = L.b[1] - L.a[1], len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len, HW = 0.42, st = 0.022;
+    for (let q = 0; q <= len; q += st) { const pulse = 0.5 + 0.5 * Math.sin(q * 5 - G.t * 9), endF = Math.min(1, q / 0.4, (len - q) / 0.4 + 0.3);
+      for (let w = -HW; w <= HW; w += st) { const fi = L.a[0] + ux * q - uy * w, fj = L.a[1] + uy * q + ux * w; if (blocked(fi, fj)) continue; const [X, Y] = toDet(fi, fj); if (X < 0 || Y < 0 || X >= OW || Y >= OH) continue;
+        const aw = Math.abs(w) / HW, th = fade * endF * (aw < 0.18 ? 0.95 : aw < 0.55 ? 0.75 - 0.25 * pulse : (1 - aw) * 1.1 * (0.4 + 0.4 * pulse)); if (BAYER[((Y & 3) << 2) | (X & 3)] > th) continue;
+        ov32[Y * OW + X] = PAL32[aw < 0.18 ? 27 : aw < 0.55 ? 51 : GOLD[2]]; } }
+  }
+  for (const T of G.pal.tolls) {   // each toll a ring rolling out over the ground, a fainter one behind it
+    const u = Math.min(1, T.t / T.T), R = T.R * Math.pow(u, 0.7), [cx, cy] = toDet(T.fi, T.fj), rx = R * 22.63 * SPX, ry = rx / 2, fade = 1 - u * 0.7, n = Math.ceil(rx * 1.6) + 12;
+    for (let q = 0; q < n; q++) { const a = q / n * 6.283; for (let w = 0; w < 4; w++) { const X = Math.round(cx + Math.cos(a) * (rx - w)), Y = Math.round(cy + Math.sin(a) * (ry - w * 0.5)); if (X < 0 || Y < 0 || X >= OW || Y >= OH || BAYER[((Y & 3) << 2) | (X & 3)] > fade * (1 - w * 0.2)) continue; ov32[Y * OW + X] = PAL32[w === 0 ? 27 : 51]; }
+      const X2 = Math.round(cx + Math.cos(a) * rx * 0.82), Y2 = Math.round(cy + Math.sin(a) * ry * 0.82); if (X2 >= 0 && Y2 >= 0 && X2 < OW && Y2 < OH && BAYER[((Y2 & 3) << 2) | (X2 & 3)] < fade * 0.4) ov32[Y2 * OW + X2] = PAL32[51]; }
+  }
+}; }
+{ const a0 = drawPalAir; drawPalAir = function () { a0(); if (!G.pal) return;
+  for (const k of G.pal.streaks) {   // the dive's streak: a falling star's trail, white-hot along its middle
+    const f = k.t / k.t0, [ax, ay] = toDet(k.a[0], k.a[1], k.a[2]), [bx, by] = toDet(k.b[0], k.b[1], k.b[2]), len = Math.hypot(bx - ax, by - ay) || 1, ux = (bx - ax) / len, uy = (by - ay) / len;
+    for (let q = 0; q <= len; q++) { const t2 = q / len, w = Math.round((1 - Math.abs(t2 - 0.7)) * 5 * f); for (let s2 = -w; s2 <= w; s2++) { const X = Math.round(ax + ux * q - uy * s2), Y = Math.round(ay + uy * q + ux * s2); if (X < 0 || Y < 0 || X >= OW || Y >= OH || BAYER[((Y & 3) << 2) | (X & 3)] > f * 1.2 - Math.abs(s2) / (w + 1) * 0.4) continue; ov32[Y * OW + X] = PAL32[Math.abs(s2) < w * 0.4 ? 27 : 51]; } }
+  }
+  for (const S2 of G.pal.spears) {   // a spear of light: a long white-gold shaft with a bright point
+    const back = Math.min(2.4, S2.go + 0.3);
+    palSpearDraw([S2.fi - Math.cos(S2.a) * back, S2.fj - Math.sin(S2.a) * back], [S2.fi + Math.cos(S2.a) * 0.4, S2.fj + Math.sin(S2.a) * 0.4], 12, 2.6, 7, 1);   // (round 99 pass 2: a real spear, not a scratch)
+    glowAt(iso(S2.fi, S2.fj)[0], iso(S2.fi, S2.fj)[1] - 12, 18, 0.45, GLOW_GOLD);
+  }
+  const LB = hero.bz; if (LB && LB.kind === 'lance' && isPal()) {
+    const dx = LB.to[0] - LB.from[0], dy = LB.to[1] - LB.from[1], L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, gone = Math.hypot(hero.fi - LB.from[0], hero.fj - LB.from[1]), z = 14 + (hero.leapZ || 0);
+    palSpearDraw([hero.fi - ux * Math.min(gone, 3), hero.fj - uy * Math.min(gone, 3)], [hero.fi - ux * 0.25, hero.fj - uy * 0.25], z, 4, 0, 0.9);   // the trail he leaves
+    palSpearDraw([hero.fi + ux * 0.3, hero.fj + uy * 0.3], [hero.fi + ux * 1.25, hero.fj + uy * 1.25], z, 3.4, 9, 1);   // the point he drives ahead of him
+    glowAt(iso(hero.fi + ux * 0.8, hero.fj + uy * 0.8)[0], iso(hero.fi + ux * 0.8, hero.fj + uy * 0.8)[1] - z, 30, 0.6, GLOW_GOLD);
+  }
+  const Bl = G.pal.bell;
+  if (Bl && isPal()) {   // the bell of light hanging over him, struck by the hammer below it; it flares and throws rings of sound
+    const z = 47 + (hero.leapZ || 0), [hx2, hy2] = toDet(hero.fi, hero.fj, z), fl = Bl.flash > 0, sc = (Bl.big ? 1.55 : 1.25) * (1 + Bl.flash * 0.9), fade = Math.min(1, Bl.t / 0.12), Hh = Math.round(28 * sc);
+    const hw = v => sc * (v < 0.12 ? 6 * Math.sqrt(v / 0.12) : v < 0.74 ? 6 + (v - 0.12) / 0.62 * 3.4 : 9.4 + Math.pow((v - 0.74) / 0.26, 2) * 5.2);
+    const up1 = c => fl ? (c === 48 ? 50 : c === 49 || c === 50 ? 51 : 27) : c;   // struck: a step brighter
+    for (let y = -3; y <= Hh; y++) {
+      if (y < 0) { for (let x = -2; x <= 2; x++) if (Math.abs(x) === 2 || y === -3) palPut(hx2 + x, hy2 - Hh + y, up1(50)); continue; }   // its crown loop
+      const v = y / Hh, w = hw(v), band = Math.abs(v - 0.62) < 0.04, lip = v > 0.9;
+      for (let x = Math.round(-w); x <= Math.round(w); x++) { const X = hx2 + x, Y = hy2 - Hh + y; if (X < 0 || Y < 0 || X >= OW || Y >= OH) continue;
+        const xn = x / (w || 1), edge = Math.abs(x) >= Math.round(w) - 0.5 || y === 0;
+        if (!edge && BAYER[((Y & 3) << 2) | (X & 3)] > fade * 0.9) continue; if (edge && BAYER[((Y & 3) << 2) | (X & 3)] > fade * 1.05) continue;
+        let c = xn < -0.6 ? 27 : xn < -0.15 ? 51 : xn < 0.4 ? 50 : xn < 0.8 ? 49 : 48;
+        if (band || lip) c = xn < 0.2 ? 27 : 51; if (edge) c = xn < 0 ? 51 : 48;
+        ov32[Y * OW + X] = PAL32[up1(c)]; } }
+    if (fl) for (const s of [-1, 1]) for (let r2 = 0; r2 < 2; r2++) { const R = sc * (16 + r2 * 7) + (0.14 - Bl.flash) * 90; for (let a = -0.6; a <= 0.6; a += 0.04) palPut(hx2 + s * Math.cos(a) * R, hy2 - Hh * 0.45 + Math.sin(a) * R * 0.9, r2 ? 51 : 27); }   // rings of sound either side
+    glowAt(iso(hero.fi, hero.fj)[0], iso(hero.fi, hero.fj)[1] - z - 14, fl ? 54 : 34, fl ? 0.75 : 0.4, GLOW_GOLD);
+  }
+  const F2 = G.pal.flashes2; if (F2) { const [x, y] = toDet(F2.fi, F2.fj, F2.z), k = F2.t / 0.16; for (let a = 0; a < 16; a++) { const t2 = a / 16 * 6.283, L = 30 * (1.2 - k); for (let q = 6; q < L; q++) if ((q & 1) === 0) palPut(x + Math.cos(t2) * q, y + Math.sin(t2) * q * 0.7, q < L * 0.5 ? 27 : 51); } }   // the apex: rays of light round the opened wings
+}; }
+// a spear of light from a (its tail) to b (its point), z above the ground: the tail thin and dithered, the head a bright diamond
+function palSpearDraw(a, b, z, W, head, fade) {
+  const [ax, ay] = toDet(a[0], a[1], z), [bx, by] = toDet(b[0], b[1], z), len = Math.hypot(bx - ax, by - ay) || 1, ux = (bx - ax) / len, uy = (by - ay) / len, h0 = Math.max(1, len - head * 2);
+  for (let q = 0; q <= len; q++) {
+    const inHead = q > h0, d = inHead ? (q - h0) / (len - h0) : 0, w = inHead ? W * 1.9 * (d < 0.35 ? 0.55 + d / 0.35 * 0.45 : (1 - d) / 0.65) : W * Math.pow(q / h0, 0.7), tf = inHead ? 1 : 0.25 + 0.75 * q / h0;
+    for (let s2 = -Math.ceil(w); s2 <= Math.ceil(w); s2++) { const aw = Math.abs(s2) / (w + 0.5); if (aw > 1) continue;
+      const X = Math.round(ax + ux * q - uy * s2), Y = Math.round(ay + uy * q + ux * s2); if (X < 0 || Y < 0 || X >= OW || Y >= OH) continue;
+      if (!inHead && BAYER[((Y & 3) << 2) | (X & 3)] > fade * tf * (1.15 - aw)) continue;
+      ov32[Y * OW + X] = PAL32[aw < 0.4 ? 27 : aw < 0.8 ? 51 : GOLD[2]]; } }
+}
+// glyphs for the new buttons
+const glyphSeraph = (cx, cy) => { for (const s of [-1, 1]) for (let k = 0; k < 5; k++) line(cx, cy - 2, cx + s * (3 + k), cy - 6 + k, 27); line(cx, cy - 2, cx, cy + 5, 51); line(cx - 2, cy + 3, cx, cy + 6, 51); line(cx + 2, cy + 3, cx, cy + 6, 51); };
+const glyphLance = (cx, cy) => { line(cx - 6, cy + 5, cx + 5, cy - 6, 27); line(cx - 5, cy + 5, cx + 5, cy - 5, 51); for (let k = 0; k < 3; k++) put(cx + 3 + k, cy - 4 - k, 27); line(cx - 7, cy + 2, cx - 3, cy + 6, 26); };
+const glyphLance3 = (cx, cy) => { for (const o of [-4, 0, 4]) { line(cx - 5 + o, cy + 5, cx + 3 + o, cy - 5, o ? 51 : 27); put(cx + 3 + o, cy - 6, 27); } };
+const glyphToll = (cx, cy) => { for (let y = -6; y <= 4; y++) { const v = (y + 6) / 10, w = Math.round(v < 0.3 ? 3 * Math.sqrt(v / 0.3) : 3 + (v - 0.3) * (v - 0.3) * 8); put(cx - w, cy + y, 51); put(cx + w, cy + y, 51); } line(cx - 5, cy + 4, cx + 5, cy + 4, 27); put(cx, cy + 6, 27); for (const s of [-1, 1]) { put(cx + s * 8, cy - 1, 26); put(cx + s * 8, cy + 1, 26); } };
+const glyphWrathH = (cx, cy) => { for (const [o, h] of [[-5, 2], [0, -1], [5, 2]]) { line(cx + o, cy - 7 + h, cx + o, cy + h, 51); for (let u = -2; u <= 2; u++) { put(cx + o + u, cy + h + 1, 27); put(cx + o + u, cy + h + 2, 27); } } };
+Object.assign(SPELL_LOOK, { seraph: [[24, 25, 26, 27], glyphSeraph], seraph3: [[48, 49, 50, 51], glyphSeraph], lance: [[24, 25, 26, 27], glyphLance], lance3: [[48, 49, 50, 51], glyphLance3], toll: [[24, 25, 26, 27], glyphToll], toll3: [[48, 49, 50, 51], glyphToll], wrath: [[48, 49, 50, 51], glyphWrathH] });
+if (typeof PV_PLAN !== 'undefined') Object.assign(PV_PLAN, { lance: { len: 2.4 }, lance3: { len: 2.4 }, toll: { len: 2.4 }, toll3: { len: 2.6 }, seraph3: { len: 3.4, far: 1.5 }, wrath: { len: 3.2 } });

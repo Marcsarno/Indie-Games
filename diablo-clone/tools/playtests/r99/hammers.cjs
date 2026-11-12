@@ -1,0 +1,16 @@
+const { chromium } = require('playwright'); const path = require('path'), fs = require('fs');
+(async () => { const out = process.argv[2];
+  const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e.stack)));
+  await p.addInitScript(() => { window.requestAnimationFrame = () => 0; window.localStorage.clear(); });
+  await p.goto('file://' + path.resolve('game/index.html') + '?cine=0');
+  const url = await p.evaluate(() => { const Z = 3, sps = [];
+    const make = (look, bd0, wd0, yaw) => { const r = new Rig(), bd = V.norm(bd0), g = [0, 0, 0], wide = V.norm(V.cross(bd, wd0)), wf = [bd, wide, V.cross(bd, wide)];
+      r.cone(V.mad(g, bd, -9.5), V.mad(g, bd, -7), 1.0, 1.0, M.LEATHER); r.sph(V.mad(g, bd, -10.2), 1.5, M.GOLD);
+      GEAR_EXTRA.weapon[look](r, { g, bd, wide, wf }); scaleRig(r, 5.4);
+      return renderRig(r, yaw, 90, 190, 45, 65, 1); };
+    for (const look of ['pal_maul2', 'pal_warhammer', 'pal_dawn']) for (const [bd, wd] of [[[0.12, 0.28, -1], [1, 0, 0]], [[0.12, 0.28, -1], [0, 1, 0]], [[0.1, 0.1, -1], [1, -1, 0]], [[0.1, 0.1, -1], [1, 1, 0]]]) sps.push(make(look, bd, wd, yawOf(1)));
+    const cw = 100, ch = 200, c = document.createElement('canvas'); c.width = cw * 4 * Z; c.height = ch * 3 * Z;
+    const g = c.getContext('2d'); g.fillStyle = '#2a2420'; g.fillRect(0, 0, c.width, c.height);
+    sps.forEach((sp, k) => { const ox = (k % 4) * cw, oy = ((k / 4) | 0) * ch; for (let q = 0; q < sp.w * sp.h; q++) { const v0 = sp.data[q]; if (!v0) continue; const v = (v0 & 128) ? v0 & 127 : LTAB[4][v0 & 127]; g.fillStyle = `rgb(${PR[v]},${PG[v]},${PB[v]})`; g.fillRect((ox + 5 + q % sp.w) * Z, (oy + 5 + ((q / sp.w) | 0)) * Z, Z, Z); } });
+    return c.toDataURL(); });
+  fs.writeFileSync(out, Buffer.from(url.split(',')[1], 'base64')); console.log(errs.join('\n') || 'ok'); await b.close(); })();

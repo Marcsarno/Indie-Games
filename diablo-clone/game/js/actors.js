@@ -1182,7 +1182,7 @@ function heroRig(eq, st) {
     handR = V.add(V.add(J.shR, V.mul(fwd, 2.0 + J.swingArm * 1.8)), V.add(V.mul(up, -7.5 + Math.abs(J.swingArm) * 0.6), V.mul(sideR, 3.4)));
     bd = V.norm(V.add(V.add(V.mul(fwd, 0.04 + J.swingArm * 0.18), up), V.mul(sideR, 0.2)));   // leaning out, clear of the face
   } else if (st.clip === 'raise') {   // round 98: the paladin's hammer held up to the sky (Judgment, the wings)
-    handR = V.add(V.add(J.shR, V.mul(fwd, 1.6)), V.add(V.mul(up, 7.2), V.mul(sideR, 0.4))); bd = V.norm(V.add(up, V.mul(fwd, 0.12)));
+    handR = V.add(V.add(J.shR, V.mul(fwd, 1.4)), V.add(V.mul(up, 7.0), V.mul(sideR, 2.0))); bd = V.norm(V.add(V.add(up, V.mul(fwd, 0.12)), V.mul(sideR, 0.38)));   // (round 99: out to the side, its light clear of the helm)
   } else if (sw) {
     handR = V.mad(pivot, inPlane(sw.a), sw.r || 6.5); bd = inPlane(bladeA(sw));
   } else if (st.clip === 'bash' || st.clip === 'channel') {   // weapon held back and low, out of the way
