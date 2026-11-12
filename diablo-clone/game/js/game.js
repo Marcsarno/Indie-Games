@@ -2081,7 +2081,7 @@ function lightPass(chars, kx, ky) {
   }
   const charLevel = chars.map(c => {
     const [x, y] = screenOf(c), sx = Math.round(x - camX), sy = Math.round(y - camY - 16);
-    const l = (sx >= 0 && sy >= 0 && sx < W && sy < H) ? lbuf[sy * W + sx] : 0.3;
+    const at = yy => (sx >= 0 && yy >= 0 && sx < W && yy < H) ? lbuf[yy * W + sx] : 0.3, l = Math.max(at(sy), at(sy + 14));   // (round 109: and at the feet: behind a tall prop the point above them is the prop, lit at its height, and he went dark)
     const lv = tone ? tone[Math.min(1023, (l * BANDS * 64) | 0)] : l * BANDS;
     return Math.min(CHAR_CAP, Math.max(1, Math.round(lv)));   // capped: torch-side sprites must not blow out (round 60: at the colors as drawn)
   });

@@ -1457,14 +1457,14 @@ const THING = {
   campgate: () => propSprite('campgate', r => {   // two heavy posts, a crossbeam with braces, a lantern hanging each side, the two leaves swung open against the fence
     const Y = 45.2;   // (two tiles from the middle: the posts' tiles must not touch, or the way through is shut)
     for (const sy of [-1, 1]) {
-      r.cyl([0, sy * Y, 0], [0, sy * Y, 46], 4.2, M.BARK, { mf: p => p[2] > 45.6 ? M.PLANK : Math.abs(p[2] - 16) < 0.6 || Math.abs(p[2] - 30) < 0.6 ? M.WOOD : 0 });
-      r.box([0, sy * (Y - 8), 36], [1.2, 6.4, 1.2], M.WOOD, [[1, 0, 0], V.norm([0, 1, -sy * 0.75]), V.norm([0, sy * 0.75, 1])]);   // a brace
-      r.cyl([0, sy * (Y - 9), 41], [0, sy * (Y - 9), 36], 0.3, M.IRON);   // the lantern's hook and lantern
-      r.box([0, sy * (Y - 9), 33.5], [2, 2, 2.6], M.IRON, null, { mf: p => Math.abs(p[2] - 33.5) < 1.8 && (Math.abs(p[0]) < 1.3 || Math.abs(p[1] - sy * (Y - 9)) < 1.3) ? M.LAMP : 0 }); r.cone([0, sy * (Y - 9), 36], [0, sy * (Y - 9), 37.6], 2.6, 0.4, M.IRON);
+      r.cyl([0, sy * Y, 0], [0, sy * Y, 62], 4.2, M.BARK, { mf: p => p[2] > 61.6 ? M.PLANK : Math.abs(p[2] - 16) < 0.6 || Math.abs(p[2] - 30) < 0.6 || Math.abs(p[2] - 44) < 0.6 ? M.WOOD : 0 });   // (round 109: 16 taller: the beam was at the hero's head and he seemed to walk through it)
+      r.box([0, sy * (Y - 8), 52], [1.2, 6.4, 1.2], M.WOOD, [[1, 0, 0], V.norm([0, 1, -sy * 0.75]), V.norm([0, sy * 0.75, 1])]);   // a brace
+      r.cyl([0, sy * (Y - 9), 57], [0, sy * (Y - 9), 50], 0.3, M.IRON);   // the lantern's hook and lantern
+      r.box([0, sy * (Y - 9), 47.5], [2, 2, 2.6], M.IRON, null, { mf: p => Math.abs(p[2] - 47.5) < 1.8 && (Math.abs(p[0]) < 1.3 || Math.abs(p[1] - sy * (Y - 9)) < 1.3) ? M.LAMP : 0 }); r.cone([0, sy * (Y - 9), 50], [0, sy * (Y - 9), 51.6], 2.6, 0.4, M.IRON);
       r.box([3.5, sy * (Y + 12), 13], [0.9, 10, 13], M.PLANK, null, { mf: p => Math.abs(((p[1] + 60) % 4.6) - 2.3) < 0.4 ? M.BARK : Math.abs(p[2] - 6) < 0.8 || Math.abs(p[2] - 20) < 0.8 ? M.WOOD : 0 });   // the leaf, open
     }
-    r.cyl([0, -Y - 6, 43], [0, Y + 6, 43], 3, M.BARK, { mf: p => Math.abs(p[1]) > Y + 5.5 ? M.PLANK : 0 });   // the crossbeam
-  }, [160, 104, 80, 76], -3 * Math.PI / 4),
+    r.cyl([0, -Y - 6, 59], [0, Y + 6, 59], 3, M.BARK, { mf: p => Math.abs(p[1]) > Y + 5.5 ? M.PLANK : 0 });   // the crossbeam
+  }, [160, 124, 80, 96], -3 * Math.PI / 4),
   pot: () => propSprite('pot', r => {   // a tripod over the fire with a black pot hung from it
     for (let k = 0; k < 3; k++) { const a = k * 2.094 + 0.5; r.cone([Math.cos(a) * 10, Math.sin(a) * 10, 0], [0, 0, 24], 0.9, 0.7, M.WOOD); }
     r.cyl([0, 0, 24], [0, 0, 14], 0.3, M.IRON);
@@ -1612,7 +1612,7 @@ function buildOutdoor(back) {
       props.push({ depth: d.fi + d.fj + (d.what === 'pot' ? 0.06 : 0), sp, wx: x, wy: y + (d.what === 'pot' ? 0 : 2), tile: tIdx(Math.floor(d.fi), Math.floor(d.fj)) });
       const sh = { stakes: [6, 3], post: [5, 3], campgate: 0, pot: 0, laundry: 0, toy: [4, 2], bedroll: [7, 3], sacks: [8, 4], plough: [7, 3], anvil: [6, 3], tub: [6, 3], rack: [7, 3], crates: [10, 5], barrels: [8, 4], seat: [5, 3], stakepile: [12, 5], banner: [4, 2], cushion: 0, trough: [9, 4], bucket: [3, 2], cauldron: [6, 3], sign: [3, 2], grind: [5, 3], coal: [5, 2], table: [16, 7], firewood: [10, 4] }[d.what];
       if (sh) shadows.push([x + 2, y + 2, sh[0], sh[1]]);
-      if (d.what === 'campgate') for (const sd of [-1, 1]) { const q = CAMP_AT(sd * 1.6, CAMP_UV(d.fi, d.fj)[1]), [lx, ly] = iso(q[0], q[1]); lights.push({ x: lx, y: ly, z: 34, r: LV.night ? 110 : LV.dusk && DUSK_ON ? 88 : 64, i: LV.night ? 0.7 : LV.dusk && DUSK_ON ? 0.45 : 0.3, seed: Math.floor(lx) }); }
+      if (d.what === 'campgate') for (const sd of [-1, 1]) { const q = CAMP_AT(sd * 1.6, CAMP_UV(d.fi, d.fj)[1]), [lx, ly] = iso(q[0], q[1]); lights.push({ x: lx, y: ly, z: 48, r: LV.night ? 110 : LV.dusk && DUSK_ON ? 88 : 64, i: LV.night ? 0.7 : LV.dusk && DUSK_ON ? 0.45 : 0.3, seed: Math.floor(lx) }); }
     } else if (d.kind === 'palisade') {
       const [x, y] = iso(d.i + 0.5, d.j + 0.5);
       props.push({ depth: d.i + d.j + 1, sp: OUT.palisade(d.a), wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
