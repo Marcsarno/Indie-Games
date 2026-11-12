@@ -1483,6 +1483,7 @@ function frameOf(e) {
   if (e.clip === 'attack2' || e.clip === 'attack3' || e.clip === 'attack4') return Math.max(0, swingKey(FAMILIES[e.fam].combo(e, atkIndex(e.clip)), e.atk));
   if (e === hero && e.clip === 'arrive') return hero.arriveT > 0.15 ? 0 : 1;
   if (e === hero && e.clip === 'storm') return Math.floor(G.t * 6) % 4;   // round 43
+  if (e === hero && e.clip === 'raise') return Math.floor(G.t * 8) % 2;   // round 98: the paladin's raised hammer, its light flickering
   if (e.clip === 'attack' || e.clip === 'shoot' || e.clip === 'volley' || e.clip === 'skyshot' || e.clip === 'cast') return Math.max(0, swingKey(FAMILIES[e.fam].swing(e), e.atk));
   if (e.downT > 0) { const t = e.downT0 - e.downT; return Math.max(0, Math.min(4, Math.floor(Math.min(t, e.downT) / 0.06))); }   // knocked down: fall, lie, get up
   if (e.clip === 'death') return Math.min(5, Math.floor((e === hero ? hero.dead : e.dying) / 0.1));

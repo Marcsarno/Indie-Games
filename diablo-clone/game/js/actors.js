@@ -451,7 +451,7 @@ const GEAR_LOOKS = {
   weapon: ['sword', 'axe', 'mace', 'flail', 'greatsword'],
   shield: ['none', 'buckler', 'round', 'kite', 'tower', 'targe', 'heater'],
 };
-const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}.${eq.cape || ''}.${eq.lgd || ''}.${eq.set || ''}.${eq.ench || ''}.${eq.wings || ''}`;
+const heroKey = eq => `${eq.team}.${eq.helm}.${eq.chest}.${eq.weapon}.${eq.shield}.${eq.hair || ''}.${eq.beard ? 1 : 0}.${eq.cape || ''}.${eq.lgd || ''}.${eq.set || ''}.${eq.ench || ''}.${eq.wings || ''}${eq.holy ? '.h' : ''}`;
 const hasFx = (eq, k) => !!eq.lgd && eq.lgd.split('|').includes(k);
 // combo 1 = the second swing of a quick pair (a backhand)
 // a quick string of swings: forehand, backhand, then a finisher (sword thrust or heavy slam)
@@ -511,7 +511,7 @@ const isBow = w => typeof w === 'string' && w.startsWith('bow');
 // Warden a white tabard with a gold cross, a white cloak and a plume; the Scout a green cloak and
 // a red feather; the Stalker a black cloak and a red scarf over the face; the Magus a glowing
 // arcane gem at the collar and a star at the hat's tip
-const CHEST_CAPE = {}, CHEST_RETOUCH = {}, ACROSS_GRIP = {};   // round 97: a chest look's own cloak and retouch, two-handers carried across the body (paladin.js fills them)
+const CHEST_CAPE = {}, CHEST_RETOUCH = {}, ACROSS_GRIP = {}, HOLY_SMEAR = [27, 51, 50];   // round 97: a chest look's own cloak and retouch, two-handers carried across the body (paladin.js fills them)
 const SET_CAPE = { warden: { m: M.CLOTH_WHITE, hem: M.GOLD, len: 11 }, ranger: { m: M.CLOTH_GREEN, hem: M.LEATHER, len: 10 }, stalker: { m: M.CLOTH_DARK, hem: M.CLOTH_RED, len: 11.5 } };
 function setChest(r, eq, J, fwd, up, sideR) {
   if (eq.set === 'warden') {
@@ -1181,6 +1181,8 @@ function heroRig(eq, st) {
   } else if (staff && st.clip !== 'death') {   // carried at the side, swinging with the walk like a walking stick
     handR = V.add(V.add(J.shR, V.mul(fwd, 2.0 + J.swingArm * 1.8)), V.add(V.mul(up, -7.5 + Math.abs(J.swingArm) * 0.6), V.mul(sideR, 3.4)));
     bd = V.norm(V.add(V.add(V.mul(fwd, 0.04 + J.swingArm * 0.18), up), V.mul(sideR, 0.2)));   // leaning out, clear of the face
+  } else if (st.clip === 'raise') {   // round 98: the paladin's hammer held up to the sky (Judgment, the wings)
+    handR = V.add(V.add(J.shR, V.mul(fwd, 1.6)), V.add(V.mul(up, 7.2), V.mul(sideR, 0.4))); bd = V.norm(V.add(up, V.mul(fwd, 0.12)));
   } else if (sw) {
     handR = V.mad(pivot, inPlane(sw.a), sw.r || 6.5); bd = inPlane(bladeA(sw));
   } else if (st.clip === 'bash' || st.clip === 'channel') {   // weapon held back and low, out of the way
@@ -1596,7 +1598,7 @@ function heroRig(eq, st) {
   }
   if (sw && sw.smear && st.prev) {
     const reach = (sw.r || 6.5) + (WEAPON_LEN[eq.weapon] || GEAR_LEN[eq.weapon] || 16);
-    smearArc(r, pivot, F, U, bladeA(st.prev), bladeA(sw), reach - 9, reach);
+    smearArc(r, pivot, F, U, bladeA(st.prev), bladeA(sw), reach - 9, reach, eq.holy ? HOLY_SMEAR : null, eq.holy ? 8.5 : undefined);   // round 98: the paladin's swings trail gold light
   }
   if (st.clip === 'death') deathTip(r, B, st.f, -1);
   return r;
