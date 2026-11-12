@@ -343,6 +343,13 @@ function deathTip(rig, B, f, dir = -1, side = 1) {
 // round 43: a Burning weapon licks with little flames along its head, a Chilling one is rimed with
 // ice crystals; they flicker with the frame so they live while idle too
 function enchantGlow(r, eq, g, bd, wide, st, len) {
+  if (eq.ench === 'blessed') {   // round 109: Consecrate's blessing: the head haloed in light, motes down the haft, rays that flicker
+    const L = len || WEAPON_LEN[eq.weapon] || GEAR_LEN[eq.weapon] || 16, k = (st.f || 0) % 2, head = V.mad(g, bd, L - 1.5), up = [0, 0, 1], wf2 = V.norm(V.cross(bd, wide));
+    for (const s of [-1, 1]) { r.sph(V.add(head, V.mul(wide, s * 3.0)), 1.7 - k * 0.3, M.HOLY, { noShadow: true }); r.sph(V.add(head, V.mul(wf2, s * 2.6)), 1.3 + k * 0.3, M.HOLY, { noShadow: true }); }
+    for (const u of [0.35, 0.6]) r.sph(V.add(V.mad(g, bd, L * u), V.mul(wide, (u > 0.5 ? 1 : -1) * 1.5)), 1.0, M.HOLY, { noShadow: true });
+    for (const [v, l] of [[bd, 5 + k * 2], [up, 4 + (1 - k) * 2], [V.mul(up, -1), 2.5], [wide, 3 + k], [V.mul(wide, -1), 3 + (1 - k)]]) r.cone(V.mad(head, v, 2.6), V.mad(head, v, 2.6 + l), 0.9, 0.2, M.HOLY, { noShadow: true });
+    return;
+  }
   const L = len || WEAPON_LEN[eq.weapon] || GEAR_LEN[eq.weapon] || 16, fire = eq.ench === 'fire', k = (st.f || 0) % 2;
   const us = len ? [[0.62, 1], [0.74, -1], [0.86, 1]] : [[0.5, 1], [0.7, -1], [0.9, 1]];   // a staff burns near its head
   for (const [u, s] of us) {

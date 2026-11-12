@@ -347,13 +347,14 @@ function palPillar(fi, fj, k) {
   const [x, y] = screenOf(e); for (let q = 0; q < (big ? 14 : 7); q++) { const a = Math.random() * 6.283, sp = 50 + Math.random() * 90; pspawn(4, x, y, z, Math.cos(a) * sp, Math.sin(a) * sp * 0.6, 20 + Math.random() * 30, 0.35, Math.random() < 0.5 ? 27 : 51); }
   if (SHAKE) G.trauma = Math.min(1, G.trauma + (big ? 0.12 : 0.07));
   shockwave(e.fi, e.fj, big ? 1.1 : 0.75, big ? 0.22 : 0.16, [27, 51], null, false); sfx('palHit', big ? 1 : 0.8);   // (round 102: the blow lands on the ground too; round 108: a plain thump, the user's ask)
+  if (palBlessActive()) { palSpark(e.fi, e.fj, big ? 14 : 8); G.pal.pillars.push({ fi: e.fi, fj: e.fj, t: 0, T: big ? 0.34 : 0.26 }); sfx('palPillar', big ? 0.4 : 0.25); }   // (round 109: blessed blows burst in light)
   for (let q = 0; q < (big ? 8 : 4); q++) { const a = Math.random() * 6.283; pspawn(5, x + Math.cos(a) * 6, y + Math.sin(a) * 3, 1, Math.cos(a) * 30, Math.sin(a) * 14, 10 + Math.random() * 10, 0.5, LV.outdoor ? 30 : 26); }   // dust kicked up
 }; }
 // ---- HAMMER OF LIGHT
 function palThrow() {
   const t = nearestEnemy(8); let a;
   if (t) { a = Math.atan2(t.fj - hero.fj, t.fi - hero.fi); hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj); } else { const [fx, fy] = dirVec(hero.dir); a = Math.atan2(fy, fx); }
-  const W = palWings(), n = W && W.kind === 'arch' ? 3 : 1;
+  const W = palWings(), mod = skillMod('phammer'), n = (W && W.kind === 'arch' ? 3 : 1) + (mod === 'twin' ? 1 : 0);   // (round 109: Twin Hammers, one more)
   for (let k = 0; k < n; k++) { const aa = a + (k - (n - 1) / 2) * 0.32; G.pal.hammers.push({ fi: hero.fi + Math.cos(aa) * 0.5, fj: hero.fj + Math.sin(aa) * 0.5, vx: Math.cos(aa), vy: Math.sin(aa), go: 0, max: 6.5, back: false, hit: new Set(), spin: Math.random() * 6, t: 0 }); }
   hero.combo = 1; hero.atk = 0; hero.hitDone = true; hero.clip = 'attack2';   // the throwing swing, without its melee blow
   sfx('palThrow');
@@ -362,9 +363,11 @@ function palThrow() {
 function updatePalHammers(dt) {
   for (const h of G.pal.hammers) {
     h.t += dt; h.spin += dt * (h.small ? 28 : 22); const sp = (h.sp || 13) * dt;
-    if (!h.back) { h.fi += h.vx * sp; h.fj += h.vy * sp; h.go += sp; if (h.go >= h.max || blocked(h.fi, h.fj)) { if (h.oneWay) { h.done = true; palSpark(h.fi, h.fj, 10); shockwave(h.fi, h.fj, 0.9, 0.18, [27, 51]); continue; } h.back = true; h.hit.clear(); sfx('swing', 0.5); } }
+    if (!h.back) { h.fi += h.vx * sp; h.fj += h.vy * sp; h.go += sp; if (h.go >= h.max || blocked(h.fi, h.fj)) { if (!h.oneWay && !h.small && skillMod('phammer') === 'burst') { h.done = true; palSpark(h.fi, h.fj, 22); shockwave(h.fi, h.fj, 1.9, 0.3, [27, 51]); G.pal.domes.push({ fi: h.fi, fj: h.fj, t: 0, T: 0.26, R: 1.4 }); for (const e of nearFoes(h.fi, h.fj, 1.8)) bzHit(e, 1.3, [h.fi, h.fj], 1, 'holy'); sfx('palJudgeLand', 0.5); continue; }   // (round 109: Shatterpoint: it bursts at the end of its flight instead of coming back)
+      if (h.oneWay) { h.done = true; palSpark(h.fi, h.fj, 10); shockwave(h.fi, h.fj, 0.9, 0.18, [27, 51]); continue; } h.back = true; h.hit.clear(); sfx('swing', 0.5); } }
     else { const dx = hero.fi - h.fi, dy = hero.fj - h.fj, l = Math.hypot(dx, dy) || 1; h.fi += dx / l * sp * 1.15; h.fj += dy / l * sp * 1.15; if (l < 0.6) h.done = true; }
-    for (const e of enemies) if (alive(e) && !h.hit.has(e) && Math.hypot(e.fi - h.fi, e.fj - h.fj) < 0.75 + (e.def.unique ? 0.4 : 0)) { h.hit.add(e); bzHit(e, h.k || 1.0, [h.fi - h.vx, h.fj - h.vy], 1, 'holy'); palSpark(e.fi, e.fj, h.small ? 6 : 8); sfx(h.small ? 'hit' : 'crit', 0.5); }
+    for (const e of enemies) if (alive(e) && !h.hit.has(e) && Math.hypot(e.fi - h.fi, e.fj - h.fj) < 0.75 + (e.def.unique ? 0.4 : 0)) { h.hit.add(e); const rb = h.back && skillMod('phammer') === 'return'; bzHit(e, (h.k || 1.0) * (rb ? 1.8 : 1), [h.fi - h.vx, h.fj - h.vy], 1, 'holy'); if (rb && alive(e) && !e.def.unique) e.stun = Math.max(e.stun || 0, 0.5);   // (round 109: Return Blow)
+       palSpark(e.fi, e.fj, h.small ? 6 : 8); sfx(h.small ? 'hit' : 'crit', 0.5); }
     if (Math.random() < 0.7) { const [x, y] = iso(h.fi, h.fj); pspawn(4, x, y - 14, 2, 0, 0, 8, 0.35, Math.random() < 0.5 ? 51 : 27); }
     (h.trail = h.trail || []).unshift([h.fi, h.fj, h.spin]); if (h.trail.length > 5) h.trail.pop();   // afterimages
     if (h.t > 3) h.done = true;
@@ -373,31 +376,42 @@ function updatePalHammers(dt) {
 }
 // ---- CONSECRATE
 function palConsecrate() {
-  G.pal.consec = { fi: hero.fi, fj: hero.fj, t: 0, T: 8, R: 2.8, tick: 0 };
+  const wide = skillMod('consec') === 'wide';   // (round 109: Wide Ground)
+  G.pal.consec = { fi: hero.fi, fj: hero.fj, t: 0, T: wide ? 11 : 8, R: wide ? 3.8 : 2.8, tick: 0 };
   hero.combo = 2; hero.atk = 0; hero.hitDone = true; hero.clip = 'attack3';   // the hammer brought down into the ground
   shockwave(hero.fi, hero.fj, 2.8, 0.35, [27, 51]); sfx('palConsec'); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.2);
   return true;
 }
 const palBlessed = () => { const C = G.pal && G.pal.consec; return !!(C && isPal() && Math.hypot(hero.fi - C.fi, hero.fj - C.fj) < C.R); };
+const palBlessActive = () => isPal() && (palBlessed() || hero.blessUntil > G.t);   // (round 109: the blessing, also its lingering after he steps out with Lingering Blessing)
+// the weapon's holy glow follows the blessing: switched on and off in the look (a +3 weapon glows anyway)
+function palBlessTick() {
+  if (!isPal() || !hero.look) return;
+  const on = palBlessActive(); if (on === !!hero.blessGlow) return;
+  hero.blessGlow = on;
+  if (on) { hero.blessEnch0 = hero.look.ench; hero.look.ench = 'blessed'; } else { hero.look.ench = hero.blessEnch0 || ''; }
+  if (typeof prewarmHero === 'function') prewarmHero();
+}
+{ const rcB = recalcHero; recalcHero = function (...a) { const r = rcB(...a); if (hero.blessGlow && hero.look) { hero.blessEnch0 = hero.look.ench; hero.look.ench = 'blessed'; } return r; }; }
 function updatePalConsec(dt) {
   const C = G.pal.consec; if (!C) return;
   C.t += dt; C.tick -= dt;
-  if (C.tick <= 0) { C.tick = 0.5; let n = 0; for (const e of enemies) if (alive(e) && Math.hypot(e.fi - C.fi, e.fj - C.fj) < C.R) { bzHit(e, 0.2, [C.fi, C.fj], 0, 'holy'); n++; } if (n) sfx('palEmber', 0.45); }   // (round 108: a faint smolder as it burns them, the user's ask)   // (round 102: 0.35x was a lot for how it looks)
-  if (Math.hypot(hero.fi - C.fi, hero.fj - C.fj) < C.R && !hero.dead) {   // BLESSED: his skills hit 30% harder and come back 50% faster while he stands in it
+  if (C.tick <= 0) { C.tick = 0.5; let n = 0; for (const e of enemies) if (alive(e) && Math.hypot(e.fi - C.fi, e.fj - C.fj) < C.R) { const hf = skillMod('consec') === 'fire'; bzHit(e, hf ? 0.35 : 0.2, [C.fi, C.fj], 0, 'holy'); if (hf && alive(e)) e.slowT = Math.max(e.slowT || 0, 1.2); n++; /* (round 109: Holy Fire burns harder and slows) */ } if (n) sfx('palEmber', 0.45); }   // (round 108: a faint smolder as it burns them, the user's ask)   // (round 102: 0.35x was a lot for how it looks)
+  if (Math.hypot(hero.fi - C.fi, hero.fj - C.fj) < C.R && !hero.dead) {   // BLESSED (round 109, the user's design): his weapon glows and his basic blows turn holy, a fifth harder, bursting in light; he mends a little
     hero.hp = Math.min(STAT.maxHp, hero.hp + STAT.maxHp * 0.03 * dt);
-    for (const k in CD) if (k !== 'consec' && CD[k] > 0) CD[k] = Math.max(0, CD[k] - dt * 0.5);
     if (!C.blessT) { C.blessT = 1; floater('BLESSED', hero.fi, hero.fj, 44, 51); sfx('palEmber', 0.8); }
     if (Math.random() < dt * 14) { const [x, y] = screenOf(hero); pspawn(4, x + (Math.random() - 0.5) * 16, y - 2, 2 + Math.random() * 6, 0, 0, 30 + Math.random() * 20, 0.6, Math.random() < 0.5 ? 51 : 27); }   // light rising off him
-  } else C.blessT = 0;
+  } else { if (C.blessT && skillMod('consec') === 'linger') hero.blessUntil = G.t + 4; C.blessT = 0; }   // (round 109: Lingering Blessing: 4 s more after he steps out)
   if (Math.random() < dt * 30) { const a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * C.R, [x, y] = iso(C.fi + Math.cos(a) * r, C.fj + Math.sin(a) * r); pspawn(4, x, y, 1, 0, 0, 16 + Math.random() * 16, 0.8, Math.random() < 0.6 ? 51 : 27); }
-  if (C.t >= C.T) G.pal.consec = null;
+  if (C.t >= C.T) { if (C.blessT && skillMod('consec') === 'linger') hero.blessUntil = G.t + 4; G.pal.consec = null; }
 }
 // ---- JUDGMENT (round 99: a real hammer, his own, falling through a tear in the sky; WRATH OF HEAVEN: three of them;
 // the combo's finisher: a small one on whatever the third swing struck)
 function palJudge() {
   const t = thickest(8) || nearestEnemy(8); if (!t) return false;
   hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
-  G.pal.judges.push({ fi: t.fi, fj: t.fj, t: 0, T: 0.62, done: false, R: 2.4 });
+  const gavel = skillMod('judge') === 'gavel'; if (gavel) CD.judge = (CD.judge || 0) * 0.5;   // (round 109: Gavel: smaller, faster, half the wait)
+  G.pal.judges.push({ fi: t.fi, fj: t.fj, t: 0, T: gavel ? 0.38 : 0.62, done: false, R: gavel ? 1.8 : 2.4, gavel });
   hero.palRaise = 0.65; hero.atk = -1; hero.clip = 'raise';   // he raises the hammer to the sky
   sfx('palJudgeCall', 0.85);
   return true;
@@ -425,7 +439,7 @@ function updatePalJudges(dt) {
         sfx('palJudgeLand', 0.85); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.12);
         continue;
       }
-      for (const e of nearFoes(J.fi, J.fj, J.R)) { bzHit(e, J.big ? 2.4 : 2.2, [J.fi, J.fj], 3, 'holy'); if (alive(e)) { e.palMark = G.t + 8; if (!e.def.unique) e.stun = Math.max(e.stun || 0, 1.0); } }
+      for (const e of nearFoes(J.fi, J.fj, J.R)) { bzHit(e, (J.big ? 2.4 : 2.2) * (J.gavel ? 0.6 : 1), [J.fi, J.fj], 3, 'holy'); if (alive(e)) { e.palMark = G.t + (skillMod('judge') === 'sentence' ? 12 : 8); if (!e.def.unique) e.stun = Math.max(e.stun || 0, 1.0); } }
       shockwave(J.fi, J.fj, J.R + 0.6, 0.4, [27, 51]); shockwave(J.fi, J.fj, J.R * 0.6, 0.3, [51, GOLD[2]], null, false);
       G.pal.domes.push({ fi: J.fi, fj: J.fj, t: 0, T: 0.42, R: J.R + 0.4 });
       palSpark(J.fi, J.fj, 30); G.flashes.push({ fi: J.fi, fj: J.fj, r: 140, t: 0.35, t0: 0.35 });
@@ -439,10 +453,11 @@ function updatePalJudges(dt) {
 function palCracks(fi, fj, T) { const R0 = rng((Math.random() * 1e9) | 0), cracks = []; for (let k = 0; k < 9; k++) { let a = k / 9 * 6.283 + R0() * 0.5, x = 0, y = 0; const pts = [[0, 0]], n = 3 + R0.int(0, 2); for (let q = 0; q < n; q++) { a += (R0() - 0.5) * 0.9; const l = 0.35 + R0() * 0.45; x += Math.cos(a) * l; y += Math.sin(a) * l; pts.push([x, y]); } cracks.push(pts); } G.pal.scorch.push({ fi, fj, t: 0, T, cracks }); }
 // a marked foe takes a quarter more, and dies in a burst of healing light
 { const d0 = damageEnemy; damageEnemy = function (e, dmg, ...rest) {
-  if (isPal()) { const W = palWings(); if (W) dmg = Math.round(dmg * WINGS[W.kind].dmg); if (e.palMark > G.t) dmg = Math.round(dmg * 1.25);
-    if (G.palMelee) dmg = Math.max(1, Math.round(dmg * PAL_MELEE_K)); else if (palBlessed()) dmg = Math.round(dmg * 1.3); }   // (round 102: the basic blow a little lighter; Consecrate's blessing on his skills)
+  if (isPal()) { const W = palWings(); if (W) dmg = Math.round(dmg * WINGS[W.kind].dmg); if (e.palMark > G.t) dmg = Math.round(dmg * (skillMod('judge') === 'sentence' ? 1.6 : 1.25));   // (round 109: Sentence)
+    if (G.palMelee) dmg = Math.max(1, Math.round(dmg * PAL_MELEE_K * (palBlessActive() ? 1.2 : 1))); }   // (round 102: the basic blow a little lighter; round 109: blessed, a fifth harder (Consecrate no longer lifts his skills))
   const was = alive(e), r = d0(e, dmg, ...rest);
-  if (isPal() && was && !alive(e) && e.palMark > G.t) { e.palMark = 0; hero.hp = Math.min(STAT.maxHp, hero.hp + STAT.maxHp * 0.06); palSpark(e.fi, e.fj, 16); shockwave(e.fi, e.fj, 1.6, 0.3, [27, 51]); for (const o of nearFoes(e.fi, e.fj, 1.6)) bzHit(o, 0.5, [e.fi, e.fj], 0, 'holy'); floater('+LIGHT', hero.fi, hero.fj, 40, 51); }
+  if (isPal() && was && !alive(e) && e.palMark > G.t) { e.palMark = 0; const ab = skillMod('judge') === 'absolve'; hero.hp = Math.min(STAT.maxHp, hero.hp + STAT.maxHp * (ab ? 0.12 : 0.06)); if (ab && !palWings()) hero.ult = Math.min(100, (hero.ult || 0) + 6);   // (round 109: Absolution)
+    palSpark(e.fi, e.fj, 16); shockwave(e.fi, e.fj, 1.6, 0.3, [27, 51]); for (const o of nearFoes(e.fi, e.fj, 1.6)) bzHit(o, 0.5, [e.fi, e.fj], 0, 'holy'); floater('+LIGHT', hero.fi, hero.fj, 40, 51); }
   return r;
 }; }
 // ---- FAITH and the wings
@@ -506,7 +521,7 @@ function updatePaladin(dt) {
     shockwave(hero.fi, hero.fj, 2.2, 0.3, [27, 51]); palSpark(hero.fi, hero.fj, 18); palPillar(hero.fi, hero.fj, 0.6);
   }
   if (hero.palRaise > 0) { hero.palRaise -= dt; if (hero.atk < 0 && !hero.leap && !hero.dead) hero.clip = 'raise'; }
-  updatePalWaves(dt); updatePalHammers(dt); updatePalConsec(dt); updatePalJudges(dt); updatePal99(dt);
+  updatePalWaves(dt); updatePalHammers(dt); updatePalConsec(dt); palBlessTick(); palModTick(dt); updatePalJudges(dt); updatePal99(dt);
   for (const p of G.pal.pillars) p.t += dt; G.pal.pillars = G.pal.pillars.filter(p => p.t < p.T);
   for (const m of G.pal.smites) m.t -= dt; G.pal.smites = G.pal.smites.filter(m => m.t > 0);
   for (const c of G.pal.scorch) c.t += dt; G.pal.scorch = G.pal.scorch.filter(c => c.t < c.T);
@@ -782,7 +797,8 @@ function palSerTarget(avoid) {
 }
 function palSeraph(chains) {
   const t = palSerTarget(null), [fx, fy] = dirVec(hero.dir), to = palLandAt(t ? [t.fi, t.fj] : [hero.fi + fx * 3.5, hero.fj + fy * 3.5]); if (!to) return false;
-  hero.bz = { kind: 'seraph', t: 0, from: [hero.fi, hero.fj], to, chains, landed: false }; hero.approach = null; hero.atk = -1;
+  const again = hero.serFree > G.t; if (again) { hero.mana += 10; hero.serFree = 0; CD.seraph = hero.serCd || 0; }   // (the free second dive)
+  hero.bz = { kind: 'seraph', t: 0, from: [hero.fi, hero.fj], to, chains, landed: false, again }; hero.approach = null; hero.atk = -1;
   if (!palWings()) { hero.palSerWing = true; recalcHero(); }
   G.pal.pillars.push({ fi: hero.fi, fj: hero.fj, t: 0, T: 0.28, white: true });
   const [x, y] = screenOf(hero); for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283; pspawn(5, x, y, 1, Math.cos(a) * 60, Math.sin(a) * 30, 18, 0.8, LV.outdoor ? DIRT[3] : S[5]); }
@@ -804,8 +820,9 @@ function updSeraph(B, dt) {
     const [x, y] = screenOf(hero); G.ghosts.push({ sp: getSprite('hero', hero.look, hero.dir, hero.clip, frameOf(hero), hero), x, y: y - hero.leapZ, t: 0.18, t0: 0.18, fl: 8 });
   } else if (!B.landed) {
     B.landed = true; hero.fi = B.to[0]; hero.fj = B.to[1]; hero.leapZ = 0; bzPose(3, T3.hit + 20);
-    const R = 2.6;
-    for (const e of nearFoes(hero.fi, hero.fj, R + 0.4)) { const d = Math.hypot(e.fi - hero.fi, e.fj - hero.fj); bzHit(e, d < 1.2 ? 2.8 : 2.8 - (d - 1.2) / (R - 1.2) * 1.2, [hero.fi, hero.fj], 3, 'holy'); if (alive(e) && !e.def.unique) { e.downT = e.downT0 = 1.0; e.atk = -1; const dx = e.fi - hero.fi, dy = e.fj - hero.fj, l = Math.hypot(dx, dy) || 1; e.kb = [dx / l * 7, dy / l * 7]; } }
+    const sm = skillMod('seraph'), R = sm === 'quake' ? 3.6 : 2.6;   // (round 109: Shockwave: wider)
+    if (sm === 'feathers') G.pal.feathers = (G.pal.feathers || []).concat([{ fi: hero.fi, fj: hero.fj, t: 0, T: 3, R: 2, tick: 0.25 }]);   // (round 109: Feathers of Light burn on the ground)
+    for (const e of nearFoes(hero.fi, hero.fj, R + 0.4)) { if (sm === 'quake' && !e.def.unique) e.stun = Math.max(e.stun || 0, 1.3); const d = Math.hypot(e.fi - hero.fi, e.fj - hero.fj); bzHit(e, d < 1.2 ? 2.8 : 2.8 - (d - 1.2) / (R - 1.2) * 1.2, [hero.fi, hero.fj], 3, 'holy'); if (alive(e) && !e.def.unique) { e.downT = e.downT0 = 1.0; e.atk = -1; const dx = e.fi - hero.fi, dy = e.fj - hero.fj, l = Math.hypot(dx, dy) || 1; e.kb = [dx / l * 7, dy / l * 7]; } }
     shockwave(hero.fi, hero.fj, R + 0.6, 0.4, [27, 51]); shockwave(hero.fi, hero.fj, R * 0.55, 0.3, [51, GOLD[2]]); shockwave(hero.fi, hero.fj, R + 1, 0.5, LV.outdoor ? [DIRT[4], DIRT[3]] : [27, 26], null, false);
     G.pal.domes.push({ fi: hero.fi, fj: hero.fj, t: 0, T: 0.32, R: 1.9 }); palCracks(hero.fi, hero.fj, 1.8); if (typeof stampCrater === 'function') stampCrater(hero.fi, hero.fj, 1.0);
     G.pal.pillars.push({ fi: hero.fi, fj: hero.fj, t: 0, T: 0.4 });
@@ -818,6 +835,7 @@ function updSeraph(B, dt) {
     if (t >= B.tl + (B.chains > 0 ? 0.12 : SER.rec)) {
       if (B.chains > 0) { const n = palSerTarget([hero.fi, hero.fj]) || palSerTarget(null), to = n && palLandAt([n.fi, n.fj]); if (to) { hero.bz = { kind: 'seraph', t: SER.up * 0.4, from: [hero.fi, hero.fj], to, chains: B.chains - 1, landed: false }; hero.leapZ = SER.H * 0.3; sfx('meteor', 0.6); return; } }
       hero.bz = null; hero.atk = -1; hero.clip = 'idle'; hero.swingEnd = G.t; unstickHero(); if (hero.palSerWing) { hero.palSerWing = false; recalcHero(); }
+      if (skillMod('seraph') === 'again' && !B.again && !hero.serFree) { hero.serFree = G.t + 2; hero.serCd = CD.seraph; CD.seraph = 0; say('SECOND DIVE!', 51, 1.2); }   // (round 109: Second Dive, free within 2 s)
     }
   }
 }
@@ -955,3 +973,56 @@ Object.assign(SPELL_LOOK, { seraph: [[24, 25, 26, 27], glyphSeraph], seraph3: [[
 if (typeof PV_PLAN !== 'undefined') Object.assign(PV_PLAN, { lance: { len: 2.4 }, lance3: { len: 2.4 }, toll: { len: 2.4 }, toll3: { len: 2.6 }, seraph3: { len: 3.4, far: 1.5 }, wrath: { len: 3.2 } });
 // round 108: the Paladin's own recorded sounds (sound.js SAMPLES); while they load, or where a file fails, each falls back to the sound it replaced
 if (typeof RECIPES !== 'undefined') for (const [k, o] of Object.entries({ palHit: 'thud', palEmber: 'clink', palConsec: 'crit', palToll: 'clink', palJudgeCall: 'portal', palJudgeLand: 'crit', palThrow: 'heavySwing', palPillar: 'zap', palFaith: 'levelUp', palFlap: 'whoomp' })) if (!RECIPES[k] && RECIPES[o]) RECIPES[k] = v => RECIPES[o](v);
+
+// ---------------------------------------------------------------- round 109: the Paladin's skill modifiers (the skills screen, like the others: 2/4/6 levels after the skill)
+Object.assign(SKILL_MODS, {
+  phammer: [
+    { id: 'twin', name: 'TWIN HAMMERS', desc: 'THROWS TWO HAMMERS IN A V' },
+    { id: 'burst', name: 'SHATTERPOINT', desc: 'BURSTS IN LIGHT AT THE END OF ITS FLIGHT INSTEAD OF RETURNING' },
+    { id: 'return', name: 'RETURN BLOW', desc: 'HITS FAR HARDER ON THE WAY BACK AND DAZES' },
+  ],
+  consec: [
+    { id: 'wide', name: 'WIDE GROUND', desc: 'A BIGGER CIRCLE THAT LASTS LONGER' },
+    { id: 'fire', name: 'HOLY FIRE', desc: 'FOES INSIDE BURN HARDER AND SLOW DOWN' },
+    { id: 'linger', name: 'LINGERING BLESSING', desc: 'THE BLESSING STAYS 4 SECONDS AFTER YOU STEP OUT' },
+  ],
+  seraph: [
+    { id: 'again', name: 'SECOND DIVE', desc: 'DIVE AGAIN WITHIN 2 SECONDS, FREE' },
+    { id: 'quake', name: 'SHOCKWAVE', desc: 'A MUCH WIDER LANDING THAT KNOCKS FOES DOWN' },
+    { id: 'feathers', name: 'FEATHERS OF LIGHT', desc: 'THE LANDING LEAVES BURNING FEATHERS ON THE GROUND' },
+  ],
+  judge: [
+    { id: 'gavel', name: 'GAVEL', desc: 'A SMALLER, FASTER HAMMER, READY AGAIN IN HALF THE TIME' },
+    { id: 'sentence', name: 'SENTENCE', desc: 'MARKED FOES TAKE FAR MORE DAMAGE, FOR LONGER' },
+    { id: 'absolve', name: 'ABSOLUTION', desc: 'KILLING A MARKED FOE HEALS YOU MORE AND GIVES FAITH' },
+  ],
+});
+if (typeof SKILL_TEXT !== 'undefined') Object.assign(SKILL_TEXT, {
+  phammer: 'HURL A SPINNING HAMMER OF LIGHT THROUGH THE PACK. IT COMES BACK TO YOU, HITTING AGAIN.',
+  'phammer/twin': 'TWO HAMMERS FLY OUT IN A V AND BOTH COME BACK. MORE OF THE PACK HIT TWICE.',
+  'phammer/burst': 'NO RETURN: AT THE END OF ITS FLIGHT IT BURSTS, HITTING EVERYTHING AROUND IT. THROW IT INTO THE MIDDLE OF THEM.',
+  'phammer/return': 'THE WAY BACK HITS NEARLY TWICE AS HARD AND DAZES WHAT IT HITS. STAND SO THEY ARE BETWEEN YOU AND IT.',
+  consec: 'BLESS THE GROUND AROUND YOU. STANDING IN IT, YOUR WEAPON GLOWS, YOUR BLOWS TURN HOLY AND HIT A FIFTH HARDER, AND YOU MEND. FOES IN IT BURN.',
+  'consec/wide': 'A BIGGER CIRCLE THAT LASTS ELEVEN SECONDS. EASIER TO FIGHT INSIDE.',
+  'consec/fire': 'FOES INSIDE BURN NEARLY TWICE AS HARD AND SLOW DOWN.',
+  'consec/linger': 'STEP OUT AND THE GLOW STAYS FOUR MORE SECONDS. CHASE THEM DOWN STILL BLESSED.',
+  seraph: 'RISE IN A COLUMN OF LIGHT AND DIVE ONTO THE THICKEST PACK, KNOCKING THEM DOWN.',
+  'seraph/again': 'AFTER A DIVE YOU MAY DIVE ONCE MORE WITHIN 2 SECONDS, FREE.',
+  'seraph/quake': 'A MUCH WIDER LANDING, AND EVERY FOE IN IT IS KNOCKED DOWN LONGER.',
+  'seraph/feathers': 'BURNING FEATHERS FALL WHERE YOU LAND AND HURT WHAT STANDS IN THEM FOR 3 SECONDS.',
+  judge: 'A GIANT HAMMER OF LIGHT FALLS FROM THE SKY ON THE THICKEST PACK. THE SURVIVORS ARE MARKED: THEY TAKE MORE, AND DIE IN A BURST OF HEALING LIGHT.',
+  'judge/gavel': 'A SMALLER HAMMER THAT FALLS FASTER AND IS READY AGAIN IN HALF THE TIME. LESS DAMAGE EACH.',
+  'judge/sentence': 'MARKED FOES TAKE 60% MORE INSTEAD OF 25%, AND STAY MARKED 12 SECONDS.',
+  'judge/absolve': 'EACH MARKED FOE THAT DIES HEALS YOU TWICE AS MUCH AND ADDS FAITH.',
+});
+// Feathers of Light (burning on the ground after a dive) and the Second Dive's window
+function palModTick(dt) {
+  if (!isPal() || !G.pal) return;
+  if (hero.serFree && G.t > hero.serFree) { hero.serFree = 0; CD.seraph = Math.max(CD.seraph || 0, (hero.serCd || 0) - 2); }
+  for (const F of G.pal.feathers || []) {
+    F.t += dt; F.tick -= dt;
+    if (F.tick <= 0) { F.tick = 0.5; for (const e of nearFoes(F.fi, F.fj, F.R)) bzHit(e, 0.3, [F.fi, F.fj], 0, 'holy'); }
+    if (Math.random() < dt * 22) { const a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * F.R, [x, y] = iso(F.fi + Math.cos(a) * r, F.fj + Math.sin(a) * r); pspawn(4, x, y, 6 + Math.random() * 14, (Math.random() - 0.5) * 10, 0, -8, 0.9, Math.random() < 0.5 ? 51 : 27); }
+  }
+  if (G.pal.feathers) G.pal.feathers = G.pal.feathers.filter(F => F.t < F.T);
+}
