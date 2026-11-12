@@ -156,12 +156,12 @@ function palHammerHead(r, g, bd, wide, wf, o) {
 }
 GEAR_EXTRA.weapon.pal_hammer = (r, { g, bd, wide, wf }) => {   // the squire's warhammer: an ash haft, a plain steel head
   r.cone(V.mad(g, bd, 1.2), V.mad(g, bd, 12.6), 0.9, 0.9, M.WOOD);
-  palHammerHead(r, g, bd, wide, wf, { at: 13.8, hl: 2.0, hw: 3.3, m: M.STEEL, face: M.STEEL, band: M.IRON, spike: 2.0 });
+  palHammerHead(r, g, bd, wide, wf, { at: 14.0, hl: 2.6, hw: 4.0, m: M.STEEL, face: M.STEEL, band: M.IRON, spike: 2.0 });   // (round 102: a chunkier head: it read as a drumstick)
 };
 GEAR_EXTRA.weapon.pal_warhammer = (r, { g, bd, wide, wf }) => {   // the sunsteel warhammer: a blue-wrapped haft, a white head with gold faces
   r.cone(V.mad(g, bd, 1.2), V.mad(g, bd, 12.8), 0.95, 0.95, M.CLOTH_BLUE);
   r.cyl(V.mad(g, bd, 11.4), V.mad(g, bd, 12.4), 1.3, M.GOLD);
-  palHammerHead(r, g, bd, wide, wf, { at: 14.2, hl: 2.2, hw: 3.6, m: M.WPLATE, face: M.GOLD, band: M.GOLD, spike: 2.6 });
+  palHammerHead(r, g, bd, wide, wf, { at: 14.4, hl: 2.8, hw: 4.3, m: M.WPLATE, face: M.GOLD, band: M.GOLD, spike: 2.6 });
 };
 GEAR_EXTRA.weapon.pal_maul = (r, { g, bd, wide, wf }) => {   // the great maul (two hands): a long haft, a big steel head banded in gold
   r.cone(V.mad(g, bd, -7), V.mad(g, bd, 16), 1.0, 1.0, M.WOOD, { mf: p => Math.abs(((V.dot(V.sub(p, g), bd) + 30) % 6) - 3) < 0.5 ? M.LEATHER : 0 });
@@ -284,13 +284,39 @@ const isPal = () => hero.cls === 'paladin';
 const palWings = () => hero.wing && hero.wing.t > 0 ? hero.wing : null;
 const palFresh = () => ({ waves: [], hammers: [], consec: null, judges: [], pillars: [], flashes: [], smites: [], scorch: [], lanes: [], spears: [], tolls: [], domes: [], streaks: [], bell: null });
 { const r0 = resetFx; resetFx = function () { r0(); G.pal = palFresh(); }; }
-// ---- the swings' waves of light
+// ---- the swings (round 102, the user: the one-handed swing looked like a drumstick tap, was too slow, and its
+// big arc of light hit too hard for a starting attack). Now his own swing set: about a third quicker, the body
+// dropping deeper into each blow; his blows land heavier (a ring and dust on the ground, a thud) but each does
+// less (`PAL_MELEE_K`); the third swing throws a small hammer of light straight out; the arcs of light come only
+// with the wings (an upgrade, not the base attack).
+const PAL_MELEE_K = 0.72, PAL_SWING_SP = {};
+{ const ws0 = weaponSwing; weaponSwing = function (eq, combo = 0) {
+  const sw = ws0(eq, combo); if (!eq || !(eq.holy || /^pal_/.test(eq.weapon || '')) || combo === 3 || isBow(eq.weapon)) return sw;
+  const two = !!PAL_TWO_HAND[eq.weapon], key = sw.length + ':' + combo + ':' + two + ':' + sw.map(k => k.ms).join(',');
+  if (PAL_SWING_SP[key]) return PAL_SWING_SP[key];
+  const hi = sw.findIndex(k => k.hit), pre = two ? 0.8 : 0.62, post = two ? 0.85 : 0.7;
+  const out = sw.map((k, i) => { const q = Object.assign({}, k, { ms: Math.round(k.ms * (i < hi ? pre : i === hi ? 0.9 : post)) });
+    if (i >= hi - 1 && i <= hi + 1) { if (q.ln !== undefined) q.ln *= 1.35; if (q.bob !== undefined) q.bob *= 1.4; }   // deeper into the blow
+    return q; });
+  for (const k of Object.keys(sw)) if (isNaN(+k)) out[k] = sw[k];
+  let t = 0; for (let i = 0; i <= hi; i++) t += out[i].ms; if (sw.free !== undefined) { out.free = t; out.chain = t + (out[hi + 1] ? out[hi + 1].ms : 0); }
+  return (PAL_SWING_SP[key] = out);
+}; }
+{ const hr0 = heroHitResolve; heroHitResolve = function (...a) { G.palMelee = isPal(); try { return hr0(...a); } finally { G.palMelee = false; } }; }
 function palSwing(combo) {
   if (!isPal() || !G.pal) return;
   const W = palWings(), big = combo === 2, [fx, fy] = dirVec(hero.dir), a0 = Math.atan2(fy, fx);
-  const range = (big ? 4.6 : 2.7) * (W ? WINGS[W.kind].reach : 1);
-  G.pal.waves.push({ fi: hero.fi, fj: hero.fj, a0, half: big ? 0.8 : 0.62, range, speed: big ? 12 : 10, t: 0, front: heroReach() * 0.6, k: big ? 0.75 : 0.4, big, hit: new Set(), arch: !!(W && W.kind === 'arch') });
-  if (big) { sfx('whoomp'); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.1); palFinisher(); } else sfx('swing', 0.5);   // (round 99: the third swing also calls a hammer down)
+  if (W) {   // the wings' arcs of light
+    const range = (big ? 4.6 : 2.7) * WINGS[W.kind].reach;
+    G.pal.waves.push({ fi: hero.fi, fj: hero.fj, a0, half: big ? 0.8 : 0.62, range, speed: big ? 12 : 10, t: 0, front: heroReach() * 0.6, k: big ? 0.75 : 0.4, big, hit: new Set(), arch: W.kind === 'arch' });
+  }
+  if (big) { palShot(a0, !!W); sfx('whoomp', 0.7); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.08); } else sfx('swing', 0.5);
+}
+// the third swing's small hammer of light: straight out, through what it meets, gone at the end of its flight
+function palShot(a, winged) {
+  const t = nearestEnemy(5.5), [fx, fy] = [Math.cos(a), Math.sin(a)];
+  if (t) { const dx = t.fi - hero.fi, dy = t.fj - hero.fj, d = Math.hypot(dx, dy) || 1; if ((dx * fx + dy * fy) / d > 0.5) a = Math.atan2(dy, dx); }   // (a foe roughly ahead: at him)
+  G.pal.hammers.push({ fi: hero.fi + Math.cos(a) * 0.6, fj: hero.fj + Math.sin(a) * 0.6, vx: Math.cos(a), vy: Math.sin(a), go: 0, max: winged ? 6 : 4.6, back: false, oneWay: true, small: true, k: 0.5, sp: 16, hit: new Set(), spin: Math.random() * 6, t: 0 });
 }
 function updatePalWaves(dt) {
   for (const w of G.pal.waves) {
@@ -319,7 +345,9 @@ function palPillar(fi, fj, k) {
   const big = pow >= 2 || crit || combo === 2, z = (e.def.chest || 20) * 0.62;
   G.pal.smites.push({ fi: e.fi, fj: e.fj, z, t: big ? 0.2 : 0.14, t0: big ? 0.2 : 0.14, big, rot: (combo % 2) * 0.785 + (Math.random() - 0.5) * 0.3 });
   const [x, y] = screenOf(e); for (let q = 0; q < (big ? 14 : 7); q++) { const a = Math.random() * 6.283, sp = 50 + Math.random() * 90; pspawn(4, x, y, z, Math.cos(a) * sp, Math.sin(a) * sp * 0.6, 20 + Math.random() * 30, 0.35, Math.random() < 0.5 ? 27 : 51); }
-  if (SHAKE) G.trauma = Math.min(1, G.trauma + (big ? 0.1 : 0.05));
+  if (SHAKE) G.trauma = Math.min(1, G.trauma + (big ? 0.12 : 0.07));
+  shockwave(e.fi, e.fj, big ? 1.1 : 0.75, big ? 0.22 : 0.16, [27, 51], null, false); sfx('thud', big ? 0.7 : 0.45);   // (round 102: the blow lands on the ground too)
+  for (let q = 0; q < (big ? 8 : 4); q++) { const a = Math.random() * 6.283; pspawn(5, x + Math.cos(a) * 6, y + Math.sin(a) * 3, 1, Math.cos(a) * 30, Math.sin(a) * 14, 10 + Math.random() * 10, 0.5, LV.outdoor ? 30 : 26); }   // dust kicked up
 }; }
 // ---- HAMMER OF LIGHT
 function palThrow() {
@@ -333,10 +361,10 @@ function palThrow() {
 }
 function updatePalHammers(dt) {
   for (const h of G.pal.hammers) {
-    h.t += dt; h.spin += dt * 22; const sp = 13 * dt;
-    if (!h.back) { h.fi += h.vx * sp; h.fj += h.vy * sp; h.go += sp; if (h.go >= h.max || blocked(h.fi, h.fj)) { h.back = true; h.hit.clear(); sfx('swing', 0.5); } }
+    h.t += dt; h.spin += dt * (h.small ? 28 : 22); const sp = (h.sp || 13) * dt;
+    if (!h.back) { h.fi += h.vx * sp; h.fj += h.vy * sp; h.go += sp; if (h.go >= h.max || blocked(h.fi, h.fj)) { if (h.oneWay) { h.done = true; palSpark(h.fi, h.fj, 10); shockwave(h.fi, h.fj, 0.9, 0.18, [27, 51]); continue; } h.back = true; h.hit.clear(); sfx('swing', 0.5); } }
     else { const dx = hero.fi - h.fi, dy = hero.fj - h.fj, l = Math.hypot(dx, dy) || 1; h.fi += dx / l * sp * 1.15; h.fj += dy / l * sp * 1.15; if (l < 0.6) h.done = true; }
-    for (const e of enemies) if (alive(e) && !h.hit.has(e) && Math.hypot(e.fi - h.fi, e.fj - h.fj) < 0.75 + (e.def.unique ? 0.4 : 0)) { h.hit.add(e); bzHit(e, 1.0, [h.fi - h.vx, h.fj - h.vy], 1, 'holy'); palSpark(e.fi, e.fj, 8); sfx('crit', 0.5); }
+    for (const e of enemies) if (alive(e) && !h.hit.has(e) && Math.hypot(e.fi - h.fi, e.fj - h.fj) < 0.75 + (e.def.unique ? 0.4 : 0)) { h.hit.add(e); bzHit(e, h.k || 1.0, [h.fi - h.vx, h.fj - h.vy], 1, 'holy'); palSpark(e.fi, e.fj, h.small ? 6 : 8); sfx(h.small ? 'hit' : 'crit', 0.5); }
     if (Math.random() < 0.7) { const [x, y] = iso(h.fi, h.fj); pspawn(4, x, y - 14, 2, 0, 0, 8, 0.35, Math.random() < 0.5 ? 51 : 27); }
     (h.trail = h.trail || []).unshift([h.fi, h.fj, h.spin]); if (h.trail.length > 5) h.trail.pop();   // afterimages
     if (h.t > 3) h.done = true;
@@ -350,11 +378,17 @@ function palConsecrate() {
   shockwave(hero.fi, hero.fj, 2.8, 0.35, [27, 51]); sfx('crit'); sfx('levelUp', 0.4); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.2);
   return true;
 }
+const palBlessed = () => { const C = G.pal && G.pal.consec; return !!(C && isPal() && Math.hypot(hero.fi - C.fi, hero.fj - C.fj) < C.R); };
 function updatePalConsec(dt) {
   const C = G.pal.consec; if (!C) return;
   C.t += dt; C.tick -= dt;
-  if (C.tick <= 0) { C.tick = 0.5; for (const e of enemies) if (alive(e) && Math.hypot(e.fi - C.fi, e.fj - C.fj) < C.R) bzHit(e, 0.35, [C.fi, C.fj], 0, 'holy'); }
-  if (Math.hypot(hero.fi - C.fi, hero.fj - C.fj) < C.R && !hero.dead) { hero.hp = Math.min(STAT.maxHp, hero.hp + STAT.maxHp * 0.03 * dt); }
+  if (C.tick <= 0) { C.tick = 0.5; for (const e of enemies) if (alive(e) && Math.hypot(e.fi - C.fi, e.fj - C.fj) < C.R) bzHit(e, 0.2, [C.fi, C.fj], 0, 'holy'); }   // (round 102: 0.35x was a lot for how it looks)
+  if (Math.hypot(hero.fi - C.fi, hero.fj - C.fj) < C.R && !hero.dead) {   // BLESSED: his skills hit 30% harder and come back 50% faster while he stands in it
+    hero.hp = Math.min(STAT.maxHp, hero.hp + STAT.maxHp * 0.03 * dt);
+    for (const k in CD) if (k !== 'consec' && CD[k] > 0) CD[k] = Math.max(0, CD[k] - dt * 0.5);
+    if (!C.blessT) { C.blessT = 1; floater('BLESSED', hero.fi, hero.fj, 44, 51); sfx('clink', 0.6); }
+    if (Math.random() < dt * 14) { const [x, y] = screenOf(hero); pspawn(4, x + (Math.random() - 0.5) * 16, y - 2, 2 + Math.random() * 6, 0, 0, 30 + Math.random() * 20, 0.6, Math.random() < 0.5 ? 51 : 27); }   // light rising off him
+  } else C.blessT = 0;
   if (Math.random() < dt * 30) { const a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * C.R, [x, y] = iso(C.fi + Math.cos(a) * r, C.fj + Math.sin(a) * r); pspawn(4, x, y, 1, 0, 0, 16 + Math.random() * 16, 0.8, Math.random() < 0.6 ? 51 : 27); }
   if (C.t >= C.T) G.pal.consec = null;
 }
@@ -379,12 +413,6 @@ function palWrath() {
   picks.forEach((p, k) => G.pal.judges.push({ fi: p[0], fj: p[1], t: -k * 0.24, T: 0.55, done: false, R: 2.6, big: true }));
   hero.palRaise = 1.1; hero.atk = -1; hero.clip = 'raise'; sfx('cry'); sfx('portal');
   return true;
-}
-function palFinisher() {   // the third swing: a small hammer of light falls on what it struck, or just ahead
-  const [fx, fy] = dirVec(hero.dir); let t = null, bd = 1e9;
-  for (const e of nearFoes(hero.fi, hero.fj, 4.5)) { const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy); if ((dx * fx + dy * fy) / (d || 1) > 0.3 && d < bd) { bd = d; t = e; } }
-  const at = t ? [t.fi, t.fj] : [hero.fi + fx * 2.2, hero.fj + fy * 2.2];
-  G.pal.judges.push({ fi: at[0], fj: at[1], t: 0, T: 0.22, done: false, R: 1.3, mini: true });
 }
 function updatePalJudges(dt) {
   for (const J of G.pal.judges) {
@@ -411,7 +439,8 @@ function updatePalJudges(dt) {
 function palCracks(fi, fj, T) { const R0 = rng((Math.random() * 1e9) | 0), cracks = []; for (let k = 0; k < 9; k++) { let a = k / 9 * 6.283 + R0() * 0.5, x = 0, y = 0; const pts = [[0, 0]], n = 3 + R0.int(0, 2); for (let q = 0; q < n; q++) { a += (R0() - 0.5) * 0.9; const l = 0.35 + R0() * 0.45; x += Math.cos(a) * l; y += Math.sin(a) * l; pts.push([x, y]); } cracks.push(pts); } G.pal.scorch.push({ fi, fj, t: 0, T, cracks }); }
 // a marked foe takes a quarter more, and dies in a burst of healing light
 { const d0 = damageEnemy; damageEnemy = function (e, dmg, ...rest) {
-  if (isPal()) { const W = palWings(); if (W) dmg = Math.round(dmg * WINGS[W.kind].dmg); if (e.palMark > G.t) dmg = Math.round(dmg * 1.25); }
+  if (isPal()) { const W = palWings(); if (W) dmg = Math.round(dmg * WINGS[W.kind].dmg); if (e.palMark > G.t) dmg = Math.round(dmg * 1.25);
+    if (G.palMelee) dmg = Math.max(1, Math.round(dmg * PAL_MELEE_K)); else if (palBlessed()) dmg = Math.round(dmg * 1.3); }   // (round 102: the basic blow a little lighter; Consecrate's blessing on his skills)
   const was = alive(e), r = d0(e, dmg, ...rest);
   if (isPal() && was && !alive(e) && e.palMark > G.t) { e.palMark = 0; hero.hp = Math.min(STAT.maxHp, hero.hp + STAT.maxHp * 0.06); palSpark(e.fi, e.fj, 16); shockwave(e.fi, e.fj, 1.6, 0.3, [27, 51]); for (const o of nearFoes(e.fi, e.fj, 1.6)) bzHit(o, 0.5, [e.fi, e.fj], 0, 'holy'); floater('+LIGHT', hero.fi, hero.fj, 40, 51); }
   return r;
@@ -597,12 +626,12 @@ function drawPalAir() {
     if (fade > 0.3) { const [gx, gy] = iso(w.fi + Math.cos(w.a0) * w.front, w.fj + Math.sin(w.a0) * w.front); glowAt(gx, gy - 8, w.big ? 24 : 16, 0.4 * fade, GLOW_GOLD); }   // it lights what it passes
   }
   for (const h of G.pal.hammers) {   // a spinning hammer of light: a gold haft, a white-hot head, a halo, afterimages behind
-    (h.trail || []).forEach(([fi, fj, sp], n) => { if (!n) return; const [tx, ty] = toDet(fi, fj, 14), c2 = Math.cos(sp), s2 = Math.sin(sp), th = 0.55 - n * 0.1;
-      for (let u = -8; u <= 8; u++) for (let v = 0; v <= 6; v++) { const X = Math.round(tx + c2 * (9 + v) - s2 * u), Y = Math.round(ty + s2 * (9 + v) + c2 * u); if (X >= 0 && Y >= 0 && X < OW && Y < OH && BAYER[((Y & 3) << 2) | (X & 3)] < th) ov32[Y * OW + X] = PAL32[51]; } });
-    const [cx, cy] = toDet(h.fi, h.fj, 14), ca = Math.cos(h.spin), sa = Math.sin(h.spin);
-    for (let k = -10; k <= 8; k++) for (let w = -1; w <= 1; w++) palPut(cx + ca * k - sa * w, cy + sa * k + ca * w, k < -8 || w ? 51 : 27);
-    for (let u = -8; u <= 8; u++) for (let v = 0; v <= 6; v++) palPut(cx + ca * (9 + v) - sa * u, cy + sa * (9 + v) + ca * u, Math.abs(u) > 6 || v === 0 || v === 6 ? 51 : 27);
-    glowAt(h.fi !== undefined ? iso(h.fi, h.fj)[0] : 0, iso(h.fi, h.fj)[1] - 14, 22, 0.5, GLOW_GOLD);
+    (h.trail || []).forEach(([fi, fj, sp], n) => { if (!n) return; const [tx, ty] = toDet(fi, fj, 14), c2 = Math.cos(sp), s2 = Math.sin(sp), th = 0.55 - n * 0.1, s = h.small ? 0.62 : 1;
+      for (let u = -8; u <= 8; u++) for (let v = 0; v <= 6; v++) { const X = Math.round(tx + (c2 * (9 + v) - s2 * u) * s), Y = Math.round(ty + (s2 * (9 + v) + c2 * u) * s); if (X >= 0 && Y >= 0 && X < OW && Y < OH && BAYER[((Y & 3) << 2) | (X & 3)] < th) ov32[Y * OW + X] = PAL32[51]; } });
+    const [cx, cy] = toDet(h.fi, h.fj, 14), ca = Math.cos(h.spin), sa = Math.sin(h.spin), s = h.small ? 0.62 : 1;   // (round 102: the third swing's shot, smaller)
+    for (let k = -10; k <= 8; k++) for (let w = -1; w <= 1; w++) palPut(cx + (ca * k - sa * w) * s, cy + (sa * k + ca * w) * s, k < -8 || w ? 51 : 27);
+    for (let u = -8; u <= 8; u++) for (let v = 0; v <= 6; v++) palPut(cx + (ca * (9 + v) - sa * u) * s, cy + (sa * (9 + v) + ca * u) * s, Math.abs(u) > 6 || v === 0 || v === 6 ? 51 : 27);
+    glowAt(h.fi !== undefined ? iso(h.fi, h.fj)[0] : 0, iso(h.fi, h.fj)[1] - 14, h.small ? 15 : 22, 0.5, GLOW_GOLD);
   }
   for (const J of G.pal.judges) {   // the hammer falling through a tear in the sky; after the blow, a column of light fading
     if (J.t < 0) continue;
