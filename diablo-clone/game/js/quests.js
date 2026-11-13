@@ -639,7 +639,7 @@ PROPS.sacks = v => propSprite('sacks' + v, r => {
 // Each is a short floor generated like a dungeon (few rooms), with its own monsters and a leader
 // in the farthest room. The way out (stairs up) is in the start room.
 const SIDES = {
-  den: { name: 'THE WOLF DEN', theme: 'caves', rooms: 9, pool: ['wolf'], boss: 'alpha', at: 'hub', door: () => [HUB.den[0] + 1.6, HUB.den[1] + 0.6], label: 'WOLF DEN', seed: 0xd3d },
+  den: { name: 'THE WOLF DEN', theme: 'caves', rooms: 9, pool: ['wolf'], boss: 'alpha', bossArena: true, at: 'hub', door: () => [HUB.den[0] + 1.6, HUB.den[1] + 0.6], label: 'WOLF DEN', seed: 0xd3d },
   // round 48c: the Hollow's other doors (the barrow: dangerous, level 6; the watchtower: goblins and their shaman)
   barrow: { name: 'THE BARROW', down: 'barrow2', theme: 'crypt', rooms: 10, pool: ['spearman', 'axeman', 'skeleton', 'skeleton', 'spearman', 'axeman', 'gravebow', 'tombguard'], boss: 'wraith', at: 'hub', diff: 6,   /* round 78: on the main path now: one in eight a crossbow or a shield wall (was one in five each; the ranger bot died 13 times to bolts from out of sight) */ door: () => [HUB.barrow[0] + 1.6, HUB.barrow[1] + 0.6], label: 'THE BARROW: DANGER', labelCol: 22, seed: 0xba770 },
   // round 67: the barrow's second floor, down the stairs in the wraith's room: bigger and harder, its
@@ -657,11 +657,16 @@ function sideExtras(kind) {
   if (kind === 'den') {
     const f = storyF(), r = LV.rooms[LV.leaderRoom];
     let c = roomFloor(r, 1).filter(([i, j]) => clearOf(i, j));
+    if (r.bossArena && c.length) {   // round 113b: in the arena, off at its far left or far right (on screen: i - j), the side away from the way in
+      const lo = c.reduce((m, p) => p[0] - p[1] < m[0] - m[1] ? p : m), hi = c.reduce((m, p) => p[0] - p[1] > m[0] - m[1] ? p : m), en = r.entry || [r.cx, r.cy];
+      const pick = Math.hypot(lo[0] - en[0], lo[1] - en[1]) > Math.hypot(hi[0] - en[0], hi[1] - en[1]) ? lo : hi;
+      c = c.filter(p => Math.abs((p[0] - p[1]) - (pick[0] - pick[1])) <= 1).sort((p, q) => Math.abs(p[0] + p[1] - pick[0] - pick[1]) - Math.abs(q[0] + q[1] - pick[0] - pick[1]));
+    }
     if (!c.length) c = roomFloor(r, 0).filter(([i, j]) => clearOf(i, j));   // a small far room: any open tile in it
     if (!c.length) c = LV.rooms.flatMap((q, n) => n ? roomFloor(q, 0) : []).filter(([i, j]) => clearOf(i, j)).sort((p, q) => Math.hypot(p[0] - r.cx, p[1] - r.cy) - Math.hypot(q[0] - r.cx, q[1] - r.cy)).slice(0, 1);   // else the nearest open tile to it
     if (!c.length) return;
-    c.sort((p, q) => Math.hypot(q[0] - r.cx, q[1] - r.cy) - Math.hypot(p[0] - r.cx, p[1] - r.cy));   // toward the room's edge, the Alpha in front
-    const [i, j] = c[Math.min(c.length - 1, R.int(0, 2))];
+    if (!r.bossArena) c.sort((p, q) => Math.hypot(q[0] - r.cx, q[1] - r.cy) - Math.hypot(p[0] - r.cx, p[1] - r.cy));   // toward the room's edge, the Alpha in front
+    const [i, j] = r.bossArena ? c[0] : c[Math.min(c.length - 1, R.int(0, 2))];
     LV.decor.push({ kind: 'cage', i, j, open: !!f.aldoFree }); LV.solid[tIdx(i, j)] = 1;
     if (!f.aldoFree && storyOn()) LV.npcs.push({ role: 'aldo', name: 'ALDO', fi: i + 0.5, fj: j + 0.5, caged: true });
   }

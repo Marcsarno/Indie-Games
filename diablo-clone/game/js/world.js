@@ -120,6 +120,15 @@ function tryGen(level, seed, relaxed = false) {
   const pickTpl = () => { const p = R(); return p < 0.3 ? 'room' : p < 0.45 ? 'cavern' : p < 0.57 ? 'cross' : p < 0.69 ? 'gallery' : p < 0.81 ? 'ell' : 'small'; };
   const want = cfg ? null : ['room', 'hall'];   // the start is an ordinary room; one great hall per floor
   for (let t = 0; t < 600 && rooms.length < maxRooms; t++) {
+    if (cfg && cfg.bossArena && rooms.length === 1) {   // round 113b (the user: a boss needs a big separate arena): a wide open cavern, as far from the way in as it fits
+      const w = 22, h = 17; let best = null, bd = -1;
+      for (let q = 0; q < 300; q++) { const x = R.int(2, MW - w - 2), y = R.int(2, MH - h - 2), r0 = rooms[0];
+        if (x < r0.x + r0.w + 5 && x + w + 5 > r0.x && y < r0.y + r0.h + 5 && y + h + 5 > r0.y) continue;
+        const d = Math.hypot(x + w / 2 - r0.cx, y + h / 2 - r0.cy); if (d > bd) { bd = d; best = [x, y]; } }
+      if (!best) { LV.genFail = ['arena: no room for it']; return false; }
+      rooms.push({ w, h, shape: 'round', type: 'crypt', great: true, bossArena: true, kind: 'arena', x: best[0], y: best[1], cx: best[0] + (w >> 1), cy: best[1] + (h >> 1) });
+      continue;
+    }
     const kind = cfg ? (rooms.length ? R.pick(cfg.rooms >= 8 ? ['room', 'room', 'cavern', 'small', 'ell', 'cross'] : ['room', 'room', 'cavern', 'small']) : 'room') : rooms.length < want.length ? want[rooms.length] : pickTpl();
     const T = TPL[kind](), w = T.w, h = T.h;
     if (w > MW - 6 || h > MH - 6) continue;
@@ -193,6 +202,13 @@ function tryGen(level, seed, relaxed = false) {
   const degN = rooms.map((r, n) => edges.reduce((c, [u, v]) => c + (u === n || v === n ? 1 : 0), 0)), h0 = hops(0);
   let far = -1, fd = -1;
   rooms.forEach((r, n) => { const d = dist[tIdx(r.cx, r.cy)]; if (n && degN[n] <= 1 && d > fd) { fd = d; far = n; } });
+  if (cfg && cfg.bossArena) {   // round 113b: the boss's arena is the goal: a dead end, entered by one way only (no corridor cutting through it)
+    const ai = rooms.findIndex(r => r.bossArena), r = rooms[ai];
+    const ways = []; for (let j = r.y - 1; j <= r.y + r.h; j++) for (let i = r.x - 1; i <= r.x + r.w; i++) { const k = tIdx(i, j); if (map[k] === FLOOR && LV.roomOf[k] !== ai && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => LV.roomOf[tIdx(i + a, j + b)] === ai)) ways.push([i, j]); }
+    const groups = []; for (const w of ways) { const g = groups.find(g => g.some(([a, b]) => Math.abs(a - w[0]) + Math.abs(b - w[1]) <= 2)); if (g) g.push(w); else groups.push([w]); }
+    if (!relaxed && (degN[ai] !== 1 || groups.length !== 1)) { LV.genFail = ['arena: not a dead end with one way in']; return false; }
+    far = ai; fd = dist[tIdx(r.cx, r.cy)]; r.entry = groups[0] ? groups[0][Math.floor(groups[0].length / 2)] : [r.cx, r.cy];
+  }
   const minSteps = rooms.length >= 8 ? 30 : 20, minHops = rooms.length >= 8 ? 3 : 2;   // (a small floor, the cellar: a shorter walk)
   if (far < 0 || fd < minSteps || h0[far] < minHops) { if (!relaxed) { LV.genFail = [far < 0 ? 'R5 no dead end for the goal' : fd < minSteps ? 'R2 goal too few steps' : 'R2 goal too few rooms']; return false; } far = 1; fd = -1; rooms.forEach((r, n) => { const d = dist[tIdx(r.cx, r.cy)]; if (n && d > fd) { fd = d; far = n; } }); }
   if (!relaxed && cfg && cfg.bigLeader && rooms[far].kind === 'small') return false;   // round 67: a boss gets a real room to fight in
@@ -583,6 +599,8 @@ function placeDecor(R, level) {
     const mine = (i, j) => LV.roomOf[tIdx(i, j)] === n;   // (shaped rooms: only tiles of this room's own floor)
     const th = LV.theme, interior = () => { for (let t = 0; t < 30; t++) { const i = R.int(r.x + 1, r.x + r.w - 2), j = R.int(r.y + 1, r.y + r.h - 2); if (mine(i, j) && Math.abs(i - r.cx) + Math.abs(j - r.cy) > 1) return [i, j]; } return [r.cx, r.cy]; };
     const nearWall = () => { for (let t = 0; t < 40; t++) { const i = R.int(r.x, r.x + r.w - 1), j = R.int(r.y, r.y + r.h - 1); if (mine(i, j) && wallSide(i, j)) return [i, j]; } return null; };
+    if (r.bossArena) { for (let q = 0; q < 6; q++) { const a = q / 6 * 6.283 + 0.5, i = Math.round(r.x + r.w / 2 - 0.5 + Math.cos(a) * r.w * 0.36), j = Math.round(r.y + r.h / 2 - 0.5 + Math.sin(a) * r.h * 0.36); if (mine(i, j) && trySolid(i, j)) D.push({ kind: 'brazier', i, j }); }   // a ring of fire round the edge: the fight in the light, the middle open
+      for (let q = 0; q < R.int(5, 8); q++) { const p = nearWall(); if (p) D.push({ kind: 'mushroom', fi: p[0] + 0.5, fj: p[1] + 0.5, seed: R.int(1, 1e6) % 6 }); } return; }   // round 113b: the boss's arena stays open floor
     if (r.job) { roomJob(r, n, D, R, mine); return; }   // round 68d: a room with a job is laid out on its own
     if (th === 'crypt' && n && r.w >= 9 && r.h >= 9 && R() < 0.22 && LV.shafts) { const fi = r.x + r.w * (0.3 + R() * 0.4), fj = r.y + r.h * (0.3 + R() * 0.4); LV.shafts.push({ fi, fj }); LV.stamps.push({ kind: 'debris', fi, fj }); }   // a crack in the ceiling: moonlight and fallen stones
     if (th === 'crypt') {
@@ -716,7 +734,7 @@ function placeSpawns(R, level) {
   const spot = r => { for (let t = 0; t < 40; t++) { const fi = r.x + 0.5 + R() * (r.w - 1), fj = r.y + 0.5 + R() * (r.h - 1); if (ok(fi, fj)) return [fi, fj]; } return null; };
   const groups = [];
   LV.rooms.forEach((r, n) => {
-    if (n === 0 || r.role === 'vault' || r.role === 'arena') return;   // (round 103: the vault is sealed; the ambush room waits empty)
+    if (n === 0 || r.role === 'vault' || r.role === 'arena' || r.bossArena) return;   // (round 113b: and the boss's arena: just the boss)   // (round 103: the vault is sealed; the ambush room waits empty)
     const base = (2 + Math.floor(level * 0.8)) * clamp(Math.pow((r.area || r.w * r.h) / 64, 0.6), 0.75, 1.8);   // round 38: more in bigger rooms (capped so a great hall isn't a crowd)
     let budget = Math.round(base * (0.6 + 0.8 * r.depth) * (cfg ? 0.6 : 1) * (r.role === 'hall' ? 1.4 : 1)) + (r.dead ? 1 : 0);   // side areas are lighter (round 103: the great hall a crowd)
     while (budget > 0) {
@@ -747,7 +765,7 @@ function placeSpawns(R, level) {
     const g = champs.find(g => LV.rooms[g.room].role !== 'vault') || groups.find(g => g.members.length && g.room !== LV.vault.room && g.room !== LV.leaderRoom);
     if (g) { S[g.members[0]].champ = true; S[g.members[0]].key = true; if (!champs.includes(g)) champs.push(g); } else LV.vault.noKey = true;
   }
-  if (cfg) { const r = LV.rooms[LV.leaderRoom], p = spot(r) || [r.cx + 0.5, r.cy + 0.5]; S.push({ id: cfg.boss, fi: p[0], fj: p[1] }); return; }   // the leader waits in the far room
+  if (cfg) { const r = LV.rooms[LV.leaderRoom], p = r.bossArena ? [r.cx + 0.5, r.cy + 0.5] : spot(r) || [r.cx + 0.5, r.cy + 0.5]; S.push({ id: cfg.boss, fi: p[0], fj: p[1] }); return; }   // the leader waits in the far room
   if (R() < 0.25) { const r = LV.rooms[R.int(1, LV.rooms.length - 1)], p = spot(r); if (p) S.push({ id: 'treasure', fi: p[0], fj: p[1] }); }   // now and then a treasure goblin
 }
 
