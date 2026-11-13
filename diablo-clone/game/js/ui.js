@@ -471,7 +471,7 @@ function drawSplash() {
   textC('SOUND ON FOR THE MUSIC', W / 2, Math.round(H * 0.74) + 20, 24);
   UI.titleBtns = [{ x: 0, y: 0, w: W, h: H, on: leaveSplash }];
 }
-function leaveSplash() { TITLE.splash = false; TITLE.pickT = G.t - 9; if (cineOK() && !G.cine) startCine('title'); }   // round 91: on to Dave's table
+function leaveSplash() { TITLE.splash = false; TITLE.pickT = G.t - 9; if (cineOK() && !G.cine) startCine('title', { intro: introWanted() }); }   // (round 111: the voiced opening, the first time)   // round 91: on to Dave's table
 // round 91: the title's settings and credits (both titles: the table's and, without the table, the old one)
 function drawTitleOptions(btn, oy) {
   if (TITLE.opts) {
@@ -482,6 +482,7 @@ function drawTitleOptions(btn, oy) {
     btn(SHOW_FPS ? 'SPEED: SHOWN' : 'SPEED: HIDDEN', 180, oy - 44, 84, 16, () => { SHOW_FPS = !SHOW_FPS; try { localStorage.setItem('dcg-fps', SHOW_FPS ? '1' : '0'); } catch (e) { /* storage blocked */ } }, 25, 3, 6);   // round 79: a speed readout to check a real phone
     btn('HERO LIGHT: ' + (CHAR_CAP === L_ID ? 'DRAWN' : '+' + (CHAR_CAP - L_ID)), 6, oy - 44, 84, 16, () => setCharCap(CHAR_CAP >= L_ID + 2 ? L_ID : CHAR_CAP + 1), 25, 3, 6);   // round 60
     btn(DL48 ? 'DUNGEONS: NEW' : 'DUNGEONS: OLD', 6, oy, 84, 16, () => setDL48(!DL48), 25, 3, 6);   // round 48: the dungeon light
+    if (G.cine && G.cine.kind === 'title') btn('WATCH THE OPENING', 93, oy, 84, 16, () => { TITLE.opts = false; G.cine = null; startCine('title', { intro: true }); }, 25, 3, 6);   // round 111
     btn(SFX.synth ? 'SOUND: SYNTH' : 'SOUND: REAL', 180, oy, 84, 16, () => { setSynthSfx(!SFX.synth); sfx('hit'); }, 25, 3, 6);   // round 44: compare the recorded sounds with the old synth
   }
 }
@@ -490,6 +491,7 @@ function drawTitleCredits(y) {
   textC('THE GAME ART IS DRAWN IN CODE', W / 2, y + 8, 24);
   textC('SOUNDS: KENNEY, ARTISTICDUDE, RUBBERDUCK, QUBODUP,', W / 2, y + 17, 24);   // round 44: the sound packs' credits (sfx/CREDITS.md)
   textC('LITTLE ROBOT SOUND FACTORY, WILL LEAMON, BART, VOICEBOSCH + MORE', W / 2, y + 24, 24);
+  textC('VOICES MADE WITH ELEVENLABS', W / 2, y + 31, 24);   // round 111 (vo/CREDITS.md)
 }
 function drawTitle() {
   if (!TITLE.looks) {   // each class's starting look (the title's hero is a throwaway)
@@ -1190,7 +1192,7 @@ cvs.addEventListener('pointerdown', e => {
   audioInit();
   const p = toNative(e);
   if (G.paused) { G.paused = false; last = performance.now(); return; }
-  if (G.mode === 'title') { for (const b of UI.titleBtns || []) if (inRect(p, b)) { sfx('tap'); b.on(); } return; }
+  if (G.mode === 'title') { if (cineTitleTap(p)) return; for (const b of UI.titleBtns || []) if (inRect(p, b)) { sfx('tap'); b.on(); } return; }   // (round 111: the opening takes its own taps)
   if (G.mode === 'cine') { cineTap(p); return; }   // round 89
   if (G.mode === 'inv') { sfx('tap'); invTap(p); return; }
   if (G.mode === 'talk') { talkTap(p); return; }

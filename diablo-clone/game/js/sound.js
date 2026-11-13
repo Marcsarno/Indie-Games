@@ -41,7 +41,7 @@ function audioInit() {
   SFX.noise = c.createBuffer(1, c.sampleRate, c.sampleRate);
   const d = SFX.noise.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-  musicUnlock(); loadSamples();
+  musicUnlock(); loadSamples(); loadVoices();
 }
 // ---------------------------------------------------------------- music (round 39b, 40b)
 // The user's songs: the forest song in forest areas and Act I's west woods; three songs cut from
@@ -126,7 +126,7 @@ function musicWanted() {
 }
 function updateMusic(dt) {
   if (!MUS.unlocked || !MUS.decks.length) return;
-  const want = musicWanted(), duck = MUSIC_MODES[G.mode] || 1;
+  const want = musicWanted(), duck = (MUSIC_MODES[G.mode] || 1) * (voTalking() ? 0.4 : 1);   // (round 111: the music dips under the voices)
   MUS.duck += (duck - MUS.duck) * Math.min(1, dt * 4);   // dip and come back smoothly
   let on = MUS.decks.find(d => d.track === want && want);
   if (want && !on) {   // start the wanted song on the quieter deck
@@ -144,7 +144,7 @@ function updateMusic(dt) {
     d.g.gain.value = d.v * d.v * MUSIC_VOL * MUS.duck;   // an eased fade
   }
 }
-function setMuted(m) { SFX.muted = m; try { localStorage.setItem('dcg-mute', m ? '1' : '0'); } catch (e) { /* ignore */ } }
+function setMuted(m) { SFX.muted = m; if (m && typeof voStop === 'function') voStop(); try { localStorage.setItem('dcg-mute', m ? '1' : '0'); } catch (e) { /* ignore */ } }
 
 // a pitched blip: oscillator gliding f0 -> f1 with a fast attack and exponential decay
 function tone(type, f0, f1, dur, gain, delay = 0) {
@@ -235,3 +235,24 @@ function ambience(dt) {
   }
   if (best > 0) RECIPES.crackle(best);
 }
+
+// ---------------------------------------------------------------- voices (round 111: the opening at Dave's table)
+// The user's ElevenLabs reads of their script, one line per file in vo/ (fetched on the first tap,
+// with the sound effects). A line stops the one before it (a cheer doesn't: they pile up), and the
+// music dips while anyone talks. VO_LEN is each file's length, so the scene keeps its timing when
+// the sound is off or a file hasn't arrived.
+const VO_LEN = { 'cheer-aaron': 0.89, 'cheer-chris': 0.91, 'cheer-marc': 0.91, 'open-01-dave': 4.39, 'open-02-marc': 3.37, 'open-03-dave': 1.91, 'open-05a-aaron': 5.04, 'open-05b-aaron': 1.07, 'open-06-dave': 2.51, 'open-07-dave': 1.33, 'open-08-chris': 2.56, 'open-09-dave': 2.87, 'open-10-dave': 3.19, 'open-11-aaron': 2.4, 'open-12-chris': 1.31, 'open-13-dave': 2.19, 'open-15-dave': 1.78, 'open-16-dave': 2.46, 'open-17-marc': 0.89, 'pick-barbarian': 2.04, 'pick-mage': 1.7, 'pick-paladin': 1.67, 'pick-ranger': 1.67 };
+const VO = { buf: {}, src: null, until: 0 }, VO_GAIN = 1.1;
+function loadVoices() {
+  for (const k in VO_LEN) fetch('vo/' + k + '.mp3').then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status))
+    .then(b => new Promise((ok, no) => SFX.ctx.decodeAudioData(b, ok, no))).then(buf => { VO.buf[k] = buf; }).catch(() => { /* the line shows as text only */ });
+}
+function voStop() { if (VO.src) { try { VO.src.stop(); } catch (e) { /* already done */ } VO.src = null; } }
+function vo(name, from = 0, pile = false) {
+  if (!pile) voStop();
+  if (SFX.muted || !SFX.ctx || SFX.ctx.state !== 'running' || !VO.buf[name]) return;
+  try { const c = SFX.ctx, s = c.createBufferSource(), g = c.createGain(), b = VO.buf[name];
+    s.buffer = b; g.gain.value = VO_GAIN; s.connect(g); g.connect(SFX.out); s.start(0, from);
+    if (!pile) VO.src = s; VO.until = Math.max(VO.until, c.currentTime + b.duration - from); } catch (e) { /* audio is optional */ }
+}
+const voTalking = () => !!SFX.ctx && SFX.ctx.currentTime < VO.until;

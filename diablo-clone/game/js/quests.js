@@ -265,7 +265,7 @@ QUEST_TABLE.mine = QUEST_TABLE.hollis;   // (Hollis gives the farm whether or no
 // ---------------------------------------------------------------- what each person says
 function talkTo(n) {
   const f = storyF(), st = storyStage(), on = storyOn();
-  if (on && LV.hub && QUEST_TABLE[st] && CAMP_ROLE[st] === n.role && cineOK()) { startCine('quest', { stage: st }); return; }   // round 91: a quest is told at Dave's table
+  if (on && LV.hub && QUEST_TABLE[st] && CAMP_ROLE[st] === n.role && st !== 'meet' && cineOK()) { startCine('quest', { stage: st }); return; }   // round 91: a quest is told at Dave's table
   const O = 'BROTHER OSRIC', Wn = 'WREN', Ho = 'HOLLIS', Al = 'ALDO';
   if (n.role === 'priest') {
     if (!on) return openTalk([[O, LV.gateOpen ? 'THE ROAD ON IS OPEN, PAST THE RIVERLANDS. GO WITH THE LIGHT.' : 'THE LIGHT KEEPS YOU.']]);
