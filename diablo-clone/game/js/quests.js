@@ -245,13 +245,13 @@ const QUEST_TABLE = {
     ['marc', null, "SOME DO. IF THEY'RE MOTIVATED.", null, { vo: 'aldo-06-marc', cut: true }],
     ['dave', null, "THEY DON'T.", null, { vo: 'aldo-07-dave', cut: true, gap: 0.3 }],
     ['dave', 'ALDO', 'BEFORE THE WOLVES TOOK ME, I SAW A MAN AT THE OLD MINE. TALL HAT. A LANTERN THAT BURNED GREEN.', 'maelis', { vo: 'aldo-08-dave' }],
-    ['chris', null, 'NOBODY GOOD OWNS A GREEN LANTERN.', null, { vo: 'aldo-09-chris', cut: true }],
+    ['chris', null, "TALL HAT? THEN HE'S SHORT.", null, { vo: 'aldo-09-chris', cut: true }],   // (the user's rewrite)
     ['dave', 'ALDO', "THREE DANGERS BLOCK THE ROAD NORTH. CLEAR THEM AND I'LL CUT THE FALLEN TREE.", null, { vo: 'aldo-10-dave' }],
     ['marc', null, 'OR I CUT THE TREE.', null, { vo: 'aldo-11-marc', cut: true }],
     ['dave', null, "YOU CAN'T CUT THE TREE.", null, { vo: 'aldo-12-dave', cut: true, gap: 0 }],
     ['aaron', null, 'NOT WITH THAT ATTITUDE.', null, { vo: 'aldo-13-aaron', cut: true }]],   // (right on Dave's heels)
     reward: ['WREN', "TAKE SOMETHING. REST BY THE FIRE. IT'LL MEND YOU."], rewardVo: 'aldo-14-dave',
-    post: [['aaron', null, "FIFTY GOLD'S STILL ON THE TABLE.", null, { vo: 'aldo-15-aaron', cut: true }]],   // after the pick, the callback
+    post: [['aaron', null, 'FIFTY GOLD. STILL ON THE TABLE.', null, { vo: 'aldo-15-aaron', cut: true }]],   // after the pick, the callback
     after: () => { storyF().woodPaid = true; payQuest('woodcutter'); say('REST BY THE CAMPFIRE TO HEAL', 26, 3); aldoToTree(); } },
   hollis: { lines: [
     ['dave', 'HOLLIS', 'BANDITS TOOK MY FARM AND PUT ME OUT IN MY NIGHTSHIRT.', 'bandits'],

@@ -57,4 +57,4 @@ Aaron (Declan Sage): [all business] We did. That'll be fifty gold. / [generous] 
 
 Marc (Mark): [confident] Some do. If they're motivated. / [eager] Or I cut the tree.
 
-Chris (Titan): [dry, certain] Nobody good owns a green lantern.
+Chris (Titan): [dry, certain] Nobody good owns a green lantern. (Recorded instead: "Tall hat? Then he's short.")
