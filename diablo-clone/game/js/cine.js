@@ -437,12 +437,12 @@ for (const id in CINE_PEOPLE) {
 // cGame is the game's own picture (kept from the last frame the world was drawn), cMini the same at
 // a third of the size, for the map while the camera is not on its way into it.
 let cW = 0, cH = 0, cS0 = null, cF0 = null, cCN = null, cCD = null, cCG = null, cC = null, cGame = null, cGameOK = false, cMini = null, cMiniOK = false, cCL = null, cCLg = null, cGeo = null;
-let cXa = null, cXw = null, cGx = null, cGhost = null;
+let cXa = null, cXw = null, cGx = null, cGhost = null, cGhostW = null;
 let cWallM = null, cWallOn = false;   // 1 where a vision may show: the back wall and what hangs on it (cleared by everything drawn after)
 let cT = null, cTF = null, cFl = 0, cDyn = false;   // what the drawing calls write into, at which flat light; cDyn: straight into this frame's colours
 const C_ID = 5, C_LEVELS = 8;   // the scene's own light table: level 5 is each colour as drawn
 function cineLightTable() {
-  cCL = new Uint32Array(C_LEVELS * NPAL); cCLg = new Uint32Array(C_LEVELS * NPAL); cGhost = new Uint32Array(NPAL);
+  cCL = new Uint32Array(C_LEVELS * NPAL); cCLg = new Uint32Array(C_LEVELS * NPAL); cGhost = new Uint32Array(NPAL); cGhostW = new Uint32Array(NPAL);
   for (let i = 1; i < NPAL; i++) {
     const ramp = PAL_RAMPS.find(r => r.includes(i)), chain = ramp ? [...TAIL, ...ramp] : TAIL, pos = chain.indexOf(i);
     for (let L = 0; L < C_LEVELS; L++) {
@@ -455,6 +455,7 @@ function cineLightTable() {
     }
     // a vision's colours: the sprite's light and dark kept, in green
     const l = (PR[i] * 0.3 + PG[i] * 0.59 + PB[i] * 0.11) / 255; cGhost[i] = PAL32[[53, 53, 54, 55, 124][Math.min(4, Math.floor(Math.pow(l, 0.75) * 5.4))]];
+    { const q = Math.pow(l, 0.8); cGhostW[i] = (255 << 24) | (clamp(Math.round(40 + q * 150), 0, 255) << 16) | (clamp(Math.round(70 + q * 170), 0, 255) << 8) | clamp(Math.round(110 + q * 145), 0, 255); }   // (round 111d: a warm one, for a happy vision)
   }
 }
 const cHash = (a, b) => { let h = Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
@@ -499,13 +500,13 @@ function cineBust(P, x, y, palA, palB, mix, clipY, blink, mouth, fadeY = 1e9) {
 }
 // one of the game's own sprites as a vision: green, `k` times its size, its feet at (x, y), behind
 // everything in front of the back wall; a: how much of it shows (a dither; under 1 it is see-through)
-function cineGhost(sp, x, y, k, clipY, a) {
-  const X0 = Math.round(x - sp.ax * k), Y0 = Math.round(y - sp.ay * k), bright = PAL32[72], rim = PAL32[52];
+function cineGhost(sp, x, y, k, clipY, a, warm) {
+  const X0 = Math.round(x - sp.ax * k), Y0 = Math.round(y - sp.ay * k), bright = warm ? PAL32[18] : PAL32[72], rim = warm ? PAL32[51] : PAL32[52], GH = warm ? cGhostW : cGhost;
   if (!sp.rim) { sp.rim = new Uint8Array(sp.w * sp.h); for (let j = 0; j < sp.h; j++) for (let i = 0; i < sp.w; i++) { const o = j * sp.w + i; if (sp.data[o] && (i === 0 || j === 0 || i === sp.w - 1 || j === sp.h - 1 || !sp.data[o - 1] || !sp.data[o + 1] || !sp.data[o - sp.w] || !sp.data[o + sp.w])) sp.rim[o] = 1; } }   // (round 91: its outline, so a pale shape still reads)
   for (let j = 0; j < sp.h; j++) for (let q = 0; q < k; q++) {
     const Y = Y0 + j * k + q; if (Y < 0) continue; if (Y >= clipY || Y >= cH) break;
     const by = (Y & 3) << 2, row = Y * cW, srow = j * sp.w;
-    for (let i = 0; i < sp.w; i++) { const v = sp.data[srow + i]; if (!v) continue; const c = sp.rim[srow + i] ? rim : (v & EMIS) ? bright : cGhost[v & 127];
+    for (let i = 0; i < sp.w; i++) { const v = sp.data[srow + i]; if (!v) continue; const c = sp.rim[srow + i] ? rim : (v & EMIS) ? bright : GH[v & 127];
       for (let p = 0; p < k; p++) { const X = X0 + i * k + p; if (X < 0 || X >= cW || !cWallM[row + X] || BAYER[by | (X & 3)] >= a) continue; cC[row + X] = c; } }
   }
 }
@@ -686,15 +687,20 @@ const cineCam = s => Array.isArray(s) ? cineV(...s) : s;   // a shot's camera: [
 // end on its own), roll (you roll the die), reward [as, text] (choose a reward at the table), onEnd }
 const CINE_LIGHT_FX = { dead: 1, wolves: 1, bandits: 1, king: 1, maelis: 1 };
 function questShots(stage) {   // a quest at the table: Dave gives it in a few words, as whoever gives it; a friend chimes in
-  const q = QUEST_TABLE[stage], out = [];
-  q.lines.forEach(([who, as, text, fx], n) => {
-    const dur = 1.5 + text.length * 0.05;
-    if (who !== 'dave') out.push({ dur, cam: [[who, 2], [who, 2.15]], light: 'N', ease: 0.45, who, text });
-    else if (fx) out.push({ dur: dur + 0.6, cam: [['corner', 1.4, 0.42], ['corner', 1.28, 0.4]], light: 'G', cut: true, fx, who, as, text });
-    else out.push({ dur, cam: [['dave', n % 2 ? 2.2 : 1.95], ['dave', n % 2 ? 2.05 : 2.1]], light: 'N', ease: 0.45, who, as, text });
-  });
-  if (q.reward) out.push({ dur: 1, wait: true, cam: [['table', 1.18, 0.4], ['table', 1.2, 0.4]], light: 'N', ease: 0.6, reward: q.reward, onReward: q.after });
+  // a line: [who, as, text, vision, { vo, gap, pre, cut, light, noTap }] (round 111d: voices, timing and cuts; a line's voice
+  // counts once its file is listed in VO_LEN, so a scene plays as captions until its recordings arrive)
+  const q = QUEST_TABLE[stage], out = [], hasVo = k => k && typeof VO_LEN !== 'undefined' && VO_LEN[k];
+  const mk = ([who, as, text, fx, o = {}], n) => {
+    const v = hasVo(o.vo) ? o.vo : null, dur = v ? (o.pre || 0) + vLen(v) + (o.gap ?? 0.25) : 1.5 + text.length * 0.05 + (o.gap || 0);
+    const b = { dur, who, as, text, vo: v, pre: v ? o.pre : 0, noTap: o.noTap }, glide = o.cut ? { cut: true } : { ease: 0.45 };
+    if (who !== 'dave') return { ...b, cam: [[who, 2], [who, 2.15]], light: 'N', ...glide };
+    if (fx) return { ...b, dur: dur + (v ? 0.3 : 0.6), cam: [['corner', 1.4, 0.42], ['corner', 1.28, 0.4]], light: o.light || 'G', cut: true, fx };
+    return { ...b, cam: [['dave', n % 2 ? 2.2 : 1.95], ['dave', n % 2 ? 2.05 : 2.1]], light: 'N', ...glide };
+  };
+  q.lines.forEach((l, n) => out.push(mk(l, n)));
+  if (q.reward) out.push({ dur: 1, wait: true, cam: [['table', 1.18, 0.4], ['table', 1.2, 0.4]], light: 'N', ease: 0.6, reward: q.reward, onReward: q.after, vo: hasVo(q.rewardVo) ? q.rewardVo : null });
   else out[out.length - 1].onEnd = q.after;
+  if (q.post) q.post.forEach((l, n) => out.push(mk(l, n)));   // (after the reward is picked)
   return out;
 }
 // Round 111: the user's opening (their beat sheet, voiced by them in ElevenLabs; vo/ and sound.js). Dave
@@ -783,6 +789,7 @@ function cineSp(kind) {   // a vision's sprites (the game's own), built the firs
   if (kind === 'bandits') { const L = MONSTERS.brigand.look; out.L = mk('hero', L, 2, 'walk', 8, hent(L)); out.R = mk('hero', L, 0, 'walk', 8, hent(L)); }
   if (kind === 'king') out.A = mk('skeleton', MONSTERS.skelking.look, 1, 'idle', 4);
   if (kind === 'maelis') out.A = mk('hero', NPC_LOOKS.maelis, 1, 'idle', 4, { look: NPC_LOOKS.maelis, cls: 'mage', combo: 0 });
+  if (kind === 'reunion') { out.W = mk('hero', NPC_LOOKS.wren, 0, 'idle', 4, { look: NPC_LOOKS.wren, cls: 'warrior', combo: 0 }); out.A = mk('hero', NPC_LOOKS.aldo, 2, 'idle', 4, { look: NPC_LOOKS.aldo, cls: 'warrior', combo: 0 }); }   // round 111d
   budgetOn(s); return CINE_SP[kind] = out;
 }
 function cineLight(to) { const C = G.cine; if (to === C.lB) return; C.lA = C.lt > 0.5 ? C.lB : C.lA; C.lB = to; C.lt = 0; }
@@ -923,6 +930,9 @@ function cineFx(fx, st, a) {   // a vision on the walls: st its time so far, a h
   } else if (fx === 'king') {   // the king, rising out of the corner behind the chair until his crown nears the beam
     if (st < 0.5) return; const sp = S.A[Math.floor(t * 5) % 4], up = 1 - Math.pow(1 - clamp((st - 0.5) / 1.6, 0, 1), 3);
     cineGhost(sp, g.cx, g.yC - g.Hw + 30 + (sp.ay - cineBox(sp)[0]) * 2 + (1 - up) * 190 + Math.round(Math.sin(t * 2.3) * 2), 2, cH, a * Math.min(1, (st - 0.5) / 0.4 + 0.3));
+  } else if (fx === 'reunion') {   // round 111d: Wren runs to her father, in warm light (not the green of the bad news)
+    if (st < 0.25) return; const u = cineSmooth((st - 0.25) / 0.9), gap = Math.round(50 - 20 * u), y = g.yC - g.Hw + 96, f = Math.floor(t * 5) % 4, fade = a * Math.min(1, (st - 0.25) / 0.5) * 0.95;
+    const A = S.A[f], Wn = S.W[f]; cineGhost(A, g.cx + gap / 2, y + (A.ay - cineBox(A)[0]) * 2, 2, cH, fade, true); cineGhost(Wn, g.cx - gap / 2, y + 14 + (Wn.ay - cineBox(Wn)[0]) * 2, 2, cH, fade, true);
   } else if (fx === 'maelis') {   // the man behind it all, in his hood
     if (st < 0.4) return; const sp = S.A[Math.floor(t * 5) % 4];
     cineGhost(sp, g.cx, g.yC - g.Hw + 36 + (sp.ay - cineBox(sp)[0]) * 3 + Math.round(Math.sin(t * 2) * 2), 3, cH, a * Math.min(1, (st - 0.4) / 0.5) * 0.9);

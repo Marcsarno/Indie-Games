@@ -253,7 +253,7 @@ function decodeVoice(k) {
   try { SFX.ctx.decodeAudioData(VO.raw[k], buf => { VO.buf[k] = buf; }, () => { VO.bad[k] = 1; }); } catch (e) { VO.bad[k] = 1; }
 }
 function loadVoices() { for (const k in VO.raw) decodeVoice(k); }
-const voPending = k => !!SFX.ctx && !SFX.muted && !VO.buf[k] && !VO.bad[k];   // still on its way (with the sound off, nothing is)
+const voPending = k => k in VO_LEN && !!SFX.ctx && !SFX.muted && !VO.buf[k] && !VO.bad[k];   // still on its way (with the sound off, nothing is)
 const voLoaded = () => { let n = 0, t = 0; for (const k in VO_LEN) { t++; if (VO.buf[k] || VO.bad[k]) n++; } return n / t; };
 const musicLoaded = () => SFX.muted || typeof MUS === 'undefined' || !MUS.els || !MUS.els[0] || MUS.els[0].readyState >= 3;
 function voStop() { if (VO.src) { try { VO.src.stop(); } catch (e) { /* already done */ } VO.src = null; } }

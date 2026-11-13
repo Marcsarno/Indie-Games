@@ -45,3 +45,16 @@ Upload them all in one zip. I trim the silence, match the volumes and time the s
 | `cheer-marc`, `cheer-aaron`, `cheer-chris` | each | Yeah! | [cheering] optional; I layer them into one cheer |
 
 Total: about 40 seconds of speech. Even 3 takes of everything is about 2 minutes, well inside the free credits.
+
+# Aldo's homecoming (round 111d): voice prompts
+Same voices. One clip per voice is fine (I split them). Files become `vo/aldo-NN-<who>.mp3`; once listed in
+`VO_LEN` (sound.js) each line plays with its voice; until then the scene runs as captions.
+
+Dave (Adam):
+[deadpan, reading it off the page] Father! You brought him home! / [flat] She's eight. / [flat, plain] They had me in a cage. Wolves don't build cages. / [flat] They don't. / [low, steady] Before the wolves took me, I saw a man at the old mine. Tall hat. A lantern that burned green. / [matter-of-fact] Three dangers block the road north. Clear them and I'll cut the fallen tree. / [flat] You can't cut the tree. / [flat, kind] Take something. Rest by the fire. It'll mend you.
+
+Aaron (Declan Sage): [all business] We did. That'll be fifty gold. / [generous] Then forty. / [fast] Not with that attitude. / [casual] Fifty gold's still on the table.
+
+Marc (Mark): [confident] Some do. If they're motivated. / [eager] Or I cut the tree.
+
+Chris (Titan): [dry, certain] Nobody good owns a green lantern.
