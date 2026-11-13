@@ -1,6 +1,6 @@
 // Round 112: journey sets (the user: "I really want to see the sets"). Through Act I (levels 1-10) each
 // class walks through five matched outfits, one per two levels; the user approved the five per class
-// (tools/playtests/r111/journey.cjs draws them). How it works:
+// (tools/playtests/r111/journey.cjs draws them; round 112b: the ranger's 3-4 is Night Tracker, navy, so not every set is green). How it works:
 // - a helm or chest that drops at or under level 11 is the area's set piece (the slot the hero is still
 //   missing from that set comes first); weapons, rings, set items and legendaries drop as before;
 // - an area's boss always drops the set piece the hero is still missing;
@@ -12,7 +12,7 @@ const JOURNEY = {   // [set name, chest, helm] for levels 1-2, 3-4, 5-6, 7-8, 9-
   warrior: [['HIDE', 'b_hide', 'b_band'], ['BEARHIDE', 'b_bear', 'b_skull'], ['TUSKBREAKER', 'bt_tusk', 'bt_boar'], ['THUNDERHORN', 'bt_thunder', 'bt_ram'], ['MAMMOTH', 'bt_mammoth', 'bt_mskull']],
   paladin: [['SQUIRE', 'pal_plate1', 'pal_helm1'], ['WINTER BULWARK', 'winter_bulwark_mail', 'winter_bulwark_helm'], ['SILVER VIGIL', 'pt_vigil_plate', 'pt_vigil_helm'], ['AURIC', 'pt_auric_plate', 'pt_auric_helm'], ['SERAPH', 'pt_seraph_plate', 'pt_seraph_helm']],
   mage: [['WAYFARER', 'wayfarer_robe', 'wayfarer_hat'], ['CRIMSON ORACLE', 'rose_oracle_robe', 'rose_oracle_hat'], ['STORMCALLER', 'mt_storm_robe', 'mt_storm_hat'], ['STARSEER', 'mt_star_robe', 'mt_star_hat'], ['ECLIPSE', 'mt_eclipse_robe', 'mt_eclipse_hat']],
-  ranger: [['LEATHER', 'leather_jerkin', 'ranger_hood'], ['THORN SENTINEL', 'thorn_sentinel_jerkin', 'rt_thorn_hood'], ['FALCONER', 'rt_falconer_jerkin', 'rt_falconer_hood'], ['ANTLER WARDEN', 'rt_antler_jerkin', 'rt_antler_hood'], ['WILDHEART', 'rt_wildheart_jerkin', 'rt_wildheart_hood']],
+  ranger: [['LEATHER', 'leather_jerkin', 'ranger_hood'], ['NIGHT TRACKER', 'night_tracker_jerkin', 'night_hood'], ['FALCONER', 'rt_falconer_jerkin', 'rt_falconer_hood'], ['ANTLER WARDEN', 'rt_antler_jerkin', 'rt_antler_hood'], ['WILDHEART', 'rt_wildheart_jerkin', 'rt_wildheart_hood']],
 };
 const J_TOP = 11;   // past this level (Act II on) gear drops as it always did
 const jBand = lvl => clamp(Math.floor((Math.round(lvl) - 1) / 2), 0, 4);
