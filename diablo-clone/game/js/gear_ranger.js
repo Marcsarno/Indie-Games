@@ -17,6 +17,7 @@
   // the curve goes on from the old top tier (L6 Blackthorn: jerkin 16, bow 13-23; L4 night hood 6, deep quiver 5), each piece
   // a clear step over the one below found at the same level (items.js itemStats raises a piece found above its level)
   const RT = {
+    rt_thorn_hood: { slot: 'helm', look: 'rhood_thorn', name: 'THORN SENTINEL HOOD', armor: 6, cls: 'ranger', lvl: 4 },   // round 112: the journey set's missing hood
     rt_falconer_jerkin: { slot: 'chest', look: 'jerkin_falcon', name: 'FALCONER JERKIN', armor: 18, cls: 'ranger', lvl: 6 },
     rt_falconer_hood: { slot: 'helm', look: 'rhood_falcon', name: 'FALCONER HOOD', armor: 8, cls: 'ranger', lvl: 6 },
     rt_falconer_bow: { slot: 'weapon', look: 'bow_falcon', name: 'FALCONER RECURVE', dmg: [15, 26], cls: 'ranger', lvl: 6 },
@@ -142,6 +143,17 @@
     });
     return { hc, sw };
   };
+  GEAR_EXTRA.helm.rhood_thorn = (r, ctx) => {   // round 112: the Thorn Sentinel's hood: green, a cream cowl like the jerkin's plate, leaf ears, bark thorns on the crown
+    const { hd, fwd, up, sideR } = ctx; hoodOn(r, ctx, M.CLOTH_GREEN, { cowl: M.CLOTH_WHITE });
+    for (const s of [-1, 1]) {   // a green leaf at each temple, swept back
+      const b0 = at(hd, fwd, sideR, up, 0.6, s * 4.3, 2.6), dir = V.norm(V.add(V.add(V.mul(fwd, -1), V.mul(up, 0.3)), V.mul(sideR, s * 0.12)));   // (pass 2: slim, lying back along the hood, not standing out like ears)
+      blade(r, V.mad(b0, dir, 2.4), dir, V.norm(V.add(sideR, V.mul(up, s * 0.4))), 5.8, 1.5, 0.7, M.PINE, { noShadow: true });
+    }
+    for (const [f, s] of [[1.2, 0], [-0.6, -1.6], [-0.6, 1.6]]) {   // three thorns up through the crown
+      const b0 = at(hd, fwd, sideR, up, f, s, 4.4), tip = at(hd, fwd, sideR, up, f - 1.4, s * 1.2, 7.0);   // (pass 2: shorter, leaning back: thorns, not antlers)
+      r.cone(b0, tip, 1.05, 0.2, M.BARK);
+    }
+  };
   GEAR_EXTRA.helm.rhood_falcon = (r, ctx) => {   // tan leather, a crest of falcon feathers swept back off the crown
     const { hd, fwd, up, sideR } = ctx, { sw } = hoodOn(r, ctx, M.STRAWM, { cowl: M.STRAWM, hair: M.HAIR });
     const back = V.norm(V.add(V.mul(fwd, -1), V.mul(up, 0.35)));
@@ -258,7 +270,7 @@
 
   // ---------------------------------------------------------------- bag icons
   { const ic0 = itemIcon; itemIcon = function (it) {
-    const B = ITEM_BASES[it.base]; if (!B || !/^(jerkin_falcon|jerkin_antler|jerkin_wild|rhood_falcon|rhood_antler|rhood_wild|bow_falcon|bow_antler|bow_wild|quiver_falcon|quiver_antler|quiver_wild)$/.test(B.look || '')) return ic0(it);
+    const B = ITEM_BASES[it.base]; if (!B || !/^(jerkin_falcon|jerkin_antler|jerkin_wild|rhood_thorn|rhood_falcon|rhood_antler|rhood_wild|bow_falcon|bow_antler|bow_wild|quiver_falcon|quiver_antler|quiver_wild)$/.test(B.look || '')) return ic0(it);
     const k = B.look; if (iconCache[k]) return iconCache[k];
     const r = new Rig(), L = k, F = [1, 0, 0], S = [0, 1, 0];
     if (L.startsWith('bow')) {   // the bow standing on its end, strung (as items.js draws one), with its tips
@@ -275,6 +287,7 @@
       const hm = L === 'rhood_falcon' ? M.STRAWM : L === 'rhood_antler' ? M.PINE : M.CLOTH_GREEN;
       r.ell([0, 0, 4], [5.4, 5.6, 5.8], hm, null, { mf: p => p[0] > 3 && Math.abs(p[1]) < 3 && p[2] < 5 ? M.DARK : 0 });
       if (L === 'rhood_falcon') for (const [f, z, len, m] of [[0.5, 8.5, 9, M.AUTUMNM], [-1, 8, 6.5, M.CLOTH_WHITE]]) blade(r, [f - 2.4, 0, z + 2.2], V.norm([-1, 0, 0.9]), S, len, 1.9, 0.8, m);
+      else if (L === 'rhood_thorn') { for (const s of [-1, 1]) blade(r, [0, s * 6, 7], V.norm([-0.8, s * 0.4, 0.6]), F, 5, 2.0, 0.7, M.CLOTH_GREEN); for (const s of [-1.6, 0, 1.6]) r.cone([0.5, s, 9.5], [0, s * 1.4, 12.5], 0.95, 0.25, M.BARK); r.ell([0.5, 0, -0.6], [3.2, 4.6, 1.3], M.CLOTH_WHITE); }
       else r.cone([-1.5, 0, 8.5], [-3.5, 0, 12], 2.8, 0.4, hm);
       if (L === 'rhood_antler') for (const s of [-1, 1]) { r.cone([0, s * 4, 7], [0, s * 6.5, 11.5], 1.0, 0.6, M.BONE); r.cone([0, s * 5, 9], [0, s * 4.2, 12.5], 0.8, 0.5, M.BONE); r.cone([0, s * 5.8, 10.2], [0, s * 9, 10.6], 0.75, 0.5, M.BONE); }
       if (L === 'rhood_wild') { r.cyl([1.5, 0, 6.6], [1.5, 0, 7.6], 4.4, M.GOLD); for (const s of [-2, -1, 0, 1, 2]) blade(r, [4.2 - Math.abs(s) * 0.5, s * 1.6, 8.6], V.norm([0.2, s * 0.35, 1]), F, 3.2, 1.0, 0.6, M.GOLD); }
