@@ -23,7 +23,7 @@ const PICKS = {   // [band, set, chest, helm, weapon, off-hand]
     const paint = (sp, x0, y0) => { for (let y = 0; y < sp.h; y++) for (let x = 0; x < sp.w; x++) { const v0 = sp.data[y * sp.w + x]; if (!v0) continue; const v = (v0 & 128) ? v0 & 127 : LTAB[4][v0 & 127]; g.fillStyle = `rgb(${PR[v]},${PG[v]},${PB[v]})`; g.fillRect(x0 + x * Z, y0 + y * Z, Z, Z); } };
     rows.forEach(([cname, [cls, bands]], r) => { const y0 = 50 + r * (LAB + CH);
       g.fillStyle = '#ffd77a'; g.font = 'bold 18px monospace'; g.fillText(cname, 10, y0 + LAB + CH / 2);
-      bands.forEach(([band, set, chest, helm], c) => { const x0 = NAMEW + c * 2 * CW, lv = +band.split('-')[1];
+      bands.forEach(([band, set, chest, helm], c) => { const x0 = NAMEW + c * 2 * CW, lv = parseInt(band.split('-')[1]);
         newHero(cls); for (const s of SLOTS) if (s !== 'ring' && s !== 'amulet') hero.equip[s] = null;
         const ids = { chest: byName(cls, chest), helm: byName(cls, helm) }; ids.weapon = bestWeapon(cls, set, lv); const off = offFor(cls, ids.weapon, lv); if (off) ids.shield = off;
         if (!ids.chest || !ids.helm) warn.push(cname + ' ' + band + ' missing ' + (!ids.chest ? chest : helm));
