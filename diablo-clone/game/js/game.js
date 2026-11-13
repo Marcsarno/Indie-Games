@@ -424,7 +424,7 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
     gainXp((SWARM && !e.def.unique ? XP_K : 1) * e.def.xp * (1 + ((e.lvl || LV.diff) - 1) * 0.3) * (e.champ ? 3 + (e.pw ? e.pw.length - 1 : 0) : 1) * (e.summonedBy ? 0.2 : 1) * (1 + Math.max(0, streak - 2) * 0.1));
     if (STAT.hpKill) hero.hp = Math.min(STAT.maxHp, hero.hp + STAT.hpKill);
     if (STAT.manaKill) hero.mana = Math.min(STAT.maxMana, hero.mana + STAT.manaKill);
-    if (!e.noLoot) { G.lootBoss = !!e.def.unique; dropLoot(e.fi, e.fj, e.def.unique ? 4 : e.champ ? 3 + (e.pw ? e.pw.length - 1 : 0) : e.def.elite ? 3 : 1, e.def.unique || !!e.champ || !!e.def.elite); G.lootBoss = false; }   // (round 112: a boss leaves the journey piece still missing)
+    if (!e.noLoot) { G.lootBoss = !!e.def.unique || e === boss; dropLoot(e.fi, e.fj, e.def.unique || e === boss ? 4 : e.champ ? 3 + (e.pw ? e.pw.length - 1 : 0) : e.def.elite ? 3 : 1, e.def.unique || !!e.champ || !!e.def.elite); G.lootBoss = false; }   // (round 112: a boss leaves the journey piece still missing)
     if (e.def.unique || (e.champ && Math.random() < 0.08)) groundItems.push({ item: rollLegendary(rng((Math.random() * 1e9) | 0)), fi: e.fi, fj: e.fj, t: 0 });
     if ((e.champ || e.def.elite) && Math.random() < 0.12) groundItems.push({ item: rollSetItem(rng((Math.random() * 1e9) | 0)), fi: e.fi + 0.4, fj: e.fj, t: 0 });
     if (e.def.treasure) {   // the sack bursts: a spray of gold and gems, often a legendary
@@ -443,7 +443,8 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
       for (const o of enemies) if (o !== e && alive(o) && o.def.pack && o.fam === e.fam && Math.hypot(o.fi - e.fi, o.fj - e.fj) < 7) { o.panicT = 2.5 + Math.random() * 1.5; o.atk = -1; floater('!', o.fi, o.fj, o.def.chest + 16, 51); n++; }
       if (n >= 2) say('THEY SCATTER IN PANIC', 51, 1.6);
     }
-    if (e === boss) { say(`THE ${e.def.name} IS SLAIN`, 51, 4); if (!(e.id === 'skelking' && finaleDue())) say('THE WAY DOWN IS OPEN', 26, 4); sfx('levelUp'); G.slowmo = 0.9; G.bossIntro = 0; if (e.id === 'skelking' && finaleDue()) startFinale(); }   // (round 67: then Maelis)
+    if (e === boss && e.bossKind) bossSlain(e);   // round 113: a side area's boss falls in its own way (bosses.js)
+    else if (e === boss) { say(`THE ${e.def.name} IS SLAIN`, 51, 4); if (!(e.id === 'skelking' && finaleDue())) say('THE WAY DOWN IS OPEN', 26, 4); sfx('levelUp'); G.slowmo = 0.9; G.bossIntro = 0; if (e.id === 'skelking' && finaleDue()) startFinale(); }   // (round 67: then Maelis)
     G.kills++; if (hero.stats) hero.stats.kills++;
   } else {
     sfx(hero.cls === 'paladin' && !ranged ? 'palHit' : 'hit'); if (HEAVY) RECIPES_THUD((ranged ? 0.45 : 0.7) + pow * 0.25 + (crit ? 0.3 : 0));
