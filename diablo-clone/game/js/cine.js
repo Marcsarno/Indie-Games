@@ -719,13 +719,14 @@ function introShots() {
     L('open-09-dave', 'dave', 'AND SOMEONE IS PAYING FOR THEIR BONES.', [['skel', 2], ['skel', 2.4]], { fx: 'coin' }),
     L('open-10-dave', 'dave', 'THE SURVIVORS SPEAK OF SOMETHING OLD, BENEATH THE-', [['mapc', 1.5], ['mapc', 1.75]], { light: 'D', fx: 'glow', gap: 0, noTap: true }),
     L('open-11-aaron', 'aaron', "A BOSS. I'M SAVING MY POTIONS.", [['aaron', 2], ['aaron', 2.15]], { gap: 0.05 }),
-    L('open-12-chris', 'chris', "YOU WON'T USE THEM ANYWAY.", [['chris', 2], ['chris', 2.15]], { gap: 0.1 }),
+    L('open-12-chris', 'chris', "YOU WON'T USE THEM ANYWAY.", [['chris', 2], ['chris', 2.15]], { gap: 0.05 }),
+    L('open-13a-dave', 'dave', 'I HAD THREE MORE PAGES.', [['dave', 2.2], ['dave', 2.35]], { gap: 0.3, papers: true }),   // round 111c: the user's line; he looks at his notes and tosses them
   ];
 }
 function cineShots(kind, cls, opts = {}) {
   if (kind === 'title') {
-    const ask = opts.intro ? { dur: vLen('open-13-dave') + 0.25, vo: 'open-13-dave', cam: [['dave', 2], ['near', 1.4, 0.5]], light: 'N', cut: true, who: 'dave', text: 'FINE. WHO ARE YOU PLAYING TONIGHT?', minis: true }
-      : { dur: 2.6, vo: 'open-13-dave', voFrom: 1.18, cam: [['wide'], ['wide']], light: 'N', cut: true, who: 'dave', text: 'WHO ARE YOU PLAYING TONIGHT?', minis: true };
+    const ask = opts.intro ? { dur: vLen('open-13b-dave') + 0.25, vo: 'open-13b-dave', cam: [['dave', 2.35], ['near', 1.4, 0.5]], pan: [0.3, 1], light: 'N', ease: 0.01, who: 'dave', text: 'FINE. WHAT CLASS ARE YOU PLAYING TONIGHT?', minis: true, minisAt: 1.1 }   // (the sigh and the toss on Dave, then down to your miniatures)
+      : { dur: 2.4, vo: 'ask-dave', cam: [['wide'], ['wide']], light: 'N', cut: true, who: 'dave', text: 'WHAT CLASS ARE YOU PLAYING TONIGHT?', minis: true };
     return [...(opts.intro ? [{ dur: 1, wait: true, gate: true, cam: [['wide'], ['table', 1.12, 0.46]], light: 'N' }, ...introShots()] : []), ask,
       { dur: 1, wait: true, pick: true, cam: [['near', 1.75, 0.55], ['near', 1.75, 0.55]], ease: 1.5, who: 'dave', text: ask.text, keep: true }];
   }
@@ -796,7 +797,8 @@ function cineShot(k) {
   if (s.roll) { C.rollT = null; C.landed = false; C.dieFace = s.face || 20; }
   voStop(); C.voOn = false; C.voHold = 0;   // round 111: the voices (started by updateCine, which waits for a line still on its way)
   C.typeK = s.vo ? Math.max(24, C.total / Math.max(0.6, (vLen(s.vo) - (s.voFrom || 0)) * 0.8)) : 34;   // (the caption keeps pace with the voice)
-  if (s.minis && C.miniIn == null) C.miniIn = G.t;
+  if (s.minis && C.miniIn == null) C.miniIn = G.t + (s.minisAt || 0);
+  if (s.papers && C.papersAt == null) C.papersAt = G.t;
   if (s.fx === 'rise' && C.risenAt == null) C.risenAt = G.t;
   if (s.fx === 'coin' && C.coinAt == null) { C.coinAt = G.t + 0.35; C.coinHits = 0; }
   if (s.cheer) { C.cheer = 1.3; for (const w of ['marc', 'aaron', 'chris']) vo('cheer-' + w, 0, true); }
@@ -855,6 +857,7 @@ function updateCine(dt) {
     if (!hold) { C.st += dt; C.fxSt += dt; }
     if (!hold && !C.voOn && C.st >= (s.pre || 0)) { C.voOn = true; if (s.vo) vo(s.vo, s.voFrom || 0); }   // (EVEN THE KIDS waits a beat)
     if (C.voOn) C.chars = Math.min(C.total, C.chars + dt * (C.typeK || 34));
+    if (C.papersAt != null && !C.papersTossed && G.t - C.papersAt > PAPER_TOSS) { C.papersTossed = true; sfx('swing', 0.3); }   // (round 111c: the pages go)
     if (C.coinAt != null && C.coinHits < 2) { const T = G.t - C.coinAt; if (T >= COIN_HIT[C.coinHits]) { sfx('clink', C.coinHits ? 0.45 : 1); C.coinHits++; } }
     const u = clamp(C.st / s.dur, 0, 1), a = cineCam(s.cam[0]), b = cineCam(s.cam[1]), path = cineLerp(a, b, s.pan ? cineSmooth((u - s.pan[0]) / (s.pan[1] - s.pan[0])) : u);
     C.cam = C.camPrev && s.ease && C.st < s.ease ? cineLerp(C.camPrev, path, cineSmooth(C.st / s.ease)) : path;
@@ -1014,6 +1017,19 @@ function cineSkelMini(C) {
     if (hit < 0.12) { const r = 3 + Math.round(hit * 40); for (const [ex, ey] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) cP(X + ex * r, Y + ey * r, 27 | EMIS); }
   }
 }
+const PAPER_TOSS = 1.75;
+function cinePapers(C) {   // round 111c: Dave's three more pages: up over his screen, a look, then tossed aside onto the table
+  const g = cGeo, T = G.t - C.papersAt, rise = cineSmooth(T / 0.3);
+  for (let n = 2; n >= 0; n--) {   // three sheets; the top one is drawn last
+    const u = clamp((T - PAPER_TOSS - n * 0.08) / 0.55, 0, 1), a0 = -0.08 + n * 0.06;
+    const hx = g.cx - 3 + n * 3, hy = g.sT + 16 - 26 * rise - n * 2 + (T > 0.3 && T < PAPER_TOSS ? Math.round(Math.sin(T * 6 + n) * 0.7) : 0);
+    const lx = g.cx + 66 + n * 8, ly = g.tY + 13 + n * 3, k = cineSmooth(u);
+    const x = hx + (lx - hx) * k, y = hy + (ly - hy) * k - Math.sin(u * Math.PI) * 26, a = a0 + u * (2.4 + n * 0.8), sy = 1 - 0.45 * u;   // (it ends lying flat: shorter)
+    const ca = Math.cos(a), sa = Math.sin(a), w = 16, h = 11, P = (px, py) => [Math.round(x + px * ca - py * sa), Math.round(y + (px * sa + py * ca) * sy)];
+    cFl = 6; cQuad([P(-w - 1, -h - 1), P(w + 1, -h - 1), P(w + 1, h + 1), P(-w - 1, h + 1)], BLK); cQuad([P(-w, -h), P(w, -h), P(w, h), P(-w, h)], n ? 26 : 27);
+    for (let r = -h + 3; r < h - 1; r += 3) { const [x0, y0] = P(-w + 3, r), [x1, y1] = P(w - 3 - ((r * 7 + n * 5) & 7), r); cLine(x0, y0, x1, y1, 25, 1); }   // his handwriting
+  }
+}
 function cineGlow(st) {   // something old, beneath: a sick green light spilling out from under the map onto the table, pulsing
   const g = cGeo, a = Math.min(1, st / 0.9) * (0.75 + 0.25 * Math.sin(G.t * 3.1)), R = 12, x0 = Math.round(g.mX), y0 = Math.round(g.mY), x1 = Math.round(g.mX + g.mw), y1 = Math.round(g.mY + g.mh); cFl = 0;
   for (let y = y0 - R; y < y1 + R; y++) for (let x = x0 - R; x < x1 + R; x++) {
@@ -1042,6 +1058,7 @@ function cineDynamic(C) {
     cineBust(P, q.x, q.y + bob, P.lit[C.lA], P.lit[C.lB], mix, q.clipY, ((t + q.ph * 1.7) % 3.9) < 0.13, talking && Math.floor(t * 9) % 2 === 0, q.fadeY);
   }
   cFl = 6; for (const sd of [-1, 1]) for (let k = 0; k < 4; k++) { const fx = g.cx + sd * (16 + k * 8); cEll(fx, g.sT - 1, 4, 6, BLK); cEll(fx, g.sT - 2, 3, 5, wN > 0.5 ? 63 : 61, wN > 0.5 ? 62 : 60); }   // Dave's fingers over his screen
+  if (C.papersAt != null && C.kind === 'title') cinePapers(C);
   cFl = 0;
   for (const [x, y] of g.candles) { const k = Math.floor(t * 9 + x) % 3, gr = green > 0.5; cEll(x + (k === 1 ? 1 : 0), y - 6, 3, 5 + (k === 2 ? 1 : 0) + (gr ? 2 : 0), (gr ? 55 : 16) | EMIS); cEll(x, y - 4, 1, 3, (gr ? 72 : 18) | EMIS); }
   if (wN > 0.5) for (let k = 0; k < 12; k++) {   // dust in the light
