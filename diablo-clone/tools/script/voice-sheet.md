@@ -23,7 +23,7 @@ Upload them all in one zip. I trim the silence, match the volumes and time the s
 | File | Who | Line | How |
 |---|---|---|---|
 | `open-01-dave` | Dave | For a thousand years, Oakhollow has buried its dead. | [slow, epic narrator] |
-| `open-02-marc` | Marc | I roll to save the village! | [excited, blurting] |
+| `open-02-marc` | Marc | Sweet! Rolling a d20 to save the village! | [excited, blurting] (Marc's rewrite) |
 | `open-03-dave` | Dave | Marc. We haven't started. | [flat, deadpan] no sigh |
 | `open-05a-aaron` | Aaron | Nice, Marc. You killed the whole village. I loot everyone. | [delighted] quick |
 | `open-05b-aaron` | Aaron | Even the kids. | [matter-of-fact] quieter |
@@ -41,7 +41,7 @@ Upload them all in one zip. I trim the silence, match the volumes and time the s
 | `pick-ranger` | Dave | A ranger. Good. | same |
 | `open-15-dave` | Dave | You reach the camp. Roll. | [flat] |
 | `open-16-dave` | Dave | A natural twenty. Of course. | [flat, a little tired] |
-| `open-17-marc` | Marc | ...Reroll. | [sulky mutter] |
+| `open-17-marc` | Marc | I'll re-roll. | [sulky mutter] (Marc's rewrite) |
 | `cheer-marc`, `cheer-aaron`, `cheer-chris` | each | Yeah! | [cheering] optional; I layer them into one cheer |
 
 Total: about 40 seconds of speech. Even 3 takes of everything is about 2 minutes, well inside the free credits.
