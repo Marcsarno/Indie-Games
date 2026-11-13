@@ -706,7 +706,7 @@ const vLen = k => (typeof VO_LEN !== 'undefined' && VO_LEN[k]) || 2;
 function introShots() {
   const L = (vo, who, text, cam, o = {}) => Object.assign({ vo, who, text, cam, light: 'N', cut: true, dur: (o.pre || 0) + vLen(vo) + (o.gap ?? 0.15) }, o);
   return [
-    L('open-01-dave', 'dave', 'FOR A THOUSAND YEARS, OAKHOLLOW HAS BURIED ITS DEAD.', [['wide'], ['dave', 1.45]], { cut: false, gap: 0.1 }),
+    L('open-01-dave', 'dave', 'FOR A THOUSAND YEARS, OAKHOLLOW HAS BURIED ITS DEAD.', [['wide'], ['dave', 1.45]], { cut: false, gap: 0.1, pre: 1.4 }),
     L('open-02-marc', 'marc', 'SWEET! ROLLING A D20 TO SAVE THE VILLAGE!', [['marc', 2], ['marc', 2.15]], { gap: 0.05 }),
     L('open-03-dave', 'dave', "MARC. WE HAVEN'T STARTED.", [['dave', 2.1], ['dave', 2.25]], { gap: 0 }),
     { dur: 2.25, roll: true, auto: true, face: 1, fx: 'roll', noTap: true, cam: [['die', 3.2, 0.52], ['die', 3.7, 0.52]], light: 'N', cut: true },   // he rolls anyway: a one, in close-up
@@ -726,7 +726,7 @@ function cineShots(kind, cls, opts = {}) {
   if (kind === 'title') {
     const ask = opts.intro ? { dur: vLen('open-13-dave') + 0.25, vo: 'open-13-dave', cam: [['dave', 2], ['near', 1.4, 0.5]], light: 'N', cut: true, who: 'dave', text: 'FINE. WHO ARE YOU PLAYING TONIGHT?', minis: true }
       : { dur: 2.6, vo: 'open-13-dave', voFrom: 1.18, cam: [['wide'], ['wide']], light: 'N', cut: true, who: 'dave', text: 'WHO ARE YOU PLAYING TONIGHT?', minis: true };
-    return [...(opts.intro ? introShots() : []), ask,
+    return [...(opts.intro ? [{ dur: 1, wait: true, gate: true, cam: [['wide'], ['table', 1.12, 0.46]], light: 'N' }, ...introShots()] : []), ask,
       { dur: 1, wait: true, pick: true, cam: [['near', 1.75, 0.55], ['near', 1.75, 0.55]], ease: 1.5, who: 'dave', text: ask.text, keep: true }];
   }
   if (kind === 'open') { const pk = { warrior: 'barbarian', mage: 'mage', ranger: 'ranger', paladin: 'paladin' }[cls] || 'barbarian';   // (round 111: the opening's story moved to the title; the priest gives his quest in the game)
@@ -794,7 +794,7 @@ function cineShot(k) {
   if (s.fx && s.fx !== 'roll') cineSp(s.fx);
   if (s.fx === 'dead' || s.fx === 'wolves') sfx(s.fx === 'wolves' ? 'growl' : 'cry');
   if (s.roll) { C.rollT = null; C.landed = false; C.dieFace = s.face || 20; }
-  voStop(); C.voOn = !s.pre; if (s.vo && !s.pre) vo(s.vo, s.voFrom || 0);   // round 111: the voices
+  voStop(); C.voOn = false; C.voHold = 0;   // round 111: the voices (started by updateCine, which waits for a line still on its way)
   C.typeK = s.vo ? Math.max(24, C.total / Math.max(0.6, (vLen(s.vo) - (s.voFrom || 0)) * 0.8)) : 34;   // (the caption keeps pace with the voice)
   if (s.minis && C.miniIn == null) C.miniIn = G.t;
   if (s.fx === 'rise' && C.risenAt == null) C.risenAt = G.t;
@@ -851,8 +851,9 @@ function updateCine(dt) {
   C.lt = Math.min(1, C.lt + dt / 0.7); if (C.fxPrev) { C.fxPrev.t += dt; C.fxPrev.st += dt; if (C.fxPrev.t > 0.5) C.fxPrev = null; }
   const barsTo = C.kind === 'resume' || C.ph === 'drop' || (C.ph === 'lift' && C.pt < C.hold) ? 0 : 1; C.bars = clamp(C.bars + clamp(barsTo - C.bars, -dt * 1.4, dt * 1.8), 0, 1);
   if (C.ph === 'shots') {
-    const s = C.shots[C.k]; C.st += dt; C.fxSt += dt;
-    if (!C.voOn && C.st >= (s.pre || 0)) { C.voOn = true; if (s.vo) vo(s.vo, s.voFrom || 0); }   // (EVEN THE KIDS waits a beat)
+    const s = C.shots[C.k], hold = !C.voOn && s.vo && C.st >= (s.pre || 0) && voPending(s.vo) && (C.voHold += dt) < 3;   // (round 111b: a line not loaded yet holds its shot, up to 3 s)
+    if (!hold) { C.st += dt; C.fxSt += dt; }
+    if (!hold && !C.voOn && C.st >= (s.pre || 0)) { C.voOn = true; if (s.vo) vo(s.vo, s.voFrom || 0); }   // (EVEN THE KIDS waits a beat)
     if (C.voOn) C.chars = Math.min(C.total, C.chars + dt * (C.typeK || 34));
     if (C.coinAt != null && C.coinHits < 2) { const T = G.t - C.coinAt; if (T >= COIN_HIT[C.coinHits]) { sfx('clink', C.coinHits ? 0.45 : 1); C.coinHits++; } }
     const u = clamp(C.st / s.dur, 0, 1), a = cineCam(s.cam[0]), b = cineCam(s.cam[1]), path = cineLerp(a, b, s.pan ? cineSmooth((u - s.pan[0]) / (s.pan[1] - s.pan[0])) : u);
@@ -896,10 +897,12 @@ const openingDone = () => { G.lastSt = 'meet'; G.lastStory = G.story; saveGame()
 function cineTitleTap(p) {   // round 111: a tap during the opening (the miniatures and PLAY wait for its last two shots)
   const C = G.cine; if (!C || C.kind !== 'title' || C.ph !== 'shots') return false;
   const s = C.shots[C.k]; if (s.pick || s.minis) return false;
+  if (s.gate) { if (cineGateReady(C)) { sfx('tap'); cineNext(); } return true; }
   if (inRect(p, cineLayout().skip)) { sfx('tap'); if (C.risenAt == null) C.risenAt = G.t - 9; cineShot(C.shots.length - 2); return true; }
   if (s.noTap || C.st < 0.3 || C.fi > 0.4) return true;
   cineNext(); return true;
 }
+const cineGateReady = C => C.st > 1.2 && ((voLoaded() > 0.99 && musicLoaded()) || C.st > 12);   // (round 111b: everything has arrived, or 12 s have gone by)
 const introWanted = () => { if (params.get('intro') === '1') return true; try { return !localStorage.getItem('dcg-intro'); } catch (e) { return true; } };
 
 // ---------------------------------------------------------------- each frame: the visions, the miniatures, the die, the people
@@ -1121,6 +1124,11 @@ function drawCineHud() {
       for (let k = 0; k < lines.length && left > 0; k++) { const l = lines[k]; text(l.slice(0, left), Math.round(W / 2 - textWidth(l, z) / 2), ty + k * lh, 26, z); left -= l.length + 1; }
     }
     if (s.roll && C.rollT === null && C.st > 0.8 && Math.floor(G.t * 2.5) % 2 === 0) textC('TAP TO ROLL', W / 2, Math.round(H * 0.62), 51, 2);
+    if (s.gate) {   // round 111b: the table gets ready before the night starts
+      const y = H - 44;
+      if (cineGateReady(C)) { if (Math.floor(G.t * 1.6) % 2 === 0) textC('TAP TO SIT DOWN', W / 2, y, 51, 2); textC('SOUND ON', W / 2, y + 20, 24); }
+      else { const n = Math.round(voLoaded() * 10); textC('THE OTHERS ARE SITTING DOWN' + '...'.slice(0, 1 + Math.floor(G.t * 2) % 3), W / 2, y, 26); cR0(W / 2 - 50, y + 12, n); }
+    }
     if (C.kind !== 'resume' && (C.kind !== 'title' || !(s.minis || s.pick))) textC('SKIP', W - 16, 4, 24);
   }
   if (G.talk) drawTalk();   // a reward chosen at the table
@@ -1150,3 +1158,5 @@ function drawTableTitle(btn) {
     btn(TITLE.opts ? 'OPTIONS  -' : 'OPTIONS  +', W - 70, 16, 64, 14, () => { TITLE.opts = !TITLE.opts; }, 25, 3, 6);
   }
 }
+
+function cR0(x, y, n) { fillRect(x, y, 100, 4, 3); fillRect(x, y, n * 10, 4, 51); }   // a little loading bar (ten steps)

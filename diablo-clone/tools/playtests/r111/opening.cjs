@@ -15,6 +15,7 @@ const { chromium } = require('playwright'); const path = require('path'), fs = r
       const C = G.cine;
       if (C.k !== lastK || C.kind !== lastKind) { lastK = C.k; lastKind = C.kind; const s = C.shots[C.k]; log.push(`${T.toFixed(2)}s ${C.kind} #${C.k} ${s.vo || (s.roll ? 'roll' : s.fx || '')} ${s.text || ''}`); C._snaps = [0.45, ...(s.roll ? [1.3, 2.0] : []), ...(s.fx === 'rise' ? [0.15, 0.55, 0.75, 1.0, 1.8] : []), ...(s.fx === 'coin' ? [0.6, 0.8, 1.05, 2.5] : []), ...(s.fx === 'glow' ? [1.5, 3.0] : []), ...(s.pick ? [1.6] : [])].sort((a, b) => a - b).filter((v, i, a) => a.indexOf(v) === i); }
       if (C.ph === 'shots' && C._snaps && C._snaps.length && C.st >= C._snaps[0]) { C._snaps.shift(); snap(`${C.kind}${C.k}-${C.st.toFixed(1)}`); }
+      if (C.shots[C.k].gate && cineGateReady(C)) { snap('gate'); log.push(`${T.toFixed(2)}s gate ready`); cineTitleTap([135, 300]); }
       if (C.kind === 'title' && C.shots[C.k].pick && C.st > 2) { snap('pick'); titlePick(cls); startGame(false, cls); lastK = -1; continue; }
       if (C.kind === 'open' && C.shots[C.k].roll && C.rollT === null && C.st > 1.2) cineRoll();
       step();

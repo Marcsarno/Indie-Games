@@ -242,15 +242,25 @@ function ambience(dt) {
 // music dips while anyone talks. VO_LEN is each file's length, so the scene keeps its timing when
 // the sound is off or a file hasn't arrived.
 const VO_LEN = { 'cheer-aaron': 0.89, 'cheer-chris': 0.91, 'cheer-marc': 0.91, 'open-01-dave': 4.39, 'open-02-marc': 3.37, 'open-03-dave': 1.91, 'open-05a-aaron': 5.04, 'open-05b-aaron': 1.07, 'open-06-dave': 2.51, 'open-07-dave': 1.33, 'open-08-chris': 2.56, 'open-09-dave': 2.87, 'open-10-dave': 3.19, 'open-11-aaron': 2.4, 'open-12-chris': 1.31, 'open-13-dave': 2.19, 'open-15-dave': 1.78, 'open-16-dave': 2.46, 'open-17-marc': 0.89, 'pick-barbarian': 2.04, 'pick-mage': 1.7, 'pick-paladin': 1.67, 'pick-ranger': 1.67 };
-const VO = { buf: {}, src: null, until: 0 }, VO_GAIN = 1.1;
-function loadVoices() {
-  for (const k in VO_LEN) fetch('vo/' + k + '.mp3').then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status))
-    .then(b => new Promise((ok, no) => SFX.ctx.decodeAudioData(b, ok, no))).then(buf => { VO.buf[k] = buf; }).catch(() => { /* the line shows as text only */ });
+const VO = { buf: {}, raw: {}, dec: {}, bad: {}, src: null, until: 0 }, VO_GAIN = 1.1;
+// (round 111b: the user heard nothing until a few lines in: the files only started downloading on the first tap
+// and the lines played before they arrived. Now they download as the page opens, decode once there is an audio
+// context, and the table waits for them.)
+for (const k in VO_LEN) fetch('vo/' + k + '.mp3').then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status))
+  .then(b => { VO.raw[k] = b; if (SFX.ctx) decodeVoice(k); }).catch(() => { VO.bad[k] = 1; });
+function decodeVoice(k) {
+  if (!VO.raw[k] || VO.buf[k] || VO.dec[k]) return; VO.dec[k] = 1;
+  try { SFX.ctx.decodeAudioData(VO.raw[k], buf => { VO.buf[k] = buf; }, () => { VO.bad[k] = 1; }); } catch (e) { VO.bad[k] = 1; }
 }
+function loadVoices() { for (const k in VO.raw) decodeVoice(k); }
+const voPending = k => !!SFX.ctx && !SFX.muted && !VO.buf[k] && !VO.bad[k];   // still on its way (with the sound off, nothing is)
+const voLoaded = () => { let n = 0, t = 0; for (const k in VO_LEN) { t++; if (VO.buf[k] || VO.bad[k]) n++; } return n / t; };
+const musicLoaded = () => SFX.muted || typeof MUS === 'undefined' || !MUS.els || !MUS.els[0] || MUS.els[0].readyState >= 3;
 function voStop() { if (VO.src) { try { VO.src.stop(); } catch (e) { /* already done */ } VO.src = null; } }
 function vo(name, from = 0, pile = false) {
   if (!pile) voStop();
-  if (SFX.muted || !SFX.ctx || SFX.ctx.state !== 'running' || !VO.buf[name]) return;
+  if (SFX.muted || !SFX.ctx || SFX.ctx.state === 'closed' || !VO.buf[name]) return;
+  if (SFX.ctx.state === 'suspended') SFX.ctx.resume();   // (phones: it starts as soon as the context does)
   try { const c = SFX.ctx, s = c.createBufferSource(), g = c.createGain(), b = VO.buf[name];
     s.buffer = b; g.gain.value = VO_GAIN; s.connect(g); g.connect(SFX.out); s.start(0, from);
     if (!pile) VO.src = s; VO.until = Math.max(VO.until, c.currentTime + b.duration - from); } catch (e) { /* audio is optional */ }

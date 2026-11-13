@@ -11,7 +11,8 @@ const { chromium } = require('playwright'); const path = require('path');
       const run = s => { for (let i = 0; i < s * 60; i++) update(1 / 60); render(); }, tap = (x, y) => cineTitleTap([x, y]);
       log.push('shots ' + C.shots.length);
       if (C.intro) {
-        run(0.5); tap(135, 300); log.push('tap -> #' + C.k);
+        run(0.3); tap(135, 300); log.push('gate early tap -> #' + C.k); while (!cineGateReady(C)) run(0.1); log.push('gate ready at ' + C.st.toFixed(1) + 's'); tap(135, 300); log.push('sat down -> #' + C.k);
+        run(2); tap(135, 300); log.push('tap -> #' + C.k);
         while (!C.shots[C.k].noTap) run(0.1); const k = C.k; run(0.4); tap(135, 300); log.push('held #' + k + ' tap -> #' + C.k);
         tap(W - 20, 10); log.push('SKIP -> #' + C.k + ' ' + C.shots[C.k].text);
       }
