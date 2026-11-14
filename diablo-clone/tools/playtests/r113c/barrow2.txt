@@ -1,0 +1,14 @@
+barrow2 lvl 9
+warrior plain    won 2/2  time 7.8/7.4s  rage@5.3/4.7  deaths 0/0  pots 0/0  took 11/9/112  boss 562  adds 0/0  []
+warrior dodger   won 2/2  time 7.4/7.7s  rage@5.3/5  deaths 0/0  pots 0/0  took 10/6/112  boss 562  adds 0/0  []
+paladin plain    won 2/2  time 8.2/8.8s  rage@5.5/5.6  deaths 0/0  pots 0/0  took 2/0/161  boss 562  adds 0/0  [hands]
+paladin dodger   won 2/2  time 13.4/7.8s  rage@5.4/5.6  deaths 0/0  pots 0/0  took 3/3/161  boss 562  adds 0/0  [hands,beam]
+mage plain       won 2/2  time 6.3/6.5s  rage@4.5/4.3  deaths 0/0  pots 0/0  took 0/0/118  boss 562  adds 0/0  []
+mage dodger      won 2/2  time 5.9/7.2s  rage@4.1/4.5  deaths 0/0  pots 0/0  took 0/0/118  boss 562  adds 0/0  []
+ranger plain     won 2/2  time 8.4/10.2s  rage@4.6/6.7  deaths 0/0  pots 0/0  took 13/17/125  boss 562  adds 0/0  [hands]
+ranger dodger    won 2/2  time 10.1/11.6s  rage@5/6.5  deaths 0/0  pots 0/0  took 13/18/125  boss 562  adds 0/0  [hands]
+plain {"boss:melee":8,"boss:hands":5}
+plain {"boss:melee":17}
+dodge {"boss:melee":6,"boss:hands":7}
+dodge {"boss:melee":15,"boss:beam":3}
+no errors

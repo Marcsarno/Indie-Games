@@ -121,12 +121,12 @@ function tryGen(level, seed, relaxed = false) {
   const want = cfg ? null : ['room', 'hall'];   // the start is an ordinary room; one great hall per floor
   for (let t = 0; t < 600 && rooms.length < maxRooms; t++) {
     if (cfg && cfg.bossArena && rooms.length === 1) {   // round 113b (the user: a boss needs a big separate arena): a wide open cavern, as far from the way in as it fits
-      const w = 22, h = 17; let best = null, bd = -1;
+      const [w, h] = cfg.arenaSize || [22, 17]; let best = null, bd = -1;
       for (let q = 0; q < 300; q++) { const x = R.int(2, MW - w - 2), y = R.int(2, MH - h - 2), r0 = rooms[0];
         if (x < r0.x + r0.w + 5 && x + w + 5 > r0.x && y < r0.y + r0.h + 5 && y + h + 5 > r0.y) continue;
         const d = Math.hypot(x + w / 2 - r0.cx, y + h / 2 - r0.cy); if (d > bd) { bd = d; best = [x, y]; } }
       if (!best) { LV.genFail = ['arena: no room for it']; return false; }
-      rooms.push({ w, h, shape: 'round', type: 'crypt', great: true, bossArena: true, kind: 'arena', x: best[0], y: best[1], cx: best[0] + (w >> 1), cy: best[1] + (h >> 1) });
+      rooms.push({ w, h, shape: LV.theme === 'caves' ? 'round' : 'rect', type: 'crypt', great: true, bossArena: true, kind: 'arena', x: best[0], y: best[1], cx: best[0] + (w >> 1), cy: best[1] + (h >> 1) });
       continue;
     }
     const kind = cfg ? (rooms.length ? R.pick(cfg.rooms >= 8 ? ['room', 'room', 'cavern', 'small', 'ell', 'cross'] : ['room', 'room', 'cavern', 'small']) : 'room') : rooms.length < want.length ? want[rooms.length] : pickTpl();
@@ -600,7 +600,7 @@ function placeDecor(R, level) {
     const th = LV.theme, interior = () => { for (let t = 0; t < 30; t++) { const i = R.int(r.x + 1, r.x + r.w - 2), j = R.int(r.y + 1, r.y + r.h - 2); if (mine(i, j) && Math.abs(i - r.cx) + Math.abs(j - r.cy) > 1) return [i, j]; } return [r.cx, r.cy]; };
     const nearWall = () => { for (let t = 0; t < 40; t++) { const i = R.int(r.x, r.x + r.w - 1), j = R.int(r.y, r.y + r.h - 1); if (mine(i, j) && wallSide(i, j)) return [i, j]; } return null; };
     if (r.bossArena) { for (let q = 0; q < 6; q++) { const a = q / 6 * 6.283 + 0.5, i = Math.round(r.x + r.w / 2 - 0.5 + Math.cos(a) * r.w * 0.36), j = Math.round(r.y + r.h / 2 - 0.5 + Math.sin(a) * r.h * 0.36); if (mine(i, j) && trySolid(i, j)) D.push({ kind: 'brazier', i, j }); }   // a ring of fire round the edge: the fight in the light, the middle open
-      for (let q = 0; q < R.int(5, 8); q++) { const p = nearWall(); if (p) D.push({ kind: 'mushroom', fi: p[0] + 0.5, fj: p[1] + 0.5, seed: R.int(1, 1e6) % 6 }); } return; }   // round 113b: the boss's arena stays open floor
+      for (let q = 0; q < (LV.theme === 'caves' ? R.int(5, 8) : 0); q++) { const p = nearWall(); if (p) D.push({ kind: 'mushroom', fi: p[0] + 0.5, fj: p[1] + 0.5, seed: R.int(1, 1e6) % 6 }); } return; }   // round 113b: the boss's arena stays open floor
     if (r.job) { roomJob(r, n, D, R, mine); return; }   // round 68d: a room with a job is laid out on its own
     if (th === 'crypt' && n && r.w >= 9 && r.h >= 9 && R() < 0.22 && LV.shafts) { const fi = r.x + r.w * (0.3 + R() * 0.4), fj = r.y + r.h * (0.3 + R() * 0.4); LV.shafts.push({ fi, fj }); LV.stamps.push({ kind: 'debris', fi, fj }); }   // a crack in the ceiling: moonlight and fallen stones
     if (th === 'crypt') {

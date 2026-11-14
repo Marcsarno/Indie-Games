@@ -1,0 +1,14 @@
+king lvl 10
+warrior plain    won 2/2  time 9/9.5s  rage@7.3/5.2  deaths 0/0  pots 0/0  took 10/11/121  boss 618  adds 0/0  [cleave]
+warrior dodger   won 2/2  time 7.8/16.2s  rage@5.3/5.2  deaths 0/0  pots 0/0  took 6/6/121  boss 618  adds 0/0  [cleave]
+paladin plain    won 2/2  time 29.2/11.9s  rage@16.6/7.2  deaths 0/0  pots 0/0  took 6/2/171  boss 618  adds 2/0  [cleave,raise]
+paladin dodger   won 2/2  time 52.8/17.2s  rage@26.6/12.3  deaths 0/0  pots 0/0  took 22/2/171  boss 618  adds 11/5  [cleave,raise]
+mage plain       won 2/2  time 7.1/7.6s  rage@4.8/5.2  deaths 0/0  pots 0/0  took 0/0/125  boss 618  adds 0/0  []
+mage dodger      won 2/2  time 6.6/8.1s  rage@4.3/5.2  deaths 0/0  pots 0/0  took 0/1/125  boss 618  adds 0/0  []
+ranger plain     won 2/2  time 7.3/9.3s  rage@5/7.2  deaths 0/0  pots 0/0  took 5/10/133  boss 618  adds 0/0  []
+ranger dodger    won 2/2  time 7.7/11.8s  rage@5/5.4  deaths 0/0  pots 0/0  took 4/4/133  boss 618  adds 0/0  [cleave]
+plain {"boss:melee":5}
+plain {"boss:cleave":6,"boss:melee":4}
+dodge {"boss:melee":4}
+dodge {"boss:melee":4}
+no errors

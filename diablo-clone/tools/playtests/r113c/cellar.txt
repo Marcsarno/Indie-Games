@@ -1,0 +1,10 @@
+cellar lvl 7
+warrior plain    won 2/2  time 17/16.9s  rage@10.6/9.3  deaths 0/0  pots 0/1  took 86/79/94  boss 354  adds 3/3  [axe,oil]
+warrior dodger   won 2/2  time 20.7/17s  rage@10.4/9.2  deaths 0/0  pots -1/1  took 67/69/94  boss 354  adds 3/3  [axe,oil,charge]
+paladin plain    won 2/2  time 24.6/26s  rage@11.3/13.5  deaths 0/0  pots 1/1  took 107/98/94  boss 354  adds 3/3  [axe,oil,charge]
+paladin dodger   won 2/2  time 29.6/27.9s  rage@14.2/13  deaths 0/0  pots 1/0  took 87/61/94  boss 354  adds 3/3  [axe,oil,charge]
+mage plain       won 2/2  time 20.1/18.3s  rage@9.2/9.8  deaths 0/0  pots 2/1  took 125/94/74  boss 354  adds 3/3  [axe,oil,charge]
+mage dodger      won 2/2  time 19.2/20.6s  rage@8.6/9.2  deaths 0/0  pots 0/0  took 16/36/74  boss 354  adds 3/3  [axe,oil,charge]
+ranger plain     won 2/2  time 34.8/39.6s  rage@18.3/20.2  deaths 0/0  pots 3/3  took 169/208/84  boss 354  adds 3/3  [axe,oil,charge]
+ranger dodger    won 2/2  time 43.4/45.2s  rage@19.4/18.9  deaths 0/0  pots 1/1  took 65/85/84  boss 354  adds 3/3  [axe,oil,charge]
+no errors

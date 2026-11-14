@@ -644,9 +644,9 @@ const SIDES = {
   barrow: { name: 'THE BARROW', down: 'barrow2', theme: 'crypt', rooms: 10, pool: ['spearman', 'axeman', 'skeleton', 'skeleton', 'spearman', 'axeman', 'gravebow', 'tombguard'], boss: 'wraith', at: 'hub', diff: 6,   /* round 78: on the main path now: one in eight a crossbow or a shield wall (was one in five each; the ranger bot died 13 times to bolts from out of sight) */ door: () => [HUB.barrow[0] + 1.6, HUB.barrow[1] + 0.6], label: 'THE BARROW: DANGER', labelCol: 22, seed: 0xba770 },
   // round 67: the barrow's second floor, down the stairs in the wraith's room: bigger and harder, its
   // dead led by the Barrow Wight (it raises the dead and calls frost orbs); its hoard is in two chests
-  barrow2: { name: 'THE BARROW: THE DEEP TOMB', theme: 'crypt', rooms: 11, pool: ['spearman', 'axeman', 'gravebow', 'tombguard', 'tombguard', 'wraith'], boss: 'barrowwight', bigLeader: true, at: 'below', diff: 7, label: '', seed: 0xba772 },
-  tower: { name: 'THE OLD WATCHTOWER', theme: 'crypt', rooms: 9, pool: ['goblin', 'goblin', 'gshaman'], boss: 'gchief', at: 'hub', diff: 3, door: () => [HUB.tower[0] + 1.6, HUB.tower[1] - 0.4], label: 'OLD WATCHTOWER', seed: 0x70e7 },
-  cellar: { name: 'THE FARM CELLAR', theme: 'crypt', rooms: 5, pool: ['brigand'], boss: 'banditchief', at: 'riv', door: () => RIV.cellar, label: 'FARMHOUSE CELLAR', seed: 0xce11a },
+  barrow2: { name: 'THE BARROW: THE DEEP TOMB', theme: 'crypt', rooms: 11, pool: ['spearman', 'axeman', 'gravebow', 'tombguard', 'tombguard', 'wraith'], boss: 'barrowwight', bigLeader: true, bossArena: true, arenaSize: [22, 16], at: 'below', diff: 7, label: '', seed: 0xba772 },
+  tower: { name: 'THE OLD WATCHTOWER', theme: 'crypt', rooms: 9, pool: ['goblin', 'goblin', 'gshaman'], boss: 'gchief', bossArena: true, arenaSize: [20, 16], at: 'hub', diff: 3, door: () => [HUB.tower[0] + 1.6, HUB.tower[1] - 0.4], label: 'OLD WATCHTOWER', seed: 0x70e7 },
+  cellar: { name: 'THE FARM CELLAR', theme: 'crypt', rooms: 5, pool: ['brigand'], boss: 'banditchief', bossArena: true, arenaSize: [18, 14], at: 'riv', door: () => RIV.cellar, label: 'FARMHOUSE CELLAR', seed: 0xce11a },
 };
 const sidesHere = () => Object.keys(SIDES).filter(k => (SIDES[k].at === 'hub' && LV.hub) || (SIDES[k].at === 'riv' && LV.riv));
 // round 42b: what the story adds to a side area once it is built: Aldo's cage near the Alpha,
