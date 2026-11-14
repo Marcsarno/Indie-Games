@@ -1295,10 +1295,10 @@ function fitCanvas() {
 let last = performance.now(), fpsN = 0, fpsT = 0, fpsShown = 0, workSum = 0, workMax = 0, workShown = 0, workWorst = 0;
 let SHOW_FPS = false; try { SHOW_FPS = localStorage.getItem('dcg-fps') === '1'; } catch (e) { /* storage blocked */ }
 function tick(now) {
-  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;   // (round 115: a slow frame is caught up in two steps: the game gets choppier on a slow phone, not slower)
   fpsN++; fpsT += dt; if (fpsT > 1) { fpsShown = fpsN; workShown = workSum / fpsN; workWorst = workMax; fpsN = 0; fpsT = 0; workSum = 0; workMax = 0; }
   const w0 = performance.now();
-  update(dt);
+  if (dt > 0.05) { update(dt / 2); update(dt / 2); } else update(dt);
   warmStep(G.mode === 'play' ? 2 : 10);
   if (G.mode === 'title' && !LV.rooms.length) titleScene();
   render();

@@ -171,7 +171,7 @@ function eliteDeath(e) {
   if (hasPw(e, 'summoner')) for (const o of enemies) if (o.summonedBy === e && alive(o)) { o.crumbleT = 0.1 + Math.random() * 0.35; }
   if (e.pwWeak) return;
   // the leader: a short sting, a little more slow motion, a spray of extra loot; the pack falters
-  sfx('cry', 0.6); G.slowmo = Math.max(G.slowmo || 0, 0.35);
+  sfx('cry', 0.6); G.slowmo = Math.max(G.slowmo || 0, 0.2);
   if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.35);
   for (let k = 0; k < 10; k++) pspawn(2, x, y, e.def.chest, (Math.random() - 0.5) * 90, (Math.random() - 0.5) * 50, 60 + Math.random() * 40, 0.7, 51);
   for (const o of enemies) if (o.packOf === e && alive(o)) { o.panicT = Math.max(o.panicT || 0, 1.2); o.atk = -1; floater('!', o.fi, o.fj, o.def.chest + 16, 51); }

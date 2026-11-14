@@ -103,13 +103,17 @@ function startLevel(level, seed, side = null) {
 // round 81: the user: the first pack took too long, skills had no weight, you spam the basic attack.
 // Measured: a new warrior hits for 5.2 and a level 1 wolf had 28 health. Now it has 12, and packs are
 // PACK_K times the size (kill XP is scaled by XP_K so levelling keeps its pace).
-let SWARM = true; const SWARM_DMG = 1.3, PACK_K = 2, XP_K = 0.7;
+// round 115 (the user: "higher monster density feels good ... zipping around quickly, killing these monsters"):
+// packs half again as big (PACK_K 2 -> 3, dungeon packs 3-6 -> 5-8), the rank and file a fifth weaker so a pack
+// falls in about the same time, XP and drops per kill thinned by the same share (XP_K, LOOT_K) so levels and
+// gold keep their pace. Elites, champions and bosses are as they were.
+let SWARM = true; const SWARM_DMG = 1.3, PACK_K = 3, XP_K = 0.47, LOOT_K = 0.67;
 function makeEnemy(id, fi, fj, n, lvl) {
   const m = MONSTERS[id], lv = lvl || LV.diff;   // round 48c: a spawn may carry its own level (the Hollow's clearings climb in bands)
   // round 62 (HEAVY): more health, more for the big ones (fodder x1.6, the rank and file x2, bruisers
   // x2.3, uniques x1.5), and it climbs faster with the level (0.27 a level, compounding 1.5%) so
   // deeper floors outpace old gear and upgrades are felt. Damage keeps the old curve.
-  const scale = 1 + (lv - 1) * 0.22, hpScale = !HEAVY ? scale : (1 + (lv - 1) * 0.27) * Math.pow(1.015, lv - 1) * (m.unique ? 1.5 : SWARM ? (m.hp < 12 ? 0.75 : m.hp < 30 ? 0.85 : 1.3) : m.hp < 12 ? 1.6 : m.hp < 30 ? 2 : 2.3);   // round 81 (SWARM): the rank and file have well under half the health they had, and come in bigger packs (PACK_K), so skills kill
+  const scale = 1 + (lv - 1) * 0.22, hpScale = !HEAVY ? scale : (1 + (lv - 1) * 0.27) * Math.pow(1.015, lv - 1) * (m.unique ? 1.5 : SWARM ? (m.hp < 12 ? 0.6 : m.hp < 30 ? 0.7 : 1.3) : m.hp < 12 ? 1.6 : m.hp < 30 ? 2 : 2.3);   // round 81 (SWARM): the rank and file have well under half the health they had, and come in bigger packs (PACK_K), so skills kill
   // round 77: gear now grows with its level (itemStats). Measured over 40 heroes in the best of 60 drops per
   // area level: damage x1.02-1.14 at levels 2-6 and x1.11-1.32 from 8 on, armor x1.05-1.29. So monsters gain
   // 1.8% health and 1.2% damage a level past 2 (x1.07 / x1.05 at 6, x1.18 / x1.12 at 12): the fights stay as long.
@@ -210,7 +214,7 @@ function wayTo(t) {
 }
 
 // ---------------------------------------------------------------- particles (pooled typed arrays)
-const PN = 600;
+const PN = 1000;   // (round 115: 600; blood needs room)
 const px_ = new Float32Array(PN), py_ = new Float32Array(PN), pz_ = new Float32Array(PN), pvx = new Float32Array(PN), pvy = new Float32Array(PN), pvz = new Float32Array(PN), plife = new Float32Array(PN);
 const pcol = new Uint8Array(PN), pkind = new Uint8Array(PN);   // kind: 0 free, 1 blood, 2 spark, 3 ember, 4 magic, 5 bone chip
 let pnext = 0;
@@ -335,7 +339,7 @@ function drinkPotion() {
   const [x, y] = screenOf(hero); burst(4, x, y, 20, 10, 30, 22);
 }
 // pow: 0 = light blow (sword swings, spells), 1 = heavy (two-handers), 2 = combo finisher
-const HITSTOP = [0.045, 0.08, 0.11], KNOCK = [5, 7.7, 11];
+const HITSTOP = [0.045, 0.08, 0.11], KNOCK = [5, 7.7, 11], HERO_STOP = [0.015, 0.035, 0.06];
 const HITSTOP_H = [0.07, 0.12, 0.16], KNOCK_H = [6.2, 9.6, 13.5];   // round 62: HEAVY   // knock speed: tiles/s, ~1/14 of it is the slide
 // round 62: a short jolt of the view in the direction of a blow (frame pixels), easing back
 // the low thud layered under a melee blow (synthesized, so it never repeats a sample)
@@ -343,6 +347,15 @@ function RECIPES_THUD(v) { if (SFX.muted || !SFX.ctx || SFX.ctx.state !== 'runni
 function camKick(dx, dy, px) {
   const sx = (dx - dy), sy = (dx + dy) * 0.5, l = Math.hypot(sx, sy) || 1, k = Math.min(px, 4.5);
   G.kick = [(G.kick ? G.kick[0] : 0) * 0.4 + sx / l * k, (G.kick ? G.kick[1] : 0) * 0.4 + sy / l * k];
+}
+// round 115 (the user: "the gameplay feels slow again ... so much slow-mo"; measured: the Paladin stood frozen 9.7%
+// of play, the Barbarian 9.1%): the hero's own freeze on a blow is now short (the target still freezes and
+// flashes in full), a swing that lands on three or more freezes him no further, and a budget (update) caps his
+// frozen share at about 4% whatever asks for it.
+function heroHitStop(v) {
+  if (G.hsT !== G.t) { G.hsT = G.t; G.hsN = 0; }
+  if (++G.hsN >= 3) return;
+  hero.stop = Math.max(hero.stop, v);
 }
 function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = false) {
   if (!(dmg >= 0)) dmg = 1;   // round 107: a broken number (NaN) must never reach health: NaN health is neither alive nor dead
@@ -390,6 +403,7 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
   burst(bony ? 5 : 1, ex, ey, e.def.chest, bony ? 8 : 12, 50, bony ? 25 : ichor, (e.fi - fromFi - (e.fj - fromFj)) / d * 20);
   burst(2, ex, ey, e.def.chest, crit ? 16 : 6, crit ? 120 : 70, crit ? 18 : 17);
   if (crit) { sfx('crit'); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.2); }
+  if (typeof goreHit === 'function' && !FEEL_OLD) goreHit(e, fromFi, fromFj, crit, pow);   // round 115: blood thrown on along the blow
   if (e.state === 'sleep') wake(e);
   // round 29: how the monster takes it depends on what hit it
   const small = !e.def.unique && !e.def.elite, el = G.elem;
@@ -405,17 +419,19 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
     e.deathKind = el === 'fire' ? 'ash' : (el === 'cold' || e.frozen > 0) ? 'shatter' : el === 'heavy' && small ? 'thrown' : null;
     // round 37: an overkill (a blow far past what was left, a crit or a finisher) bursts a small one apart
     if (!FEEL_OLD && small && !e.deathKind && e.fam !== 'skeleton' && dmg - (e.hp + dmg) >= e.maxHp * 0.6 && (crit || pow >= 1)) e.deathKind = 'gib';
+    if (typeof goreKind === 'function') goreKind(e, el, dmg, crit, pow, small);   // round 115: beheaded, cut in half, burned black ... (gore.js)
     if (!FEEL_OLD) deathWeight(e, fromFi, fromFj, dmg, crit, pow);
     if (e.deathKind === 'thrown') { const dd = Math.hypot(e.fi - fromFi, e.fj - fromFj) || 1; e.throwV = [(e.fi - fromFi) / dd * 7, (e.fj - fromFj) / dd * 7]; }
     e.burnT = 0; e.downT = 0;
     e.dying = 0; e.atk = -1; e.clip = 'death'; e.tint = 0;
     if (FEEL_OLD) { e.stop = crit ? 0.2 : 0.15; hero.stop = Math.max(hero.stop, e.stop); }
-    else { e.stop = crit ? 0.15 : 0.12; hero.stop = Math.max(hero.stop, e.stop * 0.65); }
+    else { e.stop = crit ? 0.15 : 0.12; heroHitStop(crit || pow >= 2 ? 0.06 : 0.035); }   // (round 115: was 0.08-0.1)
     if (e.frozen > 0) { const [x, y] = screenOf(e); burst(5, x, y, e.def.chest, 18, 90, 118); burst(2, x, y, e.def.chest, 10, 80, 117); e.frozen = 0; if (e.deepIce) G.iceBursts.push({ fi: e.fi, fj: e.fj }); }   // shatters (Deep Freeze: and bursts)
     if (ranged) hero.stop = heroStop;   // spells and arrows never freeze the caster
     if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.5);
     sfx('kill'); if (HEAVY) RECIPES_THUD(ranged ? 0.7 : 1.2);
-    if (e.deathKind === 'gib') gibBurst(e, fromFi, fromFj);
+    if (typeof goreDeath === 'function' && goreDeath(e, fromFi, fromFj, crit, pow)) { e.deathV = null; e.throwV = null; e.thudded = true; }   // round 115: the body comes apart (gore.js)
+    else if (e.deathKind === 'gib') gibBurst(e, fromFi, fromFj);
     else if (bony) shatter(e, fromFi, fromFj);   // skeletons burst apart into a heap of bones
     else stampBlood(Math.round(ex), Math.round(ey), e.def.unique ? 6 : 3, (Math.random() * 1e6) | 0, e.fam === 'spider' ? GREEN : RED);
     const streak = killStreak();
@@ -424,7 +440,7 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
     gainXp((SWARM && !e.def.unique ? XP_K : 1) * e.def.xp * (1 + ((e.lvl || LV.diff) - 1) * 0.3) * (e.champ ? 3 + (e.pw ? e.pw.length - 1 : 0) : 1) * (e.summonedBy ? 0.2 : 1) * (1 + Math.max(0, streak - 2) * 0.1));
     if (STAT.hpKill) hero.hp = Math.min(STAT.maxHp, hero.hp + STAT.hpKill);
     if (STAT.manaKill) hero.mana = Math.min(STAT.maxMana, hero.mana + STAT.manaKill);
-    if (!e.noLoot) { G.lootBoss = !!e.def.unique || e === boss; dropLoot(e.fi, e.fj, e.def.unique || e === boss ? 4 : e.champ ? 3 + (e.pw ? e.pw.length - 1 : 0) : e.def.elite ? 3 : 1, e.def.unique || !!e.champ || !!e.def.elite); G.lootBoss = false; }   // (round 112: a boss leaves the journey piece still missing)
+    if (!e.noLoot && (!SWARM || e.champ || e.def.elite || e.def.unique || e.def.treasure || e === boss || Math.random() < LOOT_K)) { G.lootBoss = !!e.def.unique || e === boss; dropLoot(e.fi, e.fj, e.def.unique || e === boss ? 4 : e.champ ? 3 + (e.pw ? e.pw.length - 1 : 0) : e.def.elite ? 3 : 1, e.def.unique || !!e.champ || !!e.def.elite); G.lootBoss = false; }   // (round 112: a boss leaves the journey piece still missing)
     if (e.def.unique || (e.champ && Math.random() < 0.08)) groundItems.push({ item: rollLegendary(rng((Math.random() * 1e9) | 0)), fi: e.fi, fj: e.fj, t: 0 });
     if ((e.champ || e.def.elite) && Math.random() < 0.12) groundItems.push({ item: rollSetItem(rng((Math.random() * 1e9) | 0)), fi: e.fi + 0.4, fj: e.fj, t: 0 });
     if (e.def.treasure) {   // the sack bursts: a spray of gold and gems, often a legendary
@@ -454,7 +470,7 @@ function damageEnemy(e, dmg, fromFi, fromFj, crit = false, pow = 0, ranged = fal
       if (dmg >= e.maxHp * 0.18 && !e.def.unique) { e.atk = -1; e.hurt = 0.18; }
     } else {
       // the freeze scales with the blow; the hero's is shorter than the target's, so control stays snappy
-      e.stop = (HEAVY ? HITSTOP_H : HITSTOP)[pow] + (crit ? 0.03 : 0); hero.stop = Math.max(hero.stop, e.stop * 0.6);
+      e.stop = (HEAVY ? HITSTOP_H : HITSTOP)[pow] + (crit ? 0.03 : 0); heroHitStop(HERO_STOP[pow] + (crit ? 0.02 : 0));   // (round 115: was 60% of the target's)
       if (HEAVY) camKick(e.fi - fromFi, e.fj - fromFj, (ranged ? 0.8 : 1.6) + pow * 0.9 + (crit ? 0.8 : 0));   // round 62: the view jolts with the blow
       // every hit shoves: heavier blows further, bosses barely, elites and champions half
       const mass = e.def.unique ? 0.15 : e.def.elite || e.champ ? 0.5 : 1, v = (HEAVY ? KNOCK_H : KNOCK)[pow] * mass * (crit ? 1.25 : 1);
@@ -488,7 +504,7 @@ function deathWeight(e, fromFi, fromFj, dmg, crit, pow) {
   // the last one standing of a real fight: a beat of slow motion
   (G.killTimes = G.killTimes || []).push(G.t); G.killTimes = G.killTimes.filter(t => G.t - t < 10);
   const others = enemies.some(o => o !== e && alive(o) && o.state !== 'sleep' && Math.hypot(o.fi - hero.fi, o.fj - hero.fj) < 12);
-  if (!others && G.killTimes.length >= 3 && !(G.slowmo > 0) && !hero.ultOn && !(G.t - (G.ultAt || -99) < 5)) { G.slowmo = 0.5; G.killTimes = []; }   // (round 52: never during or just after an ultimate: it read as the phone slowing down)
+  if (!others && G.killTimes.length >= 8 && !(G.slowmo > 0) && !hero.ultOn && !(G.t - (G.ultAt || -99) < 5) && !(G.t - (G.lastSlowAt || -99) < 25)) { G.slowmo = 0.3; G.killTimes = []; G.lastSlowAt = G.t; }   // (round 115: it fired every 13 s, after any three kills, for 0.5 s; now after a real fight of eight, at most every 25 s)   // (round 52: never during or just after an ultimate: it read as the phone slowing down)
 }
 // an overkill: chunks and a spray of blood (or ichor), no body left
 function gibBurst(e, fromFi, fromFj) {
@@ -690,6 +706,8 @@ function update(dt) {
   G.saveT += dt; if (G.saveT > 20) { G.saveT = 0; saveGame(); }
   G.trauma = Math.max(0, G.trauma - dt * 1.4);
   if (G.kick) { const f = Math.exp(-dt * 22); G.kick[0] *= f; G.kick[1] *= f; if (Math.abs(G.kick[0]) + Math.abs(G.kick[1]) < 0.3) G.kick = null; }   // round 62
+  G.stopBank = Math.min(0.12, (G.stopBank === undefined ? 0.12 : G.stopBank) + dt * 0.04);   // round 115: the hero's freeze budget
+  if (hero.stop > 0) { G.stopBank -= dt; if (G.stopBank <= 0) hero.stop = 0; }
   updateHero(dt);
   if (typeof updatePaladin === 'function') updatePaladin(dt);   // round 97
   flowT -= dt; if (flowT <= 0) { flowT = 0.4; computeFlow(); }
@@ -1159,7 +1177,7 @@ function assignEngage() {
     const list = fams[k], busy = list.filter(e => e.atk >= 0), free = list.filter(e => e.atk < 0 && !(e.engageCd > G.t));
     for (const e of busy) e.mayEngage = true;
     free.sort((a, b) => (a.engageCd || 0) - (b.engageCd || 0) || Math.hypot(a.fi - hero.fi, a.fj - hero.fj) - Math.hypot(b.fi - hero.fi, b.fj - hero.fj));
-    for (let n = 0, cap = SWARM && list.length >= 5 ? 3 : 2; n < free.length && n < cap - busy.length; n++) free[n].mayEngage = true;   // (round 81: three at once from a big pack)
+    for (let n = 0, cap = SWARM && list.length >= 8 ? 4 : SWARM && list.length >= 5 ? 3 : 2; n < free.length && n < cap - busy.length; n++) free[n].mayEngage = true;   // (round 81: three at once from a big pack)
     if (list.length <= 2) for (const e of list) e.mayEngage = true;   // a pair or a lone one just comes at you
   }
 }
@@ -1454,7 +1472,7 @@ function updateParticles(dt) {
     if (pz_[k] <= 0) {
       const x = Math.round(px_[k]), y = Math.round(py_[k]);
       const fk = y * WW + x, onFloor = x >= 0 && y >= 0 && x < WW && y < WH && wFloor[fk] && floorBuf[fk] !== BLK;
-      if (kind === 1 && onFloor) setFloor(fk, pcol[k] === 54 ? GREEN[hash(x, y, 77) < 0.5 ? 2 : 1] : hash(x, y, 77) < 0.5 ? RED[2] : RED[1]);
+      if (kind === 1 && onFloor) { const c = pcol[k]; setFloor(fk, c === 54 ? GREEN[hash(x, y, 77) < 0.5 ? 2 : 1] : c >= RED[0] && c <= RED[4] ? (hash(x, y, 77) < 0.5 ? RED[2] : RED[1]) : c); }   // (round 115: anything else stains in its own colour: a slime's)
       if (kind === 6 && onFloor) { setFloor(fk, BONE[1]); if (x + 1 < WW && wFloor[fk + 1]) setFloor(fk + 1, BONE[0]); }
       pkind[k] = 0;
     }

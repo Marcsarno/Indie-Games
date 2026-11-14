@@ -736,15 +736,15 @@ function placeSpawns(R, level) {
   LV.rooms.forEach((r, n) => {
     if (n === 0 || r.role === 'vault' || r.role === 'arena' || r.bossArena) return;   // (round 113b: and the boss's arena: just the boss)   // (round 103: the vault is sealed; the ambush room waits empty)
     const base = (2 + Math.floor(level * 0.8)) * clamp(Math.pow((r.area || r.w * r.h) / 64, 0.6), 0.75, 1.8);   // round 38: more in bigger rooms (capped so a great hall isn't a crowd)
-    let budget = Math.round(base * (0.6 + 0.8 * r.depth) * (cfg ? 0.6 : 1) * (r.role === 'hall' ? 1.4 : 1)) + (r.dead ? 1 : 0);   // side areas are lighter (round 103: the great hall a crowd)
+    let budget = Math.round(base * (0.6 + 0.8 * r.depth) * (cfg ? 0.6 : 1) * (r.role === 'hall' ? 1.4 : 1) * (SWARM ? 1.4 : 1)) + (r.dead ? 1 : 0);   // (round 115: 40% more below ground too)   // side areas are lighter (round 103: the great hall a crowd)
     while (budget > 0) {
-      const id = R.pick(pool), m = MONSTERS[id], count = m.pack ? (SWARM ? R.int(3, 6) : R.int(2, HEAVY ? 5 : 4)) : 1;   // (round 62: HEAVY packs run a little bigger)
+      const id = R.pick(pool), m = MONSTERS[id], count = m.pack ? (SWARM ? R.int(5, 8) : R.int(2, HEAVY ? 5 : 4)) : 1;   // (round 62: HEAVY packs run a little bigger)
       budget -= m.pack ? 2 : 1;
       const c = spot(r); if (!c) continue;
       const g = { room: n, at: c, members: [] };
       for (let q = 0; q < count; q++) {
         let p = q === 0 ? c : null;
-        for (let t = 0; t < 14 && !p; t++) { const a = R() * 6.283, d = 0.8 + R() * 0.7, cand = [c[0] + Math.cos(a) * d, c[1] + Math.sin(a) * d]; if (ok(cand[0], cand[1])) p = cand; }
+        for (let t = 0; t < 14 && !p; t++) { const a = R() * 6.283, d = 0.8 + R() * (count > 6 ? 1.3 : 0.7), cand = [c[0] + Math.cos(a) * d, c[1] + Math.sin(a) * d]; if (ok(cand[0], cand[1])) p = cand; }
         if (p) { S.push({ id, fi: p[0], fj: p[1] }); g.members.push(S.length - 1); }
       }
       groups.push(g);

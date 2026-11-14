@@ -810,7 +810,8 @@ function updSeraph(B, dt) {
   if (t < t1) { const u = t / t1; hero.leapZ = SER.H * (1 - (1 - u) * (1 - u)); hero.clip = 'raise'; hero.atk = -1; if (Math.random() < 0.8) { const [x, y] = screenOf(hero); pspawn(4, x + (Math.random() - 0.5) * 10, y, hero.leapZ * 0.5, 0, 0, 60, 0.4, 27); } }
   else if (t < t2) {
     hero.leapZ = SER.H + 3; hero.dir = dirFrom(B.to[0] - hero.fi, B.to[1] - hero.fj); bzPose(3, 150);
-    if (!B.apex) { B.apex = true; G.slowmo = Math.max(G.slowmo || 0, 0.12); sfx('palFlap', 0.8);   // the wings snap open: feathers burst
+    if (!B.apex) { B.apex = true; sfx('palFlap', 0.8);   // (round 115: no slow motion here: it came with every cast)
+        // the wings snap open: feathers burst
       const [x, y] = screenOf(hero); for (let k = 0; k < 26; k++) { const a = Math.random() * 6.283, sp = 40 + Math.random() * 90; pspawn(4, x, y, hero.leapZ + 18, Math.cos(a) * sp, Math.sin(a) * sp * 0.6, 20 - Math.random() * 30, 0.9, k % 3 ? 27 : 51); }
       G.pal.flashes2 = { fi: hero.fi, fj: hero.fj, z: hero.leapZ + 18, t: 0.16 }; }
   } else if (t < t3) {

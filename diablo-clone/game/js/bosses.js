@@ -37,7 +37,7 @@ function updateAlpha(e, dt, d, dx, dy) {
   if (e.phase === 1 && e.hp < e.maxHp * 0.5 && !e.mv) {   // enraged
     e.phase = 2; e.speedK = (e.speedK || 1) * 1.25; e.special = 1.0;
     say('THE ALPHA IS ENRAGED', 22, 2.5); sfx('cry'); sfx('growl'); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.6);
-    startBossCam(1.2, 1.45, true);
+    startBossCam(0.8, 1.45, true);
     return true;
   }
   if (p2 && Math.random() < dt * 10) { const [x, y] = screenOf(e); pspawn(3, x + (Math.random() - 0.5) * 18, y, 4 + Math.random() * 16, 0, 0, 10 + Math.random() * 10, 0.5, Math.random() < 0.5 ? 22 : 23); }   // a red haze
@@ -239,7 +239,7 @@ const called = e => enemies.filter(o => o.calledBy === e && alive(o)).length;
 function fireField(e, c, R, dur) { for (let y = -R; y <= R; y += 0.55) for (let x = -R; x <= R; x += 0.55) { if (x * x + y * y > R * R) continue; const fi = c[0] + x + (Math.random() - 0.5) * 0.2, fj = c[1] + y + (Math.random() - 0.5) * 0.2; if (standable(fi, fj, 0.1)) G.eliteFire.push({ fi, fj, t: dur * (0.85 + Math.random() * 0.3), arm: 0.05, dmg: e.dmg, src: e, weak: false }); } }
 function blast(e, c, R, k) { const [x, y] = iso(c[0], c[1]); for (let q = 0; q < 26; q++) { const a = q / 26 * 6.283; pspawn(3, x, y, 3, Math.cos(a) * 70, Math.sin(a) * 35, 30 + Math.random() * 40, 0.5, q % 2 ? 16 : 17); } sfx('boom'); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.3); if (Math.hypot(hero.fi - c[0], hero.fj - c[1]) < R) hitHero(e, k, 0.2); }
 // a boss's rage at half life: a roar, a short push in, faster; `extra` for its own change
-function enrage(e, line, extra) { e.phase = 2; e.speedK = (e.speedK || 1) * 1.2; e.special = 1.0; say(line, 22, 2.5); sfx('cry'); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.6); startBossCam(1.2, 1.45, true); if (extra) extra(); }
+function enrage(e, line, extra) { e.phase = 2; e.speedK = (e.speedK || 1) * 1.2; e.special = 1.0; say(line, 22, 2.5); sfx('cry'); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.6); startBossCam(0.8, 1.45, true); if (extra) extra(); }
 
 // ---------------------------------------------------------------- hazards over time
 function tickBossFx(dt) {
