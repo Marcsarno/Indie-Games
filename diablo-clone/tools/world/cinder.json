@@ -1,0 +1,664 @@
+{
+ "name": "THE CINDERWORKS",
+ "act": 2,
+ "region": 2,
+ "size": 100,
+ "lvlShift": 3,
+ "start": "landing",
+ "exit": "southroad",
+ "back": [
+  -36.4,
+  47.0
+ ],
+ "bridgeW": 1.3,
+ "note": "Coordinates (u, s) as in hollow.json. Made by mk-cinder.py from ChatGPT-map coordinates.",
+ "clearings": [
+  {
+   "id": "landing",
+   "name": "HAUL GATE LANDING",
+   "u": -32.2,
+   "s": 47.0,
+   "r": 4,
+   "level": 0
+  },
+  {
+   "id": "oreyard",
+   "name": "ORE YARD",
+   "u": -20.2,
+   "s": 47.0,
+   "r": 8,
+   "level": 8
+  },
+  {
+   "id": "crane",
+   "name": "CRANE SPUR",
+   "u": -15.8,
+   "s": 26.4,
+   "r": 5,
+   "level": 8
+  },
+  {
+   "id": "wheel",
+   "name": "SILENT WHEEL YARD",
+   "u": -6.8,
+   "s": 40.9,
+   "r": 8,
+   "level": 8,
+   "lvlTo": 9
+  },
+  {
+   "id": "trail",
+   "name": "CREW TRAIL",
+   "u": 11.2,
+   "s": 49.2,
+   "r": 5,
+   "level": 9
+  },
+  {
+   "id": "forecourt",
+   "name": "SILKSHAFT FORECOURT",
+   "u": 21.0,
+   "s": 45.4,
+   "r": 8,
+   "level": 9,
+   "lvlTo": 10
+  },
+  {
+   "id": "furnaces",
+   "name": "COLD FURNACES",
+   "u": -12.8,
+   "s": 65.2,
+   "r": 9,
+   "level": 9
+  },
+  {
+   "id": "fordside",
+   "name": "THE FORD",
+   "u": -3.8,
+   "s": 69.8,
+   "r": 4,
+   "level": 9
+  },
+  {
+   "id": "glassway",
+   "name": "GLASSVEIN BRANCH",
+   "u": 16.5,
+   "s": 26.4,
+   "r": 5,
+   "level": 9
+  },
+  {
+   "id": "ashyard",
+   "name": "ASH SORTING YARD",
+   "u": 19.5,
+   "s": 62.2,
+   "r": 8,
+   "level": 9,
+   "lvlTo": 10
+  },
+  {
+   "id": "sluice",
+   "name": "SOUTH SLUICE",
+   "u": 12.8,
+   "s": 78.1,
+   "r": 6,
+   "level": 10
+  },
+  {
+   "id": "southroad",
+   "name": "TO THE BROKEN FLANK",
+   "u": 25.5,
+   "s": 85.0,
+   "r": 4,
+   "level": 0
+  }
+ ],
+ "roads": [
+  {
+   "from": "landing",
+   "to": "oreyard",
+   "w": 4,
+   "main": true
+  },
+  {
+   "from": "oreyard",
+   "via": [
+    [
+     -12.8,
+     44.7
+    ]
+   ],
+   "to": "wheel",
+   "w": 3,
+   "main": true
+  },
+  {
+   "from": "oreyard",
+   "via": [
+    [
+     -18.0,
+     35.6
+    ]
+   ],
+   "to": "crane",
+   "w": 2
+  },
+  {
+   "from": "oreyard",
+   "via": [
+    [
+     -9.8,
+     50.8
+    ],
+    [
+     -2.2,
+     50.8
+    ],
+    [
+     3.8,
+     50.8
+    ]
+   ],
+   "to": "trail",
+   "w": 4,
+   "main": true
+  },
+  {
+   "from": "trail",
+   "to": "forecourt",
+   "w": 4,
+   "main": true
+  },
+  {
+   "from": "trail",
+   "via": [
+    [
+     10.5,
+     56.8
+    ]
+   ],
+   "to": "ashyard",
+   "w": 3
+  },
+  {
+   "from": "ashyard",
+   "via": [
+    [
+     10.5,
+     66.7
+    ],
+    [
+     3.8,
+     69.8
+    ]
+   ],
+   "to": "fordside",
+   "w": 3
+  },
+  {
+   "from": "fordside",
+   "to": "furnaces",
+   "w": 3
+  },
+  {
+   "from": "furnaces",
+   "via": [
+    [
+     -21.8,
+     59.1
+    ]
+   ],
+   "to": "oreyard",
+   "w": 3
+  },
+  {
+   "from": "forecourt",
+   "via": [
+    [
+     12.8,
+     35.6
+    ]
+   ],
+   "to": "glassway",
+   "w": 2
+  },
+  {
+   "from": "ashyard",
+   "via": [
+    [
+     13.5,
+     70.5
+    ]
+   ],
+   "to": "sluice",
+   "w": 3,
+   "main": true
+  },
+  {
+   "from": "sluice",
+   "via": [
+    [
+     20.2,
+     78.9
+    ]
+   ],
+   "to": "southroad",
+   "w": 4,
+   "main": true
+  }
+ ],
+ "water": [
+  {
+   "name": "the works river",
+   "path": [
+    [
+     5.2,
+     9.0
+    ],
+    [
+     6.0,
+     25.7
+    ],
+    [
+     3.8,
+     39.4
+    ],
+    [
+     3.8,
+     50.8
+    ],
+    [
+     3.0,
+     59.9
+    ],
+    [
+     3.8,
+     69.8
+    ],
+    [
+     2.2,
+     80.4
+    ],
+    [
+     0.8,
+     91.0
+    ]
+   ],
+   "w": 5
+  }
+ ],
+ "cliffs": [
+  {
+   "name": "silkshaft crags",
+   "path": [
+    [
+     15.0,
+     34.8
+    ],
+    [
+     24.0,
+     32.5
+    ],
+    [
+     32.2,
+     35.6
+    ],
+    [
+     34.5,
+     45.4
+    ]
+   ],
+   "w": 3
+  },
+  {
+   "name": "glassvein crags",
+   "path": [
+    [
+     21.0,
+     19.6
+    ],
+    [
+     31.5,
+     16.6
+    ],
+    [
+     35.2,
+     25.7
+    ]
+   ],
+   "w": 2
+  },
+  {
+   "name": "east wall",
+   "path": [
+    [
+     35.2,
+     51.5
+    ],
+    [
+     34.5,
+     66.7
+    ],
+    [
+     33.0,
+     77.4
+    ]
+   ],
+   "w": 2
+  },
+  {
+   "name": "south-west crags",
+   "path": [
+    [
+     -31.5,
+     71.3
+    ],
+    [
+     -22.5,
+     80.4
+    ],
+    [
+     -9.0,
+     84.2
+    ]
+   ],
+   "w": 3
+  },
+  {
+   "name": "north-west crags",
+   "path": [
+    [
+     -33.0,
+     30.2
+    ],
+    [
+     -25.5,
+     19.6
+    ],
+    [
+     -15.0,
+     16.6
+    ]
+   ],
+   "w": 2
+  }
+ ],
+ "doors": [
+  {
+   "id": "silkshaft",
+   "name": "SILKSHAFT",
+   "u": 23.2,
+   "s": 37.8,
+   "dungeon": "caves",
+   "floors": 1,
+   "boss": "broodmother",
+   "plain": true
+  },
+  {
+   "id": "glassvein",
+   "name": "GLASSVEIN GROTTO",
+   "u": 27.8,
+   "s": 18.8,
+   "dungeon": "caves",
+   "floors": 1,
+   "plain": true
+  }
+ ],
+ "gates": [
+  {
+   "id": "flooded road",
+   "kind": "flood",
+   "at": [
+    21.0,
+    80.4
+   ],
+   "opens": "drained",
+   "pools": [
+    [
+     19.5,
+     78.9,
+     3.4
+    ],
+    [
+     22.5,
+     81.9,
+     3.2
+    ]
+   ]
+  }
+ ],
+ "landmarks": [
+  {
+   "name": "the silent wheel",
+   "u": -3.8,
+   "s": 35.6,
+   "prop": "waterwheel",
+   "id": "wheel",
+   "extra": [
+    [
+     "cabin",
+     -3.4,
+     0.4,
+     3,
+     3
+    ],
+    [
+     "crate",
+     -1.5,
+     3
+    ],
+    [
+     "barrel",
+     0.5,
+     3.5
+    ],
+    [
+     "crate",
+     -5.5,
+     2
+    ]
+   ]
+  },
+  {
+   "name": "ore yard shelter",
+   "u": -21.8,
+   "s": 42.4
+  },
+  {
+   "name": "loading crane",
+   "u": -17.2,
+   "s": 23.4,
+   "prop": "crane"
+  },
+  {
+   "name": "kiln a",
+   "u": -17.2,
+   "s": 62.2,
+   "prop": "kiln"
+  },
+  {
+   "name": "kiln b",
+   "u": -12.8,
+   "s": 61.4,
+   "prop": "kiln"
+  },
+  {
+   "name": "kiln c",
+   "u": -8.2,
+   "s": 62.2,
+   "prop": "kiln"
+  },
+  {
+   "name": "ash kiln",
+   "u": 15.8,
+   "s": 59.9,
+   "prop": "kiln",
+   "extra": [
+    [
+     "cart",
+     3.5,
+     2,
+     2,
+     1
+    ],
+    [
+     "crate",
+     -2,
+     2
+    ]
+   ]
+  },
+  {
+   "name": "the south sluice",
+   "u": 12.0,
+   "s": 75.8,
+   "prop": "sluice",
+   "propOn": "sluiceon",
+   "on": "drained",
+   "id": "sluice"
+  },
+  {
+   "name": "escape passage",
+   "u": 30.8,
+   "s": 41.6,
+   "prop": "grate",
+   "id": "grate"
+  },
+  {
+   "name": "crew trail 1",
+   "u": 7.5,
+   "s": 50.0,
+   "prop": "minerscrap"
+  },
+  {
+   "name": "crew trail 2",
+   "u": 12.8,
+   "s": 47.0,
+   "prop": "minerscrap"
+  },
+  {
+   "name": "crew trail 3",
+   "u": 16.5,
+   "s": 47.7,
+   "prop": "minerscrap"
+  }
+ ],
+ "packs": [
+  {
+   "at": "oreyard",
+   "id": "shaleripper",
+   "n": 1,
+   "count": 1,
+   "exact": true
+  },
+  {
+   "at": "crane",
+   "id": "digger",
+   "n": 2,
+   "count": 1
+  },
+  {
+   "at": "wheel",
+   "id": "brigand",
+   "n": 2,
+   "count": 1
+  },
+  {
+   "at": "wheel",
+   "id": "rusk",
+   "n": 1,
+   "count": 1,
+   "exact": true,
+   "with": [
+    "brigand",
+    "mastiff"
+   ],
+   "u": -6.8,
+   "s": 38.6
+  },
+  {
+   "at": "trail",
+   "id": "spider",
+   "n": 3,
+   "count": 1
+  },
+  {
+   "at": "forecourt",
+   "id": "spider",
+   "n": 3,
+   "count": 2
+  },
+  {
+   "at": "furnaces",
+   "id": "cinderhusk",
+   "n": 1,
+   "count": 1,
+   "exact": true
+  },
+  {
+   "at": "furnaces",
+   "id": "digger",
+   "n": 3,
+   "count": 1
+  },
+  {
+   "at": "fordside",
+   "id": "digger",
+   "n": 2,
+   "count": 1
+  },
+  {
+   "at": "glassway",
+   "id": "slime",
+   "n": 3,
+   "count": 1,
+   "with": "sporecap"
+  },
+  {
+   "at": "ashyard",
+   "id": "shaleripper",
+   "n": 1,
+   "count": 1,
+   "exact": true
+  },
+  {
+   "at": "ashyard",
+   "id": "digger",
+   "n": 2,
+   "count": 1
+  },
+  {
+   "at": "sluice",
+   "id": "cinderhusk",
+   "n": 1,
+   "count": 1,
+   "exact": true
+  },
+  {
+   "at": "sluice",
+   "id": "fallen",
+   "n": 2,
+   "count": 1
+  }
+ ],
+ "caches": [
+  {
+   "name": "crane cache",
+   "u": -14.2,
+   "s": 24.2
+  },
+  {
+   "name": "survey cache",
+   "u": 13.5,
+   "s": 24.2
+  },
+  {
+   "name": "ash cache",
+   "u": 31.5,
+   "s": 58.4
+  }
+ ],
+ "woodsFringe": 6,
+ "roadFringe": 4,
+ "gridRows": 8
+}

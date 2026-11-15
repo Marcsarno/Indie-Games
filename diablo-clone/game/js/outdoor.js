@@ -90,7 +90,7 @@ function genOutdoor(level, seed, A) {
   LV.ponds = []; LV.river = []; LV.bridges = [];
   LV.map.fill(FLOOR); LV.solid.fill(0); LV.tall.fill(0); LV.roomOf.fill(-1); LV.seen.fill(1); LV.vis.fill(1);
   LV.decor = []; LV.spawns = []; LV.paths = []; LV.rooms = []; LV.npcs = [];
-  LV.thick = null; LV.backExit = null; LV.treeBlock = null; LV.treeCut = null; LV.aldoTree = null; LV.aldoChop = null; LV.gatePos = null; LV.regGate = null; LV.cacheAt = null; LV.safe = null; LV.cobble = null; LV.doorsAt = null; LV.pads = null; LV.smokes = null; LV.campGlows = null;
+  LV.thick = null; LV.backExit = null; LV.treeBlock = null; LV.treeCut = null; LV.aldoTree = null; LV.aldoChop = null; LV.gatePos = null; LV.regGate = null; LV.regBack = null; LV.marks = null; LV.cacheAt = null; LV.safe = null; LV.cobble = null; LV.doorsAt = null; LV.pads = null; LV.smokes = null; LV.campGlows = null;
   bakeCanopy(A.act === 1 && !A.reg);   // before the floor bake, which samples it past the map edge
   if (A.hub) genHollow(R, A); else if (A.riv) genRiver(R, A); else if (A.reg && REGIONS[A.reg]) genRegion(R, A, REGIONS[A.reg]); else if (A.kind === 'town') genTown(R, A); else genForest(R, A);
   bakePathField();
@@ -624,11 +624,13 @@ function genHollow(R, A) {
 const REGIONS = {};
 // @regions:begin (written by tools/world/embed-region.py from tools/world/<name>.json; edit those)
 REGIONS.ashford = {"name":"ASHFORD VALE","act":2,"region":1,"size":100,"lvlShift":3,"clearings":[{"id":"arrival","name":"FROM ACT I","u":-7.5,"s":14.3,"r":4,"level":0},{"id":"town","name":"ASHFORD","u":-19.5,"s":48.5,"r":10,"level":0,"kind":"camp"},{"id":"cartway","name":"CARTWAY","u":3.8,"s":48.5,"r":8,"level":7},{"id":"pityard","name":"RESCUE PIT YARD","u":12.0,"s":31.8,"r":8,"level":7,"lvlTo":8},{"id":"rennyard","name":"RENN'S YARD","u":20.2,"s":58.4,"r":7,"level":8},{"id":"haul","name":"HAUL GATE","u":33.8,"s":46.2,"r":4,"level":8},{"id":"copse","name":"CHARCOAL COPSE","u":9.0,"s":72.8,"r":8,"level":7,"lvlTo":8},{"id":"graveroad","name":"GRAVE ROAD","u":-6.0,"s":66.7,"r":6,"level":7},{"id":"forecourt","name":"BLACKWAKE","u":-17.2,"s":72.8,"r":6,"level":11,"lvlTo":12,"danger":true},{"id":"oak","name":"HOLLOW OAK","u":25.5,"s":69.8,"r":5,"level":8}],"roads":[{"from":"arrival","via":[[-15.0,27.2]],"to":"town","w":3,"main":true},{"from":"town","via":[[-6.0,45.4]],"to":"cartway","w":4,"main":true},{"from":"cartway","via":[[4.5,36.3]],"to":"pityard","w":3,"main":true},{"from":"pityard","via":[[19.5,40.9]],"to":"rennyard","w":3},{"from":"cartway","via":[[13.5,50.0]],"to":"rennyard","w":4,"main":true},{"from":"rennyard","via":[[28.5,48.5]],"to":"haul","w":4,"main":true},{"from":"cartway","via":[[0.0,60.6]],"to":"copse","w":3},{"from":"copse","via":[[19.5,62.2]],"to":"rennyard","w":2},{"from":"cartway","via":[[0.0,60.6]],"to":"graveroad","w":2},{"from":"graveroad","to":"forecourt","w":2},{"from":"copse","to":"oak","w":1}],"water":[],"cliffs":[{"name":"north crags","path":[[6.0,19.6],[18.0,16.6],[27.0,22.6],[30.0,34.8]],"w":3},{"name":"haul gate cliffs south","path":[[33.0,53.0],[31.5,62.2],[33.0,72.8]],"w":3},{"name":"tomb crags","path":[[-27.0,68.2],[-24.0,78.9]],"w":2}],"doors":[{"id":"rescuepit","name":"RESCUE PIT","u":15.0,"s":22.6,"dungeon":"caves","floors":1,"boss":"oenforcer","labelUp":true,"note":"mine-works caves; the Pit Enforcer (ogre enforcer); Renn and two miners behind a barricade"},{"id":"blackwake","name":"BLACKWAKE TOMB","u":-19.5,"s":78.9,"dungeon":"crypt","floors":1,"level":11,"danger":true,"note":"DANGER LV 11-12 sign; elite tomb guard + two crossbowmen; burial ledger, a rare"}],"gates":[{"id":"haulgate","label":"Haul Gate (opens when Renn is free)","at":[31.5,46.2],"opens":"rennFree","note":"timber gate between cliffs, windlass, mining banner; Renn waits here after the rescue"}],"landmarks":[{"name":"town bell","u":-19.5,"s":48.5},{"name":"timber shelter","u":4.5,"s":30.2},{"name":"charcoal kiln","u":12.0,"s":77.4},{"name":"giant hollow oak","u":30.0,"s":65.2},{"name":"DANGER posts","u":-10.5,"s":68.2},{"name":"dropped helmet","u":-12.0,"s":22.6}],"packs":[{"at":"cartway","id":"wolf","n":3,"count":1},{"at":"cartway","id":"goblin","n":3,"count":1},{"at":"pityard","id":"digger","n":3,"count":2},{"at":"rennyard","id":"goblin","n":3,"count":1,"with":"gshaman"},{"at":"copse","id":"boar","n":2,"count":1},{"at":"copse","id":"goblin","n":3,"count":1},{"at":"graveroad","id":"wolf","n":3,"count":1},{"at":"forecourt","id":"tombguard","n":1,"count":1},{"at":"forecourt","id":"gravebow","n":1,"count":1},{"at":"oak","id":"goblin","n":2,"count":1}],"caches":[{"name":"lost satchel","u":5.2,"s":27.2},{"name":"Tamsin's ore","u":24.0,"s":61.4},{"name":"memorial offering","u":-3.8,"s":75.8},{"name":"hollow oak cache","u":27.8,"s":72.8}],"town":{"r":10,"gates":[{"name":"north gate (from Act I)","du":-2,"ds":-9.5},{"name":"east gate (to the Cartway)","du":9.5,"ds":-1}],"stations":[{"who":"MARA VENN","role":"reeve, quests","du":-1.6,"ds":0.2,"prop":"the bell (centre)","pdu":0,"pds":0},{"who":"TAMSIN FLINT","role":"smith","du":-5.2,"ds":0.4,"prop":"forge + anvil","pdu":-7,"pds":-0.6},{"who":"BRAM TOLL","role":"merchant","du":-5,"ds":4.4,"prop":"wagon stall","pdu":-6.6,"pds":4},{"who":"NELLA REED","role":"potions","du":2.6,"ds":-4.2,"prop":"potion counter","pdu":3.8,"pds":-4.4},{"who":"SISTER EDDA","role":"keeper of the dead","du":5,"ds":4.2,"prop":"memorial stone","pdu":6.2,"pds":4},{"who":"RENN PIKE","role":"foreman (after the rescue)","du":-3.6,"ds":-4.4,"prop":"mine-office desk + map","pdu":-4.4,"pds":-5}],"props":[{"name":"well","du":2.2,"ds":1.4},{"name":"houses (scenery, round the square)","du":0,"ds":8}]},"woodsFringe":6,"roadFringe":4,"gridRows":8};
+REGIONS.cinder = {"name":"THE CINDERWORKS","act":2,"region":2,"size":100,"lvlShift":3,"start":"landing","exit":"southroad","back":[-36.4,47.0],"bridgeW":1.3,"clearings":[{"id":"landing","name":"HAUL GATE LANDING","u":-32.2,"s":47.0,"r":4,"level":0},{"id":"oreyard","name":"ORE YARD","u":-20.2,"s":47.0,"r":8,"level":8},{"id":"crane","name":"CRANE SPUR","u":-15.8,"s":26.4,"r":5,"level":8},{"id":"wheel","name":"SILENT WHEEL YARD","u":-6.8,"s":40.9,"r":8,"level":8,"lvlTo":9},{"id":"trail","name":"CREW TRAIL","u":11.2,"s":49.2,"r":5,"level":9},{"id":"forecourt","name":"SILKSHAFT FORECOURT","u":21.0,"s":45.4,"r":8,"level":9,"lvlTo":10},{"id":"furnaces","name":"COLD FURNACES","u":-12.8,"s":65.2,"r":9,"level":9},{"id":"fordside","name":"THE FORD","u":-3.8,"s":69.8,"r":4,"level":9},{"id":"glassway","name":"GLASSVEIN BRANCH","u":16.5,"s":26.4,"r":5,"level":9},{"id":"ashyard","name":"ASH SORTING YARD","u":19.5,"s":62.2,"r":8,"level":9,"lvlTo":10},{"id":"sluice","name":"SOUTH SLUICE","u":12.8,"s":78.1,"r":6,"level":10},{"id":"southroad","name":"TO THE BROKEN FLANK","u":25.5,"s":85.0,"r":4,"level":0}],"roads":[{"from":"landing","to":"oreyard","w":4,"main":true},{"from":"oreyard","via":[[-12.8,44.7]],"to":"wheel","w":3,"main":true},{"from":"oreyard","via":[[-18.0,35.6]],"to":"crane","w":2},{"from":"oreyard","via":[[-9.8,50.8],[-2.2,50.8],[3.8,50.8]],"to":"trail","w":4,"main":true},{"from":"trail","to":"forecourt","w":4,"main":true},{"from":"trail","via":[[10.5,56.8]],"to":"ashyard","w":3},{"from":"ashyard","via":[[10.5,66.7],[3.8,69.8]],"to":"fordside","w":3},{"from":"fordside","to":"furnaces","w":3},{"from":"furnaces","via":[[-21.8,59.1]],"to":"oreyard","w":3},{"from":"forecourt","via":[[12.8,35.6]],"to":"glassway","w":2},{"from":"ashyard","via":[[13.5,70.5]],"to":"sluice","w":3,"main":true},{"from":"sluice","via":[[20.2,78.9]],"to":"southroad","w":4,"main":true}],"water":[{"name":"the works river","path":[[5.2,9.0],[6.0,25.7],[3.8,39.4],[3.8,50.8],[3.0,59.9],[3.8,69.8],[2.2,80.4],[0.8,91.0]],"w":5}],"cliffs":[{"name":"silkshaft crags","path":[[15.0,34.8],[24.0,32.5],[32.2,35.6],[34.5,45.4]],"w":3},{"name":"glassvein crags","path":[[21.0,19.6],[31.5,16.6],[35.2,25.7]],"w":2},{"name":"east wall","path":[[35.2,51.5],[34.5,66.7],[33.0,77.4]],"w":2},{"name":"south-west crags","path":[[-31.5,71.3],[-22.5,80.4],[-9.0,84.2]],"w":3},{"name":"north-west crags","path":[[-33.0,30.2],[-25.5,19.6],[-15.0,16.6]],"w":2}],"doors":[{"id":"silkshaft","name":"SILKSHAFT","u":23.2,"s":37.8,"dungeon":"caves","floors":1,"boss":"broodmother","plain":true},{"id":"glassvein","name":"GLASSVEIN GROTTO","u":27.8,"s":18.8,"dungeon":"caves","floors":1,"plain":true}],"gates":[{"id":"flooded road","kind":"flood","at":[21.0,80.4],"opens":"drained","pools":[[19.5,78.9,3.4],[22.5,81.9,3.2]]}],"landmarks":[{"name":"the silent wheel","u":-3.8,"s":35.6,"prop":"waterwheel","id":"wheel","extra":[["cabin",-3.4,0.4,3,3],["crate",-1.5,3],["barrel",0.5,3.5],["crate",-5.5,2]]},{"name":"ore yard shelter","u":-21.8,"s":42.4},{"name":"loading crane","u":-17.2,"s":23.4,"prop":"crane"},{"name":"kiln a","u":-17.2,"s":62.2,"prop":"kiln"},{"name":"kiln b","u":-12.8,"s":61.4,"prop":"kiln"},{"name":"kiln c","u":-8.2,"s":62.2,"prop":"kiln"},{"name":"ash kiln","u":15.8,"s":59.9,"prop":"kiln","extra":[["cart",3.5,2,2,1],["crate",-2,2]]},{"name":"the south sluice","u":12.0,"s":75.8,"prop":"sluice","propOn":"sluiceon","on":"drained","id":"sluice"},{"name":"escape passage","u":30.8,"s":41.6,"prop":"grate","id":"grate"},{"name":"crew trail 1","u":7.5,"s":50.0,"prop":"minerscrap"},{"name":"crew trail 2","u":12.8,"s":47.0,"prop":"minerscrap"},{"name":"crew trail 3","u":16.5,"s":47.7,"prop":"minerscrap"}],"packs":[{"at":"oreyard","id":"shaleripper","n":1,"count":1,"exact":true},{"at":"crane","id":"digger","n":2,"count":1},{"at":"wheel","id":"brigand","n":2,"count":1},{"at":"wheel","id":"rusk","n":1,"count":1,"exact":true,"with":["brigand","mastiff"],"u":-6.8,"s":38.6},{"at":"trail","id":"spider","n":3,"count":1},{"at":"forecourt","id":"spider","n":3,"count":2},{"at":"furnaces","id":"cinderhusk","n":1,"count":1,"exact":true},{"at":"furnaces","id":"digger","n":3,"count":1},{"at":"fordside","id":"digger","n":2,"count":1},{"at":"glassway","id":"slime","n":3,"count":1,"with":"sporecap"},{"at":"ashyard","id":"shaleripper","n":1,"count":1,"exact":true},{"at":"ashyard","id":"digger","n":2,"count":1},{"at":"sluice","id":"cinderhusk","n":1,"count":1,"exact":true},{"at":"sluice","id":"fallen","n":2,"count":1}],"caches":[{"name":"crane cache","u":-14.2,"s":24.2},{"name":"survey cache","u":13.5,"s":24.2},{"name":"ash cache","u":31.5,"s":58.4}],"woodsFringe":6,"roadFringe":4,"gridRows":8};
 // @regions:end
 function genRegion(R, A, D) {
   const CL = Object.fromEntries(D.clearings.map(c => [c.id, c])), cAt = id => US(CL[id].u, CL[id].s).map(v => v + 0.5);
-  const T = D.town, [cx, cy] = cAt('town'), RAD = T.r - 1.2, TA = (du, ds) => { const [a, b] = US(du, ds); return [cx + a * 0.7071, cy + b * 0.7071]; };
-  const gates = T.gates.map(g => { const p = TA(g.du, g.ds), a = Math.atan2(p[1] - cy, p[0] - cx); return { a, out: [cx + Math.cos(a) * (RAD + 2.5), cy + Math.sin(a) * (RAD + 2.5)] }; });
+  // round 116: a region need not have a town (the Cinderworks, the Broken Flank): then it starts at its `start` clearing, with the road back
+  const T = D.town || null, [cx, cy] = cAt(T ? 'town' : D.start), RAD = T ? T.r - 1.2 : 0, TA = (du, ds) => { const [a, b] = US(du, ds); return [cx + a * 0.7071, cy + b * 0.7071]; };
+  const gates = !T ? [] : T.gates.map(g => { const p = TA(g.du, g.ds), a = Math.atan2(p[1] - cy, p[0] - cx); return { a, out: [cx + Math.cos(a) * (RAD + 2.5), cy + Math.sin(a) * (RAD + 2.5)] }; });
   const gateFor = p => gates.reduce((b, g) => Math.hypot(g.out[0] - p[0], g.out[1] - p[1]) < Math.hypot(b.out[0] - p[0], b.out[1] - p[1]) ? g : b);
   // ---- roads; one that starts or ends at the town runs to the nearest gate
   const road = (pts, w) => { for (let k = 0; k + 1 < pts.length; k++) addPath(pts[k], pts[k + 1], w, R); };
@@ -663,7 +665,7 @@ function genRegion(R, A, D) {
   LV.bridges = [];
   for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
     if (riverD(i + 0.5, j + 0.5) >= 0.05) continue;
-    if (pathD(i + 0.5, j + 0.5) < 0.35) { LV.solid[tIdx(i, j)] = 0; LV.bridges.push([i, j]); } else LV.solid[tIdx(i, j)] = 1;
+    if (pathD(i + 0.5, j + 0.5) < (D.bridgeW || 0.35)) { LV.solid[tIdx(i, j)] = 0; LV.bridges.push([i, j]); } else LV.solid[tIdx(i, j)] = 1;
   }
   const small = (kind, i, j, extra = {}) => { if (i < 0 || j < 0 || i >= MW || j >= MH) return false; const k = tIdx(i, j); if (LV.solid[k] && !LV.thick[k]) return false; LV.solid[k] = 1; LV.thick[k] = 0; LV.decor = LV.decor.filter(d => !(d.kind === 'tree' && d.i === i && d.j === j)); LV.decor.push({ kind, i, j, seed: i * 7 + j, ...extra }); return true; };
   // ---- cliffs: ridges of boulders (never on a road)
@@ -674,6 +676,11 @@ function genRegion(R, A, D) {
       for (let s = 0; s <= n; s++) { const t = s / n, fi = a + (c - a) * t, fj = b + (d - b) * t; for (let q = -(cl.w - 1) / 2; q <= (cl.w - 1) / 2; q++) { const i = Math.floor(fi + q * 0.7), j = Math.floor(fj - q * 0.7); if (i < 0 || j < 0 || i >= MW || j >= MH || pathD(i + 0.5, j + 0.5) < 2.2 || LV.decor.some(e => e.kind === 'rock' && e.i === i && e.j === j)) continue; small('rock', i, j, { seed: (i * 3 + j) % 5, big: true }); } }
     }
   }
+  const solidRect = (i0, j0, w, h) => { for (let j = j0; j < j0 + h; j++) for (let i = i0; i < i0 + w; i++) LV.solid[tIdx(i, j)] = 1; };
+  const put = (kind, p, w, h, extra = {}) => { const i = Math.round(p[0] - w / 2), j = Math.round(p[1] - h / 2); solidRect(i, j, w, h); LV.decor.push({ kind, i, j, w, h, ...extra }); };
+  const lamp = p => LV.decor.push({ kind: 'lantern', fi: p[0], fj: p[1] });
+  const putA2 = (prop, p, extra = {}) => { const F = (typeof A2PROPS !== 'undefined' && A2PROPS[prop] && A2PROPS[prop].foot) || [1, 1]; put('a2', p, F[0], F[1], { prop, ...extra }); };   // an Act II landmark (props_act2.js)
+  if (T) {
   // ---- the town: a ring of sharpened logs with its gates, the bell in the middle, everyone at a station
   const inGate = a => gates.some(g => Math.abs(((a - g.a + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < 0.19);
   for (let k = 0; k < 170; k++) {
@@ -684,9 +691,6 @@ function genRegion(R, A, D) {
   }
   for (const g of gates) for (const sd of [-1, 1]) LV.decor.push({ kind: 'lantern', fi: cx + Math.cos(g.a + sd * 0.24) * (RAD + 0.4), fj: cy + Math.sin(g.a + sd * 0.24) * (RAD + 0.4) });
   LV.plaza = { x: cx, y: cy, r: 3.4 }; LV.cobble = { x: cx, y: cy, r: RAD - 0.6 };
-  const solidRect = (i0, j0, w, h) => { for (let j = j0; j < j0 + h; j++) for (let i = i0; i < i0 + w; i++) LV.solid[tIdx(i, j)] = 1; };
-  const put = (kind, p, w, h, extra = {}) => { const i = Math.round(p[0] - w / 2), j = Math.round(p[1] - h / 2); solidRect(i, j, w, h); LV.decor.push({ kind, i, j, w, h, ...extra }); };
-  const lamp = p => LV.decor.push({ kind: 'lantern', fi: p[0], fj: p[1] });
   const S = Object.fromEntries(T.stations.map(s => [s.who.split(' ')[0], s]));
   small('bell', Math.floor(cx), Math.floor(cy));
   { const w = T.props.find(q => q.name === 'well'); if (w) small('well', ...TA(w.du, w.ds).map(Math.floor)); }
@@ -697,11 +701,13 @@ function genRegion(R, A, D) {
   put('cabin', TA(S.RENN.pdu - 1.2, S.RENN.pds - 1.6), 3, 3); small('crate', ...TA(S.RENN.pdu + 1.4, S.RENN.pds + 0.6).map(Math.floor));
   put('cabin', TA(0.6, 7.4), 3, 3); put('cabin', TA(7.6, 1.6), 3, 3); small('barrel', ...TA(-2.8, 6.6).map(Math.floor)); small('crate', ...TA(4.4, 6.0).map(Math.floor));   // houses round the square (scenery)
   for (const p of [TA(-2.6, -2.2), TA(2.8, 2.6), TA(-2.4, 3.0), TA(3.0, -1.6)]) lamp(p);
+  }
   // ---- dungeon doors
   LV.doorsAt = {};
   for (const d of D.doors) {
     const p = US(d.u, d.s).map(v => v + 0.5); LV.doorsAt[d.id] = p;
     put(d.dungeon === 'crypt' ? 'barrow' : 'mine', p, 2, 2);
+    if (d.plain) continue;
     if (d.danger) { for (const sd of [-1, 1]) lamp([p[0] + 1.9 + sd * 0.2, p[1] + 0.6 + sd * 1.6]); LV.decor.push({ kind: 'signpost', fi: p[0] + 3.6, fj: p[1] + 2.4 }); for (let n = 0; n < 8; n++) small('grave', Math.floor(p[0] + 2.5 + (n % 4) * 1.8), Math.floor(p[1] + 3 + Math.floor(n / 4) * 2.2 + (n % 2)), { seed: n }); }
     else { put('woodpile', [p[0] + 3.2, p[1] + 0.4], 2, 1); put('cart', [p[0] + 0.6, p[1] + 3.4], 2, 1); }
   }
@@ -712,10 +718,13 @@ function genRegion(R, A, D) {
     else if (/shelter/.test(lm.name)) { put('woodpile', [a + 0.5, b + 0.5], 2, 1); put('woodpile', [a + 0.5, b + 2], 2, 1); small('crate', a + 2, b); }
     else if (/oak/.test(lm.name)) { small('tree', a, b, { tree: 'oak', seed: 3, big: true }); for (const [x, y] of [[-1, 1], [1, -1], [1, 1]]) small('stump', a + x * 2, b + y * 2); }
     else if (/DANGER/.test(lm.name)) LV.decor.push({ kind: 'signpost', fi: a + 0.5, fj: b + 0.5 });
+    if (lm.prop) { putA2(lm.on && storyF()['a2' + lm.on] ? lm.propOn : lm.prop, [a + 0.5, b + 0.5], lm.light ? { light: lm.light } : {}); (LV.marks = LV.marks || {})[lm.id || lm.prop] = [a + 0.5, b + 0.5]; }
+    for (const x of lm.extra || []) { const q = [a + 0.5 + x[1], b + 0.5 + x[2]]; if (x[0] === 'lantern') lamp(q); else if (typeof A2PROPS !== 'undefined' && A2PROPS[x[0]]) putA2(x[0], q); else if (x[3]) put(x[0], q, x[3], x[4] || x[3]); else small(x[0], Math.floor(q[0]), Math.floor(q[1])); }
   }
   // ---- the gate the story opens (stage 1: it stands open; the Rescue Pit will hold its key)
   { const g = D.gates && D.gates[0]; if (g) { const p = US(g.at[0], g.at[1]).map(v => v + 0.5), open = !g.opens || !!storyF()['a2' + g.opens] || !storyOn(); LV.regGate = { p, open, name: g.id };   // (round 116: shut until the story opens it; act2.js `exitBarred` holds the way on)
-    if (open) LV.decor.push({ kind: 'gateo', i: Math.floor(p[0]), j: Math.floor(p[1]), w: 1, h: 1 }); else put('gate', p, 1, 1); } }
+    if (g.kind === 'flood') { if (!open) for (const q of g.pools) { const [x, y] = US(q[0], q[1]).map(v => v + 0.5), rx = q[2], ry = q[2] * 0.85; LV.ponds.push({ x, y, rx, ry, seed: R.int(1, 1e6) }); for (let j = Math.floor(y - ry - 1); j <= y + ry + 1; j++) for (let i = Math.floor(x - rx - 1); i <= x + rx + 1; i++) if (i > 0 && j > 0 && i < MW && j < MH && pondD(i + 0.5, j + 0.5) < 1.1) LV.solid[tIdx(i, j)] = 1; } }   // (a drowned stretch of road: the sluice drains it)
+    else if (open) LV.decor.push({ kind: 'gateo', i: Math.floor(p[0]), j: Math.floor(p[1]), w: 1, h: 1 }); else put('gate', p, 1, 1); } }
   // ---- caches
   LV.cacheAt = {};
   for (const c of D.caches) {
@@ -733,22 +742,26 @@ function genRegion(R, A, D) {
   }
   LV.decor.push({ kind: 'meadow', seed: R.int(1, 1e6) });
   // ---- start, the way on, people
-  const st = TA(0.6, 2.6);
+  const st = T ? TA(0.6, 2.6) : [cx, cy];
   LV.rooms = [{ x: Math.floor(cx - 2), y: Math.floor(cy - 2), w: 4, h: 4, cx: Math.floor(st[0]), cy: Math.floor(st[1]) }]; LV.start = LV.rooms[0];
   { const e = cAt(D.exit || 'haul'); LV.stairs = { i: Math.floor(e[0] + 1), j: Math.floor(e[1] - 1), room: 0, road: true }; LV.decor.push({ kind: 'signpost', fi: e[0] - 0.6, fj: e[1] + 1.6 }); }
+  if (D.back) { const q = US(D.back[0], D.back[1]).map(v => v + 0.5); LV.regBack = q; LV.decor.push({ kind: 'signpost', fi: q[0] + 1.2, fj: q[1] + 1.6 }); }   // the road back to the region before (act2.js)
+  if (T) {
   const ROLE = { TAMSIN: 'smith', NELLA: 'merchant', MARA: 'mara', BRAM: 'bram', SISTER: 'edda', RENN: 'renn' };   // (round 116: the ones with something to say have roles of their own, act2.js)
   LV.npcs = T.stations.filter(s => !/after the rescue/.test(s.role) || storyF().a2gate).map(s => { const k = s.who.split(' ')[0], p = TA(s.du, s.ds); return { role: ROLE[k] || 'villager', name: s.who, fi: p[0], fj: p[1], who: k.toLowerCase() }; });
   for (const p of [TA(1.8, 5.2), TA(-0.6, -5.6)]) LV.npcs.push({ role: 'villager', fi: p[0], fj: p[1] });
+  }
   // ---- packs, at each clearing's level
   for (const p of D.packs) {
+    if (!MONSTERS[p.id]) continue;
     const c = CL[p.at], [a, b] = US(c.u, c.s);
     for (let q = 0; q < p.count; q++) {
-      const ang = R() * 6.283, rr = c.r * (p.count > 1 ? 0.55 : 0.25) * Math.sqrt(R()), px = a + 0.5 + Math.cos(ang) * rr, py = b + 0.5 + Math.sin(ang) * rr, lvl = (c.lvlTo ? R.int(c.level, c.lvlTo) : c.level) + (D.lvlShift || 0);
-      for (let m = 0, pn = SWARM ? Math.ceil(p.n * PACK_K) : p.n; m < pn; m++) LV.spawns.push({ id: p.id, fi: px + (R() - 0.5) * (SWARM ? 4.2 : 2.2), fj: py + (R() - 0.5) * (SWARM ? 4.2 : 2.2), lvl });
-      if (p.with) LV.spawns.push({ id: p.with, fi: px + 0.6, fj: py - 0.6, lvl });
+      const ang = R() * 6.283, rr = c.r * (p.count > 1 ? 0.55 : 0.25) * Math.sqrt(R()), at = p.u !== undefined ? US(p.u, p.s) : null, px = at ? at[0] + 0.5 : a + 0.5 + Math.cos(ang) * rr, py = at ? at[1] + 0.5 : b + 0.5 + Math.sin(ang) * rr, lvl = (c.lvlTo ? R.int(c.level, c.lvlTo) : c.level) + (D.lvlShift || 0);
+      for (let m = 0, pn = p.exact ? p.n : SWARM ? Math.ceil(p.n * PACK_K) : p.n; m < pn; m++) LV.spawns.push({ id: p.id, fi: px + (R() - 0.5) * (SWARM ? 4.2 : 2.2), fj: py + (R() - 0.5) * (SWARM ? 4.2 : 2.2), lvl });
+      for (const w of p.with ? [].concat(p.with) : []) LV.spawns.push({ id: w, fi: px + 0.6 + R() * 0.8, fj: py - 0.6 - R() * 0.8, lvl });
     }
   }
-  LV.safe = { x: cx, y: cy, r: RAD + 6 };
+  LV.safe = { x: cx, y: cy, r: T ? RAD + 6 : 7 };
   LV.spawns = LV.spawns.filter(s => Math.hypot(s.fi - cx, s.fj - cy) > LV.safe.r);
 }
 
@@ -1627,6 +1640,11 @@ function buildOutdoor(back) {
       props.push({ depth: d.i + d.j + 1, sp: OUT.campfire(), wx: x, wy: y + 2, tile: tIdx(d.i, d.j) });
       fires.push({ wx: x, wy: y - 2, h: 14, w: 5, seed: d.i * 31 + d.j, ember: 0.12, tile: tIdx(d.i, d.j) });
       { const dk = LV.dusk && DUSK_ON; lights.push({ x, y, z: 16, r: LV.night ? 150 : dk ? 150 : 90, i: LV.night ? 0.9 : dk ? 0.62 : 0.35, seed: d.i + d.j * 7 }); }
+    } else if (d.kind === 'a2') {   // round 116: Act II's landmarks (props_act2.js)
+      const P = typeof A2PROPS !== 'undefined' && A2PROPS[d.prop]; if (!P) continue;
+      const ci = d.i + d.w / 2, cj = d.j + d.h / 2, [x, y] = iso(ci, cj);
+      props.push({ depth: ci + cj + 0.5, sp: P.sp(), wx: x, wy: y, tile: tIdx(d.i + d.w - 1, d.j + d.h - 1) }); shadows.push([x + 8, y + 5, (d.w + d.h) * 10, (d.w + d.h) * 5]);
+      if (d.light || P.light) lights.push({ x, y, z: 18, r: 90, i: 0.5, seed: d.i * 3 + d.j });
     } else if (BUILD[d.kind.replace('2', '')] || d.kind === 'stall2') {   // (the open gate 'gateo' has no footprint: it is walked through)
       const dw = d.w || 1, dh = d.h || 1, ci = d.i + dw / 2, cj = d.j + dh / 2, [x, y] = iso(ci, cj);   // forest tents have no footprint size
       const sp = d.kind === 'stall' ? BUILD.stall(0) : d.kind === 'stall2' ? BUILD.stall(1) : BUILD[d.kind]();

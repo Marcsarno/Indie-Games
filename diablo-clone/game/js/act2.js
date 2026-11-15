@@ -350,3 +350,282 @@ function updateWarden(e, dt, d, dx, dy) {
   e.atk = -1; return true;
 }
 Object.assign(BOSS_UPDATE, { pitenforcer: (...a) => updateEnforcer(...a), blackwarden: (...a) => updateWarden(...a) });
+
+// ================================================================ Region 2: THE CINDERWORKS (level 7)
+// In from the Haul Gate (west). RUSK THE TOLLMAN and his brigands hold the SILENT WHEEL (he has Bram's lockbox,
+// and a crew tally that points on to Silkshaft) -> over the bridge, at SILKSHAFT's mouth, MAELIS shows the old
+// king's seal and leaves by the service passage, dropping its grate -> SILKSHAFT: the BROODMOTHER; the night crew
+// cut free, the sluice handle -> the SOUTH SLUICE drains the road south. Optional: GLASSVEIN GROTTO (Nella's salts).
+// From here on: the SHALE RIPPER (it burrows, comes up under a marked spot) and the CINDER HUSK (it lobs embers).
+const A2_NEXT = { ashford: 'THE CINDERWORKS', cinder: 'THE BROKEN FLANK', flank: 'GREYMARSH' }, A2_PREV = { cinder: 'ASHFORD VALE', flank: 'THE CINDERWORKS' };
+const a2Steer = () => Math.hypot(input.mx, input.my) >= 0.18 || input.keys.size > 0 || !!hero.goTalk;
+const a2Place = id => { const D = REGIONS[LV.reg], c = D && D.clearings.find(c => c.id === id); return c ? US(c.u, c.s).map(v => v + 0.5) : null; };
+MONSTERS.rusk = { family: 'hero', name: 'RUSK THE TOLLMAN', title: 'HE TAXES THE DEAD WHEEL', minLevel: 99, where: 'act2', look: { team: 'red', helm: 'cap', chest: 'brigandine', weapon: 'sword', shield: 'none', hair: 'bald', beard: true, cape: 'red' }, hp: 100, dmg: [6, 11], speed: 34, reach: 1.5, xp: 180, chest: 24, shadow: 8, unique: true };
+MONSTERS.glassmaw = { family: 'slime', name: 'THE GLASSVEIN MAW', minLevel: 99, where: 'act2', look: { blue: true, big: true, scale: 1.6 }, hp: 110, dmg: [5, 9], speed: 22, reach: 1.7, xp: 120, chest: 20, shadow: 14, elite: true };
+Object.assign(SIDES, {
+  silkshaft: { name: 'SILKSHAFT', theme: 'caves', rooms: 9, pool: ['spider', 'spider', 'spider', 'digger'], boss: 'broodmother', bossArena: true, arenaSize: [22, 17], at: 'cinder', diff: 10, door: a2Door('silkshaft'), label: 'SILKSHAFT', seed: 0x511c },
+  glassvein: { name: 'GLASSVEIN GROTTO', theme: 'caves', rooms: 6, pool: ['slime', 'slime', 'blueslime', 'sporecap', 'shroom'], boss: 'glassmaw', at: 'cinder', diff: 9, door: a2Door('glassvein'), label: 'GLASSVEIN GROTTO', seed: 0x61a5 },
+});
+Object.assign(BOSS_KINDS, { silkshaft: 'broodmother' });
+Object.assign(BOSS_HP, { rusk: 1.6, broodmother: 4.5 });
+const A2_FIELD = { rusk: 'rusk' };   // a boss met in the open (not in a side area's arena)
+{ const sb1 = setupBoss; setupBoss = function (...a) {
+  const r = sb1(...a);
+  if (a2On() && !LV.side && LV.outdoor) { const e = enemies.find(o => A2_FIELD[o.id] && alive(o)); if (e && !e.bossKind) { boss = e; e.bossKind = A2_FIELD[e.id]; e.pw = null; e.maxHp = e.hp = Math.round(e.maxHp * (BOSS_HP[e.bossKind] || 1.5)); e.special = 2.2; e.phase = 1; e.moves = 0; e.mv = null; } }
+  return r;
+}; }
+{ const sl1 = startLevel; startLevel = function (...a) {
+  const r = sl1(...a);
+  if (LV.reg && LV.stairs && !LV.side) LV.stairs.to = A2_NEXT[LV.reg];
+  if (LV.side === 'silkshaft') for (const p of dynProps) if (p.kind === 'egg') p.hatch = 999;   // her egg sacs sleep until she wakes them
+  G.a2Fx = []; G.a2Scene = null;
+  return r;
+}; }
+// her two clutches of eggs, to either side of her arena
+{ const se1 = sideExtras; sideExtras = function (kind) {
+  se1(kind);
+  if (kind !== 'silkshaft') return;
+  const r = LV.rooms[LV.leaderRoom]; if (!r) return;
+  const ok = (i, j) => { for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) if (tileAt(i + a, j + b) !== FLOOR || LV.solid[tIdx(i + a, j + b)]) return false; return true; };
+  const c = []; for (let j = r.y + 2; j < r.y + r.h - 2; j++) for (let i = r.x + 2; i < r.x + r.w - 2; i++) if (ok(i, j) && Math.hypot(i - r.cx, j - r.cy) > 4) c.push([i, j]);
+  if (c.length < 2) return;
+  const lo = c.reduce((m, p) => p[0] - p[1] < m[0] - m[1] ? p : m), hi = c.reduce((m, p) => p[0] - p[1] > m[0] - m[1] ? p : m);
+  for (const [i, j] of [lo, hi]) { LV.decor.push({ kind: 'egg', i, j, seed: i * 7 + j }); LV.solid[tIdx(i, j)] = 1; }
+}; }
+{ const qk1 = questKill; questKill = function (id) {
+  qk1(id);
+  if (!a2On()) return;
+  const f = a2F();
+  if (id === 'rusk' && !f.a2rusk) { f.a2rusk = true; a2Got('box', "BRAM'S LOCKBOX"); say('A CREW TALLY ON HIS BELT:', 26, 4.5); say('"NIGHT CREW TO SILKSHAFT. NONE BACK."', 51, 4.5); }
+  if (id === 'broodmother' && LV.side === 'silkshaft' && !f.a2brood) { f.a2brood = true; say('THE NIGHT CREW IS CUT FREE', 51, 4); questBanner('FOUND', 'THE SLUICE HANDLE', 51); sfx('levelUp'); }
+  if (id === 'glassmaw') { a2Got('salts', 'CRYSTAL SALTS (FOR NELLA)'); const e = enemies.find(o => o.id === 'glassmaw' && o.dying >= 0 && !o.split); if (e) { e.split = true; for (let k = 0; k < 3; k++) { const a = k * 2.1, s2 = makeEnemy('blueslime', e.fi + Math.cos(a) * 0.9, e.fj + Math.sin(a) * 0.9, enemies.length, e.lvl); s2.state = 'hunt'; s2.noLoot = true; enemies.push(s2); } say('IT SPLITS!', 22, 1.6); } }
+  saveGame();
+}; }
+// the sluice: the handle from Silkshaft fits it, and the road south drains
+{ const at1 = actionTarget; actionTarget = function () {
+  const a = at1(); if (a || !a2On() || LV.reg !== 'cinder' || LV.side || !LV.marks || !LV.marks.sluice) return a;
+  const f = a2F(), p = LV.marks.sluice; if (f.a2drained || Math.hypot(p[0] - hero.fi, p[1] - hero.fj) > 3.2) return a;
+  if (!f.a2brood) { if (!(G.sealT > 0)) { say('THE WINDLASS HAS NO HANDLE', 22, 2.5); G.sealT = 3; } return a; }
+  return { label: 'FIT THE HANDLE', go: () => { f.a2drained = true; sfx('chest'); sfx('clank'); a2Rebuild('THE ROAD SOUTH IS DRAINED'); } };
+}; }
+{ const eb0 = exitBarred; exitBarred = function () {
+  if (LV.regGate && !LV.regGate.open && LV.reg === 'cinder') { if (!(G.sealT > 0)) { say('THE ROAD SOUTH IS UNDER WATER', 22, 3); say(a2F().a2brood ? 'FIT THE HANDLE AT THE SLUICE' : 'THE SLUICE WOULD DRAIN IT. ITS HANDLE IS GONE', 26, 3); G.sealT = 3.5; } return true; }
+  return eb0();
+}; }
+{ const ez0 = exitZones; exitZones = function () { const Z = ez0(); if (LV.regBack && !LV.side) Z.push({ fi: LV.regBack[0], fj: LV.regBack[1], r: EXIT_R.road, col: 1 }); return Z; }; }
+{ const tg1 = storyTarget; storyTarget = function () {
+  if (!a2On() || (LV.reg !== 'cinder' && LV.side !== 'silkshaft' && LV.side !== 'glassvein')) return tg1();
+  if (portalHome()) { if (G.tp && !G.tp.back) return [G.tp.fi, G.tp.fj]; return null; }
+  const st = a2Stage(), stairs = () => LV.stairs ? [LV.stairs.i + 0.5, LV.stairs.j + 0.5] : null, bossAt = () => boss && alive(boss) ? [boss.fi, boss.fj] : null;
+  if (LV.side === 'silkshaft') return st === 'a2brood' ? bossAt() || stairs() : stairs();
+  if (LV.side) return stairs();
+  if (st === 'a2wheel') return bossAt() || (LV.marks && LV.marks.wheel) || stairs();
+  if (st === 'a2silk') return a2Place('forecourt');
+  if (st === 'a2brood') return SIDES.silkshaft.door();
+  if (st === 'a2sluice') return (LV.marks && LV.marks.sluice && [LV.marks.sluice[0] + 1.6, LV.marks.sluice[1] + 1.4]) || stairs();
+  if (st === 'a2back') return LV.regBack;
+  return stairs();
+}; }
+// the road back west, Maelis at Silkshaft's mouth, and the hazards of the two new monsters
+{ const us1 = updateStory; updateStory = function (dt) {
+  us1(dt);
+  if (LV.regBack && !LV.side && !G.fadeTo) {
+    const d = Math.hypot(LV.regBack[0] - hero.fi, LV.regBack[1] - hero.fj);
+    if (d > EXIT_R.road + 0.9) G.a2BackArmed = true;
+    if (G.a2BackArmed && d < EXIT_R.road && a2Steer()) { G.a2BackArmed = false; sfx('stairs'); const lv = LV.level - 1, sd = (Math.imul((LV.seed - 17) | 0, 0xbdef7bdf | 0)) >>> 0; G.fadeTo = () => { G.portal = null; startLevel(lv, sd); if (LV.stairs) { hero.fi = LV.stairs.i - 2.5; hero.fj = LV.stairs.j + 2.5; unstickHero(); updateFov(hero.fi, hero.fj); } saveGame(); }; }
+  }
+  if (!a2On()) return;
+  a2MaelisScene(dt); a2TickFx(dt);
+}; }
+function a2MaelisScene(dt) {
+  const f = a2F(); if (f.a2maelis || LV.reg !== 'cinder' || LV.side || a2Stage() !== 'a2silk' || G.mode !== 'play') return;
+  const C = a2Place('forecourt'), S = G.a2Scene;
+  if (!S) { if (C && Math.hypot(C[0] - hero.fi, C[1] - hero.fj) < 6 && !foesNear(8) && !hero.dead && !G.fadeTo) G.a2Scene = { t: 0, ph: 'wait' }; return; }
+  S.t += dt; const m = npcs.find(n => n.maelis);
+  if (S.ph === 'wait' && S.t > 0.8) {
+    const d = SIDES.silkshaft.door(); let spot = [d[0] + 1.2, d[1] + 1.2]; for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283, q = [d[0] + Math.cos(a) * 2.2, d[1] + Math.sin(a) * 2.2]; if (!blocked(q[0], q[1]) && Math.hypot(q[0] - hero.fi, q[1] - hero.fj) > 2) { spot = q; break; } }
+    npcs.push({ role: 'maelis', name: MAELIS, maelis: true, fam: 'hero', look: NPC_LOOKS.maelis, fi: spot[0], fj: spot[1], home: spot, dir: dirFrom(hero.fi - spot[0], hero.fj - spot[1]), clip: 'idle', clock: 0, walk: 0, wait: 99, target: null, npc: true });
+    maelisFlash(spot[0], spot[1]); S.ph = 'appear'; S.t = 0;
+  } else if (S.ph === 'appear' && S.t > 1.1 && m) {
+    S.ph = 'talk'; hero.atk = -1; clearInput();
+    openTalk([
+      [MAELIS, "OSRIC'S HOUND, ALL THE WAY FROM OAKHOLLOW. YOU ARE PERSISTENT. I WILL GIVE YOU THAT."],
+      [MAELIS, 'DO YOU KNOW WHAT THE OLD KING KEPT IN HIS GRAVE? NOT GOLD. THIS SEAL. HIS FATHERS SHUT SOMETHING UNDER THIS MOUNTAIN WITH IT.'],
+      [MAELIS, 'THE MINERS DUG SO CLOSE TO THE DOOR. I ONLY HAVE TO OPEN IT. THE SPIDERS MAY KEEP THE MINERS.']], 'OK', () => { S.ph = 'flee'; S.t = 0; });
+  } else if (S.ph === 'flee' && m) {
+    const g = (LV.marks && LV.marks.grate) || [m.fi + 4, m.fj - 2], dx = g[0] - m.fi, dy = g[1] - m.fj, d = Math.hypot(dx, dy) || 1;
+    m.dir = dirFrom(dx, dy); m.clip = 'walk'; m.walk += dt * 9; tryMove(m, dx / d * dt * 3.2, dy / d * dt * 3.2, 0.2);
+    if (S.t > 2.2 || d < 1.6) { maelisFlash(m.fi, m.fj); npcs.splice(npcs.indexOf(m), 1); G.a2Scene = null; f.a2maelis = true; sfx('clank'); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.4); say('A GRATE DROPS BEHIND HIM', 55, 4); say('THE CREW WENT INTO SILKSHAFT', 26, 4); saveGame(); }
+  }
+  if (m && Math.random() < 0.5) { const [x, y] = iso(m.fi, m.fj); pspawn(3, x + 7 + (Math.random() - 0.5) * 3, y, 13 + Math.random() * 3, (Math.random() - 0.5) * 4, 0, 6 + Math.random() * 8, 0.6, Math.random() < 0.6 ? 55 : 54); }
+}
+
+// ---------------------------------------------------------------- warnings and hazards of ordinary monsters
+// G.a2Fx: { kind: 'disc', c, R, t, dur, done: fn } a marked circle that fills, then `done`; { kind: 'ember', a, b, t, dur } an ember in the air
+function a2TickFx(dt) {
+  const L = G.a2Fx || (G.a2Fx = []);
+  for (const f of L) { f.t += dt; if (f.t >= f.dur && !f.gone) { f.gone = true; if (f.done) f.done(); } }
+  if (L.some(f => f.gone)) G.a2Fx = L.filter(f => !f.gone);
+}
+{ const dt0 = drawTelegraph; drawTelegraph = function (...a) {
+  const r = dt0(...a), L = G.a2Fx; if (!L || !L.length) return r;
+  const pulse = Math.floor(G.t * 10) % 2, edge = (pulse ? RED[4] : RED[3]) | EMIS, fill = RED[2] | EMIS;
+  for (const f of L) {
+    if (f.kind === 'disc') {
+      const u = Math.min(1, f.t / f.dur), [cx, cy] = scrAt(f.c[0], f.c[1]), rx = f.R * 22.6, ry = rx / 2;
+      for (let q = 0; q < 220; q++) { const t = q / 220 * 6.283; for (const k of [1, 0.96]) scrPx(cx + Math.cos(t) * rx * k, cy + Math.sin(t) * ry * k, edge); }
+      for (let y = -ry * u; y <= ry * u; y++) for (let x = -rx * u; x <= rx * u; x++) if ((x / rx) ** 2 + (y / ry) ** 2 <= u * u && ((Math.round(cx + x) + Math.round(cy + y)) & 1) === 0) scrPx(cx + x, cy + y, fill);
+    } else if (f.kind === 'ember') {   // a lobbed ember: a high arc, a trail of sparks
+      const u = Math.min(1, f.t / f.dur), fi = f.a[0] + (f.b[0] - f.a[0]) * u, fj = f.a[1] + (f.b[1] - f.a[1]) * u, [x, y] = scrAt(fi, fj), z = Math.sin(u * Math.PI) * 46 + 14 * (1 - u);
+      for (let yy = -2; yy <= 2; yy++) for (let xx = -2; xx <= 2; xx++) if (xx * xx + yy * yy <= 5) scrPx(x + xx, y - z + yy, (xx * xx + yy * yy <= 1 ? 51 : 17) | EMIS);
+      if (Math.random() < 0.6) { const [wx, wy] = iso(fi, fj); pspawn(3, wx, wy, z, (Math.random() - 0.5) * 10, 0, -8, 0.35, 16); }
+    }
+  }
+  return r;
+}; }
+// ---------------------------------------------------------------- the SHALE RIPPER and the CINDER HUSK
+// Ripper: above ground it claws like any beast for a few seconds, then digs in. Below, nothing can hurt it; it
+// tunnels toward you (a moving trail of dirt), stops under you, and its mound shakes and spits stones for 0.9 s in a
+// marked circle before it bursts up (one mound warns at a time). Then it is in the open for a while.
+// Husk: at range its chest opens and an arm goes up (1 s), then it lobs an ember at a marked circle that burns 2 s.
+const RIP = { above: 3.6, tell: 0.9, R: 1.15, speed: 5.2 }, HUSK = { wind: 1.0, R: 1.25, fly: 0.55, burn: 2.2, cd: 4.5 };
+function a2Ripper(e, dt, d) {
+  const B = e.bur || (e.bur = { ph: 'up', t: 1 + Math.random() * 2 });
+  B.t -= dt;
+  if (B.ph === 'up') { if (B.t <= 0 && d < 10 && e.atk < 0 && !(e.frozen > 0) && !(e.stun > 0)) { B.ph = 'under'; B.t = 1.2 + Math.random() * 1.2; e.under = true; e.atk = -1; sfx('thunk', 0.6); const [x, y] = screenOf(e); burst(5, x, y, 2, 10, 50, DIRT[3]); } return false; }
+  e.clip = B.ph === 'erupt' ? 'erupt' : 'mound'; e.atk = -1; e.hurt = 0; e.kb = [0, 0];
+  if (B.ph === 'under') {
+    const dx = hero.fi - e.fi, dy = hero.fj - e.fj, l = Math.hypot(dx, dy) || 1;
+    if (l > 0.4) tryMove(e, dx / l * RIP.speed * dt, dy / l * RIP.speed * dt, 0.3);
+    if (Math.random() < dt * 14) { const [x, y] = screenOf(e); pspawn(5, x + (Math.random() - 0.5) * 8, y, 1, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 8, 22 + Math.random() * 14, 0.4, Math.random() < 0.5 ? DIRT[3] : S[4]); }
+    if ((B.t <= 0 || l < 0.6) && !(G.a2RipTell > G.t)) { B.ph = 'tell'; B.t = RIP.tell; G.a2RipTell = G.t + RIP.tell + 0.3; G.a2Fx.push({ kind: 'disc', c: [e.fi, e.fj], R: RIP.R, t: 0, dur: RIP.tell }); sfx('growl', 0.5); }
+    return true;
+  }
+  if (B.ph === 'tell') {
+    if (Math.random() < dt * 22) { const [x, y] = screenOf(e), a = Math.random() * 6.283; pspawn(6, x, y, 3, Math.cos(a) * 40, Math.sin(a) * 20, 60 + Math.random() * 50, 1.2, S[4]); }
+    if (B.t <= 0) { B.ph = 'erupt'; B.t = 0.26; e.eruptT = 0; e.under = false; sfx('boom', 0.5); if (SHAKE) G.trauma = Math.min(1, G.trauma + 0.2); const [x, y] = screenOf(e); burst(5, x, y, 4, 18, 90, DIRT[3]); burst(6, x, y, 6, 6, 70, S[4]); if (Math.hypot(hero.fi - e.fi, hero.fj - e.fj) < RIP.R) hurtHero(Math.round(roll(e.dmg) * 1.6), e); }
+    return true;
+  }
+  e.eruptT = (e.eruptT || 0) + dt;
+  if (B.t <= 0) { B.ph = 'up'; B.t = RIP.above; e.clip = 'idle'; e.cool = 0.3; }
+  return true;
+}
+function a2Husk(e, dt, d) {
+  e.lobCd = (e.lobCd === undefined ? 0.3 : e.lobCd) - dt;
+  const L = e.lob;
+  if (L) {
+    L.t += dt; e.clip = 'cast'; e.atk = L.t * 1000; e.dir = dirFrom(L.c[0] - e.fi, L.c[1] - e.fj);
+    if (!L.out && L.t >= HUSK.wind) { L.out = true; const c = L.c, src = e; G.a2Fx.push({ kind: 'ember', a: [e.fi, e.fj], b: c, t: 0, dur: HUSK.fly, done: () => { blast(src, c, HUSK.R, 1.2); fireField(src, c, HUSK.R * 0.85, HUSK.burn); } }); sfx('fireball', 0.5); }
+    if (L.t >= HUSK.wind + 0.45 || e.frozen > 0) { e.lob = null; e.atk = -1; e.clip = 'idle'; e.lobCd = HUSK.cd; }
+    return true;
+  }
+  if (e.lobCd <= 0 && d > 1.8 && d < 8.5 && e.atk < 0 && !(e.frozen > 0) && !(e.stun > 0) && los(e.fi, e.fj, hero.fi, hero.fj) && (G.a2Fx || []).filter(f => f.husk).length < 2) {
+    const c = heroAt(); e.lob = { t: 0, c }; G.a2Fx.push({ kind: 'disc', c, R: HUSK.R, t: 0, dur: HUSK.wind + HUSK.fly, husk: true }); return true;
+  }
+  return false;
+}
+{ const ue0 = updateEnemy; updateEnemy = function (e, dt) {
+  if (e.fam === 'ripper' || e.fam === 'husk') {
+    if (alive(e) && e.state !== 'sleep' && !hero.dead && !(e.downT > 0)) {
+      if (e.stop > 0) return ue0(e, dt);
+      const d = Math.hypot(hero.fi - e.fi, hero.fj - e.fj);
+      if (e.fam === 'ripper' ? a2Ripper(e, dt, d) : a2Husk(e, dt, d)) { e.clock += dt; e.flash = Math.max(0, e.flash - dt); return; }
+    } else if (e.under && !alive(e)) e.under = false;
+  }
+  return ue0(e, dt);
+}; }
+{ const de1 = damageEnemy; damageEnemy = function (e, ...a) { if (e && e.under) return; return de1(e, ...a); }; }   // below ground, nothing reaches it
+{ const fo0 = frameOf; frameOf = function (e) { return e.clip === 'mound' ? Math.floor(G.t * 10) % 4 : e.clip === 'erupt' ? Math.min(2, Math.floor((e.eruptT || 0) / 0.085)) : fo0(e); }; }
+
+// ---------------------------------------------------------------- RUSK THE TOLLMAN (the Silent Wheel)
+// LUNGE: the blade drawn back, a narrow lane, a fast lunge (three in a row when enraged). KNIFE FAN: thrown knives
+// down marked lanes (three, then five). THE TOLL: he whistles and his men come out of the wheelhouse.
+function updateRusk(e, dt, d, dx, dy) {
+  const p2 = e.phase === 2;
+  if (e.phase === 1 && e.hp < e.maxHp * 0.5 && !e.mv) { enrage(e, 'RUSK: NOBODY CROSSES FOR FREE'); return true; }
+  e.special -= dt;
+  if (e.mv) {
+    const M = e.mv; M.t += dt;
+    if (M.kind === 'lunge') {
+      const W = M.warn[0]; e.dir = dirFrom(W.b[0] - W.a[0], W.b[1] - W.a[1]);
+      if (M.t < M.wind) { e.clip = 'attack'; e.atk = 0; return true; }
+      const l = Math.hypot(W.b[0] - W.a[0], W.b[1] - W.a[1]), u = (M.t - M.wind) / (l / 15);
+      if (u < 1) { tryMove(e, W.a[0] + (W.b[0] - W.a[0]) * u - e.fi, W.a[1] + (W.b[1] - W.a[1]) * u - e.fj, 0.35); e.clip = 'attack'; e.atk = 300; if (!M.hit && Math.hypot(hero.fi - e.fi, hero.fj - e.fj) < 1.0) { M.hit = true; hitHero(e, 1.7, 0.4); } return true; }
+      if (p2 && (M.n || 0) < 2 && !hero.dead) { const ddx = hero.fi - e.fi, ddy = hero.fj - e.fj, dd = Math.hypot(ddx, ddy) || 1, l2 = laneEnd(e, ddx / dd, ddy / dd, 7); e.mv = { kind: 'lunge', t: 0, wind: 0.4, n: (M.n || 0) + 1, warn: [{ k: 'lane', a: [e.fi, e.fj], b: [e.fi + ddx / dd * l2, e.fj + ddy / dd * l2], w: 0.45 }] }; return true; }
+      e.mv = null; e.atk = -1; e.special = p2 ? 1.4 : 2.2; return true;
+    }
+    if (M.kind === 'fan') {
+      e.clip = 'attack'; e.atk = M.t < M.wind ? 0 : 260; e.dir = dirFrom(M.warn[0].b[0] - e.fi, M.warn[0].b[1] - e.fj);
+      if (M.t >= M.wind && !M.fired) { M.fired = true; sfx('swing'); for (const w of M.warn) bossFx.push({ kind: 'shot', src: e, a: w.a, b: w.b, t: 0, dur: Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) / 15 + 0.01, k: 1.1 }); }
+      if (M.t > M.wind + 0.6) { e.mv = null; e.atk = -1; e.special = p2 ? 1.3 : 2.1; }
+      return true;
+    }
+    if (M.kind === 'toll') {
+      e.clip = 'idle'; e.atk = -1; e.dir = dirFrom(hero.fi - e.fi, hero.fj - e.fj);
+      if (M.t >= 0.7 && !M.done) { M.done = true; const at = (LV.marks && LV.marks.wheel) || [e.fi, e.fj]; summonAround(e, 'brigand', 2, [at[0] - 2, at[1] + 2], 0.5, 3); if (p2) summonAround(e, 'mastiff', 1, [at[0] - 2, at[1] + 2], 0.5, 3); }
+      if (M.t > 1.1) { e.mv = null; e.special = p2 ? 1.6 : 2.4; }
+      return true;
+    }
+  }
+  if (e.special > 0 || d > 11 || !los(e.fi, e.fj, hero.fi, hero.fj)) return false;
+  const m = ++e.moves % 3, l0 = Math.hypot(dx, dy) || 1, ux = dx / l0, uy = dy / l0;
+  if (m === 1) { const l = laneEnd(e, ux, uy, 7); e.mv = { kind: 'lunge', t: 0, wind: 0.7, warn: [{ k: 'lane', a: [e.fi, e.fj], b: [e.fi + ux * l, e.fj + uy * l], w: 0.45 }] }; sfx('growl'); }
+  else if (m === 2) { const n = p2 ? 5 : 3, warn = []; for (let k = 0; k < n; k++) { const off = (k - (n - 1) / 2) * 0.3, c = Math.cos(off), s2 = Math.sin(off), vx = ux * c - uy * s2, vy = ux * s2 + uy * c, l = laneEnd(e, vx, vy, 9); warn.push({ k: 'lane', a: [e.fi + vx * 0.5, e.fj + vy * 0.5], b: [e.fi + vx * l, e.fj + vy * l], w: 0.3 }); } e.mv = { kind: 'fan', t: 0, wind: 0.75, warn }; sfx('swing'); }
+  else if (called(e) < (p2 ? 5 : 3)) { e.mv = { kind: 'toll', t: 0, wind: 0.7, warn: [] }; say('RUSK WHISTLES FOR HIS MEN', 22, 1.6); sfx('cry'); }
+  else return false;
+  e.atk = -1; return true;
+}
+// ---------------------------------------------------------------- THE BROODMOTHER (Silkshaft)
+// BITE: her legs go up, a cone in front of her (twice, the second where you went, when enraged). WEB: her abdomen
+// goes up, a circle on you: the web slows whoever it catches (three circles when enraged). THE BROOD: spiderlings
+// drop from the roof in marked circles. At half life she leaps to the far side and wakes her two clutches of
+// eggs: they hatch every few seconds until they are broken (break them any time before).
+function updateBrood(e, dt, d, dx, dy) {
+  const p2 = e.phase === 2;
+  if (e.phase === 1 && e.hp < e.maxHp * 0.5 && !e.mv) {
+    enrage(e, 'THE BROODMOTHER WAKES HER EGGS', () => { for (const p of dynProps) if (p.kind === 'egg' && !p.broken) p.hatch = 2 + Math.random() * 2; });
+    const r = LV.rooms[LV.leaderRoom]; if (r) { let best = null, bd = -1; for (let t = 0; t < 30; t++) { const fi = r.x + 2 + Math.random() * (r.w - 4), fj = r.y + 2 + Math.random() * (r.h - 4), q = Math.hypot(fi - hero.fi, fj - hero.fj); if (standable(fi, fj, 0.6) && q > bd) { bd = q; best = [fi, fj]; } } if (best) { e.fi = best[0]; e.fj = best[1]; const [x, y] = screenOf(e); burst(5, x, y, 6, 16, 60, S[5]); } }
+    return true;
+  }
+  e.special -= dt;
+  if (e.mv) {
+    const M = e.mv; M.t += dt;
+    if (M.kind === 'bite') {
+      const W = M.warn[M.step || 0]; e.dir = dirFrom(Math.cos(W.ang), Math.sin(W.ang)); e.clip = 'attack'; e.atk = M.t < W.t0 + W.dur ? 0 : 300;
+      if (!W.set && M.t >= W.t0) { W.set = true; if (M.step) { W.ang = Math.atan2(hero.fj - e.fj, hero.fi - e.fi); } }
+      if (M.t >= W.t0 + W.dur && !W.hit) { W.hit = true; sfx('heavySwing'); bossFx.push({ kind: 'rake', fi: e.fi, fj: e.fj, ang: W.ang, t: 0, dur: 0.22 }); if (Math.hypot(hero.fi - e.fi, hero.fj - e.fj) < W.R + 0.3 && angDiff(Math.atan2(hero.fj - e.fj, hero.fi - e.fi), W.ang) < W.arc) { hitHero(e, 1.9, 0.4); hero.chillT = Math.max(hero.chillT || 0, 1.2); } if ((M.step || 0) + 1 < M.warn.length) M.step = (M.step || 0) + 1; }
+      const last = M.warn[M.warn.length - 1]; if (M.warn.every(w => w.hit) && M.t > last.t0 + last.dur + 0.3) { e.mv = null; e.atk = -1; e.special = p2 ? 1.5 : 2.3; }
+      return true;
+    }
+    if (M.kind === 'web') {
+      e.clip = 'attack'; e.atk = 0; e.dir = dirFrom(hero.fi - e.fi, hero.fj - e.fj);
+      for (const w of M.warn) if (!w.hit && M.t >= (w.t0 || 0) + w.dur) { w.hit = true; sfx('splat', 0.6); const [x, y] = iso(w.c[0], w.c[1]); burst(5, x, y, 3, 16, 50, 27); bossFx.push({ kind: 'web', c: w.c, R: w.R, t: 0, dur: 4 }); if (Math.hypot(hero.fi - w.c[0], hero.fj - w.c[1]) < w.R) hitHero(e, 0.7, 0.15); }
+      if (M.warn.every(w => w.hit)) { e.mv = null; e.atk = -1; e.special = p2 ? 1.5 : 2.3; }
+      return true;
+    }
+    if (M.kind === 'brood') {
+      e.clip = 'idle'; e.atk = -1;
+      for (const w of M.warn) if (!w.up && M.t >= w.dur) { w.up = true; if (Math.hypot(hero.fi - w.c[0], hero.fj - w.c[1]) < w.R) hitHero(e, 0.6, 0.15); if (standable(w.c[0], w.c[1], 0.3) && called(e) < 4) { const s2 = makeEnemy('spider', w.c[0], w.c[1], enemies.length, e.lvl); s2.state = 'hunt'; s2.calledBy = e; s2.noLoot = true; enemies.push(s2); } const [x, y] = iso(w.c[0], w.c[1]); burst(1, x, y, 30, 8, 40, 54); }
+      if (M.warn.every(w => w.up)) { e.mv = null; e.special = p2 ? 1.8 : 2.6; }
+      return true;
+    }
+  }
+  if (e.special > 0 || d > 12 || !los(e.fi, e.fj, hero.fi, hero.fj)) return false;
+  const m = ++e.moves % 3, ang = Math.atan2(dy, dx);
+  if (m === 1 || (d < 2.6 && m === 0 && called(e) >= 4)) { const warn = [{ k: 'cone', ang, R: 2.9, arc: 0.85, t0: 0, dur: 0.75 }]; if (p2) warn.push({ k: 'cone', ang, R: 2.9, arc: 0.85, t0: 0.95, dur: 0.5 }); e.mv = { kind: 'bite', t: 0, wind: 0.75, warn }; sfx('hiss'); }
+  else if (m === 2) { const warn = [{ k: 'disc', c: heroAt(), R: 1.7, dur: 0.85 }]; if (p2) for (let k = 0; k < 2; k++) { const a = Math.random() * 6.283; warn.push({ k: 'disc', c: [hero.fi + Math.cos(a) * 2.6, hero.fj + Math.sin(a) * 2.6], R: 1.5, t0: 0.25 + k * 0.25, dur: 0.85 }); } e.mv = { kind: 'web', t: 0, wind: 0.85, warn }; sfx('hiss'); }
+  else if (called(e) < 4) { const n = p2 ? 3 : 2, warn = []; for (let k = 0; k < n; k++) { const a = k / n * 6.283 + Math.random(); warn.push({ k: 'disc', c: [hero.fi + Math.cos(a) * 2.3, hero.fj + Math.sin(a) * 2.3], R: 0.85, dur: 0.9 }); } e.mv = { kind: 'brood', t: 0, wind: 0.9, warn }; say('THE BROOD COMES DOWN', 22, 1.4); sfx('hiss'); }
+  else return false;
+  e.atk = -1; return true;
+}
+// a web on the floor: it slows whoever stands in it
+{ const tb1 = tickBossFx; tickBossFx = function (dt) { for (const f of bossFx) if (f.kind === 'web' && !hero.dead && Math.hypot(hero.fi - f.c[0], hero.fj - f.c[1]) < f.R) hero.chillT = Math.max(hero.chillT || 0, 0.5); tb1(dt); }; }
+{ const db1 = drawBossFx2; drawBossFx2 = function () {
+  db1();
+  for (const f of bossFx) if (f.kind === 'web') {
+    const [cx, cy] = scrAt(f.c[0], f.c[1]), rx = f.R * 22.6, ry = rx / 2, fade = f.t > f.dur - 0.8 ? (f.dur - f.t) / 0.8 : 1;
+    for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283; for (let s = 0; s <= 1; s += 0.04) if (BAYER[(Math.round(cx + Math.cos(a) * rx * s) & 3) + ((Math.round(cy + Math.sin(a) * ry * s) & 3) << 2)] < fade) scrPx(cx + Math.cos(a) * rx * s, cy + Math.sin(a) * ry * s, 26); }
+    for (const q of [0.35, 0.65, 1]) for (let a = 0; a < 6.283; a += 0.04) if (BAYER[(Math.round(cx + Math.cos(a) * rx * q) & 3) + ((Math.round(cy + Math.sin(a) * ry * q) & 3) << 2)] < fade * 0.8) scrPx(cx + Math.cos(a) * rx * q, cy + Math.sin(a) * ry * q, 27);
+  }
+}; }
+Object.assign(BOSS_UPDATE, { rusk: (...a) => updateRusk(...a), broodmother: (...a) => updateBrood(...a) });
