@@ -26,16 +26,18 @@ function jMissing(level) {   // the set piece of this level's band the hero has 
 // ---------------------------------------------------------------- drops
 { const ri0 = rollItem; rollItem = function (R, level, forceBase) {
   const it = ri0(R, level, forceBase);
-  if (forceBase || !(level <= J_TOP) || !it || it.rarity === 'set' || it.rarity === 'legend' || typeof hero === 'undefined' || !hero.equip) return it;
+  const lv = Math.max(level, hero.lvl || 1);   // round 116: the band follows the hero's level (the user: "gear set stuff for the level you're on"); areas run well under it (the King's Hall is area level 5)
+  if (forceBase || !(lv <= J_TOP) || !it || it.rarity === 'set' || it.rarity === 'legend' || typeof hero === 'undefined' || !hero.equip) return it;
   const slot = ITEM_BASES[it.base].slot; if (slot !== 'helm' && slot !== 'chest') return it;
-  const S = jSets()[jBand(level)], mine = slot === 'chest' ? S[1] : S[2], other = slot === 'chest' ? S[2] : S[1];
+  const S = jSets()[jBand(lv)], mine = slot === 'chest' ? S[1] : S[2], other = slot === 'chest' ? S[2] : S[1];
   const pick = jOwned(mine) && !jOwned(other) ? other : mine;   // the piece still missing first
   const x = ri0(R, level, pick); x.lvl = it.lvl; return x;
 }; }
 { const dl0 = dropLoot; dropLoot = function (fi, fj, n, rich) {   // an area's boss (G.lootBoss, set by killEnemy) leaves the missing piece
   dl0(fi, fj, n, rich);
-  if (!G.lootBoss || !(LV.diff <= J_TOP)) return;
-  const id = jMissing(LV.diff); if (!id) return;
+  const lv = Math.max(LV.diff, hero.lvl || 1);
+  if (!G.lootBoss || !(lv <= J_TOP)) return;
+  const id = jMissing(lv); if (!id) return;
   const it = rollItem(rng((Math.random() * 1e9) | 0), LV.diff, id); if (it.rarity === 'normal') { it.rarity = 'magic'; it.mods = { hp: 6 + Math.round(LV.diff * 2) }; }
   groundItems.push({ item: it, fi: fi + 0.45, fj: fj - 0.35, t: 0 });
 }; }

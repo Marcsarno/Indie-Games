@@ -10,7 +10,7 @@ def cl(id, name, x, y, r, level, lvlTo=None, **k):
     if lvlTo: d['lvlTo'] = lvlTo
     d.update(k); return d
 D = {
-  'name': 'ASHFORD VALE', 'act': 2, 'region': 1, 'size': 100,
+  'name': 'ASHFORD VALE', 'act': 2, 'region': 1, 'size': 100, 'lvlShift': 3,   # round 116: Act I ends at hero level 9-10, so the map's levels 7-12 play as 10-15
   'note': 'Coordinates (u, s) as in hollow.json: u east(+)/west(-) across the screen, s north(0) to south(100) down it. Tile i = s + u, j = s - u. Made by mk-ashford.py from ChatGPT-map coordinates.',
   'clearings': [
     cl('arrival', 'FROM ACT I', 40, 3, 4, 0),

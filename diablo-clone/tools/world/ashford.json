@@ -3,6 +3,7 @@
  "act": 2,
  "region": 1,
  "size": 100,
+ "lvlShift": 3,
  "note": "Coordinates (u, s) as in hollow.json: u east(+)/west(-) across the screen, s north(0) to south(100) down it. Tile i = s + u, j = s - u. Made by mk-ashford.py from ChatGPT-map coordinates.",
  "clearings": [
   {

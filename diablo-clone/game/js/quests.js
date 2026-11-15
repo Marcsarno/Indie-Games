@@ -20,7 +20,7 @@
 // done out of order (the Alpha killed before Wren asks) still count.
 const STORY_NAMES = { hollow: 'CLEAR THE HOLLOW', woodcutter: 'THE MISSING WOODCUTTER', farm: 'THE STOLEN FARM', king: 'THE KING BELOW' };
 function storyF() { if (!G.story) G.story = { f: {}, n: 0 }; return G.story.f; }
-const storyOn = () => LV.act === 0 && !(LV.loop > 0);   // the story is Act I's, first time through
+const storyOn = () => (LV.act === 0 || LV.act === 1) && !(LV.loop > 0);   // the story is Acts I and II, first time through (round 116: Act II's stages are in act2.js)
 const mineOpen = () => { const f = storyF(); return !!(f.mineOpen || f.kingDead || (G.gates && G.gates[0]) || LV.loop > 0); };
 // ---------------------------------------------------------------- round 78: three at once
 // The user: following the quest you see under half the Hollow. After Aldo is home the road north
@@ -648,7 +648,7 @@ const SIDES = {
   tower: { name: 'THE OLD WATCHTOWER', theme: 'crypt', rooms: 9, pool: ['goblin', 'goblin', 'gshaman'], boss: 'gchief', bossArena: true, arenaSize: [20, 16], at: 'hub', diff: 3, door: () => [HUB.tower[0] + 1.6, HUB.tower[1] - 0.4], label: 'OLD WATCHTOWER', seed: 0x70e7 },
   cellar: { name: 'THE FARM CELLAR', theme: 'crypt', rooms: 5, pool: ['brigand'], boss: 'banditchief', bossArena: true, arenaSize: [18, 14], at: 'riv', door: () => RIV.cellar, label: 'FARMHOUSE CELLAR', seed: 0xce11a },
 };
-const sidesHere = () => Object.keys(SIDES).filter(k => (SIDES[k].at === 'hub' && LV.hub) || (SIDES[k].at === 'riv' && LV.riv));
+const sidesHere = () => Object.keys(SIDES).filter(k => (SIDES[k].at === 'hub' && LV.hub) || (SIDES[k].at === 'riv' && LV.riv) || (LV.reg && SIDES[k].at === LV.reg && LV.doorsAt && LV.doorsAt[k]));   // (round 116: and a region's doors)
 // round 42b: what the story adds to a side area once it is built: Aldo's cage near the Alpha,
 // the cellar's sacks of bones. A cage tile is one with open floor all round it, so it blocks nothing
 function sideExtras(kind) {
@@ -733,7 +733,7 @@ function leaveSide() {
   };
 }
 function drawSideDoorLabels() {
-  if (LV.down && Math.hypot(LV.down.i + 0.5 - hero.fi, LV.down.j + 0.5 - hero.fj) < 6) { const [x, y] = iso(LV.down.i + 0.5, LV.down.j + 0.5); textC('DOWN: THE DEEP TOMB', Math.round(x - camX), Math.round(y - camY) - 30, 22); }
+  if (LV.down && Math.hypot(LV.down.i + 0.5 - hero.fi, LV.down.j + 0.5 - hero.fj) < 6) { const [x, y] = iso(LV.down.i + 0.5, LV.down.j + 0.5); textC('DOWN: ' + (LV.sideCfg && LV.sideCfg.down && SIDES[LV.sideCfg.down].downLabel || 'THE DEEP TOMB'), Math.round(x - camX), Math.round(y - camY) - 30, 22); }
   if (LV.side) return;
   for (const k of sidesHere()) {
     const [fi, fj] = SIDES[k].door(); if (Math.hypot(fi - hero.fi, fj - hero.fj) > 6) continue;

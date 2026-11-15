@@ -49,7 +49,8 @@
   while (t < CAP) {
     t += dt; G.guide = null; G.actCard = 0;
     if (G.mode === 'talk') { if (G.talk.reward) G.talk.pick = 0; closeTalk(); }
-    if (G.mode === 'end') { mark('END'); break; }
+    if (G.mode === 'end') { mark('END'); if (!window.__act2) break; G.mode = 'play'; clearInput(); }   // (round 116: on into Act II)
+    if (window.__until && storyStage() === window.__until) { mark('UNTIL ' + window.__until); break; }
     if (G.mode === 'inv' || G.mode === 'skills') G.mode = 'play';
     if (hero.dead && !hero.deadMarked) { hero.deadMarked = 1; mark('DIED@' + areaName() + '#' + Math.round(t) + ' by ' + [...new Set(enemies.filter(e => alive(e) && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 5).map(e => e.id + (e.champ ? '*' : '')))].join(',')); }
     if (!hero.dead) hero.deadMarked = 0;

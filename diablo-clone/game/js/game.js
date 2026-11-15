@@ -98,7 +98,7 @@ function startLevel(level, seed, side = null) {
   if (LV.arena) say('SOMETHING VAST STIRS IN THE DARK', 22, 4);
   G.tp = null;
   if (LV.area === 'town') { G.town = { level, seed }; if (G.portal) openPortalNear(hero.fi + 1.4, hero.fj + 0.4, true); }
-  if (LV.area === 'forest') say(LV.autumn ? 'A TREANT ELDER HOLDS THE WAY DOWN' : 'AN OGRE WARLORD HOLDS THE WAY DOWN', 22, 4);
+  if (LV.area === 'forest' && !LV.reg) say(LV.autumn ? 'A TREANT ELDER HOLDS THE WAY DOWN' : 'AN OGRE WARLORD HOLDS THE WAY DOWN', 22, 4);
 }
 // round 81: the user: the first pack took too long, skills had no weight, you spam the basic attack.
 // Measured: a new warrior hits for 5.2 and a level 1 wolf had 28 health. Now it has 12, and packs are
@@ -884,15 +884,15 @@ function updateHero(dt) {
   } else if (LV.side) {   // a side area's stairs lead back up to the hub (once the hero has stepped off them)
     const d = Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj);
     if (d > EXIT_R.up + 0.8) G.upArmed = true;
-    if (!G.fadeTo && G.upArmed && d < EXIT_R.up && steering) { G.upArmed = false; if (LV.side === 'barrow2') climbSide(); else leaveSide(); }
+    if (!G.fadeTo && G.upArmed && d < EXIT_R.up && steering) { G.upArmed = false; if (LV.sideCfg && LV.sideCfg.at === 'below') climbSide(); else leaveSide(); }   // (round 116: any second floor)
     if (LV.down) { const dd = Math.hypot(LV.down.i + 0.5 - hero.fi, LV.down.j + 0.5 - hero.fj); if (dd > EXIT_R.stairs + 0.8) G.downArmed = true; if (!G.fadeTo && G.downArmed && dd < EXIT_R.stairs && steering) { G.downArmed = false; descendSide(); } }
-  } else if (!G.fadeTo && !G.finale && steering && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < (LV.outdoor ? EXIT_R.road : EXIT_R.stairs) && !(s.mine && mineBarred())) {   // (round 67: not while Maelis is coming)   // round 42b: the mine is chained until the key
+  } else if (!G.fadeTo && !G.finale && steering && Math.hypot(s.i + 0.5 - hero.fi, s.j + 0.5 - hero.fj) < (LV.outdoor ? EXIT_R.road : EXIT_R.stairs) && !(s.mine && mineBarred()) && !(typeof exitBarred === 'function' && exitBarred())) {   // (round 116: a region's gate the story has not opened)   // (round 67: not while Maelis is coming)   // round 42b: the mine is chained until the key
     sfx('stairs');
     // the hub's mine leads straight to the first floor; Act I's boss hall leads home to the hub,
     // where the south gate now stands open (round 26)
     const A = areaOf(LV.level);
     if (A.arena && A.act === 0) { G.gates = G.gates || {}; G.gates[A.cyc] = true; const home = LV.level - 4; G.fadeTo = () => { G.portal = null; startLevel(home, (LV.seed * 31 + 17) >>> 0); say('THE ROAD ON IS OPEN, PAST THE RIVERLANDS', 51, 4); saveGame(); }; }
-    else G.fadeTo = () => { G.portal = null; startLevel(LV.level + 1, (LV.seed * 31 + 17) >>> 0); saveGame(); };   // (round 48c: the Hollow's road leads to the Riverlands, level 2)
+    else { const to = LV.level + (typeof exitSkip === 'function' ? exitSkip() : 1); G.fadeTo = () => { G.portal = null; startLevel(to, (LV.seed * 31 + 17) >>> 0); saveGame(); }; }   // (round 48c: the Hollow's road leads to the Riverlands, level 2)
   }
   G.sealT = (G.sealT || 0) - dt;
   updatePortal(dt); updateSideDoors(); updateStory(dt); updateWays(dt);
