@@ -2260,7 +2260,7 @@ function beginGame(fromSave, cls = 'warrior') {
   }
 }
 // round 89: from the title, a game starts at Dave's table: the opening for a new hero, a short push into the map for a saved one
-function startGame(fromSave, cls) { const resume = fromSave && !!loadSave(cls); beginGame(fromSave, cls); if (cineOK()) startCine(resume ? 'resume' : 'open', { done: resume ? null : openingDone }); }
+function startGame(fromSave, cls) { if (typeof TITLE !== 'undefined' && TITLE.act === 2 && typeof a2TestStart === 'function') { a2TestStart(cls); return; } const resume = fromSave && !!loadSave(cls); beginGame(fromSave, cls); if (cineOK()) startCine(resume ? 'resume' : 'open', { done: resume ? null : openingDone }); }
 function respawn() {
   if (hero.stats) hero.stats.deaths++;
   hero.dead = 0; hero.clip = 'idle'; recalcHero(); hero.hp = STAT.maxHp; hero.mana = STAT.maxMana;

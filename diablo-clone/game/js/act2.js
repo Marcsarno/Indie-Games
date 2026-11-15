@@ -629,3 +629,15 @@ function updateBrood(e, dt, d, dx, dy) {
   }
 }; }
 Object.assign(BOSS_UPDATE, { rusk: (...a) => updateRusk(...a), broodmother: (...a) => updateBrood(...a) });
+
+// ---------------------------------------------------------------- the title's TEST: ACT II (ui.js drawActPick)
+function a2TestStart(cls) {
+  beginGame(false, cls); G.cine = null;
+  hero.tut = null; hero.lvl = 10; hero.xp = 0; hero.potions = Math.max(hero.potions || 0, 5);
+  const R = rng((Math.random() * 1e9) | 0); for (let k = 0; k < 14; k++) hero.bag.push(rollItem(R, 10));
+  for (let q = 0; q < 3; q++) for (const it of bestUpgrades()) equipItem(it);
+  hero.bag = hero.bag.filter(it => ITEM_BASES[it.base].slot === 'potion'); recalcHero(); hero.hp = STAT.maxHp; hero.mana = STAT.maxMana;
+  G.story = { f: { met: true, woodTold: true, aldoFree: true, alphaDead: true, woodPaid: true, h3tower: true, h3stones: true, h3barrow: true, h3all: true, treeCleared: true, sawChain: true, farmTold: true, chiefDead: true, farmPaid: true, letterRead: true, mineOpen: true, kingDead: true, kingPaid: true, maelisSeen: true, endShown: true }, n: 4 };
+  G.gates = { 0: true }; G.mode = 'play'; startLevel(6, (Math.random() * 1e9) >>> 0); G.actCard = 0;
+  say('TEST START: ACT II, LEVEL 10', 51, 4); saveGame();
+}

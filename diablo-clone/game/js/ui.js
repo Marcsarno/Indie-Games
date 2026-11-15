@@ -505,7 +505,8 @@ function drawTitle() {
   if (TITLE.splash) return drawSplash();
   if (G.cine && G.cine.kind === 'title') {   // round 91: the game opens at Dave's table
     UI.titleBtns = [];
-    return drawTableTitle((label, x, y, w, h, on, col = 27, bg = 5, edge = 8) => { fillRect(x, y, w, h, bg); frame(x, y, w, h, edge, 2); textC(label, x + w / 2, y + Math.floor(h / 2) - 2, col); UI.titleBtns.push({ x, y, w, h, on }); });
+    const tb = (label, x, y, w, h, on, col = 27, bg = 5, edge = 8) => { fillRect(x, y, w, h, bg); frame(x, y, w, h, edge, 2); textC(label, x + w / 2, y + Math.floor(h / 2) - 2, col); UI.titleBtns.push({ x, y, w, h, on }); };
+    const r = drawTableTitle(tb); drawActPick(tb); return r;
   }
   fade(0.7);
   textC('DUNGEONS', W / 2, 34, 22, 4);
@@ -547,6 +548,15 @@ function drawTitle() {
   btn(TITLE.opts ? 'OPTIONS  -' : 'OPTIONS  +', W / 2 - 40, oy, 80, 16, () => { TITLE.opts = !TITLE.opts; }, 25, 3, 6);
   drawTitleOptions(btn, oy);
   drawTitleCredits(H - 32);
+  drawActPick(btn);
+}
+// round 116 (the user: "For testing. Add an act select button when you start the game"): which act a new game
+// starts in. ACT II starts a fresh hero of the picked class at level 10 with gear for it and Act I done, at the
+// gate of Ashford (act2.js `a2TestStart`); it replaces that class's save. Remembered in localStorage.
+function drawActPick(btn) {
+  if (TITLE.act === undefined) { TITLE.act = 1; try { TITLE.act = +localStorage.getItem('dcg-act') === 2 ? 2 : 1; } catch (e) { /* ignore */ } }
+  const two = TITLE.act === 2;
+  btn(two ? 'TEST: ACT II' : 'TEST: ACT I', 4, 4, 78, 16, () => { TITLE.act = two ? 1 : 2; try { localStorage.setItem('dcg-act', String(TITLE.act)); } catch (e) { /* ignore */ } }, two ? 51 : 25, two ? 6 : 3, two ? 51 : 6);
 }
 // round 42b: a small speech bubble (over the attack button when a tap would talk)
 function talkBubble(x, y) {
