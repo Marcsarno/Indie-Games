@@ -1,5 +1,7 @@
 # Survivors game: first plan (2026-11-16)
 
+> Status: round 1 (the Mage prototype) is built; see NOTES.md for the current state.
+
 A Vampire Survivors / Brotato style game built from the Diablo-style game in `diablo-clone/game/`.
 Nothing is built yet. This is the thinking so far, waiting on the user's research and choices.
 
