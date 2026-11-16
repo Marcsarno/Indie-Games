@@ -23,6 +23,11 @@ Nothing is built yet. This is the thinking so far, waiting on the user's researc
 - **Gems set the pace.** XP gems pull you into danger; a magnet range upgrade and a "pull all gems"
   pickup are part of the rhythm.
 
+- **Melee works too** (the user asked, 2026-11-16). Halls of Torment (Diablo 1 look, Swordsman /
+  Norseman / Shieldmaiden), Death Must Die (Diablo-like heroes), Brotato's melee weapons, VS's whip.
+  Tricks: auto-swing at the nearest foe in reach, wide arcs and spins, auras and orbiting blades, dashes
+  and leaps; melee gets more life, armour, lifesteal and knockback to pay for standing close.
+
 Sources: jboger.substack.com "The Secret Sauce of Vampire Survivors"; legitsauce.pages.dev
 "Geometry Survivor design notes"; game guides on evolutions (PC Gamer, GameSpot); Brotato guides.
 
