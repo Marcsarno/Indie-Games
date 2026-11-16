@@ -5,28 +5,54 @@
 // (move only: spells cast themselves), the spawns (waves on a timer), XP (gems to collect), levelling
 // (pick 1 of 3 cards; a spell's third level is a choice of its three runes) and the HUD.
 // Started with the Mage (the user, 2026-11-16). Design notes: survivors/PLAN.md and RESEARCH.md.
+// Round 2 (the user's expanded brief, sections 20-29): the PALADIN as the first melee hero, built to the brief's
+// "Warden": swings on his own at foes in reach while he keeps walking (no slowdown while attacking), a broad
+// frontal arc with an open back, one visible GUARD charge that blocks a blow and primes a COUNTER (the next swing
+// hits all round, much harder), healing capped per swing. Also: two rerolls a run (a limited way to redirect
+// offers), the grace after a hit shown on the life bar, and a log of every offer and pick (with its context).
 
 const SV_PARAMS = new URLSearchParams(location.search);
 const SV = {
-  on: false, t: 0, kills: 0, lvl: 1, xp: 0, queue: 0, serial: 0, spawnT: 0, eliteT: 0, cards: null, rune: null,
+  on: false, cls: 'mage', t: 0, kills: 0, lvl: 1, xp: 0, queue: 0, serial: 0, spawnT: 0, eliteT: 0, cards: null, rune: null,
   w: {}, mods: {}, pas: {}, echo: [], end: null, endAt: 0, boss: null, bossDone: {}, picks: [], firstHurt: 0,
 };
 
-// ---------------------------------------------------------------- the Mage's spells as weapons
-// cd = seconds between casts at level 1; range = how near a foe must be before it casts
+// ---------------------------------------------------------------- each hero's attacks as weapons
+// cd = seconds between casts at level 1; range = how near a foe must be before it casts; basic = the hero's
+// own weapon, used every time a foe is in reach (svSwing)
 const SV_WEAPONS = {
-  missile: { name: 'MAGIC MISSILE', cd: 1.05, range: 8, fn: () => castMissiles(), desc: 'A HOMING BOLT OF ARCANE FORCE AT THE NEAREST FOE' },
-  fireball: { name: 'FIREBALL', cd: 2.4, range: 8.5, fn: () => castFireball(), desc: 'A BALL OF FIRE THAT BURSTS ON WHAT IT HITS' },
-  cone: { name: 'CONE OF COLD', cd: 4.2, range: 3.6, fn: () => coneOfCold(), desc: 'A BLAST OF FROST IN FRONT OF YOU. FREEZES THE WEAK, SLOWS THE STRONG' },
-  meteor: { name: 'METEOR', cd: 6.5, range: 8, fn: () => castMeteor(), desc: 'A METEOR FALLS ON THE THICKEST CROWD' },
-  chain: { name: 'CHAIN LIGHTNING', cd: 3.2, range: 7.5, fn: () => chainLightning(), desc: 'LIGHTNING THAT JUMPS FROM FOE TO FOE' },
+  missile: { cls: 'mage', name: 'MAGIC MISSILE', cd: 1.05, range: 8, fn: () => castMissiles(), desc: 'A HOMING BOLT OF ARCANE FORCE AT THE NEAREST FOE' },
+  fireball: { cls: 'mage', name: 'FIREBALL', cd: 2.4, range: 8.5, fn: () => castFireball(), desc: 'A BALL OF FIRE THAT BURSTS ON WHAT IT HITS' },
+  cone: { cls: 'mage', name: 'CONE OF COLD', cd: 4.2, range: 3.6, fn: () => coneOfCold(), desc: 'A BLAST OF FROST IN FRONT OF YOU. FREEZES THE WEAK, SLOWS THE STRONG' },
+  meteor: { cls: 'mage', name: 'METEOR', cd: 6.5, range: 8, fn: () => castMeteor(), desc: 'A METEOR FALLS ON THE THICKEST CROWD' },
+  chain: { cls: 'mage', name: 'CHAIN LIGHTNING', cd: 3.2, range: 7.5, fn: () => chainLightning(), desc: 'LIGHTNING THAT JUMPS FROM FOE TO FOE' },
+  swing: { cls: 'paladin', basic: true, name: 'HOLY HAMMER', desc: 'YOUR HAMMER: IT SWINGS ON ITS OWN AT FOES IN REACH, IN FRONT OF YOU',
+    lv: ['', 'NEW', 'HITS 30% HARDER', 'CHOOSE A FIGHTING STYLE', 'SWINGS 25% FASTER', 'HITS 30% HARDER'] },
+  phammer: { cls: 'paladin', name: 'HAMMER OF LIGHT', cd: 2.6, range: 7, fn: () => palThrow(), desc: 'A HAMMER OF LIGHT THROWN AT THE NEAREST FOE. IT FLIES BACK TO YOU' },
+  consec: { cls: 'paladin', name: 'CONSECRATE', cd: 9, range: 2.4, fn: () => palConsecrate(), desc: 'HOLY GROUND THAT BURNS FOES. STAND IN IT: YOU MEND AND HIT HARDER',
+    lv: ['', 'NEW', 'CASTS 25% MORE OFTEN', 'CHOOSE ONE OF THREE RUNES', 'THE GROUND LASTS TWICE AS LONG', 'CASTS 25% MORE OFTEN'] },
+  judge: { cls: 'paladin', name: 'JUDGMENT', cd: 5.5, range: 8, fn: () => palJudge(), desc: 'A HAMMER FALLS FROM THE SKY ON THE THICKEST CROWD' },
+};
+// the hammer's level 3: a fighting style (the brief: reach and width are separate growth, so shapes stay distinct)
+SKILL_MODS.swing = [
+  { id: 'wide', name: 'WIDE CLEAVE', desc: 'EVERY SWING HITS ALL AROUND YOU, NOT JUST IN FRONT' },
+  { id: 'reach', name: 'LONG REACH', desc: 'A CRESCENT OF LIGHT CARRIES EACH SWING A TILE FARTHER' },
+  { id: 'crush', name: 'CRUSHING BLOWS', desc: 'FOES YOU HIT ARE DAZED A MOMENT AND THROWN BACK' },
+];
+const SV_HEROES = {
+  mage: { name: 'THE MAGE', role: 'RANGED: SPELLS FROM AFAR', start: 'missile', hp: 2.5, maxW: 5,
+    lines: ['KEEP YOUR DISTANCE. SPELLS FIND THE FOES,', 'RUNES CHANGE HOW EACH SPELL PLAYS'] },
+  paladin: { name: 'THE PALADIN', role: 'MELEE: HAMMER AND SHIELD', start: 'swing', hp: 3, maxW: 4,
+    lines: ['WORK THE EDGE OF THE CROWD. YOUR GUARD', 'BLOCKS ONE BLOW AND PRIMES A COUNTER'] },
 };
 const SV_WLVL = ['', 'NEW', 'CASTS 25% MORE OFTEN', 'CHOOSE ONE OF THREE RUNES', 'CASTS TWICE EACH TIME', 'CASTS 25% MORE OFTEN'];
-const SV_MAXW = 5;
-// passives: the item affixes of the Diablo game as level-up picks
+const SV_GUARD_CD = 6;   // seconds for the guard to come back
+// passives: the item affixes of the Diablo game as level-up picks (cls: that hero only)
 const SV_PASSIVES = {
-  might: { name: 'MIGHT', max: 5, desc: '+15% SPELL DAMAGE', ramp: [19, 20, 21, 22] },
-  haste: { name: 'HASTE', max: 5, desc: 'ALL SPELLS CAST 8% MORE OFTEN', ramp: [48, 49, 50, 51] },
+  might: { name: 'MIGHT', max: 5, desc: '+15% DAMAGE', ramp: [19, 20, 21, 22] },
+  haste: { name: 'HASTE', max: 5, desc: 'ATTACKS AND SPELLS 8% FASTER', ramp: [48, 49, 50, 51] },
+  guard: { cls: 'paladin', name: 'STALWART', max: 3, desc: 'YOUR GUARD COMES BACK 25% SOONER', ramp: [37, 38, 39, 40] },
+  oath: { cls: 'paladin', name: 'BLOOD OATH', max: 3, desc: 'EACH SWING HEALS 1 LIFE PER FOE HIT (UP TO 3)', ramp: [19, 20, 21, 22] },
   vigor: { name: 'VIGOR', max: 5, desc: '+20 MAXIMUM LIFE, AND HEALS YOU', ramp: [52, 53, 54, 55] },
   swift: { name: 'SWIFTNESS', max: 3, desc: '+10% MOVE SPEED', ramp: [33, 34, 35, 36] },
   magnet: { name: 'MAGNETISM', max: 3, desc: 'PICK UP GEMS FROM 50% FARTHER AWAY', ramp: [56, 57, 58, 59] },
@@ -84,11 +110,12 @@ function svArena(seed) {
 
 // ---------------------------------------------------------------- a run
 function svReset() {
-  Object.assign(SV, { t: 0, kills: 0, lvl: 1, xp: 0, queue: 0, spawnT: 0.5, eliteT: 75, cards: null, rune: null, w: { missile: { lvl: 1, cd: 0.4 } }, mods: {}, pas: {}, echo: [], end: null, boss: null, bossDone: {}, picks: [], firstHurt: 0, grace: 0 });
+  Object.assign(SV, { t: 0, kills: 0, lvl: 1, xp: 0, queue: 0, spawnT: 0.5, eliteT: 75, cards: null, rune: null, w: { [SV_HEROES[SV.cls].start]: { lvl: 1, cd: 0.4 } }, mods: {}, pas: {}, echo: [], end: null, boss: null, bossDone: {}, picks: [], firstHurt: 0, grace: 0,
+    rerolls: 2, log: [], guardOn: true, guardT: 0, counterT: 0, won: false });
   if (SV_PARAMS.get('t')) SV.t = +SV_PARAMS.get('t');   // (testing: start the clock later)
 }
-function svNewRun() {
-  newHero('mage'); hero.lvl = 1; svReset(); SV.on = true;
+function svNewRun(cls = SV.cls) {
+  SV.cls = cls; newHero(cls); hero.lvl = 1; svReset(); SV.on = true;
   svArena((Math.random() * 1e9) >>> 0);
   recalcHero(); hero.hp = STAT.maxHp;
 }
@@ -112,13 +139,59 @@ function svCast(id) {
 const svCd = id => SV_WEAPONS[id].cd * (SV.w[id].lvl >= 2 ? 0.8 : 1) * (SV.w[id].lvl >= 5 ? 0.8 : 1) * Math.pow(0.92, SV.pas.haste || 0);
 function svWeapons(dt) {
   for (const id in SV.w) {
+    if (SV_WEAPONS[id].basic) continue;
     const w = SV.w[id]; w.cd -= dt;
     if (w.cd > 0) continue;
-    if (svCast(id)) { w.cd = svCd(id); if (w.lvl >= 4) SV.echo.push({ id, t: 0.28 }); }
+    if (svCast(id)) {
+      w.cd = svCd(id);
+      if (id === 'consec' && w.lvl >= 4 && G.pal && G.pal.consec) G.pal.consec.T *= 2;   // (its level 4: the ground lasts twice as long)
+      else if (w.lvl >= 4) SV.echo.push({ id, t: 0.28 });
+    }
     else w.cd = 0.15;   // nothing in reach: look again shortly
   }
   for (const q of SV.echo) { q.t -= dt; if (q.t <= 0) svCast(q.id); }
   SV.echo = SV.echo.filter(q => q.t > 0);
+  if (SV.w.swing) svSwing(dt);
+}
+// ---------------------------------------------------------------- the Paladin's hammer (melee)
+// A swing starts whenever a foe is in reach and he is free; he keeps walking through it (svCarry). The brief:
+// slowing movement during auto-attacks felt clumsy in a horde. He faces his target for the swing (locomotion and
+// attack direction are separate), so the back of the arc is the opening to watch.
+const svReachPlus = () => SV.mods.swing === 'reach' ? 1.1 : 0;
+function svSwing() {
+  if (hero.dead || heroBusy() || hero.leap) return;
+  const reach = heroReach(), t = nearestEnemy(reach + 0.4 + svReachPlus());
+  if (!t) return;
+  const d = Math.hypot(t.fi - hero.fi, t.fj - hero.fj);
+  hero.dir = dirFrom(t.fi - hero.fi, t.fj - hero.fj);
+  hero.mag = Math.min(0.4, Math.max(0, d - (reach - 0.25)));   // the small step into the blow
+  hero.combo = G.t - (hero.swingEnd ?? -9) < 0.3 ? ((hero.combo || 0) + 1) % 3 : 0;
+  hero.approach = null; hero.atk = 0; hero.hitDone = false;
+  sfx(SV.counterT > G.t ? 'heavySwing' : 'swing');
+}
+// while a swing, a throw or a raised hammer holds the body, the legs still carry him where the stick points
+function svCarry(dt) {
+  if (hero.dead || !(hero.atk >= 0 || hero.palRaise > 0) || hero.leap || hero.bz) return;
+  let vx = input.mx, vy = input.my; const K = input.keys;
+  if (K.has('a') || K.has('arrowleft')) vx -= 1; if (K.has('d') || K.has('arrowright')) vx += 1;
+  if (K.has('w') || K.has('arrowup')) vy -= 1; if (K.has('s') || K.has('arrowdown')) vy += 1;
+  const l = Math.hypot(vx, vy); if (l < 0.18) return;
+  if (l > 1) { vx /= l; vy /= l; }
+  const [gi, gj, m] = stickToGround(vx, vy), sp = STAT.speed * m * 0.85 * dt;
+  tryMove(hero, gi * sp, gj * sp);
+}
+function svGuardCd() { return SV_GUARD_CD * Math.pow(0.75, SV.pas.guard || 0); }
+// the guard: one blow stopped dead, the nearest foes shoved off, and the next swing primed as a counter
+function svBlock(src) {
+  SV.guardOn = false; SV.guardT = svGuardCd(); SV.counterT = G.t + 2.5; SV.grace = G.t + 0.4;
+  floater('BLOCKED', hero.fi, hero.fj, 46, 39); sfx('block'); sfx('clank');
+  shockwave(hero.fi, hero.fj, 1.6, 0.22, [38, 40]);
+  for (const e of enemies) {
+    if (!alive(e) || e.def.unique) continue;
+    const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy);
+    if (d < 1.7 && d > 1e-3) { tryMove(e, dx / d * 0.7, dy / d * 0.7, 0.25); e.stun = Math.max(e.stun || 0, 0.35); e.atk = -1; }
+  }
+  void src;
 }
 
 // ---------------------------------------------------------------- spawning
@@ -219,14 +292,24 @@ function svMagnet(dt) {
 function svLvlOf(c) { return c.kind === 'w' ? `LV ${SV.w[c.id] ? SV.w[c.id].lvl : 1}` : `LV ${SV.pas[c.id] || 0}`; }
 // every card the pool can offer now
 function svPool() {
-  const out = [], nw = Object.keys(SV.w).length;
+  const out = [], nw = Object.keys(SV.w).length, H = SV_HEROES[SV.cls];
   for (const id in SV_WEAPONS) {
-    const w = SV.w[id];
-    if (!w && nw < SV_MAXW) out.push({ kind: 'w', id, name: SV_WEAPONS[id].name, line: 'NEW SPELL', desc: SV_WEAPONS[id].desc, wt: 1.4 });
-    else if (w && w.lvl < 5) out.push({ kind: 'w', id, name: SV_WEAPONS[id].name, line: `LEVEL ${w.lvl + 1}`, desc: SV_WLVL[w.lvl + 1], wt: w.lvl === 2 ? 1.6 : 1.2 });
+    const W = SV_WEAPONS[id], w = SV.w[id]; if (W.cls !== SV.cls) continue;
+    if (!w && nw < H.maxW) out.push({ kind: 'w', id, name: W.name, line: SV.cls === 'mage' ? 'NEW SPELL' : 'NEW SKILL', desc: W.desc, wt: 1.4 });
+    else if (w && w.lvl < 5) out.push({ kind: 'w', id, name: W.name, line: `LEVEL ${w.lvl + 1}`, desc: (W.lv || SV_WLVL)[w.lvl + 1], wt: w.lvl === 2 ? 1.6 : 1.2 });
   }
-  for (const id in SV_PASSIVES) { const p = SV_PASSIVES[id], l = SV.pas[id] || 0; if (l < p.max) out.push({ kind: 'p', id, name: p.name, line: l ? `LEVEL ${l + 1}` : 'NEW', desc: p.desc, wt: 1 }); }
+  for (const id in SV_PASSIVES) { const p = SV_PASSIVES[id], l = SV.pas[id] || 0; if (p.cls && p.cls !== SV.cls) continue; if (l < p.max) out.push({ kind: 'p', id, name: p.name, line: l ? `LEVEL ${l + 1}` : 'NEW', desc: p.desc, wt: 1 }); }
   return out;
+}
+// every offer and pick, with when and how the run stood (the brief: balance from the choices offered and their
+// circumstances, not from winning builds); the last 20 runs are kept in the browser (localStorage 'sv-runs')
+function svLog(kind, c) {
+  SV.log.push({ t: Math.round(SV.t), lvl: SV.lvl, hp: Math.round(100 * hero.hp / STAT.maxHp), foes: svAlive(), kind, offer: (SV.cards || []).map(x => x.id), pick: c ? c.id : null });
+}
+function svReroll() {
+  if (G.mode !== 'svcards' || SV.rune || !(SV.rerolls > 0) || G.t - SV.cardT < 0.35) return;
+  SV.rerolls--; svLog('reroll', null);
+  SV.cards = svOffer(3); SV.cardT = G.t; sfx('gold');
 }
 function svOffer(n = 3, noRune = false) {
   let pool = svPool(); if (noRune) pool = pool.filter(c => !(c.kind === 'w' && SV.w[c.id] && SV.w[c.id].lvl === 2)).concat([]);
@@ -256,9 +339,9 @@ function svOpenCards() {
 }
 function svPick(k) {
   const c = SV.cards && SV.cards[k]; if (!c || G.t - SV.cardT < 0.35) return;
-  sfx('tap');
+  sfx('tap'); svLog(SV.rune ? 'rune' : 'level', c);
   if (c.kind === 'w' && SV.w[c.id] && SV.w[c.id].lvl === 2) {   // the third level: the rune choice
-    SV.cards = SKILL_MODS[c.id].map(m => ({ kind: 'rune', wid: c.id, id: m.id, name: m.name, line: SV_WEAPONS[c.id].name + ' RUNE', desc: m.desc.replace(/[.,]? ?COSTS? \d+ MORE (MANA|FURY)/, '').replace(/[.,] \d+ MORE (MANA|FURY)/, '') }));   // (no mana here)
+    SV.cards = SKILL_MODS[c.id].map(m => ({ kind: 'rune', wid: c.id, id: m.id, name: m.name, line: SV_WEAPONS[c.id].name + (c.id === 'swing' ? ' STYLE' : ' RUNE'), desc: m.desc.replace(/[.,]? ?COSTS? \d+ MORE (MANA|FURY)/, '').replace(/[.,] \d+ MORE (MANA|FURY)/, '') }));   // (no mana here)
     SV.rune = c.id; SV.cardT = G.t; return;
   }
   svApply(c); SV.cards = null; SV.rune = null;
@@ -275,8 +358,15 @@ function svEnd(won) {
   if (SV.end) return;
   SV.end = { won, t: SV.t, kills: SV.kills, lvl: SV.lvl }; SV.endAt = G.t; G.mode = 'svend'; clearInput();
   if (won) { sfx('levelUp'); sfx('chest'); } else sfx('death');
-  try { const best = JSON.parse(localStorage.getItem('sv-best') || '{}'); if (!(best.t >= SV.t)) { best.t = SV.t; best.kills = SV.kills; localStorage.setItem('sv-best', JSON.stringify(best)); } } catch (e) { /* storage blocked */ }
+  try {
+    const all = JSON.parse(localStorage.getItem('sv-best2') || '{}'), best = all[SV.cls] || {};
+    if (won && !best.won || !(best.t >= SV.t) && !best.won) { all[SV.cls] = { t: SV.t, kills: SV.kills, won }; localStorage.setItem('sv-best2', JSON.stringify(all)); }
+    const runs = JSON.parse(localStorage.getItem('sv-runs') || '[]');
+    runs.push({ cls: SV.cls, won, t: Math.round(SV.t), lvl: SV.lvl, kills: SV.kills, w: Object.fromEntries(Object.entries(SV.w).map(([k, v]) => [k, v.lvl])), mods: SV.mods, pas: SV.pas, log: SV.log, at: Date.now() });
+    localStorage.setItem('sv-runs', JSON.stringify(runs.slice(-20)));
+  } catch (e) { /* storage blocked */ }
 }
+const svBest = cls => { try { return JSON.parse(localStorage.getItem('sv-best2') || '{}')[cls] || null; } catch (e) { return null; } };
 
 // The dungeon game presses blood, bones and body parts into the floor for good. A thousand kills would
 // carpet the arena and hide the next wave, so the ground washes back to clean, a scattered pixel at a time
@@ -298,6 +388,7 @@ function svUpdate(dt) {
   if (G.mode !== 'play' || G.paused) return;
   if (hero.dead) { if (hero.dead > 1.4) svEnd(false); return; }
   SV.t += dt;
+  if (hero.cls === 'paladin') { svCarry(dt); if (!SV.guardOn && (SV.guardT -= dt) <= 0) { SV.guardOn = true; sfx('clank', 0.5); } }
   svWeapons(dt); svSpawns(dt); svMagnet(dt); svWash(dt);
   G.trauma = Math.min(G.trauma, 0.32);   // a kill shakes the screen in the dungeon game: a hundred at once would never stop
   if (SV.chestShow) { SV.chestShow.t -= dt; if (SV.chestShow.t <= 0) SV.chestShow = null; }
@@ -314,10 +405,13 @@ function svBotPick() {
   const C = SV.cards, nw = Object.keys(SV.w).length, score = c => c.kind === 'rune' ? Math.random() : c.kind === 'w' ? (SV.w[c.id] ? 10 + SV.w[c.id].lvl : nw < 3 ? 9 : 0) : c.id === 'might' ? 6 : c.id === 'haste' ? 5 : c.id === 'vigor' ? 4 : 1;
   let best = 0; C.forEach((c, k) => { if (score(c) > score(C[best])) best = k; }); return best;
 }
-// testing: a bot that walks away from the crowd, round the arena, and goes for gems
+// testing: a bot that walks away from the crowd, round the arena, and goes for gems (the Paladin: works the edge of
+// the crowd while his life holds, standing a swing's length from the nearest foe)
 function svBot() {
   let ax = 0, ay = 0;
-  for (const e of enemies) { if (!alive(e)) continue; const dx = hero.fi - e.fi, dy = hero.fj - e.fj, d = Math.hypot(dx, dy); if (d < 5) { ax += dx / (d * d + 0.3); ay += dy / (d * d + 0.3); } }
+  const melee = hero.cls === 'paladin' && hero.hp > STAT.maxHp * 0.4, near = melee ? nearestEnemy(4) : null;
+  for (const e of enemies) { if (!alive(e)) continue; const dx = hero.fi - e.fi, dy = hero.fj - e.fj, d = Math.hypot(dx, dy); if (d < (melee ? 1.6 : 5)) { ax += dx / (d * d + 0.3); ay += dy / (d * d + 0.3); } }
+  if (near) { const dx = near.fi - hero.fi, dy = near.fj - hero.fj, d = Math.hypot(dx, dy); if (d > 1.3) { ax += dx / d * 1.2; ay += dy / d * 1.2; } }
   const cx = MW / 2 - hero.fi, cy = MH / 2 - hero.fj, a = G.t * 0.35; ax += cx * 0.02 + Math.cos(a) * 0.3; ay += cy * 0.02 + Math.sin(a) * 0.3;
   let g = null, gd = 6; for (const q of groundItems) { const d = Math.hypot(q.fi - hero.fi, q.fj - hero.fj); if (d < gd) { gd = d; g = q; } }   // and goes for the gems
   if (g) { ax += (g.fi - hero.fi) / gd * 0.8; ay += (g.fj - hero.fj) / gd * 0.8; }
@@ -330,7 +424,12 @@ function svPad(n) { return n < 10 ? '0' + n : '' + n; }
 function svTime(t) { t = Math.max(0, Math.floor(t)); return `${svPad(Math.floor(t / 60))}:${svPad(t % 60)}`; }
 function svDim(a = 0.7) { for (let y = 0, o = 0; y < H; y++) for (let x = 0; x < W; x++, o++) if (BAYER[((y & 3) << 2) | (x & 3)] < a) out32[o] = PAL32[BLK]; }
 function svIcon(c, cx, cy, r) {
-  if (c.kind === 'w' || c.kind === 'rune') { const id = c.kind === 'rune' ? c.wid : c.id, sk = SKILLSETS.mage.find(s => s.id === id) || { id, lvl: 1 }; skillIcon(sk, 0, cx, cy, r, false); return; }
+  if (c.kind === 'w' || c.kind === 'rune') {
+    const id = c.kind === 'rune' ? c.wid : c.id;
+    if (id === 'swing') { drawButton([cx, cy, r], [48, 49, 50, 51], false, typeof glyphHammer === 'function' ? glyphHammer : glyphSword); return; }
+    const sk = [...SKILLSETS.mage, ...SKILLSETS.paladin].find(s => s.id === id) || { id, lvl: 1 }; skillIcon(sk, 0, cx, cy, r, false); return;
+  }
+  if (c.kind === 'hero') { drawButton([cx, cy, r], c.id === 'mage' ? [37, 38, 39, 40] : [48, 49, 50, 51], false, c.id === 'mage' ? glyphBolt : (typeof glyphHammer === 'function' ? glyphHammer : glyphSword)); return; }
   const p = SV_PASSIVES[c.id]; drawButton([cx, cy, r], p ? p.ramp : [52, 53, 54, 55], false, (x, y) => textC(p ? p.name[0] : '+', x + 1, y - 2, 27));
 }
 function svHud() {
@@ -342,8 +441,20 @@ function svHud() {
   }
   if (G.mode === 'svtitle') return svTitle();
   // the hero's life under his feet
-  { const [x, y] = screenOf(hero), sx = Math.round(x - camX), sy = Math.round(y - camY) + 5, w = 22, f = Math.max(0, hero.hp / STAT.maxHp);
-    fillRect(sx - w / 2 - 1, sy - 1, w + 2, 4, BLK); fillRect(sx - w / 2, sy, Math.round(w * f), 2, f < 0.3 && Math.sin(G.t * 10) > 0 ? 23 : 21); }
+  // a broken ring at his feet, over everything: in a crowd (the Paladin's whole job) he must never be lost
+  if (!hero.dead) { const [x, y] = screenOf(hero), cx = x - camX, cy = y - camY + 1; for (let a = 0; a < 40; a++) { if (a % 5 === 4) continue; const t = a / 40 * 6.283; put(cx + Math.cos(t) * 11, cy + Math.sin(t) * 5.5, a % 5 === 2 ? 27 : 51); } }
+  // (it flashes white through the grace after a blow: the brief asks for that window to be visible)
+  { const [x, y] = screenOf(hero), sx = Math.round(x - camX), sy = Math.round(y - camY) + 5, w = 22, f = Math.max(0, hero.hp / STAT.maxHp), grace = G.t < SV.grace && Math.floor(G.t * 20) % 2 === 0;
+    fillRect(sx - w / 2 - 1, sy - 1, w + 2, 4, BLK); fillRect(sx - w / 2, sy, Math.round(w * f), 2, grace ? 27 : f < 0.3 && Math.sin(G.t * 10) > 0 ? 23 : 21);
+    // the Paladin's guard: a small shield left of the bar, bright when ready, filling while it comes back; gold while a counter is primed
+    if (hero.cls === 'paladin') {
+      const gx = sx - w / 2 - 7, gy = sy - 4, fill = SV.guardOn ? 1 : 1 - SV.guardT / svGuardCd(), col = SV.counterT > G.t ? 51 : SV.guardOn ? 39 : 4;
+      const rows = [[0, 4], [0, 4], [0, 4], [1, 3], [2, 2]];
+      rows.forEach(([a, b], r) => { for (let c = a - 1; c <= b + 1; c++) put(gx + c, gy + r, BLK); });
+      put(gx + 2, gy + 5, BLK); put(gx + 1, gy - 1, BLK); put(gx + 3, gy - 1, BLK); for (let c = -1; c <= 5; c++) put(gx + c, gy - 1, BLK);
+      rows.forEach(([a, b], r) => { const on = SV.guardOn || (4 - r) / 5 < fill; for (let c = a; c <= b; c++) put(gx + c, gy + r, on ? col : 3); });
+      if (SV.counterT > G.t && Math.floor(G.t * 8) % 2) textC('COUNTER', sx, sy + 5, 51);
+    } }
   // top: the XP bar, the level, the clock, the kills
   { const f = SV.xp / svNeed(SV.lvl); fillRect(0, 0, W, 7, BLK); fillRect(1, 1, Math.round((W - 2) * f), 5, 39); fillRect(1, 1, Math.round((W - 2) * f), 1, 40);
     text(`LV ${SV.lvl}`, 3, 10, 27); textC(svTime(SV.t), W / 2, 10, 27, 2); const k = `${SV.kills}`; text(k, W - 3 - textWidth(k), 10, 25); text('KILLS', W - 3 - textWidth('KILLS'), 17, 4); }
@@ -375,11 +486,14 @@ function svDrawCards() {
     fillRect(r.x, r.y, r.w, r.h, 3); frame(r.x, r.y, r.w, r.h, c.kind === 'rune' ? 50 : 6, c.kind === 'rune' ? 48 : 3);
     svIcon(c, r.x + 18, r.y + 20, 11);
     text(c.name, r.x + 36, r.y + 8, c.kind === 'rune' ? 51 : 27);
-    text(c.line, r.x + 36, r.y + 17, c.line === 'NEW SPELL' || c.line === 'NEW' ? 54 : 50);
+    text(c.line, r.x + 36, r.y + 17, /^NEW/.test(c.line) ? 54 : 50);
     wrapText(c.desc, 44).forEach((l, n) => text(l, r.x + 36, r.y + 29 + n * 8, 26));
     text(`${k + 1}`, r.x + r.w - 9, r.y + 6, 4);
   });
+  // two rerolls a run (the brief: a limited way to redirect offers, not a filter for every menu)
+  if (!SV.rune) { const B = svRerollRect(), on = SV.rerolls > 0; fillRect(B.x, B.y, B.w, B.h, 3); frame(B.x, B.y, B.w, B.h, on ? 50 : 4, on ? 48 : 3); textC(on ? `REROLL (${SV.rerolls} LEFT)` : 'NO REROLLS LEFT', W / 2, B.y + 6, on ? 50 : 4); }
 }
+function svRerollRect() { const R = svCardRects(), last = R[R.length - 1]; return { x: W / 2 - 55, y: last.y + last.h + 12, w: 110, h: 18 }; }
 function svDrawEnd() {
   svDim(0.75);
   const E = SV.end, y0 = Math.round(H * 0.22);
@@ -389,18 +503,32 @@ function svDrawEnd() {
   let y = y0 + 54; textC('YOUR BUILD', W / 2, y, 50); y += 12;
   for (const id in SV.w) { svIcon({ kind: 'w', id }, 40, y + 4, 7); text(`${SV_WEAPONS[id].name} LV ${SV.w[id].lvl}`, 54, y, 27); if (SV.mods[id]) text(SKILL_MODS[id].find(m => m.id === SV.mods[id]).name, 54, y + 8, 51); y += 20; }
   const ps = Object.keys(SV.pas).map(id => `${SV_PASSIVES[id].name} ${SV.pas[id]}`); wrapText(ps.join(', '), 48).forEach(l => { textC(l, W / 2, y, 25); y += 8; });
-  try { const best = JSON.parse(localStorage.getItem('sv-best') || '{}'); if (best.t) textC(`BEST: ${svTime(best.t)}`, W / 2, y + 8, 4); } catch (e) { /* storage blocked */ }
-  if (G.t - SV.endAt > 1.2) textC('TAP TO PLAY AGAIN', W / 2, H - 50, 27);
+  { const b = svBest(SV.cls); if (b) textC(b.won ? `BEST: A WIN, ${b.kills} KILLS` : `BEST: ${svTime(b.t)}`, W / 2, y + 8, 4); }
+  if (G.t - SV.endAt > 1.2) textC('TAP TO GO ON', W / 2, H - 50, 27);
 }
+function svHeroRects() { const w = W - 28, h = 66, y0 = Math.round(H * 0.42); return ['mage', 'paladin'].map((id, k) => ({ id, x: 14, y: y0 + k * (h + 10), w, h })); }
 function svTitle() {
   svDim(0.45);
-  const y0 = Math.round(H * 0.2);
+  const y0 = Math.round(H * 0.12);
   textC('DUNGEONS OF BONES', W / 2, y0, 26); textC('SURVIVORS', W / 2, y0 + 12, 51, 3);
-  textC('THE MAGE', W / 2, y0 + 50, 39, 2);
-  ['MOVE: DRAG ANYWHERE (OR WASD)', 'YOUR SPELLS CAST THEMSELVES', 'GRAB THE GEMS TO LEVEL UP', 'THE SKELETON KING COMES AT 9:00'].forEach((l, n) => textC(l, W / 2, y0 + 80 + n * 10, 26));
-  try { const best = JSON.parse(localStorage.getItem('sv-best') || '{}'); if (best.t) textC(`BEST: ${svTime(best.t)}, ${best.kills} KILLS`, W / 2, y0 + 130, 4); } catch (e) { /* storage blocked */ }
-  if (Math.sin(G.t * 4) > -0.3) textC('TAP TO START', W / 2, H * 0.72, 27, 2);
+  ['DRAG ANYWHERE TO MOVE (OR WASD). YOUR', 'ATTACKS ARE AUTOMATIC: GRAB GEMS, LEVEL UP,', 'THE SKELETON KING COMES AT 9:00'].forEach((l, n) => textC(l, W / 2, y0 + 46 + n * 9, 26));
+  textC('CHOOSE YOUR HERO', W / 2, svHeroRects()[0].y - 14, 50);
+  for (const r of svHeroRects()) {
+    const H0 = SV_HEROES[r.id], sel = SV.cls === r.id, b = svBest(r.id);
+    fillRect(r.x, r.y, r.w, r.h, 3); frame(r.x, r.y, r.w, r.h, sel ? 50 : 6, sel ? 48 : 3);
+    svIcon({ kind: 'hero', id: r.id }, r.x + 18, r.y + 22, 11);
+    text(H0.name, r.x + 36, r.y + 8, r.id === 'mage' ? 39 : 51); text(H0.role, r.x + 36, r.y + 17, 50);
+    H0.lines.forEach((l, n) => text(l, r.x + 36, r.y + 29 + n * 8, 26));
+    if (b) text(b.won ? 'BEST: A WIN' : `BEST: ${svTime(b.t)}`, r.x + 36, r.y + r.h - 10, 4);
+  }
+  { const R = svHeroRects(), last = R[R.length - 1]; if (Math.sin(G.t * 4) > -0.3) textC('TAP A HERO TO START', W / 2, last.y + last.h + 14, 27); }
 }
+function svChooseHero(cls) {
+  if (cls !== SV.cls || SV.t > 0 || SV.kills) svNewRun(cls);   // (the arena behind the title was made for the last hero)
+  try { localStorage.setItem('sv-cls', cls); } catch (e) { /* storage blocked */ }
+  svBegin();
+}
+function svToTitle() { svNewRun(SV.cls); G.mode = 'svtitle'; }
 
 // ---------------------------------------------------------------- input (ahead of the game's own)
 // Taps go to the cards and screens here; in play a touch anywhere is the floating stick.
@@ -410,9 +538,9 @@ addEventListener('pointerdown', e => {
   audioInit();
   const p = toNative(e);
   if (G.paused) { G.paused = false; last = performance.now(); return; }
-  if (G.mode === 'svtitle') { svBegin(); return; }
-  if (G.mode === 'svcards') { const R = svCardRects(); R.forEach((r, k) => { if (inRect(p, r)) svPick(k); }); return; }
-  if (G.mode === 'svend') { if (G.t - SV.endAt > 1.2) { svNewRun(); svBegin(); } return; }
+  if (G.mode === 'svtitle') { for (const r of svHeroRects()) if (inRect(p, r)) svChooseHero(r.id); return; }
+  if (G.mode === 'svcards') { const R = svCardRects(); R.forEach((r, k) => { if (inRect(p, r)) svPick(k); }); if (!SV.rune && inRect(p, svRerollRect())) svReroll(); return; }
+  if (G.mode === 'svend') { if (G.t - SV.endAt > 1.2) svToTitle(); return; }
   if (G.mode !== 'play') return;
   if (p[0] > W - 50 && p[1] > H - 16) { setMuted(!SFX.muted); return; }
   if (stick.id === null) { stick.id = e.pointerId; stick.ox = p[0]; stick.oy = p[1]; stick.x = p[0]; stick.y = p[1]; capture(e); }
@@ -420,9 +548,9 @@ addEventListener('pointerdown', e => {
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   audioInit();
-  if (G.mode === 'svtitle') { if (k === 'enter' || k === ' ') svBegin(); e.stopImmediatePropagation(); return; }
-  if (G.mode === 'svcards') { if (k >= '1' && k <= '3') svPick(+k - 1); e.stopImmediatePropagation(); return; }
-  if (G.mode === 'svend') { if ((k === 'enter' || k === ' ') && G.t - SV.endAt > 1.2) { svNewRun(); svBegin(); } e.stopImmediatePropagation(); return; }
+  if (G.mode === 'svtitle') { if (k === '1' || k === '2') svChooseHero(k === '1' ? 'mage' : 'paladin'); else if (k === 'enter' || k === ' ') svChooseHero(SV.cls); e.stopImmediatePropagation(); return; }
+  if (G.mode === 'svcards') { if (k >= '1' && k <= '3') svPick(+k - 1); if (k === 'r') svReroll(); e.stopImmediatePropagation(); return; }
+  if (G.mode === 'svend') { if ((k === 'enter' || k === ' ') && G.t - SV.endAt > 1.2) svToTitle(); e.stopImmediatePropagation(); return; }
   if (k === 'n') { setMuted(!SFX.muted); e.stopImmediatePropagation(); return; }
   if (k === 'p' || k === 'escape') { G.paused = !G.paused; e.stopImmediatePropagation(); return; }
   if (!['w', 'a', 's', 'd', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown'].includes(k)) e.stopImmediatePropagation();   // only movement reaches the game
@@ -430,13 +558,43 @@ addEventListener('keydown', e => {
 
 // ---------------------------------------------------------------- hooks into the game
 {
-  const _update = update, _damage = damageEnemy, _pickup = pickup, _recalc = recalcHero, _hurt = hurtHero;
-  // a moment's grace after a blow (0.3 s), so a crowd's swings land one by one instead of all in one frame
-  hurtHero = function (dmg, src) { if (SV.on) { if (G.t < SV.grace) return; SV.grace = G.t + 0.3; } _hurt(dmg, src); };
+  const _update = update, _damage = damageEnemy, _pickup = pickup, _recalc = recalcHero, _hurt = hurtHero, _resolve = heroHitResolve;
+  // a moment's grace after a blow (0.3 s), so a crowd's swings land one by one instead of all in one frame;
+  // the Paladin's guard takes the first blow whole
+  hurtHero = function (dmg, src) {
+    if (SV.on) {
+      if (G.t < SV.grace || hero.dead || G.mode !== 'play') return;
+      if (hero.cls === 'paladin' && SV.guardOn) { svBlock(src); return; }
+      SV.grace = G.t + 0.3;
+    }
+    _hurt(dmg, src);
+  };
+  // the Paladin's swing, as his hammer's levels and fighting style make it (heroHitResolve is the moment a blow lands)
+  heroHitResolve = function (all = false, pow = 0, ...rest) {
+    if (!SV.on || hero.cls !== 'paladin') return _resolve(all, pow, ...rest);
+    const w = SV.w.swing, mod = SV.mods.swing, counter = SV.counterT > G.t;
+    const k = (w && w.lvl >= 2 ? 1.3 : 1) * (w && w.lvl >= 5 ? 1.3 : 1) * (counter ? 2.5 : 1);
+    const hp0 = new Map(); for (const e of enemies) if (alive(e) && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 4) hp0.set(e, e.hp);
+    const d0 = STAT.dmg; STAT.dmg = [d0[0] * k, d0[1] * k];
+    let r;
+    try {
+      r = _resolve(all || mod === 'wide' || counter, Math.max(pow, counter ? 2 : mod === 'crush' ? 1 : 0), ...rest);
+      if (mod === 'reach') {   // LONG REACH: a crescent of light carries the blow a tile past the hammer, in front
+        const [fx, fy] = dirVec(hero.dir), R0 = heroReach() + 0.1;
+        for (const e of enemies) { if (!alive(e) || hp0.has(e) && e.hp < hp0.get(e)) continue; const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy);
+          if (d > R0 && d < R0 + 1.2 + (e.def.unique ? 0.5 : 0) && (dx * fx + dy * fy) / d > 0.35) damageEnemy(e, heroDmg(0.8), hero.fi, hero.fj, false, 0); }
+        shockwave(hero.fi + fx * 0.6, hero.fj + fy * 0.6, R0 + 0.9, 0.16, [27, 51], [Math.atan2(fy, fx), 1.1]);   // (arc: [centre angle, half width])
+      }
+    } finally { STAT.dmg = d0; }
+    let n = 0; for (const [e, hp] of hp0) if (e.hp < hp) { n++; if (mod === 'crush' && alive(e) && !e.def.unique) e.stun = Math.max(e.stun || 0, 0.5); }
+    if (counter) { SV.counterT = 0; shockwave(hero.fi, hero.fj, heroReach() + 0.4, 0.3, [50, 51]); sfx('palToll'); if (n) floater('COUNTER!', hero.fi, hero.fj, 52, 51); }
+    if (SV.pas.oath && n) hero.hp = Math.min(STAT.maxHp, hero.hp + Math.min(n, 3) * SV.pas.oath);   // healing capped per swing (a cleave through ten must not heal ten times)
+    return r;
+  };
   update = function (dt) {
     for (let k = 0, n = +SV_PARAMS.get('speed') || 1; k < n; k++) { _update(dt); if (SV.on) svUpdate(dt); }   // (?speed=4 for test runs)
     if (!SV.on) return;
-    if (SV_PARAMS.get('bot')) { if (G.mode === 'svtitle') svBegin(); if (G.mode === 'svcards' && G.t - SV.cardT > 0.4) svPick(svBotPick()); }   // (testing)
+    if (SV_PARAMS.get('bot')) { if (G.mode === 'svtitle') svChooseHero(SV_PARAMS.get('cls') || 'mage'); if (G.mode === 'svcards' && G.t - SV.cardT > 0.4) svPick(svBotPick()); }   // (testing)
   };
   damageEnemy = function (e, ...a) { const was = alive(e); _damage(e, ...a); if (SV.on && was && !alive(e)) svKilled(e); };
   pickup = g => SV.on ? svPickup(g) || (!g.xp && !g.svHeal && !g.svChest && _pickup(g)) : _pickup(g);
@@ -444,7 +602,8 @@ addEventListener('keydown', e => {
     _recalc(); if (!SV.on) return;
     const p = SV.pas, k = 1 + 0.15 * (p.might || 0);
     STAT.dmg = [STAT.dmg[0] * k, STAT.dmg[1] * k];
-    STAT.maxHp = Math.round(STAT.maxHp * 2.5) + 20 * (p.vigor || 0); STAT.speed *= 1 + 0.1 * (p.swift || 0);
+    STAT.maxHp = Math.round(STAT.maxHp * SV_HEROES[SV.cls].hp) + 20 * (p.vigor || 0); STAT.speed *= 1 + 0.1 * (p.swift || 0);
+    STAT.atkSpeed = (STAT.atkSpeed || 0) + 8 * (p.haste || 0) + (SV.w.swing && SV.w.swing.lvl >= 4 ? 25 : 0);
     STAT.crit = (STAT.crit || 0) + 6 * (p.crit || 0); STAT.armor = (STAT.armor || 0) + 5 * (p.ward || 0); STAT.regen = (STAT.regen || 0) + 0.6 * (p.regen || 0);
   };
   skillMod = id => SV.on ? SV.mods[id] || null : null;   // the runes are chosen in the run
@@ -457,5 +616,9 @@ addEventListener('keydown', e => {
   MUSIC_MODES.svtitle = 0.6; MUSIC_MODES.svcards = 0.6; MUSIC_MODES.svend = 0.8;
   window.SV = SV;
 }
-// boot: a run is ready behind the title
+// boot: a run is ready behind the title (for the hero picked last time)
+try { const c = SV_PARAMS.get('cls') || localStorage.getItem('sv-cls'); if (SV_HEROES[c]) SV.cls = c; } catch (e) { /* storage blocked */ }
 svNewRun(); G.mode = 'svtitle';
+
+// let the frame loop run (index.html held it until this file was in)
+if (window.__svRelease) window.__svRelease();

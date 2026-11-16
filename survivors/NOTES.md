@@ -2,7 +2,7 @@
 
 Read this first, then `PLAN.md` (the first plan) and `RESEARCH.md` (the user's research brief, the design guide).
 
-## State (2026-11-16, round 1: the Mage prototype)
+## State (2026-11-16): round 2, the Mage and the Paladin
 Playable on the phone: https://claude.ai/artifact/AnNxggtQ8t2FsAHznH9mz9 ("Bones Survivors").
 The user asked to start with the Mage, using the research brief as the guide. Nothing else is built yet
 (no other classes, no meta progression, no unlocks).
@@ -12,6 +12,33 @@ gems (blue 1, green 3+, purple 10+), the magnet pulls them in; each level offers
 opens a choice of its three runes (the Diablo game's skill modifiers). Waves change every 40-70 s; an elite
 (a champion with its powers and two of its kind) every 75 s from 1:15 drops a chest (1, 3 or rarely 5 free
 upgrades); the Alpha at 5:00; the Skeleton King at 9:00; killing him wins. Best time is kept in the browser.
+
+## Round 2 (2026-11-16): the expanded brief applied
+The user sent the expanded brief (sections 20-29, mostly melee; condensed at the end of RESEARCH.md) and asked to
+use it to improve the game. Done:
+- **Hero choice** on the title: the Mage or the **PALADIN** (the game's own class, built to the brief's "Warden").
+  The last pick is remembered; the end screen goes back to the title.
+- **Paladin**: his hammer (`swing`, a basic weapon) swings on its own whenever a foe is in reach and he is free
+  (`svSwing`, our own swing start so he never walks into foes on his own); he **keeps walking through every swing,
+  throw and raised hammer** (`svCarry`, 85% speed); he faces his target (broad frontal arc, open back). **Guard**:
+  one charge (shield pip left of his life bar), blocks a whole blow, shoves the nearest foes back and dazes them,
+  and primes a **COUNTER** for 2.5 s (the next swing hits all round at 2.5x); it comes back in 6 s. His skills are
+  the Paladin's own: Hammer of Light (thrown, returns), Consecrate (holy ground: stand in it to mend and hit harder;
+  its level 4 doubles how long it lasts), Judgment (a hammer from the sky). Seraph's Fall is left out (it moves him
+  on its own; the brief warns against automatic offensive dashes). Hammer levels: 2 and 5 hit 30% harder, 4 swings
+  25% faster, 3 is a **fighting style**: WIDE CLEAVE (all round), LONG REACH (a crescent a tile farther, in front),
+  CRUSHING BLOWS (dazes and throws back). Paladin-only passives: Stalwart (guard 25% sooner), Blood Oath (heal 1 per
+  foe hit, at most 3 per swing). 3x life (the Mage 2.5x).
+- **Two rerolls a run** on the level-up screen (a limited way to redirect offers).
+- The **grace after a hit** flashes the life bar white; a **ring at the hero's feet** drawn over everything (in a
+  crowd the Paladin was lost).
+- **Choice log**: every offer, pick and reroll with time, level, life and foe count; the last 20 runs are kept in
+  the browser (`localStorage['sv-runs']`), best per hero in `sv-best2`.
+- **Load-order fix**: the page holds the game's frame loop until surv.js has loaded (`__svRelease`); without it a
+  frame could run between scripts and the dungeon game's title crashed the loop (seen in about half the test loads).
+- Bot runs (focused picks, 3x speed): the Paladin won at 9:20 (2,722 kills; life dipped to a third at times; the
+  King died in ~20 s), the Mage at 11:08 (3,027 kills; the King took 2 minutes). One run each: the brief warns a
+  lucky run must not decide balance.
 
 ## How it works
 - `survivors/index.html` loads every script of `diablo-clone/game/js/` unchanged (a `<base href>` points all
@@ -57,7 +84,17 @@ on later publishes (usually just `sv/surv.js`).
 3. Run length (10 min now), and whether the view should pull back (more of the arena on screen).
 4. A name (working title: Bones Survivors).
 
-## Next steps (proposed)
+## Next steps after round 2 (from the expanded brief)
+- Play test both heroes on the phone; ask the melee questions (where did you want to stand, why did a hit miss,
+  what did the shield let you do, when could you safely hit the King).
+- The King melts to the Paladin (~20 s): give the final fight its own test (phases, a support threat, openings)
+  rather than more health.
+- Encounter variety per the brief's matrix: a durable priority enemy, mixed fast/slow, one optional objective.
+- A Duelist (narrow reach, a step on a button) as the second melee identity, only after the Paladin feels right.
+- Read the choice log (`sv-runs`) once the user has played a few runs (ask them to open the page on a desktop, or add
+  an export).
+
+## Next steps (proposed, round 1)
 - Mage only, deepen first: more Mage spells or evolutions (a maxed spell + a passive = an evolved spell), the
   Mage's Arcane Storm / elemental ultimates as a charge-up button or automatic burst.
 - Enemy roles per the brief (chargers already wind up; archers make distance matter); a distinct final test.

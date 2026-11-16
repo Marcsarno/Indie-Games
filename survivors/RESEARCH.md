@@ -93,3 +93,68 @@ FullCleared interview with Chasing Carrots (Halls of Torment, 2024-09-19); S7 De
 Steam reviews; S10 r/brotato "The ban system is not enough"; S11 Deep Rock Galactic: Survivor Steam page; S12
 r/VampireSurvivors "30 minutes is too long" (2022-03); S13 r/brotato "Why does Brotato never feel repetitive?".
 Further viewing: Noclip, "The Making of Vampire Survivors" (2023-07-17).
+
+# Expanded edition (the user's second brief, same day): sections 20-29, condensed
+
+## What changed after the extra rounds
+- Build variety depends on the enemies and objectives that test it, not only on upgrades.
+- A narrow starting character or weapon creates an expectation that the run offers compatible paths.
+- A new mechanic can weaken the main activity by giving an easier way round it (DRG: Survivor dropped a dash
+  because mining already gave escape).
+- Progression can make an enjoyable challenge feel compulsory; optional resets and bounded rewards are alternatives.
+- Balance needs the choices players were offered and their circumstances, not just winning builds.
+
+## Round 1, combat and pacing (S14-S16)
+- Judge a new ability by the decisions it changes; record movement with and without it.
+- Weapon identity, usefulness and power distribution are separate questions; don't equalise shapes away.
+- Protect a readable area around the player (20 Minutes Till Dawn raised enemy/floor contrast and moved friendly
+  effects off the character). Test full effects vs softer friendly effects near the hero vs simplified effects.
+- Two rhythms: movement (routes open and close) and planning (choose, test, revise). Too-frequent choices leave no
+  time to feel their consequences.
+
+## Round 2, choices and replayability (S17-S20)
+- A starting identity is a promise: give it several viable routes ("choose an identity, discover an implementation"),
+  not one exact recipe.
+- Predictable vs adaptive builds can be separate modes later; first one satisfying default.
+- Pool dilution: with 3 offers drawn from N and K relevant, P(at least one) = 1 - C(N-K,3)/C(N,3): 20/5 -> 60%,
+  40/5 -> 34%, 40/10 -> 59%. Audit each new upgrade: which identities use it, when it enters the pool.
+- Enemy design can make a rich upgrade system converge (Nova Drift: all-crowd waves made area clear the only answer).
+  Encounter matrix: dense weak crowd, durable priority enemy, mixed fast/slow, recoverable sustained pressure,
+  temporary objective.
+- Winning-build statistics mislead; log offers, picks, state, stage, outcome.
+
+## Round 3, progression and grind (S21-S23)
+- A progression screen tells players what they think they must do; check that against the real requirements.
+- Look for reward rules that make players stall the climax (DRG: Survivor rewarded fast elite kills).
+- Restarting can be content (VS Adventures: contained campaigns with restricted arsenals).
+- Test first-time, returning, experienced and post-update players separately.
+- Six experiments in order: same encounter with three identities; one alternative enemy composition; relevance
+  protection on offers; core movement with/without an extra ability; timely-completion rewards; a small unlock path.
+
+## Melee (sections 25-28, S24-S31)
+- Keep movement responsive while attacking (Death Must Die found attack slowdowns clumsy with autoattack).
+- There must be a gap between "my attack reaches" and "the enemy hurts me": R > r_player + r_enemy, and startup time
+  must fit inside the time an enemy needs to cross that gap.
+- Honest hit regions: the visible sweep hits (close targets too), one hit per swing, range to the nearest part of
+  big enemies, telegraph / active / recovery separated.
+- Targeting: face a nearby enemy while moving freely; keep the target through a swing.
+- Every melee class needs one reliable defensive answer (knockback, stagger, a limited guard, recovery on hit, a step,
+  a slow); grace after a hit should be visible.
+- Recommended first melee class, the WARDEN: auto cleave while moving, broad frontal arc with a rear weakness, one
+  visible guard charge on a timer that absorbs a hit and primes a stronger next slash. Second: a DUELIST (narrow
+  reach, deliberate repositioning; the best candidate for an optional action button). Backlog: Berserker (rage from
+  weapon contact, capped, decays), Grave Reaper (scythe marks).
+- Upgrades should change behaviour visibly; keep reach and width separate. Heal per swing capped; bosses need a
+  defined response to stagger and repeatable, reachable openings (Brotato fixed whips missing adjacent enemies and
+  weapons that could not reach a boss's foot). Delivered DPS = sheet DPS x opportunity x hit success.
+- Decision gates: contact damage before a valid swing lands -> fix spacing first; unpredictable attack direction ->
+  simplify targeting; a class needs a rare defence -> move a defence into its baseline; bosses drag -> check access;
+  runs abandon the main weapon -> audit upgrade coverage; late builds erase all danger -> limit healing/control.
+- Post-run questions for melee: Where did you want to stand? Why did that hit connect or miss? What did the shield
+  let you do? Which upgrade changed how you moved? When could you safely attack the boss?
+
+New sources S14-S31 (PC Gamer 2022 Galante interview; How To Market A Game on DRG: Survivor; 20MTD visibility
+update; 20MTD developer discussion; Nova Drift Wild Metamorphosis and Manifesto; Slay the Spire GDC slides; DRG:
+Survivor 1.0 notes; Steam "grindy update" thread; VS Adventures FAQ; Death Must Die Act II dev logs #2 and #3;
+Halls of Torment EA preview 2023, update 2024-05-14 and its feedback thread; Jotunnslayer dev blogs #1 and #2;
+Brotato balancing patch and 1.2.0.3 notes, November 2026).
