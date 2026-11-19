@@ -1,5 +1,7 @@
 # Survivors: progression, unlocks and a reason to explore (plan, 2026-11-19)
 
+> Status (2026-11-19, round 3): built: gold kept on death, the camp (heroes, shrine, unlocks), blessings with free refunds, hero ranks with gear looks, 15 unlocks, four difficulty levels, the bigger map with barrels, pickups, shrines, the caged Ranger, a relic altar, goblins and fire rain. Not built yet: the second map, curses beyond the four levels, gear from chests, the walkable camp. See NOTES.md.
+
 The user: "plan how to add unlocks, progression, give you a reason to walk around the map like survivors. More
 rogue-like with dying and leveling." Nothing here is built yet. It follows RESEARCH.md: unlocks should answer
 "what can I try now?", permanent power should answer "what frustration does this soften?", nothing should feel

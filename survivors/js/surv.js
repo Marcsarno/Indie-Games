@@ -32,7 +32,34 @@ const SV_WEAPONS = {
   consec: { cls: 'paladin', name: 'CONSECRATE', cd: 9, range: 2.4, fn: () => palConsecrate(), desc: 'HOLY GROUND THAT BURNS FOES. STAND IN IT: YOU MEND AND HIT HARDER',
     lv: ['', 'NEW', 'CASTS 25% MORE OFTEN', 'CHOOSE ONE OF THREE RUNES', 'THE GROUND LASTS TWICE AS LONG', 'CASTS 25% MORE OFTEN'] },
   judge: { cls: 'paladin', name: 'JUDGMENT', cd: 5.5, range: 8, fn: () => palJudge(), desc: 'A HAMMER FALLS FROM THE SKY ON THE THICKEST CROWD' },
+  // round 3: the BARBARIAN (the game's 'warrior'): two axes, rage, the brief's Berserker (rage from weapon contact,
+  // capped per swing, decays when he backs off; at full it becomes a FRENZY). Bull Rush and Leap are left out: they
+  // move him on their own.
+  axes: { cls: 'warrior', basic: true, name: 'TWIN AXES', desc: 'TWO AXES THAT SWING ON THEIR OWN. EVERY THIRD BLOW STAGGERS',
+    lv: ['', 'NEW', 'HITS 30% HARDER', 'CHOOSE A FIGHTING STYLE', 'SWINGS 25% FASTER', 'HITS 30% HARDER'] },
+  slam: { cls: 'warrior', name: 'GROUND SLAM', cd: 3.4, range: 3.2, fn: () => groundSlam(), desc: 'SMASHES THE GROUND IN FRONT OF YOU: A CONE THAT KNOCKS FOES DOWN' },
+  whirl: { cls: 'warrior', name: 'WHIRLWIND', cd: 6.5, range: 2.2, fn: () => { hero.whirl = skillMod('whirl') === 'long' ? 1.6 : 0.8; hero.whirlTick = 0; hero.devilT = 0.1; sfx('heavySwing'); return true; },
+    desc: 'A SPINNING STORM OF AXES WHEN THEY CROWD YOU. YOU KEEP MOVING', lv: ['', 'NEW', 'CASTS 25% MORE OFTEN', 'CHOOSE ONE OF THREE RUNES', 'SPINS HALF AGAIN AS LONG', 'CASTS 25% MORE OFTEN'] },
+  hook: { cls: 'warrior', name: 'CHAIN HOOK', cd: 4.5, range: 6.5, fn: () => chainHook(), desc: 'A HOOK ON A CHAIN DRAGS A FOE (AND WHAT IS BESIDE IT) TO YOUR AXES' },
+  // the RANGER: a bow that looses on its own, combo points from basic hits that her shots spend, a sentry, a strafe
+  bow: { cls: 'ranger', basic: true, name: 'HUNTING BOW', desc: 'YOUR BOW LOOSES ON ITS OWN AT THE NEAREST FOE. HITS BUILD COMBO POINTS',
+    lv: ['', 'NEW', 'HITS 30% HARDER', 'CHOOSE A FIGHTING STYLE', 'DRAWS 25% FASTER', 'HITS 30% HARDER'] },
+  pierce: { cls: 'ranger', name: 'PIERCING SHOT', cd: 2.6, range: 8.5, fn: () => piercingShot(), desc: 'A HEAVY BOLT THROUGH EVERY FOE IN A LINE. COMBO POINTS MAKE IT HUGE' },
+  cluster: { cls: 'ranger', name: 'CLUSTER ARROW', cd: 3.8, range: 8, fn: () => clusterArrow(), desc: 'A LOBBED ARROW THAT BURSTS INTO BOUNCING BOMBLETS' },
+  sentry: { cls: 'ranger', name: 'SENTRY', cd: 9, range: 7, fn: () => { placeSentry(); return true; }, desc: 'PLANTS A CROSSBOW TURRET THAT SHOOTS FOR A FEW SECONDS',
+    lv: ['', 'NEW', 'CASTS 25% MORE OFTEN', 'CHOOSE ONE OF THREE RUNES', 'THE SENTRY STANDS TWICE AS LONG', 'CASTS 25% MORE OFTEN'] },
+  strafe: { cls: 'ranger', name: 'STRAFE', cd: 8, range: 6, fn: () => { startStrafe(); return true; }, desc: 'A HAIL OF ARROWS AT EVERY FOE NEAR WHILE YOU RUN, AND YOU RUN FASTER' },
 };
+SKILL_MODS.axes = [
+  { id: 'ravager', name: 'RAVAGER', desc: 'EVERY THIRD BLOW IS A SPIN THAT HITS ALL AROUND AND STAGGERS LONGER' },
+  { id: 'bleed', name: 'BLOODLETTER', desc: 'YOUR AXES OPEN WOUNDS: FOES BLEED FOR HALF THE HIT AGAIN OVER 3 SECONDS' },
+  { id: 'frenzy', name: 'BERSERK', desc: 'RAGE FILLS TWICE AS FAST AND THE FRENZY LASTS 3 SECONDS LONGER' },
+];
+SKILL_MODS.bow = [
+  { id: 'twin', name: 'TWIN SHOT', desc: 'TWO ARROWS EACH TIME, SIDE BY SIDE' },
+  { id: 'pierce', name: 'BODKIN POINTS', desc: 'YOUR ARROWS GO THROUGH EVERY FOE IN THEIR WAY' },
+  { id: 'fire', name: 'FIRE ARROWS', desc: 'YOUR ARROWS SET FOES ALIGHT' },
+];
 // the hammer's level 3: a fighting style (the brief: reach and width are separate growth, so shapes stay distinct)
 SKILL_MODS.swing = [
   { id: 'wide', name: 'WIDE CLEAVE', desc: 'EVERY SWING HITS ALL AROUND YOU, NOT JUST IN FRONT' },
@@ -44,7 +71,17 @@ const SV_HEROES = {
     lines: ['KEEP YOUR DISTANCE. SPELLS FIND THE FOES,', 'RUNES CHANGE HOW EACH SPELL PLAYS'] },
   paladin: { name: 'THE PALADIN', role: 'MELEE: HAMMER AND SHIELD', start: 'swing', hp: 3, maxW: 4,
     lines: ['WORK THE EDGE OF THE CROWD. YOUR GUARD', 'BLOCKS ONE BLOW AND PRIMES A COUNTER'] },
+  warrior: { name: 'THE BARBARIAN', role: 'MELEE: TWO AXES AND RAGE', start: 'axes', hp: 2.7, maxW: 4,
+    lines: ['STAY IN THE THICK OF IT: HITS FILL', 'YOUR RAGE, FULL RAGE IS A FRENZY'] },
+  ranger: { name: 'THE RANGER', role: 'RANGED: BOW, TRAPS AND SPEED', start: 'bow', hp: 2.4, maxW: 5,
+    lines: ['KEEP MOVING. WHEN A BLOW LANDS YOU', 'TUMBLE AWAY FASTER FOR A MOMENT'] },
 };
+const SV_HERO_ORDER = ['mage', 'paladin', 'warrior', 'ranger'];
+const svMelee = () => hero.cls === 'paladin' || hero.cls === 'warrior';
+const svBasicId = () => SV_HEROES[SV.cls].start;
+// round 3: other files (surv_meta.js, surv_map.js) hang their work on these
+const SV_HOOKS = { newRun: [], killed: [], update: [], hud: [], end: [], recalc: [], spawn: [], pickup: [], world: [], decor: [], fatal: [] };
+const svRun = (k, ...a) => { for (const f of SV_HOOKS[k]) f(...a); };
 const SV_WLVL = ['', 'NEW', 'CASTS 25% MORE OFTEN', 'CHOOSE ONE OF THREE RUNES', 'CASTS TWICE EACH TIME', 'CASTS 25% MORE OFTEN'];
 const SV_GUARD_CD = 6;   // seconds for the guard to come back
 // passives: the item affixes of the Diablo game as level-up picks (cls: that hero only)
@@ -52,7 +89,10 @@ const SV_PASSIVES = {
   might: { name: 'MIGHT', max: 5, desc: '+15% DAMAGE', ramp: [19, 20, 21, 22] },
   haste: { name: 'HASTE', max: 5, desc: 'ATTACKS AND SPELLS 8% FASTER', ramp: [48, 49, 50, 51] },
   guard: { cls: 'paladin', name: 'STALWART', max: 3, desc: 'YOUR GUARD COMES BACK 25% SOONER', ramp: [37, 38, 39, 40] },
-  oath: { cls: 'paladin', name: 'BLOOD OATH', max: 3, desc: 'EACH SWING HEALS 1 LIFE PER FOE HIT (UP TO 3)', ramp: [19, 20, 21, 22] },
+  oath: { cls: ['paladin', 'warrior'], name: 'BLOOD OATH', max: 3, desc: 'EACH SWING HEALS 1 LIFE PER FOE HIT (UP TO 3)', ramp: [19, 20, 21, 22] },
+  fury: { cls: 'warrior', name: 'FURY', max: 3, desc: 'RAGE FILLS 30% FASTER AND DRAINS SLOWER', ramp: [13, 14, 15, 16] },
+  fleet: { cls: 'ranger', name: 'FLEET FOOT', max: 3, desc: 'YOUR TUMBLE LASTS LONGER AND COMES WITH A MOMENT OF GRACE', ramp: [52, 53, 54, 55] },
+  eagle: { cls: 'ranger', name: 'EAGLE EYE', max: 3, desc: 'YOUR BASIC ARROWS HIT 15% HARDER AND FLY FASTER', ramp: [33, 34, 35, 36] },
   vigor: { name: 'VIGOR', max: 5, desc: '+20 MAXIMUM LIFE, AND HEALS YOU', ramp: [52, 53, 54, 55] },
   swift: { name: 'SWIFTNESS', max: 3, desc: '+10% MOVE SPEED', ramp: [33, 34, 35, 36] },
   magnet: { name: 'MAGNETISM', max: 3, desc: 'PICK UP GEMS FROM 50% FARTHER AWAY', ramp: [56, 57, 58, 59] },
@@ -97,6 +137,7 @@ function svArena(seed) {
   for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) { const k = tIdx(i, j); if (!edgeBand(i, j) && !keep.has(k)) LV.solid[k] = 0; }
   LV.start = { cx: Math.floor(cx), cy: Math.floor(cy), x: Math.floor(cx) - 2, y: Math.floor(cy) - 2, w: 4, h: 4 };
   LV.rooms = [LV.start];
+  svRun('decor');   // (barrels, cages: placed before the bake)
   buildWorld();
   SV.floor0 = floorBuf.slice(); SV.washAt = 0;   // the clean ground, for the wash (svWash)
   makeNpcs();
@@ -106,18 +147,23 @@ function svArena(seed) {
   updateFov(hero.fi, hero.fj); flowT = 0; computeFlow();
   warmStep(1e9, prewarm());
   G.msg = [];
+  svRun('world');   // (the map's places of interest, once the level is clear)
 }
 
 // ---------------------------------------------------------------- a run
 function svReset() {
   Object.assign(SV, { t: 0, kills: 0, lvl: 1, xp: 0, queue: 0, spawnT: 0.5, eliteT: 75, cards: null, rune: null, w: { [SV_HEROES[SV.cls].start]: { lvl: 1, cd: 0.4 } }, mods: {}, pas: {}, echo: [], end: null, boss: null, bossDone: {}, picks: [], firstHurt: 0, grace: 0,
-    rerolls: 2, log: [], guardOn: true, guardT: 0, counterT: 0, won: false });
+    rerolls: 2, log: [], guardOn: true, guardT: 0, counterT: 0, won: false, rage: 0, rageT: 0, tumbleT: 0, gold: 0, banish: 0, banished: {}, revives: 0, unlocked: [], kingPh: 0, diff: SV.diff || 1 });
   if (SV_PARAMS.get('t')) SV.t = +SV_PARAMS.get('t');   // (testing: start the clock later)
 }
 function svNewRun(cls = SV.cls) {
   SV.cls = cls; newHero(cls); hero.lvl = 1; svReset(); SV.on = true;
+  if (cls === 'warrior') {   // the Barbarian: an axe in each hand, hide and a war band
+    const R = rng(7); for (const [b, slot] of [['hand_axe', 'weapon'], ['hand_axe', 'shield'], ['b_hide', 'chest'], ['b_band', 'helm']]) { const it = rollItem(R, 1, b); it.rarity = 'normal'; it.mods = {}; hero.equip[slot] = it; }
+  }
+  svRun('newRun');   // (the hero's rank shows in his gear; blessings; the difficulty)
   svArena((Math.random() * 1e9) >>> 0);
-  recalcHero(); hero.hp = STAT.maxHp;
+  recalcHero(); prewarmHero(); hero.hp = STAT.maxHp;
 }
 function svBegin() { G.mode = 'play'; G.hudInT = 0; sfx('portal'); say('SURVIVE', 51, 2); }
 const svNeed = l => Math.round(3 + l * 3 + l * l * 0.2);   // gems to the next level (6, 10, 14 ... 53 at 10: a pick every 20-30 s)
@@ -136,7 +182,7 @@ function svCast(id) {
   hero.cast = -1; hero.castKind = null; if (hero.clip === 'channel') hero.clip = 'idle';
   return true;
 }
-const svCd = id => SV_WEAPONS[id].cd * (SV.w[id].lvl >= 2 ? 0.8 : 1) * (SV.w[id].lvl >= 5 ? 0.8 : 1) * Math.pow(0.92, SV.pas.haste || 0);
+const svCd = id => SV_WEAPONS[id].cd * (SV.w[id].lvl >= 2 ? 0.8 : 1) * (SV.w[id].lvl >= 5 ? 0.8 : 1) * Math.pow(0.92, SV.pas.haste || 0) * (hero.frenzy > 0 ? 0.7 : 1) * (SV.cdK || 1);
 function svWeapons(dt) {
   for (const id in SV.w) {
     if (SV_WEAPONS[id].basic) continue;
@@ -145,19 +191,42 @@ function svWeapons(dt) {
     if (svCast(id)) {
       w.cd = svCd(id);
       if (id === 'consec' && w.lvl >= 4 && G.pal && G.pal.consec) G.pal.consec.T *= 2;   // (its level 4: the ground lasts twice as long)
+      else if (id === 'whirl' && w.lvl >= 4) hero.whirl *= 1.5;
+      else if (id === 'sentry' && w.lvl >= 4 && G.sentries) { for (const o of G.sentries) if (!o.fall && o.age < 0.1) { o.t *= 2; o.t0 *= 2; } }
+      else if (id === 'strafe' && w.lvl >= 4 && hero.strafe) hero.strafe.t *= 1.5;
       else if (w.lvl >= 4) SV.echo.push({ id, t: 0.28 });
     }
     else w.cd = 0.15;   // nothing in reach: look again shortly
   }
   for (const q of SV.echo) { q.t -= dt; if (q.t <= 0) svCast(q.id); }
   SV.echo = SV.echo.filter(q => q.t > 0);
-  if (SV.w.swing) svSwing(dt);
+  if (SV.w.swing || SV.w.axes) svSwing(dt);
+  if (SV.w.bow) svBow(dt);
 }
+// the Ranger's bow: a shot whenever she is free and a foe is in range (she keeps walking through the draw)
+function svBow() {
+  if (hero.dead || heroBusy() || hero.strafe || hero.roll) return;
+  const t = rangerTarget(ARROW_RANGE - 0.5); if (!t) return;
+  rangerShoot(); hero.approach = null;
+}
+// the Barbarian's rage: each swing that lands adds (capped per swing); it drains once he stops landing blows;
+// full rage is a FRENZY (the dungeon game's frenzy: attacks half again as fast) and he moves a little faster
+function svRage(n) {
+  const k = (SV.mods.axes === 'frenzy' ? 2 : 1) * (1 + 0.3 * (SV.pas.fury || 0));
+  SV.rage = Math.min(100, SV.rage + Math.min(n, 3) * 4.5 * k); SV.rageT = G.t;
+  if (SV.rage >= 100 && !(hero.frenzy > 0)) {
+    hero.frenzy = 6 + (SV.mods.axes === 'frenzy' ? 3 : 0); SV.rage = 0;
+    say('FRENZY!', 22, 1.5); sfx('cry'); sfx('heavySwing'); shockwave(hero.fi, hero.fj, 2.2, 0.3, [21, 23]);
+    const [x, y] = screenOf(hero); burst(1, x, y, 20, 24, 70, 22);
+  }
+}
+// the Ranger's tumble: a blow that lands sends her off faster for a moment (her one defensive answer)
+function svTumble() { SV.tumbleT = G.t + 1.2 + 0.4 * (SV.pas.fleet || 0); if (SV.pas.fleet) SV.grace = Math.max(SV.grace, G.t + 0.3 + 0.15 * SV.pas.fleet); }
 // ---------------------------------------------------------------- the Paladin's hammer (melee)
 // A swing starts whenever a foe is in reach and he is free; he keeps walking through it (svCarry). The brief:
 // slowing movement during auto-attacks felt clumsy in a horde. He faces his target for the swing (locomotion and
 // attack direction are separate), so the back of the arc is the opening to watch.
-const svReachPlus = () => SV.mods.swing === 'reach' ? 1.1 : 0;
+const svReachPlus = () => SV.mods.swing === 'reach' && hero.cls === 'paladin' ? 1.1 : 0;
 function svSwing() {
   if (hero.dead || heroBusy() || hero.leap) return;
   const reach = heroReach(), t = nearestEnemy(reach + 0.4 + svReachPlus());
@@ -171,7 +240,7 @@ function svSwing() {
 }
 // while a swing, a throw or a raised hammer holds the body, the legs still carry him where the stick points
 function svCarry(dt) {
-  if (hero.dead || !(hero.atk >= 0 || hero.palRaise > 0) || hero.leap || hero.bz) return;
+  if (hero.dead || !(hero.atk >= 0 || hero.cast >= 0 || hero.palRaise > 0) || hero.leap || hero.bz || hero.roll) return;
   let vx = input.mx, vy = input.my; const K = input.keys;
   if (K.has('a') || K.has('arrowleft')) vx -= 1; if (K.has('d') || K.has('arrowright')) vx += 1;
   if (K.has('w') || K.has('arrowup')) vy -= 1; if (K.has('s') || K.has('arrowdown')) vy += 1;
@@ -217,6 +286,7 @@ function svSpawn(id, fi, fj, opt = {}) {
   // many small hits, not a few big ones: a monster's blow grows 10% a level (the dungeon game's curve, made for
   // one pack at a time, had a crowd at 4:00 killing the Mage in two blows)
   { const L = opt.lvl || svMonLvl(); e.dmg = e.def.dmg.map(v => Math.max(1, Math.round(v * (1 + (L - 1) * 0.1)))); }
+  svRun('spawn', e, opt);
   enemies.push(e);
   return e;
 }
@@ -224,8 +294,8 @@ function svSpawns(dt) {
   const [, ids, rate, cap] = svWave();
   SV.spawnT -= dt;
   while (SV.spawnT <= 0) {
-    SV.spawnT += 1 / rate;
-    if (svAlive() >= cap) continue;
+    SV.spawnT += 1 / (rate * (SV.rateK || 1));
+    if (svAlive() >= cap * (SV.capK || 1)) continue;
     const id = ids[Math.floor(Math.random() * ids.length)], p = svSpot(9.5, 12, true);
     if (!p) continue;
     const n = SV_PACKS[id] ? 2 + Math.floor(Math.random() * 3) : 1;
@@ -233,7 +303,7 @@ function svSpawns(dt) {
   }
   // an elite every 75 seconds from 1:15: a champion with its powers, two of its kind beside it; it drops a chest
   if (SV.t >= SV.eliteT) {
-    SV.eliteT += 75;
+    SV.eliteT += SV.eliteEvery || 75;
     const id = ids.filter(x => !SV_PACKS[x])[0] || ids[0], p = svSpot(9.5, 11, true);
     if (p) { const e = svSpawn(id, p[0], p[1]); makeChampion(e, rng((Math.random() * 1e9) >>> 0)); e.svChest = true; for (let k = 0; k < 2; k++) svSpawn(id, p[0] + (k ? 0.8 : -0.8), p[1] + 0.5); say(`${e.name || 'AN ELITE'} APPROACHES`, 22, 2.5); sfx('growl'); }
   }
@@ -259,12 +329,16 @@ function svKilled(e) {
   groundItems.push({ gem: v >= 10 ? XP_GEM.purple : v >= 3 ? XP_GEM.green : XP_GEM.blue, xp: v, fi: e.fi, fj: e.fj, t: 0.3 });
   if (Math.random() < 0.012) groundItems.push({ gem: HEAL_GEM, svHeal: true, fi: e.fi + 0.3, fj: e.fj, t: 0 });
   if (e.svChest) { groundItems.push({ gem: CHEST_GEM, svChest: true, fi: e.fi, fj: e.fj + 0.3, t: 0 }); say('A CHEST!', 51, 2); }
+  svRun('killed', e);
   if (e === SV.boss) { SV.boss = null; if (e.id === 'skelking') { SV.won = true; setTimeout(() => svEnd(true), 1600); } }
 }
 function svPickup(g) {
   if (g.xp) { svGainXp(g.xp); sfx('clink', 0.35); return true; }
   if (g.svHeal) { hero.hp = Math.min(STAT.maxHp, hero.hp + STAT.maxHp * 0.3); sfx('potion'); floater('+LIFE', hero.fi, hero.fj, 40, 54); return true; }
   if (g.svChest) { svChest(); return true; }
+  for (const f of SV_HOOKS.pickup) if (f(g)) return true;
+  if (g.gold) { SV.gold += g.gold; sfx('gold'); floater(`+${g.gold} GOLD`, g.fi, g.fj, 10, 50); return true; }
+  if (g.item || g.gem) { const v = 15; SV.gold += v; sfx('gold'); floater(`+${v} GOLD`, g.fi, g.fj, 10, 50); return true; }   // (dungeon loot that falls here, a goblin's sack: gold)
   return false;
 }
 // a chest: usually one free upgrade, sometimes three, rarely five (the slot machine)
@@ -282,9 +356,9 @@ function svGainXp(v) {
 function svMagnet(dt) {
   const R = 1.7 * (1 + 0.5 * (SV.pas.magnet || 0));
   for (const g of groundItems) {
-    if (!(g.xp || g.svHeal || g.svChest)) continue;
+    if (!(g.xp || g.svHeal || g.svChest || g.gold || g.svPick)) continue;
     const dx = hero.fi - g.fi, dy = hero.fj - g.fj, d = Math.hypot(dx, dy);
-    if (g.pull || (d < R && !g.svChest)) { g.pull = (g.pull || 3) + dt * 14; const s = Math.min(d, g.pull * dt); if (d > 1e-3) { g.fi += dx / d * s; g.fj += dy / d * s; } g.t = Math.max(g.t, 0.41); }
+    if (g.pull || (d < R && !g.svChest && !g.svPick)) { g.pull = (g.pull || 3) + dt * 14; const s = Math.min(d, g.pull * dt); if (d > 1e-3) { g.fi += dx / d * s; g.fj += dy / d * s; } g.t = Math.max(g.t, 0.41); }
   }
 }
 
@@ -298,7 +372,7 @@ function svPool() {
     if (!w && nw < H.maxW) out.push({ kind: 'w', id, name: W.name, line: SV.cls === 'mage' ? 'NEW SPELL' : 'NEW SKILL', desc: W.desc, wt: 1.4 });
     else if (w && w.lvl < 5) out.push({ kind: 'w', id, name: W.name, line: `LEVEL ${w.lvl + 1}`, desc: (W.lv || SV_WLVL)[w.lvl + 1], wt: w.lvl === 2 ? 1.6 : 1.2 });
   }
-  for (const id in SV_PASSIVES) { const p = SV_PASSIVES[id], l = SV.pas[id] || 0; if (p.cls && p.cls !== SV.cls) continue; if (l < p.max) out.push({ kind: 'p', id, name: p.name, line: l ? `LEVEL ${l + 1}` : 'NEW', desc: p.desc, wt: 1 }); }
+  for (const id in SV_PASSIVES) { const p = SV_PASSIVES[id], l = SV.pas[id] || 0; if (p.cls && ![].concat(p.cls).includes(SV.cls)) continue; if (l < p.max) out.push({ kind: 'p', id, name: p.name, line: l ? `LEVEL ${l + 1}` : 'NEW', desc: p.desc, wt: 1 }); }
   return out;
 }
 // every offer and pick, with when and how the run stood (the brief: balance from the choices offered and their
@@ -341,7 +415,8 @@ function svPick(k) {
   const c = SV.cards && SV.cards[k]; if (!c || G.t - SV.cardT < 0.35) return;
   sfx('tap'); svLog(SV.rune ? 'rune' : 'level', c);
   if (c.kind === 'w' && SV.w[c.id] && SV.w[c.id].lvl === 2) {   // the third level: the rune choice
-    SV.cards = SKILL_MODS[c.id].map(m => ({ kind: 'rune', wid: c.id, id: m.id, name: m.name, line: SV_WEAPONS[c.id].name + (c.id === 'swing' ? ' STYLE' : ' RUNE'), desc: m.desc.replace(/[.,]? ?COSTS? \d+ MORE (MANA|FURY)/, '').replace(/[.,] \d+ MORE (MANA|FURY)/, '') }));   // (no mana here)
+    SV.cards = SKILL_MODS[c.id].filter(m => !(c.id === 'hook' && m.id === 'tether')).map(m =>   // (Tether hauls him off on its own: left out)
+      ({ kind: 'rune', wid: c.id, id: m.id, name: m.name, line: SV_WEAPONS[c.id].name + (c.id === 'swing' ? ' STYLE' : ' RUNE'), desc: m.desc.replace(/[.,]? ?COSTS? \d+ MORE (MANA|FURY)/, '').replace(/[.,] \d+ MORE (MANA|FURY)/, '') }));   // (no mana here)
     SV.rune = c.id; SV.cardT = G.t; return;
   }
   svApply(c); SV.cards = null; SV.rune = null;
@@ -356,7 +431,8 @@ function svCardRects() {
 // ---------------------------------------------------------------- the end of a run
 function svEnd(won) {
   if (SV.end) return;
-  SV.end = { won, t: SV.t, kills: SV.kills, lvl: SV.lvl }; SV.endAt = G.t; G.mode = 'svend'; clearInput();
+  SV.end = { won, t: SV.t, kills: SV.kills, lvl: SV.lvl, gold: SV.gold }; SV.endAt = G.t; G.mode = 'svend'; clearInput();
+  svRun('end', won);
   if (won) { sfx('levelUp'); sfx('chest'); } else sfx('death');
   try {
     const all = JSON.parse(localStorage.getItem('sv-best2') || '{}'), best = all[SV.cls] || {};
@@ -388,7 +464,10 @@ function svUpdate(dt) {
   if (G.mode !== 'play' || G.paused) return;
   if (hero.dead) { if (hero.dead > 1.4) svEnd(false); return; }
   SV.t += dt;
-  if (hero.cls === 'paladin') { svCarry(dt); if (!SV.guardOn && (SV.guardT -= dt) <= 0) { SV.guardOn = true; sfx('clank', 0.5); } }
+  if (hero.cls !== 'mage') svCarry(dt);
+  if (hero.cls === 'paladin' && !SV.guardOn && (SV.guardT -= dt) <= 0) { SV.guardOn = true; sfx('clank', 0.5); }
+  if (hero.cls === 'warrior' && G.t - SV.rageT > 2) SV.rage = Math.max(0, SV.rage - dt * 14 * (1 - 0.25 * (SV.pas.fury || 0)));
+  for (const e of enemies) { const B = e.svBleed; if (!B || !alive(e)) continue; B.tick -= dt; if (B.tick <= 0) { B.tick = 0.5; B.left -= 0.5; damageEnemy(e, Math.round(B.per), e.fi, e.fj, false, 0, true); const [x, y] = screenOf(e); burst(1, x, y, e.def.chest * 0.5, 3, 30, 22); if (B.left <= 0) e.svBleed = null; } }
   svWeapons(dt); svSpawns(dt); svMagnet(dt); svWash(dt);
   G.trauma = Math.min(G.trauma, 0.32);   // a kill shakes the screen in the dungeon game: a hundred at once would never stop
   if (SV.chestShow) { SV.chestShow.t -= dt; if (SV.chestShow.t <= 0) SV.chestShow = null; }
@@ -396,20 +475,21 @@ function svUpdate(dt) {
   if (enemies.length > 60) enemies = enemies.filter(e => alive(e) || e.dying < 2.2 || e === boss);
   // gems far behind are folded into one, so the floor never holds hundreds
   if (groundItems.length > 160) { let v = 0; groundItems = groundItems.filter(g => { if (g.xp && Math.hypot(g.fi - hero.fi, g.fj - hero.fj) > 9) { v += g.xp; return false; } return true; }); if (v) { const p = svSpot(4, 7); if (p) groundItems.push({ gem: XP_GEM.purple, xp: v, fi: p[0], fj: p[1], t: 0 }); } }
+  svRun('update', dt);
   if (SV.queue > 0 && !SV.end) svOpenCards();
   if (SV_PARAMS.get('bot')) svBot();
 }
 // testing: ?bot=1 picks at random; ?bot=2 plays focused: up to three spells, levels them, then might and haste
 function svBotPick() {
   if (SV_PARAMS.get('bot') !== '2') return Math.floor(Math.random() * SV.cards.length);
-  const C = SV.cards, nw = Object.keys(SV.w).length, score = c => c.kind === 'rune' ? Math.random() : c.kind === 'w' ? (SV.w[c.id] ? 10 + SV.w[c.id].lvl : nw < 3 ? 9 : 0) : c.id === 'might' ? 6 : c.id === 'haste' ? 5 : c.id === 'vigor' ? 4 : 1;
+  const C = SV.cards, nw = Object.keys(SV.w).length, score = c => c.kind === 'rune' ? Math.random() : c.kind === 'w' ? (SV.w[c.id] ? 10 + SV.w[c.id].lvl + (SV_WEAPONS[c.id].basic ? 2 : 0) : nw < 3 ? 9 : 0) : c.id === 'might' ? 6 : c.id === 'haste' ? 5 : c.id === 'vigor' ? 4 : 1;
   let best = 0; C.forEach((c, k) => { if (score(c) > score(C[best])) best = k; }); return best;
 }
 // testing: a bot that walks away from the crowd, round the arena, and goes for gems (the Paladin: works the edge of
 // the crowd while his life holds, standing a swing's length from the nearest foe)
 function svBot() {
   let ax = 0, ay = 0;
-  const melee = hero.cls === 'paladin' && hero.hp > STAT.maxHp * 0.4, near = melee ? nearestEnemy(4) : null;
+  const melee = svMelee() && hero.hp > STAT.maxHp * 0.4, near = melee ? nearestEnemy(4) : null;
   for (const e of enemies) { if (!alive(e)) continue; const dx = hero.fi - e.fi, dy = hero.fj - e.fj, d = Math.hypot(dx, dy); if (d < (melee ? 1.6 : 5)) { ax += dx / (d * d + 0.3); ay += dy / (d * d + 0.3); } }
   if (near) { const dx = near.fi - hero.fi, dy = near.fj - hero.fj, d = Math.hypot(dx, dy); if (d > 1.3) { ax += dx / d * 1.2; ay += dy / d * 1.2; } }
   const cx = MW / 2 - hero.fi, cy = MH / 2 - hero.fj, a = G.t * 0.35; ax += cx * 0.02 + Math.cos(a) * 0.3; ay += cy * 0.02 + Math.sin(a) * 0.3;
@@ -427,9 +507,14 @@ function svIcon(c, cx, cy, r) {
   if (c.kind === 'w' || c.kind === 'rune') {
     const id = c.kind === 'rune' ? c.wid : c.id;
     if (id === 'swing') { drawButton([cx, cy, r], [48, 49, 50, 51], false, typeof glyphHammer === 'function' ? glyphHammer : glyphSword); return; }
-    const sk = [...SKILLSETS.mage, ...SKILLSETS.paladin].find(s => s.id === id) || { id, lvl: 1 }; skillIcon(sk, 0, cx, cy, r, false); return;
+    if (id === 'axes') { drawButton([cx, cy, r], [19, 20, 21, 22], false, glyphSword); return; }
+    if (id === 'bow') { drawButton([cx, cy, r], [33, 34, 35, 36], false, typeof glyphBowAtk === 'function' ? glyphBowAtk : glyphBolt); return; }
+    const sk = [...SKILLSETS.mage, ...SKILLSETS.paladin, ...SKILLSETS.warrior, ...SKILLSETS.ranger].find(s => s.id === id) || { id, lvl: 1 };
+    try { skillIcon(sk, 0, cx, cy, r, false); } catch (e) { drawButton([cx, cy, r], [28, 29, 30, 31], false, glyphBolt); }
+    return;
   }
-  if (c.kind === 'hero') { drawButton([cx, cy, r], c.id === 'mage' ? [37, 38, 39, 40] : [48, 49, 50, 51], false, c.id === 'mage' ? glyphBolt : (typeof glyphHammer === 'function' ? glyphHammer : glyphSword)); return; }
+  if (c.kind === 'hero') { const id = c.id; drawButton([cx, cy, r], { mage: [37, 38, 39, 40], paladin: [48, 49, 50, 51], warrior: [19, 20, 21, 22], ranger: [33, 34, 35, 36] }[id], false,
+    id === 'mage' ? glyphBolt : id === 'paladin' ? (typeof glyphHammer === 'function' ? glyphHammer : glyphSword) : id === 'ranger' ? (typeof glyphBowAtk === 'function' ? glyphBowAtk : glyphBolt) : glyphSword); return; }
   const p = SV_PASSIVES[c.id]; drawButton([cx, cy, r], p ? p.ramp : [52, 53, 54, 55], false, (x, y) => textC(p ? p.name[0] : '+', x + 1, y - 2, 27));
 }
 function svHud() {
@@ -454,13 +539,18 @@ function svHud() {
       put(gx + 2, gy + 5, BLK); put(gx + 1, gy - 1, BLK); put(gx + 3, gy - 1, BLK); for (let c = -1; c <= 5; c++) put(gx + c, gy - 1, BLK);
       rows.forEach(([a, b], r) => { const on = SV.guardOn || (4 - r) / 5 < fill; for (let c = a; c <= b; c++) put(gx + c, gy + r, on ? col : 3); });
       if (SV.counterT > G.t && Math.floor(G.t * 8) % 2) textC('COUNTER', sx, sy + 5, 51);
-    } }
+    }
+    // the Barbarian's rage under his life bar (it glows through a frenzy)
+    if (hero.cls === 'warrior') { const fr = hero.frenzy > 0, f = fr ? hero.frenzy / 9 : SV.rage / 100; fillRect(sx - w / 2 - 1, sy + 3, w + 2, 3, BLK); fillRect(sx - w / 2, sy + 4, Math.round(w * Math.min(1, f)), 1, fr ? (Math.floor(G.t * 12) % 2 ? 51 : 16) : 14); }
+    if (hero.cls === 'ranger' && G.t < SV.tumbleT) textC('TUMBLE', sx, sy + 5, 54);
+  }
   // top: the XP bar, the level, the clock, the kills
   { const f = SV.xp / svNeed(SV.lvl); fillRect(0, 0, W, 7, BLK); fillRect(1, 1, Math.round((W - 2) * f), 5, 39); fillRect(1, 1, Math.round((W - 2) * f), 1, 40);
-    text(`LV ${SV.lvl}`, 3, 10, 27); textC(svTime(SV.t), W / 2, 10, 27, 2); const k = `${SV.kills}`; text(k, W - 3 - textWidth(k), 10, 25); text('KILLS', W - 3 - textWidth('KILLS'), 17, 4); }
+    text(`LV ${SV.lvl}`, 3, 10, 27); text(`${SV.gold}G`, 3, 18, 50); textC(svTime(SV.t), W / 2, 10, 27, 2); const k = `${SV.kills}`; text(k, W - 3 - textWidth(k), 10, 25); text('KILLS', W - 3 - textWidth('KILLS'), 17, 4); }
   // the spells owned, with their levels
   { let x = 4; for (const id in SV.w) { svIcon({ kind: 'w', id }, x + 8, 34, 7); for (let l = 0; l < SV.w[id].lvl; l++) put(x + 2 + l * 3, 44, SV.mods[id] && l === 2 ? 51 : 27); x += 19; }
     for (const id in SV.pas) { text(`${SV_PASSIVES[id].name[0]}${SV.pas[id]}`, x + 2, 32, 25); x += 13; } }
+  svRun('hud');
   G.msg.forEach((m, n) => textC(m.text, W / 2, 52 + n * 8, m.col));
   // a boss: its name and its life along the bottom
   if (SV.boss && alive(SV.boss)) { const b = SV.boss, w = W - 40, f = b.hp / b.maxHp; textC(b.def.name, W / 2, H - 24, 22); fillRect(19, H - 15, w + 2, 6, BLK); fillRect(20, H - 14, Math.round(w * f), 4, 21); }
@@ -506,7 +596,7 @@ function svDrawEnd() {
   { const b = svBest(SV.cls); if (b) textC(b.won ? `BEST: A WIN, ${b.kills} KILLS` : `BEST: ${svTime(b.t)}`, W / 2, y + 8, 4); }
   if (G.t - SV.endAt > 1.2) textC('TAP TO GO ON', W / 2, H - 50, 27);
 }
-function svHeroRects() { const w = W - 28, h = 66, y0 = Math.round(H * 0.42); return ['mage', 'paladin'].map((id, k) => ({ id, x: 14, y: y0 + k * (h + 10), w, h })); }
+function svHeroRects() { const w = W - 28, h = 56, y0 = Math.round(H * 0.3); return SV_HERO_ORDER.map((id, k) => ({ id, x: 14, y: y0 + k * (h + 6), w, h })); }
 function svTitle() {
   svDim(0.45);
   const y0 = Math.round(H * 0.12);
@@ -518,7 +608,7 @@ function svTitle() {
     fillRect(r.x, r.y, r.w, r.h, 3); frame(r.x, r.y, r.w, r.h, sel ? 50 : 6, sel ? 48 : 3);
     svIcon({ kind: 'hero', id: r.id }, r.x + 18, r.y + 22, 11);
     text(H0.name, r.x + 36, r.y + 8, r.id === 'mage' ? 39 : 51); text(H0.role, r.x + 36, r.y + 17, 50);
-    H0.lines.forEach((l, n) => text(l, r.x + 36, r.y + 29 + n * 8, 26));
+    H0.lines.forEach((l, n) => text(l, r.x + 36, r.y + 28 + n * 8, 26));
     if (b) text(b.won ? 'BEST: A WIN' : `BEST: ${svTime(b.t)}`, r.x + 36, r.y + r.h - 10, 4);
   }
   { const R = svHeroRects(), last = R[R.length - 1]; if (Math.sin(G.t * 4) > -0.3) textC('TAP A HERO TO START', W / 2, last.y + last.h + 14, 27); }
@@ -528,6 +618,9 @@ function svChooseHero(cls) {
   try { localStorage.setItem('sv-cls', cls); } catch (e) { /* storage blocked */ }
   svBegin();
 }
+let svCardExtraTap = () => false;   // (surv_meta.js: the banish button)
+let svTitleTap = p => { for (const r of svHeroRects()) if (inRect(p, r)) svChooseHero(r.id); };   // (surv_meta.js: the camp)
+let svTitleKey = k => { if (k >= '1' && k <= '4') svChooseHero(SV_HERO_ORDER[+k - 1]); else if (k === 'enter' || k === ' ') svChooseHero(SV.cls); };
 function svToTitle() { svNewRun(SV.cls); G.mode = 'svtitle'; }
 
 // ---------------------------------------------------------------- input (ahead of the game's own)
@@ -538,8 +631,8 @@ addEventListener('pointerdown', e => {
   audioInit();
   const p = toNative(e);
   if (G.paused) { G.paused = false; last = performance.now(); return; }
-  if (G.mode === 'svtitle') { for (const r of svHeroRects()) if (inRect(p, r)) svChooseHero(r.id); return; }
-  if (G.mode === 'svcards') { const R = svCardRects(); R.forEach((r, k) => { if (inRect(p, r)) svPick(k); }); if (!SV.rune && inRect(p, svRerollRect())) svReroll(); return; }
+  if (G.mode === 'svtitle') { svTitleTap(p); return; }
+  if (G.mode === 'svcards') { if (svCardExtraTap(p)) return; const R = svCardRects(); R.forEach((r, k) => { if (inRect(p, r)) svPick(k); }); if (!SV.rune && inRect(p, svRerollRect())) svReroll(); return; }
   if (G.mode === 'svend') { if (G.t - SV.endAt > 1.2) svToTitle(); return; }
   if (G.mode !== 'play') return;
   if (p[0] > W - 50 && p[1] > H - 16) { setMuted(!SFX.muted); return; }
@@ -548,7 +641,7 @@ addEventListener('pointerdown', e => {
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   audioInit();
-  if (G.mode === 'svtitle') { if (k === '1' || k === '2') svChooseHero(k === '1' ? 'mage' : 'paladin'); else if (k === 'enter' || k === ' ') svChooseHero(SV.cls); e.stopImmediatePropagation(); return; }
+  if (G.mode === 'svtitle') { svTitleKey(k); e.stopImmediatePropagation(); return; }
   if (G.mode === 'svcards') { if (k >= '1' && k <= '3') svPick(+k - 1); if (k === 'r') svReroll(); e.stopImmediatePropagation(); return; }
   if (G.mode === 'svend') { if ((k === 'enter' || k === ' ') && G.t - SV.endAt > 1.2) svToTitle(); e.stopImmediatePropagation(); return; }
   if (k === 'n') { setMuted(!SFX.muted); e.stopImmediatePropagation(); return; }
@@ -566,44 +659,77 @@ addEventListener('keydown', e => {
       if (G.t < SV.grace || hero.dead || G.mode !== 'play') return;
       if (hero.cls === 'paladin' && SV.guardOn) { svBlock(src); return; }
       SV.grace = G.t + 0.3;
+      dmg = Math.max(1, Math.round(dmg * (SV.dmgInK || 1)));   // (the difficulty and blessings)
     }
+    const hp0 = hero.hp;
     _hurt(dmg, src);
+    if (SV.on && hero.cls === 'ranger' && hero.hp < hp0) svTumble();
+    if (SV.on && hero.hp <= 0) svRun('fatal');   // (a revive may catch it)
   };
   // the Paladin's swing, as his hammer's levels and fighting style make it (heroHitResolve is the moment a blow lands)
   heroHitResolve = function (all = false, pow = 0, ...rest) {
-    if (!SV.on || hero.cls !== 'paladin') return _resolve(all, pow, ...rest);
-    const w = SV.w.swing, mod = SV.mods.swing, counter = SV.counterT > G.t;
-    const k = (w && w.lvl >= 2 ? 1.3 : 1) * (w && w.lvl >= 5 ? 1.3 : 1) * (counter ? 2.5 : 1);
+    if (!SV.on || !svMelee()) return _resolve(all, pow, ...rest);
+    const id = svBasicId(), w = SV.w[id], mod = SV.mods[id], pal = hero.cls === 'paladin', counter = pal && SV.counterT > G.t;
+    const third = !pal && hero.combo === 2;   // the Barbarian's every third blow
+    const k = (w && w.lvl >= 2 ? 1.3 : 1) * (w && w.lvl >= 5 ? 1.3 : 1) * (counter ? 2.5 : 1) * (third ? 1.3 : 1);
     const hp0 = new Map(); for (const e of enemies) if (alive(e) && Math.hypot(e.fi - hero.fi, e.fj - hero.fj) < 4) hp0.set(e, e.hp);
     const d0 = STAT.dmg; STAT.dmg = [d0[0] * k, d0[1] * k];
+    const spin = pal ? mod === 'wide' || counter : third && mod === 'ravager';
     let r;
     try {
-      r = _resolve(all || mod === 'wide' || counter, Math.max(pow, counter ? 2 : mod === 'crush' ? 1 : 0), ...rest);
-      if (mod === 'reach') {   // LONG REACH: a crescent of light carries the blow a tile past the hammer, in front
+      r = _resolve(all || spin, Math.max(pow, counter ? 2 : pal && mod === 'crush' ? 1 : third ? 1 : 0), ...rest);
+      if (pal && mod === 'reach') {   // LONG REACH: a crescent of light carries the blow a tile past the hammer, in front
         const [fx, fy] = dirVec(hero.dir), R0 = heroReach() + 0.1;
         for (const e of enemies) { if (!alive(e) || hp0.has(e) && e.hp < hp0.get(e)) continue; const dx = e.fi - hero.fi, dy = e.fj - hero.fj, d = Math.hypot(dx, dy);
           if (d > R0 && d < R0 + 1.2 + (e.def.unique ? 0.5 : 0) && (dx * fx + dy * fy) / d > 0.35) damageEnemy(e, heroDmg(0.8), hero.fi, hero.fj, false, 0); }
         shockwave(hero.fi + fx * 0.6, hero.fj + fy * 0.6, R0 + 0.9, 0.16, [27, 51], [Math.atan2(fy, fx), 1.1]);   // (arc: [centre angle, half width])
       }
     } finally { STAT.dmg = d0; }
-    let n = 0; for (const [e, hp] of hp0) if (e.hp < hp) { n++; if (mod === 'crush' && alive(e) && !e.def.unique) e.stun = Math.max(e.stun || 0, 0.5); }
+    let n = 0;
+    for (const [e, hp] of hp0) if (e.hp < hp) {
+      n++;
+      if (!alive(e) || e.def.unique) continue;
+      if (pal && mod === 'crush') e.stun = Math.max(e.stun || 0, 0.5);
+      if (third) e.stun = Math.max(e.stun || 0, mod === 'ravager' ? 0.7 : 0.35);   // the finishing blow staggers (his defensive answer)
+      if (!pal && mod === 'bleed') e.svBleed = { left: 3, tick: 0.5, per: Math.max(1, (hp - e.hp) * 0.5 / 6) };
+    }
+    if (spin && !pal) { shockwave(hero.fi, hero.fj, heroReach() + 0.3, 0.25, [21, 23]); sfx('heavySwing'); }
     if (counter) { SV.counterT = 0; shockwave(hero.fi, hero.fj, heroReach() + 0.4, 0.3, [50, 51]); sfx('palToll'); if (n) floater('COUNTER!', hero.fi, hero.fj, 52, 51); }
     if (SV.pas.oath && n) hero.hp = Math.min(STAT.maxHp, hero.hp + Math.min(n, 3) * SV.pas.oath);   // healing capped per swing (a cleave through ten must not heal ten times)
+    if (!pal && n) svRage(n);
     return r;
   };
+  // the Ranger's basic arrows, as her bow's levels and style make them
+  const _shoot = shootArrow;
+  shootArrow = function (a, o = {}) {
+    if (!SV.on || hero.cls !== 'ranger' || !o.basic) return _shoot(a, o);
+    const w = SV.w.bow, mod = SV.mods.bow, k = (w && w.lvl >= 2 ? 1.3 : 1) * (w && w.lvl >= 5 ? 1.3 : 1) * (1 + 0.15 * (SV.pas.eagle || 0));
+    const o2 = Object.assign({}, o, { dmgK: (o.dmgK || 1) * k * (mod === 'twin' ? 0.8 : 1), sp: ARROW_SP * (1 + 0.12 * (SV.pas.eagle || 0)) });
+    if (mod === 'pierce') { o2.pierce = true; o2.hits = new Set(); }
+    if (mod === 'fire') { o2.elem = 'fire'; o2.fire = true; }
+    if (mod === 'twin') { _shoot(a - 0.07, Object.assign({}, o2, o2.hits ? { hits: new Set() } : {})); return _shoot(a + 0.07, o2); }
+    return _shoot(a, o2);
+  };
   update = function (dt) {
-    for (let k = 0, n = +SV_PARAMS.get('speed') || 1; k < n; k++) { _update(dt); if (SV.on) svUpdate(dt); }   // (?speed=4 for test runs)
+    for (let k = 0, n = +SV_PARAMS.get('speed') || 1; k < n; k++) {   // (?speed=4 for test runs)
+      // a frenzy, a tumble or a shrine's haste quickens his legs for the frame
+      const s0 = STAT.speed; if (SV.on) STAT.speed *= (hero.frenzy > 0 && hero.cls === 'warrior' ? 1.15 : 1) * (G.t < SV.tumbleT ? 1.4 : 1) * (SV.speedK || 1);
+      try { _update(dt); } finally { STAT.speed = s0; }
+      if (SV.on) svUpdate(dt);
+    }
     if (!SV.on) return;
     if (SV_PARAMS.get('bot')) { if (G.mode === 'svtitle') svChooseHero(SV_PARAMS.get('cls') || 'mage'); if (G.mode === 'svcards' && G.t - SV.cardT > 0.4) svPick(svBotPick()); }   // (testing)
   };
   damageEnemy = function (e, ...a) { const was = alive(e); _damage(e, ...a); if (SV.on && was && !alive(e)) svKilled(e); };
-  pickup = g => SV.on ? svPickup(g) || (!g.xp && !g.svHeal && !g.svChest && _pickup(g)) : _pickup(g);
+  pickup = g => SV.on ? svPickup(g) : _pickup(g);
   recalcHero = function () {
     _recalc(); if (!SV.on) return;
+    if (SV.base) { STAT.dmg = SV.base.dmg.slice(); STAT.armor = SV.base.armor; STAT.maxHp = SV.base.maxHp; STAT.block = SV.base.block; }   // (gear worn for the hero's rank is a look; its power is set in surv_meta.js)
+    svRun('recalc');
     const p = SV.pas, k = 1 + 0.15 * (p.might || 0);
     STAT.dmg = [STAT.dmg[0] * k, STAT.dmg[1] * k];
     STAT.maxHp = Math.round(STAT.maxHp * SV_HEROES[SV.cls].hp) + 20 * (p.vigor || 0); STAT.speed *= 1 + 0.1 * (p.swift || 0);
-    STAT.atkSpeed = (STAT.atkSpeed || 0) + 8 * (p.haste || 0) + (SV.w.swing && SV.w.swing.lvl >= 4 ? 25 : 0);
+    { const b = SV.w[svBasicId()]; STAT.atkSpeed = (STAT.atkSpeed || 0) + 8 * (p.haste || 0) + (b && b.lvl >= 4 ? 25 : 0) + (SV.atkK || 0); }
     STAT.crit = (STAT.crit || 0) + 6 * (p.crit || 0); STAT.armor = (STAT.armor || 0) + 5 * (p.ward || 0); STAT.regen = (STAT.regen || 0) + 0.6 * (p.regen || 0);
   };
   skillMod = id => SV.on ? SV.mods[id] || null : null;   // the runes are chosen in the run
@@ -616,9 +742,5 @@ addEventListener('keydown', e => {
   MUSIC_MODES.svtitle = 0.6; MUSIC_MODES.svcards = 0.6; MUSIC_MODES.svend = 0.8;
   window.SV = SV;
 }
-// boot: a run is ready behind the title (for the hero picked last time)
-try { const c = SV_PARAMS.get('cls') || localStorage.getItem('sv-cls'); if (SV_HEROES[c]) SV.cls = c; } catch (e) { /* storage blocked */ }
-svNewRun(); G.mode = 'svtitle';
+// boot: in surv_map.js (the last file), once every part has hung its hooks
 
-// let the frame loop run (index.html held it until this file was in)
-if (window.__svRelease) window.__svRelease();

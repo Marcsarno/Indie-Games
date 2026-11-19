@@ -1,6 +1,43 @@
 # Survivors: project notes
 
-Read this first, then `PLAN.md` (the first plan), `PLAN-PROGRESSION.md` (unlocks, meta progression, exploration: planned, not built) and `RESEARCH.md` (the user's research brief, the design guide).
+Read this first, then `PLAN.md` (the first plan), `PLAN-PROGRESSION.md` (unlocks, meta progression, exploration) and `RESEARCH.md` (the user's research brief, the design guide).
+
+## Round 3 (2026-11-19): four heroes, progression, difficulty levels, a map worth walking
+The user: keep the gold when you die; save in the browser; level 1 beatable, later levels need unlocks and levels;
+balance what exists; add the other two classes; "really flesh this out".
+**Files now:** `js/surv.js` (the run: heroes, weapons, waves, cards, HUD, input, hooks `SV_HOOKS`), `js/surv_meta.js`
+(save, gold, camp, blessings, unlocks, ranks, difficulty), `js/surv_map.js` (the 88x88 map, barrels, pickups,
+shrines, cage, relic altar, goblins, fire rain, edge arrows; **the boot is at its end**). Both pages load all three.
+- **Barbarian** (class id `warrior`): two hand axes (an axe in the off hand), auto swings while walking; every third
+  blow staggers; RAGE fills from blows that land (capped per swing), drains after 2 s without hits, full = FRENZY
+  (attacks +50%, legs +15%, 6 s). Skills: Ground Slam, Whirlwind, Chain Hook (its Tether rune is left out: it moves
+  him on its own). Styles: RAVAGER, BLOODLETTER (bleed), BERSERK. Passive cards: Fury, Blood Oath.
+- **Ranger**: the bow looses on its own (`svBow`), basic hits build the game's combo points that Piercing Shot and
+  Cluster Arrow spend; Sentry, Strafe. Styles: TWIN SHOT, BODKIN POINTS (pierce), FIRE ARROWS (`shootArrow` hook).
+  Defence: a TUMBLE (40% faster for 1.2 s after a blow lands). Passive cards: Fleet Foot, Eagle Eye.
+- **Save** (`localStorage['sv-save-1']`, `SVM`): gold, blessings, unlocks (`ach`), XP per hero, best per hero and
+  level, runs/wins. `?nosave=1` or `?unlock=all` never write it. Test params: `?unlock=all`, `?bless=max`,
+  `?rank=N`, `?diff=N`, `?cls=X` (opens that hero).
+- **Gold**: kills now and then (3.5%), elites, bosses, chests, barrels, goblins; times the level's gold rate, Greed
+  and the Lucky Coin; all kept on death.
+- **Camp** (the title): HEROES (pick a hero, its rank and XP bar; pick the level with < >; START), SHRINE
+  (12 blessings, 3-5 ranks each, cost = base x next rank, REFUND ALL is free), UNLOCKS (15 achievements and what
+  each opens). End screen: gold banked, hero XP and rank-ups, NEW UNLOCKS, the build; tap goes back to camp.
+- **Ranks** (per hero, 1-10; XP = kills/8 + seconds/6 + 60 for a win, times the level number): +3% damage and life
+  a rank, a reroll at rank 5, and better gear on the hero (`SV_RANK_GEAR`: the Diablo game's armour tiers). Gear is
+  only a look: `SV.base` keeps the starting kit's damage, armour, life and block, and rank/blessings scale that.
+- **Unlocks**: Barbarian (kill 400 in a run), Ranger (free her from the cage on the map), Nightmare/Hell/Torment
+  (win the level before), blessings Luck (kill the Alpha), Banishment (level 20 in a run), Second Life (bank 1000),
+  Pilgrim (3 shrines in a run: Growth half price), five relics (from the altar, one a run) that add cards:
+  Emberbrand, Thornmail, Bloodstone, Lucky Coin, Second Wind.
+- **Levels** (`SV_DIFFS`): NORMAL; NIGHTMARE (monsters x2.1 life, x1.5 blows, waves x1.2, elites every 55 s, 4%
+  champions in the horde, night, the King brings 2 guards); HELL (x3.6 / x2.1, fire rain every ~7 s, 7% champions,
+  4 guards); TORMENT (x6 / x2.8, everything 15% faster, fire every ~5 s, 10% champions). The King has twice the life
+  on every level and calls a ring of skeletons and archers at two thirds and one third of his life.
+- **Map**: 55 barrels (walk into one: gold, heal, MAGNET, BOMB, rare chest), 3 shrines with statues (stand 2.5 s:
+  30 s of Frenzy, Stoneskin, Greed or Wrath), the caged Ranger, a relic altar with braziers guarded by a sleeping
+  elite pack, a treasure goblin every ~2 min, fire rain on Hell and Torment; arrows at the screen edge (S shrine,
+  R the cage, ! the relic, G a goblin, B the boss).
 
 ## State (2026-11-16): round 2, the Mage and the Paladin
 Playable on the phone: https://claude.ai/artifact/AnNxggtQ8t2FsAHznH9mz9 ("Bones Survivors").
