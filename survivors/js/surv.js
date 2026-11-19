@@ -12,6 +12,7 @@
 // offers), the grace after a hit shown on the life bar, and a log of every offer and pick (with its context).
 
 const SV_PARAMS = new URLSearchParams(location.search);
+const SV_MODES = new Set(['play', 'svtitle', 'svcards', 'svend', 'svwin']);
 const SV = {
   on: false, cls: 'mage', t: 0, kills: 0, lvl: 1, xp: 0, queue: 0, serial: 0, spawnT: 0, eliteT: 0, cards: null, rune: null,
   w: {}, mods: {}, pas: {}, echo: [], end: null, endAt: 0, boss: null, bossDone: {}, picks: [], firstHurt: 0,
@@ -723,6 +724,7 @@ addEventListener('keydown', e => {
       try { _update(dt); if (SV.on) { STAT.speed = s0; svUpdate(dt); } } catch (err) { if (!SV.errs) SV.errs = []; if (SV.errs.length < 20) { SV.errs.push(String(err && err.stack || err).slice(0, 300)); console.error(err); } } finally { STAT.speed = s0; }
     }
     if (!SV.on) return;
+    if (!SV_MODES.has(G.mode)) { G.mode = SV.end ? 'svend' : 'play'; G.talk = null; G.cine = null; }   // (any other screen: back to the run)
     if (SV_PARAMS.get('bot')) { if (G.mode === 'svwin' && G.t - SV.winAt > 0.7) { if (SV_PARAMS.get('keep')) { const r = svWinRects().keep; svWinTap([r.x + 2, r.y + 2]); } else svWinTap(null); } if (G.mode === 'svtitle') svChooseHero(SV_PARAMS.get('cls') || 'mage'); if (G.mode === 'svcards' && G.t - SV.cardT > 0.4) svPick(svBotPick()); }   // (testing)
   };
   damageEnemy = function (e, ...a) { const was = alive(e); _damage(e, ...a); if (SV.on && was && !alive(e)) svKilled(e); };
@@ -742,6 +744,9 @@ addEventListener('keydown', e => {
   dropLoot = () => {};   // no gear on the floor (chests instead)
   assignEngage = () => { for (const e of enemies) e.mayEngage = true; };   // the whole swarm comes on (the dungeon game holds most of a pack back)
   saveGame = () => {};   // never touches the dungeon game's saves
+  // the dungeon game's story (dialogue, cutscenes, the end of Act I after the King) has no place here: its screens
+  // would leave the player stuck, since only the survivors screens take taps (found by a bot run that kept fighting)
+  { const ot0 = openTalk; openTalk = (...a) => SV.on ? undefined : ot0(...a); }
   startGuide = () => {}; guideKill = () => {}; guideLevel = () => {};   // no tutorial pop-ups
   drawHud = svHud;
   MUSIC_MODES.svtitle = 0.6; MUSIC_MODES.svcards = 0.6; MUSIC_MODES.svend = 0.8;

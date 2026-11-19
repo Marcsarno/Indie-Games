@@ -274,7 +274,7 @@ SV_HOOKS.recalc.push(() => {
 // boss is near: Arcane Storm, Archangel (wings, a reach of light, speed), Wrath of the Mountain, Rain of Arrows.
 const SV_ULT = { mage: 'ARCANE STORM', paladin: 'ARCHANGEL', warrior: 'WRATH OF THE MOUNTAIN', ranger: 'RAIN OF ARROWS' };
 const SV_ULT_LVL = 15;
-SV_HOOKS.killed.push(e => { if (SV.lvl < SV_ULT_LVL || SV.ult >= 100) return; SV.ult = Math.min(100, SV.ult + (e.def.unique ? 30 : e.champ || e.svChest ? 6 : 0.22)); if (SV.ult >= 100) { say(`${SV_ULT[hero.cls]} IS READY`, 51, 2); sfx('levelUp', 0.7); } });
+SV_HOOKS.killed.push(e => { if (SV.lvl < SV_ULT_LVL || SV.ult >= 100) return; SV.ult = Math.min(100, SV.ult + (e.def.unique ? 30 : e.svChest ? 6 : e.champ ? 0.6 : 0.22)); if (SV.ult >= 100) { say(`${SV_ULT[hero.cls]} IS READY`, 51, 2); sfx('levelUp', 0.7); } });
 function svFireUlt() {
   SV.ult = 0; SV.ultShow = 2.2;
   if (hero.cls === 'mage') startStorm();
