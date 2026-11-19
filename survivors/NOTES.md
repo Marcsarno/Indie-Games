@@ -1,6 +1,6 @@
 # Survivors: project notes
 
-Read this first, then `PLAN.md` (the first plan) and `RESEARCH.md` (the user's research brief, the design guide).
+Read this first, then `PLAN.md` (the first plan), `PLAN-PROGRESSION.md` (unlocks, meta progression, exploration: planned, not built) and `RESEARCH.md` (the user's research brief, the design guide).
 
 ## State (2026-11-16): round 2, the Mage and the Paladin
 Playable on the phone: https://claude.ai/artifact/AnNxggtQ8t2FsAHznH9mz9 ("Bones Survivors").
