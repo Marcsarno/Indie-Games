@@ -133,7 +133,8 @@ SV_HOOKS.spawn.push((e, opt) => {
   const D = svDiff(); if (!D) return;
   const boss = e.def.unique, kingK = e.id === 'skelking' && SV.diff > 1 ? 1.4 : 1;   // (the King had fallen in 20 seconds to a Paladin; x2 dragged past 3 minutes for three heroes)
   const late = SV.diff === 1 && !boss && SV.t > 360 && !SV.endless ? Math.max(0.65, 1 - (SV.t - 360) / 450) : 1;   // (Normal: the last minutes are the payoff)
-  e.hp = e.maxHp = Math.round(e.maxHp * D.hp * kingK * late); e.dmg = e.dmg.map(v => Math.max(1, Math.round(v * D.dmg)));
+  e.hp = e.maxHp = Math.round(e.maxHp * D.hp * kingK * late);
+  if (SV.diff === 1 && !boss && SV.t > 360 && !SV.endless) { const L = opt.lvl || svMonLvl(), L6 = 1 + 360 / 50; e.dmg = e.dmg.map(v => Math.max(1, Math.round(v * (1 + (L6 - 1) * 0.1) / (1 + (L - 1) * 0.1)))); }   // (and their blows stop growing) e.dmg = e.dmg.map(v => Math.max(1, Math.round(v * D.dmg)));
   if (D.haste) e.speedK = (e.speedK || 1) * D.haste;
   if (!boss && !opt.noChamp && D.champs && Math.random() < D.champs) { makeChampion(e, rng((Math.random() * 1e9) >>> 0)); e.svGold = 6; }
 });

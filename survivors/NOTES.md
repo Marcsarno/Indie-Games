@@ -2,6 +2,36 @@
 
 Read this first, then `REVIEW.md` (the latest review and what to build next), `PLAN.md` (the first plan), `PLAN-PROGRESSION.md` (unlocks, meta progression, exploration) and `RESEARCH.md` (the user's research brief, the design guide).
 
+## Round 4 (2026-11-19): all five steps of REVIEW.md
+The user asked for every step of the review, checked along the way. New file `js/surv_skills.js` (loaded after
+surv.js, before surv_meta.js; both pages load it).
+- **More skills than slots** (step 1): every hero has 7-8 skills of its own plus three shared ones, and four slots
+  beside the basic weapon (`maxW` 5 for all). New for the Mage: THUNDERSTORM (`skyStrike` on foes near for 2 s),
+  BLIZZARD (`iceBlast` bursts over the thickest crowd, chill/freeze), ARCANE ORB (the missile's orb on its own).
+  From the Diablo game: Divine Toll, Wrath of Heaven (`hwrath`); Blood Roar, Earthsplitter, Uproot, Titan's
+  Crescent; Multishot, Snare Trap, Hawk, Hunter's Mark. Shared (`cls: 'all'`, `aura: true`, always on): BONE ORBIT
+  (skulls drawn on the HUD layer), HOLY AURA (burns all within ~1.6 tiles twice a second), ASH TRAIL (the game's
+  `G.fireGround` patches where you walk). New skills have their own runes, or ECHO/SWIFT where the game had none.
+  The Barbarian's standing moves and the toll let his legs keep going (`svCarry` wrapper). Left out: moves that carry
+  the hero on their own (Lance of Dawn, Reaver's Rush, Skyfall, Seraph's Fall, Leap, Bull Rush, Blink).
+- **Survivors passives** (step 2): AMOUNT (+1 repeat of every skill, +1 skull, +1 arrow; max 2), AREA (+15% to
+  blast radii, consecrate, judgment, fire, orbit, aura; max 3), DURATION (+20% to fire, consecrate, sentries,
+  strafe, whirl, blizzard, thunder, hawk; max 3). Scaled after each cast on what the cast made (`svCast` wrapper).
+- **Evolutions** (step 3, `SV_EVO`): a skill at 5 + its partner card (named on the cards) evolves at the next chest:
+  a new name, twice as often, one more repeat; the basic weapons +30% damage plus HAMMER OF DAWN (every swing all
+  round), ENDLESS RAGE (never out of the frenzy), STORMBOW (two more piercing arrows); the shared three x1.5 and
+  bigger. **Ultimates**: from level 15 kills fill a meter (0.35 a kill, 8 an elite, 30 a boss); full, it goes off
+  by itself near 8 foes or the boss: Arcane Storm, Archangel (wings), Wrath of the Mountain, Rain of Arrows.
+- **Ranger and the late run** (step 4): the Ranger's basic arrow x1.35, life 2.6x; on Normal, monsters spawned after
+  6:00 have up to 35% less life and their blows stop growing (the 7-9 minute payoff).
+- **After the King** (step 5): the win is banked at once, then END THE RUN or KEEP FIGHTING (waves speed up a third
+  every minute; a later death still counts as the win). The end screen's YOUR PICKS page lists every pick, rune,
+  banish, evolution and ultimate with its time.
+- **Robustness**: an error in a frame is caught and logged (`SV.errs`) instead of freezing the game loop.
+- **Tests**: `tools/skilltest.cjs` (every skill with every rune at level 5 for 3 s on ten dummies: damage and
+  errors), `tools/review.cjs <cls> <diff>` (a measured run: level times, when skills max, offers with no skill
+  card, life by minute, evolutions, ultimates), `tools/ui3.cjs` (evolution, ultimates, victory, picks screens).
+
 ## Round 3 (2026-11-19): four heroes, progression, difficulty levels, a map worth walking
 The user: keep the gold when you die; save in the browser; level 1 beatable, later levels need unlocks and levels;
 balance what exists; add the other two classes; "really flesh this out".

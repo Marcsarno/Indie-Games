@@ -1,5 +1,7 @@
 # Survivors: a review of the whole game (2026-11-19)
 
+> Status: all five recommended steps were built in round 4 (see NOTES.md); the before/after numbers are at the end.
+
 Measured with `tools/review.cjs` (one focused-bot run per hero on Normal, no meta progress, 3x speed), plus the
 round 3 balance runs in NOTES.md, judged against RESEARCH.md.
 
