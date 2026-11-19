@@ -32,6 +32,19 @@ surv.js, before surv_meta.js; both pages load it).
   errors), `tools/review.cjs <cls> <diff>` (a measured run: level times, when skills max, offers with no skill
   card, life by minute, evolutions, ultimates), `tools/ui3.cjs` (evolution, ultimates, victory, picks screens).
 
+### Round 4 checks and fixes (after the stop-hook review)
+- **Bug fixed: stuck after KEEP FIGHTING.** Killing the King let the dungeon game's story open a dialogue
+  (`openTalk` sets `G.mode = 'talk'`), which no survivors screen answers. `openTalk` now does nothing in a run, and
+  any mode outside `SV_MODES` falls back to play (or the end screen). Re-tested: fought on to 12:00 with no error;
+  dying at 10:48 after fighting on shows VICTORY ("you fought on to 10:48") and the YOUR PICKS page lists every pick.
+- **Ultimate meter:** horde champions gave 6 each (the elite rate), so Torment fired 16 ultimates; now true elites
+  (chest carriers) 6, horde champions 0.6.
+- **Torment** monsters' life x9 -> x13, blows x4.5 -> x5.8 (a maxed Mage had lost only 1-15% life a minute).
+- Runs after the changes (bot, 3x speed): maxed account (bless max, rank 10) on Torment: Mage won (5-20% life lost
+  a minute, lows 10-21%), Paladin won (lows 9%), Ranger won; Barbarian on Hell at rank 6 won with lows of 5%.
+  Half-upgraded (bless half, rank 5) on Torment: Mage died at 8:37, Paladin won at 9% life every minute (the
+  Paladin is the sturdiest hero; a human who slips once would fall, so left as is; watch it in playtests).
+
 ## Round 3 (2026-11-19): four heroes, progression, difficulty levels, a map worth walking
 The user: keep the gold when you die; save in the browser; level 1 beatable, later levels need unlocks and levels;
 balance what exists; add the other two classes; "really flesh this out".

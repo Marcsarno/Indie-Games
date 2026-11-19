@@ -77,3 +77,14 @@ Every run took a different kit from the one before; the first card offer with no
 1:11-1:36 for the melee heroes (more skills to choose among), and ultimates fired 5-7 times a run (then slowed to
 3-4). No errors in any run (`SV.errs`). Lowest life each minute stays around 10-20%: the bot plays to its limit
 (it only backs off under 40%), so that measure says little about the payoff; a human playtest should judge it.
+
+## Hell and Torment after round 4 (maxed accounts, then half-upgraded)
+| Run | Result | Lowest life each minute |
+|---|---|---|
+| Mage, Torment, bless max, rank 10 | won 9:38 | 10-40% |
+| Paladin, Torment, max | won 9:18 | 9-18% |
+| Ranger, Torment, max | won 10:06 | 8-11% |
+| Barbarian, Hell, max blessings, rank 6 | won 9:25 | 5-8% |
+| Mage, Torment, half blessings, rank 5 | died 8:37 | down to 2% |
+| Paladin, Torment, half | won 9:34 | 9-14% |
+Torment was raised (life x13, blows x5.8) and the ultimate meter no longer counts horde champions as elites.
