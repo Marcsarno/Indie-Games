@@ -1,6 +1,6 @@
 # Survivors: project notes
 
-Read this first, then `PLAN.md` (the first plan), `PLAN-PROGRESSION.md` (unlocks, meta progression, exploration) and `RESEARCH.md` (the user's research brief, the design guide).
+Read this first, then `REVIEW.md` (the latest review and what to build next), `PLAN.md` (the first plan), `PLAN-PROGRESSION.md` (unlocks, meta progression, exploration) and `RESEARCH.md` (the user's research brief, the design guide).
 
 ## Round 3 (2026-11-19): four heroes, progression, difficulty levels, a map worth walking
 The user: keep the gold when you die; save in the browser; level 1 beatable, later levels need unlocks and levels;
