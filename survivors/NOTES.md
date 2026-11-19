@@ -32,6 +32,12 @@ surv.js, before surv_meta.js; both pages load it).
   errors), `tools/review.cjs <cls> <diff>` (a measured run: level times, when skills max, offers with no skill
   card, life by minute, evolutions, ultimates), `tools/ui3.cjs` (evolution, ultimates, victory, picks screens).
 
+### XP gems easier to see (2026-11-19, the user: "the blue pickups are too hard to see")
+The XP gems now glow from within (EMIS, so night levels don't darken them), are one step brighter (blue 39/40/32,
+green 54/55/124, purple 58/59/27) and a shine sweeps across each one every ~1.2 s with a small twinkle above it,
+each gem on its own beat (`drawGem` wrapper in surv.js, survivors only). Before/after: `shots/gems-before-after.png`,
+`shots/gems-closeup.png` (`tools/gemzoom.cjs`).
+
 ### Round 4 checks and fixes (after the stop-hook review)
 - **Bug fixed: stuck after KEEP FIGHTING.** Killing the King let the dungeon game's story open a dialogue
   (`openTalk` sets `G.mode = 'talk'`), which no survivors screen answers. `openTalk` now does nothing in a run, and

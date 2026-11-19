@@ -325,6 +325,20 @@ function svSpawns(dt) {
 // ---------------------------------------------------------------- kills, gems, chests
 const XP_GEM = { blue: { name: 'XP', cols: [38, 39, 40], worth: 0 }, green: { name: 'XP', cols: [53, 54, 55], worth: 0 }, purple: { name: 'XP', cols: [57, 58, 59], worth: 0 } };
 const HEAL_GEM = { name: 'LIFE', cols: [20, 22, 23], worth: 0 }, CHEST_GEM = { name: 'CHEST', cols: [49, 50, 51], worth: 0 };
+// XP gems glow from within (the night and the grass swallowed the dark blue ones), one step brighter, and a shimmer
+// runs across each one with a twinkle above it, every gem on its own beat
+XP_GEM.blue.cols = [39, 40, 32]; XP_GEM.green.cols = [54, 55, 124]; XP_GEM.purple.cols = [58, 59, 27];
+const SV_XP_GEMS = new Set(Object.values(XP_GEM));
+const SV_GEM_PX = [[0, -3, 0], [-1, -2, 0], [1, -2, 0], [-2, -1, 0], [2, -1, 0], [-2, 0, 0], [2, 0, 0], [-1, 1, 0], [1, 1, 0], [0, 2, 0],
+  [0, -2, 3], [-1, -1, 3], [0, -1, 2], [1, -1, 2], [-1, 0, 2], [0, 0, 2], [1, 0, 1], [0, 1, 1]];   // (0 outline, 1-3 dark to light)
+{ const dg0 = drawGem; drawGem = function (x, y, tile, gem) {
+  if (!SV.on || !SV_XP_GEMS.has(gem)) return dg0(x, y, tile, gem);
+  const sx = Math.round(x - camX), sy = Math.round(y - camY) - 2, cols = [BLK, ...gem.cols];
+  const ph = (G.t * 0.8 + ((sx * 7 + sy * 13) & 255) / 97) % 1, band = Math.floor(ph * 11) - 4;   // the shine sweeps down-right, then rests
+  const put = (xx, yy, c) => { if (xx < 0 || yy < 0 || xx >= W || yy >= H) return; const o = yy * W + xx; scr[o] = c; zbuf[o] = 3; tbuf[o] = tile; cid[o] = 0; };
+  for (const [a, b, k] of SV_GEM_PX) put(sx + a, sy + b, k ? (a + b === band || a + b === band - 1 && k === 3 ? 27 : cols[k]) | EMIS : BLK);
+  if (ph > 0.82) { const tw = ph > 0.9 ? 27 : cols[3]; put(sx + 2, sy - 4, tw | EMIS); if (ph > 0.86 && ph < 0.96) { put(sx + 1, sy - 4, cols[2] | EMIS); put(sx + 3, sy - 4, cols[2] | EMIS); put(sx + 2, sy - 5, cols[2] | EMIS); } }
+}; }
 function svKilled(e) {
   SV.kills++;
   const v = e.def.unique ? 40 : Math.max(1, Math.round((e.def.xp || 12) / 12)) * (e.champ ? 5 : 1);
