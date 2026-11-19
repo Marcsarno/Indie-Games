@@ -318,7 +318,7 @@ svDrawEnd = function () {
   textC('YOUR BUILD', W / 2, y, 50); y += 12;
   for (const id in SV.w) { svIcon({ kind: 'w', id }, 40, y + 4, 7); text(`${svEvoName(id)} LV ${SV.w[id].lvl}`, 54, y, SV.evo && SV.evo[id] ? 51 : 27); if (SV.mods[id]) { const m = SKILL_MODS[id].find(m => m.id === SV.mods[id]); if (m) text(m.name, 54, y + 8, 51); } y += 19; }
   const ps = Object.keys(SV.pas).map(id => `${SV_PASSIVES[id].name} ${SV.pas[id]}`); wrapText(ps.join(', '), 48).forEach(l => { textC(l, W / 2, y, 25); y += 8; });
-  if (G.t - SV.endAt > 1.2) { svButton(svPicksRect(), 'YOUR PICKS', true, 6); textC('TAP ELSEWHERE FOR THE CAMP', W / 2, H - 20, 27); }
+  if (G.t - SV.endAt > 1.2) { svButton(svPicksRect(), 'YOUR PICKS', true, 50); textC('TAP ELSEWHERE FOR THE CAMP', W / 2, H - 20, 27); }
   if (SV.endPage === 'picks') svDrawPicks();
 };
 // the run's choices in order (the brief: balance from what was offered and chosen, and when)
@@ -329,7 +329,7 @@ function svDrawPicks() {
   const L = SV.log.filter(x => x.kind !== 'reroll'), half = Math.ceil(L.length / 2), lh = Math.min(9, Math.floor((H - 70) / Math.max(1, half)));
   L.forEach((x, k) => {
     const col = k < half ? 0 : 1, row = k < half ? k : k - half, X = 6 + col * (W / 2), Y = 32 + row * lh;
-    const what = x.kind === 'evolve' ? 'EVOLVED ' + SV_EVO[x.pick] [1] : x.kind === 'ultimate' ? 'ULTIMATE' : x.kind === 'banish' ? 'BANISHED ' + name(x.pick) : (x.kind === 'rune' ? 'RUNE ' : '') + name(x.pick);
+    const what = x.kind === 'evolve' ? 'EVOLVED ' + SV_EVO[x.pick] [1] : x.kind === 'ultimate' ? 'ULTIMATE' : x.kind === 'banish' ? 'BANISHED ' + name(x.pick) : (x.kind === 'rune' ? 'RUNE ' + (((SKILL_MODS[x.wid] || []).find(m => m.id === x.pick) || {}).name || x.pick) : name(x.pick));
     text(`${svTime(x.t)} ${what}`.slice(0, 32), X, Y, x.kind === 'evolve' ? 51 : x.kind === 'rune' ? 50 : 26);
   });
   textC('TAP TO GO BACK', W / 2, H - 14, 27);

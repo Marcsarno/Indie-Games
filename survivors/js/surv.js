@@ -379,7 +379,7 @@ function svPool() {
 // every offer and pick, with when and how the run stood (the brief: balance from the choices offered and their
 // circumstances, not from winning builds); the last 20 runs are kept in the browser (localStorage 'sv-runs')
 function svLog(kind, c) {
-  SV.log.push({ t: Math.round(SV.t), lvl: SV.lvl, hp: Math.round(100 * hero.hp / STAT.maxHp), foes: svAlive(), kind, offer: (SV.cards || []).map(x => x.id), pick: c ? c.id : null });
+  SV.log.push({ t: Math.round(SV.t), lvl: SV.lvl, hp: Math.round(100 * hero.hp / STAT.maxHp), foes: svAlive(), kind, offer: (SV.cards || []).map(x => x.id), pick: c ? c.id : null, wid: c && c.wid || undefined });
 }
 function svReroll() {
   if (G.mode !== 'svcards' || SV.rune || !(SV.rerolls > 0) || G.t - SV.cardT < 0.35) return;
@@ -483,7 +483,7 @@ function svUpdate(dt) {
 // testing: ?bot=1 picks at random; ?bot=2 plays focused: up to three spells, levels them, then might and haste
 function svBotPick() {
   if (SV_PARAMS.get('bot') !== '2') return Math.floor(Math.random() * SV.cards.length);
-  const C = SV.cards, nw = Object.keys(SV.w).length, score = c => c.kind === 'rune' ? Math.random() : c.kind === 'w' ? (SV.w[c.id] ? 10 + SV.w[c.id].lvl + (SV_WEAPONS[c.id].basic ? 2 : 0) : nw < SV_HEROES[SV.cls].maxW ? 9 : 0) : c.id === 'might' ? 6 : c.id === 'haste' ? 5 : c.id === 'vigor' ? 4 : 1;
+  const C = SV.cards, nw = Object.keys(SV.w).length, score = c => c.kind === 'rune' ? Math.random() : c.kind === 'w' ? (SV.w[c.id] ? 10 + SV.w[c.id].lvl + (SV_WEAPONS[c.id].basic ? 2 : 0) : nw < SV_HEROES[SV.cls].maxW ? 9 : 0) : (typeof SV_EVO !== 'undefined' && Object.keys(SV.w).some(id => SV_EVO[id] && SV_EVO[id][0] === c.id && SV.w[id].lvl >= 3) && !SV.pas[c.id] ? 8 : c.id === 'might' ? 6 : c.id === 'haste' ? 5 : c.id === 'vigor' ? 4 : 1);   // (a player takes the partner of a growing skill)
   let best = 0; C.forEach((c, k) => { if (score(c) > score(C[best])) best = k; }); return best;
 }
 // testing: a bot that walks away from the crowd, round the arena, and goes for gems (the Paladin: works the edge of
@@ -723,7 +723,7 @@ addEventListener('keydown', e => {
       try { _update(dt); if (SV.on) { STAT.speed = s0; svUpdate(dt); } } catch (err) { if (!SV.errs) SV.errs = []; if (SV.errs.length < 20) { SV.errs.push(String(err && err.stack || err).slice(0, 300)); console.error(err); } } finally { STAT.speed = s0; }
     }
     if (!SV.on) return;
-    if (SV_PARAMS.get('bot')) { if (G.mode === 'svwin') svWinTap(null); if (G.mode === 'svtitle') svChooseHero(SV_PARAMS.get('cls') || 'mage'); if (G.mode === 'svcards' && G.t - SV.cardT > 0.4) svPick(svBotPick()); }   // (testing)
+    if (SV_PARAMS.get('bot')) { if (G.mode === 'svwin' && G.t - SV.winAt > 0.7) { if (SV_PARAMS.get('keep')) { const r = svWinRects().keep; svWinTap([r.x + 2, r.y + 2]); } else svWinTap(null); } if (G.mode === 'svtitle') svChooseHero(SV_PARAMS.get('cls') || 'mage'); if (G.mode === 'svcards' && G.t - SV.cardT > 0.4) svPick(svBotPick()); }   // (testing)
   };
   damageEnemy = function (e, ...a) { const was = alive(e); _damage(e, ...a); if (SV.on && was && !alive(e)) svKilled(e); };
   pickup = g => SV.on ? svPickup(g) : _pickup(g);
