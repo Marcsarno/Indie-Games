@@ -27,7 +27,7 @@ const { chromium } = require('playwright');
       lvlAt: __R.lvlAt, maxAt: __R.maxAt, picks: L.length, offersWithNoWeapon: noW, firstNoWeaponAt: (L.find(x => !x.offer.some(id => SV_WEAPONS[id])) || {}).t,
       heals: L.filter(x => x.pick === 'heal').length, hits: __R.hits, dmgIn: Math.round(__R.dmgIn), secsBelow50: low, secsBelow25: crit, minHp: Math.min(...hp),
       hpByMin: Array.from({ length: Math.ceil(hp.length / 60) }, (_, k) => Math.min(...hp.slice(k * 60, k * 60 + 60))), foesByMin: Array.from({ length: Math.ceil(__R.foes.length / 60) }, (_, k) => Math.round(__R.foes.slice(k * 60, k * 60 + 60).reduce((a, b) => a + b, 0) / 60)),
-      w: Object.fromEntries(Object.entries(SV.w).map(([k, v]) => [k, v.lvl])), mods: SV.mods, pas: SV.pas };
+      w: Object.fromEntries(Object.entries(SV.w).map(([k, v]) => [k, v.lvl])), mods: SV.mods, pas: SV.pas, evo: SV.evo, evoAt: SV.log.filter(x => x.kind === 'evolve').map(x => x.t), ultAt: SV.log.filter(x => x.kind === 'ultimate').map(x => x.t), errs: SV.errs || [] };
   });
   r.errors = errs; console.log(JSON.stringify(r));
   await b.close();

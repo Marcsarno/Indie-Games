@@ -132,7 +132,8 @@ SV_HOOKS.recalc.push(() => {
 SV_HOOKS.spawn.push((e, opt) => {
   const D = svDiff(); if (!D) return;
   const boss = e.def.unique, kingK = e.id === 'skelking' && SV.diff > 1 ? 1.4 : 1;   // (the King had fallen in 20 seconds to a Paladin; x2 dragged past 3 minutes for three heroes)
-  e.hp = e.maxHp = Math.round(e.maxHp * D.hp * kingK); e.dmg = e.dmg.map(v => Math.max(1, Math.round(v * D.dmg)));
+  const late = SV.diff === 1 && !boss && SV.t > 360 && !SV.endless ? Math.max(0.65, 1 - (SV.t - 360) / 450) : 1;   // (Normal: the last minutes are the payoff)
+  e.hp = e.maxHp = Math.round(e.maxHp * D.hp * kingK * late); e.dmg = e.dmg.map(v => Math.max(1, Math.round(v * D.dmg)));
   if (D.haste) e.speedK = (e.speedK || 1) * D.haste;
   if (!boss && !opt.noChamp && D.champs && Math.random() < D.champs) { makeChampion(e, rng((Math.random() * 1e9) >>> 0)); e.svGold = 6; }
 });
@@ -187,7 +188,7 @@ SV_HOOKS.fatal.push(() => {
 SV_HOOKS.end.push(won => {
   const cls = SV.cls, r0 = svRank(cls), xp = Math.round(SV.kills / 8 + SV.t / 6 + (won ? 60 : 0)) * (SV.diff || 1);
   SVM.gold += SV.gold; SVM.stats.banked += SV.gold; SVM.stats.runs++; SVM.xp[cls] = (SVM.xp[cls] || 0) + xp;
-  if (won) { SVM.stats.wins++; svUnlock('win' + SV.diff); }
+  if (won && !SV.winBanked) { SVM.stats.wins++; svUnlock('win' + SV.diff); }
   if (SVM.stats.banked >= 1000) svUnlock('gold1000');
   const k = cls + SV.diff, b = SVM.best[k]; if (!b || won && !b.won || (!b.won && SV.t > b.t)) SVM.best[k] = { t: Math.round(SV.t), won, kills: SV.kills };
   SV.end.xp = xp; SV.end.rank0 = r0; SV.end.rank1 = svRank(cls);
@@ -307,19 +308,59 @@ svDrawEnd = function () {
   svDim(0.75);
   const E = SV.end, y0 = Math.round(H * 0.12);
   textC(E.won ? 'VICTORY!' : 'YOU HAVE FALLEN', W / 2, y0, E.won ? 51 : 22, 2);
-  textC(E.won ? `THE SKELETON KING IS DEAD (${svDiff().name})` : `YOU LASTED ${svTime(E.t)} ON ${svDiff().name}`, W / 2, y0 + 20, 26);
+  textC(E.won ? (SV.endless ? `THE KING FELL. YOU FOUGHT ON TO ${svTime(E.t)}` : `THE SKELETON KING IS DEAD (${svDiff().name})`) : `YOU LASTED ${svTime(E.t)} ON ${svDiff().name}`, W / 2, y0 + 20, 26);
   textC(`LEVEL ${E.lvl}    ${E.kills} KILLS`, W / 2, y0 + 30, 25);
   textC(`+${E.gold} GOLD (NOW ${SVM.gold})`, W / 2, y0 + 44, 50);
   textC(`${SV_HEROES[SV.cls].name}: +${E.xp || 0} XP` + (E.rank1 > E.rank0 ? `, RANK ${E.rank1}!` : ''), W / 2, y0 + 53, E.rank1 > E.rank0 ? 51 : 39);
   let y = y0 + 68;
   if (SV.unlocked.length) { textC('UNLOCKED', W / 2, y, 54, 2); y += 16; for (const id of SV.unlocked) { const A = SV_ACH.find(a => a.id === id); textC(`${A.name}: ${A.give}`, W / 2, y, 51); y += 9; } y += 6; }
   textC('YOUR BUILD', W / 2, y, 50); y += 12;
-  for (const id in SV.w) { svIcon({ kind: 'w', id }, 40, y + 4, 7); text(`${SV_WEAPONS[id].name} LV ${SV.w[id].lvl}`, 54, y, 27); if (SV.mods[id]) { const m = SKILL_MODS[id].find(m => m.id === SV.mods[id]); if (m) text(m.name, 54, y + 8, 51); } y += 19; }
+  for (const id in SV.w) { svIcon({ kind: 'w', id }, 40, y + 4, 7); text(`${svEvoName(id)} LV ${SV.w[id].lvl}`, 54, y, SV.evo && SV.evo[id] ? 51 : 27); if (SV.mods[id]) { const m = SKILL_MODS[id].find(m => m.id === SV.mods[id]); if (m) text(m.name, 54, y + 8, 51); } y += 19; }
   const ps = Object.keys(SV.pas).map(id => `${SV_PASSIVES[id].name} ${SV.pas[id]}`); wrapText(ps.join(', '), 48).forEach(l => { textC(l, W / 2, y, 25); y += 8; });
-  if (G.t - SV.endAt > 1.2) textC('TAP TO GO BACK TO CAMP', W / 2, H - 30, 27);
+  if (G.t - SV.endAt > 1.2) { svButton(svPicksRect(), 'YOUR PICKS', true, 6); textC('TAP ELSEWHERE FOR THE CAMP', W / 2, H - 20, 27); }
+  if (SV.endPage === 'picks') svDrawPicks();
+};
+// the run's choices in order (the brief: balance from what was offered and chosen, and when)
+function svPicksRect() { return { x: W / 2 - 50, y: H - 48, w: 100, h: 18 }; }
+function svDrawPicks() {
+  svDim(0.92); textC('YOUR PICKS', W / 2, 10, 51, 2);
+  const name = id => SV_WEAPONS[id] ? SV_WEAPONS[id].name : SV_PASSIVES[id] ? SV_PASSIVES[id].name : id === 'heal' ? 'HEAL' : id;
+  const L = SV.log.filter(x => x.kind !== 'reroll'), half = Math.ceil(L.length / 2), lh = Math.min(9, Math.floor((H - 70) / Math.max(1, half)));
+  L.forEach((x, k) => {
+    const col = k < half ? 0 : 1, row = k < half ? k : k - half, X = 6 + col * (W / 2), Y = 32 + row * lh;
+    const what = x.kind === 'evolve' ? 'EVOLVED ' + SV_EVO[x.pick] [1] : x.kind === 'ultimate' ? 'ULTIMATE' : x.kind === 'banish' ? 'BANISHED ' + name(x.pick) : (x.kind === 'rune' ? 'RUNE ' : '') + name(x.pick);
+    text(`${svTime(x.t)} ${what}`.slice(0, 32), X, Y, x.kind === 'evolve' ? 51 : x.kind === 'rune' ? 50 : 26);
+  });
+  textC('TAP TO GO BACK', W / 2, H - 14, 27);
+}
+svEndTap = p => {
+  if (SV.endPage === 'picks') { SV.endPage = null; return; }
+  if (p && inRect(p, svPicksRect())) { SV.endPage = 'picks'; sfx('tap'); return; }
+  SV.endPage = null; svToTitle();
+};
+// victory: the win is banked at once; then claim it, or keep fighting for gold (the waves keep growing)
+svVictory = () => setTimeout(() => {
+  if (SV.end || hero.dead) return;
+  svUnlock('win' + SV.diff); SVM.stats.wins++; SV.winBanked = true; svmSave();
+  G.mode = 'svwin'; SV.winAt = G.t; clearInput(); sfx('levelUp'); sfx('chest');
+}, 1600);
+function svWinRects() { const y = Math.round(H * 0.55); return { end: { x: 20, y, w: W / 2 - 26, h: 26 }, keep: { x: W / 2 + 6, y, w: W / 2 - 26, h: 26 } }; }
+svWinTap = p => {
+  if (G.t - SV.winAt < 0.6) return;
+  const R = svWinRects();
+  if (!p || inRect(p, R.end)) { svEnd(true); return; }
+  if (inRect(p, R.keep)) { SV.endless = true; SV.endlessAt = SV.t; G.mode = 'play'; last = performance.now(); say('THE WOOD GROWS ANGRY', 22, 2.5); sfx('cry'); }
 };
 SV_HOOKS.hud.push(() => {
-  if (SV.unlockShow) { const U = SV.unlockShow, y = Math.round(H * 0.33); for (let yy = y - 4; yy < y + 26; yy++) for (let x = 0; x < W; x++) if (BAYER[((yy & 3) << 2) | (x & 3)] < 0.7) put(x, yy, BLK);
+  if (G.mode !== 'svwin') return;
+  svDim(0.6); const y0 = Math.round(H * 0.3);
+  textC('VICTORY!', W / 2, y0, 51, 3); textC('THE SKELETON KING IS DEAD', W / 2, y0 + 28, 26); textC('THE WIN IS YOURS. KEEP FIGHTING FOR GOLD?', W / 2, y0 + 40, 25);
+  const R = svWinRects(); svButton(R.end, 'END THE RUN', true, 54); svButton(R.keep, 'KEEP FIGHTING', true, 22);
+});
+// keeping on: the waves come faster every minute past the King
+SV_HOOKS.update.push(() => { if (SV.endless) SV.rateK = svDiff().rate * (1 + (SV.t - SV.endlessAt) / 180); });
+SV_HOOKS.hud.push(() => {
+  if (SV.unlockShow && G.mode === 'play') { const U = SV.unlockShow, y = Math.round(H * 0.33); for (let yy = y - 4; yy < y + 26; yy++) for (let x = 0; x < W; x++) if (BAYER[((yy & 3) << 2) | (x & 3)] < 0.7) put(x, yy, BLK);
     textC('UNLOCKED!', W / 2, y, 54, 2); textC(`${U.a.name}: ${U.a.give}`, W / 2, y + 16, 51); }
 });
 // banish: on the level-up screen, a button that turns the next tapped card into a banishment

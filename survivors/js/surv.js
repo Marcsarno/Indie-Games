@@ -69,11 +69,11 @@ SKILL_MODS.swing = [
 const SV_HEROES = {
   mage: { name: 'THE MAGE', role: 'RANGED: SPELLS FROM AFAR', start: 'missile', hp: 2.5, maxW: 5,
     lines: ['KEEP YOUR DISTANCE. SPELLS FIND THE FOES,', 'RUNES CHANGE HOW EACH SPELL PLAYS'] },
-  paladin: { name: 'THE PALADIN', role: 'MELEE: HAMMER AND SHIELD', start: 'swing', hp: 3, maxW: 4,
+  paladin: { name: 'THE PALADIN', role: 'MELEE: HAMMER AND SHIELD', start: 'swing', hp: 3, maxW: 5,
     lines: ['WORK THE EDGE OF THE CROWD. YOUR GUARD', 'BLOCKS ONE BLOW AND PRIMES A COUNTER'] },
-  warrior: { name: 'THE BARBARIAN', role: 'MELEE: TWO AXES AND RAGE', start: 'axes', hp: 2.7, maxW: 4,
+  warrior: { name: 'THE BARBARIAN', role: 'MELEE: TWO AXES AND RAGE', start: 'axes', hp: 2.7, maxW: 5,
     lines: ['STAY IN THE THICK OF IT: HITS FILL', 'YOUR RAGE, FULL RAGE IS A FRENZY'] },
-  ranger: { name: 'THE RANGER', role: 'RANGED: BOW, TRAPS AND SPEED', start: 'bow', hp: 2.4, maxW: 5,
+  ranger: { name: 'THE RANGER', role: 'RANGED: BOW, TRAPS AND SPEED', start: 'bow', hp: 2.6, maxW: 5,
     lines: ['KEEP MOVING. WHEN A BLOW LANDS YOU', 'TUMBLE AWAY FASTER FOR A MOMENT'] },
 };
 const SV_HERO_ORDER = ['mage', 'paladin', 'warrior', 'ranger'];
@@ -152,7 +152,7 @@ function svArena(seed) {
 
 // ---------------------------------------------------------------- a run
 function svReset() {
-  Object.assign(SV, { t: 0, kills: 0, lvl: 1, xp: 0, queue: 0, spawnT: 0.5, eliteT: 75, cards: null, rune: null, w: { [SV_HEROES[SV.cls].start]: { lvl: 1, cd: 0.4 } }, mods: {}, pas: {}, echo: [], end: null, boss: null, bossDone: {}, picks: [], firstHurt: 0, grace: 0,
+  Object.assign(SV, { endless: false, winBanked: false, endPage: null, t: 0, kills: 0, lvl: 1, xp: 0, queue: 0, spawnT: 0.5, eliteT: 75, cards: null, rune: null, w: { [SV_HEROES[SV.cls].start]: { lvl: 1, cd: 0.4 } }, mods: {}, pas: {}, echo: [], end: null, boss: null, bossDone: {}, picks: [], firstHurt: 0, grace: 0,
     rerolls: 2, log: [], guardOn: true, guardT: 0, counterT: 0, won: false, rage: 0, rageT: 0, tumbleT: 0, gold: 0, banish: 0, banished: {}, revives: 0, unlocked: [], kingPh: 0, diff: SV.diff || 1 });
   if (SV_PARAMS.get('t')) SV.t = +SV_PARAMS.get('t');   // (testing: start the clock later)
 }
@@ -182,10 +182,10 @@ function svCast(id) {
   hero.cast = -1; hero.castKind = null; if (hero.clip === 'channel') hero.clip = 'idle';
   return true;
 }
-const svCd = id => SV_WEAPONS[id].cd * (SV.w[id].lvl >= 2 ? 0.8 : 1) * (SV.w[id].lvl >= 5 ? 0.8 : 1) * Math.pow(0.92, SV.pas.haste || 0) * (hero.frenzy > 0 ? 0.7 : 1) * (SV.cdK || 1);
+let svCd = id => SV_WEAPONS[id].cd * (SV.w[id].lvl >= 2 ? 0.8 : 1) * (SV.w[id].lvl >= 5 ? 0.8 : 1) * Math.pow(0.92, SV.pas.haste || 0) * (hero.frenzy > 0 ? 0.7 : 1) * (SV.cdK || 1);
 function svWeapons(dt) {
   for (const id in SV.w) {
-    if (SV_WEAPONS[id].basic) continue;
+    if (SV_WEAPONS[id].basic || SV_WEAPONS[id].aura) continue;   // (the always-on ones: surv_skills.js)
     const w = SV.w[id]; w.cd -= dt;
     if (w.cd > 0) continue;
     if (svCast(id)) {
@@ -331,7 +331,7 @@ function svKilled(e) {
   if (Math.random() < 0.012) groundItems.push({ gem: HEAL_GEM, svHeal: true, fi: e.fi + 0.3, fj: e.fj, t: 0 });
   if (e.svChest) { groundItems.push({ gem: CHEST_GEM, svChest: true, fi: e.fi, fj: e.fj + 0.3, t: 0 }); say('A CHEST!', 51, 2); }
   svRun('killed', e);
-  if (e === SV.boss) { SV.boss = null; if (e.id === 'skelking') { SV.won = true; setTimeout(() => svEnd(true), 1600); } }
+  if (e === SV.boss) { SV.boss = null; if (e.id === 'skelking') { SV.won = true; svVictory(); } }
 }
 function svPickup(g) {
   if (g.xp) { svGainXp(g.xp); sfx('clink', 0.35); return true; }
@@ -369,7 +369,7 @@ function svLvlOf(c) { return c.kind === 'w' ? `LV ${SV.w[c.id] ? SV.w[c.id].lvl 
 function svPool() {
   const out = [], nw = Object.keys(SV.w).length, H = SV_HEROES[SV.cls];
   for (const id in SV_WEAPONS) {
-    const W = SV_WEAPONS[id], w = SV.w[id]; if (W.cls !== SV.cls) continue;
+    const W = SV_WEAPONS[id], w = SV.w[id]; if (W.cls !== SV.cls && W.cls !== 'all') continue;
     if (!w && nw < H.maxW) out.push({ kind: 'w', id, name: W.name, line: SV.cls === 'mage' ? 'NEW SPELL' : 'NEW SKILL', desc: W.desc, wt: 1.4 });
     else if (w && w.lvl < 5) out.push({ kind: 'w', id, name: W.name, line: `LEVEL ${w.lvl + 1}`, desc: (W.lv || SV_WLVL)[w.lvl + 1], wt: w.lvl === 2 ? 1.6 : 1.2 });
   }
@@ -463,7 +463,7 @@ function svWash(dt) {
 // ---------------------------------------------------------------- per frame (after the game's own update)
 function svUpdate(dt) {
   if (G.mode !== 'play' || G.paused) return;
-  if (hero.dead) { if (hero.dead > 1.4) svEnd(false); return; }
+  if (hero.dead) { if (hero.dead > 1.4) svEnd(!!SV.won); return; }
   SV.t += dt;
   if (hero.cls !== 'mage') svCarry(dt);
   if (hero.cls === 'paladin' && !SV.guardOn && (SV.guardT -= dt) <= 0) { SV.guardOn = true; sfx('clank', 0.5); }
@@ -483,7 +483,7 @@ function svUpdate(dt) {
 // testing: ?bot=1 picks at random; ?bot=2 plays focused: up to three spells, levels them, then might and haste
 function svBotPick() {
   if (SV_PARAMS.get('bot') !== '2') return Math.floor(Math.random() * SV.cards.length);
-  const C = SV.cards, nw = Object.keys(SV.w).length, score = c => c.kind === 'rune' ? Math.random() : c.kind === 'w' ? (SV.w[c.id] ? 10 + SV.w[c.id].lvl + (SV_WEAPONS[c.id].basic ? 2 : 0) : nw < 3 ? 9 : 0) : c.id === 'might' ? 6 : c.id === 'haste' ? 5 : c.id === 'vigor' ? 4 : 1;
+  const C = SV.cards, nw = Object.keys(SV.w).length, score = c => c.kind === 'rune' ? Math.random() : c.kind === 'w' ? (SV.w[c.id] ? 10 + SV.w[c.id].lvl + (SV_WEAPONS[c.id].basic ? 2 : 0) : nw < SV_HEROES[SV.cls].maxW ? 9 : 0) : c.id === 'might' ? 6 : c.id === 'haste' ? 5 : c.id === 'vigor' ? 4 : 1;
   let best = 0; C.forEach((c, k) => { if (score(c) > score(C[best])) best = k; }); return best;
 }
 // testing: a bot that walks away from the crowd, round the arena, and goes for gems (the Paladin: works the edge of
@@ -550,18 +550,18 @@ function svHud() {
   { const f = SV.xp / svNeed(SV.lvl); fillRect(0, 0, W, 7, BLK); fillRect(1, 1, Math.round((W - 2) * f), 5, 39); fillRect(1, 1, Math.round((W - 2) * f), 1, 40);
     text(`LV ${SV.lvl}`, 3, 10, 27); text(`${SV.gold}G`, 3, 18, 50); textC(svTime(SV.t), W / 2, 10, 27, 2); const k = `${SV.kills}`; text(k, W - 3 - textWidth(k), 10, 25); text('KILLS', W - 3 - textWidth('KILLS'), 17, 4); }
   // the spells owned, with their levels
-  { let x = 4; for (const id in SV.w) { svIcon({ kind: 'w', id }, x + 8, 34, 7); for (let l = 0; l < SV.w[id].lvl; l++) put(x + 2 + l * 3, 44, SV.mods[id] && l === 2 ? 51 : 27); x += 19; }
+  { let x = 4; for (const id in SV.w) { svIcon({ kind: 'w', id }, x + 8, 34, 7); for (let l = 0; l < SV.w[id].lvl; l++) put(x + 2 + l * 3, 44, SV.evo && SV.evo[id] ? 51 : SV.mods[id] && l === 2 ? 51 : 27); if (SV.evo && SV.evo[id]) { put(x + 8, 25, 51); put(x + 7, 26, 51); put(x + 9, 26, 51); } x += 19; }
     for (const id in SV.pas) { text(`${SV_PASSIVES[id].name[0]}${SV.pas[id]}`, x + 2, 32, 25); x += 13; } }
   svRun('hud');
   G.msg.forEach((m, n) => textC(m.text, W / 2, 52 + n * 8, m.col));
   // a boss: its name and its life along the bottom
   if (SV.boss && alive(SV.boss)) { const b = SV.boss, w = W - 40, f = b.hp / b.maxHp; textC(b.def.name, W / 2, H - 24, 22); fillRect(19, H - 15, w + 2, 6, BLK); fillRect(20, H - 14, Math.round(w * f), 4, 21); }
-  if (G.bossIntro > 0 && boss) {
+  if (G.bossIntro > 0 && boss && G.mode === 'play') {
     const t = 2.8 - G.bossIntro, open = Math.min(1, t / 0.25, G.bossIntro / 0.35), cy = Math.round(H * 0.3), hh = Math.round(22 * open);
     for (let y = cy - hh; y < cy + hh; y++) for (let x = 0; x < W; x++) if (BAYER[((y & 3) << 2) | (x & 3)] < 0.75) put(x, y, BLK);
     if (open > 0.8) { textC(boss.def.name, W / 2, cy - 11, 22, 2); if (boss.def.title) textC(boss.def.title, W / 2, cy + 6, 26); }
   }
-  if (SV.chestShow) { const C = SV.chestShow, y0 = Math.round(H * 0.24); textC(C.n >= 5 ? 'A HUGE CHEST!' : C.n >= 3 ? 'A RICH CHEST!' : 'A CHEST', W / 2, y0, 51, 2); C.lines.forEach((l, n) => textC(l, W / 2, y0 + 18 + n * 8, 26)); }
+  if (SV.chestShow) { const C = SV.chestShow, y0 = Math.round(H * 0.24); textC(C.evo ? 'EVOLUTION!' : C.n >= 5 ? 'A HUGE CHEST!' : C.n >= 3 ? 'A RICH CHEST!' : 'A CHEST', W / 2, y0, 51, 2); C.lines.forEach((l, n) => textC(l, W / 2, y0 + 18 + n * 8, 26)); }
   text(SFX.muted ? 'SOUND OFF' : 'SOUND ON', W - 3 - textWidth(SFX.muted ? 'SOUND OFF' : 'SOUND ON'), H - 8, 4);
   if (SV_PARAMS.get('fps')) text(`${fpsShown} FPS ${workShown.toFixed(1)}MS ${svAlive()} FOES`, 3, H - 8, 25);
   if (G.mode === 'svcards') svDrawCards();
@@ -620,6 +620,8 @@ function svChooseHero(cls) {
   try { localStorage.setItem('sv-cls', cls); } catch (e) { /* storage blocked */ }
   svBegin();
 }
+let svVictory = () => setTimeout(() => svEnd(true), 1600);   // (surv_meta.js: claim the win or keep fighting)
+let svWinTap = () => {}, svEndTap = () => svToTitle();
 let svCardExtraTap = () => false;   // (surv_meta.js: the banish button)
 let svTitleTap = p => { for (const r of svHeroRects()) if (inRect(p, r)) svChooseHero(r.id); };   // (surv_meta.js: the camp)
 let svTitleKey = k => { if (k >= '1' && k <= '4') svChooseHero(SV_HERO_ORDER[+k - 1]); else if (k === 'enter' || k === ' ') svChooseHero(SV.cls); };
@@ -635,7 +637,8 @@ addEventListener('pointerdown', e => {
   if (G.paused) { G.paused = false; last = performance.now(); return; }
   if (G.mode === 'svtitle') { svTitleTap(p); return; }
   if (G.mode === 'svcards') { if (svCardExtraTap(p)) return; const R = svCardRects(); R.forEach((r, k) => { if (inRect(p, r)) svPick(k); }); if (!SV.rune && inRect(p, svRerollRect())) svReroll(); return; }
-  if (G.mode === 'svend') { if (G.t - SV.endAt > 1.2) svToTitle(); return; }
+  if (G.mode === 'svwin') { svWinTap(p); return; }
+  if (G.mode === 'svend') { if (G.t - SV.endAt > 1.2) svEndTap(p); return; }
   if (G.mode !== 'play') return;
   if (p[0] > W - 50 && p[1] > H - 16) { setMuted(!SFX.muted); return; }
   if (stick.id === null) { stick.id = e.pointerId; stick.ox = p[0]; stick.oy = p[1]; stick.x = p[0]; stick.y = p[1]; capture(e); }
@@ -705,7 +708,7 @@ addEventListener('keydown', e => {
   const _shoot = shootArrow;
   shootArrow = function (a, o = {}) {
     if (!SV.on || hero.cls !== 'ranger' || !o.basic) return _shoot(a, o);
-    const w = SV.w.bow, mod = SV.mods.bow, k = (w && w.lvl >= 2 ? 1.3 : 1) * (w && w.lvl >= 5 ? 1.3 : 1) * (1 + 0.15 * (SV.pas.eagle || 0));
+    const w = SV.w.bow, mod = SV.mods.bow, k = 1.35 * (w && w.lvl >= 2 ? 1.3 : 1) * (w && w.lvl >= 5 ? 1.3 : 1) * (1 + 0.15 * (SV.pas.eagle || 0));
     const o2 = Object.assign({}, o, { dmgK: (o.dmgK || 1) * k * (mod === 'twin' ? 0.8 : 1), sp: ARROW_SP * (1 + 0.12 * (SV.pas.eagle || 0)) });
     if (mod === 'pierce') { o2.pierce = true; o2.hits = new Set(); }
     if (mod === 'fire') { o2.elem = 'fire'; o2.fire = true; }
@@ -716,11 +719,11 @@ addEventListener('keydown', e => {
     for (let k = 0, n = +SV_PARAMS.get('speed') || 1; k < n; k++) {   // (?speed=4 for test runs)
       // a frenzy, a tumble or a shrine's haste quickens his legs for the frame
       const s0 = STAT.speed; if (SV.on) STAT.speed *= (hero.frenzy > 0 && hero.cls === 'warrior' ? 1.15 : 1) * (G.t < SV.tumbleT ? 1.4 : 1) * (SV.speedK || 1);
-      try { _update(dt); } finally { STAT.speed = s0; }
-      if (SV.on) svUpdate(dt);
+      // an error in one frame must never stop the game (the frame loop dies with it): logged once, play goes on
+      try { _update(dt); if (SV.on) { STAT.speed = s0; svUpdate(dt); } } catch (err) { if (!SV.errs) SV.errs = []; if (SV.errs.length < 20) { SV.errs.push(String(err && err.stack || err).slice(0, 300)); console.error(err); } } finally { STAT.speed = s0; }
     }
     if (!SV.on) return;
-    if (SV_PARAMS.get('bot')) { if (G.mode === 'svtitle') svChooseHero(SV_PARAMS.get('cls') || 'mage'); if (G.mode === 'svcards' && G.t - SV.cardT > 0.4) svPick(svBotPick()); }   // (testing)
+    if (SV_PARAMS.get('bot')) { if (G.mode === 'svwin') svWinTap(null); if (G.mode === 'svtitle') svChooseHero(SV_PARAMS.get('cls') || 'mage'); if (G.mode === 'svcards' && G.t - SV.cardT > 0.4) svPick(svBotPick()); }   // (testing)
   };
   damageEnemy = function (e, ...a) { const was = alive(e); _damage(e, ...a); if (SV.on && was && !alive(e)) svKilled(e); };
   pickup = g => SV.on ? svPickup(g) : _pickup(g);
