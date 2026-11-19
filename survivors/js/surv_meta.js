@@ -44,7 +44,7 @@ const SV_BLESS = {
   luck: { name: 'LUCK', max: 3, cost: 90, desc: 'CHESTS MORE OFTEN HOLD 3 OR 5', need: 'alpha' },
   revive: { name: 'SECOND LIFE', max: 1, cost: 400, desc: 'ONCE A RUN, RISE AGAIN AT HALF LIFE', need: 'gold1000' },
 };
-const svBl = id => (SV_PARAMS.get('bless') === 'max' ? SV_BLESS[id].max : SVM.bless[id] || 0);
+const svBl = id => (SV_PARAMS.get('bless') === 'max' ? SV_BLESS[id].max : SV_PARAMS.get('bless') === 'half' ? Math.floor(SV_BLESS[id].max / 2) : SVM.bless[id] || 0);   // (?bless=max|half for tests)
 const svBlessCost = (id, r = SVM.bless[id] || 0) => SV_BLESS[id].cost * (r + 1);
 
 // ---------------------------------------------------------------- unlocks
@@ -68,7 +68,7 @@ const SV_ACH = [
 ];
 const svHas = id => SV_PARAMS.get('unlock') === 'all' || !!SVM.ach[id];
 const svHeroOpen = cls => SV_PARAMS.get('cls') === cls || cls === 'mage' || cls === 'paladin' || (cls === 'warrior' ? svHas('barb') : svHas('ranger'));
-const svDiffOpen = d => d === 1 || svHas('win' + (d - 1));
+const svDiffOpen = d => d === 1 || svHas('win' + (d - 1)) || SV_PARAMS.get('open') === 'all';   // (?open=all for tests: every level, nothing else)
 function svUnlock(id) {
   if (SVM.ach[id]) return;
   const A = SV_ACH.find(a => a.id === id); if (!A) return;
@@ -131,7 +131,7 @@ SV_HOOKS.recalc.push(() => {
 });
 SV_HOOKS.spawn.push((e, opt) => {
   const D = svDiff(); if (!D) return;
-  const boss = e.def.unique, kingK = e.id === 'skelking' ? 1.4 : 1;   // (the King had fallen in 20 seconds to a Paladin; x2 dragged past 3 minutes for three heroes)
+  const boss = e.def.unique, kingK = e.id === 'skelking' && SV.diff > 1 ? 1.4 : 1;   // (the King had fallen in 20 seconds to a Paladin; x2 dragged past 3 minutes for three heroes)
   e.hp = e.maxHp = Math.round(e.maxHp * D.hp * kingK); e.dmg = e.dmg.map(v => Math.max(1, Math.round(v * D.dmg)));
   if (D.haste) e.speedK = (e.speedK || 1) * D.haste;
   if (!boss && !opt.noChamp && D.champs && Math.random() < D.champs) { makeChampion(e, rng((Math.random() * 1e9) >>> 0)); e.svGold = 6; }
