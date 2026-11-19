@@ -143,7 +143,8 @@ function svDropGold(fi, fj, v) { if (v <= 0) return; groundItems.push({ gold: Ma
 SV_HOOKS.killed.push(e => {
   SVM.stats.kills++;
   if (e.def.unique) { for (let k = 0; k < 8; k++) svDropGold(e.fi + Math.cos(k) * 0.8, e.fj + Math.sin(k) * 0.8, 12); if (e.id === 'alpha') svUnlock('alpha'); }
-  else if (e.champ || e.svChest) svDropGold(e.fi, e.fj, 14);
+  else if (e.svChest) svDropGold(e.fi, e.fj, 14);   // an elite
+  else if (e.champ) svDropGold(e.fi, e.fj, 3);   // a champion in the horde (Nightmare and up: they are common)
   else if (Math.random() < 0.035) svDropGold(e.fi, e.fj, 1 + Math.floor(Math.random() * 3));
   if (SV.kills >= 400) svUnlock('barb');
   if (SV.pas.blood) {   // Bloodstone: kills mend, at most 4 life a second
