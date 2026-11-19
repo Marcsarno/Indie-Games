@@ -20,11 +20,11 @@ function svmSave() { if (SV_PARAMS.get('unlock') || SV_PARAMS.get('nosave')) ret
 // that are champions; twist: what makes the level play differently
 const SV_DIFFS = [null,
   { name: 'NORMAL', col: 26, hp: 1, dmg: 1, rate: 1, cap: 1, gold: 1, elite: 75, champs: 0, lines: ['THE BLIGHTED WOOD. SURVIVE, LEVEL UP,', 'AND KILL THE SKELETON KING AT 9:00'] },
-  { name: 'NIGHTMARE', col: 39, hp: 2.1, dmg: 1.5, rate: 1.2, cap: 1.15, gold: 1.7, elite: 55, champs: 0.04, night: true, kingGuard: 2,
+  { name: 'NIGHTMARE', col: 39, hp: 2.1, dmg: 1.8, rate: 1.2, cap: 1.15, gold: 1.7, elite: 55, champs: 0.04, night: true, kingGuard: 2,
     lines: ['NIGHT FALLS. ELITES COME MORE OFTEN AND', 'CHAMPIONS WALK IN THE HORDE'] },
-  { name: 'HELL', col: 22, hp: 3.6, dmg: 2.1, rate: 1.35, cap: 1.25, gold: 2.6, elite: 45, champs: 0.07, night: true, fire: 7, kingGuard: 4,
+  { name: 'HELL', col: 22, hp: 4.2, dmg: 2.8, rate: 1.35, cap: 1.25, gold: 2.6, elite: 45, champs: 0.07, night: true, fire: 7, kingGuard: 4,
     lines: ['FIRE RAINS ON THE WOOD: GET OUT OF THE', 'RED CIRCLES. THE KING BRINGS HIS GUARD'] },
-  { name: 'TORMENT', col: 57, hp: 6, dmg: 2.8, rate: 1.5, cap: 1.35, gold: 3.8, elite: 40, champs: 0.1, night: true, fire: 5, haste: 1.15, kingGuard: 6,
+  { name: 'TORMENT', col: 57, hp: 7.5, dmg: 3.8, rate: 1.5, cap: 1.35, gold: 3.8, elite: 40, champs: 0.1, night: true, fire: 5, haste: 1.15, kingGuard: 6,
     lines: ['EVERYTHING IS FASTER AND THE FIRE NEVER', 'STOPS. ONLY THE STRONGEST BUILDS LIVE'] },
 ];
 const svDiff = () => SV_DIFFS[SV.diff || 1];

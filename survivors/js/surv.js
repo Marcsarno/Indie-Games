@@ -294,8 +294,9 @@ function svSpawns(dt) {
   const [, ids, rate, cap] = svWave();
   SV.spawnT -= dt;
   while (SV.spawnT <= 0) {
-    SV.spawnT += 1 / (rate * (SV.rateK || 1));
-    if (svAlive() >= cap * (SV.capK || 1)) continue;
+    const bossOn = SV.boss && alive(SV.boss);   // while a boss is up the waves thin, so there is a way to him (the brief: bosses need reachable openings)
+    SV.spawnT += 1 / (rate * (SV.rateK || 1) * (bossOn ? 0.5 : 1));
+    if (svAlive() >= cap * (SV.capK || 1) * (bossOn ? 0.6 : 1)) continue;
     const id = ids[Math.floor(Math.random() * ids.length)], p = svSpot(9.5, 12, true);
     if (!p) continue;
     const n = SV_PACKS[id] ? 2 + Math.floor(Math.random() * 3) : 1;
@@ -492,6 +493,7 @@ function svBot() {
   const melee = svMelee() && hero.hp > STAT.maxHp * 0.4, near = melee ? nearestEnemy(4) : null;
   for (const e of enemies) { if (!alive(e)) continue; const dx = hero.fi - e.fi, dy = hero.fj - e.fj, d = Math.hypot(dx, dy); if (d < (melee ? 1.6 : 5)) { ax += dx / (d * d + 0.3); ay += dy / (d * d + 0.3); } }
   if (near) { const dx = near.fi - hero.fi, dy = near.fj - hero.fj, d = Math.hypot(dx, dy); if (d > 1.3) { ax += dx / d * 1.2; ay += dy / d * 1.2; } }
+  { const B = SV.boss; if (B && alive(B) && hero.hp > STAT.maxHp * 0.4) { const dx = B.fi - hero.fi, dy = B.fj - hero.fj, d = Math.hypot(dx, dy); if (d > (melee ? 1.4 : 5)) { ax += dx / d * 1.5; ay += dy / d * 1.5; } } }   // (a player goes for the boss)
   const cx = MW / 2 - hero.fi, cy = MH / 2 - hero.fj, a = G.t * 0.35; ax += cx * 0.02 + Math.cos(a) * 0.3; ay += cy * 0.02 + Math.sin(a) * 0.3;
   let g = null, gd = 6; for (const q of groundItems) { const d = Math.hypot(q.fi - hero.fi, q.fj - hero.fj); if (d < gd) { gd = d; g = q; } }   // and goes for the gems
   if (g) { ax += (g.fi - hero.fi) / gd * 0.8; ay += (g.fj - hero.fj) / gd * 0.8; }
