@@ -20,7 +20,7 @@ surv.js, before surv_meta.js; both pages load it).
 - **Evolutions** (step 3, `SV_EVO`): a skill at 5 + its partner card (named on the cards) evolves at the next chest:
   a new name, twice as often, one more repeat; the basic weapons +30% damage plus HAMMER OF DAWN (every swing all
   round), ENDLESS RAGE (never out of the frenzy), STORMBOW (two more piercing arrows); the shared three x1.5 and
-  bigger. **Ultimates**: from level 15 kills fill a meter (0.35 a kill, 8 an elite, 30 a boss); full, it goes off
+  bigger. **Ultimates**: from level 15 kills fill a meter (0.22 a kill, 6 an elite, 30 a boss: 3-4 a run); full, it goes off
   by itself near 8 foes or the boss: Arcane Storm, Archangel (wings), Wrath of the Mountain, Rain of Arrows.
 - **Ranger and the late run** (step 4): the Ranger's basic arrow x1.35, life 2.6x; on Normal, monsters spawned after
   6:00 have up to 35% less life and their blows stop growing (the 7-9 minute payoff).

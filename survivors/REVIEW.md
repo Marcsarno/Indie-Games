@@ -65,3 +65,15 @@ New ones worth inventing (the brief's own dark-fantasy builds, shared by every h
 4. **Fix the Ranger** (stronger basic arrow, Multishot as a starting option) and make 7-9 minutes a payoff: slower
    monster life growth on Normal after 6:00; the harder levels keep the pressure.
 5. **After the King:** an optional "keep fighting" for gold, and the run's choice log shown on the end screen.
+
+## After round 4 (the same measured run, Normal, no meta progress)
+| Hero | Before | After | Skills maxed (before → after) | Evolutions | Kit at the end |
+|---|---|---|---|---|---|
+| Mage | won 9:33 | won 9:15 | 2:19-6:37 → 3:04-9:13 | Absolute Zero 6:21, Storm Chain 8:16 | missile, bone orbit, cone, chain, blizzard |
+| Paladin | won 9:14 | won 9:06 | 1:36-9:01 → 2:04-5:18 | Wrath of Heaven, Hammer of Dawn, Hammers of Light (4:11-6:17) | hammer, hammer of light, wrath of heaven, holy aura, toll |
+| Barbarian | won 9:12 | won (fought on to 10:58) | 3:16-6:44 → 2:47-7:42 | Endless Rage, Worldbreaker, Warlord's Roar (4:03-8:16) | axes, slam, roar, crescent, ash trail |
+| Ranger | **died 8:40** | **won 9:12** | 3:31-8:38 → 3:11-6:12 | none (no partner card taken) | bow, holy aura, sentry, cluster, hawk |
+Every run took a different kit from the one before; the first card offer with no skill in it moved from 0:37-2:52 to
+1:11-1:36 for the melee heroes (more skills to choose among), and ultimates fired 5-7 times a run (then slowed to
+3-4). No errors in any run (`SV.errs`). Lowest life each minute stays around 10-20%: the bot plays to its limit
+(it only backs off under 40%), so that measure says little about the payoff; a human playtest should judge it.
