@@ -24,7 +24,7 @@ const SV_DIFFS = [null,
     lines: ['NIGHT FALLS. ELITES COME MORE OFTEN AND', 'CHAMPIONS WALK IN THE HORDE'] },
   { name: 'HELL', col: 22, hp: 4.2, dmg: 2.8, rate: 1.35, cap: 1.25, gold: 2.6, elite: 45, champs: 0.07, night: true, fire: 7, kingGuard: 4,
     lines: ['FIRE RAINS ON THE WOOD: GET OUT OF THE', 'RED CIRCLES. THE KING BRINGS HIS GUARD'] },
-  { name: 'TORMENT', col: 57, hp: 7.5, dmg: 3.8, rate: 1.5, cap: 1.35, gold: 3.8, elite: 40, champs: 0.1, night: true, fire: 5, haste: 1.15, kingGuard: 6,
+  { name: 'TORMENT', col: 57, hp: 9, dmg: 4.5, rate: 1.5, cap: 1.35, gold: 3.8, elite: 40, champs: 0.1, night: true, fire: 5, haste: 1.15, kingGuard: 6,
     lines: ['EVERYTHING IS FASTER AND THE FIRE NEVER', 'STOPS. ONLY THE STRONGEST BUILDS LIVE'] },
 ];
 const svDiff = () => SV_DIFFS[SV.diff || 1];

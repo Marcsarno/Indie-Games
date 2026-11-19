@@ -39,6 +39,21 @@ shrines, cage, relic altar, goblins, fire rain, edge arrows; **the boot is at it
   elite pack, a treasure goblin every ~2 min, fire rain on Hell and Torment; arrows at the screen edge (S shrine,
   R the cage, ! the relic, G a goblin, B the boss).
 
+**Balance (round 3 bot runs, focused picks, 3x speed; `tools/run.cjs` with `?nosave=1&open=all&bless=...&rank=...&diff=N`):**
+| Hero | Level | Progress | Result |
+|---|---|---|---|
+| Mage, Paladin, Ranger | Normal | none | won (10:53, 9:47, 11:44); the Barbarian survived (King not killed before the King's life was eased) |
+| Mage | Nightmare | none | survived, King at 33% at 12:40: cannot win yet (intended) |
+| Mage | Nightmare | half blessings, rank 4 | won 10:36 |
+| Barbarian | Hell | half blessings, rank 4 | won 10:08 at 38% life (a real fight) |
+| Paladin | Hell | all blessings, rank 8 | won at full life |
+| Mage | Torment | all blessings, rank 10, relics | won at full life, before Torment went to x9 life / x4.5 blows (not retested) |
+Tuning made: the King x1 on Normal, x1.4 above, and he calls skeletons at 2/3 and 1/3; waves at half rate and 60%
+cap while a boss is up (melee could not reach him); Nightmare/Hell/Torment blows x1.8/x2.8/x4.5; the Barbarian 2.7x
+life (was untouchable); horde champions drop 3 gold (they gave 11,000 gold in one Nightmare run).
+Open: a maxed account is very strong (the shrine's full price is about 8,000 gold); the bots kite well, real players
+will take more hits; ask the user how Normal and Nightmare feel.
+
 ## State (2026-11-16): round 2, the Mage and the Paladin
 Playable on the phone: https://claude.ai/artifact/AnNxggtQ8t2FsAHznH9mz9 ("Bones Survivors").
 The user asked to start with the Mage, using the research brief as the guide. Nothing else is built yet
