@@ -1,0 +1,16 @@
+{
+  "name": "gobble-kitchen-voice",
+  "private": true,
+  "type": "module",
+  "description": "Build-time narrator voice lines (Kokoro-82M, Apache-2.0) for Gobble Gobble Kitchen",
+  "scripts": {
+    "build": "node build-voice.mjs",
+    "build:force": "node build-voice.mjs --force",
+    "verify": "node build-voice.mjs --verify-only",
+    "verify:asr": "node verify-asr.mjs"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.5.1",
+    "kokoro-js": "^1.2.1"
+  }
+}

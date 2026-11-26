@@ -1,0 +1,8 @@
+node_modules/
+dist/
+dist-single/
+build/
+.work/
+__pycache__/
+tools/voice/node_modules/
+tools/voice/.cache/

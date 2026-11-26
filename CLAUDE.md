@@ -7,6 +7,7 @@ works, the review loop, research findings, what's waiting on the user, and next 
 - `city-clone/` is "Grand Theft Coconut Creek", a top-down open-city game in 3D (Three.js, models made with headless Blender scripts, set in Coconut Creek FL); start with `city-clone/NOTES.md` (HANDOFF.md is only the original brief).
 - `survivors/` is a Vampire Survivors / Brotato style game built on the Diablo game's code (art, classes, skills); four heroes, the camp, unlocks and four difficulty levels are playable; read `survivors/NOTES.md` first.
 - `doodle-clone/` is a Halloween Doodle Jump clone in Three.js (2.5D, outfits unlocked with candy, sprites keyed from green-screen video); plan only so far, read `doodle-clone/NOTES.md`.
+- `gobble-kitchen/` is "Gobble Gobble Kitchen", a Thanksgiving cooking toy for ages 4-8 in 3D (Vite + three.js + TypeScript, models from headless Blender 4.2 scripts); two dishes and the dinner are playable; read `gobble-kitchen/NOTES.md` first (`PLAN.md` is the full design plan).
 - Main game: `diablo-clone/game/` (classic scripts, no build, no image assets; open `index.html`).
   The earlier single-file prototype `diablo-clone/prototype-simple/` is the before/after baseline.
 - After changing the game, republish it to the same artifact (see NOTES.md) so the phone link updates.
