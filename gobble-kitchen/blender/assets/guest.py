@@ -136,6 +136,26 @@ def build(out, preview):
         sg.append(sh.tube([(0.112 * sx, -HEAD_R * 0.9, hz + 0.04), (0.185 * sx, -0.03, hz + 0.04)], r=0.007, segs=6, col='ink'))
         sg.append(sh.ball(0.012, sub=1, col='white', sy=0.3).at(0.055 * sx, -HEAD_R * 0.94 - 0.012, hz + 0.04))
     piece('acc_sunglasses', sg, tint=False)
+    # hair pulled back into a ponytail
+    pony = [cap(0.1, 1.07)]
+    pony.append(sh.ball(0.05, sub=2, col='white', sx=1.0, sy=0.9, sz=0.8).at(0, 0.165, hz + 0.1))
+    pony.append(sh.ball(0.075, sub=3, col='white', sx=0.85, sy=0.8, sz=1.9).rot(-28, 0, 0).at(0, 0.235, hz - 0.03))
+    pony.append(sh.ball(0.1, sub=3, col='white', sx=1.7, sy=0.32, sz=0.5).rot(0, 10, 0).at(0.02, -HEAD_R * 0.7, hz + 0.14).noline())
+    piece('hair_ponytail', pony)
+    # a toddler's fine, wispy hair to the chin
+    wisp = [cap(0.1, 1.06)]
+    for sx in (-1, 1):
+        wisp.append(sh.ball(0.085, sub=3, col='white', sx=0.5, sy=1.15, sz=1.75).rot(0, 12 * sx, 0).at(0.168 * sx, 0.03, hz - 0.03))
+        wisp.append(sh.ball(0.045, sub=2, col='white', sx=0.9, sy=0.8, sz=0.7).rot(0, 40 * sx, 0).at(0.21 * sx, 0.02, hz - 0.15).noline())
+    wisp.append(sh.ball(0.15, sub=3, col='white', sx=1.05, sy=0.5, sz=1.25).at(0, 0.11, hz - 0.03))
+    wisp.append(sh.ball(0.09, sub=3, col='white', sx=1.6, sy=0.3, sz=0.55).rot(0, -18, 0).at(-0.03, -HEAD_R * 0.72, hz + 0.135).noline())
+    wisp.append(sh.ball(0.03, sub=2, col='white', sx=0.6, sy=0.6, sz=1.4).rot(0, 30, 0).at(0.03, 0.0, hz + HEAD_R * 1.07))
+    piece('hair_wispy', wisp)
+    # a small chef's hat for the kitchen helper (fixed white)
+    piece('hat_chef', [
+        sh.cyl(0.1, 0.07, bevel=0.014, segs=20, col='white').at(0, 0.0, hz + HEAD_R * 0.86),
+        sh.ball(0.125, sub=3, col='white', sz=0.72).noise(0.014, 9, 3).at(0, 0.0, hz + HEAD_R * 0.86 + 0.12),
+    ], tint=False)
     # party hat
     piece('hat_party', [
         sh.lathe([(0, 0), (0.085, 0), (0.0, 0.2)], segs=16, col='white', r=0.01).at(0, 0, hz + HEAD_R - 0.02),
@@ -170,6 +190,12 @@ def build(out, preview):
         shirt.append(sh.ball(0.014, sub=1, col='white', sy=0.5).at(*on_body(0, z, 0.004)))
     shirt.append(sh.box(0.07, 0.012, 0.06, r=0.006, col='white').at(*on_body(26, 0.43, 0.002)).rot(0, 0, 0))
     piece('acc_shirt', shirt, tint=True, bone='body')
+
+    # a printed tee: a big friendly letter-shape and a little round mascot on the chest
+    pr = [sh.box(0.15, 0.014, 0.085, r=0.02, seg=2, col='white').at(*on_body(0, 0.43, 0.0)),
+          sh.box(0.1, 0.014, 0.03, r=0.01, col='white').at(*on_body(0, 0.5, -0.004)),
+          sh.ball(0.034, sub=2, col='ceramic', sy=0.4).at(*on_body(0, 0.335, 0.004))]
+    piece('acc_print', pr, tint=True, bone='body')
 
     C.export_glb(os.path.join(out, 'guest.glb'), objs)
     if preview:

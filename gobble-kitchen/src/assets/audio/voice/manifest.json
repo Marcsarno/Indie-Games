@@ -72,7 +72,9 @@
     "pie_done": "What a pretty pie!",
     "roast_bake": "Into the oven!",
     "roast_done": "The pumpkin roast is ready!",
-    "dinner_bell": "Ring the dinner bell!"
+    "dinner_bell": "Ring the dinner bell!",
+    "here_lilah": "Lilah is here!",
+    "helper_hi": "Arianna is here to help!"
   },
   "spokenAs": {
     "potato_done": "Yum, so fluffy!",
@@ -428,6 +430,18 @@
         "duration": 1.12,
         "bytes": 7248,
         "hash": "611f1b67a4fe"
+      },
+      "here_lilah": {
+        "file": "af_heart/here_lilah.mp3",
+        "duration": 0.96,
+        "bytes": 6240,
+        "hash": "30fcf7a82680"
+      },
+      "helper_hi": {
+        "file": "af_heart/helper_hi.mp3",
+        "duration": 1.4,
+        "bytes": 8976,
+        "hash": "731a99839224"
       }
     },
     "af_bella": {
@@ -778,8 +792,20 @@
         "duration": 1,
         "bytes": 6528,
         "hash": "4cf31b303786"
+      },
+      "here_lilah": {
+        "file": "af_bella/here_lilah.mp3",
+        "duration": 0.88,
+        "bytes": 5808,
+        "hash": "17d7efa4080e"
+      },
+      "helper_hi": {
+        "file": "af_bella/helper_hi.mp3",
+        "duration": 1.34,
+        "bytes": 8544,
+        "hash": "1f79a50a8418"
       }
     }
   },
-  "totalBytes": 773808
+  "totalBytes": 803376
 }

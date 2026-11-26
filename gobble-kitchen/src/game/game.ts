@@ -41,6 +41,8 @@ export class Game {
   /** Set by a recipe while it wants taps on the oven. */
   ovenTap: ((t: TapInfo) => void) | null = null;
   private table!: TableStation;
+  /** Arianna: helps in the kitchen, then sits down at dinner. */
+  private helper: Guest | null = null;
   private slotsUsed = 0;
   private dishes: { station: Station; node: THREE.Object3D }[] = [];
   private portraits: HTMLCanvasElement[] = [];
@@ -80,6 +82,19 @@ export class Game {
         : makePortrait(stage, this.gobbles.root, () => this.gobbles.faceWorld, 0.3, 'Gobbles', 0xe8833a);
     }
 
+    // the kitchen helper stands on her step stool behind the island and joins in with Gobbles
+    this.helper = this.guests.find((g) => g.look.helper) ?? null;
+    if (this.helper) {
+      const h = this.helper, stool = this.kitchen.socket('socket_helper');
+      h.arrived = true;
+      h.root.visible = true;
+      h.root.position.copy(stool);
+      stage.setShadowGround(h.root, stool.y);
+      this.gobbles.onCheer = () => {
+        if (this.state !== 'dinner' && this.state !== 'done') h.cheer();
+      };
+      this.gobbles.onFlinch = () => h.gasp();
+    }
     this.oven = new Oven(this);
     // the menu offers these three at a time, in this order; the roast is the finale
     this.table = new TableStation(this);
@@ -136,6 +151,14 @@ export class Game {
     if (!skipWelcome) {
       audio.say('welcome');
       await wait(1.7);
+    }
+    if (this.helper) {
+      // meet the helper
+      const h = this.helper;
+      this.tag = { text: h.name, at: () => h.headWorld.add(new THREE.Vector3(0, 0.12, 0)), until: clock.real + 2.6 };
+      if (h.hasVoice && !skipWelcome) audio.say('helper_hi');
+      h.wave();
+      await wait(skipWelcome ? 0.6 : 1.9);
     }
     if (this.state === 'home') this.showHome(true);
   }
@@ -259,7 +282,7 @@ export class Game {
     const total = this.stations.length;
     st.setDay((this.finished / total) * 2, 3);
     // the grandparents come after the first three jobs, the others later; everyone else arrives at dinner
-    const guest = [1, 2, 3, 5, 7].includes(this.finished) ? this.guests.filter((g) => !g.arrived)[0] : undefined;
+    const guest = [1, 2, 3, 5].includes(this.finished) ? this.guests.filter((g) => !g.arrived)[0] : undefined;
     if (guest) await this.guestArrives(guest);
     else {
       for (const g of this.guests) if (g.arrived) g.cheer();
@@ -346,6 +369,30 @@ export class Game {
     await walk;
   }
 
+  private async helperToSeat() {
+    const h = this.helper;
+    if (!h) return;
+    const st = this.stage;
+    const seat = this.kitchen.socket('socket_seat_' + h.look.seat);
+    const yaw = this.kitchen.socketYaw('socket_seat_' + h.look.seat);
+    // down off the stool, through the arch, round to the near side of her chair, and up
+    st.setShadowGround(h.root, 0);
+    await h.hopTo(new THREE.Vector3(0.2, 0, 0.55), 0.8);
+    await h.hopTo(new THREE.Vector3(1.45, 0, 0.75), 0.7);
+    this.tag = { text: h.name, at: () => h.headWorld.add(new THREE.Vector3(0, 0.12, 0)), until: clock.real + 2 };
+    await h.turnTo(yaw, 0.15);
+    const from = h.root.position.clone();
+    audio.whoosh();
+    await tween(0.45, (k, raw) => {
+      h.root.position.lerpVectors(from, seat, k);
+      h.hopY = Math.sin(raw * Math.PI) * 0.7;
+    }, ease.inOut);
+    h.hopY = 0;
+    h.poke();
+    st.setShadowGround(h.root, 0.02);
+    audio.thud();
+  }
+
   private tapGuest(g: Guest, t: TapInfo) {
     if (this.state === 'dinner' && !g.served && this.candles.every((c) => c.lit)) {
       this.hints.activity();
@@ -399,6 +446,8 @@ export class Game {
       await Promise.all(walks);
       this.closeDoor();
     }
+    // the helper hangs up her job and takes her seat
+    const helperWalk = this.helperToSeat();
     // Gobbles finally gets a seat, and a paper pilgrim hat
     const g = this.gobbles;
     const seat = this.kitchen.socket('socket_seat_' + GOBBLES_SEAT);
@@ -417,6 +466,7 @@ export class Game {
     await g.face(new THREE.Vector3(seat.x - 3, seat.y, seat.z + 1.2), 0.2);
     g.wear('hat_pilgrim');
     g.setMood('happy');
+    await helperWalk;
     await wait(0.5);
     // candles: the kids light them, and the room warms to candlelight
     for (let i = 0; i < 2; i++) {

@@ -1,6 +1,6 @@
 # Gobble Gobble Kitchen notes
 
-Last updated 2026-11-26 (round 3: five more recipes, the shared oven, picture menu, dinner bell). **Start here.** `PLAN.md` is the user's full design plan; this file says what is built, how to build it, and where it differs.
+Last updated 2026-11-26 (round 3: five more recipes, the shared oven, picture menu, dinner bell, Arianna as kitchen helper, Lilah). **Start here.** `PLAN.md` is the user's full design plan; this file says what is built, how to build it, and where it differs.
 
 Phone / tablet link (private Claude artifact): **https://claude.ai/artifact/1cuiWA9tnyBS51PnHXkU9i**. Republish `dist-single/artifact.html` to the same artifact after every change (`npm run build:single`, then the Artifact tool with that path and this `url`).
 
@@ -17,9 +17,10 @@ The Big Feast with **eight jobs**, about 12-15 minutes for all of them (the kids
 - **Pumpkin Pie** (round 3): roll the dough flat (5 taps or back-and-forth drag; shape key) -> pour the filling (3) -> crimp 12 pinches round the rim (taps or circle-drag, notes climb) -> bake (the timer sweeps to green by itself; tapping the oven hurries it) -> whipped cream (8 dollops; drag works) and a leaf.
 - **Pumpkin Roast, the finale** (round 3): Gobbles' "turkey" is a big stuffed pumpkin with two butternut drumsticks in paper frills. Stuff it (4 scoops) -> baste three times (tap the baster to fill, tap the roast to squirt; it gets shinier) -> roast: the timer runs by itself, tap the oven to peek as often as you like, pull it out in the green; late is "Extra crispy!" with a giggle, never burnt -> carve four slices along the dashed lines.
 - **The oven** (`src/game/oven.ts`) is shared: the dish flies over, the player taps the oven, the door drops open like a shelf and **Gobbles panics into a disguise every time** (the running gag; each disguise is a sticker). A kitchen timer on the stove shows a green "done" zone.
-- **Job done:** freeze-frame, sparkle, the dish shrinks a little and flies through the arch to its place on the table (eight numbered spots plus the middle for the roast). The grandparents arrive after jobs 1, 2 and 3, Cousin after job 5, Friend after job 7, each with a name tag and (for the grandparents) the narrator saying their name; on the other jobs the seated guests cheer.
+- **Job done:** freeze-frame, sparkle, the dish shrinks a little and flies through the arch to its place on the table (eight numbered spots plus the middle for the roast). The grandparents arrive after jobs 1, 2 and 3 and Lilah after job 5, each with a name tag and the narrator saying their name; on the other jobs the seated guests cheer.
 - **Dinner:** starts by itself when all eight jobs are done, or when the kids ring the **dinner bell**, which joins the menu after three jobs. If the table was never set, the place settings pop out by themselves. Then: anyone not yet there arrives, Gobbles takes his booster seat in a pilgrim hat, the kids light two candles, serve everyone a scoop of every dish, confetti, feast photo (kept in the scrapbook), "cook again".
-- **The family** (`src/game/guests.ts`): **Grammy**, **Babcia**, **Dziadziu** (toy likenesses from the user's photos; the photos are not in the repo), plus Cousin and Friend. A grown-up can rename all five in the parent area.
+- **The family** (`src/game/guests.ts`), toy likenesses from the user's photos (the photos are not in the repo): **Grammy**, **Babcia**, **Dziadziu**, **Lilah** (toddler, wispy blonde hair, sage top) and **Arianna** (ponytail, white tee with a blue print). A grown-up can rename all five in the parent area.
+- **Arianna is Gobbles' kitchen helper** (`helper: true`): she stands on a step stool behind the island in a chef hat from the start, is introduced by name, cheers and gasps along with Gobbles, and at dinner hops through the arch to the end seat. She does not arrive at the door.
 - **Gobbles:** eyes follow the finger, blinks, tail fan as mood meter, flinch / cheer / yum / sneeze / panic. Tapping him replays the instruction.
 - **Hints:** narrator line + demo wing at every step; idle escalation at 5 / 10 / 15 s. In the overview the menu pictures wave instead.
 - **Pointless delights:** hanging pots (tune = secret), faucet bubbles, oven door, fridge, window weather, cat (purr = secret), cookie jar, real-time clock. Finished dishes stay tappable.
@@ -61,11 +62,11 @@ Blender names drive the code: `hit_*` tap targets, `socket_*`, `cam_<name>` + `c
 - The artifact host's `img { max-width: 100% }` reset would have collapsed the big name card (its wrapper has no width): `max-width: none`.
 
 ## Numbers (headless)
-Draw calls 30-125, triangles 90-160k on screen (only one recipe kit is out at a time; dinner with every dish is the high end), models 1436 KB after meshopt (12 files), narrator MP3s about 830 KB for two voices (58 lines each), single-file build about 4.3 MB. Frame rate on real devices is **not measured yet**.
+Draw calls 30-125, triangles 90-160k on screen (only one recipe kit is out at a time; dinner with every dish is the high end), models 1436 KB after meshopt (12 files), narrator MP3s about 860 KB for two voices (60 lines each), single-file build about 4.4 MB. Frame rate on real devices is **not measured yet**.
 
 ## Audio state (measured, not heard)
 - Effects were rendered offline and measured: all make sound, none clip. Music sits roughly 16 dB under the voice and ducks while the narrator talks.
-- Narrator: 2 voices x 58 lines (`tools/voice/`; the British voice was dropped in round 3 for its glitchy line endings). `pronounce.json` holds spoken spellings: "Mmm" -> "Yum", **"Babcia" -> "Bobcha", "Dziadziu" -> "Jahjoo"** (phonemes checked: /ˈbɑːbtʃə/, /ˈdʒɑːdʒuː/; nobody has listened yet). If a guest is renamed, the narrator falls back to "Someone's at the door!".
+- Narrator: 2 voices x 60 lines (`tools/voice/`; the British voice was dropped in round 3 for its glitchy line endings). `pronounce.json` holds spoken spellings: "Mmm" -> "Yum", **"Babcia" -> "Bobcha", "Dziadziu" -> "Jahjoo"** (phonemes checked: /ˈbɑːbtʃə/, /ˈdʒɑːdʒuː/; nobody has listened yet). If a guest is renamed, the narrator falls back to "Someone's at the door!".
 - Audio starts on the Play button's `click` and resumes on any finished tap. Not yet tried on a real iPhone or iPad.
 
 ## Where the build differs from the plan (on purpose)
@@ -73,7 +74,7 @@ Draw calls 30-125, triangles 90-160k on screen (only one recipe kit is out at a 
 - **One work spot and a picture menu** instead of a station per dish: recipes are picked from pictures at the top of the screen and their kits take turns on the island. This keeps the kitchen uncluttered with eight jobs, but it drops "persistent mess" (a finished kit is cleared away).
 - **The roast is Gobbles' pumpkin roast** (the plan's recommended twist) dressed up with squash drumsticks so it reads as "the turkey". The user said "add the turkey"; a real roast bird next to a turkey mascot was not built. Ask if that is really wanted.
 - **Dinner bell:** the kids choose when dinner starts (after three jobs or more); the plan had dinner after the roast.
-- Guests do not arrive one per dish any more (five guests, eight jobs): after jobs 1, 2, 3, 5 and 7.
+- Guests do not arrive one per dish any more: four come to the door after jobs 1, 2, 3 and 5; Arianna is in the kitchen all along.
 - Oven steps happen on the opened door as a shelf; "peek" is a tap on the oven rather than on a separate oven light. Sweet potatoes toast in the open oven so the change is visible.
 - **Outlines** are shells sharing the mesh's geometry, pushed out in the vertex shader. **Characters** are skinned but animated in code with springs (no clips).
 - **Sound effects** are a hand-written WebAudio synth instead of ZzFX; no recorded foley; music is a quiet generated loop.
@@ -88,7 +89,7 @@ Rolls, gravy and other later dishes; the Guest Book (choosing and customising gu
 1. **Play round 3 with the kids:** which recipes get giggles, which drag? Is eight jobs the right length, and do they find the dinner bell?
 2. **The roast:** it is a pumpkin "turkey". Say so if a real roast turkey is wanted instead.
 3. **Listen:** nobody has heard the audio, including the 17 new lines and "Bobcha" / "Jahjoo".
-4. Do the grandparents look right? Who else should come?
+4. Does the family look right (Grammy, Babcia, Dziadziu, Lilah, Arianna)? Should Arianna do more as the helper (fetch ingredients, hold the bowl)? Who else should come?
 5. Hosting: the artifact link is fine for testing; a Vercel project would give a full-screen URL. Not set up.
 
 ## Next steps (suggested)

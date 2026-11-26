@@ -279,6 +279,15 @@ if (script === 'feast' || script === 'short') {
   await sleep(2500);
   await shot('again-home');
 }
+if (script === 'helper') {
+  await closeup('helper-home', 'window.__game.helper.headWorld', 420, 420);
+  await pick('potato');
+  await sleep(2300);
+  await shot('helper-station');
+  await tap('potato', 8, 300);
+  await sleep(900);
+  await closeup('helper-cheer', 'window.__game.helper.headWorld', 420, 420);
+}
 if (script === 'chars') {
   await pick('potato');
   await sleep(2500);

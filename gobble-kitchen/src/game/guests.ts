@@ -23,10 +23,11 @@ export interface GuestLook {
   seat: number;                   // socket_seat_<n>
   voice?: string;                 // narrator line when they walk in
   card: number;                   // portrait background
+  helper?: boolean;               // works in the kitchen with Gobbles instead of arriving at the door
 }
 
-// The family table. The first three are the grandparents (toy likenesses: hair, glasses, favourite outfits);
-// they arrive one per finished job. The others come in together at dinner time.
+// The family table (toy likenesses: hair, glasses, favourite outfits). The grandparents arrive after the
+// first three jobs, little Lilah later; Arianna helps Gobbles in the kitchen all along.
 export const GUESTS: GuestLook[] = [
   { id: 'grammy', name: 'Grammy', skin: 0xf1c8a8, shirt: 0x2b2630, lower: 0x2b2630, sleeves: 'long', hair: 'hair_bob', hairColor: 0xd3c8b2,
     extras: [{ name: 'acc_dots' }], pitch: 310, speed: 0.1, seat: 1, voice: 'here_grammy', card: 0x8fae7e },
@@ -34,10 +35,11 @@ export const GUESTS: GuestLook[] = [
     extras: [{ name: 'acc_toile' }], pitch: 265, speed: 0.11, seat: 2, voice: 'here_babcia', card: 0xf6d58e },
   { id: 'dziadziu', name: 'Dziadziu', skin: 0xecb998, shirt: 0x2f80da, lower: 0x2b4b8c, sleeves: 'short', hair: 'hair_swoop', hairColor: 0xdcc08c,
     extras: [{ name: 'acc_sunglasses' }, { name: 'acc_shirt', color: 0x2468bd }], pitch: 165, speed: 0.13, seat: 3, voice: 'here_dziadziu', card: 0x7fb8b0 },
-  { id: 'cousin', name: 'Cousin', skin: 0xc98a5c, shirt: 0x7fb8b0, lower: 0x4f7a5a, sleeves: 'short', hair: 'hair_pigtails', hairColor: 0x3b2630,
-    pitch: 520, speed: 0.07, scale: 0.86, seat: 0, card: 0xe8833a },
-  { id: 'friend', name: 'Friend', skin: 0xf6d5b0, shirt: 0xf6d58e, lower: 0xb23a48, sleeves: 'short', hair: 'hair_bowl', hairColor: 0xc97a3a,
-    extras: [{ name: 'hat_party', color: 0xb23a48 }], pitch: 470, speed: 0.075, scale: 0.9, seat: 4, card: 0xb23a48 },
+  { id: 'lilah', name: 'Lilah', skin: 0xf6d2b4, shirt: 0x9fb48c, lower: 0xb9b6b8, sleeves: 'short', hair: 'hair_wispy', hairColor: 0xe9cf96,
+    pitch: 620, speed: 0.065, scale: 0.74, seat: 0, voice: 'here_lilah', card: 0xe8833a },
+  // Arianna is Gobbles' helper: she is in the kitchen from the start (on the step stool) and sits down at dinner
+  { id: 'arianna', name: 'Arianna', skin: 0xe9b995, shirt: 0xfffaf2, lower: 0xf07a9a, sleeves: 'short', hair: 'hair_ponytail', hairColor: 0x8a5a3a,
+    extras: [{ name: 'acc_print', color: 0x8cc4ec }, { name: 'hat_chef' }], pitch: 480, speed: 0.075, scale: 0.9, seat: 4, voice: 'helper_hi', card: 0xb23a48, helper: true },
 ];
 
 /** Names a grown-up typed in the parent area (saved on this device). */

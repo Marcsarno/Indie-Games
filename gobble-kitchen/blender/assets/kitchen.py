@@ -227,6 +227,14 @@ def build(out, preview):
     furn.append(sh.tube([(IS_X + 1.72, IS_Y - 0.3, 0.75), (IS_X + 1.77, IS_Y - 0.3, 0.75), (IS_X + 1.77, IS_Y + 0.3, 0.75), (IS_X + 1.72, IS_Y + 0.3, 0.75)], r=0.015, col='steel', segs=8))
     furn.append(sh.box(0.04, 0.34, 0.42, r=0.015, cell=0.105, col='cream').at(IS_X + 1.775, IS_Y, 0.56).shade_face(lambda c, n: P.lin('cranberry') if int((c.z + 5) / 0.105) % 2 == 0 else P.lin('cream')))
     objs.append(C.empty('socket_station_island', loc=(IS_X, IS_Y, TOP)))
+    # a step stool behind the island for the kitchen helper
+    hx, hy = IS_X + 1.0, IS_Y + 1.0
+    furn.append(sh.box(0.5, 0.42, 0.06, r=0.02, seg=2, col='cranberry').at(hx, hy, 0.5))
+    furn.append(sh.box(0.44, 0.36, 0.05, r=0.02, seg=2, col='wood').at(hx, hy - 0.06, 0.25))
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            furn.append(sh.box(0.05, 0.05, 0.5, r=0.015, col='wood_dark').at(hx + 0.2 * sx, hy + 0.16 * sy, 0.25))
+    objs.append(C.empty('socket_helper', loc=(hx, hy, 0.53)))
     objs.append(C.empty('socket_gobbles_home', loc=(IS_X + 0.1, IS_Y + 0.3, TOP)))
 
     # rug and the sleeping cat

@@ -118,7 +118,12 @@ export class Gobbles {
     this.wattle.kick(4);
   }
 
+  /** Whoever helps in the kitchen joins in. */
+  onCheer: () => void = () => {};
+  onFlinch: () => void = () => {};
+
   async cheer() {
+    this.onCheer();
     this.setMood('happy');
     this.fan.kick(3.5);        // tail fan-pop
     this.flap.kick(9);
@@ -130,6 +135,7 @@ export class Gobbles {
   }
 
   flinch() {
+    this.onFlinch();
     this.squash.kick(-4.5);
     this.lean.kick(-3);
     this.blink = 0.28;
