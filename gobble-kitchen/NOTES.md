@@ -43,7 +43,13 @@ Headless test with screenshots: `npx vite preview --port 4173 &` then `node tool
 Blender names drive the code: `hit_*` tap targets (1.5x oversized, invisible), `socket_*`, `cam_<name>` + `cam_<name>_target` with `fit_w`/`fit_h` custom properties (metres to keep in view), custom properties `shade` (toon / lambert / glow) and `outline`.
 
 ## Numbers (headless, 844x390)
-Draw calls 40-85, triangles 95-130k on screen (kitchen 60k), models 914 KB after meshopt, JS 731 KB (203 KB gzip), narrator MP3s about 890 KB for three voices (35 lines each, 21 used so far), single-file build 2.9 MB (1.4 MB gzip). Frame rate on real devices is **not measured yet** (headless is software rendering).
+Draw calls 40-85, triangles 95-130k on screen (kitchen 60k), models 914 KB after meshopt, JS 731 KB (203 KB gzip), narrator MP3s 705 KB for three voices (35 lines each, 21 used so far), single-file build 2.9 MB (1.4 MB gzip). Frame rate on real devices is **not measured yet** (headless is software rendering).
+
+## Audio state (measured, not heard)
+- Every effect was rendered offline (`.work/audio-probe.mjs` pattern: swap the context for an OfflineAudioContext, call the sound, read the buffer): all make sound, none clip (peaks 0.13-0.5), no errors. Narrator clips peak about 0.6-0.75; music sits roughly 16 dB under the voice and ducks while the narrator talks.
+- Narrator: 3 voices x 35 lines, MP3 24 kHz mono 48 kbps, 705 KB in all (`tools/voice/`, `manifest.json` has text and durations). A speech-recognition pass (`verify-asr.mjs`, Whisper) matched the two American voices. **`bf_emma` (British) may add a small extra sound at the end of about a third of her lines** ("Tap the canner"); it is only offered in the parent area, and should be listened to before keeping her.
+- "Mmm, so fluffy!" is spoken as **"Yum, so fluffy!"** (`tools/voice/pronounce.json`): Kokoro reads "Mmm" as the letters M-M-M.
+- Audio starts on the Play button's `click` (on touch screens only the end of a tap counts as the gesture iOS needs); any finished tap resumes it after the browser suspends it. Not yet tried on a real iPhone or iPad.
 
 ## Where the build differs from the plan (on purpose)
 - **Layout:** kitchen and dining room sit side by side with an arch between them (the set then fills a landscape phone). The table is visible in the overview, but **not in the station close-ups**; the camera follows the finished dish to the table instead.

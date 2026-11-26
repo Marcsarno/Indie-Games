@@ -105,6 +105,14 @@ class AudioSys {
     if (this.ctx.state !== 'running') this.ctx.resume();
   }
 
+  /** Wake the context after the browser suspended it (must run inside a finished tap). */
+  resume() {
+    if (this.ctx && this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
+  }
+  suspend() {
+    if (this.ctx && this.ctx.state === 'running') this.ctx.suspend().catch(() => {});
+  }
+
   applyVolumes() {
     if (!this.ctx) return;
     const s = this.settings;
@@ -137,9 +145,11 @@ class AudioSys {
     }
     const g = ctx.createGain();
     const vol = o.vol ?? 0.3;
+    // decay to about -40 dB over the note, then a short fade so the tail neither clicks nor vanishes early
     g.gain.setValueAtTime(0.0001, t0);
     g.gain.exponentialRampToValueAtTime(vol, t0 + (o.attack ?? 0.005));
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol * 0.01), t0 + dur);
+    g.gain.linearRampToValueAtTime(0, t0 + dur + 0.03);
     let head: AudioNode = osc;
     if (o.lp) {
       const f = ctx.createBiquadFilter();
@@ -163,7 +173,7 @@ class AudioSys {
     }
     head.connect(g).connect(this.sfxBus);
     osc.start(t0);
-    osc.stop(t0 + dur + 0.05);
+    osc.stop(t0 + dur + 0.06);
   }
 
   noise(o: NoiseOpts) {
@@ -180,9 +190,11 @@ class AudioSys {
     if (o.to) f.frequency.exponentialRampToValueAtTime(o.to, t0 + dur);
     f.Q.value = o.q ?? 1;
     const g = ctx.createGain();
+    const nv = o.vol ?? 0.2;
     g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(o.vol ?? 0.2, t0 + (o.attack ?? 0.004));
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    g.gain.exponentialRampToValueAtTime(nv, t0 + (o.attack ?? 0.004));
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, nv * 0.01), t0 + dur);
+    g.gain.linearRampToValueAtTime(0, t0 + dur + 0.03);
     src.connect(f).connect(g).connect(this.sfxBus);
     src.start(t0, Math.random());
     src.stop(t0 + dur + 0.05);
@@ -241,7 +253,7 @@ class AudioSys {
     for (const [m, v, d] of [[1, 1, 1.5], [2.01, 0.5, 1.0]] as const) this.tone({ freq: 523.25 * m, dur: d, vol: 0.34 * v, when: 0.42 });
   }
   sparkle() { for (let k = 0; k < 6; k++) this.tone({ freq: penta(k + 10), dur: 0.22, vol: 0.1, when: k * 0.045 }); }
-  whoosh() { this.noise({ freq: 500, to: 1900, dur: 0.3, vol: 0.14, q: 0.8, attack: 0.08 }); }
+  whoosh() { this.noise({ freq: 500, to: 1900, dur: 0.32, vol: 0.5, q: 0.8, attack: 0.08 }); }
   thud() {
     this.tone({ freq: 120, to: 48, dur: 0.16, vol: 0.5 });
     this.noise({ type: 'lowpass', freq: 300, dur: 0.1, vol: 0.3 });
@@ -252,7 +264,7 @@ class AudioSys {
     this.tone({ freq: 760, to: 430, dur: 0.34, vol: 0.2, type: 'sawtooth', lp: 1300, when: 0.15 });
   }
   purr() { this.tone({ freq: 55, dur: 0.8, vol: 0.3, type: 'sawtooth', lp: 240, trem: [24, 0.9] }); }
-  steam() { this.noise({ type: 'highpass', freq: 3500, dur: 0.5, vol: 0.06, attack: 0.15 }); }
+  steam() { this.noise({ type: 'highpass', freq: 3500, dur: 0.6, vol: 0.12, attack: 0.15 }); }
   shutter() {
     this.noise({ type: 'highpass', freq: 2500, dur: 0.03, vol: 0.3 });
     this.noise({ type: 'highpass', freq: 1800, dur: 0.05, vol: 0.3, when: 0.09 });
@@ -264,7 +276,7 @@ class AudioSys {
     });
   }
   jingle() { [0, 2, 4, 7].forEach((n, k) => { this.tone({ freq: penta(n), dur: 0.35, vol: 0.24, when: k * 0.1 }); this.tone({ freq: penta(n) * 2, dur: 0.2, vol: 0.08, type: 'triangle', when: k * 0.1 }); }); }
-  creak() { this.tone({ freq: 180, to: 260, dur: 0.3, vol: 0.1, type: 'sawtooth', lp: 700, vibrato: [22, 18] }); }
+  creak() { this.tone({ freq: 180, to: 260, dur: 0.32, vol: 0.3, type: 'sawtooth', lp: 700, vibrato: [22, 18] }); }
   brr() { this.noise({ type: 'bandpass', freq: 700, to: 1400, dur: 0.35, vol: 0.1, attack: 0.1 }); this.sparkle(); }
 
   /** Animalese-style babble: short pitched blips, one per syllable. */

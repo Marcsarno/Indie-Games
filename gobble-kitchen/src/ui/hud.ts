@@ -59,9 +59,14 @@ export class Hud {
     this.bar = this.title.querySelector('.bar')!;
     this.playBtn = this.title.querySelector('.play')!;
     this.playBtn.style.display = 'none';
-    this.playBtn.addEventListener('pointerdown', (e) => {
+    // 'click' (not pointerdown): on touch screens only the end of a tap counts as the user gesture
+    // that iOS needs before it lets audio start
+    let played = false;
+    this.playBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      audio.unlock(); // iOS needs audio to start inside the first tap
+      if (played) return;
+      played = true;
+      audio.unlock();
       audio.pop(1.2);
       this.title.classList.add('gone');
       this.onPlay();

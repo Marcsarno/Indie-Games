@@ -56,6 +56,12 @@ loadAll((k) => hud.progress(k))
     document.body.insertAdjacentHTML('beforeend', `<pre style="position:fixed;inset:0;margin:0;padding:16px;background:#fff4e0;color:#3b2630;z-index:99;white-space:pre-wrap">Could not load the kitchen: ${String(e?.message ?? e)}</pre>`);
   });
 
+// keep audio alive: if the browser suspended it (app switch, screen lock), any finished tap wakes it again
+for (const ev of ['pointerup', 'touchend', 'click']) window.addEventListener(ev, () => audio.resume(), { passive: true });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) audio.suspend();
+});
+
 // test hooks for the headless play scripts
 (window as any).__stage = stage;
 (window as any).__clock = clock;

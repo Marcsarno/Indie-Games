@@ -55,7 +55,7 @@ const waitState = async (s, ms = 30000) => { await page.waitForFunction((s) => w
 
 await page.waitForTimeout(1200);
 await shot('title');
-await page.locator('.play').dispatchEvent('pointerdown');
+await page.locator('.play').click({ force: true });
 await sleep(3200);
 await shot('home');
 
