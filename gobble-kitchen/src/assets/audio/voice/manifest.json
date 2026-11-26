@@ -50,10 +50,18 @@
     "roast_peek": "Peek in the oven!",
     "roast_pull": "Pull it out!",
     "roast_carve": "Carve the roast!",
-    "crispy": "Extra crispy!"
+    "crispy": "Extra crispy!",
+    "here_grammy": "Grammy is here!",
+    "here_babcia": "Babcia is here!",
+    "here_dziadziu": "Dziadziu is here!",
+    "here_friends": "Everybody is here!",
+    "table_forks": "Now the forks!",
+    "table_done": "The table is ready!"
   },
   "spokenAs": {
-    "potato_done": "Yum, so fluffy!"
+    "potato_done": "Yum, so fluffy!",
+    "here_babcia": "Bobcha is here!",
+    "here_dziadziu": "Jahjoo is here!"
   },
   "files": {
     "af_heart": {
@@ -266,6 +274,42 @@
         "duration": 1.1,
         "bytes": 7104,
         "hash": "02b52e7c2e69"
+      },
+      "here_grammy": {
+        "file": "af_heart/here_grammy.mp3",
+        "duration": 0.99,
+        "bytes": 6528,
+        "hash": "aef630841619"
+      },
+      "here_babcia": {
+        "file": "af_heart/here_babcia.mp3",
+        "duration": 1.04,
+        "bytes": 6816,
+        "hash": "68e2ff3de5b0"
+      },
+      "here_dziadziu": {
+        "file": "af_heart/here_dziadziu.mp3",
+        "duration": 1.07,
+        "bytes": 6960,
+        "hash": "2a275c23efa5"
+      },
+      "here_friends": {
+        "file": "af_heart/here_friends.mp3",
+        "duration": 1.13,
+        "bytes": 7392,
+        "hash": "aff97136037e"
+      },
+      "table_forks": {
+        "file": "af_heart/table_forks.mp3",
+        "duration": 1.06,
+        "bytes": 6960,
+        "hash": "ef3b6172fe76"
+      },
+      "table_done": {
+        "file": "af_heart/table_done.mp3",
+        "duration": 1.22,
+        "bytes": 7824,
+        "hash": "80b80e826944"
       }
     },
     "af_bella": {
@@ -478,6 +522,42 @@
         "duration": 1,
         "bytes": 6528,
         "hash": "56d4e11770a0"
+      },
+      "here_grammy": {
+        "file": "af_bella/here_grammy.mp3",
+        "duration": 0.93,
+        "bytes": 6096,
+        "hash": "70141ed0f150"
+      },
+      "here_babcia": {
+        "file": "af_bella/here_babcia.mp3",
+        "duration": 0.99,
+        "bytes": 6528,
+        "hash": "0b8dec7e8e73"
+      },
+      "here_dziadziu": {
+        "file": "af_bella/here_dziadziu.mp3",
+        "duration": 1,
+        "bytes": 6528,
+        "hash": "cf6e532c92af"
+      },
+      "here_friends": {
+        "file": "af_bella/here_friends.mp3",
+        "duration": 1.09,
+        "bytes": 7104,
+        "hash": "c46251544037"
+      },
+      "table_forks": {
+        "file": "af_bella/table_forks.mp3",
+        "duration": 1,
+        "bytes": 6528,
+        "hash": "f98f97a21a65"
+      },
+      "table_done": {
+        "file": "af_bella/table_done.mp3",
+        "duration": 1.13,
+        "bytes": 7392,
+        "hash": "71f0a7e4339f"
       }
     },
     "bf_emma": {
@@ -690,8 +770,44 @@
         "duration": 1.27,
         "bytes": 8112,
         "hash": "fa435a9984c9"
+      },
+      "here_grammy": {
+        "file": "bf_emma/here_grammy.mp3",
+        "duration": 1.18,
+        "bytes": 7680,
+        "hash": "c4360ed816a7"
+      },
+      "here_babcia": {
+        "file": "bf_emma/here_babcia.mp3",
+        "duration": 1.27,
+        "bytes": 8112,
+        "hash": "1260e4664b5c"
+      },
+      "here_dziadziu": {
+        "file": "bf_emma/here_dziadziu.mp3",
+        "duration": 1.32,
+        "bytes": 8400,
+        "hash": "6cd0226b8f63"
+      },
+      "here_friends": {
+        "file": "bf_emma/here_friends.mp3",
+        "duration": 1.37,
+        "bytes": 8832,
+        "hash": "965387777975"
+      },
+      "table_forks": {
+        "file": "bf_emma/table_forks.mp3",
+        "duration": 1.23,
+        "bytes": 7968,
+        "hash": "ec084c5712fc"
+      },
+      "table_done": {
+        "file": "bf_emma/table_done.mp3",
+        "duration": 1.36,
+        "bytes": 8688,
+        "hash": "2335cd5ded35"
       }
     }
   },
-  "totalBytes": 721584
+  "totalBytes": 853920
 }

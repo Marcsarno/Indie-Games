@@ -42,6 +42,9 @@ export class PotatoStation extends Station {
   dish() {
     return this.it('bowl');
   }
+  voices() {
+    return ['potato_mash', 'potato_butter', 'potato_stir', 'potato_done'];
+  }
 
   private frame(dt: number) {
     const m = clamp(this.morph.step(dt), 0, 1.25);

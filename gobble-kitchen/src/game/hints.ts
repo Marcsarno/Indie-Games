@@ -93,7 +93,7 @@ export class Hints {
     if (!t) return;
     const token = ++this.demoToken;
     const top = topOf(t);
-    const s = Math.min(3.2, Math.max(1, this.stage.pose.fitW / 1.9));
+    const s = Math.min(2.5, Math.max(1, this.stage.pose.fitW / 2.4));
     this.stage.setBaseScale(this.wing, s);
     this.wing.rotation.set(0.25, 0, -0.35);
     const base = top.clone().add(new THREE.Vector3(0, 0.005, 0.02 * s));

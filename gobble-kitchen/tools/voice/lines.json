@@ -1,5 +1,9 @@
 {
-  "voices": ["af_heart", "af_bella", "bf_emma"],
+  "voices": [
+    "af_heart",
+    "af_bella",
+    "bf_emma"
+  ],
   "lines": {
     "welcome": "Let's cook a feast!",
     "pick": "Pick a dish!",
@@ -35,6 +39,12 @@
     "roast_peek": "Peek in the oven!",
     "roast_pull": "Pull it out!",
     "roast_carve": "Carve the roast!",
-    "crispy": "Extra crispy!"
+    "crispy": "Extra crispy!",
+    "here_grammy": "Grammy is here!",
+    "here_babcia": "Babcia is here!",
+    "here_dziadziu": "Dziadziu is here!",
+    "here_friends": "Everybody is here!",
+    "table_forks": "Now the forks!",
+    "table_done": "The table is ready!"
   }
 }

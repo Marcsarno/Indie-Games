@@ -13,6 +13,7 @@ def new_bm():
     bm.loops.layers.float_color.new(COL)
     bm.verts.layers.int.new('bone')
     bm.verts.layers.float.new('_zone')
+    bm.verts.layers.float.new('_noline')   # 1 = no ink outline here (small face details)
     return bm
 
 
@@ -92,6 +93,19 @@ class S:
         layer = self.bm.verts.layers.float['_zone']
         for v in self.bm.verts:
             v[layer] = float(z)
+        return self
+
+    def noline(self):
+        layer = self.bm.verts.layers.float['_noline']
+        for v in self.bm.verts:
+            v[layer] = 1.0
+        return self
+
+    def zone_by(self, fn):
+        """Per-vertex tint zone: fn(co) -> zone number."""
+        layer = self.bm.verts.layers.float['_zone']
+        for v in self.bm.verts:
+            v[layer] = float(fn(v.co))
         return self
 
     def flip(self):

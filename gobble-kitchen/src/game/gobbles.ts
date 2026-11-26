@@ -65,6 +65,11 @@ export class Gobbles {
     return this.bones.head.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.1, 0));
   }
 
+  /** Centre of the face (for his portrait). */
+  get faceWorld() {
+    return this.bones.head.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.1, 0));
+  }
+
   setGround(y: number) {
     this.stage.setShadowGround(this.root, y);
   }

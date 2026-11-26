@@ -1,6 +1,6 @@
-// The Big Feast: pick a dish -> do its short steps -> the dish flies through the arch onto the table ->
-// the doorbell rings and a guest arrives. When every dish is done: candles, serving, the feast photo.
-// No timers, no grades, no way to fail.
+// The Big Feast: pick a job -> do its short steps -> (a dish flies through the arch onto the table) ->
+// the doorbell rings and a guest arrives. When every job is done: the rest of the family comes in, the kids
+// light the candles, serve everyone, and the feast photo is taken. No timers, no grades, no way to fail.
 import * as THREE from 'three';
 import { part, meshOf } from '../core/assets';
 import { clock, tween, wait, ease, rand } from '../core/tween';
@@ -10,16 +10,18 @@ import type { Stage } from '../core/stage';
 import type { TapInfo } from '../core/input';
 import { Kitchen } from './kitchen';
 import { Gobbles } from './gobbles';
-import { Guest, DEFAULT_GUESTS } from './guests';
+import { Guest, GUESTS } from './guests';
 import { Hints, type StepDef } from './hints';
 import { Station } from './station';
 import { PotatoStation } from './stations/potato';
 import { CranberryStation } from './stations/cranberry';
+import { TableStation } from './stations/table';
+import { makePortrait } from './portraits';
 import type { Hud } from '../ui/hud';
 
 export type State = 'title' | 'home' | 'station' | 'serving' | 'dinner' | 'done';
-const SEAT_ORDER = [1, 2, 0, 3, 4];
 const TABLE_Y = 0.8;
+const GOBBLES_SEAT = 5;
 
 export class Game {
   state: State = 'title';
@@ -31,17 +33,20 @@ export class Game {
   guests: Guest[] = [];
   private arrows = new Map<Station, THREE.Object3D>();
   private dishes: { station: Station; node: THREE.Object3D }[] = [];
-  private plates = new Map<object, THREE.Vector3>();
+  private portraits: HTMLCanvasElement[] = [];
   private gobblesServed = false;
   private homeDef: StepDef;
-  private serveDef: StepDef | null = null;
   private disposed = false;
+  private finished = 0;
+  private tag: { text: string; at: () => THREE.Vector3; until: number } | null = null;
+  private candles: { root: THREE.Object3D; flame: THREE.Object3D; lit: boolean }[] = [];
+  private steamAt: THREE.Object3D | null = null;
+  private steamT = 0;
 
   constructor(public stage: Stage, public hud: Hud) {
     this.kitchen = new Kitchen(this);
     this.gobbles = new Gobbles(stage);
     this.hints = new Hints(stage);
-    this.hints.onSpeak = () => {};
     const home = this.kitchen.socket('socket_gobbles_home');
     this.gobbles.root.position.copy(home);
     this.gobbles.setGround(home.y);
@@ -51,15 +56,32 @@ export class Game {
       if (p) this.gobbles.look(p, 1.5);
     };
 
-    this.stations = [new PotatoStation(this), new CranberryStation(this)];
+    // the whole family exists from the start (hidden) so their portraits can go on the name cards
+    for (const look of GUESTS) {
+      const g = new Guest(stage, look);
+      g.root.visible = false;
+      stage.input.add(g.hitRoot, { guest: { enabled: () => this.state !== 'title' && g.arrived, tap: (t) => this.tapGuest(g, t) } });
+      this.guests.push(g);
+    }
+    for (let seat = 0; seat < 6; seat++) {
+      const g = this.guests.find((x) => x.look.seat === seat);
+      this.portraits[seat] = g
+        ? makePortrait(stage, g.root, () => g.faceWorld, 0.3 * (g.look.scale ?? 1), g.name, g.look.card)
+        : makePortrait(stage, this.gobbles.root, () => this.gobbles.faceWorld, 0.3, 'Gobbles', 0xe8833a);
+    }
+
+    this.stations = [new PotatoStation(this), new CranberryStation(this), new TableStation(this)];
     for (const s of this.stations) {
-      // a big invisible box over the whole station: tapping it in the overview picks the dish
-      const box = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.8, 1.3), new THREE.MeshBasicMaterial({ visible: false }));
-      box.position.copy(s.root.position).add(new THREE.Vector3(0, 0.3, 0));
-      stage.scene.add(box);
-      stage.input.addMesh(box, 'station_' + s.name, { enabled: () => this.state === 'home' && !s.done, tap: () => this.enterStation(s) });
+      // big invisible boxes over the station: tapping one in the overview picks the job
+      for (const [size, offset] of s.pickBoxes()) {
+        const box = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), new THREE.MeshBasicMaterial({ visible: false }));
+        box.position.copy(s.root.position).add(offset);
+        stage.scene.add(box);
+        stage.input.addMesh(box, 'station_' + s.name, { enabled: () => this.state === 'home' && !s.done, tap: () => this.enterStation(s) });
+      }
       const arrow = part('props', 'arrow');
-      arrow.position.copy(s.root.position).add(new THREE.Vector3(0, 1.15, 0));
+      arrow.position.copy(s.root.position);
+      arrow.userData.baseY = s.root.position.y + s.arrowHeight();
       stage.scene.add(arrow);
       stage.setBaseScale(arrow, 2.6);
       stage.hide(arrow);
@@ -70,18 +92,30 @@ export class Game {
       demo: 'tap',
       target: () => {
         const s = this.stations.find((s) => !s.done)!;
-        return s.started ? s.dish() : s.root;
+        return s.started && s.flies ? s.dish() : s.root;
       },
       tap: {},
     };
     stage.setPose('home');
-    audio.preloadVoices([]);
+  }
+
+  portraitForSeat(seat: number) {
+    return this.portraits[seat];
+  }
+
+  /** A name card was picked up: show it big and let its owner say hello. */
+  revealCard(seat: number) {
+    this.hud.showCard(this.portraits[seat]);
+    const g = this.guests.find((x) => x.look.seat === seat);
+    if (g) audio.babble(g.look.pitch, 3, g.look.speed, 0.2);
+    else this.gobbles.gobble(3);
+    audio.pop(1.3);
   }
 
   /** The Play button was tapped. */
   async start(skipWelcome = false) {
     this.state = 'home';
-    audio.preloadVoices(['potato_peel', 'cran_open', 'door', 'potato_mash', 'cran_schlorp']);
+    audio.preloadVoices(['potato_peel', 'cran_open', 'table_set', 'door', 'here_grammy', 'here_babcia', 'here_dziadziu']);
     this.gobbles.cheer();
     if (!skipWelcome) {
       audio.say('welcome');
@@ -99,6 +133,12 @@ export class Game {
     if (speak) this.hints.begin(this.homeDef);
   }
 
+  private async sendGobbles(to: THREE.Vector3) {
+    const far = this.gobbles.root.position.distanceTo(to) > 2.5;
+    await this.gobbles.hopTo(to, null, far ? 0.75 : 0.42);
+    this.gobbles.setGround(to.y);
+  }
+
   // ------------------------------------------------------------------ stations
   async enterStation(s: Station) {
     if (this.state !== 'home') return;
@@ -109,21 +149,20 @@ export class Game {
     this.stage.squash(s.dish(), 3);
     for (const a of this.arrows.values()) this.stage.pop(a, 0);
     this.hud.showHome(true);
-    const spot = s.root.localToWorld(s.at('socket_gobbles'));
-    this.gobbles.hopTo(spot);
-    await this.stage.fly(s.name, 0.6);
+    this.sendGobbles(s.gobblesSpot());
+    await this.stage.fly(s.pose, 0.6);
     if (this.current !== s || this.state !== 'station') return;
     s.active = true;
     if (!s.started) {
       s.started = true;
-      audio.preloadVoices(s.name === 'potato' ? ['potato_butter', 'potato_stir', 'potato_done'] : ['cran_wobble', 'bell', 'cran_done']);
+      audio.preloadVoices(s.voices());
       s.recipe().then(() => this.finishDish(s));
     } else {
       s.resume();
     }
   }
 
-  /** The home button: back to the overview. The dish keeps its progress. */
+  /** The home button: back to the overview. The job keeps its progress. */
   async goHome() {
     if (this.state !== 'station' || !this.current) return;
     const s = this.current;
@@ -133,7 +172,7 @@ export class Game {
     this.hud.showHome(false);
     this.state = 'home';
     audio.pop(0.8);
-    this.gobbles.hopTo(this.kitchen.socket('socket_gobbles_home'));
+    this.sendGobbles(this.kitchen.socket('socket_gobbles_home'));
     await this.stage.fly('home', 0.7);
     if (this.state === 'home') this.showHome(true);
   }
@@ -147,76 +186,96 @@ export class Game {
     this.current = null;
     this.hud.showHome(false);
     this.hints.end();
-    // celebrate at the counter
+    // celebrate where the work happened
     clock.hitStop(0.08);
     audio.jingle();
     const dish = s.dish();
     st.particles.burst('spark', topOf(dish), { count: 14, color: [0xffd27a, 0xffffff, 0xe8833a] });
-    st.squash(dish, 4);
+    if (s.flies) st.squash(dish, 4);
     this.gobbles.yum();
     audio.say(s.doneVoice);
     await wait(1.25);
-    // stars to the table: the dish flies along an arc through the doorway
-    const index = this.dishes.length;
-    const slot = this.kitchen.socket('socket_dish_' + index);
-    st.scene.attach(dish);
-    this.dishes.push({ station: s, node: dish });
-    audio.whoosh();
-    st.fly('table', 1.15);
-    const sparkle = clock.onFrame(() => {
-      if (Math.random() < 0.3) st.particles.burst('spark', dish.position, { count: 1, size: 0.05, speed: 0.2, up: 0.1, color: 0xffd27a });
-    });
-    st.setShadowGround(dish, 0);
-    await arcTo(dish, slot, 1.5, 1.05, { spin: new THREE.Vector3(0, Math.PI * 2, 0), e: ease.inOut });
-    sparkle();
-    st.setShadowGround(dish, TABLE_Y);
-    st.squash(dish, -4);
-    audio.thud();
-    audio.clink(0.7);
-    st.particles.burst('puff', slot, { count: 6, color: 0xfff4e0, size: 0.08 });
-    await wait(0.45);
-    await this.guestArrives(index, dish);
+    if (s.flies) {
+      // stars to the table: the dish flies along an arc through the doorway
+      const slot = this.kitchen.socket('socket_dish_' + this.dishes.length);
+      st.scene.attach(dish);
+      this.dishes.push({ station: s, node: dish });
+      audio.whoosh();
+      st.fly('table', 1.15);
+      const sparkle = clock.onFrame(() => {
+        if (Math.random() < 0.3) st.particles.burst('spark', dish.position, { count: 1, size: 0.05, speed: 0.2, up: 0.1, color: 0xffd27a });
+      });
+      st.setShadowGround(dish, 0);
+      await arcTo(dish, slot, 1.5, 1.05, { spin: new THREE.Vector3(0, Math.PI * 2, 0), e: ease.inOut });
+      sparkle();
+      st.setShadowGround(dish, TABLE_Y);
+      st.squash(dish, -4);
+      audio.thud();
+      audio.clink(0.7);
+      st.particles.burst('puff', slot, { count: 6, color: 0xfff4e0, size: 0.08 });
+      if (s.name === 'potato') this.steamAt = dish;
+      for (const g of this.guests) if (g.arrived) g.gasp();
+      await wait(0.45);
+    } else {
+      await st.fly('table', 0.9);
+    }
+    this.finished++;
     const total = this.stations.length;
-    st.setDay((this.dishes.length / total) * 2, 3);
-    if (this.dishes.length >= total) {
+    st.setDay((this.finished / total) * 2, 3);
+    const guest = this.guests.filter((g) => !g.arrived)[0];
+    if (guest) await this.guestArrives(guest);
+    if (this.finished >= total) {
       await wait(0.5);
       this.dinner();
     } else {
       await wait(0.7);
       this.state = 'home';
-      this.gobbles.hopTo(this.kitchen.socket('socket_gobbles_home'));
+      this.sendGobbles(this.kitchen.socket('socket_gobbles_home'));
       await st.fly('home', 0.9);
       if (this.state === 'home') this.showHome(true);
     }
   }
 
   // ------------------------------------------------------------------ guests
-  private async guestArrives(index: number, dish: THREE.Object3D) {
-    const st = this.stage;
-    const seat = SEAT_ORDER[index % SEAT_ORDER.length];
-    const door = this.kitchen.n('door');
-    audio.doorbell();
-    await wait(0.5);
-    audio.say('door');
-    await wait(0.6);
+  private openDoor() {
     audio.creak();
-    await tween(0.4, (k) => (door.rotation.y = -1.75 * k), ease.outBack);
-    const g = new Guest(st, DEFAULT_GUESTS[index % DEFAULT_GUESTS.length]);
-    g.seat = seat;
-    this.guests.push(g);
+    return tween(0.4, (k) => (this.kitchen.n('door').rotation.y = -1.75 * k), ease.outBack);
+  }
+  private closeDoor() {
+    const door = this.kitchen.n('door');
+    const from = door.rotation.y;
+    return tween(0.3, (k) => (door.rotation.y = from * (1 - k)), ease.in).then(() => audio.thud());
+  }
+
+  /** One guest comes in through the front door, says hello (with a name tag) and takes their seat. */
+  private async walkIn(g: Guest, quick = false) {
+    const st = this.stage;
     const doorPos = this.kitchen.socket('socket_door');
+    g.arrived = true;
     g.root.position.copy(doorPos);
-    const s0 = g.root.scale.x;
+    g.root.rotation.y = 0;
+    const s0 = g.look.scale ?? 1;
+    g.root.scale.setScalar(0.001);
+    g.root.visible = true;
+    audio.pop(0.9);
     await tween(0.3, (k) => g.root.scale.setScalar(Math.max(0.001, s0 * k)), ease.outBack);
-    st.input.add(g.hitRoot, { guest: { enabled: () => this.state !== 'title', tap: (t) => this.tapGuest(g, t) } });
-    await g.wave();
+    this.tag = { text: g.name, at: () => g.headWorld.add(new THREE.Vector3(0, 0.12, 0)), until: clock.real + (quick ? 2.2 : 3.2) };
+    if (!quick) {
+      if (g.hasVoice) audio.say(g.look.voice!);
+      st.particles.burst('heart', g.headWorld, { count: 3, color: [0xd8453f, 0xf0907a] });
+      await g.wave();
+      await wait(0.35);
+    } else {
+      g.babble(3);
+    }
+    const seat = g.look.seat;
     const seatPos = this.kitchen.socket('socket_seat_' + seat);
     const yaw = this.kitchen.socketYaw('socket_seat_' + seat);
-    // walk round behind the chairs, then one big hop over the chair back onto the seat
-    const behind = new THREE.Vector3(seatPos.x - Math.sin(yaw) * 0.75, 0, seatPos.z - Math.cos(yaw) * 0.75);
-    await g.hopTo(new THREE.Vector3(doorPos.x, 0, behind.z));
-    await g.hopTo(behind);
-    tween(0.3, (k) => (door.rotation.y = -1.75 * (1 - k)), ease.in).then(() => audio.thud());
+    // walk round behind the chairs, then one big hop onto the seat
+    const side = seat === 4;
+    const from0 = side ? new THREE.Vector3(seatPos.x + 0.02, 0, seatPos.z - 0.85) : new THREE.Vector3(seatPos.x - Math.sin(yaw) * 0.75, 0, seatPos.z - Math.cos(yaw) * 0.75);
+    await g.hopTo(new THREE.Vector3(side ? from0.x : doorPos.x, 0, side ? doorPos.z + 0.3 : from0.z));
+    await g.hopTo(from0);
     await g.turnTo(yaw, 0.15);
     const from = g.root.position.clone();
     audio.whoosh();
@@ -228,40 +287,46 @@ export class Game {
     g.poke();
     st.setShadowGround(g.root, 0.02);
     audio.thud();
-    // a place setting pops in
-    const plate = part('props', 'dinner_plate');
-    const pp = this.kitchen.socket('socket_plate_' + seat);
-    plate.position.copy(pp);
-    st.scene.add(plate);
-    st.pop(plate, 1, 0.01);
-    audio.clink(1.1);
-    this.plates.set(g, pp);
-    await wait(0.3);
-    await g.yum();
-    void dish;
+    await wait(0.25);
+    if (this.dishes.length) await g.yum();
+    else await g.cheer();
+  }
+
+  private async guestArrives(g: Guest) {
+    audio.doorbell();
+    this.stage.fly('door', 0.7);
+    wait(3.4).then(() => this.stage.fly('table', 1.0));
+    await wait(0.5);
+    if (!g.hasVoice) audio.say('door');
+    await wait(g.hasVoice ? 0.3 : 0.7);
+    await this.openDoor();
+    const walk = this.walkIn(g);
+    wait(2.6).then(() => this.closeDoor());
+    await walk;
   }
 
   private tapGuest(g: Guest, t: TapInfo) {
-    if (this.state === 'dinner' && !g.served) {
+    if (this.state === 'dinner' && !g.served && this.candles.every((c) => c.lit)) {
       this.hints.activity();
       this.serve(g);
       return;
     }
     if (Math.random() < 0.5) g.poke();
     else g.cheer();
+    this.tag = { text: g.name, at: () => g.headWorld.add(new THREE.Vector3(0, 0.12, 0)), until: clock.real + 1.6 };
     this.stage.particles.burst('heart', g.headWorld, { count: 1, color: 0xf0907a });
   }
 
   private tapGobbles(t: TapInfo) {
     const g = this.gobbles;
-    if (this.state === 'dinner' && !this.gobblesServed) {
+    if (this.state === 'dinner' && !this.gobblesServed && this.candles.every((c) => c.lit)) {
       this.hints.activity();
       this.serve(null);
       return;
     }
     // tapping Gobbles replays the last instruction; otherwise he is ticklish
     g.bounce(-4);
-    if (this.hints.step && (this.state === 'station' || this.state === 'home')) {
+    if (this.hints.step && (this.state === 'station' || this.state === 'home' || this.state === 'dinner')) {
       g.gobble(3);
       this.hints.replay();
       return;
@@ -278,27 +343,21 @@ export class Game {
     this.state = 'serving';
     audio.fanfare();
     audio.say('dinner');
-    st.setDay(3, 2.8);
-    // candles light one by one and the room warms to candlelight
-    for (let i = 0; i < 2; i++) {
-      await wait(0.5);
-      const c = part('props', 'candle');
-      c.position.copy(this.kitchen.socket('socket_candle_' + i));
-      st.scene.add(c);
-      st.setBaseScale(c, 2.1);
-      st.pop(c, 1, 0.01);
-      audio.note(4 + i * 2, 0.3);
-      st.particles.burst('spark', c.position.clone().add(new THREE.Vector3(0, 0.6, 0)), { count: 6, color: [0xffd27a, 0xffa24a] });
-      const flame = c.getObjectByName('candle_flame')!;
-      clock.onFrame(() => {
-        const f = 1 + Math.sin(clock.real * 13 + i * 2) * 0.12 + Math.sin(clock.real * 31) * 0.05;
-        flame.scale.set(1 / Math.sqrt(f), f, 1 / Math.sqrt(f));
-      });
+    await wait(1.4);
+    // everyone else arrives together
+    const late = this.guests.filter((g) => !g.arrived);
+    if (late.length) {
+      audio.doorbell();
+      await wait(0.6);
+      audio.say('here_friends');
+      await this.openDoor();
+      const walks = late.map((g, i) => wait(i * 0.9).then(() => this.walkIn(g, true)));
+      await Promise.all(walks);
+      this.closeDoor();
     }
-    st.candleLight.position.copy(this.kitchen.socket('socket_candle_0')).add(new THREE.Vector3(0.33, 1.2, 0.5));
     // Gobbles finally gets a seat, and a paper pilgrim hat
     const g = this.gobbles;
-    const seat = this.kitchen.socket('socket_seat_gobbles');
+    const seat = this.kitchen.socket('socket_seat_' + GOBBLES_SEAT);
     g.root.position.set(1.5, 0, 1.4);
     g.setGround(0);
     await g.hopTo(new THREE.Vector3(seat.x - 0.1, 0, seat.z + 0.85), null, 0.5);
@@ -314,31 +373,79 @@ export class Game {
     await g.face(new THREE.Vector3(seat.x - 3, seat.y, seat.z + 1.2), 0.2);
     g.wear('hat_pilgrim');
     g.setMood('happy');
-    const plate = part('props', 'dinner_plate');
-    const pp = this.kitchen.socket('socket_plate_gobbles');
-    plate.position.copy(pp);
-    st.scene.add(plate);
-    st.pop(plate, 1, 0.01);
-    audio.clink(1.1);
-    this.plates.set(g, pp);
-    await wait(0.6);
-    // serve everyone
+    await wait(0.5);
+    // candles: the kids light them, and the room warms to candlelight
+    for (let i = 0; i < 2; i++) {
+      const c = part('props', 'candle');
+      c.position.copy(this.kitchen.socket('socket_candle_' + i));
+      st.scene.add(c);
+      st.setBaseScale(c, 2.1);
+      st.pop(c, 1, 0.01);
+      audio.pop(1 + i * 0.2);
+      const flame = c.getObjectByName('candle_flame')!;
+      flame.visible = false;
+      const entry = { root: c, flame, lit: false };
+      this.candles.push(entry);
+      // big tap area while it is unlit; once lit it stops taking taps so it never blocks the guests behind it
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.85, 0.42), new THREE.MeshBasicMaterial({ visible: false }));
+      box.position.copy(c.position).add(new THREE.Vector3(0, 0.35, 0));
+      st.scene.add(box);
+      st.input.addMesh(box, 'candle', { enabled: () => this.state === 'dinner' && !entry.lit, tap: (t) => this.tapCandle(entry, t) });
+      await wait(0.25);
+    }
+    st.candleLight.position.copy(this.kitchen.socket('socket_candle_0')).add(new THREE.Vector3(0.2, 1.2, 0.5));
+    clock.onFrame(() => {
+      this.candles.forEach((cd, i) => {
+        if (!cd.lit) return;
+        const f = 1 + Math.sin(clock.real * 13 + i * 2) * 0.12 + Math.sin(clock.real * 31) * 0.05;
+        cd.flame.scale.set(1 / Math.sqrt(f), f, 1 / Math.sqrt(f));
+      });
+    });
     this.state = 'dinner';
-    this.serveDef = {
-      voice: 'serve',
+    this.hints.begin({
+      voice: 'table_candles',
       demo: 'tap',
-      target: () => this.guests.find((x) => !x.served)?.root ?? this.gobbles.root,
+      target: () => (this.candles.find((c) => !c.lit) ?? this.candles[0]).root,
       tap: {},
-    };
-    this.hints.begin(this.serveDef);
+    });
+  }
+
+  private tapCandle(c: { root: THREE.Object3D; flame: THREE.Object3D; lit: boolean }, t: TapInfo) {
+    const st = this.stage;
+    st.squash(c.root, -3);
+    if (c.lit) {
+      audio.note(6, 0.2);
+      st.particles.burst('spark', t.point, { count: 3, size: 0.04, color: 0xffd27a });
+      return;
+    }
+    this.hints.activity();
+    c.lit = true;
+    c.flame.visible = true;
+    const lit = this.candles.filter((x) => x.lit).length;
+    audio.note(3 + lit * 2, 0.3);
+    audio.tone({ freq: 900, to: 1700, dur: 0.12, vol: 0.14 });
+    st.particles.burst('spark', c.root.position.clone().add(new THREE.Vector3(0, 0.6, 0)), { count: 8, color: [0xffd27a, 0xffa24a, 0xffffff] });
+    st.setDay(2 + lit / this.candles.length, 1.8);
+    if (lit === this.candles.length && this.state === 'dinner') {
+      this.hints.end();
+      for (const g of this.guests) g.gasp();
+      wait(1.6).then(() => {
+        if (this.state !== 'dinner') return;
+        this.hints.begin({
+          voice: 'serve',
+          demo: 'tap',
+          target: () => this.guests.find((x) => !x.served)?.root ?? this.gobbles.root,
+          tap: {},
+        });
+      });
+    }
   }
 
   private async serve(g: Guest | null) {
     const st = this.stage;
-    const key = g ?? this.gobbles;
     if (g) g.served = true;
     else this.gobblesServed = true;
-    const plate = this.plates.get(key)!;
+    const plate = this.kitchen.socket('socket_plate_' + (g ? g.look.seat : GOBBLES_SEAT));
     // a scoop of every dish arcs onto the plate
     this.dishes.forEach((d, i) => {
       wait(i * 0.18).then(async () => {
@@ -348,8 +455,8 @@ export class Game {
         st.scene.add(blob);
         st.pop(blob, 1, 0.2);
         audio.pop(1 + i * 0.2, 0.2);
-        const off = (i - (this.dishes.length - 1) / 2) * 0.1;
-        await arcTo(blob, plate.clone().add(new THREE.Vector3(off, 0.012, rand(-0.02, 0.02))), 0.5, 0.45, { spin: new THREE.Vector3(0, 3, 0) });
+        const off = (i - (this.dishes.length - 1) / 2) * 0.11;
+        await arcTo(blob, plate.clone().add(new THREE.Vector3(off, 0.02, rand(-0.02, 0.02))), 0.5, 0.45, { spin: new THREE.Vector3(0, 3, 0) });
         st.squash(blob, -5);
         audio.glorp(2);
       });
@@ -382,7 +489,9 @@ export class Game {
     audio.say('thanks');
     for (const g of this.guests) g.cheer();
     await wait(1.6);
-    // the feast photo
+    // the feast photo (kept in the scrapbook on this device)
+    this.tag = null;
+    this.hud.setTag(null, 0, 0);
     audio.shutter();
     const url = await st.snapshot();
     this.hud.flash();
@@ -406,12 +515,29 @@ export class Game {
     const t = clock.real;
     for (const a of this.arrows.values()) {
       if (!a.visible) continue;
-      a.position.y = 0.98 + 1.05 + Math.sin(t * 3) * 0.08;
+      a.position.y = a.userData.baseY + Math.sin(t * 3) * 0.08;
       a.rotation.y = Math.sin(t * 1.5) * 0.5;
+    }
+    // name tag over whoever just walked in
+    if (this.tag && t < this.tag.until) {
+      const p = this.stage.input.screenOf(this.tag.at());
+      this.hud.setTag(this.tag.text, p.x, p.y);
+    } else if (this.tag) {
+      this.tag = null;
+      this.hud.setTag(null, 0, 0);
+    }
+    // the mashed potatoes keep steaming on the table
+    if (this.steamAt) {
+      this.steamT -= realDt;
+      if (this.steamT <= 0) {
+        this.steamT = rand(0.8, 1.4);
+        this.stage.particles.burst('puff', topOf(this.steamAt).add(new THREE.Vector3(0, 0.05, 0)), { count: 1, color: 0xfffaf0, size: 0.07, speed: 0.04, up: 0.28, life: 1.3 });
+      }
     }
   }
 
   dispose() {
     this.disposed = true;
+    this.hud.setTag(null, 0, 0);
   }
 }

@@ -230,13 +230,17 @@ def armature(name, bones):
 def skin(mesh_ob, arm_ob, bone_names):
     """Rigid skinning from the int 'bone' vertex layer (index into bone_names)."""
     me = mesh_ob.data
-    attr = me.attributes.get('bone')
+    # Copy the ids out FIRST: creating vertex groups reallocates the mesh's attribute arrays, and reading
+    # the attribute afterwards returns stale memory (round 1 shipped with every vertex on the wrong bone).
+    ids = [d.value for d in me.attributes['bone'].data]
+    bad = [i for i in ids if i < 0 or i >= len(bone_names)]
+    if bad:
+        raise ValueError('skin: %d vertices have no valid bone id' % len(bad))
     groups = [mesh_ob.vertex_groups.new(name=n) for n in bone_names]
-    vals = sorted(set(d.value for d in attr.data))
-    if vals[0] < 0 or vals[-1] >= len(groups):
-        print('skin: bone ids out of range', vals[:5], vals[-5:], attr.data_type, attr.domain)
-    for i, v in enumerate(me.vertices):
-        groups[min(max(attr.data[i].value, 0), len(groups) - 1)].add([i], 1.0, 'REPLACE')
+    for b in range(len(bone_names)):
+        verts = [i for i, v in enumerate(ids) if v == b]
+        if verts:
+            groups[b].add(verts, 1.0, 'REPLACE')
     mesh_ob.parent = arm_ob
     mod = mesh_ob.modifiers.new('Armature', 'ARMATURE')
     mod.object = arm_ob

@@ -1,6 +1,7 @@
 // Screen UI. Kid buttons are big pictures (no reading); text only appears on the title line for parents
 // and inside the parent area, which sits behind a hold-for-3-seconds gate styled unlike the kid buttons.
 import { audio } from '../core/audio';
+import { GUESTS, guestNames, saveGuestName } from '../game/guests';
 
 const ICON = {
   play: '<svg viewBox="0 0 100 100"><path d="M36 22 L80 50 L36 78 Z" fill="currentColor" stroke="currentColor" stroke-width="10" stroke-linejoin="round"/></svg>',
@@ -41,6 +42,9 @@ export class Hud {
   private photo: HTMLElement;
   private flashEl: HTMLElement;
   private found = new Set<string>();
+  private tagEl: HTMLElement;
+  private cardEl: HTMLElement;
+  private photos: string[] = [];
   onPlay = () => {};
   onHome = () => {};
   onAgain = () => {};
@@ -93,6 +97,16 @@ export class Hud {
     } catch { /* storage may be blocked */ }
     this.renderBook();
 
+    try {
+      this.photos = JSON.parse(localStorage.getItem('gobble.photos') || '[]').filter((p: unknown) => typeof p === 'string').slice(0, 3);
+    } catch { /* storage may be blocked */ }
+    this.renderBook();
+
+    // ---- name tag over a guest, and the big name card
+    this.tagEl = el('div', 'nametag hidden');
+    this.cardEl = el('div', 'bigcard hidden');
+    this.root.append(this.tagEl, this.cardEl);
+
     // ---- photo and flash
     this.photo = el('div', 'photo hidden');
     this.flashEl = el('div', 'flash');
@@ -133,8 +147,34 @@ export class Hud {
     this.title.classList.add('gone');
   }
   showGame() {
-    this.bookBtn.classList.toggle('hidden', this.found.size === 0);
+    this.bookBtn.classList.toggle('hidden', this.found.size === 0 && this.photos.length === 0);
   }
+
+  /** Name tag at a game-space position (null hides it). */
+  setTag(text: string | null, x: number, y: number) {
+    if (!text) {
+      this.tagEl.classList.add('hidden');
+      return;
+    }
+    if (this.tagEl.textContent !== text) this.tagEl.textContent = text;
+    this.tagEl.classList.remove('hidden');
+    this.tagEl.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -100%)`;
+  }
+
+  /** Show a guest's name card big for a moment. */
+  showCard(canvas: HTMLCanvasElement) {
+    const img = document.createElement('img');
+    img.src = canvas.toDataURL('image/png');
+    img.alt = '';
+    this.cardEl.innerHTML = '';
+    this.cardEl.appendChild(img);
+    this.cardEl.classList.remove('hidden', 'go');
+    void this.cardEl.offsetWidth;
+    this.cardEl.classList.add('go');
+    clearTimeout(this.cardTimer);
+    this.cardTimer = window.setTimeout(() => this.cardEl.classList.add('hidden'), 1250);
+  }
+  private cardTimer = 0;
 
   showHome(on: boolean) {
     this.homeBtn.classList.toggle('hidden', !on);
@@ -163,7 +203,9 @@ export class Hud {
     return true;
   }
   private renderBook() {
-    this.book.innerHTML = '<div class="page">' + Object.entries(STICKERS).map(([id, svg]) => `<div class="sticker ${this.found.has(id) ? 'found' : ''}">${svg}</div>`).join('') + '</div>';
+    const stickers = Object.entries(STICKERS).map(([id, svg]) => `<div class="sticker ${this.found.has(id) ? 'found' : ''}">${svg}</div>`).join('');
+    const photos = (this.photos ?? []).map((p, i) => `<img class="snap" alt="Feast photo" style="--r:${[-4, 3, -2][i % 3]}deg" src="${p}">`).join('');
+    this.book.innerHTML = `<div class="page"><div class="stickers">${stickers}</div>${photos ? `<div class="snaps">${photos}</div>` : ''}</div>`;
   }
   private toggleBook(on?: boolean) {
     this.book.classList.toggle('hidden', on === undefined ? !this.book.classList.contains('hidden') : !on);
@@ -179,6 +221,22 @@ export class Hud {
     if (!url) return;
     this.photo.innerHTML = `<img alt="Feast photo" src="${url}">`;
     this.photo.classList.remove('hidden');
+    this.keepPhoto(url);
+  }
+  /** Scrapbook: the last three feast photos, small, on this device only. */
+  private keepPhoto(url: string) {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = 420;
+      c.height = Math.round((420 * img.height) / img.width);
+      c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
+      this.photos = [c.toDataURL('image/jpeg', 0.72), ...this.photos].slice(0, 3);
+      try { localStorage.setItem('gobble.photos', JSON.stringify(this.photos)); } catch { /* full or blocked: the photo just is not kept */ }
+      this.renderBook();
+      this.bookBtn.classList.remove('hidden');
+    };
+    img.src = url;
   }
   hidePhoto() {
     this.photo.classList.add('hidden');
@@ -189,6 +247,9 @@ export class Hud {
     const s = audio.settings;
     const voices = audio.narrators;
     const names: Record<string, string> = { af_heart: 'Heart (warm)', af_bella: 'Bella (bright)', bf_emma: 'Emma (British)' };
+    const custom = guestNames();
+    const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+    const guestRows = GUESTS.map((g) => `<label>${esc(g.name)} <input type="text" maxlength="14" data-guest="${g.id}" placeholder="${esc(g.name)}" value="${esc(custom[g.id] ?? '')}"></label>`).join('');
     this.panel.innerHTML = `
       <div class="sheet">
         <h2>Grown-ups</h2>
@@ -197,7 +258,10 @@ export class Hud {
         <label>Sound effects <input type="range" min="0" max="1" step="0.05" data-k="sfx" value="${s.sfx}"></label>
         <label class="row"><input type="checkbox" data-k="quiet" ${s.quiet ? 'checked' : ''}> Quiet mode (everything still works with the sound off)</label>
         ${voices.length > 1 ? `<label>Narrator <select data-k="narrator">${voices.map((v) => `<option value="${v}" ${v === s.narrator ? 'selected' : ''}>${names[v] ?? v}</option>`).join('')}</select></label>` : ''}
-        <p>No ads, no purchases, no outbound links and no data collection. Stickers and settings are saved on this device only.</p>
+        <h3>Who is coming to dinner</h3>
+        ${guestRows}
+        <p>Names show on the name cards the next time you start cooking. The narrator only says the names as first written.</p>
+        <p>No ads, no purchases, no outbound links and no data collection. Stickers, photos, names and settings are saved on this device only.</p>
         <div class="btns"><button data-a="title">Back to the start</button><button data-a="close" class="primary">Done</button></div>
       </div>`;
     this.panel.classList.remove('hidden');
@@ -213,6 +277,9 @@ export class Hud {
         } else s[k] = parseFloat(inp.value);
         audio.save();
       });
+    });
+    this.panel.querySelectorAll<HTMLInputElement>('[data-guest]').forEach((inp) => {
+      inp.addEventListener('change', () => saveGuestName(inp.dataset.guest!, inp.value));
     });
     this.panel.querySelector('[data-a="close"]')!.addEventListener('click', () => this.panel.classList.add('hidden'));
     this.panel.querySelector('[data-a="title"]')!.addEventListener('click', () => location.reload());

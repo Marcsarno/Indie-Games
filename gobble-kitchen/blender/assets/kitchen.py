@@ -124,7 +124,7 @@ def build(out, preview):
     # ------------------------------------------------------------------ sink counter and window
     cx = -1.55
     furn.append(sh.box(2.4, 0.7, 0.9, r=0.04, seg=3, cell=0.3, col='sage').at(cx, 2.43, 0.45))
-    furn.append(sh.box(2.5, 0.78, 0.08, r=0.03, seg=3, cell=0.2, col='wood').at(cx, 2.4, 0.94))
+    furn.append(sh.box(2.5, 0.78, 0.08, r=0.03, seg=3, cell=0.2, col='wood').at(cx, 2.4, 0.94).shade_face(lambda c, n: (P.mix('wood', 'wood_light', (0.1, 0.55, 0.3, 0.75)[int(math.floor((c.y + 20) / 0.2)) % 4]) if n.z > 0.5 else P.lin('wood'))))
     for i in range(4):
         dx = cx - 0.87 + 0.58 * i
         furn.append(sh.box(0.5, 0.03, 0.62, r=0.02, col=P.mix('sage', 'cream', 0.25)).at(dx, 2.075, 0.47))
@@ -202,7 +202,10 @@ def build(out, preview):
 
     # ------------------------------------------------------------------ island
     furn.append(sh.box(3.4, 1.1, 0.9, r=0.06, seg=3, cell=0.3, col='green').at(IS_X, IS_Y, 0.45))
-    furn.append(sh.box(3.6, 1.3, 0.08, r=0.035, seg=3, cell=0.2, col='wood').at(IS_X, IS_Y, 0.94))
+    def planks(a, b, width=0.2):
+        # butcher-block bands along the length of a top (only on faces that look up)
+        return lambda c, n: (P.mix(a, b, (0.1, 0.55, 0.3, 0.75, 0.0, 0.45)[int(math.floor((c.y + 20) / width)) % 6]) if n.z > 0.5 else P.lin(a))
+    furn.append(sh.box(3.6, 1.3, 0.08, r=0.035, seg=3, cell=0.2, col='wood').at(IS_X, IS_Y, 0.94).shade_face(planks('wood', 'wood_light')))
     for i in range(3):
         furn.append(sh.box(0.95, 0.03, 0.6, r=0.025, col=P.mix('green', 'sage', 0.35)).at(IS_X - 1.1 + 1.1 * i, IS_Y - 0.555, 0.46))
         furn.append(sh.ball(0.032, sub=2, col='butter').at(IS_X - 1.1 + 1.1 * i, IS_Y - 0.58, 0.68))
@@ -234,26 +237,37 @@ def build(out, preview):
     rug2 = sh.lathe([(0, 0), (1.0, 0), (1.04, 0.012), (1.0, 0.024), (0, 0.024)], segs=44, col='green').scale(1.95, 1.3, 1.0)
     rug2.shade(lambda c, n: P.lin('butter') if 0.8 < math.hypot(c.x / 1.95, c.y / 1.3) < 0.88 else P.lin('green'))
     furn.append(rug2.at(T_X, T_Y + 0.1, 0))
-    furn.append(sh.box(2.9, 1.15, 0.07, r=0.03, seg=3, cell=0.2, col='wood_light').at(T_X, T_Y, TABLE - 0.035))
+    furn.append(sh.box(2.9, 1.15, 0.07, r=0.03, seg=3, cell=0.2, col='wood_light').at(T_X, T_Y, TABLE - 0.035).shade_face(planks('wood_light', 'butter', 0.23)))
     furn.append(sh.box(2.6, 0.9, 0.12, r=0.02, col='wood').at(T_X, T_Y, TABLE - 0.13))
     for sx in (-1, 1):
         for sy in (-1, 1):
             furn.append(sh.box(0.11, 0.11, TABLE - 0.1, r=0.03, col='wood').at(T_X + 1.28 * sx, T_Y + 0.44 * sy, (TABLE - 0.1) / 2))
     furn.append(sh.box(2.5, 0.42, 0.014, r=0.006, cell=0.21, col='cream').at(T_X, T_Y, TABLE + 0.006).shade_face(
         lambda c, n: P.lin('cranberry') if abs(c.x - T_X) > 1.05 else P.lin('cream')))
-    seats = [(T_X - 1.05, T_Y + 0.92, 0), (T_X - 0.35, T_Y + 0.92, 0), (T_X + 0.35, T_Y + 0.92, 0), (T_X + 1.05, T_Y + 0.92, 0), (T_X - 1.82, T_Y, 90)]
+    # seats 0-3 behind the table, 4 at the left end, 5 = Gobbles on a booster at the right end.
+    # Each seat gets a place setting: plate in front, fork on one side, name card on the other.
+    seats = [(T_X - 1.05, T_Y + 0.92, 0), (T_X - 0.35, T_Y + 0.92, 0), (T_X + 0.35, T_Y + 0.92, 0), (T_X + 1.05, T_Y + 0.92, 0), (T_X - 1.82, T_Y, 90), (T_X + 1.82, T_Y, -90)]
     for i, (sx_, sy_, rz) in enumerate(seats):
-        furn += chair(sx_, sy_, rz)
-        objs.append(C.empty('socket_seat_%d' % i, loc=(sx_, sy_, 0.49), rot=(0, 0, rz)))
+        furn += chair(sx_, sy_, rz, booster=(i == 5))
+        objs.append(C.empty('socket_seat_%d' % i, loc=(sx_, sy_, 0.69 if i == 5 else 0.49), rot=(0, 0, rz)))
         d = Vector((math.sin(math.radians(rz)), -math.cos(math.radians(rz)), 0))
-        objs.append(C.empty('socket_plate_%d' % i, loc=(sx_ + d.x * 0.55, sy_ + d.y * 0.55, TABLE + 0.002)))
-    furn += chair(T_X + 1.82, T_Y, -90, booster=True)
-    objs.append(C.empty('socket_seat_gobbles', loc=(T_X + 1.82, T_Y, 0.69), rot=(0, 0, -90)))
-    objs.append(C.empty('socket_plate_gobbles', loc=(T_X + 1.27, T_Y, TABLE + 0.002)))
+        side = Vector((-d.y, d.x, 0))
+        reach = 0.55 if i < 4 else 0.62
+        p = Vector((sx_, sy_, 0)) + d * reach
+        objs.append(C.empty('socket_plate_%d' % i, loc=(p.x, p.y, TABLE + 0.002), rot=(0, 0, rz)))
+        f = p - side * 0.27
+        objs.append(C.empty('socket_fork_%d' % i, loc=(f.x, f.y, TABLE + 0.002), rot=(0, 0, rz)))
+        c = p + side * 0.25 + d * (0.06 if i < 4 else 0.0)
+        objs.append(C.empty('socket_card_%d' % i, loc=(c.x, c.y, TABLE + 0.002)))
     for i, dx in enumerate((-0.7, 0.7, 0.0, -1.2, 1.2)):
         objs.append(C.empty('socket_dish_%d' % i, loc=(T_X + dx, T_Y - 0.2, TABLE + 0.002 if abs(dx) > 1.25 else TABLE + 0.013)))
-    for i, dx in enumerate((-0.33, 0.33)):
-        objs.append(C.empty('socket_candle_%d' % i, loc=(T_X + dx, T_Y - 0.02, TABLE + 0.013)))
+    for i, dx in enumerate((-0.2, 0.2)):
+        objs.append(C.empty('socket_candle_%d' % i, loc=(T_X + dx, T_Y - 0.18, TABLE + 0.013)))
+    # the serving cart for Set the Table stands in front of the table
+    objs.append(C.empty('socket_station_table', loc=(T_X + 0.1, T_Y - 1.62, 0)))
+    objs.append(C.empty('socket_gobbles_table', loc=(T_X + 1.3, T_Y - 1.5, 0.0)))
+    objs.append(C.empty('cam_settable_target', loc=(T_X + 0.0, T_Y - 0.3, 0.8)))
+    objs.append(C.empty('cam_settable', loc=(T_X + 0.0 - 0.9, T_Y - 0.3 - 5.6, 0.8 + 4.4), props={'fit_w': 5.6, 'fit_h': 3.9}))
 
     # front door on the back wall (guests come in here); hinge on its left edge
     dx0, dw, dh = 1.55, 0.95, 2.1

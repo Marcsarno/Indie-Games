@@ -29,6 +29,9 @@ export class Kitchen {
     st.readPoses(this.root);
     const table = st.poses.get('table')!;
     st.poses.set('table_wide', { target: table.target.clone().add(new THREE.Vector3(0, 0.1, 0)), dir: table.dir.clone(), fitW: 6.2, fitH: 3.9 });
+    // a closer look at the front door for the moment a guest says hello
+    const door = this.socket('socket_door');
+    st.poses.set('door', { target: door.clone().add(new THREE.Vector3(0.55, 0.75, 0.7)), dir: table.dir.clone(), fitW: 3.5, fitH: 2.5 });
     st.input.pokeMeshes = [this.root];
     for (let i = 0; i < 3; i++) this.pots.push({ o: this.n('pot_' + i), s: new Spring(0, 1.5, 0.07) });
     this.skyMats = [meshOf(this.n('window_sky')).material as THREE.MeshBasicMaterial, meshOf(this.n('door_outside')).material as THREE.MeshBasicMaterial];

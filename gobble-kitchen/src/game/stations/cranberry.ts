@@ -57,6 +57,10 @@ export class CranberryStation extends Station {
     return plate;
   }
 
+  voices() {
+    return ['cran_schlorp', 'cran_wobble', 'bell', 'cran_done'];
+  }
+
   async recipe() {
     await this.open();
     await this.schlorp();
@@ -206,18 +210,11 @@ export class CranberryStation extends Station {
 
   // ------------------------------------------------------------------ 3. wobble (and the bell)
   private async wobble() {
-    const st = this.stage;
     const log = this.it('food_log');
     const tapLog = (t: TapInfo) => {
       if (this.raining) return;
       this.wobbles++;
-      // lean away from where the finger landed
-      const lp = log.worldToLocal(t.point.clone());
-      const a = Math.atan2(lp.z, lp.x) + Math.PI + rand(-0.4, 0.4);
-      this.leanX.kick(Math.cos(a) * 0.75);
-      this.leanZ.kick(Math.sin(a) * 0.75);
-      st.squash(log, -3.2, 3.0, 0.12);
-      audio.wobble(this.wobbles - 1);
+      this.wobbleLog(t, this.wobbles - 1);
       if (this.wobbles === 3 && !this.bellShown) this.showBell();
       if (this.wobbles % 10 === 0) this.jellyRain();
     };
@@ -227,6 +224,27 @@ export class CranberryStation extends Station {
       demo: 'tap',
       tap: { log: tapLog },
     });
+  }
+
+  /** One jelly wobble: lean away from where the finger landed, squash, sing. */
+  private wobbleLog(t: TapInfo, i: number) {
+    const log = this.it('food_log');
+    const lp = log.worldToLocal(t.point.clone());
+    const a = Math.atan2(lp.z, lp.x) + Math.PI + rand(-0.4, 0.4);
+    this.leanX.kick(Math.cos(a) * 0.75);
+    this.leanZ.kick(Math.sin(a) * 0.75);
+    this.stage.squash(log, -3.2, 3.0, 0.12);
+    audio.wobble(i);
+  }
+
+  /** On the dinner table the log is still a toy. */
+  protected idleReact(name: string, t: TapInfo) {
+    if (this.done && (name === 'log' || name === 'can') && !this.raining) {
+      this.wobbleLog(t, (this.wobbles++ % 8));
+      this.fx.burst('spark', t.point, { count: 2, size: 0.03, color: 0xffc0cb });
+      return;
+    }
+    super.idleReact(name, t);
   }
 
   private showBell() {

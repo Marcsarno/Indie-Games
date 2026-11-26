@@ -43,7 +43,9 @@ const tap = async (name, times = 1, gap = 260, index = 0) => {
   for (let i = 0; i < times; i++) {
     const p = await pos(name, index);
     if (!p) { console.log('  (no target', name + ')'); return false; }
-    await page.mouse.move(p.x, p.y);
+    // on a portrait screen the game is turned 90 degrees: game px -> client px
+    const c = await page.evaluate((p) => (window.__stage.rotated ? { x: window.innerWidth - p.y, y: p.x } : p), p);
+    await page.mouse.move(c.x, c.y);
     await page.mouse.down();
     await page.mouse.up();
     await sleep(gap);
@@ -114,6 +116,35 @@ async function cranberry() {
   await shot('cran-guest');
 }
 
+async function table() {
+  await tap('station_table');
+  await sleep(1700);
+  await shot('table-start');
+  await tap('plates', 3, 650);
+  await shot('table-plates');
+  await tap('plates', 3, 650);
+  await sleep(1500);
+  await tap('forks', 6, 650);
+  await sleep(1500);
+  await shot('table-forks');
+  await tap('cards', 1, 400);
+  await shot('table-card-reveal');
+  await sleep(1300);
+  await tap('cards', 5, 1500);
+  await sleep(900);
+  await shot('table-cards');
+  await sleep(4300);
+  await shot('table-arrival');
+  await sleep(3500);
+  await shot('table-guest');
+}
+/** Zoomed screenshot around a world point (asks the game where it is on screen). */
+async function closeup(name, expr, w = 300, h = 300) {
+  const p = await page.evaluate((expr) => { const v = eval(expr); return window.__stage.input.screenOf(v); }, expr);
+  const x = Math.max(0, Math.min(W - w, p.x - w / 2)), y = Math.max(0, Math.min(H - h, p.y - h / 2));
+  await page.screenshot({ path: `${out}/${String(++n).padStart(2, '0')}-${name}.png`, clip: { x, y, width: w, height: h } });
+}
+
 if (script === 'potato' || script === 'feast') {
   await potato();
   await waitState('home');
@@ -124,16 +155,83 @@ if (script === 'cranberry' || script === 'feast') {
   await cranberry();
 }
 if (script === 'feast') {
-  await waitState('dinner', 40000);
-  await sleep(1500);
-  await shot('dinner');
-  for (let i = 0; i < 2; i++) { await tap('guest', 1, 260, i); await sleep(1900); }
+  await waitState('home', 40000);
+  await sleep(1200);
+}
+if (script === 'table' || script === 'feast') {
+  await table();
+}
+if (script === 'feast') {
+  await waitState('dinner', 60000);
+  await sleep(1200);
+  await shot('dinner-candles');
+  await tap('candle', 1, 900, 0);
+  await tap('candle', 1, 2600, 0);
+  await shot('dinner-lit');
+  await closeup('faces', 'window.__game.guests[1].headWorld', 520, 300);
+  for (let i = 0; i < 5; i++) { await tap('guest', 1, 260, i); await sleep(1700); }
   await shot('served');
   await tap('gobbles');
   await sleep(4200);
   await shot('finale');
   await sleep(4500);
   await shot('photo');
+  // cook again: the whole session is rebuilt
+  await page.locator('.again').dispatchEvent('pointerdown');
+  await waitState('home', 20000);
+  await sleep(2500);
+  await shot('again-home');
+  await tap('station_potato');
+  await sleep(1500);
+  await tap('potato', 8, 300);
+  await sleep(2600);
+  await shot('again-potato');
+}
+if (script === 'leave') {
+  // leave a job half done, start another, come back
+  await tap('station_potato');
+  await sleep(1500);
+  await tap('potato', 3, 300);
+  await page.locator('.home').dispatchEvent('pointerdown');
+  await waitState('home');
+  await sleep(1200);
+  await tap('station_cranberry');
+  await sleep(1500);
+  await tap('opener', 1, 500);
+  await page.locator('.home').dispatchEvent('pointerdown');
+  await waitState('home');
+  await sleep(1200);
+  await shot('leave-home');
+  await tap('station_potato');
+  await sleep(1500);
+  await tap('potato', 5, 300);
+  await sleep(2600);
+  await tap('masher', 7, 330);
+  await sleep(1500);
+  await shot('leave-potato-mashed');
+  await page.locator('.home').dispatchEvent('pointerdown');
+  await waitState('home');
+  await sleep(1000);
+  await tap('station_cranberry');
+  await sleep(1500);
+  await tap('opener', 2, 500);
+  await sleep(1500);
+  await shot('leave-cran-open');
+}
+if (script === 'chars') {
+  // character check: Gobbles close up while idle, cheering and scared; then guests
+  await tap('station_potato');
+  await sleep(2500);
+  await closeup('gobbles-idle', 'window.__game.gobbles.headWorld', 360, 360);
+  await tap('gobbles');
+  await sleep(350);
+  await closeup('gobbles-react', 'window.__game.gobbles.headWorld', 360, 360);
+  await page.evaluate(() => { const g = window.__game.gobbles; g.setMood('scared'); });
+  await sleep(500);
+  await closeup('gobbles-scared', 'window.__game.gobbles.headWorld', 360, 360);
+  await page.evaluate(() => { const g = window.__game.gobbles; g.setMood('sad'); });
+  await sleep(900);
+  await closeup('gobbles-sad', 'window.__game.gobbles.headWorld', 360, 360);
 }
 if (script === 'idle') {
   await tap('station_cranberry');

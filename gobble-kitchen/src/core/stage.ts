@@ -40,6 +40,9 @@ export class Stage {
   poses = new Map<string, Pose>();
   pose: Pose = { target: new THREE.Vector3(), dir: new THREE.Vector3(0, 0.7, 0.7).normalize(), fitW: 12, fitH: 6.5 };
   windowColor = new THREE.Color(0x9fd4cb);
+  private bgColor = new THREE.Color(DAY[0].bg);
+  private bgCanvas = document.createElement('canvas');
+  private bgTex: THREE.CanvasTexture;
   private dayK = 0;
   private shake = 0;
   private sqs = new Map<THREE.Object3D, Sq>();
@@ -58,7 +61,10 @@ export class Stage {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.NoToneMapping; // ACES washes out the pastels
     container.appendChild(this.renderer.domElement);
-    this.scene.background = new THREE.Color(DAY[0].bg);
+    this.bgCanvas.width = this.bgCanvas.height = 64;
+    this.bgTex = new THREE.CanvasTexture(this.bgCanvas);
+    this.bgTex.colorSpace = THREE.SRGBColorSpace;
+    this.scene.background = this.bgTex;
     this.scene.add(this.hemi, this.key, this.candleLight);
     this.particles = new Particles(this.scene);
     this.input = new Input(this.renderer.domElement, this.camera, this);
@@ -268,12 +274,26 @@ export class Stage {
     this.key.intensity = lerp(a.keyI, b.keyI, t);
     this.key.position.set(lerp(a.keyDir[0], b.keyDir[0], t), lerp(a.keyDir[1], b.keyDir[1], t), lerp(a.keyDir[2], b.keyDir[2], t)).multiplyScalar(10);
     mix(a.window, b.window, this.windowColor);
-    mix(a.bg, b.bg, this.scene.background as THREE.Color);
+    mix(a.bg, b.bg, this.bgColor);
+    this.paintBackground();
     rimUniform.value.set(1.0, 0.72, 0.42).multiplyScalar(lerp(a.rim, b.rim, t));
     this.candleLight.intensity = lerp(a.candle, b.candle, t) * 5;
   }
   get day() {
     return this.dayK;
+  }
+  /** Backdrop: a soft glow behind the set that falls off to a deeper, plum-tinted edge. */
+  private paintBackground() {
+    const g = this.bgCanvas.getContext('2d')!;
+    const css = (c: THREE.Color) => '#' + c.getHexString();
+    const inner = this.c1.copy(this.bgColor).lerp(this.c2.set(0xffffff), 0.22);
+    const grd = g.createRadialGradient(32, 30, 4, 32, 32, 46);
+    grd.addColorStop(0, css(inner));
+    grd.addColorStop(0.55, css(this.bgColor));
+    grd.addColorStop(1, css(this.c1.copy(this.bgColor).lerp(this.c2.set(0x5b3a55), 0.42)));
+    g.fillStyle = grd;
+    g.fillRect(0, 0, 64, 64);
+    this.bgTex.needsUpdate = true;
   }
 
   /** Throw the whole world away (for "cook again"); lights and particle pools stay. */

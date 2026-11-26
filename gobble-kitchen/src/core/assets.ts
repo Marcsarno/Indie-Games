@@ -15,6 +15,13 @@ export const PAL = palette as Record<string, string>;
 export const pal = (key: string) => new THREE.Color(PAL[key] ?? key);
 
 const loaded = new Map<string, GLTF>();
+
+// a hard toon highlight on glazed, wet and metal things (matched on the start of the Blender name)
+const GLOSS: [string, number][] = [
+  ['food_log', 0.55], ['food_butter', 0.3], ['butter_pool', 0.5], ['bowl_mesh', 0.32], ['cran_plate', 0.3], ['plate_', 0.32], ['can_mesh', 0.4], ['can_lid', 0.5],
+  ['bell_dome', 0.6], ['pot_', 0.45], ['cookie_jar', 0.35], ['masher', 0.3], ['butter_dish', 0.3], ['fork_', 0.5], ['crock', 0.25], ['serving', 0.3], ['opener', 0.25],
+];
+const glossOf = (name: string) => GLOSS.find(([k]) => name.startsWith(k))?.[1] ?? 0;
 const hitMat = new THREE.MeshBasicMaterial({ visible: false });
 
 function shadeOf(o: THREE.Object3D): { shade: string; outline: boolean; data: Record<string, any> } {
@@ -36,7 +43,7 @@ function prepare(root: THREE.Object3D) {
       mesh.userData.hitName = name;
       continue;
     }
-    if (shade === 'toon') mesh.material = toonMaterial({ wobble: name === 'food_log' });
+    if (shade === 'toon') mesh.material = toonMaterial({ wobble: name === 'food_log', gloss: glossOf(name) });
     else if (shade === 'glow') mesh.material = glowMaterial(data.color && data.color !== 'vertex' ? pal(data.color) : 0xffffff, data.color === 'vertex' || !data.color);
     else mesh.material = lambertMaterial();
     if (outline) mesh.userData.wantsOutline = true;
@@ -93,7 +100,7 @@ function finish(root: THREE.Object3D) {
     const mat = mesh.material as THREE.Material;
     if ((mat as any).isMeshToonMaterial) {
       const name = mesh.name.replace(/__geo$/, '');
-      mesh.material = toonMaterial({ wobble: name === 'food_log' });
+      mesh.material = toonMaterial({ wobble: name === 'food_log', gloss: glossOf(name) });
     } else if ((mat as any).isMeshBasicMaterial && mat !== hitMat) {
       mesh.material = (mat as THREE.MeshBasicMaterial).clone();
     }

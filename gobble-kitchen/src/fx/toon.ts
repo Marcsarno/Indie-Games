@@ -37,6 +37,7 @@ function wobbleChunk(shader: { uniforms: Record<string, any>; vertexShader: stri
 export interface ToonOpts {
   color?: THREE.ColorRepresentation;
   wobble?: boolean; // jelly lean in the vertex shader (the cranberry log)
+  gloss?: number;   // strength of a hard toon highlight (glazed, wet or metal things)
 }
 
 /** Toon material. Each call makes its own instance so colours can be tweened per object. */
@@ -44,13 +45,19 @@ export function toonMaterial(opts: ToonOpts = {}) {
   const m = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: gradientMap(), color: opts.color ?? 0xffffff });
   const wob: WobbleUniforms = { uWob: { value: new THREE.Vector3(0, 0, 0) }, uWobA: { value: new THREE.Vector4(0, 1, 0, 0) } };
   m.userData.wobble = wob;
+  const gloss = { value: opts.gloss ?? 0 };
+  m.userData.gloss = gloss;
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uRim = rimUniform;
     if (opts.wobble) wobbleChunk(shader, wob);
+    shader.uniforms.uGloss = gloss;
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform vec3 uRim;')
-      .replace('#include <opaque_fragment>', `float rimF = pow(1.0 - saturate(dot(normalize(normal), normalize(vViewPosition))), 3.0);
+      .replace('#include <common>', '#include <common>\nuniform vec3 uRim;\nuniform float uGloss;')
+      .replace('#include <opaque_fragment>', `vec3 nrm = normalize(normal);
+        float rimF = pow(1.0 - saturate(dot(nrm, normalize(vViewPosition))), 3.0);
         outgoingLight += uRim * rimF * diffuseColor.rgb * 1.6;
+        float glossF = smoothstep(0.9, 0.935, dot(nrm, normalize(vec3(-0.42, 0.62, 0.66))));
+        outgoingLight += vec3(1.0, 0.97, 0.9) * glossF * uGloss;
         #include <opaque_fragment>`);
   };
   m.userData.wobbleOn = !!opts.wobble;
@@ -81,14 +88,17 @@ function outlineMaterial(skinned: boolean, wob?: WobbleUniforms) {
     shader.uniforms.uOutline = outlineUniform;
     if (wob) wobbleChunk(shader, wob);
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nuniform float uOutline;')
+      .replace('#include <common>', '#include <common>\nuniform float uOutline;\nattribute float _noline;')
       .replace('#include <project_vertex>', `#include <project_vertex>
         #ifdef USE_SKINNING
           vec3 oN = normalize(transformedNormal);
+          #ifdef FLIP_SIDED
+            oN = -oN; // three flips transformedNormal for back-side materials; the shell must still grow outward
+          #endif
         #else
           vec3 oN = normalize(normalMatrix * normal);
         #endif
-        mvPosition.xyz += oN * uOutline * max(0.8, -mvPosition.z);
+        mvPosition.xyz += oN * uOutline * max(0.8, -mvPosition.z) * (1.0 - _noline);
         gl_Position = projectionMatrix * mvPosition;`);
   };
   m.customProgramCacheKey = () => 'outline-' + key;

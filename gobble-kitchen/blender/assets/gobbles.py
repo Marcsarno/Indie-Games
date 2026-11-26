@@ -43,7 +43,7 @@ def build(out, preview):
     for sx, eb, pb in ((-1, 'eye_R', 'pupil_R'), (1, 'eye_L', 'pupil_L')):
         pcs.append(sh.uvball(0.052, segs=16, rings=10, col='white').scale(1.0, 0.55, 1.08).at(EYE[0] * sx, EYE[1], EYE[2]).bone(B[eb]))
         pcs.append(sh.uvball(0.027, segs=12, rings=8, col='eye').scale(1.0, 0.5, 1.0).at(EYE[0] * sx * 0.92, EYE[1] - 0.022, EYE[2] - 0.004).bone(B[pb]))
-        pcs.append(sh.ball(0.008, sub=1, col='white').at(EYE[0] * sx * 0.92 + 0.008, EYE[1] - 0.034, EYE[2] + 0.008).bone(B[pb]))
+        pcs.append(sh.ball(0.008, sub=1, col='white').at(EYE[0] * sx * 0.92 + 0.008, EYE[1] - 0.034, EYE[2] + 0.008).noline().bone(B[pb]))
 
     # beak: upper on the head, lower on the jaw
     pcs.append(sh.lathe([(0, 0), (0.036, 0.0), (0.028, 0.03), (0.012, 0.062), (0, 0.07)], segs=12, col='beak', r=0.006).scale(1.0, 0.7, 1.0).rot(90, 0, 0).at(0, -0.118, 0.405).bone(B['head']))

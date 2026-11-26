@@ -30,8 +30,8 @@ html, body {
 }
 .kid svg { width: 100%; height: 100%; display: block; }
 .kid:active { transform: translateY(calc(var(--u) * 0.6)) scale(0.95); box-shadow: 0 calc(var(--u) * 0.3) 0 var(--ink); }
-.home { left: 12%; top: 5%; background: var(--cream); }
-.bookbtn { right: 14%; top: 5%; background: var(--sage); }
+.home { left: calc(50% - var(--u) * 11); top: 4%; background: var(--cream); }
+.bookbtn { left: calc(50% + var(--u) * 1.5); top: 4%; background: var(--sage); }
 .bookbtn.wiggle { animation: wiggle 0.6s; }
 .again { left: 50%; top: 62%; margin-left: calc(var(--u) * -7); width: calc(var(--u) * 14); height: calc(var(--u) * 14); padding: calc(var(--u) * 2.4); background: var(--pumpkin); color: var(--cream); animation: pulse 1.4s infinite; }
 @keyframes wiggle { 20% { transform: rotate(-14deg) scale(1.15); } 50% { transform: rotate(12deg) scale(1.2); } 80% { transform: rotate(-6deg); } }
@@ -55,10 +55,13 @@ html, body {
 /* ---- sticker book */
 .book { position: absolute; inset: 0; background: rgba(59, 38, 48, 0.45); display: flex; align-items: center; justify-content: center; }
 .book .page {
-  background: var(--cream); border: calc(var(--u) * 0.7) solid var(--ink); border-radius: calc(var(--u) * 4); padding: calc(var(--u) * 3);
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: calc(var(--u) * 2.5); box-shadow: 0 calc(var(--u) * 1) 0 var(--ink);
+  background: var(--cream); border: calc(var(--u) * 0.7) solid var(--ink); border-radius: calc(var(--u) * 4); padding: calc(var(--u) * 2.6);
+  display: flex; align-items: center; gap: calc(var(--u) * 3); box-shadow: 0 calc(var(--u) * 1) 0 var(--ink); max-width: 94%;
 }
-.sticker { width: calc(var(--u) * 13); height: calc(var(--u) * 13); border-radius: 50%; background: #f1dfc0; padding: 16%; }
+.book .stickers { display: grid; grid-template-columns: repeat(3, 1fr); gap: calc(var(--u) * 2); }
+.book .snaps { display: flex; flex-direction: column; gap: calc(var(--u) * 1.2); }
+.book .snap { width: calc(var(--u) * 22); border: calc(var(--u) * 0.6) solid #fff; border-bottom-width: calc(var(--u) * 1.8); border-radius: calc(var(--u) * 0.4); box-shadow: 0 calc(var(--u) * 0.4) calc(var(--u) * 1.2) rgba(59, 38, 48, 0.35); transform: rotate(var(--r)); }
+.sticker { width: calc(var(--u) * 11); height: calc(var(--u) * 11); border-radius: 50%; background: #f1dfc0; padding: calc(var(--u) * 1.8); }
 .sticker svg { width: 100%; height: 100%; filter: brightness(0) opacity(0.14); }
 .sticker.found { background: #fff; box-shadow: inset 0 0 0 calc(var(--u) * 0.5) var(--butter); }
 .sticker.found svg { filter: none; }
@@ -71,6 +74,26 @@ html, body {
 .stickerfly svg { width: 100%; height: 100%; }
 .stickerfly.tuck { transform: translate(calc(var(--u) * 30), calc(var(--u) * -18)) scale(0.15); opacity: 0.3; }
 @keyframes stickerpop { from { transform: scale(0) rotate(-30deg); } }
+
+/* ---- name tag and the big name card */
+.nametag {
+  position: absolute; left: 0; top: 0; pointer-events: none !important; white-space: nowrap;
+  background: var(--cream); color: var(--ink); border: calc(var(--u) * 0.45) solid var(--ink); border-radius: 99px;
+  padding: calc(var(--u) * 0.5) calc(var(--u) * 1.8); font-weight: 800; font-size: max(15px, calc(var(--u) * 3));
+  box-shadow: 0 calc(var(--u) * 0.5) 0 var(--ink);
+}
+.bigcard { position: absolute; left: 50%; top: 46%; width: 0; height: 0; pointer-events: none !important; }
+.bigcard img {
+  position: absolute; height: calc(var(--u) * 36); max-width: none; left: 0; top: 0; transform: translate(-50%, -50%) rotate(-3deg);
+  border-radius: calc(var(--u) * 2.2); border: calc(var(--u) * 0.6) solid var(--ink); box-shadow: 0 calc(var(--u) * 1) 0 var(--ink);
+}
+.bigcard.go img { animation: bigcard 1.25s cubic-bezier(.3,1.5,.5,1) both; }
+@keyframes bigcard {
+  0% { transform: translate(-50%, -50%) scale(0.2) rotate(-16deg); opacity: 0; }
+  18% { transform: translate(-50%, -50%) scale(1) rotate(-3deg); opacity: 1; }
+  72% { transform: translate(-50%, -50%) scale(1) rotate(2deg); opacity: 1; }
+  100% { transform: translate(-50%, -80%) scale(0.25) rotate(8deg); opacity: 0; }
+}
 
 /* ---- feast photo */
 .photo { position: absolute; left: 50%; top: 6%; width: 46%; margin-left: -23%; transform: rotate(-3deg); pointer-events: none; animation: stickerpop 0.6s cubic-bezier(.3,1.5,.5,1); }
@@ -91,6 +114,8 @@ html, body {
 .panel { position: absolute; inset: 0; background: rgba(59, 38, 48, 0.6); display: flex; align-items: center; justify-content: center; }
 .sheet { background: #fff; color: #222; border-radius: 14px; padding: 18px 22px; width: min(440px, 88%); max-height: 92%; overflow: auto; font: 15px/1.4 system-ui, sans-serif; user-select: text; }
 .sheet h2 { margin: 0 0 10px; font-size: 18px; }
+.sheet h3 { margin: 14px 0 4px; font-size: 15px; }
+.sheet input[type=text] { width: 55%; font: inherit; padding: 5px 8px; border: 1px solid #bbb; border-radius: 6px; }
 .sheet label { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0; }
 .sheet label.row { justify-content: flex-start; }
 .sheet input[type=range] { width: 55%; }

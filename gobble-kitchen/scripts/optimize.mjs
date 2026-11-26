@@ -19,6 +19,16 @@ for (const f of fs.readdirSync(src).filter((f) => f.endsWith('.glb')).sort()) {
   const doc = await io.read(path.join(src, f));
   let tris = 0;
   for (const mesh of doc.getRoot().listMeshes()) for (const p of mesh.listPrimitives()) tris += (p.getIndices()?.getCount() ?? p.getAttribute('POSITION').getCount()) / 3;
+  // custom attributes (_ZONE, _NOLINE) are exported on every mesh; drop them where they are all zero
+  for (const mesh of doc.getRoot().listMeshes()) {
+    for (const p of mesh.listPrimitives()) {
+      for (const sem of p.listSemantics().filter((s) => s.startsWith('_'))) {
+        const acc = p.getAttribute(sem);
+        const arr = acc.getArray();
+        if (arr.every((v) => v === 0)) p.setAttribute(sem, null);
+      }
+    }
+  }
   for (const node of doc.getRoot().listNodes()) {
     const mesh = node.getMesh();
     if (!mesh || node.getSkin()) continue;
@@ -28,7 +38,7 @@ for (const f of fs.readdirSync(src).filter((f) => f.endsWith('.glb')).sort()) {
   }
   await doc.transform(
     dedup(),
-    prune({ keepAttributes: true, keepLeaves: true, keepExtras: true }),
+    prune({ keepAttributes: true, keepLeaves: true, keepExtras: true }),   // also sweeps the accessors dropped above
     weld(),
     meshopt({ encoder: MeshoptEncoder, level: 'medium' }),
   );

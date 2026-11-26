@@ -15,12 +15,8 @@ def build(out, preview):
     knob = C.make('bell_knob', [sh.cyl(0.016, 0.03, bevel=0.004, segs=12, col='steel_dark'), sh.cyl(0.03, 0.016, bevel=0.006, segs=14, col='steel').at(0, 0, 0.026)], loc=(0, 0, 0.112), parent=bell, shade='toon', outline=True)
     objs += [bell, base, dome, knob, C.hit('hit_bell', (0, 0, 0.08), (0.36, 0.36, 0.34), parent=bell)]
 
-    # dinner plate with a sage rim
-    def plate_col(co, no):
-        rad = math.hypot(co.x, co.y)
-        return P.lin('sage') if 0.135 < rad < 0.16 else P.lin('ceramic')
-    objs.append(C.make('dinner_plate', sh.lathe([(0, 0), (0.09, 0), (0.17, 0.022), (0.165, 0.032), (0.085, 0.012), (0, 0.012)], segs=32, r=0.006).shade(plate_col),
-                       loc=(0.5, 0, 0), shade='toon', normals=False))
+    # glowing ring that marks where the next thing goes
+    objs.append(C.make('slot_ring', sh.torus(0.2, 0.018, segs=28, rsegs=6, col='white').at(0, 0, 0.012), loc=(0.5, 0, 0), shade='glow', normals=False, props={'color': 'glow'}))
 
     # candle with holder; the flame is separate (hidden until dinner)
     candle = C.empty('candle', loc=(1.0, 0, 0))
@@ -40,7 +36,7 @@ def build(out, preview):
     # a rounded serving blob (recoloured in the game for each dish)
     objs.append(C.make('serving', sh.ball(0.06, sub=2, col='white', sz=0.7).noise(0.006, 10, 1).at(0, 0, 0.035), loc=(2.0, 0, 0), shade='toon', normals=False))
 
-    C.bake_ao([o for o in objs if o.type == 'MESH' and o.name not in ('candle_flame', 'arrow', 'serving')], floor_z=0.0, dist=0.2, strength=0.8)
+    C.bake_ao([o for o in objs if o.type == 'MESH' and o.name not in ('candle_flame', 'arrow', 'serving', 'slot_ring')], floor_z=0.0, dist=0.2, strength=0.8)
     C.export_glb(os.path.join(out, 'props.glb'), objs)
     if preview:
         C.render_preview(os.path.join(out, 'preview', 'props.png'), target=(0.9, 0, 0.1), dist=3.2, yaw=0, pitch=30)
