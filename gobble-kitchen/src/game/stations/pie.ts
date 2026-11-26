@@ -140,12 +140,12 @@ export class PieStation extends Station {
     // ---- 4. bake: in it goes, the timer sweeps round to the green
     const oven = this.game.oven, k = this.game.kitchen;
     await oven.load(this, pie, 'pie_bake', ['pie']);
-    await oven.slideIn(pie);
+    await oven.closeAndWind(this, pie, ['pie']);
     const crust = meshOf(this.it('pie_crust')).material as THREE.MeshToonMaterial;
     const crimpMats = Array.from({ length: CRIMPS }, (_, i) => meshOf(this.it('crimp_' + i)).material as THREE.MeshToonMaterial);
     const fillMat = meshOf(fill).material as THREE.MeshToonMaterial;
     const golden = new THREE.Color(0.9, 0.62, 0.34), white = new THREE.Color(1, 1, 1), deep = new THREE.Color(0.86, 0.74, 0.62);
-    let t = 0, lastTick = 0;
+    let t = -0.36, lastTick = 0;
     this.game.ovenTap = () => {
       t += 0.1;   // tapping the oven hurries it along a little
       st.squash(k.n('oven_door'), -2);
@@ -170,10 +170,12 @@ export class PieStation extends Station {
     crust.color.copy(golden);
     crimpMats.forEach((m) => m.color.copy(golden));
     fillMat.color.copy(white).lerp(deep, 1);
-    await oven.slideOut(pie);
+    audio.ding();
+    this.gobbles.gobble(3);
+    await oven.openAndOut(this, pie, ['pie']);
     this.fx.burst('spark', this.worldOf(pie).add(new THREE.Vector3(0, 0.2, 0)), { count: 12, color: [0xffd27a, 0xffffff, 0xffa24a] });
     await wait(0.7);
-    await oven.unload(this, pie);
+    await oven.unload(this, pie, ['pie']);
 
     // ---- 5. whipped cream, then the leaf
     const can = this.it('cream_can');

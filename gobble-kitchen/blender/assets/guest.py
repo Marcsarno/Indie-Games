@@ -156,6 +156,24 @@ def build(out, preview):
         sh.cyl(0.1, 0.07, bevel=0.014, segs=20, col='white').at(0, 0.0, hz + HEAD_R * 0.86),
         sh.ball(0.125, sub=3, col='white', sz=0.72).noise(0.014, 9, 3).at(0, 0.0, hz + HEAD_R * 0.86 + 0.12),
     ], tint=False)
+    # long straight hair past the shoulders
+    lng = [cap(0.085, 1.08)]
+    for sx in (-1, 1):
+        lng.append(sh.ball(0.1, sub=3, col='white', sx=0.5, sy=1.2, sz=3.1).rot(0, 4 * sx, 0).at(0.175 * sx, 0.04, hz - 0.17))
+    lng.append(sh.ball(0.17, sub=3, col='white', sx=1.05, sy=0.5, sz=2.1).at(0, 0.12, hz - 0.14))
+    lng.append(sh.ball(0.1, sub=3, col='white', sx=1.8, sy=0.34, sz=0.55).rot(0, 12, 0).at(0.03, -HEAD_R * 0.7, hz + 0.135).noline())
+    piece('hair_long', lng)
+    # baseball cap (fixed dark) with short hair showing under it
+    piece('hat_cap', [
+        sh.uvball(HEAD_R * 1.09, segs=24, rings=14, col='#2B2832').scale(1, 1, 0.98).bend(lambda v: v if v.z > 0.085 else Vector((v.x * 0.97, v.y * 0.97, 0.085))).at(0, 0.004, hz),
+        sh.ball(0.13, sub=3, col='#2B2832', sx=1.0, sy=1.1, sz=0.14).at(0, -HEAD_R * 0.98, hz + 0.1),
+        sh.ball(0.02, sub=1, col='#2B2832').at(0, 0, hz + HEAD_R * 1.09),
+    ], tint=False)
+    # full beard along the jaw
+    beard = [sh.ball(0.11, sub=3, col='white', sx=1.3, sy=0.75, sz=0.5).at(0, -HEAD_R * 0.5, hz - 0.15)]
+    for sx in (-1, 1):
+        beard.append(sh.ball(0.05, sub=2, col='white', sx=0.5, sy=1.0, sz=1.3).at(0.165 * sx, -HEAD_R * 0.3, hz - 0.075))
+    piece('acc_beard', beard)
     # party hat
     piece('hat_party', [
         sh.lathe([(0, 0), (0.085, 0), (0.0, 0.2)], segs=16, col='white', r=0.01).at(0, 0, hz + HEAD_R - 0.02),
@@ -196,6 +214,12 @@ def build(out, preview):
           sh.box(0.1, 0.014, 0.03, r=0.01, col='white').at(*on_body(0, 0.5, -0.004)),
           sh.ball(0.034, sub=2, col='ceramic', sy=0.4).at(*on_body(0, 0.335, 0.004))]
     piece('acc_print', pr, tint=True, bone='body')
+
+    # thin stripes round a tee
+    stripes = [sh.tube([on_body(a, z, 0.002) for a in range(0, 361, 20)], r=0.006, segs=5, col='#D9B98A') for z in (0.25, 0.31, 0.37, 0.43, 0.49)]
+    piece('acc_stripes', stripes, tint=False, bone='body')
+    # white tee showing at an open collar
+    piece('acc_tee', [sh.prism([(-0.05, 0.0), (0.05, 0.0), (0, -0.11)], 0.012, bevel=0.004, seg=1, col='white').rot(78, 0, 0).at(0, -body_r(0.53) * SQ - 0.006, 0.565)], tint=False, bone='body')
 
     C.export_glb(os.path.join(out, 'guest.glb'), objs)
     if preview:

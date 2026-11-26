@@ -122,6 +122,7 @@ export class SweetStation extends Station {
     audio.ding();
     this.game.oven.steam(cas, 8);
     this.fx.burst('spark', this.worldOf(cas).add(new THREE.Vector3(0, 0.25, 0)), { count: 12, color: [0xffd27a, 0xffffff, 0xffa24a] });
-    this.game.oven.release(this, cas);
+    await wait(0.8);
+    await this.game.oven.unload(this, cas, ['casserole']);
   }
 }

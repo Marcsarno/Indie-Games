@@ -10,7 +10,7 @@ import { arcTo } from '../../fx/motion';
 import type { DragInfo } from '../../core/input';
 import type { Game } from '../game';
 
-const SEATS = 6;
+const SEATS = 8;
 const TABLE_Y = 0.8;
 
 export class TableStation extends Station {

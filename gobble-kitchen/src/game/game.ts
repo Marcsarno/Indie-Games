@@ -27,7 +27,7 @@ import type { Hud } from '../ui/hud';
 
 export type State = 'title' | 'home' | 'station' | 'serving' | 'dinner' | 'done';
 const TABLE_Y = 0.8;
-const GOBBLES_SEAT = 5;
+const GOBBLES_SEAT = 7;
 
 export class Game {
   state: State = 'title';
@@ -40,6 +40,7 @@ export class Game {
   oven: Oven;
   /** Set by a recipe while it wants taps on the oven. */
   ovenTap: ((t: TapInfo) => void) | null = null;
+  timerTap: ((t: TapInfo) => void) | null = null;
   private table!: TableStation;
   /** Arianna: helps in the kitchen, then sits down at dinner. */
   private helper: Guest | null = null;
@@ -75,7 +76,7 @@ export class Game {
       stage.input.add(g.hitRoot, { guest: { enabled: () => this.state !== 'title' && g.arrived, tap: (t) => this.tapGuest(g, t) } });
       this.guests.push(g);
     }
-    for (let seat = 0; seat < 6; seat++) {
+    for (let seat = 0; seat < 8; seat++) {
       const g = this.guests.find((x) => x.look.seat === seat);
       this.portraits[seat] = g
         ? makePortrait(stage, g.root, () => g.faceWorld, 0.3 * (g.look.scale ?? 1), g.name, g.look.card)
@@ -234,6 +235,9 @@ export class Game {
   private async finishDish(s: Station) {
     if (this.disposed) return;
     const st = this.stage;
+    // tidy up first: tools in the sink, counter wiped
+    if (s.island) await s.cleanup();
+    if (this.disposed) return;
     this.state = 'serving';
     s.done = true;
     s.active = false;
@@ -282,7 +286,7 @@ export class Game {
     const total = this.stations.length;
     st.setDay((this.finished / total) * 2, 3);
     // the grandparents come after the first three jobs, the others later; everyone else arrives at dinner
-    const guest = [1, 2, 3, 5].includes(this.finished) ? this.guests.filter((g) => !g.arrived)[0] : undefined;
+    const guest = [1, 2, 3, 4, 5, 6].includes(this.finished) ? this.guests.filter((g) => !g.arrived)[0] : undefined;
     if (guest) await this.guestArrives(guest);
     else {
       for (const g of this.guests) if (g.arrived) g.cheer();
@@ -336,7 +340,7 @@ export class Game {
     const seatPos = this.kitchen.socket('socket_seat_' + seat);
     const yaw = this.kitchen.socketYaw('socket_seat_' + seat);
     // walk round behind the chairs, then one big hop onto the seat
-    const side = seat === 4;
+    const side = seat === 6;
     const from0 = side ? new THREE.Vector3(seatPos.x + 0.02, 0, seatPos.z - 0.85) : new THREE.Vector3(seatPos.x - Math.sin(yaw) * 0.75, 0, seatPos.z - Math.cos(yaw) * 0.75);
     await g.hopTo(new THREE.Vector3(side ? from0.x : doorPos.x, 0, side ? doorPos.z + 0.3 : from0.z));
     await g.hopTo(from0);

@@ -74,7 +74,17 @@
     "roast_done": "The pumpkin roast is ready!",
     "dinner_bell": "Ring the dinner bell!",
     "here_lilah": "Lilah is here!",
-    "helper_hi": "Arianna is here to help!"
+    "helper_hi": "Arianna is here to help!",
+    "here_mom": "Mom is here!",
+    "here_dad": "Dad is here!",
+    "oven_open": "Open the oven!",
+    "oven_in": "Put it in!",
+    "oven_close": "Close the door!",
+    "oven_timer": "Wind the timer!",
+    "oven_out": "Take it out!",
+    "clean_tools": "Dishes in the sink!",
+    "clean_wipe": "Wipe the counter!",
+    "clean_done": "All clean!"
   },
   "spokenAs": {
     "potato_done": "Yum, so fluffy!",
@@ -442,6 +452,66 @@
         "duration": 1.4,
         "bytes": 8976,
         "hash": "731a99839224"
+      },
+      "here_mom": {
+        "file": "af_heart/here_mom.mp3",
+        "duration": 0.91,
+        "bytes": 5952,
+        "hash": "be901e45d7fa"
+      },
+      "here_dad": {
+        "file": "af_heart/here_dad.mp3",
+        "duration": 0.85,
+        "bytes": 5664,
+        "hash": "ce42b47bc87d"
+      },
+      "oven_open": {
+        "file": "af_heart/oven_open.mp3",
+        "duration": 1.04,
+        "bytes": 6816,
+        "hash": "ea439f31b6bf"
+      },
+      "oven_in": {
+        "file": "af_heart/oven_in.mp3",
+        "duration": 0.8,
+        "bytes": 5376,
+        "hash": "9ad3b11fdd68"
+      },
+      "oven_close": {
+        "file": "af_heart/oven_close.mp3",
+        "duration": 0.97,
+        "bytes": 6384,
+        "hash": "f4f9a59307ad"
+      },
+      "oven_timer": {
+        "file": "af_heart/oven_timer.mp3",
+        "duration": 0.99,
+        "bytes": 6528,
+        "hash": "01ad58e457d4"
+      },
+      "oven_out": {
+        "file": "af_heart/oven_out.mp3",
+        "duration": 0.92,
+        "bytes": 6096,
+        "hash": "2cdd12e27cfb"
+      },
+      "clean_tools": {
+        "file": "af_heart/clean_tools.mp3",
+        "duration": 1.18,
+        "bytes": 7680,
+        "hash": "8270ebaacdd8"
+      },
+      "clean_wipe": {
+        "file": "af_heart/clean_wipe.mp3",
+        "duration": 1.11,
+        "bytes": 7248,
+        "hash": "881ec503df36"
+      },
+      "clean_done": {
+        "file": "af_heart/clean_done.mp3",
+        "duration": 0.87,
+        "bytes": 5808,
+        "hash": "2bcb29625381"
       }
     },
     "af_bella": {
@@ -804,8 +874,68 @@
         "duration": 1.34,
         "bytes": 8544,
         "hash": "1f79a50a8418"
+      },
+      "here_mom": {
+        "file": "af_bella/here_mom.mp3",
+        "duration": 0.84,
+        "bytes": 5520,
+        "hash": "ca5703e1da3b"
+      },
+      "here_dad": {
+        "file": "af_bella/here_dad.mp3",
+        "duration": 0.8,
+        "bytes": 5376,
+        "hash": "5a4577708c39"
+      },
+      "oven_open": {
+        "file": "af_bella/oven_open.mp3",
+        "duration": 0.92,
+        "bytes": 6096,
+        "hash": "a3f417a9cb5b"
+      },
+      "oven_in": {
+        "file": "af_bella/oven_in.mp3",
+        "duration": 0.69,
+        "bytes": 4656,
+        "hash": "2c809225cd83"
+      },
+      "oven_close": {
+        "file": "af_bella/oven_close.mp3",
+        "duration": 0.85,
+        "bytes": 5664,
+        "hash": "3340597eee56"
+      },
+      "oven_timer": {
+        "file": "af_bella/oven_timer.mp3",
+        "duration": 0.89,
+        "bytes": 5952,
+        "hash": "de356818c1a5"
+      },
+      "oven_out": {
+        "file": "af_bella/oven_out.mp3",
+        "duration": 0.82,
+        "bytes": 5520,
+        "hash": "6c83fd062b76"
+      },
+      "clean_tools": {
+        "file": "af_bella/clean_tools.mp3",
+        "duration": 1.13,
+        "bytes": 7392,
+        "hash": "0db3ef351f5c"
+      },
+      "clean_wipe": {
+        "file": "af_bella/clean_wipe.mp3",
+        "duration": 1.04,
+        "bytes": 6816,
+        "hash": "5a5daaf7122e"
+      },
+      "clean_done": {
+        "file": "af_bella/clean_done.mp3",
+        "duration": 0.8,
+        "bytes": 5376,
+        "hash": "880210207347"
       }
     }
   },
-  "totalBytes": 803376
+  "totalBytes": 925296
 }

@@ -52,6 +52,18 @@ export class Kitchen {
       cat: h((t) => this.tapCat(t)),
       jar: h((t) => this.tapJar(t)),
     });
+    // the kitchen timer on the stove
+    const timer = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.4), new THREE.MeshBasicMaterial({ visible: false }));
+    timer.position.copy(this.socket('socket_timer'));
+    st.scene.add(timer);
+    st.input.addMesh(timer, 'timer', { enabled: on, tap: (t) => {
+      if (this.game.timerTap) this.game.timerTap(t);
+      else {
+        audio.tick();
+        audio.ratchet(2);
+        st.particles.burst('spark', t.point, { count: 3, size: 0.04, color: 0xffd27a });
+      }
+    } });
     st.input.onPoke = (p) => {
       if (!on()) return;
       audio.tok();

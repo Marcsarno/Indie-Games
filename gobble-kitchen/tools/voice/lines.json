@@ -63,6 +63,16 @@
     "roast_done": "The pumpkin roast is ready!",
     "dinner_bell": "Ring the dinner bell!",
     "here_lilah": "Lilah is here!",
-    "helper_hi": "Arianna is here to help!"
+    "helper_hi": "Arianna is here to help!",
+    "here_mom": "Mom is here!",
+    "here_dad": "Dad is here!",
+    "oven_open": "Open the oven!",
+    "oven_in": "Put it in!",
+    "oven_close": "Close the door!",
+    "oven_timer": "Wind the timer!",
+    "oven_out": "Take it out!",
+    "clean_tools": "Dishes in the sink!",
+    "clean_wipe": "Wipe the counter!",
+    "clean_done": "All clean!"
   }
 }

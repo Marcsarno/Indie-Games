@@ -128,8 +128,8 @@ export class RoastStation extends Station {
     // ---- 3. into the oven. The timer runs by itself; tap to peek, pull it out when you like.
     const oven = this.game.oven, k = this.game.kitchen;
     await oven.load(this, roast, 'roast_bake', ['roast']);
-    await oven.slideIn(roast);
-    let t = 0, peeking = false, told = false, lastTick = 0, lastNudge = 0;
+    await oven.closeAndWind(this, roast, ['roast']);
+    let t = -0.36, peeking = false, told = false, lastTick = 0, lastNudge = 0;
     const stop = clock.onFrame((dt) => {
       if (!this.active) return;        // the timer waits while the player is elsewhere
       t = Math.min(1.45, t + dt / 6.5);
@@ -182,7 +182,7 @@ export class RoastStation extends Station {
       this.fx.burst('spark', this.worldOf(roast).add(new THREE.Vector3(0, 0.4, 0)), { count: 16, color: [0xffd27a, 0xffffff, 0xffa24a], size: 0.08 });
     }
     await wait(0.9);
-    await oven.unload(this, roast);
+    await oven.unload(this, roast, ['roast']);
 
     // ---- 4. carve: tap along the dashed lines
     for (let i = 0; i < 4; i++) st.pop(this.it('cut_' + i), 1, 0.01);

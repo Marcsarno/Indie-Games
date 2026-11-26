@@ -91,6 +91,7 @@ async function potato() {
   await tap('bowl', 5, 520);
   await sleep(700);
   await shot('potato-stirred');
+  await clean('potato');
   await sleep(2600);
   await shot('potato-flying');
   await sleep(3500);
@@ -117,6 +118,7 @@ async function cranberry() {
   await shot('cran-rain');
   await sleep(2600);
   await tap('bell');
+  await clean('cran');
   await sleep(2500);
   await shot('cran-flying');
   await sleep(3500);
@@ -127,17 +129,17 @@ async function table() {
   await pick('table');
   await sleep(1700);
   await shot('table-start');
-  await tap('plates', 3, 650);
+  await tap('plates', 4, 650);
   await shot('table-plates');
-  await tap('plates', 3, 650);
+  await tap('plates', 4, 650);
   await sleep(1500);
-  await tap('forks', 6, 650);
+  await tap('forks', 8, 650);
   await sleep(1500);
   await shot('table-forks');
   await tap('cards', 1, 400);
   await shot('table-card-reveal');
   await sleep(1300);
-  await tap('cards', 5, 1500);
+  await tap('cards', 7, 1500);
   await sleep(900);
   await shot('table-cards');
   await sleep(4300);
@@ -152,6 +154,19 @@ async function closeup(name, expr, w = 300, h = 300) {
   await page.screenshot({ path: `${out}/${String(++n).padStart(2, '0')}-${name}.png`, clip: { x, y, width: w, height: h } });
 }
 
+// clean-up after a recipe: tools into the sink, then wipe three spills
+async function clean(name) {
+  await page.waitForFunction(() => window.__game.hints.step && window.__game.hints.step.voice === 'clean_tools', null, { timeout: 60000 });
+  await sleep(600);
+  await tap('counter', 4, 900);
+  await page.waitForFunction(() => window.__game.hints.step && window.__game.hints.step.voice === 'clean_wipe', null, { timeout: 60000 });
+  await sleep(500);
+  await shot(name + '-cleaning');
+  await tap('counter', 3, 1200);
+  await sleep(400);
+  await shot(name + '-clean');
+}
+const step = async (voice) => { try { await page.waitForFunction((v) => window.__game.hints.step && window.__game.hints.step.voice === v, voice, { timeout: 60000 }); } catch (e) { console.log('STUCK waiting for', voice, 'at', await page.evaluate(() => JSON.stringify({ v: window.__game.hints.step && window.__game.hints.step.voice, st: window.__game.state, t: window.__clock.time.toFixed(1) }))); throw e; } };
 async function beans() {
   await pick('beans');
   await sleep(1700);
@@ -162,6 +177,7 @@ async function beans() {
   await tap('tub', 4, 700);
   await sleep(600);
   await shot('beans-done');
+  await clean('beans');
 }
 async function stuffing() {
   await pick('stuffing');
@@ -178,6 +194,7 @@ async function stuffing() {
   await tap('stuffbowl', 4, 700);
   await sleep(600);
   await shot('stuffing-done');
+  await clean('stuffing');
 }
 async function sweet() {
   await pick('sweet');
@@ -188,13 +205,14 @@ async function sweet() {
   await tap('bag', 6, 450);
   await sleep(1800);
   await shot('sweet-marsh');
-  await sleep(1600);
-  await tap('oven', 1, 400);
-  await sleep(1900);
+  await step('sweet_toast'); await sleep(400); await tap('oven');
+  await step('oven_in'); await sleep(300); await tap('oven');
+  await step('oven_tap'); await sleep(300);
   await shot('sweet-oven');
   await tap('oven', 3, 900);
-  await sleep(400);
   await shot('sweet-toasted');
+  await step('oven_out'); await sleep(300); await tap('oven');
+  await clean('sweet');
 }
 async function pie() {
   await pick('pie');
@@ -208,15 +226,18 @@ async function pie() {
   await tap('pie', 12, 230);
   await sleep(400);
   await shot('pie-crimped');
-  await sleep(2400);
-  await tap('oven', 1, 400);
-  await sleep(2600);
+  await step('pie_bake'); await sleep(400); await tap('oven');
+  await step('oven_in'); await sleep(300); await tap('oven');
+  await step('oven_close'); await sleep(300); await tap('oven');
+  await step('oven_timer'); await sleep(300); await tap('timer', 3, 500);
   await shot('pie-baking');
-  await sleep(6500);
-  await shot('pie-baked');
+  await step('oven_open'); await sleep(300); await tap('oven');
+  await step('oven_out'); await sleep(300); await shot('pie-baked'); await tap('oven');
+  await step('pie_cream'); await sleep(400);
   await tap('cream', 8, 300);
   await sleep(1500);
   await shot('pie-done');
+  await clean('pie');
 }
 async function roast() {
   await pick('roast');
@@ -227,20 +248,21 @@ async function roast() {
   await tap('baster', 6, 1100);
   await sleep(1400);
   await shot('roast-basted');
-  await sleep(1500);
-  await tap('oven', 1, 400);
-  await sleep(2600);
-  await tap('oven', 1, 400);       // an early peek
+  await step('roast_bake'); await sleep(400); await tap('oven');
+  await step('oven_in'); await sleep(300); await tap('oven');
+  await step('oven_close'); await sleep(300); await tap('oven');
+  await step('oven_timer'); await sleep(300); await tap('timer', 3, 500);
+  await step('roast_peek'); await sleep(900); await tap('oven');       // an early peek
   await sleep(1300);
   await shot('roast-peek');
-  await sleep(5200);
-  await tap('oven', 1, 400);       // pull it out
-  await sleep(1600);
-  await shot('roast-out');
-  await sleep(2600);
+  await page.waitForFunction(() => window.__game.kitchen.needle > 0.95, null, { timeout: 90000 });
+  await tap('oven');                                                   // pull it out
+  await step('oven_out'); await sleep(300); await shot('roast-out'); await tap('oven');
+  await step('roast_carve'); await sleep(400);
   await tap('roast', 4, 800);
   await sleep(500);
   await shot('roast-carved');
+  await clean('roast');
 }
 const recipes = { potato, cranberry, table, beans, stuffing, sweet, pie, roast };
 const afterDish = async (name) => {
@@ -267,7 +289,7 @@ if (script === 'feast' || script === 'short') {
   await tap('candle', 1, 2600, 0);
   await shot('dinner-lit');
   await closeup('faces', 'window.__game.guests[1].headWorld', 520, 300);
-  for (let i = 0; i < 5; i++) { await tap('guest', 1, 260, i); await sleep(1900); }
+  for (let i = 0; i < 7; i++) { await tap('guest', 1, 260, i); await sleep(1900); }
   await shot('served');
   await tap('gobbles');
   await sleep(4500);

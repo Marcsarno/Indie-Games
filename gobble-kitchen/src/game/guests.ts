@@ -35,11 +35,15 @@ export const GUESTS: GuestLook[] = [
     extras: [{ name: 'acc_toile' }], pitch: 265, speed: 0.11, seat: 2, voice: 'here_babcia', card: 0xf6d58e },
   { id: 'dziadziu', name: 'Dziadziu', skin: 0xecb998, shirt: 0x2f80da, lower: 0x2b4b8c, sleeves: 'short', hair: 'hair_swoop', hairColor: 0xdcc08c,
     extras: [{ name: 'acc_sunglasses' }, { name: 'acc_shirt', color: 0x2468bd }], pitch: 165, speed: 0.13, seat: 3, voice: 'here_dziadziu', card: 0x7fb8b0 },
+  { id: 'mom', name: 'Mom', skin: 0xf0c4a4, shirt: 0xfff3e2, lower: 0x6f86b8, sleeves: 'short', hair: 'hair_long', hairColor: 0xb08a5e,
+    extras: [{ name: 'acc_stripes' }], pitch: 360, speed: 0.09, seat: 4, voice: 'here_mom', card: 0xf6d58e },
+  { id: 'dad', name: 'Dad', skin: 0xd9a57e, shirt: 0x26232c, lower: 0x3b4a66, sleeves: 'short', hairColor: 0x2a2024,
+    extras: [{ name: 'hat_cap' }, { name: 'acc_beard', color: 0x2a2024 }, { name: 'acc_tee' }], pitch: 190, speed: 0.11, seat: 5, voice: 'here_dad', card: 0x7fb8b0 },
   { id: 'lilah', name: 'Lilah', skin: 0xf6d2b4, shirt: 0x9fb48c, lower: 0xb9b6b8, sleeves: 'short', hair: 'hair_wispy', hairColor: 0xe9cf96,
     pitch: 620, speed: 0.065, scale: 0.74, seat: 0, voice: 'here_lilah', card: 0xe8833a },
   // Arianna is Gobbles' helper: she is in the kitchen from the start (on the step stool) and sits down at dinner
   { id: 'arianna', name: 'Arianna', skin: 0xe9b995, shirt: 0xfffaf2, lower: 0xf07a9a, sleeves: 'short', hair: 'hair_ponytail', hairColor: 0x8a5a3a,
-    extras: [{ name: 'acc_print', color: 0x8cc4ec }, { name: 'hat_chef' }], pitch: 480, speed: 0.075, scale: 0.9, seat: 4, voice: 'helper_hi', card: 0xb23a48, helper: true },
+    extras: [{ name: 'acc_print', color: 0x8cc4ec }, { name: 'hat_chef' }], pitch: 480, speed: 0.075, scale: 0.9, seat: 6, voice: 'helper_hi', card: 0xb23a48, helper: true },
 ];
 
 /** Names a grown-up typed in the parent area (saved on this device). */

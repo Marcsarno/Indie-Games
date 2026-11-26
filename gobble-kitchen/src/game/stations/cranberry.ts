@@ -20,6 +20,7 @@ export class CranberryStation extends Station {
   private leanZ = new Spring(0, 3.1, 0.07);
   private wob: WobbleUniforms;
   private bell: THREE.Object3D;
+  private plated = false;
   private wobbles = 0;
   private bellShown = false;
   private raining = false;
@@ -50,7 +51,7 @@ export class CranberryStation extends Station {
   dish() {
     // the log rides on its plate
     const plate = this.it('cran_plate'), log = this.it('food_log');
-    if (log.parent !== plate && this.done) {
+    if (log.parent !== plate && this.plated) {
       plate.attach(log);
       this.stage.dropShadow(log);
     }
@@ -65,6 +66,9 @@ export class CranberryStation extends Station {
     await this.open();
     await this.schlorp();
     await this.wobble();
+    // the log belongs to its plate from here on (so clean-up leaves it alone)
+    this.plated = true;
+    this.dish();
   }
 
   // ------------------------------------------------------------------ 1. open the can

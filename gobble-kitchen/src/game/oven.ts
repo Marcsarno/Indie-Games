@@ -30,18 +30,56 @@ export class Oven {
     audio.whoosh();
     await arcTo(dish, hover, 0.5, 0.8);
     const stop = clock.onFrame(() => (dish.position.y = hover.y + Math.sin(clock.time * 3) * 0.03));
-    await s.ovenStep(voice, hits);
-    stop();
-    st.setShadowGround(dish, shelf.y - 0.01);
-    await k.setOvenDoor(1, 0.4);
+    const door = () => k.n('oven_door');
+    // 1. open the door (Gobbles panics, as always)
+    await s.extStep({ voice, target: door, hits, ext: ['oven'], need: 1, act: () => {} });
+    await k.setOvenDoor(1, 0.45);
     k.setOvenGlow(1);
     gobbles.panic().then((name) => {
       if (name) this.game.secret(name, gobbles.headWorld);
     });
     st.particles.burst('puff', k.socket('socket_oven'), { count: 6, color: 0xffd9a8, size: 0.12, dir: new THREE.Vector3(0, 0.2, 0.5) });
-    await arcTo(dish, shelf, 0.3, 0.45);
+    await wait(0.5);
+    // 2. put the dish on the rack
+    await s.extStep({ voice: 'oven_in', target: () => dish, hits, ext: ['oven'], need: 1, act: () => {} });
+    stop();
+    st.setShadowGround(dish, shelf.y - 0.01);
+    await arcTo(dish, shelf, 0.3, 0.5);
     st.squash(dish, -4);
     audio.clink(0.6);
+    await wait(0.3);
+  }
+
+  /** The player closes the door (the dish slides in) and winds the timer with three taps. */
+  async closeAndWind(s: Station, dish: THREE.Object3D, hits: string[]) {
+    const { stage: st, kitchen: k } = this.game;
+    // a tap on the dish counts too: it sits right in front of the door
+    await s.extStep({ voice: 'oven_close', target: () => k.n('oven_door'), hits, ext: ['oven'], need: 1, act: () => {} });
+    await this.slideIn(dish);
+    await wait(0.3);
+    await s.extStep({
+      voice: 'oven_timer',
+      target: () => k.n('timer_needle'),
+      hits: [],
+      ext: ['timer'],
+      need: 3,
+      act: async (i) => {
+        audio.ratchet(3);
+        audio.note(i, 0.18);
+        const from = k.needle, to = -0.12 * (i + 1);
+        await clock.tween(0.22, (q) => k.setNeedle(from + (to - from) * q), ease.outBack);
+        st.particles.burst('spark', k.socket('socket_timer'), { count: 3, size: 0.04, color: 0xffd27a });
+      },
+    });
+    audio.ding(1.2, 0.2);
+    await wait(0.3);
+  }
+
+  /** The player opens the door and the dish comes out onto it, steaming. */
+  async openAndOut(s: Station, dish: THREE.Object3D, hits: string[]) {
+    const k = this.game.kitchen;
+    await s.extStep({ voice: 'oven_open', target: () => k.n('oven_door'), hits, ext: ['oven'], need: 1, act: () => {} });
+    await this.slideOut(dish);
   }
 
   /** Push the dish inside and shut the door. */
@@ -88,8 +126,9 @@ export class Oven {
   }
 
   /** Carry the dish back to its place on the counter, camera and Gobbles too. */
-  async unload(s: Station, dish: THREE.Object3D) {
+  async unload(s: Station, dish: THREE.Object3D, hits: string[]) {
     const { stage: st } = this.game;
+    await s.extStep({ voice: 'oven_out', target: () => dish, hits, ext: ['oven'], need: 1, act: () => {} });
     const home = this.homes.get(dish)!;
     this.homes.delete(dish);
     s.pose = home.pose;

@@ -6,7 +6,7 @@ from mathutils import Vector
 from lib import shapes as sh, common as C, palette as P
 
 TOP = 0.8
-SEATS = 6
+SEATS = 8
 
 
 def plate_piece():
@@ -67,7 +67,7 @@ def build(out, preview):
     cx = 0.44
     objs.append(C.make('card_rack', sh.box(0.34, 0.22, 0.04, r=0.015, col='wood_dark').at(0, 0, 0.02), loc=(cx, 0.02, TOP), parent=root, shade='toon'))
     for i in range(SEATS):
-        o = C.make('card_%d' % i, sh.box(0.26, 0.016, 0.32, r=0.012, seg=2, col='cream').at(0, 0, 0.16), loc=(cx, -0.07 + 0.034 * i, TOP + 0.03), rot=(-8, 0, 0), parent=root, shade='toon', outline=True)
+        o = C.make('card_%d' % i, sh.box(0.26, 0.016, 0.32, r=0.012, seg=2, col='cream').at(0, 0, 0.16), loc=(cx, -0.08 + 0.026 * i, TOP + 0.03), rot=(-8, 0, 0), parent=root, shade='toon', outline=True)
         objs.append(o)
         objs.append(C.empty('card_%d_face' % i, loc=(0, -0.0095, 0.16), parent=o))
     objs.append(C.hit('hit_cards', (cx, 0.02, TOP + 0.2), (0.5, 0.45, 0.5), parent=root))

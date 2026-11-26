@@ -4,7 +4,8 @@
 // tucks away if the player switches to another dish, and is cleared when its dish goes to the table.
 import * as THREE from 'three';
 import { instantiate, node } from '../core/assets';
-import { clock } from '../core/tween';
+import { clock, tween, wait, ease, rand } from '../core/tween';
+import { arcTo, moveTo } from '../fx/motion';
 import { audio } from '../core/audio';
 import type { TapInfo, DragInfo } from '../core/input';
 import type { StepDef, DemoKind } from './hints';
@@ -15,7 +16,7 @@ export interface TapStep {
   target: () => THREE.Object3D;
   demo?: DemoKind;
   hits: string[];                 // hit_* names (without the prefix) that count
-  ext?: 'oven'[];                 // kitchen things that also count
+  ext?: ('oven' | 'timer')[];     // kitchen things that also count
   need: number;                   // taps to finish the step
   act: (i: number, t: TapInfo | null) => Promise<void> | void;
   gate?: boolean;                 // ignore taps while act() is still running (default true)
@@ -106,9 +107,9 @@ export abstract class Station {
   get counterY() {
     return this.top;
   }
-  /** One tap on the oven (or on the dish waiting in front of it). */
-  ovenStep(voice: string, hits: string[]) {
-    return this.tapStep({ voice, target: () => this.game.kitchen.n('oven_door'), hits, ext: ['oven'], need: 1, act: () => {} });
+  /** A step that also listens to kitchen things (the oven, the timer). */
+  extStep(o: TapStep) {
+    return this.tapStep(o);
   }
   /** Boxes that pick this station in the overview: [size, centre offset from the station root]. */
   pickBoxes(): [THREE.Vector3, THREE.Vector3][] {
@@ -239,8 +240,13 @@ export abstract class Station {
       tap.oven = (t) => fire(t);
       this.game.ovenTap = (t) => this.externalTap('oven', t);
     }
+    if (o.ext?.includes('timer')) {
+      tap.timer = (t) => fire(t);
+      this.game.timerTap = (t) => this.externalTap('timer', t);
+    }
     await this.step({ voice: o.voice, target: o.target, demo: o.demo ?? 'tap', tap, drag: drags });
     if (o.ext?.includes('oven')) this.game.ovenTap = null;
+    if (o.ext?.includes('timer')) this.game.timerTap = null;
   }
 
   /** A tap on something outside the kit (the oven) that the current step may care about. */
@@ -251,6 +257,105 @@ export abstract class Station {
       this.game.hints.activity();
       h(t);
     }
+  }
+
+  /**
+   * Clean-up, after the cooking and before the dish goes to the table: the tools go into the sink
+   * a few at a time, then a sponge wipes the spills off the counter.
+   */
+  async cleanup() {
+    const st = this.stage, dish = this.dish();
+    const hasMesh = (o: THREE.Object3D) => {
+      let m = false;
+      o.traverse((c) => { if ((c as THREE.Mesh).isMesh && !c.userData.hitName) m = true; });
+      return m;
+    };
+    const items = this.root.children.filter((c) => c !== dish && c.visible && c.scale.x > 0.05 && !/^(cam_|socket_|hit_)/.test(c.name) && hasMesh(c));
+    const hits: string[] = ['counter'];
+    this.root.traverse((o) => { if (o.userData.hitName) hits.push(String(o.userData.hitName).replace(/^hit_/, '')); });
+    // one big tap area over the whole counter
+    const box = new THREE.Mesh(new THREE.BoxGeometry(3.3, 0.5, 1.3), new THREE.MeshBasicMaterial({ visible: false }));
+    box.position.set(0, 0.2, 0);
+    this.root.add(box);
+    st.input.addMesh(box, 'counter', { enabled: () => this.active, tap: (t) => this.onTap('counter', t), drag: (d) => this.onDrag('counter', d) });
+    const sinkWorld = this.game.kitchen.socket('socket_sink');
+    const sink = this.root.worldToLocal(sinkWorld.clone());
+    const groups: THREE.Object3D[][] = [];
+    const n = Math.min(4, items.length);
+    items.forEach((it, i) => (groups[i % n] ??= []).push(it));
+    if (n > 0) {
+      await this.tapStep({
+        voice: 'clean_tools',
+        target: () => groups.flat().find((o) => o.visible && o.scale.x > 0.05) ?? dish,
+        hits,
+        need: n,
+        gate: false,
+        act: async (i) => {
+          audio.whoosh();
+          groups[i].forEach((it, j) => {
+            st.dropShadow(it);
+            wait(j * 0.08).then(() => arcTo(it, sink, 0.9, 0.6, { spin: new THREE.Vector3(rand(-4, 4), rand(-4, 4), rand(-4, 4)), e: ease.inOut })).then(() => {
+              st.hide(it);
+              audio.clink(0.6 + Math.random() * 0.6);
+              audio.bubble();
+              st.particles.burst('bubble', sinkWorld, { count: 4, color: [0xcfeef0, 0xffffff, 0x9fd4cb], size: 0.08 });
+            });
+          });
+          audio.note(i, 0.2);
+          await wait(0.25);
+        },
+      });
+      await wait(0.7);
+    }
+    // spills and the sponge
+    const spotMat = new THREE.MeshLambertMaterial({ color: this.servingColor });
+    const spots = [new THREE.Vector3(-0.55, 0.012, 0.2), new THREE.Vector3(0.1, 0.012, 0.36), new THREE.Vector3(0.62, 0.012, 0.08)].map((p) => {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.11, 14, 8), spotMat);
+      m.scale.set(1 + Math.random() * 0.5, 0.08, 0.8 + Math.random() * 0.4);
+      m.position.copy(p);
+      m.raycast = () => {};
+      this.root.add(m);
+      return m;
+    });
+    const sponge = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.07, 0.15), new THREE.MeshLambertMaterial({ color: 0xf6d58e }));
+    const top = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.025, 0.15), new THREE.MeshLambertMaterial({ color: 0x4f7a5a }));
+    top.position.y = 0.047;
+    body.raycast = top.raycast = () => {};
+    sponge.add(body, top);
+    sponge.position.set(-0.9, 0.3, 0.45);
+    this.root.add(sponge);
+    st.pop(sponge, 1, 0.01);
+    audio.pop(1.2);
+    await this.tapStep({
+      voice: 'clean_wipe',
+      target: () => sponge,
+      demo: 'swipe',
+      hits,
+      need: spots.length,
+      gesture: 'travel',
+      act: async (i) => {
+        const p = spots[i].position;
+        await moveTo(sponge, new THREE.Vector3(p.x, 0.06, p.z), 0.18);
+        audio.noise({ type: 'bandpass', freq: 1500, to: 2600, dur: 0.3, vol: 0.14, q: 3 });
+        const s0 = spots[i].scale.clone();
+        await tween(0.42, (q) => {
+          sponge.position.x = p.x + Math.sin(q * Math.PI * 5) * 0.09;
+          spots[i].scale.copy(s0).multiplyScalar(Math.max(0.001, 1 - q));
+        }, ease.linear);
+        spots[i].visible = false;
+        audio.note(i * 2, 0.22);
+        st.particles.burst('spark', this.world(p).add(new THREE.Vector3(0, 0.08, 0)), { count: 6, size: 0.05, color: [0xffffff, 0xcfeef0, 0xffd27a] });
+        st.particles.burst('bubble', this.world(p), { count: 3, color: [0xffffff, 0xcfeef0], size: 0.05 });
+      },
+    });
+    st.pop(sponge, 0);
+    this.root.remove(box);
+    st.input.remove(box);
+    audio.say('clean_done');
+    audio.sparkle();
+    this.gobbles.cheer();
+    await wait(1.1);
   }
 
   private onTap(name: string, t: TapInfo) {
