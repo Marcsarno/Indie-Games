@@ -38,7 +38,7 @@ export class CranberryStation extends Station {
     this.bell.position.copy(this.at('socket_bell'));
     this.root.add(this.bell);
     st.hide(this.bell);
-    st.input.add(this.bell, { bell: { enabled: () => this.active, tap: (t) => this.tapBell(t) } });
+    st.input.add(this.bell, { bell: { enabled: () => this.active && this.bell.visible, tap: (t) => this.tapBell(t) } });
     st.shadow(this.it('can'), 0.13, this.top);
     st.shadow(this.it('cran_plate'), 0.3, this.top);
     clock.onFrame((dt) => {

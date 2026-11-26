@@ -279,6 +279,26 @@ class AudioSys {
   creak() { this.tone({ freq: 180, to: 260, dur: 0.32, vol: 0.3, type: 'sawtooth', lp: 700, vibrato: [22, 18] }); }
   brr() { this.noise({ type: 'bandpass', freq: 700, to: 1400, dur: 0.35, vol: 0.1, attack: 0.1 }); this.sparkle(); }
 
+  snap(i = 0) {
+    this.noise({ type: 'highpass', freq: 2600, dur: 0.05, vol: 0.32 });
+    this.tone({ freq: 900, to: 420, dur: 0.06, vol: 0.2, type: 'triangle' });
+    this.note(i, 0.14);
+  }
+  chop() {
+    this.noise({ type: 'bandpass', freq: 1800, dur: 0.05, vol: 0.3, q: 0.8 });
+    this.tone({ freq: 160, to: 90, dur: 0.09, vol: 0.4 });
+  }
+  crunch() {
+    for (let k = 0; k < 4; k++) this.noise({ type: 'highpass', freq: 1900 + k * 300, dur: 0.035, vol: 0.2, when: k * 0.04 });
+  }
+  glug(i = 0) {
+    for (let k = 0; k < 3; k++) this.tone({ freq: 240 + i * 40 + k * 35, to: 130 + k * 20, dur: 0.11, vol: 0.3, when: k * 0.1 });
+    this.noise({ type: 'lowpass', freq: 600, dur: 0.3, vol: 0.14 });
+  }
+  pssh() { this.noise({ type: 'highpass', freq: 3200, to: 5200, dur: 0.22, vol: 0.2, attack: 0.02 }); }
+  tick() { this.tone({ freq: 1500, dur: 0.03, vol: 0.08, type: 'square', lp: 3000 }); }
+  rumble() { this.tone({ freq: 95, to: 120, dur: 0.3, vol: 0.3, type: 'triangle', trem: [22, 0.6] }); this.noise({ type: 'lowpass', freq: 500, dur: 0.28, vol: 0.12 }); }
+
   /** Animalese-style babble: short pitched blips, one per syllable. */
   babble(pitch = 300, syllables = 4, speed = 0.085, vol = 0.2, gobble = false) {
     for (let k = 0; k < syllables; k++) {

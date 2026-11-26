@@ -13,6 +13,7 @@ export class Kitchen {
   private potTaps: { i: number; t: number }[] = [];
   private ovenOpen = false;
   private ovenBusy = false;
+  private needleK = 0;
   private fridgeBusy = false;
   private catTaps = 0;
   private steamT = 0;
@@ -37,6 +38,7 @@ export class Kitchen {
     this.skyMats = [meshOf(this.n('window_sky')).material as THREE.MeshBasicMaterial, meshOf(this.n('door_outside')).material as THREE.MeshBasicMaterial];
     this.ovenMat = meshOf(this.n('oven_window')).material as THREE.MeshBasicMaterial;
     this.cloudX = this.n('window_cloud').position.x;
+    this.setNeedle(0);
     const on = () => this.game.state !== 'title';
     const h = (tap: (t: TapInfo) => void) => ({ enabled: on, tap });
     st.input.add(this.root, {
@@ -44,7 +46,7 @@ export class Kitchen {
       pot_1: h((t) => this.tapPot(1, t)),
       pot_2: h((t) => this.tapPot(2, t)),
       faucet: h((t) => this.tapFaucet()),
-      oven: h(() => this.tapOven()),
+      oven: h((t) => this.tapOven(t)),
       fridge: h(() => this.tapFridge()),
       window: h((t) => this.tapWindow(t)),
       cat: h((t) => this.tapCat(t)),
@@ -99,7 +101,35 @@ export class Kitchen {
     });
   }
 
-  private async tapOven() {
+  // ---- the oven as a cooking tool (used by the recipes through game/oven.ts)
+  /** Swing the oven door: 0 closed .. 1 fully down (it becomes a shelf). */
+  setOvenDoor(open: number, dur = 0.35) {
+    const door = this.n('oven_door');
+    const from = door.rotation.x, to = open * 1.5;
+    this.ovenOpen = open > 0.05;
+    audio.creak();
+    return tween(dur, (k) => (door.rotation.x = lerp(from, to, k)), open > 0 ? ease.outBack : ease.inOut).then(() => {
+      if (open === 0) audio.thud();
+    });
+  }
+  setOvenGlow(k: number, dur = 0.4) {
+    const from = this.ovenGlow;
+    return tween(dur, (q) => (this.ovenGlow = lerp(from, k, q)), ease.inOut);
+  }
+  /** Kitchen timer needle: 0 start, 1 = the green "done" zone, past 1.25 = extra crispy. */
+  setNeedle(k: number) {
+    this.needleK = k;
+    this.n('timer_needle').rotation.z = lerp(2.1, -1.36, k);
+  }
+  get needle() {
+    return this.needleK;
+  }
+
+  private async tapOven(t: TapInfo) {
+    if (this.game.ovenTap) {
+      this.game.ovenTap(t);
+      return;
+    }
     if (this.ovenBusy) return;
     this.ovenBusy = true;
     const door = this.n('oven_door');

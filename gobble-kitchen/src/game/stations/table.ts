@@ -17,12 +17,14 @@ export class TableStation extends Station {
   doneVoice = 'table_done';
   servingColor = 0xffffff;
   private ring: THREE.Object3D;
+  private filled: Record<string, boolean[]> = { plate: Array(SEATS).fill(false), fork: Array(SEATS).fill(false), card: Array(SEATS).fill(false) };
   private ringAt: THREE.Vector3 | null = null;
 
   constructor(game: Game) {
-    super(game, 'table', 'table');
+    super(game, 'table', 'table', 'socket_station_table');
     this.pose = 'settable';
     this.flies = false;
+    this.island = false;
     this.ring = part('props', 'slot_ring');
     game.stage.scene.add(this.ring);
     game.stage.hide(this.ring);
@@ -53,14 +55,11 @@ export class TableStation extends Station {
     return this.game.kitchen.socket('socket_gobbles_table');
   }
   pickBoxes(): [THREE.Vector3, THREE.Vector3][] {
-    const table = this.game.kitchen.socket('socket_dish_2').sub(this.root.position);
+    const table = this.game.kitchen.socket('socket_table_centre').sub(this.root.position);
     return [
       [new THREE.Vector3(1.5, 1.3, 0.8), new THREE.Vector3(0, 0.65, 0)],
       [new THREE.Vector3(3.1, 0.5, 1.3), new THREE.Vector3(table.x, TABLE_Y + 0.1, table.z - 0.15)],
     ];
-  }
-  arrowHeight() {
-    return 1.75;
   }
   voices() {
     return ['table_forks', 'table_cards', 'table_done'];
@@ -83,6 +82,37 @@ export class TableStation extends Station {
     this.stage.pop(this.ring, 1, 0.01);
   }
 
+  /** Dinner was called before the table was set: everything left on the cart pops into place by itself. */
+  async finishNow() {
+    if (this.done) return;
+    const st = this.stage;
+    const kitchen = this.game.kitchen;
+    this.done = true;
+    this.active = false;
+    this.showRing(null, 0.1);
+    let n = 0;
+    for (const kind of ['plate', 'fork', 'card'] as const) {
+      const waiting: THREE.Object3D[] = [];
+      for (let i = 0; i < SEATS; i++) {
+        const o = this.it(`${kind}_${i}`);
+        if (kind === 'card' ? !this.filled.card[i] : o.parent === this.root) waiting.push(o);
+      }
+      for (let slot = 0; slot < SEATS; slot++) {
+        if (this.filled[kind][slot]) continue;
+        const o = kind === 'card' ? this.it('card_' + slot) : waiting.shift();
+        if (!o) continue;
+        this.filled[kind][slot] = true;
+        st.scene.attach(o);
+        o.position.copy(kitchen.socket(`socket_${kind}_${slot}`));
+        o.quaternion.setFromEuler(new THREE.Euler(kind === 'card' ? -0.2 : 0, kind === 'card' ? 0 : kitchen.socketYaw(`socket_${kind}_${slot}`), 0));
+        st.pop(o, 1, 0.01);
+        if (n++ % 3 === 0) audio.pop(0.9 + n * 0.03, 0.15);
+        await wait(0.05);
+      }
+    }
+    audio.jingle();
+  }
+
   // ------------------------------------------------------------------ plates and forks
   private async place(kind: 'plate' | 'fork', hit: string, voice: string, size: number, sound: (i: number) => void) {
     const st = this.stage;
@@ -101,6 +131,7 @@ export class TableStation extends Station {
     };
     const land = async (o: THREE.Object3D, slot: number, height: number) => {
       slots[slot].free = false;
+      this.filled[kind][slot] = true;
       placed++;
       mark();
       st.scene.attach(o);
@@ -191,6 +222,7 @@ export class TableStation extends Station {
       if (busy || next >= SEATS) return;
       busy = true;
       const i = next++;
+      this.filled.card[i] = true;
       const card = this.it('card_' + i);
       const slot = kitchen.socket(`socket_card_${i}`);
       mark();

@@ -135,6 +135,24 @@ def hit(name, loc, size, parent=None, props=None):
     return ob
 
 
+def station_frame(objs, root, name, target=(-0.05, 0.06, 0.2), fit=(2.25, 1.4), gobbles=(-0.8, 0.38)):
+    """Camera pose and Gobbles' spot for a recipe that is cooked on the island (station space)."""
+    objs.append(empty('cam_%s_target' % name, loc=target, parent=root))
+    objs.append(empty('cam_%s' % name, loc=(target[0] - 0.6, target[1] - 1.9, target[2] + 1.45), parent=root, props={'fit_w': fit[0], 'fit_h': fit[1]}))
+    objs.append(empty('socket_gobbles', loc=(gobbles[0], gobbles[1], 0), parent=root))
+
+
+def bake_each(objs, static=(), dist=0.12, strength=0.6):
+    """AO for a recipe kit: static pieces together (with the counter as floor), everything else on its own
+    so nothing keeps the shadow of a thing that moves away."""
+    static = [o for o in static]
+    if static:
+        bake_ao(static, floor_z=0.0, dist=0.3, strength=0.9)
+    for o in objs:
+        if o.type == 'MESH' and not o.get('hit') and o not in static and o.get('shade') != 'glow':
+            bake_ao([o], dist=dist, strength=strength)
+
+
 # ------------------------------------------------------------------------------- baked AO
 
 def _hemi_dirs(n):

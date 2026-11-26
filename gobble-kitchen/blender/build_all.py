@@ -22,7 +22,7 @@ def arg(name, default=None):
 OUT = os.path.abspath(arg('--out', 'build/raw'))
 ONLY = arg('--only')
 PREVIEW = '--no-preview' not in argv
-ASSETS = ['potato', 'cranberry', 'table', 'props', 'gobbles', 'guest', 'kitchen']
+ASSETS = ['potato', 'cranberry', 'beans', 'stuffing', 'sweet', 'pie', 'roast', 'table', 'props', 'gobbles', 'guest', 'kitchen']
 
 from lib import palette, common  # noqa: E402
 

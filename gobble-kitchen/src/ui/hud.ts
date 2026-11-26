@@ -11,6 +11,19 @@ const ICON = {
   gear: '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="15" fill="none" stroke="currentColor" stroke-width="9"/><g stroke="currentColor" stroke-width="11" stroke-linecap="round"><path d="M50 12 V22"/><path d="M50 78 V88"/><path d="M12 50 H22"/><path d="M78 50 H88"/><path d="M23 23 L30 30"/><path d="M70 70 L77 77"/><path d="M23 77 L30 70"/><path d="M70 30 L77 23"/></g></svg>',
 };
 
+// pictures for the menu of jobs (no reading needed)
+const DISH: Record<string, string> = {
+  potato: '<svg viewBox="0 0 100 100"><ellipse cx="50" cy="44" rx="34" ry="22" fill="#FBEDBE"/><path d="M12 48 H88 C88 74 72 86 50 86 C28 86 12 74 12 48 Z" fill="#FFF4E0"/><path d="M15 58 H85 C84 64 82 68 79 72 H21 C18 68 16 64 15 58 Z" fill="#B23A48"/><rect x="42" y="24" width="18" height="12" rx="3" fill="#F6D58E" transform="rotate(-12 51 30)"/></svg>',
+  cranberry: '<svg viewBox="0 0 100 100"><ellipse cx="50" cy="76" rx="42" ry="14" fill="#FFF4E0"/><ellipse cx="50" cy="76" rx="42" ry="14" fill="none" stroke="#8FAE7E" stroke-width="5"/><rect x="30" y="20" width="40" height="56" rx="9" fill="#C22F4B"/><path d="M30 38 H70 M30 52 H70" stroke="#8E2238" stroke-width="4"/></svg>',
+  table: '<svg viewBox="0 0 100 100"><circle cx="56" cy="50" r="30" fill="#FFF9EE"/><circle cx="56" cy="50" r="30" fill="none" stroke="#8FAE7E" stroke-width="6"/><circle cx="56" cy="50" r="15" fill="none" stroke="#E9DCC6" stroke-width="3"/><path d="M14 22 V44 M8 22 V38 Q8 46 14 46 Q20 46 20 38 V22 M14 46 V82" fill="none" stroke="#8E848C" stroke-width="5" stroke-linecap="round"/></svg>',
+  beans: '<svg viewBox="0 0 100 100"><g fill="none" stroke-linecap="round" stroke-width="13"><path d="M16 34 Q50 20 84 30" stroke="#4E8238"/><path d="M14 54 Q50 44 86 52" stroke="#6FA24A"/><path d="M18 74 Q50 66 82 74" stroke="#4E8238"/></g><path d="M50 22 V84" stroke="#FFF4E0" stroke-width="4" stroke-dasharray="6 7"/></svg>',
+  stuffing: '<svg viewBox="0 0 100 100"><path d="M10 48 H90 C90 74 74 88 50 88 C26 88 10 74 10 48 Z" fill="#FFF4E0"/><path d="M13 58 H87 C86 64 84 68 81 72 H19 C16 68 14 64 13 58 Z" fill="#8FAE7E"/><g fill="#F1D49B" stroke="#D69A4E" stroke-width="3"><rect x="24" y="30" width="18" height="18" rx="3" transform="rotate(-10 33 39)"/><rect x="44" y="22" width="18" height="18" rx="3" transform="rotate(8 53 31)"/><rect x="60" y="32" width="18" height="18" rx="3" transform="rotate(-6 69 41)"/></g><circle cx="44" cy="46" r="3" fill="#5C9A4C"/><circle cx="62" cy="26" r="3" fill="#5C9A4C"/></svg>',
+  sweet: '<svg viewBox="0 0 100 100"><rect x="8" y="34" width="84" height="44" rx="10" fill="#B23A48"/><rect x="16" y="28" width="68" height="36" rx="8" fill="#EE8E3C"/><g fill="#FFFDF6" stroke="#E9DCC6" stroke-width="2"><circle cx="30" cy="40" r="8"/><circle cx="50" cy="38" r="8"/><circle cx="70" cy="40" r="8"/><circle cx="40" cy="54" r="8"/><circle cx="60" cy="54" r="8"/></g></svg>',
+  pie: '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#D9A066"/><circle cx="50" cy="50" r="40" fill="none" stroke="#C68B59" stroke-width="5" stroke-dasharray="9 6"/><circle cx="50" cy="50" r="29" fill="#D8762B"/><path d="M50 34 C60 36 64 46 58 54 C54 60 44 60 40 54 C36 46 40 36 50 34 Z" fill="#FFFDF6"/></svg>',
+  roast: '<svg viewBox="0 0 100 100"><rect x="8" y="70" width="84" height="16" rx="6" fill="#8E848C"/><ellipse cx="50" cy="56" rx="32" ry="24" fill="#E8833A"/><path d="M40 34 Q38 56 42 78 M60 34 Q62 56 58 78" stroke="#B8673A" stroke-width="4" fill="none"/><ellipse cx="50" cy="34" rx="18" ry="8" fill="#F1D49B"/><path d="M14 44 L26 66" stroke="#F6D58E" stroke-width="13" stroke-linecap="round"/><path d="M86 44 L74 66" stroke="#F6D58E" stroke-width="13" stroke-linecap="round"/><circle cx="12" cy="40" r="7" fill="#fff"/><circle cx="88" cy="40" r="7" fill="#fff"/></svg>',
+  bell: '<svg viewBox="0 0 100 100"><path d="M50 18 C28 18 22 40 22 58 L14 72 H86 L78 58 C78 40 72 18 50 18 Z" fill="#F2B33D"/><rect x="43" y="8" width="14" height="14" rx="6" fill="#B8673A"/><circle cx="50" cy="80" r="9" fill="#B8673A"/><path d="M34 34 Q30 46 30 58" stroke="#FFF4E0" stroke-width="5" fill="none" stroke-linecap="round"/></svg>',
+};
+
 // sticker pictures: found ones are coloured, the rest stay silhouettes (no counters, no percentages)
 const STICKERS: Record<string, string> = {
   jelly_rain: '<svg viewBox="0 0 100 100"><path d="M50 10 C70 40 82 52 82 66 A32 32 0 0 1 18 66 C18 52 30 40 50 10 Z" fill="#C22F4B"/><circle cx="38" cy="62" r="8" fill="#fff" opacity=".55"/></svg>',
@@ -48,6 +61,9 @@ export class Hud {
   onPlay = () => {};
   onHome = () => {};
   onAgain = () => {};
+  onPick: (id: string) => void = () => {};
+  onBell = () => {};
+  private menu: HTMLElement;
 
   constructor(container: HTMLElement) {
     this.root = el('div', 'hud');
@@ -87,6 +103,9 @@ export class Hud {
     this.againBtn.setAttribute('aria-label', 'Cook again');
     this.againBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); this.onAgain(); });
     this.root.append(this.homeBtn, this.bookBtn, this.againBtn);
+    // ---- the picture menu of jobs (overview only)
+    this.menu = el('div', 'menu hidden');
+    this.root.appendChild(this.menu);
 
     // ---- sticker book
     this.book = el('div', 'book hidden');
@@ -175,6 +194,36 @@ export class Hud {
     this.cardTimer = window.setTimeout(() => this.cardEl.classList.add('hidden'), 1250);
   }
   private cardTimer = 0;
+
+  /** Show the jobs on offer (and the dinner bell once it is earned). An empty list hides the menu. */
+  setMenu(items: { id: string; started: boolean }[], bell: boolean) {
+    this.menu.innerHTML = '';
+    this.menu.classList.toggle('hidden', items.length === 0 && !bell);
+    for (const it of items) {
+      const b = el('button', 'kid dishbtn' + (it.started ? ' started' : ''), DISH[it.id] ?? '');
+      b.setAttribute('aria-label', it.id);
+      b.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        this.onPick(it.id);
+      });
+      this.menu.appendChild(b);
+    }
+    if (bell) {
+      const b = el('button', 'kid dishbtn bellbtn', DISH.bell);
+      b.setAttribute('aria-label', 'Dinner bell');
+      b.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        this.onBell();
+      });
+      this.menu.appendChild(b);
+    }
+  }
+  /** A gentle wave through the menu when the player has been idle. */
+  pulseMenu() {
+    this.menu.classList.remove('wave');
+    void this.menu.offsetWidth;
+    this.menu.classList.add('wave');
+  }
 
   showHome(on: boolean) {
     this.homeBtn.classList.toggle('hidden', !on);

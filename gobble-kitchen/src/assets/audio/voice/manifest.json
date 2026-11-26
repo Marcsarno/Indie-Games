@@ -11,8 +11,7 @@
   },
   "voices": [
     "af_heart",
-    "af_bella",
-    "bf_emma"
+    "af_bella"
   ],
   "substitutions": {},
   "lines": {
@@ -56,7 +55,24 @@
     "here_dziadziu": "Dziadziu is here!",
     "here_friends": "Everybody is here!",
     "table_forks": "Now the forks!",
-    "table_done": "The table is ready!"
+    "table_done": "The table is ready!",
+    "beans_snap": "Snap the beans!",
+    "beans_top": "Sprinkle the crunchies!",
+    "beans_done": "Snappy green beans!",
+    "stuff_bread": "Chop the bread!",
+    "stuff_celery": "Chop the celery!",
+    "stuff_season": "Shake the herbs!",
+    "stuff_toss": "Toss it all up!",
+    "stuff_done": "Yummy stuffing!",
+    "sweet_scoop": "Scoop the sweet potatoes!",
+    "sweet_marsh": "Add the marshmallows!",
+    "sweet_toast": "Toast them golden!",
+    "sweet_done": "So gooey!",
+    "oven_tap": "Tap the oven!",
+    "pie_done": "What a pretty pie!",
+    "roast_bake": "Into the oven!",
+    "roast_done": "The pumpkin roast is ready!",
+    "dinner_bell": "Ring the dinner bell!"
   },
   "spokenAs": {
     "potato_done": "Yum, so fluffy!",
@@ -310,6 +326,108 @@
         "duration": 1.22,
         "bytes": 7824,
         "hash": "80b80e826944"
+      },
+      "beans_snap": {
+        "file": "af_heart/beans_snap.mp3",
+        "duration": 1.1,
+        "bytes": 7104,
+        "hash": "d3ea902c36dc"
+      },
+      "beans_top": {
+        "file": "af_heart/beans_top.mp3",
+        "duration": 1.33,
+        "bytes": 8544,
+        "hash": "a89bf1cb2318"
+      },
+      "beans_done": {
+        "file": "af_heart/beans_done.mp3",
+        "duration": 1.37,
+        "bytes": 8832,
+        "hash": "157e90ce0c21"
+      },
+      "stuff_bread": {
+        "file": "af_heart/stuff_bread.mp3",
+        "duration": 0.97,
+        "bytes": 6384,
+        "hash": "2ed8dd275deb"
+      },
+      "stuff_celery": {
+        "file": "af_heart/stuff_celery.mp3",
+        "duration": 1.07,
+        "bytes": 6960,
+        "hash": "bb9045537cac"
+      },
+      "stuff_season": {
+        "file": "af_heart/stuff_season.mp3",
+        "duration": 1.03,
+        "bytes": 6672,
+        "hash": "d1a16421e4e3"
+      },
+      "stuff_toss": {
+        "file": "af_heart/stuff_toss.mp3",
+        "duration": 1.02,
+        "bytes": 6672,
+        "hash": "9d630c19be90"
+      },
+      "stuff_done": {
+        "file": "af_heart/stuff_done.mp3",
+        "duration": 1.03,
+        "bytes": 6672,
+        "hash": "a06903f5bd18"
+      },
+      "sweet_scoop": {
+        "file": "af_heart/sweet_scoop.mp3",
+        "duration": 1.57,
+        "bytes": 9984,
+        "hash": "c2214fe563cf"
+      },
+      "sweet_marsh": {
+        "file": "af_heart/sweet_marsh.mp3",
+        "duration": 1.19,
+        "bytes": 7680,
+        "hash": "92fa6a8fa6fb"
+      },
+      "sweet_toast": {
+        "file": "af_heart/sweet_toast.mp3",
+        "duration": 1.2,
+        "bytes": 7680,
+        "hash": "5119c64071a1"
+      },
+      "sweet_done": {
+        "file": "af_heart/sweet_done.mp3",
+        "duration": 0.81,
+        "bytes": 5376,
+        "hash": "e73eb61cc1c1"
+      },
+      "oven_tap": {
+        "file": "af_heart/oven_tap.mp3",
+        "duration": 0.95,
+        "bytes": 6240,
+        "hash": "9ef7e3985c2c"
+      },
+      "pie_done": {
+        "file": "af_heart/pie_done.mp3",
+        "duration": 1.13,
+        "bytes": 7392,
+        "hash": "bccca7d230e3"
+      },
+      "roast_bake": {
+        "file": "af_heart/roast_bake.mp3",
+        "duration": 0.92,
+        "bytes": 6096,
+        "hash": "e6a427d01442"
+      },
+      "roast_done": {
+        "file": "af_heart/roast_done.mp3",
+        "duration": 1.61,
+        "bytes": 10272,
+        "hash": "2544ffb48367"
+      },
+      "dinner_bell": {
+        "file": "af_heart/dinner_bell.mp3",
+        "duration": 1.12,
+        "bytes": 7248,
+        "hash": "611f1b67a4fe"
       }
     },
     "af_bella": {
@@ -558,256 +676,110 @@
         "duration": 1.13,
         "bytes": 7392,
         "hash": "71f0a7e4339f"
-      }
-    },
-    "bf_emma": {
-      "welcome": {
-        "file": "bf_emma/welcome.mp3",
-        "duration": 1.44,
-        "bytes": 9120,
-        "hash": "f5e8bdd62450"
       },
-      "pick": {
-        "file": "bf_emma/pick.mp3",
-        "duration": 1.01,
-        "bytes": 6672,
-        "hash": "f0e40a8b9e33"
-      },
-      "potato_peel": {
-        "file": "bf_emma/potato_peel.mp3",
-        "duration": 1.35,
-        "bytes": 8688,
-        "hash": "ee61e69f25f8"
-      },
-      "potato_mash": {
-        "file": "bf_emma/potato_mash.mp3",
-        "duration": 1.51,
-        "bytes": 9552,
-        "hash": "1a621f3cd57b"
-      },
-      "potato_butter": {
-        "file": "bf_emma/potato_butter.mp3",
-        "duration": 1.33,
-        "bytes": 8544,
-        "hash": "2f02bb7ce3a8"
-      },
-      "potato_stir": {
-        "file": "bf_emma/potato_stir.mp3",
-        "duration": 1.27,
-        "bytes": 8112,
-        "hash": "fc9d4428ab6d"
-      },
-      "potato_done": {
-        "file": "bf_emma/potato_done.mp3",
-        "duration": 1.42,
-        "bytes": 9120,
-        "hash": "d4f61a323e3e"
-      },
-      "cran_open": {
-        "file": "bf_emma/cran_open.mp3",
-        "duration": 1.21,
-        "bytes": 7824,
-        "hash": "55b6963b39b2"
-      },
-      "cran_schlorp": {
-        "file": "bf_emma/cran_schlorp.mp3",
-        "duration": 1.11,
-        "bytes": 7248,
-        "hash": "c48098f416ea"
-      },
-      "cran_wobble": {
-        "file": "bf_emma/cran_wobble.mp3",
-        "duration": 1.24,
-        "bytes": 7968,
-        "hash": "b6c234cbbaa3"
-      },
-      "cran_done": {
-        "file": "bf_emma/cran_done.mp3",
-        "duration": 1.19,
-        "bytes": 7680,
-        "hash": "958821f6d8ca"
-      },
-      "bell": {
-        "file": "bf_emma/bell.mp3",
+      "beans_snap": {
+        "file": "af_bella/beans_snap.mp3",
         "duration": 1.04,
         "bytes": 6816,
-        "hash": "255925c57a3b"
+        "hash": "023144c984ec"
       },
-      "door": {
-        "file": "bf_emma/door.mp3",
-        "duration": 1.43,
-        "bytes": 9120,
-        "hash": "909c333f0a4b"
+      "beans_top": {
+        "file": "af_bella/beans_top.mp3",
+        "duration": 1.25,
+        "bytes": 8112,
+        "hash": "fe24327862a3"
       },
-      "dinner": {
-        "file": "bf_emma/dinner.mp3",
-        "duration": 1.14,
-        "bytes": 7392,
-        "hash": "9edb0e2cbd7f"
+      "beans_done": {
+        "file": "af_bella/beans_done.mp3",
+        "duration": 1.34,
+        "bytes": 8544,
+        "hash": "f356e80d86f1"
       },
-      "serve": {
-        "file": "bf_emma/serve.mp3",
-        "duration": 1.47,
-        "bytes": 9408,
-        "hash": "66a867823170"
+      "stuff_bread": {
+        "file": "af_bella/stuff_bread.mp3",
+        "duration": 0.92,
+        "bytes": 6096,
+        "hash": "6570ccd3a43e"
       },
-      "feast": {
-        "file": "bf_emma/feast.mp3",
-        "duration": 1.14,
-        "bytes": 7392,
-        "hash": "9eadf478c2ac"
+      "stuff_celery": {
+        "file": "af_bella/stuff_celery.mp3",
+        "duration": 0.99,
+        "bytes": 6528,
+        "hash": "f3d3ecb98df4"
       },
-      "thanks": {
-        "file": "bf_emma/thanks.mp3",
-        "duration": 1.44,
-        "bytes": 9120,
-        "hash": "f0b64f7ffd5d"
+      "stuff_season": {
+        "file": "af_bella/stuff_season.mp3",
+        "duration": 0.98,
+        "bytes": 6384,
+        "hash": "48b7d99c9a71"
       },
-      "again": {
-        "file": "bf_emma/again.mp3",
-        "duration": 1.24,
-        "bytes": 7968,
-        "hash": "ce123c545957"
+      "stuff_toss": {
+        "file": "af_bella/stuff_toss.mp3",
+        "duration": 0.88,
+        "bytes": 5808,
+        "hash": "450cae55fd9e"
       },
-      "yay1": {
-        "file": "bf_emma/yay1.mp3",
-        "duration": 0.69,
-        "bytes": 4656,
-        "hash": "ec7df2b53249"
+      "stuff_done": {
+        "file": "af_bella/stuff_done.mp3",
+        "duration": 0.96,
+        "bytes": 6240,
+        "hash": "53dfd10d827c"
       },
-      "yay2": {
-        "file": "bf_emma/yay2.mp3",
+      "sweet_scoop": {
+        "file": "af_bella/sweet_scoop.mp3",
+        "duration": 1.46,
+        "bytes": 9264,
+        "hash": "a5c9c3ea5d9a"
+      },
+      "sweet_marsh": {
+        "file": "af_bella/sweet_marsh.mp3",
         "duration": 1.19,
         "bytes": 7680,
-        "hash": "a3bb792b4272"
+        "hash": "1d8f847fe3c5"
       },
-      "yay3": {
-        "file": "bf_emma/yay3.mp3",
-        "duration": 0.68,
-        "bytes": 4656,
-        "hash": "43af0c52a4c0"
+      "sweet_toast": {
+        "file": "af_bella/sweet_toast.mp3",
+        "duration": 1.08,
+        "bytes": 6960,
+        "hash": "0d221a345228"
       },
-      "pie_roll": {
-        "file": "bf_emma/pie_roll.mp3",
-        "duration": 1.14,
-        "bytes": 7392,
-        "hash": "7d95e529bd1b"
+      "sweet_done": {
+        "file": "af_bella/sweet_done.mp3",
+        "duration": 0.73,
+        "bytes": 4944,
+        "hash": "4c8007fdca9f"
       },
-      "pie_fill": {
-        "file": "bf_emma/pie_fill.mp3",
-        "duration": 1.17,
-        "bytes": 7536,
-        "hash": "eff82f754c1d"
+      "oven_tap": {
+        "file": "af_bella/oven_tap.mp3",
+        "duration": 0.87,
+        "bytes": 5808,
+        "hash": "8564019a6be5"
       },
-      "pie_crimp": {
-        "file": "bf_emma/pie_crimp.mp3",
-        "duration": 1.25,
-        "bytes": 8112,
-        "hash": "5bd6da667b15"
+      "pie_done": {
+        "file": "af_bella/pie_done.mp3",
+        "duration": 1.06,
+        "bytes": 6960,
+        "hash": "962e87a7a82e"
       },
-      "pie_bake": {
-        "file": "bf_emma/pie_bake.mp3",
-        "duration": 1.15,
-        "bytes": 7392,
-        "hash": "1bef2976ab06"
+      "roast_bake": {
+        "file": "af_bella/roast_bake.mp3",
+        "duration": 0.83,
+        "bytes": 5520,
+        "hash": "98dcf421394e"
       },
-      "pie_cream": {
-        "file": "bf_emma/pie_cream.mp3",
-        "duration": 1.12,
-        "bytes": 7248,
-        "hash": "d234f11ef192"
+      "roast_done": {
+        "file": "af_bella/roast_done.mp3",
+        "duration": 1.53,
+        "bytes": 9696,
+        "hash": "2162c0a68170"
       },
-      "table_set": {
-        "file": "bf_emma/table_set.mp3",
-        "duration": 1.14,
-        "bytes": 7392,
-        "hash": "2986a01984dc"
-      },
-      "table_cards": {
-        "file": "bf_emma/table_cards.mp3",
-        "duration": 1.23,
-        "bytes": 7968,
-        "hash": "a8e799141000"
-      },
-      "table_candles": {
-        "file": "bf_emma/table_candles.mp3",
-        "duration": 1.29,
-        "bytes": 8256,
-        "hash": "a5fb401df2ec"
-      },
-      "roast_stuff": {
-        "file": "bf_emma/roast_stuff.mp3",
-        "duration": 1.32,
-        "bytes": 8400,
-        "hash": "0609a920e0e9"
-      },
-      "roast_baste": {
-        "file": "bf_emma/roast_baste.mp3",
-        "duration": 1.28,
-        "bytes": 8256,
-        "hash": "15eedfb5df67"
-      },
-      "roast_peek": {
-        "file": "bf_emma/roast_peek.mp3",
-        "duration": 1.25,
-        "bytes": 8112,
-        "hash": "6b056004d1da"
-      },
-      "roast_pull": {
-        "file": "bf_emma/roast_pull.mp3",
-        "duration": 1.1,
-        "bytes": 7104,
-        "hash": "dd3993aa4e7d"
-      },
-      "roast_carve": {
-        "file": "bf_emma/roast_carve.mp3",
-        "duration": 1.26,
-        "bytes": 8112,
-        "hash": "4c3ed4bfe186"
-      },
-      "crispy": {
-        "file": "bf_emma/crispy.mp3",
-        "duration": 1.27,
-        "bytes": 8112,
-        "hash": "fa435a9984c9"
-      },
-      "here_grammy": {
-        "file": "bf_emma/here_grammy.mp3",
-        "duration": 1.18,
-        "bytes": 7680,
-        "hash": "c4360ed816a7"
-      },
-      "here_babcia": {
-        "file": "bf_emma/here_babcia.mp3",
-        "duration": 1.27,
-        "bytes": 8112,
-        "hash": "1260e4664b5c"
-      },
-      "here_dziadziu": {
-        "file": "bf_emma/here_dziadziu.mp3",
-        "duration": 1.32,
-        "bytes": 8400,
-        "hash": "6cd0226b8f63"
-      },
-      "here_friends": {
-        "file": "bf_emma/here_friends.mp3",
-        "duration": 1.37,
-        "bytes": 8832,
-        "hash": "965387777975"
-      },
-      "table_forks": {
-        "file": "bf_emma/table_forks.mp3",
-        "duration": 1.23,
-        "bytes": 7968,
-        "hash": "ec084c5712fc"
-      },
-      "table_done": {
-        "file": "bf_emma/table_done.mp3",
-        "duration": 1.36,
-        "bytes": 8688,
-        "hash": "2335cd5ded35"
+      "dinner_bell": {
+        "file": "af_bella/dinner_bell.mp3",
+        "duration": 1,
+        "bytes": 6528,
+        "hash": "4cf31b303786"
       }
     }
   },
-  "totalBytes": 853920
+  "totalBytes": 773808
 }

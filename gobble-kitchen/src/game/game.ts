@@ -16,6 +16,12 @@ import { Station } from './station';
 import { PotatoStation } from './stations/potato';
 import { CranberryStation } from './stations/cranberry';
 import { TableStation } from './stations/table';
+import { BeansStation } from './stations/beans';
+import { StuffingStation } from './stations/stuffing';
+import { SweetStation } from './stations/sweet';
+import { PieStation } from './stations/pie';
+import { RoastStation } from './stations/roast';
+import { Oven } from './oven';
 import { makePortrait } from './portraits';
 import type { Hud } from '../ui/hud';
 
@@ -31,7 +37,11 @@ export class Game {
   stations: Station[] = [];
   current: Station | null = null;
   guests: Guest[] = [];
-  private arrows = new Map<Station, THREE.Object3D>();
+  oven: Oven;
+  /** Set by a recipe while it wants taps on the oven. */
+  ovenTap: ((t: TapInfo) => void) | null = null;
+  private table!: TableStation;
+  private slotsUsed = 0;
   private dishes: { station: Station; node: THREE.Object3D }[] = [];
   private portraits: HTMLCanvasElement[] = [];
   private gobblesServed = false;
@@ -70,33 +80,39 @@ export class Game {
         : makePortrait(stage, this.gobbles.root, () => this.gobbles.faceWorld, 0.3, 'Gobbles', 0xe8833a);
     }
 
-    this.stations = [new PotatoStation(this), new CranberryStation(this), new TableStation(this)];
+    this.oven = new Oven(this);
+    // the menu offers these three at a time, in this order; the roast is the finale
+    this.table = new TableStation(this);
+    this.stations = [new PotatoStation(this), new CranberryStation(this), this.table, new BeansStation(this), new StuffingStation(this),
+      new SweetStation(this), new PieStation(this), new RoastStation(this)];
     for (const s of this.stations) {
-      // big invisible boxes over the station: tapping one in the overview picks the job
+      if (s.island) s.stow();
+      // Set the Table can also be picked by tapping the cart or the table in the overview
       for (const [size, offset] of s.pickBoxes()) {
         const box = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), new THREE.MeshBasicMaterial({ visible: false }));
         box.position.copy(s.root.position).add(offset);
         stage.scene.add(box);
         stage.input.addMesh(box, 'station_' + s.name, { enabled: () => this.state === 'home' && !s.done, tap: () => this.enterStation(s) });
       }
-      const arrow = part('props', 'arrow');
-      arrow.position.copy(s.root.position);
-      arrow.userData.baseY = s.root.position.y + s.arrowHeight();
-      stage.scene.add(arrow);
-      stage.setBaseScale(arrow, 2.6);
-      stage.hide(arrow);
-      this.arrows.set(s, arrow);
     }
     this.homeDef = {
       voice: 'pick',
-      demo: 'tap',
-      target: () => {
-        const s = this.stations.find((s) => !s.done)!;
-        return s.started && s.flies ? s.dish() : s.root;
-      },
+      demo: 'none',
+      target: () => this.gobbles.root,
       tap: {},
+      onBob: () => this.hud.pulseMenu(),
     };
+    hud.onPick = (id) => {
+      const s = this.stations.find((x) => x.name === id);
+      if (s) this.enterStation(s);
+    };
+    hud.onBell = () => this.ringDinnerBell();
     stage.setPose('home');
+  }
+
+  /** Jobs on offer right now: the first three unfinished ones. */
+  private offered() {
+    return this.stations.filter((s) => !s.done).slice(0, 3);
   }
 
   portraitForSeat(seat: number) {
@@ -125,15 +141,26 @@ export class Game {
   }
 
   private showHome(speak: boolean) {
-    for (const [s, a] of this.arrows) {
-      if (!s.done) this.stage.pop(a, 1, 0.01);
-      else this.stage.pop(a, 0);
-    }
+    this.hud.setMenu(this.offered().map((s) => ({ id: s.name, started: s.started })), this.finished >= 3);
     this.hints.paused = false;
+    // once the roast is out, the narrator points at the dinner bell
+    this.homeDef.voice = this.stations.some((s) => s.name === 'roast' && s.done) ? 'dinner_bell' : 'pick';
     if (speak) this.hints.begin(this.homeDef);
   }
 
-  private async sendGobbles(to: THREE.Vector3) {
+  /** The kids decide when the feast starts: the bell is on the menu once three jobs are done. */
+  private async ringDinnerBell() {
+    if (this.state !== 'home' || this.finished < 3) return;
+    this.state = 'serving';
+    this.hints.end();
+    this.hud.setMenu([], false);
+    for (let k = 0; k < 3; k++) wait(k * 0.22).then(() => audio.ding(0.75, 0.3));
+    for (const s of this.stations) if (s.island && s.shown) s.hideKit();
+    await this.stage.fly('table', 1.0);
+    this.dinner();
+  }
+
+  async sendGobbles(to: THREE.Vector3) {
     const far = this.gobbles.root.position.distanceTo(to) > 2.5;
     await this.gobbles.hopTo(to, null, far ? 0.75 : 0.42);
     this.gobbles.setGround(to.y);
@@ -146,9 +173,13 @@ export class Game {
     this.current = s;
     this.hints.end();
     audio.pop(1.1);
-    this.stage.squash(s.dish(), 3);
-    for (const a of this.arrows.values()) this.stage.pop(a, 0);
+    this.hud.setMenu([], false);
     this.hud.showHome(true);
+    if (s.island) {
+      // one work spot on the island: a half-done dish tucks away while another is cooked
+      for (const o of this.stations) if (o !== s && o.island && o.shown) o.hideKit();
+      s.showKit();
+    }
     this.sendGobbles(s.gobblesSpot());
     await this.stage.fly(s.pose, 0.6);
     if (this.current !== s || this.state !== 'station') return;
@@ -197,8 +228,9 @@ export class Game {
     await wait(1.25);
     if (s.flies) {
       // stars to the table: the dish flies along an arc through the doorway
-      const slot = this.kitchen.socket('socket_dish_' + this.dishes.length);
+      const slot = this.kitchen.socket(s.slot ?? 'socket_dish_' + this.slotsUsed++);
       st.scene.attach(dish);
+      if (s.island) s.hideKit();     // the counter is cleared for the next recipe
       this.dishes.push({ station: s, node: dish });
       audio.whoosh();
       st.fly('table', 1.15);
@@ -206,7 +238,11 @@ export class Game {
         if (Math.random() < 0.3) st.particles.burst('spark', dish.position, { count: 1, size: 0.05, speed: 0.2, up: 0.1, color: 0xffd27a });
       });
       st.setShadowGround(dish, 0);
-      await arcTo(dish, slot, 1.5, 1.05, { spin: new THREE.Vector3(0, Math.PI * 2, 0), e: ease.inOut });
+      const from = dish.position.clone();
+      const far = from.distanceTo(slot);
+      // dishes are toy-sized on the counter and shrink a little to share the table
+      tween(1.05, (k) => st.setBaseScale(dish, 1 + (s.tableScale - 1) * k), ease.inOut);
+      await arcTo(dish, slot, Math.max(1.0, far * 0.28), 1.05, { spin: new THREE.Vector3(0, Math.PI * 2, 0), e: ease.inOut });
       sparkle();
       st.setShadowGround(dish, TABLE_Y);
       st.squash(dish, -4);
@@ -222,8 +258,13 @@ export class Game {
     this.finished++;
     const total = this.stations.length;
     st.setDay((this.finished / total) * 2, 3);
-    const guest = this.guests.filter((g) => !g.arrived)[0];
+    // the grandparents come after the first three jobs, the others later; everyone else arrives at dinner
+    const guest = [1, 2, 3, 5, 7].includes(this.finished) ? this.guests.filter((g) => !g.arrived)[0] : undefined;
     if (guest) await this.guestArrives(guest);
+    else {
+      for (const g of this.guests) if (g.arrived) g.cheer();
+      await wait(1.3);
+    }
     if (this.finished >= total) {
       await wait(0.5);
       this.dinner();
@@ -341,9 +382,12 @@ export class Game {
   private async dinner() {
     const st = this.stage;
     this.state = 'serving';
+    this.hud.setMenu([], false);
     audio.fanfare();
     audio.say('dinner');
     await wait(1.4);
+    // if the table was never set, the place settings pop out by themselves
+    await this.table.finishNow();
     // everyone else arrives together
     const late = this.guests.filter((g) => !g.arrived);
     if (late.length) {
@@ -379,7 +423,7 @@ export class Game {
       const c = part('props', 'candle');
       c.position.copy(this.kitchen.socket('socket_candle_' + i));
       st.scene.add(c);
-      st.setBaseScale(c, 2.1);
+      st.setBaseScale(c, 1.6);
       st.pop(c, 1, 0.01);
       audio.pop(1 + i * 0.2);
       const flame = c.getObjectByName('candle_flame')!;
@@ -424,7 +468,7 @@ export class Game {
     const lit = this.candles.filter((x) => x.lit).length;
     audio.note(3 + lit * 2, 0.3);
     audio.tone({ freq: 900, to: 1700, dur: 0.12, vol: 0.14 });
-    st.particles.burst('spark', c.root.position.clone().add(new THREE.Vector3(0, 0.6, 0)), { count: 8, color: [0xffd27a, 0xffa24a, 0xffffff] });
+    st.particles.burst('spark', c.root.position.clone().add(new THREE.Vector3(0, 0.45, 0)), { count: 8, color: [0xffd27a, 0xffa24a, 0xffffff] });
     st.setDay(2 + lit / this.candles.length, 1.8);
     if (lit === this.candles.length && this.state === 'dinner') {
       this.hints.end();
@@ -477,7 +521,7 @@ export class Game {
     audio.fanfare();
     audio.cheer();
     st.addShake(0.04);
-    const table = this.kitchen.socket('socket_dish_2');
+    const table = this.kitchen.socket('socket_table_centre');
     for (const g of this.guests) g.cheer();
     this.gobbles.cheer();
     st.fly('table_wide', 1.8, ease.inOut);
@@ -513,11 +557,6 @@ export class Game {
     for (const g of this.guests) g.update(dt);
     this.hints.update(dt);
     const t = clock.real;
-    for (const a of this.arrows.values()) {
-      if (!a.visible) continue;
-      a.position.y = a.userData.baseY + Math.sin(t * 3) * 0.08;
-      a.rotation.y = Math.sin(t * 1.5) * 0.5;
-    }
     // name tag over whoever just walked in
     if (this.tag && t < this.tag.until) {
       const p = this.stage.input.screenOf(this.tag.at());

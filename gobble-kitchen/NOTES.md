@@ -1,24 +1,30 @@
 # Gobble Gobble Kitchen notes
 
-Last updated 2026-11-26 (round 2: family guests, Set the Table, bug and polish pass). **Start here.** `PLAN.md` is the user's full design plan; this file says what is built, how to build it, and where it differs.
+Last updated 2026-11-26 (round 3: five more recipes, the shared oven, picture menu, dinner bell). **Start here.** `PLAN.md` is the user's full design plan; this file says what is built, how to build it, and where it differs.
 
 Phone / tablet link (private Claude artifact): **https://claude.ai/artifact/1cuiWA9tnyBS51PnHXkU9i**. Republish `dist-single/artifact.html` to the same artifact after every change (`npm run build:single`, then the Artifact tool with that path and this `url`).
 
 ## What is playable
-The Big Feast with three jobs, start to finish, about 6-8 minutes:
+The Big Feast with **eight jobs**, about 12-15 minutes for all of them (the kids can call dinner after any three):
 - **Title** (logo, Play, the "No ads / purchases / links / data" line). Audio unlocks on the Play tap.
-- **Overview** of the toy kitchen and dining room. Bobbing arrows mark the jobs; tap one and the camera flies in (0.6 s). A home button returns to the overview; a half-done job keeps its progress.
-- **Mashed Potatoes:** peel (8 strips, the potato flips after 4; swipe also works) -> hops into the bowl as chunks -> mash (7 taps, shape key chunks to mound; up-down drag also works) -> butter (tap, or drag with a magnetic drop) -> stir (5 taps or circle-drag).
-- **Cranberry Sauce:** open the can (3 cranks or circle-drag) -> the can flips over the dish, 3 taps and the log SCHLORPs out -> wobble. After 3 wobbles a service bell pops in; ringing it sends the dish. Ten wobbles = jelly rain (secret). The log still wobbles when tapped on the dinner table.
-- **Set the Table** (round 2): a serving cart in front of the table. Plates, then forks, fly to the next glowing outline (tap) or can be carried to any outline (drag, magnetic, a miss floats back). Then the name cards: each shows a guest's portrait and name, pops up big on screen with that guest's voice, and lands at their seat.
-- **Job done:** freeze-frame, sparkle, a dish flies through the arch to the table (nothing flies for Set the Table), the doorbell rings, the camera moves in on the front door, and a guest walks in with a name tag and the narrator saying "Grammy is here!". Light moves morning -> golden hour over the three jobs.
-- **Dinner** (after all three): the other two guests come in together, Gobbles hops to his booster seat in a pilgrim hat, two candles pop in and the kids light them (the room warms to candlelight), then tap each guest and Gobbles to serve. Cheer, confetti, feast photo (kept in the scrapbook), "cook again" rebuilds the session.
-- **The family** (`src/game/guests.ts`): **Grammy** (shoulder-length light hair, black polka-dot top, necklace), **Babcia** (short auburn hair, white top with pink print, pink lower half), **Dziadziu** (swept sandy hair, sunglasses, blue button shirt), plus Cousin (pigtails) and Friend (party hat). The first three arrive one per job, in that order. They are toy likenesses from the user's photos (hair, glasses, outfits); the photos are not in the repo. A grown-up can rename all five in the parent area.
-- **Gobbles:** eyes follow the finger, blinks, tail fan as mood meter, flinch / cheer / yum / sneeze / oven panic with a disguise. Tapping him replays the instruction.
-- **Hints:** narrator line + demo wing at every step; idle escalation at 5 / 10 / 15 s, then the cycle repeats.
-- **Pointless delights:** hanging pots (left-middle-right plays a tune = secret), faucet bubbles, oven door (Gobbles panics into a disguise = sticker per disguise), fridge, window weather, cat (third tap purrs = secret), cookie jar, real-time clock. Finished dishes and leftovers stay tappable. A tap on nothing still puffs.
-- **Sticker book** (6 stickers as silhouettes until found, plus the last three feast photos), **parent area** behind a 3-second hold (volumes, quiet mode, narrator voice, guest names, back to start).
-- **Portrait phones:** the whole game is turned 90 degrees so it is always landscape (taps tested).
+- **Overview and picture menu.** The top of the screen offers up to three jobs as round pictures (the first three unfinished ones in this order: potatoes, cranberry, table, beans, stuffing, sweet potatoes, pie, roast). Tap one: its kit pops onto the island and the camera flies in. The home button returns to the overview; a half-done dish keeps its progress and tucks away if another is picked. When a dish goes to the table, its kit is cleared off the counter.
+- **Mashed Potatoes:** peel (8 strips, flips after 4; swipe works) -> hops into the bowl -> mash (7 taps or up-down drag) -> butter (tap or drag, magnetic) -> stir (5 taps or circle-drag).
+- **Cranberry Sauce:** open the can (3 cranks or circle-drag) -> 3 taps and the log SCHLORPs out -> wobble; a service bell appears after 3 wobbles. Ten wobbles = jelly rain (secret). It still wobbles on the dinner table.
+- **Set the Table:** plates, then forks, fly from the cart to glowing outlines (tap, or drag to any outline); then name cards with each guest's portrait.
+- **Green Beans** (round 3): tap the pile and the next bean snaps in two with a recoil and hops into the dish (a swipe across them works too) -> sprinkle crispy onions (4 taps).
+- **Stuffing** (round 3): bread chunks pop into the air and burst into cubes that rain into the bowl (5) -> a toy knife chops celery (4; Gobbles flinches) -> shake the herbs (3; Gobbles sneezes; up-down drag works) -> toss (4 taps or circle-drag; everything jumps).
+- **Sweet Potatoes** (round 3): scoop the mash into the casserole (4) -> marshmallows two at a time (6) -> toast on the open oven door: each tap is a wave of heat and they go white -> tan -> golden (3).
+- **Pumpkin Pie** (round 3): roll the dough flat (5 taps or back-and-forth drag; shape key) -> pour the filling (3) -> crimp 12 pinches round the rim (taps or circle-drag, notes climb) -> bake (the timer sweeps to green by itself; tapping the oven hurries it) -> whipped cream (8 dollops; drag works) and a leaf.
+- **Pumpkin Roast, the finale** (round 3): Gobbles' "turkey" is a big stuffed pumpkin with two butternut drumsticks in paper frills. Stuff it (4 scoops) -> baste three times (tap the baster to fill, tap the roast to squirt; it gets shinier) -> roast: the timer runs by itself, tap the oven to peek as often as you like, pull it out in the green; late is "Extra crispy!" with a giggle, never burnt -> carve four slices along the dashed lines.
+- **The oven** (`src/game/oven.ts`) is shared: the dish flies over, the player taps the oven, the door drops open like a shelf and **Gobbles panics into a disguise every time** (the running gag; each disguise is a sticker). A kitchen timer on the stove shows a green "done" zone.
+- **Job done:** freeze-frame, sparkle, the dish shrinks a little and flies through the arch to its place on the table (eight numbered spots plus the middle for the roast). The grandparents arrive after jobs 1, 2 and 3, Cousin after job 5, Friend after job 7, each with a name tag and (for the grandparents) the narrator saying their name; on the other jobs the seated guests cheer.
+- **Dinner:** starts by itself when all eight jobs are done, or when the kids ring the **dinner bell**, which joins the menu after three jobs. If the table was never set, the place settings pop out by themselves. Then: anyone not yet there arrives, Gobbles takes his booster seat in a pilgrim hat, the kids light two candles, serve everyone a scoop of every dish, confetti, feast photo (kept in the scrapbook), "cook again".
+- **The family** (`src/game/guests.ts`): **Grammy**, **Babcia**, **Dziadziu** (toy likenesses from the user's photos; the photos are not in the repo), plus Cousin and Friend. A grown-up can rename all five in the parent area.
+- **Gobbles:** eyes follow the finger, blinks, tail fan as mood meter, flinch / cheer / yum / sneeze / panic. Tapping him replays the instruction.
+- **Hints:** narrator line + demo wing at every step; idle escalation at 5 / 10 / 15 s. In the overview the menu pictures wave instead.
+- **Pointless delights:** hanging pots (tune = secret), faucet bubbles, oven door, fridge, window weather, cat (purr = secret), cookie jar, real-time clock. Finished dishes stay tappable.
+- **Sticker book** (6 stickers + the last three feast photos), **parent area** behind a 3-second hold (volumes, quiet mode, narrator voice, guest names, back to start).
+- **Portrait phones:** the whole game is turned 90 degrees so it is always landscape.
 
 ## How to build
 ```
@@ -31,17 +37,19 @@ npm run build                        # dist/ (hashed files, for real hosting)
 npm run build:single                 # dist-single/index.html (everything inlined) + artifact.html (for the Artifact host)
 (cd tools/voice && npm i && node build-voice.mjs)   # narrator MP3s from tools/voice/lines.json (Kokoro via kokoro-js)
 ```
-Headless test with screenshots: `npx vite preview --port 4173 &` then `node tools/play.mjs .work/out --script feast|potato|cranberry|table|leave|chars|delights|idle|overview [--size 1024x768]` (`390x844` tests the rotated portrait layout). It taps real pointer events at the projected position of `hit_*` targets and waits in game time. `feast` plays everything including "cook again". Screenshots lag by about a second under software rendering, so short overlays (the big name card) are checked by reading the DOM instead.
+Headless test with screenshots: `npx vite preview --port 4173 &` then `node tools/play.mjs .work/out --script feast|short|potato|cranberry|table|beans|stuffing|sweet|pie|roast|leave|chars|delights|idle|overview [--size 1024x768]` (`390x844` tests the rotated portrait layout). It taps real pointer events at the projected position of `hit_*` targets and waits in game time. `feast` cooks all eight jobs, dinner and "cook again" (about 6 minutes headless); `short` rings the dinner bell after three. A single-recipe script jumps straight into that recipe even if the menu is not offering it yet. Screenshots lag by about a second under software rendering, so short overlays (the big name card) are checked by reading the DOM instead.
 `node scripts/inspect.mjs <glb>` lists nodes, extras and attributes; **`node scripts/joints.mjs <glb>` lists how many vertices follow each bone** (run it after touching a rig).
 
 ## How it is put together
 - `blender/lib/` `palette.py` (the one palette, mirrored to `src/game/palette.json`), `shapes.py` (rounded box, lathe, tube, prism, ball... returning a wrapper `S` with `.at/.rot/.scale/.paint/.shade/.shade_face/.bone/.zone/.zone_by/.noline`), `common.py` (`make`, `empty`, `hit`, BVH ray-cast AO bake into vertex colours, face-area weighted normals, rigs, export, Cycles CPU preview).
-- `blender/assets/` `kitchen.py`, `potato.py`, `cranberry.py`, `table.py` (cart, plates, forks, cards), `props.py`, `gobbles.py` (12-bone turkey, hats, demo wing), `guest.py` (5-bone peg person; `_zone` 1 skin, 2 shirt, 3 lower body, 4 forearm; hair, glasses, sunglasses and shirt patterns as pieces for the head or body bone).
+- `blender/assets/` `kitchen.py`, `potato.py`, `cranberry.py`, `beans.py`, `stuffing.py`, `sweet.py`, `pie.py`, `roast.py`, `table.py` (cart, plates, forks, cards), `props.py`, `gobbles.py` (12-bone turkey, hats, demo wing), `guest.py` (5-bone peg person; `_zone` 1 skin, 2 shirt, 3 lower body, 4 forearm; hair, glasses, sunglasses and shirt patterns as pieces for the head or body bone).
 - `scripts/optimize.mjs`: drops all-zero custom attributes, dedup -> prune -> weld -> meshopt. Before quantizing it moves every mesh onto a child node `<name>__geo`, so the node the game animates keeps its authored transform (`meshOf(node)` finds the mesh).
 - `src/core/` `tween.ts`, `stage.ts` (renderer, fitted camera poses, squash/pop springs, blob shadows, day-phase lighting with a gradient backdrop, snapshot), `input.ts`, `assets.ts` (materials by Blender name, gloss table), `audio.ts`.
 - `src/fx/` `toon.ts` (toon ramp, rim, gloss highlight, outline shells, jelly wobble), `particles.ts`, `motion.ts`.
-- `src/game/` `game.ts` (flow), `kitchen.ts`, `gobbles.ts`, `guests.ts`, `portraits.ts` (renders each guest once off-screen into a name-card canvas), `hints.ts`, `station.ts` + `stations/potato.ts`, `cranberry.ts`, `table.ts`.
+- `src/game/` `game.ts` (flow), `kitchen.ts`, `gobbles.ts`, `guests.ts`, `portraits.ts` (renders each guest once off-screen into a name-card canvas), `hints.ts`, `oven.ts`, `station.ts` + `stations/*.ts` (one file per job).
 - `src/ui/hud.ts` + `style.css`.
+
+**Adding a recipe** (the pattern all five round-3 recipes follow): (1) `blender/assets/<name>.py` builds a kit around a `station_<name>` empty in station space (origin on the counter top), ends with `C.station_frame(...)`, `C.bake_each(...)`, export; add it to `ASSETS` in `build_all.py`. (2) `src/game/stations/<name>.ts` extends `Station`: hide what appears later in the constructor, write `recipe()` as a list of `await this.tapStep({ voice, target, hits, need, act, gesture })` (tap N times, optional drag that counts as taps), use `this.game.oven.load / slideIn / slideOut / heat / unload / release` for oven steps. (3) Add it to the station list in `game.ts`, a picture to `DISH` in `hud.ts`, lines to `tools/voice/lines.json`, and a script to `tools/play.mjs`.
 
 Blender names drive the code: `hit_*` tap targets, `socket_*`, `cam_<name>` + `cam_<name>_target` with `fit_w`/`fit_h`, custom properties `shade` and `outline`, vertex attributes `_zone` (tint) and `_noline` (1 = no ink outline, for small face details).
 
@@ -53,31 +61,35 @@ Blender names drive the code: `hit_*` tap targets, `socket_*`, `cam_<name>` + `c
 - The artifact host's `img { max-width: 100% }` reset would have collapsed the big name card (its wrapper has no width): `max-width: none`.
 
 ## Numbers (headless)
-Draw calls 40-135 (overview with everything out is the high end, over the plan's 100), triangles 95-156k on screen (dinner is the high end), models 1027 KB after meshopt, JS about 745 KB (207 KB gzip), narrator MP3s 834 KB for three voices (41 lines each), single-file build 3.2 MB. Frame rate on real devices is **not measured yet**.
+Draw calls 30-125, triangles 90-160k on screen (only one recipe kit is out at a time; dinner with every dish is the high end), models 1436 KB after meshopt (12 files), narrator MP3s about 830 KB for two voices (58 lines each), single-file build about 4.3 MB. Frame rate on real devices is **not measured yet**.
 
 ## Audio state (measured, not heard)
 - Effects were rendered offline and measured: all make sound, none clip. Music sits roughly 16 dB under the voice and ducks while the narrator talks.
-- Narrator: 3 voices x 41 lines (`tools/voice/`). `pronounce.json` holds spoken spellings: "Mmm" -> "Yum", **"Babcia" -> "Bobcha", "Dziadziu" -> "Jahjoo"** (phonemes checked: /ˈbɑːbtʃə/, /ˈdʒɑːdʒuː/; nobody has listened yet). If a guest is renamed, the narrator falls back to "Someone's at the door!".
-- `bf_emma` may add a small extra sound at the end of some lines; she is only offered in the parent area.
+- Narrator: 2 voices x 58 lines (`tools/voice/`; the British voice was dropped in round 3 for its glitchy line endings). `pronounce.json` holds spoken spellings: "Mmm" -> "Yum", **"Babcia" -> "Bobcha", "Dziadziu" -> "Jahjoo"** (phonemes checked: /ˈbɑːbtʃə/, /ˈdʒɑːdʒuː/; nobody has listened yet). If a guest is renamed, the narrator falls back to "Someone's at the door!".
 - Audio starts on the Play button's `click` and resumes on any finished tap. Not yet tried on a real iPhone or iPad.
 
 ## Where the build differs from the plan (on purpose)
-- **Layout:** kitchen and dining room side by side with an arch between them. The table is visible in the overview but not in the kitchen close-ups; the camera follows the finished dish to the table.
+- **Layout:** kitchen and dining room side by side with an arch between them. The table is visible in the overview but not in the kitchen close-ups; the camera follows each finished dish to the table.
+- **One work spot and a picture menu** instead of a station per dish: recipes are picked from pictures at the top of the screen and their kits take turns on the island. This keeps the kitchen uncluttered with eight jobs, but it drops "persistent mess" (a finished kit is cleared away).
+- **The roast is Gobbles' pumpkin roast** (the plan's recommended twist) dressed up with squash drumsticks so it reads as "the turkey". The user said "add the turkey"; a real roast bird next to a turkey mascot was not built. Ask if that is really wanted.
+- **Dinner bell:** the kids choose when dinner starts (after three jobs or more); the plan had dinner after the roast.
+- Guests do not arrive one per dish any more (five guests, eight jobs): after jobs 1, 2, 3, 5 and 7.
+- Oven steps happen on the opened door as a shelf; "peek" is a tap on the oven rather than on a separate oven light. Sweet potatoes toast in the open oven so the change is visible.
 - **Outlines** are shells sharing the mesh's geometry, pushed out in the vertex shader. **Characters** are skinned but animated in code with springs (no clips).
-- **Sound effects** are a hand-written WebAudio synth instead of ZzFX; no recorded foley (kenney.nl is blocked from the cloud container); music is a quiet generated loop.
+- **Sound effects** are a hand-written WebAudio synth instead of ZzFX; no recorded foley; music is a quiet generated loop.
 - **Assets** live in `src/assets/` (imported, so the single-file build can inline them).
-- Cranberry ends with a **service bell**. **Candles** are lit at dinner (not inside Set the Table) so candlelight always comes last. Place settings come from Set the Table, not with each guest.
-- Names appear as text on name cards and name tags (the plan allows names; everything else is still pictures).
+- Cranberry ends with a **service bell**. Names appear as text on name cards and name tags.
 - Guests are a fixed family set with editable names, not yet the full Guest Book.
 
 ## Not built yet (from the plan)
-Pie, Pumpkin Roast, later dishes; the Guest Book (choosing and customising guests, "Me" cards); sibling co-op and the helper strip; Chef Challenge; Kitchen Play sandbox; Pip the acorn; the dog; kitchen themes; the other 5 disguises; most of the 20 discoverables; real foley; Ew reactions.
+Rolls, gravy and other later dishes; the Guest Book (choosing and customising guests, "Me" cards); sibling co-op and the helper strip; Chef Challenge (picture orders); Kitchen Play sandbox; Pip the acorn; the dog; kitchen themes; the other 5 disguises; most of the 20 discoverables (three perfect bastes, pie in Gobbles' face, popcorn...); real foley; Ew reactions; guests reacting differently to each dish.
 
 ## Waiting on the user
-1. **Play round 2 with the kids:** do the grandparents look right? Anything to change about hair, clothes or colours? Who else should come (names and a short description are enough)?
-2. **Listen:** the narrator saying "Bobcha is here!" and "Jahjoo is here!", plus effects and music in general.
-3. Open decisions from the plan: mascot twist (built as Gobbles + pumpkin roast), first playtest device, narrator voice.
-4. Hosting: the artifact link is fine for testing; a Vercel project (like city-clone) would give a full-screen URL. Not set up.
+1. **Play round 3 with the kids:** which recipes get giggles, which drag? Is eight jobs the right length, and do they find the dinner bell?
+2. **The roast:** it is a pumpkin "turkey". Say so if a real roast turkey is wanted instead.
+3. **Listen:** nobody has heard the audio, including the 17 new lines and "Bobcha" / "Jahjoo".
+4. Do the grandparents look right? Who else should come?
+5. Hosting: the artifact link is fine for testing; a Vercel project would give a full-screen URL. Not set up.
 
 ## Next steps (suggested)
-Whatever the playtest shows first. Then Pumpkin Pie (oven bake ties into the panic gag), the Pumpkin Roast finale, the Guest Book, the co-op helper strip. Trim draw calls in the overview (merge the cart items, drop outlines on forks).
+Whatever the playtest shows first. Then: rolls (knead, rise, butter) and gravy (stir on the stove, pour; the gravy-boat hat secret), guests reacting to their favourite dish, the Guest Book, the co-op helper strip, more discoverables per recipe. Trim triangles at dinner (hide the kitchen half, or lower-poly dishes on the table).

@@ -9,7 +9,7 @@ import { topOf } from '../fx/motion';
 import type { Stage } from '../core/stage';
 import type { TapInfo, DragInfo } from '../core/input';
 
-export type DemoKind = 'tap' | 'updown' | 'circle' | 'swipe';
+export type DemoKind = 'tap' | 'updown' | 'circle' | 'swipe' | 'none';
 
 export interface StepDef {
   voice: string;
@@ -17,6 +17,8 @@ export interface StepDef {
   demo: DemoKind;
   tap: Record<string, (t: TapInfo) => void>;
   drag?: Record<string, (d: DragInfo) => void>;
+  /** Extra nudge when the player has been idle for a few seconds (the picture menu pulses). */
+  onBob?: () => void;
 }
 
 export const HINT = { bob: 5, voice: 10, demo: 15 }; // seconds idle (plan: tune)
@@ -90,7 +92,7 @@ export class Hints {
   async demo(target?: THREE.Object3D, kind?: DemoKind) {
     const t = target ?? this.cur?.target();
     const k = kind ?? this.cur?.demo ?? 'tap';
-    if (!t) return;
+    if (!t || k === 'none') return;
     const token = ++this.demoToken;
     const top = topOf(t);
     const s = Math.min(2.5, Math.max(1, this.stage.pose.fitW / 2.4));
@@ -136,6 +138,7 @@ export class Hints {
     this.idle += dt;
     if (this.fired < 1 && this.idle > HINT.bob) {
       this.fired = 1;
+      this.cur.onBob?.();
       const t = this.cur.target();
       this.stage.squash(t, 3);
       audio.pop(1.4, 0.08);

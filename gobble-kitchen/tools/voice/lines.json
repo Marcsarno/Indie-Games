@@ -1,8 +1,7 @@
 {
   "voices": [
     "af_heart",
-    "af_bella",
-    "bf_emma"
+    "af_bella"
   ],
   "lines": {
     "welcome": "Let's cook a feast!",
@@ -45,6 +44,23 @@
     "here_dziadziu": "Dziadziu is here!",
     "here_friends": "Everybody is here!",
     "table_forks": "Now the forks!",
-    "table_done": "The table is ready!"
+    "table_done": "The table is ready!",
+    "beans_snap": "Snap the beans!",
+    "beans_top": "Sprinkle the crunchies!",
+    "beans_done": "Snappy green beans!",
+    "stuff_bread": "Chop the bread!",
+    "stuff_celery": "Chop the celery!",
+    "stuff_season": "Shake the herbs!",
+    "stuff_toss": "Toss it all up!",
+    "stuff_done": "Yummy stuffing!",
+    "sweet_scoop": "Scoop the sweet potatoes!",
+    "sweet_marsh": "Add the marshmallows!",
+    "sweet_toast": "Toast them golden!",
+    "sweet_done": "So gooey!",
+    "oven_tap": "Tap the oven!",
+    "pie_done": "What a pretty pie!",
+    "roast_bake": "Into the oven!",
+    "roast_done": "The pumpkin roast is ready!",
+    "dinner_bell": "Ring the dinner bell!"
   }
 }

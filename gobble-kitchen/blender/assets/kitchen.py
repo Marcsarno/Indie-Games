@@ -109,6 +109,20 @@ def build(out, preview):
     furn.append(sh.tube([(sx0 - 0.16, 2.59, 1.08), (sx0 - 0.1, 2.59, 1.08)], r=0.02, col='ink', segs=8))
     objs.append(C.empty('socket_steam', loc=(sx0 - 0.3, 2.59, 1.2)))
     objs.append(C.empty('socket_oven', loc=(sx0, 2.0, 0.5)))
+    objs.append(C.empty('socket_oven_shelf', loc=(sx0, 1.7, 0.2)))        # on the opened door
+    objs.append(C.empty('socket_oven_in', loc=(sx0, 2.5, 0.34)))           # inside the oven body (hidden)
+    objs.append(C.empty('socket_gobbles_oven', loc=(sx0 + 0.92, 1.62, 0.0)))
+    objs.append(C.empty('cam_oven_target', loc=(sx0 + 0.2, 2.0, 0.84)))
+    objs.append(C.empty('cam_oven', loc=(sx0 + 0.2 + 0.55, 2.0 - 3.4, 0.84 + 2.3), props={'fit_w': 3.0, 'fit_h': 2.25}))
+    # a big kitchen timer on top of the stove: the needle sweeps into the green zone when the food is done
+    tm = (sx0 + 0.3, 2.74, 1.4)
+    furn.append(sh.cyl(0.19, 0.06, bevel=0.015, segs=28, col='cranberry').rot(90, 0, 0).at(tm[0], tm[1] + 0.03, tm[2]))
+    furn.append(sh.cyl(0.16, 0.02, bevel=0.004, segs=28, col='ceramic').rot(90, 0, 0).at(tm[0], tm[1] - 0.03, tm[2]))
+    for k in range(-2, 3):   # green "done" wedge on the right side of the face
+        a = math.radians(-78 + k * 13)
+        furn.append(sh.ball(0.026, sub=1, col='sage', sy=0.25).at(tm[0] + math.sin(-a) * 0.118, tm[1] - 0.052, tm[2] + math.cos(a) * 0.118))
+    furn.append(sh.box(0.1, 0.06, 0.03, r=0.01, col='cranberry').at(tm[0], tm[1], tm[2] - 0.2))
+    objs.append(C.make('timer_needle', [sh.box(0.022, 0.012, 0.14, r=0.005, col='ink').at(0, 0, 0.06), sh.ball(0.02, sub=1, col='ink', sy=0.5)], loc=(tm[0], tm[1] - 0.062, tm[2]), shade='lambert'))
 
     # hanging pots on a rail: each pot's origin is its hook
     furn.append(sh.tube([(sx0 - 0.6, 2.7, 2.1), (sx0 + 0.6, 2.7, 2.1)], r=0.02, col='steel_dark', segs=8))
@@ -212,8 +226,7 @@ def build(out, preview):
     # towel on the right end
     furn.append(sh.tube([(IS_X + 1.72, IS_Y - 0.3, 0.75), (IS_X + 1.77, IS_Y - 0.3, 0.75), (IS_X + 1.77, IS_Y + 0.3, 0.75), (IS_X + 1.72, IS_Y + 0.3, 0.75)], r=0.015, col='steel', segs=8))
     furn.append(sh.box(0.04, 0.34, 0.42, r=0.015, cell=0.105, col='cream').at(IS_X + 1.775, IS_Y, 0.56).shade_face(lambda c, n: P.lin('cranberry') if int((c.z + 5) / 0.105) % 2 == 0 else P.lin('cream')))
-    objs.append(C.empty('socket_station_potato', loc=(IS_X - 0.75, IS_Y, TOP)))
-    objs.append(C.empty('socket_station_cranberry', loc=(IS_X + 1.0, IS_Y, TOP)))
+    objs.append(C.empty('socket_station_island', loc=(IS_X, IS_Y, TOP)))
     objs.append(C.empty('socket_gobbles_home', loc=(IS_X + 0.1, IS_Y + 0.3, TOP)))
 
     # rug and the sleeping cat
@@ -236,17 +249,17 @@ def build(out, preview):
     # ------------------------------------------------------------------ dining room
     rug2 = sh.lathe([(0, 0), (1.0, 0), (1.04, 0.012), (1.0, 0.024), (0, 0.024)], segs=44, col='green').scale(1.95, 1.3, 1.0)
     rug2.shade(lambda c, n: P.lin('butter') if 0.8 < math.hypot(c.x / 1.95, c.y / 1.3) < 0.88 else P.lin('green'))
-    furn.append(rug2.at(T_X, T_Y + 0.1, 0))
-    furn.append(sh.box(2.9, 1.15, 0.07, r=0.03, seg=3, cell=0.2, col='wood_light').at(T_X, T_Y, TABLE - 0.035).shade_face(planks('wood_light', 'butter', 0.23)))
-    furn.append(sh.box(2.6, 0.9, 0.12, r=0.02, col='wood').at(T_X, T_Y, TABLE - 0.13))
+    furn.append(rug2.at(T_X, T_Y + 0.15, 0))
+    furn.append(sh.box(3.0, 1.35, 0.07, r=0.03, seg=3, cell=0.2, col='wood_light').at(T_X, T_Y, TABLE - 0.035).shade_face(planks('wood_light', 'butter', 0.23)))
+    furn.append(sh.box(2.7, 1.1, 0.12, r=0.02, col='wood').at(T_X, T_Y, TABLE - 0.13))
     for sx in (-1, 1):
         for sy in (-1, 1):
-            furn.append(sh.box(0.11, 0.11, TABLE - 0.1, r=0.03, col='wood').at(T_X + 1.28 * sx, T_Y + 0.44 * sy, (TABLE - 0.1) / 2))
+            furn.append(sh.box(0.11, 0.11, TABLE - 0.1, r=0.03, col='wood').at(T_X + 1.33 * sx, T_Y + 0.54 * sy, (TABLE - 0.1) / 2))
     furn.append(sh.box(2.5, 0.42, 0.014, r=0.006, cell=0.21, col='cream').at(T_X, T_Y, TABLE + 0.006).shade_face(
         lambda c, n: P.lin('cranberry') if abs(c.x - T_X) > 1.05 else P.lin('cream')))
     # seats 0-3 behind the table, 4 at the left end, 5 = Gobbles on a booster at the right end.
     # Each seat gets a place setting: plate in front, fork on one side, name card on the other.
-    seats = [(T_X - 1.05, T_Y + 0.92, 0), (T_X - 0.35, T_Y + 0.92, 0), (T_X + 0.35, T_Y + 0.92, 0), (T_X + 1.05, T_Y + 0.92, 0), (T_X - 1.82, T_Y, 90), (T_X + 1.82, T_Y, -90)]
+    seats = [(T_X - 1.05, T_Y + 1.02, 0), (T_X - 0.35, T_Y + 1.02, 0), (T_X + 0.35, T_Y + 1.02, 0), (T_X + 1.05, T_Y + 1.02, 0), (T_X - 1.87, T_Y, 90), (T_X + 1.87, T_Y, -90)]
     for i, (sx_, sy_, rz) in enumerate(seats):
         furn += chair(sx_, sy_, rz, booster=(i == 5))
         objs.append(C.empty('socket_seat_%d' % i, loc=(sx_, sy_, 0.69 if i == 5 else 0.49), rot=(0, 0, rz)))
@@ -255,14 +268,19 @@ def build(out, preview):
         reach = 0.55 if i < 4 else 0.62
         p = Vector((sx_, sy_, 0)) + d * reach
         objs.append(C.empty('socket_plate_%d' % i, loc=(p.x, p.y, TABLE + 0.002), rot=(0, 0, rz)))
-        f = p - side * 0.27
+        # end seats keep the fork toward the player and the card toward the back, clear of the dishes
+        f = p - side * 0.27 if i < 4 else p + Vector((0, -0.27, 0))
         objs.append(C.empty('socket_fork_%d' % i, loc=(f.x, f.y, TABLE + 0.002), rot=(0, 0, rz)))
-        c = p + side * 0.25 + d * (0.06 if i < 4 else 0.0)
+        c = p + side * 0.25 + d * 0.06 if i < 4 else p + Vector((0, 0.27, 0))
         objs.append(C.empty('socket_card_%d' % i, loc=(c.x, c.y, TABLE + 0.002)))
-    for i, dx in enumerate((-0.7, 0.7, 0.0, -1.2, 1.2)):
-        objs.append(C.empty('socket_dish_%d' % i, loc=(T_X + dx, T_Y - 0.2, TABLE + 0.002 if abs(dx) > 1.25 else TABLE + 0.013)))
-    for i, dx in enumerate((-0.2, 0.2)):
-        objs.append(C.empty('socket_candle_%d' % i, loc=(T_X + dx, T_Y - 0.18, TABLE + 0.013)))
+    # dishes land small (the game scales them) in two rows; the roast takes the middle
+    slots = [(-0.62, -0.45), (0.62, -0.45), (-1.08, -0.45), (1.08, -0.45), (-0.45, -0.02), (0.45, -0.02), (-0.84, -0.02), (0.84, -0.02)]
+    for i, (dx, dy) in enumerate(slots):
+        objs.append(C.empty('socket_dish_%d' % i, loc=(T_X + dx, T_Y + dy, TABLE + 0.013 if abs(dx) < 1.2 else TABLE + 0.002)))
+    objs.append(C.empty('socket_dish_roast', loc=(T_X, T_Y - 0.3, TABLE + 0.013)))
+    objs.append(C.empty('socket_table_centre', loc=(T_X, T_Y - 0.15, TABLE)))
+    for i, dx in enumerate((-0.15, 0.15)):
+        objs.append(C.empty('socket_candle_%d' % i, loc=(T_X + dx, T_Y + 0.15, TABLE + 0.013)))
     # the serving cart for Set the Table stands in front of the table
     objs.append(C.empty('socket_station_table', loc=(T_X + 0.1, T_Y - 1.62, 0)))
     objs.append(C.empty('socket_gobbles_table', loc=(T_X + 1.3, T_Y - 1.5, 0.0)))
@@ -316,7 +334,7 @@ def build(out, preview):
     objs.append(C.empty('cam_home_target', loc=(0.0, 0.45, 1.0)))
     objs.append(C.empty('cam_home', loc=(0.0, 0.45 - 10.0, 1.0 + 9.3), props={'fit_w': 12.9, 'fit_h': 6.75}))
     objs.append(C.empty('cam_table_target', loc=(T_X + 0.1, T_Y + 0.45, 0.95)))
-    objs.append(C.empty('cam_table', loc=(T_X + 0.1 - 1.0, T_Y + 0.45 - 5.6, 0.95 + 4.1), props={'fit_w': 5.4, 'fit_h': 3.4}))
+    objs.append(C.empty('cam_table', loc=(T_X + 0.1 - 1.0, T_Y + 0.45 - 5.6, 0.95 + 4.1), props={'fit_w': 5.5, 'fit_h': 3.6}))
 
     lit = [o for o in objs if o.type == 'MESH' and not o.get('hit') and o.get('shade') != 'glow']
     C.bake_ao(lit, dist=0.55, strength=0.95, samples=24)

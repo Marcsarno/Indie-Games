@@ -45,6 +45,18 @@ PALETTE = {
     'leaf':      '#D9772F',
     'cat':       '#EFA35C',
     'cat_dark':  '#C97A3A',
+    'bean':      '#6FA24A',
+    'bean_dark': '#4E8238',
+    'celery':    '#A9CC6B',
+    'bread':     '#F1D49B',
+    'toast':     '#D69A4E',
+    'sweet':     '#EE8E3C',
+    'sweet_dark': '#CF6B26',
+    'marsh':     '#FFFDF6',
+    'dough':     '#F3DFB2',
+    'pie_fill':  '#D8762B',
+    'juice':     '#E9B552',
+    'herb':      '#5C9A4C',
 }
 
 
