@@ -482,6 +482,7 @@ function drawTitleOptions(btn, oy) {
     btn(SHOW_FPS ? 'SPEED: SHOWN' : 'SPEED: HIDDEN', 180, oy - 44, 84, 16, () => { SHOW_FPS = !SHOW_FPS; try { localStorage.setItem('dcg-fps', SHOW_FPS ? '1' : '0'); } catch (e) { /* storage blocked */ } }, 25, 3, 6);   // round 79: a speed readout to check a real phone
     btn('HERO LIGHT: ' + (CHAR_CAP === L_ID ? 'DRAWN' : '+' + (CHAR_CAP - L_ID)), 6, oy - 44, 84, 16, () => setCharCap(CHAR_CAP >= L_ID + 2 ? L_ID : CHAR_CAP + 1), 25, 3, 6);   // round 60
     btn(DL48 ? 'DUNGEONS: NEW' : 'DUNGEONS: OLD', 6, oy, 84, 16, () => setDL48(!DL48), 25, 3, 6);   // round 48: the dungeon light
+    btn(SMOOTH ? 'LOOK: SMOOTH' : 'LOOK: CLASSIC', 6, oy - 66, 84, 16, () => { setSmooth(!SMOOTH); setBloom(SMOOTH); }, 25, 3, 6);   // round 117: smooth light, soft shadows and bloom, or the dithered look of before
     if (G.cine && G.cine.kind === 'title') btn('WATCH THE OPENING', 93, oy, 84, 16, () => { TITLE.opts = false; G.cine = null; startCine('title', { intro: true }); }, 25, 3, 6);   // round 111
     btn(SFX.synth ? 'SOUND: SYNTH' : 'SOUND: REAL', 180, oy, 84, 16, () => { setSynthSfx(!SFX.synth); sfx('hit'); }, 25, 3, 6);   // round 44: compare the recorded sounds with the old synth
   }

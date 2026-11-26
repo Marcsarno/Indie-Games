@@ -1669,6 +1669,7 @@ function buildOutdoor(back) {
   }
   if (LV.campGlows && LV.dusk && DUSK_ON) for (const g of LV.campGlows) { const [x, y] = iso(g.p[0], g.p[1]); lights.push({ x, y, z: 10, r: 70, i: g.i, seed: Math.floor(x) }); }   // round 95: the places light themselves
   for (const [x, y, rx, ry] of shadows) shadeGround(x, y, rx, ry, 2);
+  LV.sunShadows = shadows;   // round 117: and each one throws a long soft shade in the light (bakeDusk)
   for (const d of LV.decor) if (d.kind === 'meadow') stampMeadow(d.seed);
 }
 

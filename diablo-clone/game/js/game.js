@@ -1566,16 +1566,24 @@ function castShadow(wx, wy, rx, kl) {
     const px = x - cx, py = (y - cy) * 2, u = (px * ux + py * uy) / (len * 0.62), v = (-px * uy + py * ux) / wid;
     const e = u * u + v * v; if (e > 1) continue;
     const far = (u + 1) / 2;   // 0 at the feet, 1 at the tip
+    if (SMOOTH) {   // round 117: a soft shadow, fading along its length and at its rim
+      if (scr[y * W + x] === BLK || zbuf[y * W + x] > 2) continue;
+      const k = Math.min(1, (1 - e) * 2.5) * (far < 0.3 ? 1 : 1 - (far - 0.3) / 0.7) * 235 | 0;
+      if (k > shd[y * W + x]) shd[y * W + x] = k;
+      continue;
+    }
     if (far > 0.55 && BAYER[((y & 3) << 2) | (x & 3)] < (far - 0.55) / 0.45) continue;
-    if (scr[y * W + x] !== BLK && zbuf[y * W + x] <= 2) shd[y * W + x] = 1;
+    if (scr[y * W + x] !== BLK && zbuf[y * W + x] <= 2) shd[y * W + x] = 255;
   }
 }
 function shadowBlob(wx, wy, rx) {
   const cx = wx - camX, cy = wy - camY, ry = rx * 0.45;
   for (let y = Math.floor(cy - ry); y <= cy + ry; y++) for (let x = Math.floor(cx - rx); x <= cx + rx; x++) {
     if (x < 0 || y < 0 || x >= W || y >= H) continue;
-    const dx = (x - cx) / rx, dy = (y - cy) / ry;
-    if (dx * dx + dy * dy <= 1 && scr[y * W + x] !== BLK) shd[y * W + x] = 1;
+    const dx = (x - cx) / rx, dy = (y - cy) / ry, d = dx * dx + dy * dy;
+    if (d > 1 || scr[y * W + x] === BLK) continue;
+    const k = SMOOTH ? Math.min(255, (1 - d) * 620) | 0 : 255;   // (round 117: a soft rim)
+    if (k > shd[y * W + x]) shd[y * W + x] = k;
   }
 }
 // flames cycle through the fire ramp; they are emissive and never lit
@@ -1593,13 +1601,75 @@ function glowAt(wx, wy, R, k, col) {
     const dy = y - Y0, by = (y & 3) << 2, row = y * OW;
     for (let x = Math.max(0, X0 - R); x < Math.min(OW, X0 + R); x++) {
       const dx = x - X0, d2 = dx * dx + dy * dy; if (d2 >= R2) continue;
-      const f = 1 - Math.sqrt(d2) / R, q = Math.floor((f * f * k * 10 + BAYER[by | (x & 3)]) ) / 10;   // banded, not smooth
+      const f = 1 - Math.sqrt(d2) / R, q = SMOOTH ? f * f * k : Math.floor((f * f * k * 10 + BAYER[by | (x & 3)]) ) / 10;   // (round 117: a smooth halo; it was banded and dithered)
       if (q <= 0) continue;
       const c = ov32[row + x], r = c & 255, g = (c >> 8) & 255, b = (c >> 16) & 255;
-      ov32[row + x] = (255 << 24) | (Math.min(255, b + col[2] * q) << 16) | (Math.min(255, g + col[1] * q) << 8) | Math.min(255, r + col[0] * q);
+      ov32[row + x] = ((c & 0xff000000) | (Math.min(255, b + col[2] * q) << 16) | (Math.min(255, g + col[1] * q) << 8) | Math.min(255, r + col[0] * q)) >>> 0;
     }
   }
 }
+// round 117, bloom: whatever shines by itself (flames, lava, spell light, glowing eyes, blade
+// trails, sparks, a struck body's white flash) spills a soft light over what is round it. Sources
+// are the frame's pixels written at alpha 255 (lit colours carry 254), read on a 2-pixel lattice
+// into a quarter-size buffer, blurred twice, and added back only where the buffer is not empty,
+// so a dark corridor costs one pass over the lattice and a spell costs the area it lights.
+let BLOOM = true, blW = 0, blH = 0, blA = null, blB = null, BLOOM_K = 0.42;
+const BL_CACHE = new Map(); let blTick = 0, blAny = 0, blKept = null;
+try { const q = new URLSearchParams(location.search).get('bloom'); BLOOM = q !== null ? q !== '0' : localStorage.getItem('dcg-bloom') !== 'off'; } catch (e) { /* storage blocked */ }
+function setBloom(v) { BLOOM = v; try { localStorage.setItem('dcg-bloom', v ? 'on' : 'off'); } catch (e) { /* ignore */ } }
+function bloomPass() {
+  // an eighth-size buffer with a one-cell empty border (so the blur needs no edge tests)
+  const ov32 = OV32_G(), OW = OW_G();   // (locals: the passes below read the whole frame)
+  const bw = (OW >> 3) + 2, bh = (OH >> 3) + 2, n = bw * bh, st = bw * 3;
+  if (blW !== bw || blH !== bh) { const key = bw * 4096 + bh; let c = BL_CACHE.get(key); if (!c) BL_CACHE.set(key, c = [new Int32Array(n * 3), new Int32Array(n * 3)]); blW = bw; blH = bh; blA = c[0]; blB = c[1]; }   // (kept per size: the skill preview draws at its own)
+  const A = blA, B = blB; let any = 0;
+  // the glow is gathered and blurred on every second frame and laid over both (a halo one frame old is not seen)
+  if ((blTick++ & 1) && blKept === A) any = blAny; else {
+  // eight samples to a cell: two rows of four, the second row shifted a pixel
+  for (let cy = 1; cy < bh - 1; cy++) {
+    const r0 = ((cy - 1) * 8 + 1) * OW, r1 = r0 + 4 * OW + 1; let o = (cy * bw + 1) * 3;
+    for (let cx = 1; cx < bw - 1; cx++, o += 3) {
+      const x = (cx - 1) * 8; let r = 0, g = 0, b = 0, c;
+      for (let q = 0; q < 8; q += 2) {
+        c = ov32[r0 + x + q]; if (c >= 0xff000000) { const cr = c & 255, cg = (c >> 8) & 255, cb = (c >> 16) & 255; if (cr + cg + cb > 300) { r += cr; g += cg; b += cb; } }
+        c = ov32[r1 + x + q]; if (c >= 0xff000000) { const cr = c & 255, cg = (c >> 8) & 255, cb = (c >> 16) & 255; if (cr + cg + cb > 300) { r += cr; g += cg; b += cb; } }
+      }
+      A[o] = r; A[o + 1] = g; A[o + 2] = b; any |= r | g | b;
+    }
+  }
+  blAny = any; blKept = A;
+  if (any) {
+  // two 3-cell box blurs each way (a soft tent, about 8 world pixels out): rows A -> B, columns B -> A
+  for (let pass = 0; pass < 2; pass++) {
+    for (let o = st + 3, e = (n - bw - 1) * 3; o < e; o++) B[o] = A[o - 3] + A[o] + A[o + 3];
+    for (let o = st + 3, e = (n - bw - 1) * 3; o < e; o++) A[o] = ((B[o - st] + B[o] + B[o + st]) * 0.1111) | 0;
+    // (the border cells take what the blur spilled into them; clear them so nothing wraps round)
+    for (let y = 0; y < bh; y++) { const a = y * st, z = a + st - 3; A[a] = A[a + 1] = A[a + 2] = A[z] = A[z + 1] = A[z + 2] = 0; }
+  }
+  } }
+  if (!any) return;
+  // added back in 4x4 blocks, each block's value taken between the cells round it (so the eighth-size
+  // buffer does not show as squares); blocks with next to nothing are skipped
+  const K = BLOOM_K / 8 / 16, OW4 = OW * 4;
+  for (let ey = 1; ey < bh - 1; ey++) {
+    const e0 = ey * st;
+    for (let ex = 1; ex < bw - 1; ex++) {
+      const a = e0 + ex * 3, a0 = A[a], a1 = A[a + 1], a2 = A[a + 2];
+      if (a0 + a1 + a2 < 40) continue;
+      for (let h = 0; h < 4; h++) {   // the cell's four 4x4 blocks: left/right, top/bottom
+        const b2 = a + (h & 1 ? 3 : -3), c2 = a + (h & 2 ? st : -st), d2 = c2 + (h & 1 ? 3 : -3);
+        const r = ((9 * a0 + 3 * A[b2] + 3 * A[c2] + A[d2]) * K) | 0, g = ((9 * a1 + 3 * A[b2 + 1] + 3 * A[c2 + 1] + A[d2 + 1]) * K) | 0, b = ((9 * a2 + 3 * A[b2 + 2] + 3 * A[c2 + 2] + A[d2 + 2]) * K) | 0;
+        if (r + g + b < 5) continue;
+        let d = (ey - 1) * 8 * OW + (ex - 1) * 8 + (h & 1 ? 4 : 0) + (h & 2 ? OW4 : 0);
+        for (let yy = 0; yy < 4; yy++, d += OW) for (let xx = 0; xx < 4; xx++) {
+          const c = ov32[d + xx], R = (c & 255) + r, G2 = ((c >> 8) & 255) + g, B2 = ((c >> 16) & 255) + b;
+          ov32[d + xx] = ((c & 0xff000000) | ((B2 > 255 ? 255 : B2) << 16) | ((G2 > 255 ? 255 : G2) << 8) | (R > 255 ? 255 : R)) >>> 0;
+        }
+      }
+    }
+  }
+}
+const HALO_X = [0, 1, -1, 2, -1, 2, 0, 1, -1, 2, -1, 2], HALO_Y = [-1, -1, 0, 0, 1, 1, 2, 2, -1, -1, 2, 2];   // the 12 pixels round a 2x2 spark (the last four: its corners)
 function drawGlows() {
   const day = LV.outdoor && !LV.night, fl = 0.9 + 0.1 * Math.sin(G.t * 13);
   for (const f of fires) {
@@ -1608,7 +1678,7 @@ function drawGlows() {
     const big = f.h >= 10, R = big ? 26 : 12, k = (day ? 0.18 : big ? 0.5 : 0.35) * fl;
     glowAt(f.wx, f.wy - f.h * 0.45, R, k, f.blue ? GLOW_BLUE : GLOW_WARM);
   }
-  if (LV.night || DUSK) for (const d of LV.decor) if (d.kind === 'lantern' && (LV.night || inCamp(d.fi, d.fj, 1))) { const [x, y] = iso(d.fi, d.fj); glowAt(x + 4, y - 20, 14, (LV.night ? 0.4 : 0.32) * fl, GLOW_GOLD); }   // (round 92: and the camp's at dusk)
+  if (LV.night || DUSK_CAMP) for (const d of LV.decor) if (d.kind === 'lantern' && (LV.night || inCamp(d.fi, d.fj, 1))) { const [x, y] = iso(d.fi, d.fj); glowAt(x + 4, y - 20, 14, (LV.night ? 0.4 : 0.32) * fl, GLOW_GOLD); }   // (round 92: and the camp's at dusk)
   for (const p of projectiles) {
     if (p.kind === 'arrow') continue;
     const [x, y] = iso(p.fi, p.fj), col = p.kind === 'missile' || p.kind === 'frostbolt' ? GLOW_ARC : p.kind === 'holy' ? GLOW_GOLD : GLOW_WARM;
@@ -1735,17 +1805,18 @@ function render() {
   drawTelegraph(); drawImpactFx(); drawElemGround(); drawRocks(); drawRangerGround(); drawEliteGround(); drawMeteors(); drawLichFx(); drawWarriorFx();
   const charLevel = lightPass(chars, kx, ky);
   // the frame: the lit world doubled (shifted by the camera's half pixel), then the detail layer over it
-  for (let y = 0; y < H; y++) {
-    const r0 = y * W; let first = -1;
+  { const OV = ov32, BASE = base32, Wd = W, Hd = H, OWd = OW, OHd = OH, hx0 = hx, hy0 = hy;   // (round 117: locals; the loop touches every pixel of the frame)
+  for (let y = 0; y < Hd; y++) {
+    const r0 = y * Wd; let first = -1;
     for (let b = 0; b < SPX; b++) {
-      const yy = y * SPX - hy + b; if (yy < 0 || yy >= OH) continue;
-      const d = yy * OW;
-      if (first >= 0) { ov32.copyWithin(d, first, first + OW); continue; }   // the second line of a doubled row
-      for (let x = 0, X = -hx; x < W; x++, X += SPX) { const c = base32[r0 + x]; if (X >= 0) ov32[d + X] = c; ov32[d + X + 1] = c; }
-      if (hx) ov32[d + OW - 1] = base32[r0 + W - 1];
+      const yy = y * SPX - hy0 + b; if (yy < 0 || yy >= OHd) continue;
+      const d = yy * OWd;
+      if (first >= 0) { OV.copyWithin(d, first, first + OWd); continue; }   // the second line of a doubled row
+      if (hx0) { OV[d] = BASE[r0]; for (let x = 1, X = d + 1; x < Wd; x++, X += 2) { const c = BASE[r0 + x]; OV[X] = c; OV[X + 1] = c; } OV[d + OWd - 1] = BASE[r0 + Wd - 1]; }
+      else for (let x = 0, X = d; x < Wd; x++, X += 2) { const c = BASE[r0 + x]; OV[X] = c; OV[X + 1] = c; }
       first = d;
     }
-  }
+  } }
   if (hy) ov32.copyWithin((OH - 1) * OW, (OH - 2) * OW, (OH - 1) * OW);
   // round 27: the 2x props, visiting only the spans of each row that hold 2x pixels. A detail pixel
   // takes its 2x prop color where the world pixel under it is still the baked one this frame
@@ -1763,7 +1834,7 @@ function render() {
           if (x !== lastX) { lastX = x; const o = r0 + x, lv = levB[o]; L = (lv === 255 || scr[o] !== wIdx[wrow + x]) ? -1 : lv * NPAL; }
           if (L < 0) continue;
           const v2 = wIdx2[row2 + wx2];
-          ov32[d + X] = (v2 & EMIS) ? PAL32[CYCLE[v2 & 127]] : v2 === BLK ? black : LCOL[L + v2];
+          ov32[d + X] = (v2 & EMIS) ? PAL32[CYCLE[v2 & 127]] : v2 === BLK ? black : LCS[L + v2];
         }
       }
     }
@@ -1792,8 +1863,17 @@ function render() {
     if (!c32) continue;
     const c2 = kind === 6 ? envCol((X + hx) >> 1, (Y + hy) >> 1, BONE[0], -2) || c32 : kind === 7 ? envCol((X + hx) >> 1, (Y + hy) >> 1, col - 2, -2) || c32 : c32;   // bone chunks are bigger, with a shaded underside
     for (let b = 0; b < s && Y + b < OH; b++) for (let a = 0; a < s && X + a < OW; a++) ov32[(Y + b) * OW + X + a] = b >= (kind === 7 ? 2 : 2) && (kind !== 7 || a > 0) ? c2 : c32;
+    if (emis && SMOOTH && X > 1 && Y > 1 && X < OW - 4 && Y < OH - 4) {   // round 117: a spark's own small halo: the ring of pixels round it takes a third of its colour
+      const r = (c32 & 255) * 0.34 | 0, g = ((c32 >> 8) & 255) * 0.34 | 0, bl = ((c32 >> 16) & 255) * 0.34 | 0;
+      for (let q = 0; q < 12; q++) {
+        const o = (Y + HALO_Y[q]) * OW + X + HALO_X[q], c = ov32[o]; if (c >= 0xff000000 && (c & 0xffffff) === (c32 & 0xffffff)) continue;   // (a neighbouring spark of the same colour stays as it is)
+        const R = (c & 255) + r, G2 = ((c >> 8) & 255) + g, B2 = ((c >> 16) & 255) + bl;
+        ov32[o] = ((c & 0xff000000) | ((B2 > 255 ? 255 : B2) << 16) | ((G2 > 255 ? 255 : G2) << 8) | (R > 255 ? 255 : R)) >>> 0;
+      }
+    }
   }
   drawImpactFlashes();
+  if (BLOOM) bloomPass();
   if (GLOW) drawGlows();
   if (G.cine) cineCompose(true);   // round 89: a cinematic: the table, with this picture as the map on it (cine.js)
   drawHudLayer();
@@ -1843,46 +1923,51 @@ function envCol(x, y, v, tile) {
   if (v === BLK) return PAL32[BLK];
   const o = y * W + x, tk = tile === -2 ? tbuf[o] : tile;
   if (tk < 0 ? !LV.outdoor : VIEW_FOG && !LV.seen[tk]) return 0;
-  const vv = tk < 0 || !VIEW_FOG ? 1 : LV.vis[tk], top = (LEVELS - 1) * NPAL;
-  let lr = shd[o] ? lbuf[o] * 0.4 : lbuf[o];
+  const vv = tk < 0 || !VIEW_FOG ? 1 : LV.vis[tk], top = (SLEV - 1) * NPAL;
+  let lr = lbuf[o] * SHK[shd[o]];
   if (DL48 && !LV.outdoor && AO) { const wx = camX + x, wy = camY + y; if (wx >= 0 && wy >= 0 && wx < WW && wy < WH) lr *= AO[wy * WW + wx] * (1 / 255); lr = TONE[Math.min(1023, (lr * BANDS * 64) | 0)] / BANDS; }   // round 48: as the light pass
-  const l = lr * BANDS * vv + 0.9 * (1 - vv) + BAYER[((y & 3) << 2) | (x & 3)];
+  const l = (lr * BANDS * vv + 0.9 * (1 - vv)) * SUB + BAYS[((y & 3) << 2) | (x & 3)];
   const L = (l | 0) * NPAL;
-  return LCOL[(L < top ? L : top) + v];
+  return LCS[(L < top ? L : top) + v];
 }
 // draw a sprite on the detail layer. A detail sprite (sp.px === SPX) is placed at sub-pixel
 // precision; a world sprite (px 1) is drawn doubled, exactly over its place in the world layer.
 // level >= 0: one light level for the whole sprite (characters); -1: lit per pixel like the world
+const OV32_G = () => ov32, OW_G = () => OW;
 function ovBlit(sp, wx, wy, level, flash, dissolve, tile, clip = null, rim = null) {
   const fine = sp.px === SPX, k = fine ? 1 : SPX;
   const X0 = fine ? Math.round(wx * SPX) - cam2x - sp.ax : (Math.round(wx - camX) - sp.ax) * SPX - hx;
   const Y0 = fine ? Math.round(wy * SPX) - cam2y - sp.ay : (Math.round(wy - camY) - sp.ay) * SPX - hy;
-  const LV0 = level >= 0 ? level * NPAL : -1;
+  const LV0 = level >= 0 ? lrow(level) : -1;
   if (fine && !flash && !dissolve && LV0 >= 0 && !clip) {   // the common case (a character, one light level): a tight loop
-    const data = sp.data, w = sp.w, h = sp.h, black = PAL32[BLK], xa = Math.max(0, -X0), xb = Math.min(w, OW - X0);
+    const data = sp.data, w = sp.w, h = sp.h, black = PAL32[BLK], xa = Math.max(0, -X0), xb = Math.min(w, OW - X0), ov32 = OV32_G(), P32 = PAL32, CY = CYCLE, LC = LCS;   // (round 117: locals)
     // rim light: a body pixel whose neighbor toward the key light is outline or empty is lit
     // brighter (two steps when the light is strong and close, one otherwise)
     let rx = 0, ry = 0, RL = 0, ra = 0, rg = 0, rb = 0, thick = false;
     if (rim) {
       const d = Math.hypot(rim.sx, rim.sy) || 1; rx = Math.round(rim.sx / d * 1.4); ry = Math.round(rim.sy / d * 1.4);
-      RL = Math.min((LEVELS - 1) * NPAL, LV0 + NPAL); const k = Math.min(1, rim.w); ra = 70 * k; rg = 42 * k; rb = 8 * k; thick = rim.w > 0.5;   // a warm edge, stronger and 2 px wide close to the light
+      RL = Math.min((SLEV - 1) * NPAL, LV0 + SUB * NPAL); const k = Math.min(1, rim.w); ra = 70 * k; rg = 42 * k; rb = 8 * k; thick = rim.w > 0.5;   // a warm edge, stronger and 2 px wide close to the light
       if (!rx && !ry) rim = null;
     }
+    // round 117: a body stands in its own shade: the last 14 rows above the feet fall up to five
+    // eighths of a light level, so legs and hems sink into the ground shadow instead of floating
+    const gy = SMOOTH ? sp.ay - 14 : 1e9, LVB = LV0;
     for (let y = Math.max(0, -Y0), y1 = Math.min(h, OH - Y0); y < y1; y++) {
       const row = (Y0 + y) * OW + X0, s = y * w;
+      const LV0 = y > gy ? Math.max(0, LVB - Math.min(5, ((y - gy) * 0.36) | 0) * NPAL) : LVB;
       for (let x = xa; x < xb; x++) {
         const v = data[s + x]; if (!v) continue;
-        if (v & EMIS) { ov32[row + x] = PAL32[CYCLE[v & 127]]; continue; }
+        if (v & EMIS) { ov32[row + x] = P32[CY[v & 127]]; continue; }
         if (v === BLK) { ov32[row + x] = black; continue; }
         if (rim) {
           let xx = x + rx, yy = y + ry, nb = xx < 0 || yy < 0 || xx >= w || yy >= h ? 0 : data[yy * w + xx], edge = nb === 0 || nb === BLK;
           if (!edge && thick) { xx += rx; yy += ry; nb = xx < 0 || yy < 0 || xx >= w || yy >= h ? 0 : data[yy * w + xx]; edge = nb === 0 || nb === BLK; }
           if (edge) {
-            const c = LCOL[RL + v], r = Math.min(255, (c & 255) + ra), g = Math.min(255, ((c >> 8) & 255) + rg), b = Math.min(255, ((c >> 16) & 255) + rb);
-            ov32[row + x] = (255 << 24) | (b << 16) | (g << 8) | r; continue;
+            const c = LC[RL + v], r = Math.min(255, (c & 255) + ra), g = Math.min(255, ((c >> 8) & 255) + rg), b = Math.min(255, ((c >> 16) & 255) + rb);
+            ov32[row + x] = (254 << 24) | (b << 16) | (g << 8) | r; continue;
           }
         }
-        ov32[row + x] = LCOL[LV0 + v];
+        ov32[row + x] = LC[LV0 + v];
       }
     }
     return;
@@ -1904,7 +1989,7 @@ function ovBlit(sp, wx, wy, level, flash, dissolve, tile, clip = null, rim = nul
       if (flash && v !== BLK) v = flash === 7 ? FIRE_TINT[v & 127] : flash === 8 ? HOLY_TINT[v & 127] : flash === 4 ? ICE_TINT[v & 127] : flash === 6 ? ARC_TINT[v & 127] : flash === 5 ? ((xx + yy) & 2 ? ICE_TINT[v & 127] : v) : flash === 2 ? HURT_TINT[v & 127] : flash === 3 ? ((xx + yy) & 2 ? HURT_TINT[v & 127] : v) : (27 | EMIS);
       // a world sprite redrawn over a character is already drawn and lit in the world layer at this
       // very pixel: copy it (cheaper than lighting it again, and identical)
-      const c = !flash && LV0 < 0 && (!fine || sp.world2) ? (fine ? frame2[yy * OW + xx] : base32[(Y0 + hy) / SPX * W + y * W + (X0 + hx) / SPX + x]) : (v & EMIS) ? PAL32[CYCLE[v & 127]] : v === BLK ? PAL32[BLK] : LV0 >= 0 ? LCOL[LV0 + v] : envCol((xx + hx) >> 1, (yy + hy) >> 1, v, tile);
+      const c = !flash && LV0 < 0 && (!fine || sp.world2) ? (fine ? frame2[yy * OW + xx] : base32[(Y0 + hy) / SPX * W + y * W + (X0 + hx) / SPX + x]) : (v & EMIS) ? PAL32[CYCLE[v & 127]] : v === BLK ? PAL32[BLK] : LV0 >= 0 ? LCS[LV0 + v] : envCol((xx + hx) >> 1, (yy + hy) >> 1, v, tile);
       if (!c) continue;
       if (k === 1) ov32[yy * OW + xx] = c;
       else for (let b = 0; b < k && yy + b < OH; b++) for (let a = 0; a < k && xx + a < OW; a++) ov32[(yy + b) * OW + xx + a] = c;
@@ -2055,6 +2140,7 @@ let CHAR_CAP = L_ID;
 try { const q = new URLSearchParams(location.search).get('charlight') || localStorage.getItem('dcg-charlight'); if (q && +q >= 1 && +q < LEVELS) CHAR_CAP = +q; } catch (e) { /* storage blocked */ }
 function setCharCap(v) { CHAR_CAP = v; try { localStorage.setItem('dcg-charlight', String(v)); } catch (e) { /* ignore */ } }
 let tintB = new Uint8Array(1);   // round 80: which coloured light reaches each world pixel this frame (0 = none)
+const LBUF_G = () => lbuf, ZBUF_G = () => zbuf;
 function lightPass(chars, kx, ky) {
   const t = G.t;
   if (tintB.length !== W * H) tintB = new Uint8Array(W * H);
@@ -2070,13 +2156,13 @@ function lightPass(chars, kx, ky) {
   for (const f of G.flashes) if (dyn.length < 7) { const [x, y] = iso(f.fi, f.fj); dyn.push({ x, y, z: 24, r: f.r, i: 1.1 * f.t / f.t0, tint: f.tint || 0 }); }   // explosions light the room
   const fl = g => 1 + 0.07 * Math.sin(t * 11 + g * 2.3) + 0.05 * Math.sin(t * 23.7 + g * 5.1) + 0.04 * Math.sin(t * 37 + g);
   const f0 = fl(0), f1 = fl(1), A = staticLight[0], B = staticLight[1];
+  const lbuf = LBUF_G(), zbuf = ZBUF_G();   // (round 117: locals for the loops below)
   for (let y = 0; y < H; y++) {
     const wy = camY + y, o0 = y * W;
     if (wy < 0 || wy >= WH) { lbuf.fill(0, o0, o0 + W); continue; }
     const row = wy * WW + camX, xa = Math.max(0, -camX), xb = Math.min(W, WW - camX);   // (round 57: the world's edges worked out once per row)
     for (let x = 0; x < xa; x++) lbuf[o0 + x] = amb;
-    if (DUSK) { const k = DUSK_K / 255; for (let x = xa; x < xb; x++) lbuf[o0 + x] = amb - DUSK[row + x] * k + A[row + x] * f0 + B[row + x] * f1; }   // round 92: evening in the camp
-    else for (let x = xa; x < xb; x++) lbuf[o0 + x] = amb + A[row + x] * f0 + B[row + x] * f1;
+    for (let x = xa; x < xb; x++) lbuf[o0 + x] = amb + A[row + x] * f0 + B[row + x] * f1;   // (round 117: the camp's dusk and the sun shadows are baked into A)
     for (let x = Math.max(xa, xb); x < W; x++) lbuf[o0 + x] = amb;
   }
   let tintOn = false;
@@ -2103,27 +2189,74 @@ function lightPass(chars, kx, ky) {
     const [x, y] = screenOf(c), sx = Math.round(x - camX), sy = Math.round(y - camY - 16);
     const at = yy => (sx >= 0 && yy >= 0 && sx < W && yy < H) ? lbuf[yy * W + sx] : 0.3, l = Math.max(at(sy), at(sy + 14));   // (round 109: and at the feet: behind a tall prop the point above them is the prop, lit at its height, and he went dark)
     const lv = tone ? tone[Math.min(1023, (l * BANDS * 64) | 0)] : l * BANDS;
-    return Math.min(CHAR_CAP, Math.max(1, Math.round(lv)));   // capped: torch-side sprites must not blow out (round 60: at the colors as drawn)
+    return Math.min(CHAR_CAP, Math.max(1, SMOOTH ? Math.round(lv * SUB) / SUB : Math.round(lv)));   // capped: torch-side sprites must not blow out (round 60: at the colors as drawn)   (round 117: in eighths of a level, so a body's light changes smoothly)
   });
   const vis = LV.vis, seen = LV.seen, black = PAL32[BLK], top = (LEVELS - 1) * NPAL;
-  const cl = charLevel.map(L => L * NPAL);
+  const cl = charLevel.map(lrow);
 
   if (!VIEW_FOG) {   // round 57: the usual case, kept lean (no fog reads; the tone curve and AO as one lookup; edges per row)
-    const outd = LV.outdoor, TL = LEVELS - 1;
-    for (let y = 0, o = 0; y < H; y++) {
-      const by = (y & 3) << 2, wy = camY + y, aoRow = nl && wy >= 0 && wy < WH ? wy * WW + camX : -1, xa = Math.max(0, -camX), xb = Math.min(W, WW - camX);
-      for (let x = 0; x < W; x++, o++) {
-        const v = scr[o];
-        if (v === BLK) { levB[o] = 255; out32[o] = black; continue; }
-        if (!outd && tbuf[o] < 0) { levB[o] = 255; out32[o] = black; continue; }
-        const ci = cid[o];
-        if (ci) { levB[o] = 255; out32[o] = (v & EMIS) ? PAL32[CYCLE[v & 127]] : LCOL[cl[ci - 1] + v]; continue; }
-        let lr = shd[o] ? lbuf[o] * 0.4 : lbuf[o];
-        if (aoRow >= 0 && x >= xa && x < xb) lr *= AO[aoRow + x] * (1 / 255);
-        const n = (lr * 320) | 0, l = (nl ? TONE[n < 1023 ? n : 1023] : lr * BANDS) + BAYER[by | (x & 3)];
+    // round 117: every buffer and table this loop reads is held in a local (the globals are
+    // re-read and re-checked on every pixel otherwise: the loop ran at 22 ns a pixel, now under half)
+    const outd = LV.outdoor, TL = SLEV - 1, Wd = W, Hd = H, SCR = scr, LEV = levB, OUT = out32, CID = cid, LB = lbuf, SH = shd, AOm = AO, TN = TONES, BY = BAYS, P32 = PAL32, CY = CYCLE, LC = LCS, TB = tintB, TBUF = tbuf, SK = SHK, CL = Int32Array.from(cl);
+    const T1 = TCS[1], T2 = TCS[2], T3 = TCS[3], KB = BANDS * SUB, NP = NPAL, wall = !outd;
+    // round 117: with the smooth light, light is worked out once per 2x2 block where it is even
+    // (two samples on the diagonal agree) and per pixel only where it changes fast (a shadow's
+    // rim, a wall's foot). Colours are still looked up per pixel. No dither: an eighth of a level
+    // is too small a step to band.
+    if (SMOOTH && !(Wd & 1) && !(Hd & 1)) {
+      const one = (p, ai) => {   // one pixel in full (ai: its place in the occlusion map, or -1)
+        const v = SCR[p];
+        if (v === BLK || (wall && TBUF[p] < 0)) { LEV[p] = 255; OUT[p] = black; return; }
+        const ci = CID[p];
+        if (ci) { LEV[p] = 255; OUT[p] = (v & EMIS) ? P32[CY[v & 127]] : LC[CL[ci - 1] + v]; return; }
+        let lr = LB[p] * SK[SH[p]], l;
+        if (nl) { if (ai >= 0) lr *= AOm[ai] * (1 / 255); const n = (lr * 320) | 0; l = TN[n < 1023 ? n : 1023] + 0.5; } else l = lr * KB + 0.5;
         const L = (l | 0) < TL ? (l | 0) : TL;
-        levB[o] = L;
-        out32[o] = (v & EMIS) ? PAL32[CYCLE[v & 127]] : tintOn && tintB[o] ? TCOL[tintB[o]][L * NPAL + v] : LCOL[L * NPAL + v];
+        LEV[p] = L;
+        if (v & EMIS) { OUT[p] = P32[CY[v & 127]]; return; }
+        if (tintOn) { const tb = TB[p]; if (tb) { OUT[p] = (tb === 1 ? T1 : tb === 2 ? T2 : T3)[L * NP + v]; return; } }
+        OUT[p] = LC[L * NP + v];
+      };
+      for (let y = 0; y < Hd; y += 2) {
+        const wy = camY + y, hasAO = nl && wy >= 0 && wy + 1 < WH, aoOff = hasAO ? wy * WW + camX - y * Wd : 0, xa = hasAO ? Math.max(0, -camX) : Wd, xb = hasAO ? Math.min(Wd, WW - camX) : 0;
+        for (let x = 0, o = y * Wd; x < Wd; x += 2, o += 2) {
+          const d = o + Wd + 1, ao = x >= xa && x + 1 < xb, ai = ao ? aoOff + o : -1;
+          let la = LB[o] * SK[SH[o]], ld = LB[d] * SK[SH[d]];
+          if (ao) { la *= AOm[ai] * (1 / 255); ld *= AOm[ai + WW + 1] * (1 / 255); }
+          const df = la - ld;
+          if (df > 0.03 || df < -0.03) { one(o, ai); one(o + 1, ao ? ai + 1 : -1); one(d - 1, ao ? ai + WW : -1); one(d, ao ? ai + WW + 1 : -1); continue; }
+          const lr = (la + ld) * 0.5; let l;
+          if (nl) { const n = (lr * 320) | 0; l = TN[n < 1023 ? n : 1023] + 0.5; } else l = lr * KB + 0.5;
+          const L = (l | 0) < TL ? (l | 0) : TL, LN = L * NP;
+          for (let k = 0; k < 4; k++) {
+            const p = k === 0 ? o : k === 1 ? o + 1 : k === 2 ? d - 1 : d, v = SCR[p];
+            if (v === BLK || (wall && TBUF[p] < 0)) { LEV[p] = 255; OUT[p] = black; continue; }
+            const ci = CID[p];
+            if (ci) { LEV[p] = 255; OUT[p] = (v & EMIS) ? P32[CY[v & 127]] : LC[CL[ci - 1] + v]; continue; }
+            LEV[p] = L;
+            if (v & EMIS) { OUT[p] = P32[CY[v & 127]]; continue; }
+            if (tintOn) { const tb = TB[p]; if (tb) { OUT[p] = (tb === 1 ? T1 : tb === 2 ? T2 : T3)[LN + v]; continue; } }
+            OUT[p] = LC[LN + v];
+          }
+        }
+      }
+      return charLevel;
+    }
+    for (let y = 0, o = 0; y < Hd; y++) {
+      const by = (y & 3) << 2, wy = camY + y, hasAO = nl && wy >= 0 && wy < WH, aoOff = hasAO ? wy * WW + camX - o : 0, xa = hasAO ? Math.max(0, -camX) : Wd, xb = hasAO ? Math.min(Wd, WW - camX) : Wd;
+      for (let x = 0; x < Wd; x++, o++) {
+        const v = SCR[o];
+        if (v === BLK || (wall && TBUF[o] < 0)) { LEV[o] = 255; OUT[o] = black; continue; }
+        const ci = CID[o];
+        if (ci) { LEV[o] = 255; OUT[o] = (v & EMIS) ? P32[CY[v & 127]] : LC[CL[ci - 1] + v]; continue; }
+        let lr = LB[o] * SK[SH[o]], l;
+        if (nl) { if (x >= xa && x < xb) lr *= AOm[aoOff + o] * (1 / 255); const n = (lr * 320) | 0; l = TN[n < 1023 ? n : 1023] + BY[by | (x & 3)]; }
+        else l = lr * KB + BY[by | (x & 3)];
+        const L = (l | 0) < TL ? (l | 0) : TL;
+        LEV[o] = L;
+        if (v & EMIS) { OUT[o] = P32[CY[v & 127]]; continue; }
+        if (tintOn) { const tb = TB[o]; if (tb) { OUT[o] = (tb === 1 ? T1 : tb === 2 ? T2 : T3)[L * NP + v]; continue; } }
+        OUT[o] = LC[L * NP + v];
       }
     }
     return charLevel;
@@ -2139,14 +2272,14 @@ function lightPass(chars, kx, ky) {
       const ci = cid[o];
       const vv = tk < 0 || !VIEW_FOG ? 1 : vis[tk];
       // remembered areas sit at a dim floor level; visible areas get their real light
-      let lr = shd[o] ? lbuf[o] * 0.4 : lbuf[o];
+      let lr = lbuf[o] * SHK[shd[o]];
       if (tone) { const wx = camX + x; if (aoRow >= 0 && !ci && wx >= 0 && wx < WW) lr *= AO[aoRow + x] * (1 / 255); lr = tone[Math.min(1023, (lr * BANDS * 64) | 0)] / BANDS; }
-      const l = lr * BANDS * vv + 0.9 * (1 - vv) + BAYER[by | (x & 3)];
-      const L = (l | 0) < LEVELS - 1 ? (l | 0) : LEVELS - 1;
+      const l = (lr * BANDS * vv + 0.9 * (1 - vv)) * SUB + BAYS[by | (x & 3)];
+      const L = (l | 0) < SLEV - 1 ? (l | 0) : SLEV - 1;
       if (!ci) levB[o] = L;
       if (v & EMIS) { out32[o] = PAL32[CYCLE[v & 127]]; continue; }
-      if (ci) { out32[o] = LCOL[cl[ci - 1] + v]; continue; }
-      out32[o] = LCOL[L * NPAL + v];
+      if (ci) { out32[o] = LCS[cl[ci - 1] + v]; continue; }
+      out32[o] = LCS[L * NPAL + v];
     }
   }
   return charLevel;

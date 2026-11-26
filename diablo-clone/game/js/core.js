@@ -131,7 +131,36 @@ function buildTcol() {
     const T = TCOL[t] || (TCOL[t] = new Uint32Array(LEVELS * NPAL)), [kr, kg, kb] = TINTS[t];
     for (let k = 0; k < LEVELS * NPAL; k++) { const c = LCOL[k], r = c & 255, g = (c >> 8) & 255, b = (c >> 16) & 255; T[k] = (255 << 24) | (Math.min(255, Math.round(b * kb)) << 16) | (Math.min(255, Math.round(g * kg)) << 8) | Math.min(255, Math.round(r * kr)); }
   }
+  buildSmooth();
 }
+// round 117, smooth light: eight sub-levels between each pair of light levels, their colours mixed
+// from the two tables, so light fades as a gradient instead of through dither bands. The light pass
+// reads LCS / TCS at (level * SUB) with one sub-level of dither (no visible pattern). SMOOTH off:
+// every sub-level shows its whole level's colour and the dither spans a full level, the old look.
+const SUB = 8, SLEV = (LEVELS - 1) * SUB + 1, LCS = new Uint32Array(SLEV * NPAL), TCS = [null], BAYS = new Float32Array(16), SHK = new Float32Array(256);
+const TONES = new Float32Array(1024);   // the dungeon's tone curve in sub-levels (TONE * SUB), one lookup in the light pass
+let SMOOTH = true;
+try { const q = new URLSearchParams(location.search).get('smooth'); SMOOTH = q !== null ? q !== '0' : localStorage.getItem('dcg-smooth') !== 'off'; } catch (e) { /* storage blocked */ }
+function buildSmooth() {
+  const mix = (S, D) => {
+    for (let s = 0; s < SLEV; s++) {
+      const L = Math.min(LEVELS - 2, Math.floor(s / SUB)), f = SMOOTH ? s / SUB - L : s === SLEV - 1 ? 1 : 0, a = L * NPAL, b = a + NPAL;
+      for (let i = 0; i < NPAL; i++) {
+        const c0 = S[a + i], c1 = S[b + i];
+        const r = (c0 & 255) + ((c1 & 255) - (c0 & 255)) * f, g = ((c0 >> 8) & 255) + (((c1 >> 8) & 255) - ((c0 >> 8) & 255)) * f, bl = ((c0 >> 16) & 255) + (((c1 >> 16) & 255) - ((c0 >> 16) & 255)) * f;
+        D[s * NPAL + i] = (254 << 24) | (Math.round(bl) << 16) | (Math.round(g) << 8) | Math.round(r);   // (alpha 254 marks a lit colour; things that shine by themselves are written at 255, and only those bloom)
+      }
+    }
+  };
+  mix(LCOL, LCS);
+  for (let t = 1; t < TCOL.length; t++) mix(TCOL[t], TCS[t] || (TCS[t] = new Uint32Array(SLEV * NPAL)));
+  for (let k = 0; k < 16; k++) BAYS[k] = BAYER_V[k] / 16 * (SMOOTH ? 1 : SUB);
+  for (let k = 0; k < 256; k++) SHK[k] = 1 - 0.6 * k / 255;   // a shadow's strength (0-255) -> what is left of the light
+}
+const BAYER_V = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+function setSmooth(v) { SMOOTH = v; buildSmooth(); try { localStorage.setItem('dcg-smooth', v ? 'on' : 'off'); } catch (e) { /* ignore */ } }
+// the sub-level index of a light level (whole or fractional), times NPAL: the row of LCS to read
+const lrow = level => Math.round(level * SUB) * NPAL;
 try { const q = new URLSearchParams(location.search).get('hue'); HUE_LIGHT = q !== null ? q !== '0' : localStorage.getItem('dcg-light') !== 'old'; } catch (e) { /* storage blocked */ }
 buildLcol();
 // outdoors keeps the old tables (daylight and the town's lanterns are as drawn); the switch rebuilds
@@ -142,6 +171,7 @@ function syncLightTables(outdoor) { const v = DL48 && !outdoor; if (v !== DLT) {
 // torch pools keep their shading and their edge.
 const TONE = new Float32Array(1024);
 for (let n = 0; n < 1024; n++) { const lv = n / 64; TONE[n] = lv < 1.5 ? 1.35 + lv * 0.1 : lv <= 3 ? lv : 3 + 2.3 * (1 - Math.exp(-(lv - 3) / 2.3)); }
+for (let k = 0; k < 1024; k++) TONES[k] = TONE[k] * SUB;
 const BAYER = Float32Array.from([0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5], v => v / 16);   // (round 57: typed, for the light pass)
 
 // ---------------------------------------------------------------- random
