@@ -123,18 +123,32 @@ function wayPx(di, dj, on, t, glow) {
   if (d < star) return on && glow > 0.5 ? BLUE[1] | EMIS : WS[4];
   return grain < 0.12 ? WS[2] : WS[3];
 }
+// round 117: a slab's stone does not change, only its runes do: each stone keeps a map of its
+// pixels (0 bare ground, 255 a rune or groove pixel to work out each frame, else the stone's colour
+// + 1), found by asking wayPx twice (asleep and lit) and keeping what agrees. It was 1 ms a frame.
+const WAY_MAPS = new WeakMap();
+function wayMap(w, rx, ry) {
+  let m = WAY_MAPS.get(w); if (m && m.rx === rx) return m;
+  const [wx, wy] = iso(w.fi, w.fj), ax = Math.round(wx * SPX) - rx, ay = Math.round(wy * SPX) - ry, wd = 2 * rx + 1, hg = 2 * ry + 1, data = new Uint8Array(wd * hg);
+  for (let j = 0; j < hg; j++) { const y = (ay + j) / SPX - WY0;
+    for (let i = 0; i < wd; i++) { const x = (ax + i) / SPX - WX0, di = (x + 2 * y) / 32 - w.fi, dj = (2 * y - x) / 32 - w.fj;
+      const c1 = wayPx(di, dj, false, 0, 0), c2 = wayPx(di, dj, true, 1.3, 1);
+      data[j * wd + i] = c1 !== c2 ? 255 : c1 < 0 ? 0 : c1 + 1; } }
+  m = { rx, ax, ay, wd, data }; WAY_MAPS.set(w, m); return m;
+}
 function drawWays() {
   if (!LV.ways || !LV.ways.length) return;
   const t = G.t;
   for (const w of LV.ways) {
     const [wx, wy] = iso(w.fi, w.fj), cx = Math.round(wx * SPX) - cam2x, cy = Math.round(wy * SPX) - cam2y, rx = Math.ceil(WAY_R * 1.08 * 22.63 * SPX), ry = Math.ceil(rx / 2);
     if (cx + rx < 0 || cx - rx >= OW || cy + ry < 0 || cy - ry >= OH) continue;
-    const on = wayOn(w), glow = Math.max(w.glow, w.flash || 0);
+    const on = wayOn(w), glow = Math.max(w.glow, w.flash || 0), M = wayMap(w, rx, ry), data = M.data;
     for (let Y = Math.max(0, cy - ry); Y <= Math.min(OH - 1, cy + ry); Y++) {
-      const y = (Y + cam2y) / SPX - WY0;
+      const y = (Y + cam2y) / SPX - WY0, mrow = (Y + cam2y - M.ay) * M.wd - M.ax + cam2x;
       for (let X = Math.max(0, cx - rx); X <= Math.min(OW - 1, cx + rx); X++) {
-        const x = (X + cam2x) / SPX - WX0, di = (x + 2 * y) / 32 - w.fi, dj = (2 * y - x) / 32 - w.fj;
-        const c = wayPx(di, dj, on, t, glow); if (c < 0) continue;
+        const v = data[mrow + X]; if (!v) continue;
+        let c = v - 1;
+        if (v === 255) { const x = (X + cam2x) / SPX - WX0, di = (x + 2 * y) / 32 - w.fi, dj = (2 * y - x) / 32 - w.fj; c = wayPx(di, dj, on, t, glow); if (c < 0) continue; }
         if (c & EMIS) { ov32[Y * OW + X] = PAL32[c & 127]; continue; }
         const col = envCol((X + hx) >> 1, (Y + hy) >> 1, c, -2); if (col) ov32[Y * OW + X] = col;
       }

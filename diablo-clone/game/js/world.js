@@ -1538,15 +1538,37 @@ function bakeLightMaps() {
 // round 92: evening in the camp (the user's dusk mock-up): the daylight dims toward the fire, so the
 // fire, the lanterns and the forge's glow pool warm in it; outside the fence it lifts back to day over
 // a few tiles. One byte per world pixel, how much of the ambient light is taken away (DUSK_K at 255).
-let DUSK = null, DUSK_ON = true;
+let DUSK = null, DUSK_ON = true, DUSK_CAMP = false;   // (DUSK_CAMP: the camp's evening is in the map, not only sun shadows)
 const DUSK_K = 0.2;   // (round 95: exactly one light band below day (0.6 -> 0.4 = band 2), so the evening is clean shade, not a screen-door dither between two bands)
 try { const q = new URLSearchParams(location.search).get('dusk'); if (q !== null) DUSK_ON = q !== '0'; } catch (e) { /* ignore */ }
 function bakeDusk() {
-  if (!LV.dusk || !DUSK_ON || typeof HUB === 'undefined') { DUSK = null; return; }
-  if (!DUSK || DUSK.length !== WW * WH) DUSK = new Uint8Array(WW * WH);
-  const [fx, fy] = iso(...HUB.camp), F = HUB.fence, cy = fy + F.c[1] * 11.31, R0 = F.r + 0.5, R1 = F.r + 7;
-  for (let wy = 0; wy < WH; wy++) { const dv = (wy - cy) / 11.31, row = wy * WW; if (Math.abs(dv) > R1 + 1) { DUSK.fill(0, row, row + WW); continue; }
-    for (let wx = 0; wx < WW; wx++) { const du = (wx - fx) / 22.63, d = Math.hypot(du, dv), t = d <= R0 ? 1 : d >= R1 ? 0 : 1 - (d - R0) / (R1 - R0); DUSK[row + wx] = Math.round(t * t * (3 - 2 * t) * 255); } }
+  const camp = LV.dusk && DUSK_ON && typeof HUB !== 'undefined', sun = LV.outdoor && SMOOTH && LV.sunShadows && LV.sunShadows.length > 0;
+  DUSK_CAMP = !!camp;
+  if (!camp && !sun) { DUSK = null; return; }
+  if (!DUSK || DUSK.length !== WW * WH) DUSK = new Uint8Array(WW * WH); else if (!camp) DUSK.fill(0);
+  if (camp) {
+    const [fx, fy] = iso(...HUB.camp), F = HUB.fence, cy = fy + F.c[1] * 11.31, R0 = F.r + 0.5, R1 = F.r + 7;
+    for (let wy = 0; wy < WH; wy++) { const dv = (wy - cy) / 11.31, row = wy * WW; if (Math.abs(dv) > R1 + 1) { DUSK.fill(0, row, row + WW); continue; }
+      for (let wx = 0; wx < WW; wx++) { const du = (wx - fx) / 22.63, d = Math.hypot(du, dv), t = d <= R0 ? 1 : d >= R1 ? 0 : 1 - (d - R0) / (R1 - R0); DUSK[row + wx] = Math.round(t * t * (3 - 2 * t) * 255); } }
+  }
+  // round 117, sun shadows: every tree, bush, rock and building throws a long soft shade down and
+  // to the right (the light the sprites are drawn in), on the ground only, so the woods lie in
+  // dappled shade and paths and clearings stand in the sun. Part of the same map as the dusk.
+  if (sun) for (const [sx, sy, rx, ry] of LV.sunShadows) {
+    const cx = sx + rx * 0.75, cy = sy + ry * 0.75, RX = rx * 1.65, RY = ry * 1.65, top = Math.min(200, 110 + rx * 2.2);   // (bigger things, deeper shade)
+    for (let y = Math.max(0, Math.floor(cy - RY)), y1 = Math.min(WH - 1, Math.ceil(cy + RY)); y <= y1; y++) {
+      const dy = (y - cy) / RY, row = y * WW;
+      for (let x = Math.max(0, Math.floor(cx - RX)), x1 = Math.min(WW - 1, Math.ceil(cx + RX)); x <= x1; x++) {
+        const dx = (x - cx) / RX, d = dx * dx + dy * dy; if (d >= 1 || wZ[row + x] > 2) continue;
+        const t = 1 - d, v = (top * t * (2 - t)) | 0;
+        if (v > DUSK[row + x]) DUSK[row + x] = v;
+      }
+    }
+  }
+  // the shade is taken out of the first light map once, here (the light pass then reads nothing
+  // extra for it; that map's 7% flicker moves a shadow by a third of a sub-level, unseen)
+  const K = (LV.night ? 0.08 : DUSK_K) / 255, A = staticLight[0];
+  for (let k = 0, n = WW * WH; k < n; k++) if (DUSK[k]) A[k] -= DUSK[k] * K;
 }
 // round 48: ambient occlusion for the new dungeon light: the floor darkens toward the walls and
 // into corners, round the foot of props, and walls darken toward their base, so rooms get shape

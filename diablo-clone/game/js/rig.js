@@ -20,6 +20,8 @@ const LIGHT_W = V.norm(V.add(V.add(V.mul(CAM_R, LIGHT[0]), V.mul(CAM_D, LIGHT[1]
 const HALF = V.norm([LIGHT[0], LIGHT[1], LIGHT[2] + 1]);
 // soft shading (round 10): gentler shadow-side falloff; false = the original hard falloff
 let SOFT_SHADE = true;
+// round 117: the shader's upgrades, each one switchable for before/after sheets (tools/playtests/r117)
+const RIGFX = { ao: 1, sheen: 1 };
 // world <-> screen for points on the ground: screen = (dot(p, R), dot(p, D)); tile edge in units
 const TILE_U = 16 * Math.SQRT2;
 
@@ -315,10 +317,31 @@ function shade(w, h, ax, ay, B, rig, R, D, VD) {
     if (SOFT_SHADE) {
       // soft: the shadow side falls off at half the rate, and a cast shadow is one step darker,
       // so turned-away surfaces keep their form instead of collapsing to the darkest color
-      if (off < 0) off *= 0.35;
+      if (off < 0) off *= RIGFX.sheen && mat.shiny ? 0.6 : 0.35;   // (round 117: polished metal keeps a deeper dark side, the contrast that makes it read as metal)
       if (shad[k]) off -= 1;
     } else if (shad[k]) off = Math.min(off, (D0 - 0.25 - D0) * (len - 0.5) * mat.span);
     tone[k] = clamp(Math.round(mat.mid + off + bias[k]), lo(mm), len - 1);
+  }
+  // round 117, contact shade: a pixel that sits just behind another part (under an arm, a helm's
+  // brim, a shield's rim, between legs) drops one step, so overlapping parts separate by depth
+  // instead of by line alone. Counted over 8 neighbors two pixels out; needs 2 of them in front.
+  if (RIGFX.ao) {
+    const A2 = [-2, 2, -2 * w, 2 * w, -w - 1, -w + 1, w - 1, w + 1];
+    for (let y = 2; y < h - 2; y++) for (let x = 2; x < w - 2; x++) {
+      const k = y * w + x; if (tone[k] < 0 || shad[k]) continue;
+      let c = 0; const dk = dep[k], pk = pid[k];
+      for (let a = 0; a < 8; a++) { const q = k + A2[a]; if (m[q] && pid[q] !== pk && dep[q] < dk - 2.2 && dep[q] > dk - 14) c++; }
+      if (c >= 2 && tone[k] > lo(m[k])) tone[k]--;
+    }
+  }
+  // round 117, sheen: polished metal carries a soft band of its next-brighter step round the
+  // highlight, so plate and blades read as curved metal and not as flat grey with one white pixel
+  if (RIGFX.sheen) for (let k = 0; k < n; k++) {
+    const mm = m[k]; if (!mm || tone[k] < 0 || shad[k]) continue;
+    const mat = MATS[mm]; if (!mat.shiny || !mat.spec) continue;
+    const ndh = nx[k] * HALF[0] + ny[k] * HALF[1] + nz[k] * HALF[2];
+    if (ndh > mat.spec[0] - 0.1 && tone[k] < mat.ramp.length - 1) tone[k]++;
+    if (ndh > mat.spec[0] - 0.035 && tone[k] < mat.ramp.length - 1) tone[k]++;
   }
   // majority cleanup: a tone pixel that disagrees with 3+ same-part neighbors joins them
   const t2 = tone.slice();
