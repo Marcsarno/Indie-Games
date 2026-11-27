@@ -160,6 +160,8 @@ def build(out, preview):
     # cutting board
     board = C.make('board', [
         sh.box(0.66, 0.44, 0.04, r=0.018, seg=3, cell=0.11, col=P.mix('wood_light', 'cream', 0.5)).at(0, 0, 0.02),
+        sh.box(0.06, 0.444, 0.042, r=0.018, seg=3, col='wood').at(0.30000000000000004, 0, 0.021),
+        sh.box(0.06, 0.444, 0.042, r=0.018, seg=3, col='wood').at(-0.30000000000000004, 0, 0.021),
         sh.lathe([(0.0, 0.0), (0.03, 0.0), (0.03, 0.042), (0, 0.042)], segs=12, col='wood_dark', r=0.004).at(0.28, 0.17, 0.0),
     ], loc=(-0.37, -0.04, 0), parent=root)
     objs.append(board)

@@ -75,8 +75,9 @@ export class StuffingStation extends Station {
     // ---- 2. celery: the toy knife chops, pieces hop into the bowl (Gobbles flinches at the knife)
     const knife = this.it('knife');
     const knifeRest = { pos: knife.position.clone(), quat: knife.quaternion.clone() };
-    const over = (i: number, y: number) => new THREE.Vector3(this.it('celery_' + Math.min(i, CELERY - 1)).position.x + 0.2, y, this.it('celery_0').position.z);
-    await arcTo(knife, over(0, 0.26), 0.2, 0.4, { quat: new THREE.Quaternion() });
+    const across = (tip: number) => new THREE.Quaternion().setFromEuler(new THREE.Euler(tip, -Math.PI / 2, 0, 'YXZ'));
+    const over = (i: number, y: number) => new THREE.Vector3(this.it('celery_' + Math.min(i, CELERY - 1)).position.x + 0.06, y, this.it('celery_0').position.z + 0.2);
+    await arcTo(knife, over(0, 0.26), 0.2, 0.4, { quat: across(0) });
     await this.tapStep({
       voice: 'stuff_celery',
       target: () => knife,
@@ -87,7 +88,11 @@ export class StuffingStation extends Station {
       act: async (i) => {
         const piece = this.it('celery_' + i);
         knife.position.copy(over(i, 0.26));
-        await tween(0.07, (q) => (knife.position.y = lerp(0.26, 0.075, q)), ease.in);
+        // tip goes down first, then the heel follows: a rocking chop
+        await tween(0.1, (q) => {
+          knife.position.y = lerp(0.26, 0.075, q);
+          knife.quaternion.copy(across(0.35 * Math.sin(q * Math.PI)));
+        }, ease.in);
         audio.chop();
         audio.note(i, 0.16);
         st.squash(knife, -3);

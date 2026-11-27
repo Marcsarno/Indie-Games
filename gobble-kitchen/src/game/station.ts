@@ -232,7 +232,10 @@ export abstract class Station {
     };
     const tap: Record<string, (t: TapInfo) => void> = {};
     const drags: Record<string, (d: DragInfo) => void> = {};
-    for (const h of o.hits) {
+    // while the camera is at the oven the island is in the foreground: a tap that lands on any of the
+    // kit's things counts as a tap on the oven
+    const names = o.ext?.length ? [...new Set([...o.hits, ...this.ownHits()])] : o.hits;
+    for (const h of names) {
       tap[h] = (t) => fire(t);
       if (o.gesture) drags[h] = drag;
     }
@@ -247,6 +250,13 @@ export abstract class Station {
     await this.step({ voice: o.voice, target: o.target, demo: o.demo ?? 'tap', tap, drag: drags });
     if (o.ext?.includes('oven')) this.game.ovenTap = null;
     if (o.ext?.includes('timer')) this.game.timerTap = null;
+  }
+
+  private ownHits() {
+    const out: string[] = [];
+    const scan = (r: THREE.Object3D) => r.traverse((c) => { if (c.userData.hitName) out.push(String(c.userData.hitName).replace(/^hit_/, '')); });
+    scan(this.root);
+    return out;
   }
 
   /** A tap on something outside the kit (the oven) that the current step may care about. */

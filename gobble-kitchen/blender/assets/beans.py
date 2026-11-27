@@ -10,19 +10,23 @@ BEANS = 6
 
 def half(sign, seed):
     """Half a bean with its broken end at the origin, running toward sign * X."""
-    n = 7
+    n = 12
     pts, rad = [], []
     for k in range(n + 1):
         t = k / n
         pts.append((sign * 0.19 * t, 0.012 * math.sin(t * 2.2 + seed), 0.0))
-        rad.append(0.028 * (1 - 0.75 * t ** 3))
+        rad.append(0.028 * (1 - 0.75 * t ** 3) * (1 + 0.2 * math.sin(t * math.pi * 3 + seed) ** 2))   # pea bumps
     return sh.tube(pts, r=rad, segs=10, col='bean').shade(lambda c, n: P.mix('bean', 'bean_dark', 0.5 + 0.5 * math.sin(c.x * 40 + seed)))
 
 
 def build(out, preview):
     root = C.empty('station_beans')
     objs = [root]
-    board = C.make('bn_board', sh.box(0.74, 0.5, 0.04, r=0.018, seg=3, cell=0.12, col=P.mix('wood_light', 'cream', 0.5)).at(0, 0, 0.02), loc=(-0.4, -0.02, 0), parent=root)
+    board = C.make('bn_board', [
+        sh.box(0.74, 0.5, 0.04, r=0.018, seg=3, cell=0.12, col=P.mix('wood_light', 'cream', 0.5)).at(0, 0, 0.02),
+        sh.box(0.06, 0.504, 0.042, r=0.018, seg=3, col='wood').at(0.33999999999999997, 0, 0.021),
+        sh.box(0.06, 0.504, 0.042, r=0.018, seg=3, col='wood').at(-0.33999999999999997, 0, 0.021),
+    ], loc=(-0.4, -0.02, 0), parent=root)
     objs.append(board)
     for i in range(BEANS):
         b = C.empty('bean_%d' % i, loc=(-0.4 + 0.03 * math.sin(i * 2.1), -0.2 + 0.074 * i, 0.07), rot=(0, 0, 7 * math.sin(i * 1.7)), parent=root)
@@ -38,7 +42,11 @@ def build(out, preview):
         rad = math.hypot(c.x / 1.25, c.y)
         out_ = n.dot(Vector((c.x, c.y, 0)).normalized()) if rad > 1e-5 else 0
         return P.lin('pumpkin') if (out_ > 0.05 and c.z < 0.135) else P.lin('ceramic')
-    dm = C.make('bean_dish_mesh', sh.lathe(prof, segs=36).scale(1.25, 1, 1).shade_face(dcol), parent=dish, shade='toon', outline=True, normals=False)
+    dm = C.make('bean_dish_mesh', [
+        sh.lathe(prof, segs=36).scale(1.25, 1, 1).shade_face(dcol),
+        sh.box(0.1, 0.18, 0.028, r=0.012, col='pumpkin').at(0.375, 0, 0.118),      # lug handles
+        sh.box(0.1, 0.18, 0.028, r=0.012, col='pumpkin').at(-0.375, 0, 0.118),
+    ], parent=dish, shade='toon', outline=True, normals=False)
     objs += [dish, dm]
     # the pile inside the dish: twelve halves that pop in as the snapped ones land
     for k in range(BEANS * 2):

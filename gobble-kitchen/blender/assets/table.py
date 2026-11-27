@@ -37,6 +37,8 @@ def build(out, preview):
         for sy in (-1, 1):
             cart.append(sh.box(0.05, 0.05, TOP - 0.1, r=0.015, col='wood_dark').at(0.6 * sx, 0.23 * sy, (TOP - 0.1) / 2 + 0.08))
             cart.append(sh.cyl(0.055, 0.04, bevel=0.012, segs=14, col='ink').rot(90, 0, 0).at(0.6 * sx, 0.23 * sy + 0.02, 0.055))
+    cart.append(sh.box(0.03, 0.2, 0.2, r=0.012, seg=2, col='cream').at(0.752, 0, TOP + 0.01))
+    cart.append(sh.box(0.034, 0.204, 0.03, r=0.01, seg=1, col='teal').at(0.752, 0, TOP - 0.05))
     # a folded cloth and a small pumpkin on the lower shelf
     cart.append(sh.box(0.4, 0.3, 0.05, r=0.02, col='cranberry').at(-0.3, 0, 0.345))
     cart.append(sh.uvball(0.11, segs=16, rings=10).scale(1, 1, 0.8).shade(lambda c, n: P.mix('pumpkin', 'roast', 0.5 + 0.5 * math.cos(math.atan2(c.y, c.x) * 8))).at(0.3, 0, 0.41))

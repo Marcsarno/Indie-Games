@@ -9,10 +9,23 @@ from lib import shapes as sh, common as C, palette as P
 CRIMPS, DOLLOPS = 12, 8
 
 
+def flute(s, n=12, amp=0.03):
+    """Push the rim in and out so the tin and crust read as fluted (bulges line up with the crimps)."""
+    for v in s.bm.verts:
+        r = math.hypot(v.co.x, v.co.y)
+        if r > 0.2:
+            k = 1 + amp * math.cos(math.atan2(v.co.y, v.co.x) * n) * min(1.0, (r - 0.2) / 0.05)
+            v.co.x *= k
+            v.co.y *= k
+    return s
+
+
 def build(out, preview):
     root = C.empty('station_pie')
     objs = [root]
     board = C.make('pie_board', [
+        sh.box(0.06, 0.5640000000000001, 0.042, r=0.018, seg=3, col='wood').at(0.35, 0, 0.021),
+        sh.box(0.06, 0.5640000000000001, 0.042, r=0.018, seg=3, col='wood').at(-0.35, 0, 0.021),
         sh.box(0.76, 0.56, 0.04, r=0.018, seg=3, cell=0.12, col=P.mix('wood_light', 'cream', 0.5)).at(0, 0, 0.02),
         sh.ball(0.3, sub=3, col='white', sx=1.0, sy=0.75, sz=0.012).noise(0.02, 6, 2).at(0, 0, 0.041),
     ], loc=(-0.44, 0.0, 0), parent=root)
@@ -29,13 +42,15 @@ def build(out, preview):
         sh.cyl(0.045, 0.4, bevel=0.012, segs=18, col='wood').rot(0, 90, 0).at(-0.2, 0, 0),
         sh.cyl(0.02, 0.62, bevel=0.008, segs=10, col='wood_dark').rot(0, 90, 0).at(-0.31, 0, 0),
         sh.ball(0.03, sub=2, col='cranberry').at(0.31, 0, 0), sh.ball(0.03, sub=2, col='cranberry').at(-0.31, 0, 0),
+        sh.cyl(0.0465, 0.03, bevel=0.006, segs=18, col='wood_dark').rot(0, 90, 0).at(0.155, 0, 0),
+        sh.cyl(0.0465, 0.03, bevel=0.006, segs=18, col='wood_dark').rot(0, 90, 0).at(-0.185, 0, 0),
     ], loc=(-0.44, 0.37, 0.05), parent=root, shade='toon', outline=True)
     objs.append(pin)
 
     # the pie
     pie = C.empty('pie', loc=(0.34, 0.0, 0), parent=root)
-    tin = C.make('pie_tin', sh.lathe([(0, 0), (0.17, 0), (0.262, 0.07), (0.292, 0.07), (0.292, 0.079), (0.25, 0.079), (0.165, 0.012), (0, 0.012)], segs=40, col='steel'), parent=pie, shade='toon', outline=True, normals=False)
-    crust = C.make('pie_crust', sh.lathe([(0, 0.013), (0.165, 0.013), (0.252, 0.08), (0.282, 0.084), (0.278, 0.097), (0.24, 0.09), (0.16, 0.03), (0, 0.03)], segs=40, col='dough'), parent=pie, shade='toon', normals=False)
+    tin = C.make('pie_tin', flute(sh.lathe([(0, 0), (0.17, 0), (0.262, 0.07), (0.292, 0.07), (0.292, 0.079), (0.25, 0.079), (0.165, 0.012), (0, 0.012)], segs=48, col='steel')), parent=pie, shade='toon', outline=True, normals=False)
+    crust = C.make('pie_crust', flute(sh.lathe([(0, 0.013), (0.165, 0.013), (0.252, 0.08), (0.282, 0.084), (0.278, 0.097), (0.24, 0.09), (0.16, 0.03), (0, 0.03)], segs=48, col='dough')), parent=pie, shade='toon', normals=False)
     fill = C.make('pie_fill', sh.lathe([(0, 0), (0.238, 0), (0.243, 0.03), (0.2, 0.045), (0, 0.05)], segs=40, col='pie_fill').shade(lambda c, n: P.mix('pie_fill', 'pumpkin', min(1, math.hypot(c.x, c.y) * 4))),
                   loc=(0, 0, 0.03), parent=pie, shade='toon', normals=False)
     objs += [pie, tin, crust, fill]

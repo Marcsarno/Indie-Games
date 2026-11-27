@@ -31,6 +31,8 @@ export class Hints {
   private demoToken = 0;
   paused = false;
   onSpeak: (seconds: number) => void = () => {};
+  /** Told which gesture the new step uses (null when a step ends). */
+  onStep: (demo: DemoKind | null) => void = () => {};
 
   constructor(private stage: Stage) {
     this.wing = part('gobbles', 'demo_wing');
@@ -50,6 +52,7 @@ export class Hints {
     this.cur = def;
     this.idle = 0;
     this.fired = 0;
+    this.onStep(def.demo);
     this.say();
     wait(0.45).then(() => {
       if (this.cur === def && !this.paused) this.demo();
@@ -58,6 +61,7 @@ export class Hints {
 
   end() {
     this.cur = null;
+    this.onStep(null);
     this.hideWing();
   }
 

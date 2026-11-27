@@ -1,4 +1,4 @@
-// The finale: Gobbles' Pumpkin Roast (the "turkey" that lets the real turkey relax). Stuff it, baste it
+// The finale: the Thanksgiving turkey. Stuff it, baste it
 // three times until it shines, roast it in the oven (peek as often as you like; late just means extra
 // crispy), then carve four slices.
 import * as THREE from 'three';
@@ -13,7 +13,7 @@ export class RoastStation extends Station {
   doneVoice = 'roast_done';
   servingColor = 0xe8833a;
   private bodyMat: THREE.MeshToonMaterial;
-  private raw = new THREE.Color(1.05, 1.5, 2.3);     // pale, uncooked pumpkin
+  private raw = new THREE.Color(1.75, 2.7, 4.4);     // pale, uncooked
   private golden = new THREE.Color(1, 1, 1);
   private crisp = new THREE.Color(0.62, 0.5, 0.42);
   private shine = 0;
@@ -24,6 +24,7 @@ export class RoastStation extends Station {
     this.tableScale = 0.7;
     const st = this.stage;
     st.hide(this.it('roast_stuffing'));
+    st.hide(this.it('roast_platter'));
     for (let k = 0; k < 4; k++) {
       st.hide(this.it('slice_' + k));
       st.hide(this.it('cut_' + k));
@@ -52,7 +53,8 @@ export class RoastStation extends Station {
   async recipe() {
     const st = this.stage;
     const roast = this.it('roast'), bowl = this.it('rs_bowl'), stuffing = this.it('roast_stuffing');
-    const cavity = () => new THREE.Vector3(roast.position.x, 0.5, roast.position.z - 0.03);
+    // the opening faces the player, between the drumsticks
+    const cavity = () => new THREE.Vector3(roast.position.x, 0.24, roast.position.z + 0.36);
 
     // ---- 1. stuff it
     await this.tapStep({
@@ -86,7 +88,7 @@ export class RoastStation extends Station {
     const baster = this.it('baster'), bulb = this.it('baster_bulb');
     const tubeMat = meshOf(this.it('baster_tube')).material as THREE.MeshToonMaterial;
     const rest = baster.position.clone();
-    const above = new THREE.Vector3(roast.position.x + 0.05, 0.86, roast.position.z + 0.05);
+    const above = new THREE.Vector3(roast.position.x + 0.05, 0.74, roast.position.z + 0.05);
     const juice = new THREE.Color(0xe9b552), clear = new THREE.Color(0xffffff);
     await this.tapStep({
       voice: 'roast_baste',
@@ -116,7 +118,7 @@ export class RoastStation extends Station {
           }, ease.out);
           st.squash(roast, -2.5);
           audio.note(i, 0.22);
-          this.fx.burst('spark', this.world(cavity()), { count: 5 + i, color: [0xffd27a, 0xffffff], size: 0.06 });
+          this.fx.burst('spark', this.world(new THREE.Vector3(roast.position.x, 0.5, roast.position.z)), { count: 5 + i, color: [0xffd27a, 0xffffff], size: 0.06 });
           await arcTo(baster, rest, 0.3, 0.4);
         }
       },
@@ -186,6 +188,20 @@ export class RoastStation extends Station {
 
     // ---- 4. carve: tap along the dashed lines
     for (let i = 0; i < 4; i++) st.pop(this.it('cut_' + i), 1, 0.01);
+    st.pop(this.it('roast_platter'), 1, 0.01);
+    audio.clink(0.7);
+    // the carving knife: blade along the cut line, handle toward the player
+    const knife = part('stuffing', 'knife');
+    this.root.add(knife);
+    const along = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
+    const overCut = (i: number, y: number) => {
+      const c = this.it('cut_' + Math.min(i, 3)).position;
+      return new THREE.Vector3(roast.position.x + c.x, c.y + y, roast.position.z + c.z + 0.3);
+    };
+    knife.position.copy(overCut(0, 0.5));
+    knife.quaternion.copy(along);
+    st.pop(knife, 1, 0.01);
+    st.setBaseScale(knife, 1.5);
     await this.tapStep({
       voice: 'roast_carve',
       target: () => roast,
@@ -193,11 +209,21 @@ export class RoastStation extends Station {
       need: 4,
       act: async (i) => {
         const cut = this.it('cut_' + i), slice = this.it('slice_' + i);
+        // saw down through the breast along the line
+        const a = overCut(i, 0.3), b = overCut(i, 0.03);
+        await tween(0.14, (q) => knife.position.lerpVectors(knife.position.clone(), a, q), ease.out);
+        await tween(0.36, (q) => {
+          knife.position.lerpVectors(a, b, q);
+          knife.position.z += Math.sin(q * Math.PI * 4) * 0.07;
+        }, ease.linear);
+        audio.noise({ type: 'bandpass', freq: 1200, to: 700, dur: 0.3, vol: 0.14, q: 2 });
         st.pop(cut, 0);
         audio.chop();
+        tween(0.18, (q) => knife.position.lerpVectors(b, overCut(Math.min(i + 1, 3), 0.42), q), ease.out);
         if (i === 0) this.gobbles.flinch();
         const home = slice.position.clone();
         slice.position.set(cut.position.x, cut.position.y, cut.position.z);
+        slice.rotation.z = 0;
         st.pop(slice, 1, 0.3);
         await arcTo(slice, home, 0.12, 0.28, { e: ease.in });
         st.squash(slice, -6);
@@ -208,6 +234,7 @@ export class RoastStation extends Station {
         if (i === 3) clock.hitStop(0.08);
       },
     });
+    st.pop(knife, 0);
     audio.sparkle();
     this.fx.burst('spark', this.worldOf(roast).add(new THREE.Vector3(0, 0.45, 0)), { count: 14, color: [0xffd27a, 0xffffff, 0xe8833a] });
     void rand;

@@ -26,7 +26,9 @@ def build(out, preview):
     def dish_col(co, no):
         rad = math.hypot(co.x / 1.3, co.y)
         return P.lin('sage') if rad > 0.2 else P.lin('ceramic')
-    plate = C.make('cran_plate', sh.lathe([(0, 0), (0.15, 0), (0.25, 0.03), (0.245, 0.045), (0.14, 0.018), (0, 0.016)], segs=40, r=0.008).scale(1.3, 1, 1).shade(dish_col),
+    garnish = [sh.ball(0.024, sub=2, col='jelly').at(x, y, 0.046) for x, y in ((0.225, -0.03), (0.245, 0.02), (0.205, 0.025))]
+    garnish += [sh.ball(0.04, sub=2, col='green', sx=1.5, sy=0.7, sz=0.25).rot(0, 0, a).at(x, y, 0.036) for x, y, a in ((0.2, -0.075, -40), (0.235, 0.07, 60))]
+    plate = C.make('cran_plate', [sh.lathe([(0, 0), (0.15, 0), (0.25, 0.03), (0.245, 0.045), (0.14, 0.018), (0, 0.016)], segs=40, r=0.008).scale(1.3, 1, 1).shade(dish_col)] + garnish,
                    loc=(0.14, -0.04, 0), parent=root, shade='toon', outline=True, normals=False)
     objs.append(plate)
     objs.append(C.empty('socket_log', loc=(0.14, -0.04, 0.017), parent=root))

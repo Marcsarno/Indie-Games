@@ -12,7 +12,10 @@ const hud = new Hud(container);
 let game: Game | null = null;
 
 const params = new URLSearchParams(location.search);
-if (params.get('ratio')) (stage as any).maxRatio = parseFloat(params.get('ratio')!);
+if (params.get('ratio')) {
+  (stage as any).maxRatio = parseFloat(params.get('ratio')!);
+  stage.keepShadows = true;
+}
 
 function newGame() {
   game?.dispose();

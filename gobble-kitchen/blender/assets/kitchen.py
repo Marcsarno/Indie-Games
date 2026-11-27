@@ -239,6 +239,35 @@ def build(out, preview):
     objs.append(C.empty('socket_helper', loc=(hx, hy, 0.53)))
     objs.append(C.empty('socket_gobbles_home', loc=(IS_X + 0.1, IS_Y + 0.3, TOP)))
 
+    # ------------------------------------------------------------------ decor pass
+    # baseboards
+    for (bx, by, bw, bd) in (((KX0 + KX1) / 2, Y1 - 0.015, KX1 - KX0, 0.04), ((DX0 + DX1) / 2, Y1 - 0.015, DX1 - DX0, 0.04), (KX0 + 0.015, (Y0 + Y1) / 2, 0.04, Y1 - Y0), (DX1 - 0.015, (Y0 + Y1) / 2, 0.04, Y1 - Y0)):
+        room.append(sh.box(bw, bd, 0.14, r=0.015, col='cream').at(bx, by, 0.07))
+    # tiled backsplash behind the sink counter: cream tiles with a few teal and pumpkin ones
+    def tile(c, n):
+        if abs(n.y) < 0.5:
+            return P.lin('cream')
+        k = int(math.floor((c.x + 20) / 0.1)) * 7 + int(math.floor(c.z / 0.1)) * 13
+        return P.lin('teal') if k % 11 == 0 else P.lin('pumpkin') if k % 17 == 0 else P.lin('ceramic') if k % 2 else P.lin('cream')
+    furn.append(sh.box(2.5, 0.025, 0.3, r=0.004, seg=1, cell=0.1, col='cream').at(cx, 2.785, 1.13).shade_face(tile))
+    # curtains on a rod
+    furn.append(sh.tube([(wx - ww / 2 - 0.3, 2.66, wz + wh / 2 + 0.16), (wx + ww / 2 + 0.3, 2.66, wz + wh / 2 + 0.16)], r=0.02, col='wood_dark', segs=8))
+    for sx in (-1, 1):
+        furn.append(sh.ball(0.04, sub=2, col='wood_dark').at(wx + sx * (ww / 2 + 0.3), 2.66, wz + wh / 2 + 0.16))
+        for k in range(3):
+            fx_ = wx + sx * (ww / 2 + 0.2 - 0.1 * k)
+            fold = sh.capsule(0.06, wh + 0.32, segs=10, col='cranberry').shade(lambda c, n: P.lin('cream') if 0.1 < c.z < 0.2 else P.lin('cranberry'))
+            furn.append(fold.scale(1, 0.6, 1).at(fx_, 2.66, wz - wh / 2 - 0.18))
+        furn.append(sh.torus(0.1, 0.018, segs=14, rsegs=6, col='butter').rot(0, 90, 0).scale(1.5, 0.6, 1).at(wx + sx * (ww / 2 + 0.1), 2.66, wz - 0.2))
+    # a striped runner in front of the sink
+    furn.append(sh.box(1.9, 0.62, 0.02, r=0.008, cell=0.19, col='teal').at(cx, 1.62, 0.011).shade_face(lambda c, n: P.lin('cream') if int(math.floor((c.x + 20) / 0.19)) % 2 else P.lin('teal')))
+    # flowers on the dining wall shelf side: a vase by the door
+    furn.append(sh.lathe([(0, 0), (0.07, 0), (0.1, 0.12), (0.05, 0.26), (0.06, 0.3), (0, 0.3)], segs=16, col='teal', r=0.01).at(DX1 - 0.35, Y1 - 0.4, 0))
+    for k in range(5):
+        a = k * 1.26
+        furn.append(sh.tube([(DX1 - 0.35, Y1 - 0.4, 0.28), (DX1 - 0.35 + math.cos(a) * 0.12, Y1 - 0.4 + math.sin(a) * 0.1, 0.62 + 0.05 * (k % 2))], r=0.008, col='green', segs=5))
+        furn.append(sh.ball(0.055, sub=2, col=('pumpkin', 'butter', 'cranberry')[k % 3]).at(DX1 - 0.35 + math.cos(a) * 0.12, Y1 - 0.4 + math.sin(a) * 0.1, 0.65 + 0.05 * (k % 2)))
+
     # rug and the sleeping cat
     rug = sh.lathe([(0, 0), (0.62, 0), (0.66, 0.012), (0.62, 0.024), (0, 0.024)], segs=36, col='cranberry').scale(1.25, 1.0, 1.0)
     rug.shade(lambda c, n: P.lin('cream') if 0.42 < math.hypot(c.x / 1.25, c.y) < 0.53 else P.lin('cranberry'))

@@ -10,7 +10,7 @@ from lib import shapes as sh, common as C, palette as P
 
 BONES = ['root', 'body', 'head', 'arm_L', 'arm_R']
 B = {n: i for i, n in enumerate(BONES)}
-Z_FIXED, Z_SKIN, Z_SHIRT, Z_LOWER, Z_FOREARM = 0, 1, 2, 3, 4
+Z_FIXED, Z_SKIN, Z_SHIRT, Z_LOWER, Z_FOREARM, Z_BROW = 0, 1, 2, 3, 4, 5
 BODY_Z = 0.05
 HEAD_Z = 0.56
 HEAD_C = (0, 0, 0.74)
@@ -48,6 +48,10 @@ def build(out, preview):
         pcs.append(sh.uvball(0.027, segs=10, rings=8, col='eye').scale(1, 0.5, 1.2).at(0.068 * sx, fy - 0.012, 0.765).zone(Z_FIXED).noline().bone(B['head']))
         pcs.append(sh.ball(0.009, sub=1, col='white').at(0.068 * sx + 0.008, fy - 0.026, 0.776).zone(Z_FIXED).noline().bone(B['head']))
         pcs.append(sh.ball(0.032, sub=2, col='#F2917C', sy=0.25, sz=0.7).at(0.118 * sx, fy + 0.024, 0.712).zone(Z_FIXED).noline().bone(B['head']))
+    for sx in (-1, 1):
+        pcs.append(sh.ball(0.04, sub=2, col='white', sx=0.5, sy=0.8, sz=1.0).at(0.186 * sx, 0.0, 0.745).zone(Z_SKIN).bone(B['head']))
+        brow = [(sx * (0.045 + 0.022 * k), fy - 0.012 + 0.006 * abs(k - 1), 0.808 + 0.008 * (1 - abs(k - 1))) for k in range(3)]
+        pcs.append(sh.tube(brow, r=0.0065, segs=5, col='white').zone(Z_BROW).noline().bone(B['head']))
     smile = [(0.058 * math.sin(math.radians(a)), fy - 0.012 + 0.014 * (1 - math.cos(math.radians(a))), 0.716 - 0.032 * math.cos(math.radians(a))) for a in range(-62, 63, 15)]
     pcs.append(sh.tube(smile, r=0.0075, segs=6, col='#7A3B3F').zone(Z_FIXED).noline().bone(B['head']))
     pcs.append(sh.ball(0.02, sub=1, col='white').at(0, fy - 0.016, 0.737).zone(Z_SKIN).noline().bone(B['head']))

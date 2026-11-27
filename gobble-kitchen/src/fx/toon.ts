@@ -6,7 +6,7 @@ let ramp: THREE.DataTexture | null = null;
 function gradientMap() {
   if (ramp) return ramp;
   // soft 5-step ramp; nearest filtering keeps the steps crisp (the plan's pitfall list)
-  const steps = [118, 160, 205, 240, 255];
+  const steps = [132, 172, 212, 242, 255];
   const data = new Uint8Array(steps.length * 4);
   steps.forEach((v, i) => data.set([v, v, v, 255], i * 4));
   ramp = new THREE.DataTexture(data, steps.length, 1, THREE.RGBAFormat);
@@ -124,6 +124,7 @@ export function addOutline(mesh: THREE.Mesh) {
   shell.name = mesh.name + '__outline';
   shell.userData.isOutline = true;
   shell.raycast = () => {};
+  shell.castShadow = shell.receiveShadow = false;
   shell.frustumCulled = mesh.frustumCulled;
   mesh.add(shell);
   return shell;

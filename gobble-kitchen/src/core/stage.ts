@@ -54,12 +54,25 @@ export class Stage {
   rotated = false;  // portrait phones: the whole game is turned 90 degrees so it is always landscape
   private wantShot: ((url: string) => void) | null = null;
   private fps = { t: 0, n: 0, low: 0 };
+  keepShadows = false;   // tests pin shadows on (software rendering is always slow)
   private maxRatio = 1.5;
+  /** Soft real-time shadows from the key light (turned off first if the frame rate drops; blob shadows take over). */
+  realShadows = true;
+  private keyDir = new THREE.Vector3(-0.5, 1, 0.75);
 
   constructor(public container: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.NoToneMapping; // ACES washes out the pastels
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.key.castShadow = true;
+    const touch = matchMedia('(pointer: coarse)').matches;
+    this.key.shadow.mapSize.set(touch ? 1024 : 2048, touch ? 1024 : 2048);
+    this.key.shadow.bias = -0.0006;
+    this.key.shadow.normalBias = 0.025;
+    this.key.shadow.radius = 4;
+    this.scene.add(this.key.target);
     container.appendChild(this.renderer.domElement);
     this.bgCanvas.width = this.bgCanvas.height = 64;
     this.bgTex = new THREE.CanvasTexture(this.bgCanvas);
@@ -148,6 +161,16 @@ export class Stage {
 
   private placeCamera(dt: number) {
     const p = this.pose;
+    // the key light (and its shadow box) follows whatever the camera is looking at
+    const reach = Math.max(p.fitW, p.fitH) * 0.62 + 0.6;
+    this.key.target.position.copy(p.target);
+    this.key.position.copy(p.target).addScaledVector(this.keyDir, 14);
+    const sc = this.key.shadow.camera;
+    if (Math.abs(sc.right - reach) > 0.01) {
+      sc.left = -reach; sc.right = reach; sc.top = reach; sc.bottom = -reach;
+      sc.near = 1; sc.far = 34;
+      sc.updateProjectionMatrix();
+    }
     const half = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
     const dist = Math.max(p.fitH / 2 / half, p.fitW / 2 / (half * this.camera.aspect));
     this.camera.position.copy(p.target).addScaledVector(p.dir, dist);
@@ -246,7 +269,7 @@ export class Stage {
       const k = clamp(1 - hgt / 1.6);
       let vis = true;
       for (let p: THREE.Object3D | null = s.o; p; p = p.parent) if (!p.visible) vis = false;
-      s.mesh.visible = vis && s.o.scale.x > 0.05;
+      s.mesh.visible = !this.realShadows && vis && s.o.scale.x > 0.05;
       s.mesh.position.set(this.v.x, s.ground + 0.004, this.v.z);
       const size = s.r * 2 * (1 + hgt * 0.5) * Math.min(1.2, Math.abs(s.o.scale.x));
       s.mesh.scale.set(size, 1, size);
@@ -272,7 +295,7 @@ export class Stage {
     this.hemi.intensity = lerp(a.hemi, b.hemi, t);
     mix(a.key, b.key, this.key.color);
     this.key.intensity = lerp(a.keyI, b.keyI, t);
-    this.key.position.set(lerp(a.keyDir[0], b.keyDir[0], t), lerp(a.keyDir[1], b.keyDir[1], t), lerp(a.keyDir[2], b.keyDir[2], t)).multiplyScalar(10);
+    this.keyDir.set(lerp(a.keyDir[0], b.keyDir[0], t), lerp(a.keyDir[1], b.keyDir[1], t), lerp(a.keyDir[2], b.keyDir[2], t)).normalize();
     mix(a.window, b.window, this.windowColor);
     mix(a.bg, b.bg, this.bgColor);
     this.paintBackground();
@@ -339,7 +362,12 @@ export class Stage {
       this.fps.t = 0;
       this.fps.n = 0;
       this.fps.low = fps < 40 ? this.fps.low + 1 : 0;
-      if (this.fps.low >= 2 && this.maxRatio > 1) {
+      if (this.fps.low >= 2 && this.realShadows && !this.keepShadows) {
+        // first thing to go on a slow device: real shadows (soft blobs take over)
+        this.realShadows = false;
+        this.key.castShadow = false;
+        this.fps.low = 0;
+      } else if (this.fps.low >= 2 && this.maxRatio > 1) {
         this.maxRatio = Math.max(1, this.maxRatio - 0.25);
         this.fps.low = 0;
         this.resize();

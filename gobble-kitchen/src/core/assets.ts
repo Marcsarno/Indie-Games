@@ -43,9 +43,15 @@ function prepare(root: THREE.Object3D) {
       mesh.userData.hitName = name;
       continue;
     }
-    if (shade === 'toon') mesh.material = toonMaterial({ wobble: name === 'food_log', gloss: glossOf(name) });
-    else if (shade === 'glow') mesh.material = glowMaterial(data.color && data.color !== 'vertex' ? pal(data.color) : 0xffffff, data.color === 'vertex' || !data.color);
-    else mesh.material = lambertMaterial();
+    if (shade === 'toon') {
+      mesh.material = toonMaterial({ wobble: name === 'food_log', gloss: glossOf(name) });
+      mesh.castShadow = mesh.receiveShadow = true;
+    } else if (shade === 'glow') mesh.material = glowMaterial(data.color && data.color !== 'vertex' ? pal(data.color) : 0xffffff, data.color === 'vertex' || !data.color);
+    else {
+      mesh.material = lambertMaterial();
+      mesh.receiveShadow = true;
+      mesh.castShadow = name !== 'room';   // the walls must not black out the room
+    }
     if (outline) mesh.userData.wantsOutline = true;
     if ((mesh as THREE.SkinnedMesh).isSkinnedMesh) mesh.frustumCulled = false;
   }

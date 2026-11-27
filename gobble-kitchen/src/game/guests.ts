@@ -96,7 +96,8 @@ export class Guest {
     const col = geo.getAttribute('color').clone();
     geo.setAttribute('color', col);
     const skin = new THREE.Color(look.skin), shirt = new THREE.Color(look.shirt), lower = new THREE.Color(look.lower ?? look.shirt);
-    const tint = [null, skin, shirt, lower, look.sleeves === 'short' ? skin : shirt];
+    const brow = new THREE.Color(look.hairColor ?? 0x6b4a3a).multiplyScalar(0.62);
+    const tint = [null, skin, shirt, lower, look.sleeves === 'short' ? skin : shirt, brow];
     const c = new THREE.Color();
     if (zone) {
       for (let i = 0; i < col.count; i++) {

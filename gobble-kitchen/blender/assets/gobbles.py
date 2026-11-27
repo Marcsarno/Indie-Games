@@ -45,6 +45,10 @@ def build(out, preview):
         pcs.append(sh.uvball(0.027, segs=12, rings=8, col='eye').scale(1.0, 0.5, 1.0).at(EYE[0] * sx * 0.92, EYE[1] - 0.022, EYE[2] - 0.004).bone(B[pb]))
         pcs.append(sh.ball(0.008, sub=1, col='white').at(EYE[0] * sx * 0.92 + 0.008, EYE[1] - 0.034, EYE[2] + 0.008).noline().bone(B[pb]))
 
+    for sx in (-1, 1):
+        pcs.append(sh.ball(0.03, sub=2, col='#E8825E', sy=0.3, sz=0.7).at(0.098 * sx, -0.1, 0.402).noline().bone(B['head']))
+        for toe in (-1, 0, 1):
+            pcs.append(sh.ball(0.016, sub=1, col='beak', sx=0.8, sy=1.9, sz=0.6).rot(0, 0, 24 * toe).at(0.06 * sx + 0.02 * toe, -0.075, 0.012).bone(B['root']))
     # beak: upper on the head, lower on the jaw
     pcs.append(sh.lathe([(0, 0), (0.036, 0.0), (0.028, 0.03), (0.012, 0.062), (0, 0.07)], segs=12, col='beak', r=0.006).scale(1.0, 0.7, 1.0).rot(90, 0, 0).at(0, -0.118, 0.405).bone(B['head']))
     pcs.append(sh.lathe([(0, 0), (0.026, 0.0), (0.02, 0.025), (0.008, 0.045), (0, 0.05)], segs=10, col='pumpkin', r=0.005).scale(1.0, 0.45, 1.0).rot(90, 0, 0).at(0, -0.118, 0.386).bone(B['jaw']))

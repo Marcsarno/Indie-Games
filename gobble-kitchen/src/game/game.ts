@@ -60,6 +60,7 @@ export class Game {
     this.kitchen = new Kitchen(this);
     this.gobbles = new Gobbles(stage);
     this.hints = new Hints(stage);
+    this.hints.onStep = (demo) => hud.setGesture(demo && demo !== 'none' && (this.state === 'station' || this.state === 'dinner') ? demo : null);
     const home = this.kitchen.socket('socket_gobbles_home');
     this.gobbles.root.position.copy(home);
     this.gobbles.setGround(home.y);
@@ -165,7 +166,7 @@ export class Game {
   }
 
   private showHome(speak: boolean) {
-    this.hud.setMenu(this.offered().map((s) => ({ id: s.name, started: s.started })), this.finished >= 3);
+    this.hud.setMenu(this.offered().map((s) => ({ id: s.name, started: s.started })), this.finished >= 3, this.stations.filter((s) => s.done).map((s) => s.name));
     this.hints.paused = false;
     // once the roast is out, the narrator points at the dinner bell
     this.homeDef.voice = this.stations.some((s) => s.name === 'roast' && s.done) ? 'dinner_bell' : 'pick';

@@ -25,6 +25,8 @@ def build(out, preview):
         sh.lathe([(0, 0), (0.06, 0), (0.07, 0.012), (0.035, 0.03), (0.03, 0.045), (0, 0.045)], segs=20, col='butter', r=0.004),
         sh.cyl(0.024, 0.2, bevel=0.008, segs=14, col='cream').at(0, 0, 0.04),
         sh.cyl(0.003, 0.02, bevel=0.001, segs=6, col='ink').at(0, 0, 0.238),
+        sh.ball(0.011, sub=1, col='cream', sz=2.2).at(0.022, 0.006, 0.205), sh.ball(0.009, sub=1, col='cream', sz=2.6).at(-0.012, -0.02, 0.185),
+        sh.torus(0.022, 0.007, segs=14, rsegs=6, col='butter').rot(90, 0, 0).at(0.082, 0, 0.022),
     ], parent=candle, shade='toon'))
     flame_prof = [(0, 0), (0.016, 0.012), (0.02, 0.03), (0.012, 0.055), (0, 0.085)]
     objs.append(C.make('candle_flame', sh.lathe(flame_prof, segs=12, col='glow').shade(lambda co, no: P.mix('pumpkin', 'glow', min(1.0, co.z / 0.05))), loc=(0, 0, 0.25), parent=candle, shade='glow', normals=False))

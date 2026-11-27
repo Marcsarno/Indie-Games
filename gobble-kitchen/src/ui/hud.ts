@@ -24,6 +24,16 @@ const DISH: Record<string, string> = {
   bell: '<svg viewBox="0 0 100 100"><path d="M50 18 C28 18 22 40 22 58 L14 72 H86 L78 58 C78 40 72 18 50 18 Z" fill="#F2B33D"/><rect x="43" y="8" width="14" height="14" rx="6" fill="#B8673A"/><circle cx="50" cy="80" r="9" fill="#B8673A"/><path d="M34 34 Q30 46 30 58" stroke="#FFF4E0" stroke-width="5" fill="none" stroke-linecap="round"/></svg>',
 };
 
+// how to do the current step, as a moving picture
+const HAND = '<svg class="hand" viewBox="0 0 100 100"><path d="M40 92 C28 80 22 66 24 56 C25 50 32 50 36 56 V22 C36 12 50 12 50 22 V46 C50 40 62 40 62 48 C63 42 74 43 74 50 C75 45 85 46 85 54 V70 C85 82 78 92 66 92 Z" fill="#FFF4E0" stroke="#3B2630" stroke-width="5" stroke-linejoin="round"/></svg>';
+const GESTURE: Record<string, string> = {
+  tap: `<div class="g g-tap"><i class="ring"></i>${HAND}</div>`,
+  swipe: `<div class="g g-swipe"><i class="track"></i>${HAND}</div>`,
+  circle: `<div class="g g-circle"><i class="orbit"></i>${HAND}</div>`,
+  updown: `<div class="g g-updown"><i class="track v"></i>${HAND}</div>`,
+};
+const GOBBLES_FACE = '<svg viewBox="0 0 120 110"><g fill="none" stroke-linecap="round" stroke-width="13"><path d="M60 62 L14 30" stroke="#B23A48"/><path d="M60 62 L30 12" stroke="#E8833A"/><path d="M60 62 L60 6" stroke="#F6D58E"/><path d="M60 62 L90 12" stroke="#E8833A"/><path d="M60 62 L106 30" stroke="#B23A48"/></g><ellipse cx="60" cy="72" rx="34" ry="32" fill="#A8683F" stroke="#3B2630" stroke-width="4"/><rect x="42" y="18" width="36" height="20" rx="8" fill="#fff" stroke="#3B2630" stroke-width="4"/><ellipse cx="60" cy="16" rx="24" ry="13" fill="#fff" stroke="#3B2630" stroke-width="4"/><circle cx="47" cy="62" r="11" fill="#fff" stroke="#3B2630" stroke-width="3"/><circle cx="73" cy="62" r="11" fill="#fff" stroke="#3B2630" stroke-width="3"/><circle cx="49" cy="64" r="5" fill="#2C1B26"/><circle cx="71" cy="64" r="5" fill="#2C1B26"/><path d="M52 74 L68 74 L60 88 Z" fill="#F2B33D" stroke="#3B2630" stroke-width="3" stroke-linejoin="round"/><path d="M66 84 q6 6 2 14 q-7 -4 -6 -12 z" fill="#D8453F"/></svg>';
+
 // sticker pictures: found ones are coloured, the rest stay silhouettes (no counters, no percentages)
 const STICKERS: Record<string, string> = {
   jelly_rain: '<svg viewBox="0 0 100 100"><path d="M50 10 C70 40 82 52 82 66 A32 32 0 0 1 18 66 C18 52 30 40 50 10 Z" fill="#C22F4B"/><circle cx="38" cy="62" r="8" fill="#fff" opacity=".55"/></svg>',
@@ -64,6 +74,7 @@ export class Hud {
   onPick: (id: string) => void = () => {};
   onBell = () => {};
   private menu: HTMLElement;
+  private gestureEl: HTMLElement;
 
   constructor(container: HTMLElement) {
     this.root = el('div', 'hud');
@@ -71,9 +82,12 @@ export class Hud {
 
     // ---- title
     this.title = el('div', 'title', `
-      <div class="logo"><span>Gobble Gobble</span><b>Kitchen</b></div>
-      <div class="loading"><div class="bar"></div></div>
-      <button class="kid play" aria-label="Play">${ICON.play}</button>
+      <div class="sign">
+        <div class="mascot">${GOBBLES_FACE}</div>
+        <div class="logo"><span>Gobble Gobble</span><b>Kitchen</b></div>
+        <div class="loading"><div class="bar"></div></div>
+        <button class="kid play" aria-label="Play">${ICON.play}</button>
+      </div>
       <div class="trust">No ads &middot; No purchases &middot; No links &middot; No data collected</div>`);
     this.root.appendChild(this.title);
     this.bar = this.title.querySelector('.bar')!;
@@ -105,7 +119,8 @@ export class Hud {
     this.root.append(this.homeBtn, this.bookBtn, this.againBtn);
     // ---- the picture menu of jobs (overview only)
     this.menu = el('div', 'menu hidden');
-    this.root.appendChild(this.menu);
+    this.gestureEl = el('div', 'gesture hidden');
+    this.root.append(this.menu, this.gestureEl);
 
     // ---- sticker book
     this.book = el('div', 'book hidden');
@@ -196,9 +211,14 @@ export class Hud {
   private cardTimer = 0;
 
   /** Show the jobs on offer (and the dinner bell once it is earned). An empty list hides the menu. */
-  setMenu(items: { id: string; started: boolean }[], bell: boolean) {
+  setMenu(items: { id: string; started: boolean }[], bell: boolean, done: string[] = []) {
     this.menu.innerHTML = '';
     this.menu.classList.toggle('hidden', items.length === 0 && !bell);
+    if (items.length || bell) {
+      // what is already on the table, as a row of little pictures (no numbers)
+      const tray = el('div', 'tray', done.map((id) => `<i>${DISH[id] ?? ''}</i>`).join(''));
+      if (done.length) this.menu.appendChild(tray);
+    }
     for (const it of items) {
       const b = el('button', 'kid dishbtn' + (it.started ? ' started' : ''), DISH[it.id] ?? '');
       b.setAttribute('aria-label', it.id);
@@ -223,6 +243,14 @@ export class Hud {
     this.menu.classList.remove('wave');
     void this.menu.offsetWidth;
     this.menu.classList.add('wave');
+  }
+
+  /** Show how the current step is done (tap, swipe, circle, up-down), or hide the bubble. */
+  setGesture(kind: string | null) {
+    const html = kind ? GESTURE[kind] : undefined;
+    this.gestureEl.classList.toggle('hidden', !html);
+    if (html && this.gestureEl.dataset.kind !== kind) this.gestureEl.innerHTML = html;
+    this.gestureEl.dataset.kind = kind ?? '';
   }
 
   showHome(on: boolean) {
